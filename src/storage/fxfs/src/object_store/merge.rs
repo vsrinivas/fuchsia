@@ -4,7 +4,7 @@
 
 use {
     super::extent_record::{ExtentKey, ExtentValue},
-    super::object_record::{ObjectKey, ObjectKeyData, ObjectValue},
+    super::object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
     crate::lsm_tree::{
         merge::{
             ItemOp::{Discard, Keep, Replace},
@@ -14,30 +14,42 @@ use {
     },
 };
 
-pub fn merge_extents(
-    left: &MergeLayerIterator<'_, ExtentKey, ExtentValue>,
-    right: &MergeLayerIterator<'_, ExtentKey, ExtentValue>,
-) -> MergeResult<ExtentKey, ExtentValue> {
+fn merge_extents(
+    object_id: u64,
+    attribute_id: u64,
+    left: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
+    right: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
+    left_key: &ExtentKey,
+    right_key: &ExtentKey,
+    left_value: &ExtentValue,
+    right_value: &ExtentValue,
+) -> MergeResult<ObjectKey, ObjectValue> {
     // For now, we don't support/expect two extents with the same key in one layer.
+    // One reason you can't merge deleted extents in non-adjacent layers is because you
+    // can't decide which layer the merge should end up in.
+    //
+    // Consider this scenario:
+    //   |X-X-X|
+    //      |a-a-a|
+    //         |X-X-X|
+    // If you merge the deleted extents here, you might end up with:
+    //   |X-X-X-X-X-X|
+    //      |a-a-a|
+    // which is clearly incorrect.
     debug_assert!(right.layer_index != left.layer_index);
 
-    if left.key().object_id != right.key().object_id
-        || left.key().attribute_id != right.key().attribute_id
-    {
-        return MergeResult::EmitLeft;
-    }
-
-    if let (ExtentValue::None, ExtentValue::None) = (left.value(), right.value()) {
+    if let (ExtentValue::None, ExtentValue::None) = (left_value, right_value) {
         if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
             // Two deletions in adjacent layers can be merged.
-            return merge_deleted_extents(left, right);
+            return merge_deleted_extents(
+                object_id,
+                attribute_id,
+                left_key,
+                right_key,
+                std::cmp::min(left.sequence(), right.sequence()),
+            );
         }
     }
-
-    let left_key = left.key();
-    let right_key = right.key();
-    let object_id = left_key.object_id;
-    let attribute_id = left_key.attribute_id;
 
     if left_key.range.end <= right_key.range.start {
         // Extents don't overlap.
@@ -59,28 +71,33 @@ pub fn merge_extents(
     //  Emit  |------|
     //  Old          |--|
     //  New          |----------|
+
     if right.layer_index < left.layer_index {
         // Right layer is newer.
         debug_assert!(left_key.range.start < right_key.range.start);
         return MergeResult::Other {
             emit: Some(Item::new_with_sequence(
-                ExtentKey::new(
+                ObjectKey::extent(
                     object_id,
                     attribute_id,
                     left_key.range.start..right_key.range.start,
                 ),
-                left.value().shrunk(
+                ObjectValue::Extent(left_value.shrunk(
                     left_key.range.end - left_key.range.start,
                     right_key.range.start - left_key.range.start,
-                ),
+                )),
                 std::cmp::min(left.sequence(), right.sequence()),
             )),
             left: Replace(Item::new_with_sequence(
-                ExtentKey::new(object_id, attribute_id, right_key.range.start..left_key.range.end),
-                left.value().offset_by(
+                ObjectKey::extent(
+                    object_id,
+                    attribute_id,
+                    right_key.range.start..left_key.range.end,
+                ),
+                ObjectValue::Extent(left_value.offset_by(
                     right_key.range.start - left_key.range.start,
                     left_key.range.end - left_key.range.start,
-                ),
+                )),
                 std::cmp::min(left.sequence(), right.sequence()),
             )),
             right: Keep,
@@ -95,11 +112,11 @@ pub fn merge_extents(
         emit: None,
         left: Keep,
         right: Replace(Item::new_with_sequence(
-            ExtentKey::new(object_id, attribute_id, left_key.range.end..right_key.range.end),
-            right.value().offset_by(
+            ObjectKey::extent(object_id, attribute_id, left_key.range.end..right_key.range.end),
+            ObjectValue::Extent(right_value.offset_by(
                 left_key.range.end - right_key.range.start,
                 right_key.range.end - right_key.range.start,
-            ),
+            )),
             std::cmp::min(left.sequence(), right.sequence()),
         )),
     }
@@ -107,16 +124,19 @@ pub fn merge_extents(
 
 // Assumes that the two extents to be merged are on adjacent layers (i.e. layers N, N+1).
 fn merge_deleted_extents(
-    left: &MergeLayerIterator<'_, ExtentKey, ExtentValue>,
-    right: &MergeLayerIterator<'_, ExtentKey, ExtentValue>,
-) -> MergeResult<ExtentKey, ExtentValue> {
-    if left.key().range.end < right.key().range.start {
+    object_id: u64,
+    attribute_id: u64,
+    left_key: &ExtentKey,
+    right_key: &ExtentKey,
+    sequence: u64,
+) -> MergeResult<ObjectKey, ObjectValue> {
+    if left_key.range.end < right_key.range.start {
         // The extents are not adjacent or overlapping.
         return MergeResult::EmitLeft;
     }
     // Both of these are deleted extents which are either adjacent or overlapping, which means
     // we can coalece the records.
-    if left.key().range.end >= right.key().range.end {
+    if left_key.range.end >= right_key.range.end {
         // The left deletion eclipses the right, so just keep the left.
         return MergeResult::Other { emit: None, left: Keep, right: Discard };
     }
@@ -124,13 +144,9 @@ fn merge_deleted_extents(
         emit: None,
         left: Discard,
         right: Replace(Item::new_with_sequence(
-            ExtentKey::new(
-                left.key().object_id,
-                left.key().attribute_id,
-                left.key().range.start..right.key().range.end,
-            ),
-            ExtentValue::deleted_extent(),
-            std::cmp::min(left.sequence(), right.sequence()),
+            ObjectKey::extent(object_id, attribute_id, left_key.range.start..right_key.range.end),
+            ObjectValue::deleted_extent(),
+            sequence,
         )),
     }
 }
@@ -168,17 +184,38 @@ pub fn merge(
     if left.key().object_id != right.key().object_id {
         return MergeResult::EmitLeft;
     }
-    match (left.key(), left.value(), right.key()) {
-        (ObjectKey { data: ObjectKeyData::Object, .. }, ObjectValue::None, _) => {
-            // Note that due to OrdLowerBound, when keys are equal,
-            // left.layer_index < right.layer_index so
-            // we don't need to consider tombstones on the right here.
+    match (left.key(), right.key(), left.value(), right.value()) {
+        (
+            ObjectKey {
+                object_id,
+                data: ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(left_extent_key)),
+            },
+            ObjectKey {
+                object_id: _,
+                data:
+                    ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(right_extent_key)),
+            },
+            ObjectValue::Extent(left_extent),
+            ObjectValue::Extent(right_extent),
+        ) if left_attr_id == right_attr_id => {
+            return merge_extents(
+                *object_id,
+                *left_attr_id,
+                left,
+                right,
+                left_extent_key,
+                right_extent_key,
+                left_extent,
+                right_extent,
+            );
+        }
+        // Tombstones (ObjectKeyData::Object) compare before others, so always appear on left.
+        (ObjectKey { data: ObjectKeyData::Object, .. }, _, ObjectValue::None, _) => {
             debug_assert!(left.layer_index < right.layer_index);
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
-        (left_key, _, right_key) if left_key == right_key => {
-            // Likewise, equal keys implies the left is the newer value,
-            // so we are safe to keep it here.
+        // Note that identical keys are sorted by layer_index, so left is always newer.
+        (left_key, right_key, _, _) if left_key == right_key => {
             debug_assert!(left.layer_index < right.layer_index);
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
@@ -189,14 +226,16 @@ pub fn merge(
 #[cfg(test)]
 mod tests {
     use {
-        super::{merge, merge_extents},
+        super::merge,
         crate::{
             lsm_tree::{
                 types::{Item, LayerIterator, MergeableKey, Value},
                 LSMTree,
             },
-            object_store::extent_record::{Checksums, ExtentKey, ExtentValue},
-            object_store::object_record::{EncryptionKeys, ObjectKey, ObjectValue, Timestamp},
+            object_store::extent_record::{Checksums, ExtentValue},
+            object_store::object_record::{
+                AttributeKey, EncryptionKeys, ObjectKey, ObjectValue, Timestamp,
+            },
         },
         anyhow::Error,
         fuchsia_async as fasync,
@@ -230,24 +269,27 @@ mod tests {
     async fn test_merge_extents_non_overlapping() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..512), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::new(16384),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::Extent(ExtentValue::new(16384)),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -257,26 +299,29 @@ mod tests {
     async fn test_merge_extents_rewrite_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..1024), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::new(16384),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::Extent(ExtentValue::new(16384)),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(0));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(0)));
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(16384));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(16384)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -286,34 +331,34 @@ mod tests {
     async fn test_merge_extents_rewrite_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1024),
-            ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2])),
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2]))),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![3])),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![3]))),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
         assert_eq!(
             iter.get().unwrap().value,
-            &ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![3]))
+            &ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![3])))
         );
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
         assert_eq!(
             iter.get().unwrap().value,
-            &ExtentValue::with_checksum(512, Checksums::Fletcher(vec![2]))
+            &ObjectValue::Extent(ExtentValue::with_checksum(512, Checksums::Fletcher(vec![2])))
         );
         iter.advance().await?;
         assert!(iter.get().is_none());
@@ -324,40 +369,43 @@ mod tests {
     async fn test_merge_extents_rewrite_middle() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..2048),
-            ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2, 3, 4])),
+            ObjectKey::extent(object_id, attr_id, 0..2048),
+            ObjectValue::Extent(ExtentValue::with_checksum(
+                0,
+                Checksums::Fletcher(vec![1, 2, 3, 4]),
+            )),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..1536),
-            ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![5])),
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![5]))),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1024));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1024));
         assert_eq!(
             iter.get().unwrap().value,
-            &ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2]))
+            &ObjectValue::Extent(ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2])))
         );
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1024..1536));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1024..1536));
         assert_eq!(
             iter.get().unwrap().value,
-            &ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![5]))
+            &ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![5])))
         );
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1536..2048));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
         assert_eq!(
             iter.get().unwrap().value,
-            &ExtentValue::with_checksum(1536, Checksums::Fletcher(vec![4]))
+            &ObjectValue::Extent(ExtentValue::with_checksum(1536, Checksums::Fletcher(vec![4])))
         );
         iter.advance().await?;
         assert!(iter.get().is_none());
@@ -368,23 +416,26 @@ mod tests {
     async fn test_merge_extents_rewrite_eclipses() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 1024..1536), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..2048),
-            ExtentValue::new(16384),
+            ObjectKey::extent(object_id, attr_id, 0..2048),
+            ObjectValue::Extent(ExtentValue::new(16384)),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(16384));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(16384)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -394,26 +445,29 @@ mod tests {
     async fn test_merge_extents_delete_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..1024), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(512));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(512)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -423,26 +477,29 @@ mod tests {
     async fn test_merge_extents_delete_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..1024), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(0));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(0)));
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -452,29 +509,32 @@ mod tests {
     async fn test_merge_extents_delete_middle() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..2048), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..2048),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(0));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(0)));
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1024..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1024..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1536..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(1536));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(1536)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -484,23 +544,26 @@ mod tests {
     async fn test_merge_extents_delete_eclipses() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 1024..1536), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..2048),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..2048),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -513,23 +576,23 @@ mod tests {
         // Merged:     [--------------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
@@ -537,8 +600,8 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -551,23 +614,23 @@ mod tests {
         // Merged:     [--------------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
@@ -575,8 +638,8 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -586,26 +649,26 @@ mod tests {
     async fn test_merge_deleted_extents_overlapping_newest_on_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -615,25 +678,25 @@ mod tests {
     async fn test_merge_deleted_extents_overlapping_newest_on_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -646,18 +709,18 @@ mod tests {
         // Merged:     [--------------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
@@ -665,8 +728,8 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -679,18 +742,18 @@ mod tests {
         // Merged:     [--------------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1536),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..1536),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
@@ -698,8 +761,8 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -714,33 +777,36 @@ mod tests {
         //  Merged:  [XXXXX|--------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 512..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 512..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.seal().await;
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..1024), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(512));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(512)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -754,28 +820,34 @@ mod tests {
         //  Merged:  [XXXXX|--------]
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 1024..1536), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 1024..1536),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
         tree.seal().await;
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..512),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..512),
+            ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 512..1536), ExtentValue::new(0)))
-            .await;
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 512..1536),
+            ObjectValue::Extent(ExtentValue::new(0)),
+        ))
+        .await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(0));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(0)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -785,18 +857,21 @@ mod tests {
     async fn test_merge_deleted_extent_into_overwrites_extents() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
 
-        tree.insert(Item::new(ExtentKey::new(object_id, attr_id, 0..1024), ExtentValue::new(0)))
-            .await;
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..2048),
-            ExtentValue::new(16384),
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::Extent(ExtentValue::new(0)),
         ))
         .await;
-        let key = ExtentKey::new(object_id, attr_id, 512..1536);
+        tree.insert(Item::new(
+            ObjectKey::extent(object_id, attr_id, 1024..2048),
+            ObjectValue::Extent(ExtentValue::new(16384)),
+        ))
+        .await;
+        let key = ObjectKey::extent(object_id, attr_id, 512..1536);
         tree.merge_into(
-            Item::new(key.clone(), ExtentValue::deleted_extent()),
+            Item::new(key.clone(), ObjectValue::deleted_extent()),
             &key.key_for_merge_into(),
         )
         .await;
@@ -804,14 +879,14 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(0));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(0)));
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..1536));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1536));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1536..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(16896));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(16896)));
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -821,22 +896,22 @@ mod tests {
     async fn test_merge_deleted_extent_into_merges_with_other_deletions() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
 
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 0..1024),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 0..1024),
+            ObjectValue::deleted_extent(),
         ))
         .await;
         tree.insert(Item::new(
-            ExtentKey::new(object_id, attr_id, 1024..2048),
-            ExtentValue::deleted_extent(),
+            ObjectKey::extent(object_id, attr_id, 1024..2048),
+            ObjectValue::deleted_extent(),
         ))
         .await;
 
-        let key = ExtentKey::new(object_id, attr_id, 512..1536);
+        let key = ObjectKey::extent(object_id, attr_id, 512..1536);
         tree.merge_into(
-            Item::new(key.clone(), ExtentValue::deleted_extent()),
+            Item::new(key.clone(), ObjectValue::deleted_extent()),
             &key.key_for_merge_into(),
         )
         .await;
@@ -844,8 +919,8 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -853,22 +928,30 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_merge_size_records() {
-        let left = &[Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5))];
-        let right = &[Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(10))];
+        let left =
+            &[Item::new(ObjectKey::attribute(1, 0, AttributeKey::Size), ObjectValue::attribute(5))];
+        let right = &[Item::new(
+            ObjectKey::attribute(1, 0, AttributeKey::Size),
+            ObjectValue::attribute(10),
+        )];
         let tree = LSMTree::new(merge);
         test_merge(&tree, left, right, left).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_different_attributes_not_merged() {
-        let left = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5));
-        let right = Item::new(ObjectKey::attribute(1, 1), ObjectValue::attribute(10));
+        let left =
+            Item::new(ObjectKey::attribute(1, 0, AttributeKey::Size), ObjectValue::attribute(5));
+        let right =
+            Item::new(ObjectKey::attribute(1, 1, AttributeKey::Size), ObjectValue::attribute(10));
         let tree = LSMTree::new(merge);
         test_merge(&tree, &[left.clone()], &[right.clone()], &[left, right]).await;
 
-        let left = Item::new(ExtentKey::new(1, 0, 0..100), ExtentValue::new(0));
-        let right = Item::new(ExtentKey::new(1, 1, 0..100), ExtentValue::new(1));
-        let tree = LSMTree::new(merge_extents);
+        let left =
+            Item::new(ObjectKey::extent(1, 0, 0..100), ObjectValue::Extent(ExtentValue::new(0)));
+        let right =
+            Item::new(ObjectKey::extent(1, 1, 0..100), ObjectValue::Extent(ExtentValue::new(1)));
+        let tree = LSMTree::new(merge);
         test_merge(&tree, &[left.clone()], &[right.clone()], &[left, right]).await;
     }
 
@@ -900,7 +983,10 @@ mod tests {
                         EncryptionKeys::None,
                     ),
                 ),
-                Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(100)),
+                Item::new(
+                    ObjectKey::attribute(1, 0, AttributeKey::Size),
+                    ObjectValue::attribute(100),
+                ),
                 other_object.clone(),
             ],
             &[tombstone, other_object],
@@ -912,30 +998,30 @@ mod tests {
     async fn test_merge_preserves_sequences() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
-        let tree = LSMTree::<ExtentKey, ExtentValue>::new(merge_extents);
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
 
         tree.insert(Item {
-            key: ExtentKey::new(object_id, attr_id, 0..1024),
-            value: ExtentValue::new(0u64),
+            key: ObjectKey::extent(object_id, attr_id, 0..1024),
+            value: ObjectValue::Extent(ExtentValue::new(0u64)),
             sequence: 1u64,
         })
         .await;
         tree.seal().await;
         tree.insert(Item {
-            key: ExtentKey::new(object_id, attr_id, 0..512),
-            value: ExtentValue::deleted_extent(),
+            key: ObjectKey::extent(object_id, attr_id, 0..512),
+            value: ObjectValue::deleted_extent(),
             sequence: 2u64,
         })
         .await;
         tree.insert(Item {
-            key: ExtentKey::new(object_id, attr_id, 1536..2048),
-            value: ExtentValue::new(1536),
+            key: ObjectKey::extent(object_id, attr_id, 1536..2048),
+            value: ObjectValue::Extent(ExtentValue::new(1536)),
             sequence: 3u64,
         })
         .await;
         tree.insert(Item {
-            key: ExtentKey::new(object_id, attr_id, 768..1024),
-            value: ExtentValue::new(12345),
+            key: ObjectKey::extent(object_id, attr_id, 768..1024),
+            value: ObjectValue::Extent(ExtentValue::new(12345)),
             sequence: 4u64,
         })
         .await;
@@ -943,20 +1029,20 @@ mod tests {
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
         assert_eq!(iter.get().unwrap().sequence, 2u64);
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 512..768));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(512));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..768));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(512)));
         assert_eq!(iter.get().unwrap().sequence, 1u64);
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 768..1024));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(12345));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 768..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(12345)));
         assert_eq!(iter.get().unwrap().sequence, 4u64);
         iter.advance().await?;
-        assert_eq!(iter.get().unwrap().key, &ExtentKey::new(object_id, attr_id, 1536..2048));
-        assert_eq!(iter.get().unwrap().value, &ExtentValue::new(1536));
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::Extent(ExtentValue::new(1536)));
         assert_eq!(iter.get().unwrap().sequence, 3u64);
         iter.advance().await?;
         assert!(iter.get().is_none());

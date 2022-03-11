@@ -18,7 +18,6 @@ use {
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
             fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
             object_record::{ObjectKey, ObjectValue},
@@ -229,14 +228,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
 }
 
 trait KeyExt: PartialEq {
-    fn overlaps(&self, other: &Self) -> bool {
-        self == other
-    }
+    fn overlaps(&self, other: &Self) -> bool;
 }
-
-// Without https://rust-lang.github.io/rfcs/1210-impl-specialization.html, we can't have one
-// behaviour for RangeKey and another for Key, unless we specify all possible Keys.
-impl KeyExt for ObjectKey {}
 
 impl<K: RangeKey + PartialEq> KeyExt for K {
     fn overlaps(&self, other: &Self) -> bool {
@@ -326,7 +319,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             ObjectStore::open_object(&root_store, store_id, HandleOptions::default(), None).await,
             FsckFatal::MissingStoreInfo(store_id),
         )?;
-        let (object_layer_file_object_ids, extent_layer_file_object_ids) = {
+        let object_layer_file_object_ids = {
             let info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let mut cursor = std::io::Cursor::new(&serialized_info[..]);
@@ -343,25 +336,15 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             // We don't replay the store ReplayInfo here, since it doesn't affect what we
             // want to check (mainly the existence of the layer files).  If that changes,
             // we'll need to update this.
-            (info.object_tree_layers.clone(), info.extent_tree_layers.clone())
+            info.layers.clone()
         };
         self.verbose(format!(
-            "Store {} has {} object tree layers, {} extent tree layers",
+            "Store {} has {} object tree layers",
             store_id,
             object_layer_file_object_ids.len(),
-            extent_layer_file_object_ids.len()
         ));
         for layer_file_object_id in object_layer_file_object_ids {
             self.check_layer_file::<ObjectKey, ObjectValue>(
-                &root_store,
-                store_id,
-                layer_file_object_id,
-                crypt.as_ref(),
-            )
-            .await?;
-        }
-        for layer_file_object_id in extent_layer_file_object_ids {
-            self.check_layer_file::<ExtentKey, ExtentValue>(
                 &root_store,
                 store_id,
                 layer_file_object_id,

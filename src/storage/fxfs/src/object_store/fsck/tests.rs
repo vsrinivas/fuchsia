@@ -15,15 +15,15 @@ use {
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             directory::Directory,
-            extent_record::{ExtentKey, ExtentValue},
+            extent_record::ExtentValue,
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
             object_record::{
-                EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKind,
-                ObjectValue, Timestamp,
+                AttributeKey, EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey,
+                ObjectKind, ObjectValue, Timestamp,
             },
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
@@ -100,12 +100,6 @@ impl FsckTest {
     }
 }
 
-#[derive(Copy, Clone)]
-enum InstallTarget {
-    ExtentTree,
-    ObjectTree,
-}
-
 // Creates a new layer file containing |items| and writes them in order into |store|, skipping all
 // normal validation.  This allows bad records to be inserted into the object store (although they
 // will still be subject to merging).
@@ -114,7 +108,6 @@ async fn install_items_in_store<K: Key, V: Value>(
     filesystem: &Arc<FxFilesystem>,
     store: &ObjectStore,
     items: impl AsRef<[Item<K, V>]>,
-    target: InstallTarget,
 ) {
     let device = filesystem.device();
     let root_store = filesystem.root_store();
@@ -143,10 +136,7 @@ async fn install_items_in_store<K: Key, V: Value>(
     }
 
     let mut store_info = store.store_info();
-    match target {
-        InstallTarget::ExtentTree => store_info.extent_tree_layers.push(layer_handle.object_id()),
-        InstallTarget::ObjectTree => store_info.object_tree_layers.push(layer_handle.object_id()),
-    }
+    store_info.layers.push(layer_handle.object_id());
     let mut store_info_vec = vec![];
     store_info.serialize_with_version(&mut store_info_vec).expect("serialize failed");
     let mut buf = device.allocate_buffer(store_info_vec.len());
@@ -352,7 +342,10 @@ async fn test_misaligned_extent_in_root_store() {
             .expect("new_transaction failed");
         transaction.add(
             root_store.store_object_id(),
-            Mutation::extent(ExtentKey::new(555, 0, 1..fs.block_size()), ExtentValue::new(1)),
+            Mutation::insert_object(
+                ObjectKey::extent(555, 0, 1..fs.block_size()),
+                ObjectValue::Extent(ExtentValue::new(1)),
+            ),
         );
         transaction.commit().await.expect("commit failed");
     }
@@ -377,7 +370,10 @@ async fn test_malformed_extent_in_root_store() {
             .expect("new_transaction failed");
         transaction.add(
             root_store.store_object_id(),
-            Mutation::extent(ExtentKey::new(555, 0, fs.block_size()..0), ExtentValue::new(1)),
+            Mutation::insert_object(
+                ObjectKey::extent(555, 0, fs.block_size()..0),
+                ObjectValue::Extent(ExtentValue::new(1)),
+            ),
         );
         transaction.commit().await.expect("commit failed");
     }
@@ -403,7 +399,10 @@ async fn test_misaligned_extent_in_child_store() {
             .expect("new_transaction failed");
         transaction.add(
             volume.store_object_id(),
-            Mutation::extent(ExtentKey::new(555, 0, 1..fs.block_size()), ExtentValue::new(1)),
+            Mutation::insert_object(
+                ObjectKey::extent(555, 0, 1..fs.block_size()),
+                ObjectValue::Extent(ExtentValue::new(1)),
+            ),
         );
         transaction.commit().await.expect("commit failed");
     }
@@ -429,7 +428,10 @@ async fn test_malformed_extent_in_child_store() {
             .expect("new_transaction failed");
         transaction.add(
             volume.store_object_id(),
-            Mutation::extent(ExtentKey::new(555, 0, fs.block_size()..0), ExtentValue::new(1)),
+            Mutation::insert_object(
+                ObjectKey::extent(555, 0, fs.block_size()..0),
+                ObjectValue::Extent(ExtentValue::new(1)),
+            ),
         );
         transaction.commit().await.expect("commit failed");
     }
@@ -580,38 +582,6 @@ async fn test_too_few_object_refs() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_missing_extent_tree_layer_file() {
-    let mut test = FsckTest::new().await;
-
-    {
-        let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol", test.get_crypt()).await.unwrap();
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        ObjectStore::create_object(&volume, &mut transaction, HandleOptions::default(), None)
-            .await
-            .expect("create_object failed");
-        transaction.commit().await.expect("commit failed");
-        volume.flush().await.expect("Flush store failed");
-        let id = {
-            let layers = volume.extent_tree().immutable_layer_set();
-            assert!(!layers.layers.is_empty());
-            layers.layers[0].handle().unwrap().object_id()
-        };
-        fs.root_store()
-            .tombstone(id, transaction::Options::default())
-            .await
-            .expect("tombstone failed");
-    }
-
-    test.remount().await.expect_err("Remount succeeded");
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_missing_object_tree_layer_file() {
     let mut test = FsckTest::new().await;
 
@@ -675,10 +645,9 @@ async fn test_misordered_layer_file() {
             &fs,
             store.as_ref(),
             vec![
-                Item::new(ExtentKey::new(5, 0, 10..20), ExtentValue::None),
-                Item::new(ExtentKey::new(0, 0, 0..5), ExtentValue::None),
+                Item::new(ObjectKey::extent(5, 0, 10..20), ObjectValue::deleted_extent()),
+                Item::new(ObjectKey::extent(1, 0, 0..5), ObjectValue::deleted_extent()),
             ],
-            InstallTarget::ExtentTree,
         )
         .await;
     }
@@ -700,10 +669,10 @@ async fn test_overlapping_keys_in_layer_file() {
             &fs,
             store.as_ref(),
             vec![
-                Item::new(ExtentKey::new(0, 0, 0..20), ExtentValue::None),
-                Item::new(ExtentKey::new(0, 0, 10..30), ExtentValue::None),
+                Item::new(ObjectKey::extent(1, 0, 0..20), ObjectValue::deleted_extent()),
+                Item::new(ObjectKey::extent(1, 0, 10..30), ObjectValue::deleted_extent()),
+                Item::new(ObjectKey::extent(1, 0, 15..40), ObjectValue::deleted_extent()),
             ],
-            InstallTarget::ExtentTree,
         )
         .await;
     }
@@ -727,8 +696,7 @@ async fn test_unexpected_record_in_layer_file() {
         install_items_in_store(
             &fs,
             store.as_ref(),
-            vec![Item::new(ObjectKey::object(0), ObjectValue::None)],
-            InstallTarget::ExtentTree,
+            vec![Item::new(ObjectKey::object(0), AllocatorValue { delta: 100000 })],
         )
         .await;
     }
@@ -750,7 +718,6 @@ async fn test_mismatched_key_and_value() {
             &fs,
             store.as_ref(),
             vec![Item::new(ObjectKey::object(10), ObjectValue::Attribute { size: 100 })],
-            InstallTarget::ObjectTree,
         )
         .await;
     }
@@ -924,7 +891,6 @@ async fn test_children_on_file() {
                 ObjectKey::child(object_id, "foo"),
                 ObjectValue::Child { object_id: 11, object_descriptor: ObjectDescriptor::File },
             )],
-            InstallTarget::ObjectTree,
         )
         .await;
     }
@@ -947,10 +913,9 @@ async fn test_attribute_on_directory() {
             &fs,
             store.as_ref(),
             vec![Item::new(
-                ObjectKey::attribute(store.root_directory_object_id(), 1),
+                ObjectKey::attribute(store.root_directory_object_id(), 1, AttributeKey::Size),
                 ObjectValue::attribute(100),
             )],
-            InstallTarget::ObjectTree,
         )
         .await;
     }
@@ -972,8 +937,10 @@ async fn test_orphaned_attribute() {
         install_items_in_store(
             &fs,
             store.as_ref(),
-            vec![Item::new(ObjectKey::attribute(10, 1), ObjectValue::attribute(100))],
-            InstallTarget::ObjectTree,
+            vec![Item::new(
+                ObjectKey::attribute(10, 1, AttributeKey::Size),
+                ObjectValue::attribute(100),
+            )],
         )
         .await;
     }
@@ -1000,9 +967,11 @@ async fn test_records_for_tombstoned_object() {
             store.as_ref(),
             vec![
                 Item::new(ObjectKey::object(10), ObjectValue::None),
-                Item::new(ObjectKey::attribute(10, 1), ObjectValue::attribute(100)),
+                Item::new(
+                    ObjectKey::attribute(10, 1, AttributeKey::Size),
+                    ObjectValue::attribute(100),
+                ),
             ],
-            InstallTarget::ObjectTree,
         )
         .await;
     }
@@ -1028,7 +997,6 @@ async fn test_invalid_object_in_store() {
             &fs,
             store.as_ref(),
             vec![Item::new(ObjectKey::object(INVALID_OBJECT_ID), ObjectValue::Some)],
-            InstallTarget::ObjectTree,
         )
         .await;
     }
@@ -1153,7 +1121,7 @@ async fn test_file_length_mismatch() {
         transaction.add(
             store.store_object_id(),
             Mutation::replace_or_insert_object(
-                ObjectKey::attribute(handle.object_id, handle.attribute_id),
+                ObjectKey::attribute(handle.object_id, handle.attribute_id, AttributeKey::Size),
                 ObjectValue::attribute(123),
             ),
         );
@@ -1205,13 +1173,16 @@ async fn test_spurious_extents() {
             .expect("new_transaction failed");
         transaction.add(
             store.store_object_id(),
-            Mutation::extent(ExtentKey::new(555, 0, 0..4096), ExtentValue::new(0)),
+            Mutation::insert_object(
+                ObjectKey::extent(555, 0, 0..4096),
+                ObjectValue::Extent(ExtentValue::new(0)),
+            ),
         );
         transaction.add(
             store.store_object_id(),
-            Mutation::extent(
-                ExtentKey::new(store.root_directory_object_id(), 0, 0..4096),
-                ExtentValue::new(0),
+            Mutation::insert_object(
+                ObjectKey::extent(store.root_directory_object_id(), 0, 0..4096),
+                ObjectValue::Extent(ExtentValue::new(0)),
             ),
         );
         transaction.commit().await.expect("commit failed");

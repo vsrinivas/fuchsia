@@ -14,7 +14,9 @@ use {
                 Fsck,
             },
             graveyard::Graveyard,
-            object_record::{ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
+            object_record::{
+                AttributeKey, ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
+            },
             ObjectStore,
         },
         range::RangeExt,
@@ -226,7 +228,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                     }
                 }
             }
-            ObjectKeyData::Attribute(attribute_id) => {
+            ObjectKeyData::Attribute(attribute_id, AttributeKey::Size) => {
                 match value {
                     ObjectValue::Attribute { size } => {
                         match self.objects.get_mut(&key.object_id) {
@@ -259,6 +261,22 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                             }
                         }
                     }
+                    _ => {
+                        self.fsck.error(FsckError::MalformedObjectRecord(
+                            self.store_id,
+                            key.into(),
+                            value.into(),
+                        ))?;
+                    }
+                }
+            }
+            // Ignore extents on this pass. We'll process them later.
+            ObjectKeyData::Attribute(_, AttributeKey::Extent(_)) => {
+                match value {
+                    // Regular extent record.
+                    ObjectValue::Extent(ExtentValue::Some { .. }) => {}
+                    // Deleted extent.
+                    ObjectValue::Extent(ExtentValue::None) => {}
                     _ => {
                         self.fsck.error(FsckError::MalformedObjectRecord(
                             self.store_id,
@@ -477,6 +495,7 @@ impl<'iter, 'a, F: Fn(&FsckIssue)> std::iter::Iterator for ScannedStoreIterator<
 
 // Scans all extents in the store, emitting synthesized allocations into |fsck.allocations| and
 // updating the sizes for files in |scanned|.
+// TODO(fxbug.dev/95475): Roll this back into main function.
 async fn scan_extents<'a, F: Fn(&FsckIssue)>(
     fsck: &'a Fsck<F>,
     store: &ObjectStore,
@@ -484,74 +503,94 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
 ) -> Result<(), Error> {
     let store_id = store.store_object_id();
     let bs = store.block_size();
-    let layer_set = store.extent_tree.layer_set();
+    let layer_set = store.tree.layer_set();
     let mut merger = layer_set.merger();
     let mut iter = merger.seek(Bound::Unbounded).await?;
     let mut allocated_bytes = 0;
-    while let Some(ItemRef { key: ExtentKey { object_id, attribute_id, range }, value, .. }) =
-        iter.get()
-    {
-        if range.start % bs > 0 || range.end % bs > 0 {
-            fsck.error(FsckError::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
-        } else if range.start >= range.end {
-            fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
-        }
-        if let ExtentValue::Some { device_offset, .. } = value {
-            allocated_bytes += range.length().unwrap();
-            if device_offset % bs > 0 {
-                fsck.error(FsckError::MisalignedExtent(
-                    store_id,
-                    *object_id,
-                    range.clone(),
-                    *device_offset,
-                ))?;
-            }
-            match scanned.objects.get_mut(object_id) {
-                Some(ScannedObject::File(ScannedFile { attributes, allocated_size, .. })) => {
-                    match attributes.iter().find(|(attr_id, _)| attr_id == attribute_id) {
-                        Some((_, size)) => {
-                            if range.end > round_up(*size, bs).unwrap() {
-                                fsck.error(FsckError::ExtentExceedsLength(
-                                    store_id,
+    while let Some(itemref) = iter.get() {
+        if let ItemRef {
+            key:
+                ObjectKey {
+                    object_id,
+                    data:
+                        ObjectKeyData::Attribute(
+                            attribute_id,
+                            AttributeKey::Extent(ExtentKey { range }),
+                        ),
+                },
+            value: ObjectValue::Extent(value),
+            ..
+        } = itemref
+        {
+            if let ExtentValue::Some { device_offset, .. } = value {
+                if range.start % bs > 0 || range.end % bs > 0 {
+                    fsck.error(FsckError::MisalignedExtent(
+                        store_id,
+                        *object_id,
+                        range.clone(),
+                        0,
+                    ))?;
+                } else if range.start >= range.end {
+                    fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
+                }
+                allocated_bytes += range.length().unwrap();
+                if device_offset % bs > 0 {
+                    fsck.error(FsckError::MisalignedExtent(
+                        store_id,
+                        *object_id,
+                        range.clone(),
+                        *device_offset,
+                    ))?;
+                }
+                match scanned.objects.get_mut(object_id) {
+                    Some(ScannedObject::File(ScannedFile {
+                        attributes, allocated_size, ..
+                    })) => {
+                        match attributes.iter().find(|(attr_id, _)| attr_id == attribute_id) {
+                            Some((_, size)) => {
+                                if range.end > round_up(*size, bs).unwrap() {
+                                    fsck.error(FsckError::ExtentExceedsLength(
+                                        store_id,
+                                        *object_id,
+                                        *attribute_id,
+                                        *size,
+                                        range.into(),
+                                    ))?;
+                                }
+                            }
+                            None => {
+                                fsck.warning(FsckWarning::ExtentForMissingAttribute(
+                                    store.store_object_id(),
                                     *object_id,
                                     *attribute_id,
-                                    *size,
-                                    range.into(),
                                 ))?;
                             }
                         }
-                        None => {
-                            fsck.warning(FsckWarning::ExtentForMissingAttribute(
-                                store.store_object_id(),
-                                *object_id,
-                                *attribute_id,
-                            ))?;
-                        }
+                        *allocated_size += range.end - range.start;
                     }
-                    *allocated_size += range.end - range.start;
+                    Some(ScannedObject::Directory(..)) => {
+                        fsck.warning(FsckWarning::ExtentForDirectory(
+                            store.store_object_id(),
+                            *object_id,
+                        ))?;
+                    }
+                    Some(_) => { /* NOP */ }
+                    None => {
+                        fsck.warning(FsckWarning::ExtentForNonexistentObject(
+                            store.store_object_id(),
+                            *object_id,
+                        ))?;
+                    }
                 }
-                Some(ScannedObject::Directory(..)) => {
-                    fsck.warning(FsckWarning::ExtentForDirectory(
-                        store.store_object_id(),
-                        *object_id,
-                    ))?;
-                }
-                Some(_) => { /* NOP */ }
-                None => {
-                    fsck.warning(FsckWarning::ExtentForNonexistentObject(
-                        store.store_object_id(),
-                        *object_id,
-                    ))?;
-                }
+                let item = Item::new(
+                    AllocatorKey {
+                        device_range: *device_offset..*device_offset + range.end - range.start,
+                    },
+                    AllocatorValue { delta: 1 },
+                );
+                let lower_bound = item.key.lower_bound_for_merge_into();
+                fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
             }
-            let item = Item::new(
-                AllocatorKey {
-                    device_range: *device_offset..*device_offset + range.end - range.start,
-                },
-                AllocatorValue { delta: 1 },
-            );
-            let lower_bound = item.key.lower_bound_for_merge_into();
-            fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
         }
         iter.advance().await?;
     }

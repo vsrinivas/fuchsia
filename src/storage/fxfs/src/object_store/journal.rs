@@ -25,7 +25,6 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
-        lsm_tree::types::ItemRef,
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, SimpleAllocator},
@@ -42,8 +41,11 @@ use {
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
-            transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
-            HandleOptions, LockState, ObjectStore, StoreObjectHandle,
+            object_record::{AttributeKey, ObjectKey, ObjectKeyData},
+            transaction::{
+                AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
+            },
+            HandleOptions, Item, LockState, ObjectStore, StoreObjectHandle,
         },
         round::{round_down, round_up},
         serialized_types::{Version, Versioned, LATEST_VERSION},
@@ -290,9 +292,6 @@ impl Journal {
                 SuperBlockItem::Object(item) => {
                     (Mutation::insert_object(item.key, item.value), item.sequence)
                 }
-                SuperBlockItem::Extent(item) => {
-                    (Mutation::extent(item.key, item.value), item.sequence)
-                }
             };
             root_parent
                 .apply_mutation(
@@ -367,17 +366,20 @@ impl Journal {
 
         let mut handle;
         {
-            let root_parent_layer = root_parent.extent_tree().mutable_layer();
+            let root_parent_layer = root_parent.tree().mutable_layer();
             let mut iter = root_parent_layer
-                .seek(Bound::Included(&ExtentKey::search_key_from_offset(
+                .seek(Bound::Included(&ObjectKey::attribute(
                     super_block.journal_object_id,
                     DEFAULT_DATA_ATTRIBUTE_ID,
-                    round_down(super_block.journal_checkpoint.file_offset, BLOCK_SIZE),
+                    AttributeKey::Extent(ExtentKey::search_key_from_offset(round_down(
+                        super_block.journal_checkpoint.file_offset,
+                        BLOCK_SIZE,
+                    ))),
                 )))
                 .await?;
             handle = Handle::new(super_block.journal_object_id, device.clone());
             while let Some(item) = iter.get() {
-                if !handle.try_push_extent(item)? {
+                if !handle.try_push_extent_from_object_item(item)? {
                     break;
                 }
                 iter.advance().await?;
@@ -441,14 +443,26 @@ impl Journal {
                                     // file so that we can pass them to the reader so that it can
                                     // read the journal file.
                                     if *object_id == super_block.root_parent_store_object_id {
-                                        if let Mutation::Extent(ExtentMutation(key, value)) =
-                                            mutation
+                                        if let Mutation::ObjectStore(ObjectStoreMutation {
+                                            item:
+                                                item @ Item {
+                                                    key:
+                                                        ObjectKey {
+                                                            data:
+                                                                ObjectKeyData::Attribute(
+                                                                    0,
+                                                                    AttributeKey::Extent(_),
+                                                                ),
+                                                            ..
+                                                        },
+                                                    ..
+                                                },
+                                            ..
+                                        }) = mutation
                                         {
-                                            reader.handle().try_push_extent(ItemRef {
-                                                key,
-                                                value,
-                                                sequence: 0,
-                                            })?;
+                                            reader.handle().try_push_extent_from_object_item(
+                                                item.as_item_ref(),
+                                            )?;
                                         }
                                     }
                                 }

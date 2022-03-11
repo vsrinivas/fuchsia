@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // TODO(jfsulliv): need validation after deserialization.
-
 use {
     crate::{
-        crypt::{WrappedKeys, WrappedKeysV1},
-        lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
+        crypt::WrappedKeys,
+        lsm_tree::types::{Item, ItemRef, NextKey, OrdLowerBound, OrdUpperBound, RangeKey},
+        object_store::extent_record::{Checksums, ExtentKey, ExtentValue},
         serialized_types::Versioned,
     },
     serde::{Deserialize, Serialize},
@@ -32,11 +32,17 @@ pub enum ObjectKeyData {
     /// object because it's also used as a tombstone and it needs to merge with all following keys.
     Object,
     /// An attribute associated with an object.  It has a 64-bit ID.
-    Attribute(u64),
+    Attribute(u64, AttributeKey),
     /// A child of a directory.
     Child { name: String }, // TODO(jfsulliv): Should this be a string or array of bytes?
     /// A graveyard entry.
     GraveyardEntry { object_id: u64 },
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub enum AttributeKey {
+    Size,
+    Extent(ExtentKey),
 }
 
 /// ObjectKey is a key in the object store.
@@ -55,8 +61,19 @@ impl ObjectKey {
     }
 
     /// Creates an ObjectKey for an attribute.
-    pub fn attribute(object_id: u64, attribute_id: u64) -> Self {
-        Self { object_id, data: ObjectKeyData::Attribute(attribute_id) }
+    pub fn attribute(object_id: u64, attribute_id: u64, key: AttributeKey) -> Self {
+        Self { object_id, data: ObjectKeyData::Attribute(attribute_id, key) }
+    }
+
+    /// Creates an ObjectKey for an extent.
+    pub fn extent(object_id: u64, attribute_id: u64, range: std::ops::Range<u64>) -> Self {
+        Self {
+            object_id,
+            data: ObjectKeyData::Attribute(
+                attribute_id,
+                AttributeKey::Extent(ExtentKey::new(range)),
+            ),
+        }
     }
 
     /// Creates an ObjectKey for a child.
@@ -69,28 +86,99 @@ impl ObjectKey {
         Self { object_id: graveyard_object_id, data: ObjectKeyData::GraveyardEntry { object_id } }
     }
 
-    /// Returns the merge key for this key; that is, a key which is <= this key and any other
-    /// possibly overlapping key, under Ord. This would be used for `lower_bound` to calls to
-    /// `merge_into`.  For now, object keys don't have any range based bits, so this just returns a
-    /// clone.
+    /// Returns the search key for this extent; that is, a key which is <= this key under Ord and
+    /// OrdLowerBound.
+    /// This would be used when searching for an extent with |find| (when we want to find any
+    /// overlapping extent, which could include extents that start earlier).
+    pub fn search_key(&self) -> Self {
+        if let Self {
+            object_id,
+            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(e)),
+        } = self
+        {
+            Self::attribute(*object_id, *attribute_id, AttributeKey::Extent(e.search_key()))
+        } else {
+            self.clone()
+        }
+    }
+
+    /// Returns the merge key for this key; that is, a key which is <= this key and any
+    /// other possibly overlapping key, under Ord. This would be used for the hint in |merge_into|.
     pub fn key_for_merge_into(&self) -> Self {
-        self.clone()
+        if let Self {
+            object_id,
+            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(e)),
+        } = self
+        {
+            Self::attribute(*object_id, *attribute_id, AttributeKey::Extent(e.key_for_merge_into()))
+        } else {
+            self.clone()
+        }
     }
 }
 
 impl OrdUpperBound for ObjectKey {
     fn cmp_upper_bound(&self, other: &ObjectKey) -> std::cmp::Ordering {
-        self.cmp(other)
+        self.object_id.cmp(&other.object_id).then_with(|| match (&self.data, &other.data) {
+            (
+                ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(ref left_extent)),
+                ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(ref right_extent)),
+            ) => left_attr_id.cmp(right_attr_id).then(left_extent.cmp_upper_bound(right_extent)),
+            _ => self.data.cmp(&other.data),
+        })
     }
 }
 
 impl OrdLowerBound for ObjectKey {
     fn cmp_lower_bound(&self, other: &ObjectKey) -> std::cmp::Ordering {
-        self.cmp(other)
+        self.object_id.cmp(&other.object_id).then_with(|| match (&self.data, &other.data) {
+            (
+                ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(ref left_extent)),
+                ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(ref right_extent)),
+            ) => left_attr_id.cmp(right_attr_id).then(left_extent.cmp_lower_bound(right_extent)),
+            _ => self.data.cmp(&other.data),
+        })
     }
 }
 
-impl NextKey for ObjectKey {}
+impl NextKey for ObjectKey {
+    fn next_key(&self) -> Option<Self> {
+        if let ObjectKey { data: ObjectKeyData::Attribute(_, AttributeKey::Extent(_)), .. } = self {
+            let mut key = self.clone();
+            if let ObjectKey {
+                data: ObjectKeyData::Attribute(_, AttributeKey::Extent(ExtentKey { range })),
+                ..
+            } = &mut key
+            {
+                // We want a key such that cmp_lower_bound returns Greater for any key which starts
+                // after end, and a key such that if you search for it, you'll get an extent whose
+                // end > range.end.
+                *range = range.end..range.end + 1;
+            }
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
+impl RangeKey for ObjectKey {
+    fn overlaps(&self, other: &Self) -> bool {
+        if self.object_id != other.object_id {
+            return false;
+        }
+        match (&self.data, &other.data) {
+            (
+                ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(left_key)),
+                ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(right_key)),
+            ) if *left_attr_id == *right_attr_id => {
+                left_key.range.end > right_key.range.start
+                    && left_key.range.start < right_key.range.end
+            }
+            (a, b) => a == b,
+        }
+    }
+}
 
 /// UNIX epoch based timestamp in the UTC timezone.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
@@ -185,6 +273,8 @@ pub enum ObjectValue {
     Object { kind: ObjectKind, attributes: ObjectAttributes },
     /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
+    /// An extent associated with an object.
+    Extent(ExtentValue),
     /// A child of an object. |object_id| is the ID of the child, and |object_descriptor| describes
     /// the child.
     Child { object_id: u64, object_descriptor: ObjectDescriptor },
@@ -208,6 +298,18 @@ impl ObjectValue {
     pub fn attribute(size: u64) -> ObjectValue {
         ObjectValue::Attribute { size }
     }
+    /// Creates an ObjectValue for an insertion/replacement of an object extent.
+    pub fn extent(device_offset: u64) -> ObjectValue {
+        ObjectValue::Extent(ExtentValue::with_checksum(device_offset, Checksums::None))
+    }
+    /// Creates an ObjectValue for an insertion/replacement of an object extent.
+    pub fn extent_with_checksum(device_offset: u64, checksum: Checksums) -> ObjectValue {
+        ObjectValue::Extent(ExtentValue::with_checksum(device_offset, checksum))
+    }
+    /// Creates an ObjectValue for a deletion of an object extent.
+    pub fn deleted_extent() -> ObjectValue {
+        ObjectValue::Extent(ExtentValue::deleted_extent())
+    }
     /// Creates an ObjectValue for an object child.
     pub fn child(object_id: u64, object_descriptor: ObjectDescriptor) -> ObjectValue {
         ObjectValue::Child { object_id, object_descriptor }
@@ -229,90 +331,87 @@ impl ObjectItem {
     }
 }
 
-// Below this point, outdated structs are defined.  These can be removed only after we can be
-// certain that at least two updates have applied since the new struct versions were introduced
-// (which requires stepping-stone releases, but is also hard to predict because of fxbug.dev/94256).
-// See serialized_types/types.rs for the version at which these were last used.
-
-pub type ObjectItemV1 = Item<ObjectKey, ObjectValueV1>;
-
-impl From<ObjectItemV1> for ObjectItem {
-    fn from(other: ObjectItemV1) -> Self {
-        Self::new(other.key, other.value.into())
-    }
-}
-
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum ObjectValueV1 {
-    None,
-    Some,
-    Object { kind: ObjectKindV1, attributes: ObjectAttributes },
-    Attribute { size: u64 },
-    Child { object_id: u64, object_descriptor: ObjectDescriptor },
-}
-
-impl From<ObjectValueV1> for ObjectValue {
-    fn from(value: ObjectValueV1) -> Self {
-        use ObjectValue as New;
-        use ObjectValueV1 as Old;
-        match value {
-            Old::None => New::None,
-            Old::Some => New::Some,
-            Old::Object { kind, attributes } => New::Object { kind: kind.into(), attributes },
-            Old::Attribute { size } => New::Attribute { size },
-            Old::Child { object_id, object_descriptor } => {
-                New::Child { object_id, object_descriptor }
-            }
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum ObjectKindV1 {
-    File { refs: u64, allocated_size: u64, keys: EncryptionKeysV1 },
-    Directory { sub_dirs: u64 },
-    Graveyard,
-}
-
-impl From<ObjectKindV1> for ObjectKind {
-    fn from(value: ObjectKindV1) -> Self {
-        use ObjectKind as New;
-        use ObjectKindV1 as Old;
-        match value {
-            Old::File { refs, allocated_size, keys } => {
-                New::File { refs, allocated_size, keys: keys.into() }
-            }
-            Old::Directory { sub_dirs } => New::Directory { sub_dirs },
-            Old::Graveyard => New::Graveyard,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum EncryptionKeysV1 {
-    None,
-    AES256XTS(WrappedKeysV1),
-}
-
-impl From<EncryptionKeysV1> for EncryptionKeys {
-    fn from(value: EncryptionKeysV1) -> Self {
-        use EncryptionKeys as New;
-        use EncryptionKeysV1 as Old;
-        match value {
-            Old::None => New::None,
-            Old::AES256XTS(keys) => New::AES256XTS(keys.into()),
+// If the given item describes an extent, unwraps it and returns the extent key/value.
+impl<'a> From<ItemRef<'a, ObjectKey, ObjectValue>>
+    for Option<(/*object-id*/ u64, /*attribute-id*/ u64, &'a ExtentKey, &'a ExtentValue)>
+{
+    fn from(item: ItemRef<'a, ObjectKey, ObjectValue>) -> Self {
+        match item {
+            ItemRef {
+                key:
+                    ObjectKey {
+                        object_id,
+                        data:
+                            ObjectKeyData::Attribute(
+                                attribute_id, //
+                                AttributeKey::Extent(ref extent_key),
+                            ),
+                    },
+                value: ObjectValue::Extent(ref extent_value),
+                ..
+            } => Some((*object_id, *attribute_id, extent_key, extent_value)),
+            _ => None,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::ObjectKey, crate::lsm_tree::types::NextKey};
-
-    // TODO(fxbug.dev/95406): Tests similar to extent_record.rs
+    use {
+        super::ObjectKey,
+        crate::lsm_tree::types::{NextKey, OrdLowerBound, OrdUpperBound, RangeKey},
+        std::cmp::Ordering,
+    };
 
     #[test]
     fn test_next_key() {
-        assert!(ObjectKey::object(1).next_key().is_none());
+        let next_key = ObjectKey::extent(1, 0, 0..100).next_key().unwrap();
+        assert_eq!(ObjectKey::extent(1, 0, 101..200).cmp_lower_bound(&next_key), Ordering::Greater);
+        assert_eq!(ObjectKey::extent(1, 0, 100..200).cmp_lower_bound(&next_key), Ordering::Equal);
+        assert_eq!(ObjectKey::extent(1, 0, 100..101).cmp_lower_bound(&next_key), Ordering::Equal);
+        assert_eq!(ObjectKey::extent(1, 0, 99..100).cmp_lower_bound(&next_key), Ordering::Less);
+        assert_eq!(ObjectKey::extent(1, 0, 0..100).cmp_upper_bound(&next_key), Ordering::Less);
+        assert_eq!(ObjectKey::extent(1, 0, 99..100).cmp_upper_bound(&next_key), Ordering::Less);
+        assert_eq!(ObjectKey::extent(1, 0, 100..101).cmp_upper_bound(&next_key), Ordering::Equal);
+        assert_eq!(ObjectKey::extent(1, 0, 100..200).cmp_upper_bound(&next_key), Ordering::Greater);
+        assert_eq!(ObjectKey::extent(1, 0, 50..101).cmp_upper_bound(&next_key), Ordering::Equal);
+        assert_eq!(ObjectKey::extent(1, 0, 50..200).cmp_upper_bound(&next_key), Ordering::Greater);
+    }
+    #[test]
+    fn test_range_key() {
+        assert_eq!(ObjectKey::object(1).overlaps(&ObjectKey::object(1)), true);
+        assert_eq!(ObjectKey::object(1).overlaps(&ObjectKey::object(2)), false);
+        assert_eq!(ObjectKey::extent(1, 0, 0..100).overlaps(&ObjectKey::object(1)), false);
+        assert_eq!(ObjectKey::object(1).overlaps(&ObjectKey::extent(1, 0, 0..100)), false);
+        assert_eq!(
+            ObjectKey::extent(1, 0, 0..100).overlaps(&ObjectKey::extent(2, 0, 0..100)),
+            false
+        );
+        assert_eq!(
+            ObjectKey::extent(1, 0, 0..100).overlaps(&ObjectKey::extent(1, 1, 0..100)),
+            false
+        );
+        assert_eq!(
+            ObjectKey::extent(1, 0, 0..100).overlaps(&ObjectKey::extent(1, 0, 0..100)),
+            true
+        );
+
+        assert_eq!(
+            ObjectKey::extent(1, 0, 0..50).overlaps(&ObjectKey::extent(1, 0, 49..100)),
+            true
+        );
+        assert_eq!(
+            ObjectKey::extent(1, 0, 49..100).overlaps(&ObjectKey::extent(1, 0, 0..50)),
+            true
+        );
+
+        assert_eq!(
+            ObjectKey::extent(1, 0, 0..50).overlaps(&ObjectKey::extent(1, 0, 50..100)),
+            false
+        );
+        assert_eq!(
+            ObjectKey::extent(1, 0, 50..100).overlaps(&ObjectKey::extent(1, 0, 0..50)),
+            false
+        );
     }
 }

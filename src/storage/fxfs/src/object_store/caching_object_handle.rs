@@ -10,7 +10,7 @@ use {
         },
         object_store::{
             allocator::{self},
-            object_record::Timestamp,
+            object_record::{AttributeKey, Timestamp},
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
             writeback_cache::{StorageReservation, WritebackCache},
             AssocObj, HandleOwner, Mutation, ObjectKey, ObjectStore, ObjectValue,
@@ -198,7 +198,11 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 transaction.add_with_object(
                     store_object_id,
                     Mutation::replace_or_insert_object(
-                        ObjectKey::attribute(self.handle.object_id, self.handle.attribute_id),
+                        ObjectKey::attribute(
+                            self.handle.object_id,
+                            self.handle.attribute_id,
+                            AttributeKey::Size,
+                        ),
                         ObjectValue::attribute(content_size),
                     ),
                     AssocObj::Borrowed(&self.handle),
@@ -393,9 +397,9 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
-                extent_record::ExtentKey,
+                extent_record::ExtentValue,
                 filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
-                object_record::{ObjectKey, ObjectValue, Timestamp},
+                object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 CachingObjectHandle, HandleOptions, ObjectStore,
             },
@@ -682,28 +686,32 @@ mod tests {
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        let mut found = false;
-        while let Some(ItemRef { key: ObjectKey { object_id, .. }, value, .. }) = iter.get() {
+        let mut found_tombstone = false;
+        let mut found_deleted_extent = false;
+        while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
             if *object_id == object.object_id() {
-                if let ObjectValue::None = value {
-                    assert!(!found);
-                    found = true;
-                } else {
-                    assert!(false, "Unexpected item {:?}", iter.get());
+                match (data, value) {
+                    // Tombstone entry
+                    (ObjectKeyData::Object, ObjectValue::None) => {
+                        assert!(!found_tombstone);
+                        found_tombstone = true;
+                    }
+                    // Deleted extent entry
+                    (
+                        ObjectKeyData::Attribute(0, AttributeKey::Extent(_)),
+                        ObjectValue::Extent(ExtentValue::None),
+                    ) => {
+                        assert!(!found_deleted_extent);
+                        found_deleted_extent = true;
+                    }
+                    // We don't expect anything else.
+                    _ => assert!(false, "Unexpected item {:?}", iter.get()),
                 }
             }
             iter.advance().await.expect("advance failed");
         }
-        assert!(found);
-
-        // Make sure there are no extents.
-        let layer_set = store.extent_tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        while let Some(ItemRef { key: ExtentKey { object_id, .. }, value, .. }) = iter.get() {
-            assert!(*object_id != object.object_id() || value.is_deleted());
-            iter.advance().await.expect("advance failed");
-        }
+        assert!(found_tombstone);
+        assert!(found_deleted_extent);
 
         fs.close().await.expect("Close failed");
     }

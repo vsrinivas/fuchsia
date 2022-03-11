@@ -16,7 +16,8 @@ use {
             journal::fletcher64,
             object_manager::ObjectManager,
             object_record::{
-                ObjectAttributes, ObjectItem, ObjectKey, ObjectKind, ObjectValue, Timestamp,
+                AttributeKey, ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind,
+                ObjectValue, Timestamp,
             },
             transaction::{
                 self, AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Options,
@@ -98,16 +99,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction.add_with_object(
             self.store().store_object_id,
             Mutation::replace_or_insert_object(
-                ObjectKey::attribute(self.object_id, self.attribute_id),
+                ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
                 ObjectValue::attribute(new_size),
             ),
             AssocObj::Borrowed(self),
         );
         transaction.add(
             self.store().store_object_id,
-            Mutation::extent(
-                ExtentKey::new(self.object_id, self.attribute_id, old_end..new_size),
-                ExtentValue::new(device_range.start),
+            Mutation::merge_object(
+                ObjectKey::extent(self.object_id, self.attribute_id, old_end..new_size),
+                ObjectValue::Extent(ExtentValue::new(device_range.start)),
             ),
         );
         self.update_allocated_size(transaction, device_range.end - device_range.start, 0).await
@@ -220,22 +221,33 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if range.start == range.end {
             return Ok(0);
         }
-        let tree = &self.store().extent_tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
-        let key = ExtentKey::new(self.object_id, self.attribute_id, range);
-        let lower_bound = key.search_key();
+        let key = ExtentKey { range };
+        let lower_bound = ObjectKey::attribute(
+            self.object_id,
+            self.attribute_id,
+            AttributeKey::Extent(key.search_key()),
+        );
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&lower_bound)).await?;
         let allocator = self.store().allocator();
         let mut deallocated = 0;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
-        while let Some(ItemRef { key: extent_key, value: extent_value, .. }) = iter.get() {
-            if extent_key.object_id != self.object_id
-                || extent_key.attribute_id != self.attribute_id
-            {
+        while let Some(ItemRef {
+            key:
+                ObjectKey {
+                    object_id,
+                    data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent_key)),
+                },
+            value: ObjectValue::Extent(value),
+            ..
+        }) = iter.get()
+        {
+            if *object_id != self.object_id || *attribute_id != self.attribute_id {
                 break;
             }
-            if let ExtentValue::Some { device_offset, .. } = extent_value {
+            if let ExtentValue::Some { device_offset, .. } = value {
                 if let Some(overlap) = key.overlap(extent_key) {
                     let range = device_offset + overlap.start - extent_key.range.start
                         ..device_offset + overlap.end - extent_key.range.start;
@@ -271,9 +283,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             self.update_allocated_size(transaction, 0, deallocated).await?;
             transaction.add(
                 self.store().store_object_id,
-                Mutation::extent(
-                    ExtentKey::new(self.object_id, self.attribute_id, range),
-                    ExtentValue::deleted_extent(),
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, range),
+                    ObjectValue::Extent(ExtentValue::deleted_extent()),
                 ),
             );
         }
@@ -297,10 +309,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             return Ok((false, 0));
         }
 
-        let tree = &self.store().extent_tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
-        let offset_key =
-            ExtentKey::search_key_from_offset(self.object_id, self.attribute_id, start_offset);
+        let offset_key = ObjectKey::attribute(
+            self.object_id,
+            self.attribute_id,
+            AttributeKey::Extent(ExtentKey::search_key_from_offset(start_offset)),
+        );
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&offset_key)).await?;
 
@@ -311,11 +326,18 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             // Iterate through the extents, each time setting `end` as the end of the previous
             // extent
             match iter.get() {
-                Some(ItemRef { key: extent_key, value: extent_value, .. }) => {
+                Some(ItemRef {
+                    key:
+                        ObjectKey {
+                            object_id,
+                            data:
+                                ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent_key)),
+                        },
+                    value: ObjectValue::Extent(extent_value),
+                    ..
+                }) => {
                     // Equivalent of getting no extents back
-                    if extent_key.object_id != self.object_id
-                        || extent_key.attribute_id != self.attribute_id
-                    {
+                    if *object_id != self.object_id || *attribute_id != self.attribute_id {
                         if allocated == Some(false) || allocated.is_none() {
                             end = self.get_size();
                             allocated = Some(false);
@@ -360,7 +382,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                         }
                     }
                     end = extent_key.range.end;
-                    iter.advance().await?;
                 }
                 // This occurs when there are no extents left
                 None => {
@@ -371,7 +392,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     // Otherwise, we were monitoring extents that were allocated, so just exit.
                     break;
                 }
+                // Non-extent records (Object, Child, GraveyardEntry) are ignored.
+                Some(_) => {}
             }
+            iter.advance().await?;
         }
 
         Ok((allocated.unwrap(), end - start_offset))
@@ -392,7 +416,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             transaction.add_with_object(
                 self.store().store_object_id,
                 Mutation::replace_or_insert_object(
-                    ObjectKey::attribute(self.object_id, self.attribute_id),
+                    ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
                     ObjectValue::attribute(offset + buf.len() as u64),
                 ),
                 AssocObj::Borrowed(self),
@@ -476,13 +500,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                         }
                         let l = std::cmp::min(len, current_range.end - current_range.start);
                         let tail = checksums.split_off((l / block_size) as usize);
-                        mutations.push(Mutation::extent(
-                            ExtentKey::new(
+                        mutations.push(Mutation::merge_object(
+                            ObjectKey::extent(
                                 self.object_id,
                                 self.attribute_id,
                                 current_range.start..current_range.start + l,
                             ),
-                            ExtentValue::with_checksum(device_offset, checksums),
+                            ObjectValue::Extent(ExtentValue::with_checksum(
+                                device_offset,
+                                checksums,
+                            )),
                         ));
                         checksums = tail;
                         device_offset += l;
@@ -513,21 +540,35 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     // All the extents for the range must have been preallocated using preallocate_range or from
     // existing writes.
     pub async fn overwrite(&self, mut offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        let tree = &self.store().extent_tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
-        let end = offset + buf.len() as u64;
         let mut iter = merger
-            .seek(Bound::Included(
-                &ExtentKey::new(self.object_id, self.attribute_id, offset..end).search_key(),
-            ))
+            .seek(Bound::Included(&ObjectKey::attribute(
+                self.object_id,
+                self.attribute_id,
+                AttributeKey::Extent(ExtentKey::search_key_from_offset(offset)),
+            )))
             .await?;
         let mut pos = 0;
         loop {
             let (device_offset, to_do) = match iter.get() {
                 Some(ItemRef {
-                    key: ExtentKey { object_id, attribute_id, range },
-                    value: ExtentValue::Some { device_offset, checksums: Checksums::None, .. },
+                    key:
+                        ObjectKey {
+                            object_id,
+                            data:
+                                ObjectKeyData::Attribute(
+                                    attribute_id,
+                                    AttributeKey::Extent(ExtentKey { range }),
+                                ),
+                        },
+                    value:
+                        ObjectValue::Extent(ExtentValue::Some {
+                            device_offset,
+                            checksums: Checksums::None,
+                            ..
+                        }),
                     ..
                 }) if *object_id == self.object_id
                     && *attribute_id == self.attribute_id
@@ -566,7 +607,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction
             .get_object_mutation(
                 self.store().store_object_id,
-                ObjectKey::attribute(self.object_id, self.attribute_id),
+                ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
             )
             .and_then(|m| {
                 if let ObjectItem { value: ObjectValue::Attribute { size }, .. } = m.item {
@@ -671,7 +712,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction.add_with_object(
             self.store().store_object_id,
             Mutation::replace_or_insert_object(
-                ObjectKey::attribute(self.object_id, self.attribute_id),
+                ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
                 ObjectValue::attribute(size),
             ),
             AssocObj::Borrowed(self),
@@ -690,26 +731,38 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         assert_eq!(file_range.end % self.block_size(), 0);
         assert!(self.keys.is_none());
         let mut ranges = Vec::new();
-        let tree = &self.store().extent_tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger
-            .seek(Bound::Included(
-                &ExtentKey::new(self.object_id, self.attribute_id, file_range.clone()).search_key(),
-            ))
+            .seek(Bound::Included(&ObjectKey::attribute(
+                self.object_id,
+                self.attribute_id,
+                AttributeKey::Extent(ExtentKey::search_key_from_offset(file_range.start)),
+            )))
             .await?;
         let mut allocated = 0;
         'outer: while file_range.start < file_range.end {
             let allocate_end = loop {
                 match iter.get() {
+                    // Case for allocated extents for the same object that overlap with file_range.
                     Some(ItemRef {
-                        key: ExtentKey { object_id, attribute_id, range },
-                        value: ExtentValue::Some { device_offset, .. },
+                        key:
+                            ObjectKey {
+                                object_id,
+                                data:
+                                    ObjectKeyData::Attribute(
+                                        attribute_id,
+                                        AttributeKey::Extent(ExtentKey { range }),
+                                    ),
+                            },
+                        value: ObjectValue::Extent(ExtentValue::Some { device_offset, .. }),
                         ..
                     }) if *object_id == self.object_id
                         && *attribute_id == self.attribute_id
                         && range.start < file_range.end =>
                     {
+                        // If the start of the requested file_range overlaps with an existing extent...
                         if range.start <= file_range.start {
                             // Record the existing extent and move on.
                             let device_range = device_offset + file_range.start - range.start
@@ -727,9 +780,18 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                             break range.start;
                         }
                     }
+                    // Case for deleted extents eclipsed by file_range.
                     Some(ItemRef {
-                        key: ExtentKey { object_id, attribute_id, range },
-                        value: ExtentValue::None,
+                        key:
+                            ObjectKey {
+                                object_id,
+                                data:
+                                    ObjectKeyData::Attribute(
+                                        attribute_id,
+                                        AttributeKey::Extent(ExtentKey { range }),
+                                    ),
+                            },
+                        value: ObjectValue::Extent(ExtentValue::None),
                         ..
                     }) if *object_id == self.object_id
                         && *attribute_id == self.attribute_id
@@ -755,9 +817,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             file_range.start = this_file_range.end;
             transaction.add(
                 self.store().store_object_id,
-                Mutation::extent(
-                    ExtentKey::new(self.object_id, self.attribute_id, this_file_range),
-                    ExtentValue::new(device_range.start),
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
+                    ObjectValue::Extent(ExtentValue::new(device_range.start)),
                 ),
             );
             ranges.push(device_range);
@@ -768,7 +830,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             transaction.add_with_object(
                 self.store().store_object_id,
                 Mutation::replace_or_insert_object(
-                    ObjectKey::attribute(self.object_id, self.attribute_id),
+                    ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
                     ObjectValue::attribute(file_range.end),
                 ),
                 AssocObj::Borrowed(self),
@@ -946,11 +1008,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
         if offset >= size {
             return Ok(0);
         }
-        let tree = &self.store().extent_tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger
-            .seek(Bound::Included(&ExtentKey::new(
+            .seek(Bound::Included(&ObjectKey::extent(
                 self.object_id,
                 self.attribute_id,
                 offset..offset + 1,
@@ -961,10 +1023,17 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
         let end_align = ((offset + to_do as u64) % block_size) as usize;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
         let reads = FuturesUnordered::new();
-        while let Some(ItemRef { key: extent_key, value: extent_value, .. }) = iter.get() {
-            if extent_key.object_id != self.object_id
-                || extent_key.attribute_id != self.attribute_id
-            {
+        while let Some(ItemRef {
+            key:
+                ObjectKey {
+                    object_id,
+                    data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent_key)),
+                },
+            value: ObjectValue::Extent(extent_value),
+            ..
+        }) = iter.get()
+        {
+            if *object_id != self.object_id || *attribute_id != self.attribute_id {
                 break;
             }
             if extent_key.range.start > offset {
@@ -1166,9 +1235,9 @@ mod tests {
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
-                extent_record::ExtentKey,
+                extent_record::ExtentValue,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
-                object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
+                object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
@@ -1398,6 +1467,10 @@ mod tests {
                 Self { fill: 0, object, mirror }
             }
 
+            // Fills |range| of self.object with a byte value (self.fill) and mirrors the same
+            // operation to an in-memory copy of the object.
+            // Each subsequent call bumps the value of fill.
+            // It is expected that the object and its mirror maintain identical content.
             async fn test(&mut self, range: Range<u64>) {
                 let mut buf = self.object.allocate_buffer((range.end - range.start) as usize);
                 self.fill += 1;
@@ -1422,18 +1495,18 @@ mod tests {
         let block_size = object.block_size() as u64;
         let mut align = AlignTest::new(object).await;
 
-        // Fill the object to start with.
+        // Fill the object to start with (with 1).
         align.test(0..2 * block_size + 1).await;
 
-        // Unaligned head.
+        // Unaligned head (fills with 2, overwrites that with 3).
         align.test(1..block_size).await;
         align.test(1..2 * block_size).await;
 
-        // Unaligned tail.
+        // Unaligned tail (fills with 4 and 5).
         align.test(0..block_size - 1).await;
         align.test(0..2 * block_size - 1).await;
 
-        // Both unaligned.
+        // Both unaligned (fills with 6 and 7).
         align.test(1..block_size - 1).await;
         align.test(1..2 * block_size - 1).await;
 
@@ -1642,29 +1715,32 @@ mod tests {
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        let mut found = false;
+        let mut found_tombstone = false;
+        let mut found_deleted_extent = false;
         while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
             if *object_id == object.object_id() {
                 match (data, value) {
+                    // Tombstone entry
                     (ObjectKeyData::Object, ObjectValue::None) => {
-                        assert!(!found);
-                        found = true;
+                        assert!(!found_tombstone);
+                        found_tombstone = true;
                     }
+                    // Deleted extent entry
+                    (
+                        ObjectKeyData::Attribute(0, AttributeKey::Extent(_)),
+                        ObjectValue::Extent(ExtentValue::None),
+                    ) => {
+                        assert!(!found_deleted_extent);
+                        found_deleted_extent = true;
+                    }
+                    // We don't expect anything else.
                     _ => assert!(false, "Unexpected item {:?}", iter.get()),
                 }
             }
             iter.advance().await.expect("advance failed");
         }
-        assert!(found);
-
-        // Make sure there are no extents.
-        let layer_set = store.extent_tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        while let Some(ItemRef { key: ExtentKey { object_id, .. }, value, .. }) = iter.get() {
-            assert!(*object_id != object.object_id() || value.is_deleted());
-            iter.advance().await.expect("advance failed");
-        }
+        assert!(found_tombstone);
+        assert!(found_deleted_extent);
 
         fs.close().await.expect("Close failed");
     }

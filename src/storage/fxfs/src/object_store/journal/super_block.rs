@@ -5,11 +5,10 @@
 use {
     crate::{
         errors::FxfsError,
-        lsm_tree::types::{Item, LayerIterator},
+        lsm_tree::types::LayerIterator,
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            extent_record::{ExtentKey, ExtentValue},
             journal::{
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
@@ -159,9 +158,6 @@ pub enum SuperBlockRecord {
     // parent object store.
     ObjectItem(ObjectItem),
 
-    // After the ObjectItem records, come the extent records.
-    ExtentItem(Item<ExtentKey, ExtentValue>),
-
     // Marks the end of the full super-block.
     End,
 }
@@ -265,17 +261,6 @@ impl SuperBlock {
             iter.advance().await?;
         }
 
-        let tree = root_parent_store.extent_tree();
-        let layer_set = tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await?;
-
-        while let Some(item_ref) = iter.get() {
-            writer.maybe_extend().await?;
-            SuperBlockRecord::ExtentItem(item_ref.cloned()).serialize_into(&mut writer.writer)?;
-            iter.advance().await?;
-        }
-
         SuperBlockRecord::End.serialize_into(&mut writer.writer)?;
         writer.writer.pad_to_block()?;
         writer.flush_buffer().await
@@ -339,7 +324,6 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> SuperBlockWriter<'a, S> 
 pub enum SuperBlockItem {
     End,
     Object(ObjectItem),
-    Extent(Item<ExtentKey, ExtentValue>),
 }
 
 pub struct ItemReader {
@@ -358,9 +342,6 @@ impl ItemReader {
                 }
                 ReadResult::Some(SuperBlockRecord::ObjectItem(item)) => {
                     return Ok(SuperBlockItem::Object(item))
-                }
-                ReadResult::Some(SuperBlockRecord::ExtentItem(item)) => {
-                    return Ok(SuperBlockItem::Extent(item))
                 }
                 ReadResult::Some(SuperBlockRecord::End) => return Ok(SuperBlockItem::End),
             }
@@ -525,20 +506,6 @@ mod tests {
 
         while let Some(item) = iter.get() {
             if let SuperBlockItem::Object(i) = written_item {
-                assert_eq!(i.as_item_ref(), item);
-            } else {
-                panic!("missing item: {:?}", item);
-            }
-            iter.advance().await.expect("advance failed");
-            written_item = written_super_block_a.1.next_item().await.expect("next_item failed");
-        }
-
-        let layer_set = fs.object_manager().root_parent_store().extent_tree().layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-
-        while let Some(item) = iter.get() {
-            if let SuperBlockItem::Extent(i) = written_item {
                 assert_eq!(i.as_item_ref(), item);
             } else {
                 panic!("missing item: {:?}", item);

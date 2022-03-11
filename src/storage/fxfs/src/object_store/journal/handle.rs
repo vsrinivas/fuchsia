@@ -7,7 +7,10 @@ use {
         errors::FxfsError,
         lsm_tree::types::ItemRef,
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
+        object_store::{
+            extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
+            object_record::{ObjectKey, ObjectValue},
+        },
         range::RangeExt,
     },
     anyhow::{anyhow, bail, Error},
@@ -56,16 +59,17 @@ impl Handle {
         self.extents.push(r);
     }
 
-    pub fn try_push_extent(
+    pub fn try_push_extent_from_object_item(
         &mut self,
-        item: ItemRef<'_, ExtentKey, ExtentValue>,
+        item: ItemRef<'_, ObjectKey, ObjectValue>,
     ) -> Result<bool, Error> {
-        match item {
-            ItemRef {
-                key: ExtentKey { object_id, attribute_id: DEFAULT_DATA_ATTRIBUTE_ID, range },
-                value: ExtentValue::Some { device_offset, .. },
-                ..
-            } if *object_id == self.object_id => {
+        match item.into() {
+            Some((
+                object_id,
+                DEFAULT_DATA_ATTRIBUTE_ID,
+                ExtentKey { range },
+                ExtentValue::Some { device_offset, .. },
+            )) if object_id == self.object_id => {
                 if self.extents.is_empty() {
                     self.start_offset = range.start;
                 } else if range.start != self.start_offset + self.size {

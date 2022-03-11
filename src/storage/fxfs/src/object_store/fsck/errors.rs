@@ -325,7 +325,7 @@ impl FsckFatal {
             FsckFatal::MisOrderedLayerFile(store_id, layer_file_id) => {
                 format!(
                     "Layer file {} for store/allocator {} contains out-of-order records",
-                    store_id, layer_file_id
+                    layer_file_id, store_id
                 )
             }
             FsckFatal::MisOrderedObjectStore(store_id) => {
