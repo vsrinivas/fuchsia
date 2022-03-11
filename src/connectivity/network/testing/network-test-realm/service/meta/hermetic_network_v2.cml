@@ -82,6 +82,7 @@
         {
             protocol: [
                 "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",

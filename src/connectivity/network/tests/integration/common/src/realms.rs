@@ -489,6 +489,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                         subdir: Some(constants::netcfg::CLASS_ETHERNET_PATH.to_string()),
                         ..fnetemul::DevfsDep::EMPTY
                     }),
+                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                        name: Some(constants::netcfg::DEV_CLASS_NETWORK.to_string()),
+                        subdir: Some(constants::netcfg::CLASS_NETWORK_PATH.to_string()),
+                        ..fnetemul::DevfsDep::EMPTY
+                    }),
                 ])),
                 ..fnetemul::ChildDef::EMPTY
             },

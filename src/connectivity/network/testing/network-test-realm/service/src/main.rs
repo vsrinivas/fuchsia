@@ -8,11 +8,13 @@ use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_hardware_network as fhwnet;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_test_realm as fntr;
 use fidl_fuchsia_netstack as fnetstack;
@@ -38,77 +40,358 @@ const DEFAULT_METRIC: u32 = 100;
 const DEFAULT_INTERFACE_TOPOLOGICAL_PATH: &'static str = "/dev/fake/topological/path";
 const DEFAULT_INTERFACE_FILE_PATH: &'static str = "/dev/fake/file/path";
 
-/// Returns a `fidl::endpoints::ClientEnd` for the device that matches
-/// `mac_address`.
-///
-/// If a matching device is not found, then an error is returned.
-async fn find_device_client_end(
-    expected_mac_address: fnet_ext::MacAddress,
-) -> Result<fidl::endpoints::ClientEnd<fethernet::DeviceMarker>, fntr::Error> {
-    // TODO(https://fxbug.dev/89648): Replace this function with a call to
-    // fuchsia.net.debug. As an intermediate solution, the
-    // `fidl::endpoints::ClientEnd` is obtained by enumerating the ethernet
-    // devices in devfs.
-    const ETHERNET_DIRECTORY_PATH: &'static str = "/dev/class/ethernet";
+trait ResultExt<T> {
+    /// Converts from `Result<T, E>` to `Option<T>`.
+    ///
+    /// If there is an error, then the `msg` with the error appended is logged
+    /// as a warning and `Option::None` is returned. Otherwise, `Option::Some`
+    /// is returned with the value.
+    fn ok_or_log_err(self, msg: &str) -> Option<T>;
+}
 
+impl<T, E: std::fmt::Debug> ResultExt<T> for Result<T, E> {
+    fn ok_or_log_err(self, msg: &str) -> Option<T> {
+        match self {
+            Ok(val) => Some(val),
+            Err(e) => {
+                warn!("{}: {:?}", msg, e);
+                None
+            }
+        }
+    }
+}
+
+/// Returns a stream of existing `fhwnet::PortId`s for the provided
+/// `device_proxy`.
+fn existing_ports(
+    device_proxy: &fhwnet::DeviceProxy,
+) -> Result<impl futures::Stream<Item = fhwnet::PortId> + '_> {
+    let client = netdevice_client::Client::new(Clone::clone(device_proxy));
+    Ok(client.device_port_event_stream().context("device_port_event_stream failed")?.scan(
+        (),
+        |_: &mut (), event| match event {
+            Ok(event) => match event {
+                fhwnet::DevicePortEvent::Existing(port_id) => futures::future::ready(Some(port_id)),
+                fhwnet::DevicePortEvent::Idle(fhwnet::Empty {}) => futures::future::ready(None),
+                fhwnet::DevicePortEvent::Added(_) | fhwnet::DevicePortEvent::Removed(_) => {
+                    // The first n events should correspond to existing
+                    // ports and should be followed by an idle event. As a
+                    // result, this shouldn't happen.
+                    unreachable!("unexpected event: {:?}", event);
+                }
+            },
+            Err(e) => {
+                warn!("DevicePortEvent error: {:?}", e);
+                futures::future::ready(None)
+            }
+        },
+    ))
+}
+
+/// Returns a stream that contains a `P::Proxy` for each file in the provided
+/// `directory`.
+async fn file_proxies<P: fidl::endpoints::ProtocolMarker>(
+    directory: &str,
+) -> Result<impl futures::Stream<Item = P::Proxy> + '_, fntr::Error> {
     let (directory_proxy, directory_server_end) =
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(|e| {
-            error!("failed to create directory endpoint: {:?}", e);
+            error!("create_proxy failed: {:?}", e);
             fntr::Error::Internal
         })?;
-    fdio::service_connect(ETHERNET_DIRECTORY_PATH, directory_server_end.into_channel().into())
-        .map_err(|e| {
-            error!(
-                "failed to connect to directory service at {} with error: {:?}",
-                ETHERNET_DIRECTORY_PATH, e
-            );
-            fntr::Error::Internal
-        })?;
-    let files = files_async::readdir(&directory_proxy).await.map_err(|e| {
-        error!("failed to read files in {} with error {:?}", ETHERNET_DIRECTORY_PATH, e);
+    fdio::service_connect(directory, directory_server_end.into_channel().into()).map_err(|e| {
+        error!("service_connect failed to connect at {} with error: {:?}", directory, e);
         fntr::Error::Internal
     })?;
 
-    for file in files {
-        let filepath = path::Path::new(ETHERNET_DIRECTORY_PATH).join(&file.name);
-        let filepath = filepath.to_str().ok_or_else(|| {
-            error!("failed to convert file path to string");
+    let proxies: Result<Vec<P::Proxy>, fntr::Error> = files_async::readdir(&directory_proxy)
+        .await
+        .map_err(|e| {
+            error!("failed to read files in {} with error {:?}", directory, e);
             fntr::Error::Internal
-        })?;
-        let (device_proxy, device_server_end) =
-            fidl::endpoints::create_proxy::<fethernet::DeviceMarker>().map_err(|e| {
-                error!("failed to create device endpoint: {:?}", e);
+        })?
+        .iter()
+        .map(|file| {
+            let filepath = path::Path::new(directory).join(&file.name);
+            let filepath = filepath.to_str().ok_or_else(|| {
+                error!("failed to convert file path to string");
                 fntr::Error::Internal
             })?;
-        fdio::service_connect(filepath, device_server_end.into_channel().into()).map_err(|e| {
-            error!("failed to connect to device service: {:?}", e);
-            fntr::Error::Internal
-        })?;
+            let (proxy, server_end) = fidl::endpoints::create_proxy::<P>().map_err(|e| {
+                error!("create_proxy failed: {:?}", e);
+                fntr::Error::Internal
+            })?;
+            fdio::service_connect(filepath, server_end.into_channel().into()).map_err(|e| {
+                error!("service_connect failed to connect at {} with error: {:?}", filepath, e);
+                fntr::Error::Internal
+            })?;
+            Ok(proxy)
+        })
+        .collect();
 
-        let info = device_proxy.get_info().await.map_err(|e| {
-            error!("failed to read ethernet device info: {:?}", e);
-            fntr::Error::Internal
-        })?;
+    Ok(futures::stream::iter(proxies?))
+}
 
-        if info.mac.octets == expected_mac_address.octets {
-            let channel = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
-                device_proxy
-                    .into_channel()
-                    .map_err(|e| {
-                        error!("failed to convert device proxy to channel: {:?}", e);
-                        fntr::Error::Internal
-                    })?
-                    .into_zx_channel(),
-            );
-            return Ok(channel);
-        }
-    }
+/// Returns the `fhwnet::PortId` that corresponds to the provided
+/// `expected_mac_address`.
+///
+/// If a matching port is not found, then `Option::None` is returned.
+async fn find_matching_port_id(
+    expected_mac_address: fnet_ext::MacAddress,
+    device_proxy: &fhwnet::DeviceProxy,
+) -> Result<Option<fhwnet::PortId>> {
+    let results = existing_ports(&device_proxy)?.filter_map(|mut port_id| async move {
+        // Note that errors are logged, but not propagated. In the event of an
+        // error, this ensures that other ports/devices can be searched for the
+        // `expected_mac_address`.
 
-    warn!(
-        "failed to find interface with MAC address: {} in {}",
-        expected_mac_address, ETHERNET_DIRECTORY_PATH
+        let (port, port_server_end) = fidl::endpoints::create_proxy::<fhwnet::PortMarker>()
+            .ok_or_log_err("create_proxy failed")?;
+
+        device_proxy.get_port(&mut port_id, port_server_end).ok_or_log_err("get_port failed")?;
+
+        let (mac, mac_server_end) = fidl::endpoints::create_proxy::<fhwnet::MacAddressingMarker>()
+            .ok_or_log_err("create_proxy failed")?;
+
+        port.get_mac(mac_server_end).ok_or_log_err("get_mac failed")?;
+
+        let mac = mac.get_unicast_address().await.ok_or_log_err("get_unicast_address failed")?;
+
+        (mac.octets == expected_mac_address.octets).then(|| port_id)
+    });
+
+    futures::pin_mut!(results);
+    Ok(results.next().await)
+}
+
+/// Installs a netdevice with the provided `name` on the hermetic Netstack.
+///
+/// The `port_id` and `device_proxy` correspond to a system netdevice.
+async fn install_netdevice(
+    name: &str,
+    mut port_id: fhwnet::PortId,
+    device_proxy: fhwnet::DeviceProxy,
+    connector: &HermeticNetworkConnector,
+) -> Result<(), fntr::Error> {
+    let installer = connector.connect_to_protocol::<fnet_interfaces_admin::InstallerMarker>()?;
+    let (device_control, device_control_server_end) = fidl::endpoints::create_proxy::<
+        fnet_interfaces_admin::DeviceControlMarker,
+    >()
+    .map_err(|e| {
+        error!("create_proxy failed: {:?}", e);
+        fntr::Error::Internal
+    })?;
+
+    let channel = fidl::endpoints::ClientEnd::<fhwnet::DeviceMarker>::new(
+        device_proxy
+            .into_channel()
+            .map_err(|e| {
+                error!("into_channel failed: {:?}", e);
+                fntr::Error::Internal
+            })?
+            .into_zx_channel(),
     );
-    Err(fntr::Error::InterfaceNotFound)
+    installer.install_device(channel, device_control_server_end).map_err(|e| {
+        error!("install_device failed: {:?}", e);
+        fntr::Error::Internal
+    })?;
+
+    let (control, control_server_end) = fnet_interfaces_ext::admin::Control::create_endpoints()
+        .map_err(|e| {
+            error!("create_endpoints failed: {:?}", e);
+            fntr::Error::Internal
+        })?;
+
+    device_control
+        .create_interface(
+            &mut port_id,
+            control_server_end,
+            fnet_interfaces_admin::Options {
+                name: Some(name.to_string()),
+                metric: Some(DEFAULT_METRIC),
+                ..fnet_interfaces_admin::Options::EMPTY
+            },
+        )
+        .map_err(|e| {
+            error!("create_interface failed: {:?}", e);
+            fntr::Error::Internal
+        })?;
+
+    // Enable the interface that was newly added to the hermetic Netstack. It is
+    // not enabled by default. Note that the `enable_interface` function could
+    // be used here, but is not since using the `Control` type is simpler in
+    // this case (no need to fetch the interface ID).
+    let _did_enable = control
+        .enable()
+        .await
+        // TODO(https://fxbug.dev/95432): Define more granular error types for
+        // the interface being removed.
+        .map_err(|e| {
+            error!("enable failed: {:?}", e);
+            fntr::Error::Internal
+        })?
+        .map_err(|e| {
+            error!("enable error: {:?}", e);
+            fntr::Error::Internal
+        })?;
+
+    // Extend the lifetime of the created interface beyond that of the `control`
+    // and `device_control` types. Note that the lifetime of the created
+    // interface is tied to the hermetic Netstack. That is, the interface will
+    // be removed when the hermetic Netstack is shutdown.
+    control.detach().map_err(|e| {
+        error!("detatch failed for Control: {:?}", e);
+        fntr::Error::Internal
+    })?;
+    device_control.detach().map_err(|e| {
+        error!("detach failed for DeviceControl: {:?}", e);
+        fntr::Error::Internal
+    })
+}
+
+/// Attempts to install a netdevice on the hermetic Netstack.
+///
+/// If a device was installed, then true is returned. An error may be returned
+/// if the `expected_mac_address` matches a netdevice, but installation of the
+/// device on the hermetic Netstack failed.
+async fn try_install_netdevice(
+    name: &str,
+    expected_mac_address: fnet_ext::MacAddress,
+    connector: &HermeticNetworkConnector,
+) -> Result<bool, fntr::Error> {
+    const NETDEV_DIRECTORY_PATH: &'static str = "/dev/class/network";
+
+    let results = file_proxies::<fhwnet::DeviceInstanceMarker>(NETDEV_DIRECTORY_PATH)
+        .await?
+        .filter_map(|device_instance_proxy| async move {
+            // Note that errors are logged, but not propagated. In the event of
+            // an error, this ensures that other devices can be searched for the
+            // `expected_mac_address`.
+
+            let (device_proxy, device_server_end) =
+                fidl::endpoints::create_proxy::<fhwnet::DeviceMarker>()
+                    .ok_or_log_err("create_proxy failed")?;
+
+            device_instance_proxy
+                .get_device(device_server_end)
+                .ok_or_log_err("get_device failed")?;
+
+            find_matching_port_id(expected_mac_address, &device_proxy)
+                .await
+                .ok_or_log_err("find_matching_port_id failed")?
+                .and_then(|port_id| Some((port_id, device_proxy)))
+        });
+
+    futures::pin_mut!(results);
+
+    match results.next().await {
+        Some((port_id, device_proxy)) => {
+            install_netdevice(name, port_id, device_proxy, connector).await?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
+/// Installs an ethernet device with the provided `name` on the hermetic
+/// Netstack.
+async fn install_eth_device(
+    name: &str,
+    device_proxy: fethernet::DeviceProxy,
+    connector: &HermeticNetworkConnector,
+) -> Result<(), fntr::Error> {
+    let device_client_end = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
+        device_proxy
+            .into_channel()
+            .map_err(|e| {
+                error!("into_channel failed: {:?}", e);
+                fntr::Error::Internal
+            })?
+            .into_zx_channel(),
+    );
+
+    // TODO(https://fxbug.dev/89651): Support Netstack3. Currently, an
+    // interface name cannot be specified when adding an interface via
+    // fuchsia.net.stack.Stack. As a result, the Network Test Realm
+    // currently does not support Netstack3.
+    let id: u32 = connector
+        .connect_to_protocol::<fnetstack::NetstackMarker>()?
+        .add_ethernet_device(
+            DEFAULT_INTERFACE_TOPOLOGICAL_PATH,
+            &mut fnetstack::InterfaceConfig {
+                name: name.to_string(),
+                filepath: DEFAULT_INTERFACE_FILE_PATH.to_string(),
+                metric: DEFAULT_METRIC,
+            },
+            device_client_end,
+        )
+        .await
+        .map_err(|e| {
+            error!("add_ethernet_device failed: {:?}", e);
+            fntr::Error::Internal
+        })?
+        // TODO(https://fxbug.dev/95432): Define more granular error types.
+        .map_err(|e| {
+            error!("add_ethernet_device error: {:?}", e);
+            fntr::Error::Internal
+        })?;
+
+    // Enable the interface that was newly added to the hermetic Netstack.
+    // It is not enabled by default.
+    enable_interface(id.into(), connector).await
+}
+
+/// Attempts to install an ethernet device on the hermetic Netstack.
+///
+/// If a device was installed, then true is returned. An error may be returned
+/// if the `expected_mac_address` matches an ethernet device, but installation
+/// of the device on the hermetic Netstack failed.
+async fn try_install_eth_device(
+    name: &str,
+    expected_mac_address: fnet_ext::MacAddress,
+    connector: &HermeticNetworkConnector,
+) -> Result<bool, fntr::Error> {
+    const ETHERNET_DIRECTORY_PATH: &'static str = "/dev/class/ethernet";
+
+    let results = file_proxies::<fethernet::DeviceMarker>(ETHERNET_DIRECTORY_PATH)
+        .await?
+        .filter_map(|device_proxy| async move {
+            // Note that errors are logged, but not propagated. In the event of
+            // an error, this ensures that other devices can be searched for the
+            // `expected_mac_address`.
+
+            device_proxy.get_info().await.ok_or_log_err("get_info failed").and_then(|info| {
+                (info.mac.octets == expected_mac_address.octets).then(|| device_proxy)
+            })
+        });
+    futures::pin_mut!(results);
+
+    match results.next().await {
+        Some(device_proxy) => {
+            install_eth_device(name, device_proxy, connector).await?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
+/// Adds an interface with the provided `name` to the hermetic Netstack.
+///
+/// If a matching interface cannot be found in devfs, then an
+/// `fntr::Error::InterfaceNotFound` error is returned. Errors installing the
+/// interface may also be propagated.
+async fn install_interface(
+    name: &str,
+    mac_address: fnet_ext::MacAddress,
+    connector: &HermeticNetworkConnector,
+) -> Result<(), fntr::Error> {
+    // TODO(https://fxbug.dev/89648): Replace this with fuchsia.net.debug, which
+    // should ideally provide direct access to the matching interface. As an
+    // intermediate solution, interfaces are read directly from devfs (for
+    // ethernet and netdevice).
+    (try_install_eth_device(name, mac_address, connector).await?
+        || try_install_netdevice(name, mac_address, connector).await?)
+        .then(|| ())
+        .ok_or(fntr::Error::InterfaceNotFound)
 }
 
 /// Returns the id for the enabled interface that matches `mac_address`.
@@ -888,37 +1171,8 @@ impl Controller {
             .as_ref()
             .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
 
-        let device_client_end = find_device_client_end(mac_address).await?;
         let interface_id_to_disable = find_enabled_interface_id(mac_address).await?;
-
-        // TODO(https://fxbug.dev/89651): Support Netstack3. Currently, an
-        // interface name cannot be specified when adding an interface via
-        // fuchsia.net.stack.Stack. As a result, the Network Test Realm
-        // currently does not support Netstack3.
-        let id: u32 = hermetic_network_connector
-            .connect_to_protocol::<fnetstack::NetstackMarker>()?
-            .add_ethernet_device(
-                DEFAULT_INTERFACE_TOPOLOGICAL_PATH,
-                &mut fnetstack::InterfaceConfig {
-                    name: name.to_string(),
-                    filepath: DEFAULT_INTERFACE_FILE_PATH.to_string(),
-                    metric: DEFAULT_METRIC,
-                },
-                device_client_end,
-            )
-            .await
-            .map_err(|e| {
-                error!("add_ethernet_device failed: {:?}", e);
-                fntr::Error::Internal
-            })?
-            .map_err(|e| {
-                error!("add_ethernet_device error: {:?}", e);
-                fntr::Error::Internal
-            })?;
-
-        // Enable the interface that was newly added to the hermetic Netstack.
-        // It is not enabled by default.
-        enable_interface(id.into(), hermetic_network_connector).await?;
+        install_interface(name, mac_address, hermetic_network_connector).await?;
 
         if let Some(interface_id_to_disable) = interface_id_to_disable {
             // Disable the matching interface on the system's Netstack.
