@@ -1132,9 +1132,7 @@ See //tools/size_checker for more details.`)
 	}
 	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsCapacity)
 
-	if reportPath == "" {
-		log.Println(report)
-	} else {
+	if reportPath != "" {
 		file, err := os.Create(reportPath)
 		if err != nil {
 			log.Fatal(err)
@@ -1149,6 +1147,7 @@ See //tools/size_checker for more details.`)
 	}
 
 	if overBudget {
+		log.Println(report)
 		os.Exit(1)
 	}
 }
