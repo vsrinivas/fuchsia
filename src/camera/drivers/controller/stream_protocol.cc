@@ -148,7 +148,10 @@ void StreamImpl::GetBuffers(GetBuffersCallback callback) {
 
   fuchsia::sysmem::BufferCollectionTokenHandle token;
   input_buffer_collection->AttachToken(ZX_RIGHT_SAME_RIGHTS, token.NewRequest());
-  callback(std::move(token));
+  input_buffer_collection->Sync(
+      [token = std::move(token), callback = std::move(callback)]() mutable {
+        callback(std::move(token));
+      });
 }
 
 }  // namespace camera
