@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/vector.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -29,6 +32,11 @@ constexpr char kPresentViewComponentUri[] =
     "fuchsia-pkg://fuchsia.com/present_view_tests#meta/present_view.cmx";
 constexpr char kIntlPropertyProviderUri[] =
     "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager_without_flags.cmx";
+
+// Max timeouts in failure cases.
+// Set this as low as you can that still works across all test platforms.
+constexpr zx::duration kGlobalTimeout = zx::min(10);
+constexpr zx::duration kTimeout = zx::min(1);
 
 // This test fixture tests the full present_view component running as a standalone process.
 //
@@ -56,6 +64,12 @@ class PresentViewIntegrationTest : public gtest::TestWithEnvironmentFixture {
   PresentViewIntegrationTest()
       : interceptor_(sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(real_env())),
         fake_presenter_(std::make_unique<testing::FakePresenter>()) {
+    // Post a "just in case" quit task, if the test hangs.
+    async::PostDelayedTask(
+        dispatcher(),
+        [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
+        kGlobalTimeout);
+
     // We want to inject our fake components and services into the environment.
     auto services = interceptor_.MakeEnvironmentServices(real_env());
     services->AddService(fake_presenter_->GetHandler());
@@ -88,13 +102,8 @@ class PresentViewIntegrationTest : public gtest::TestWithEnvironmentFixture {
     WaitForEnclosingEnvToStart(environment_.get());
   }
 
-  void RunUntilTerminated(RunningComponent* component) {
-    RunLoopUntil([&component] { return component->terminated(); });
-  }
-
-  void TerminateComponent(RunningComponent* component) {
-    component->controller->Kill();
-    RunUntilTerminated(component);
+  bool RunLoopWithTestTimeoutOrUntil(fit::function<bool()> condition) {
+    return RunLoopWithTimeoutOrUntil(std::move(condition), kTimeout, zx::duration::infinite());
   }
 
   std::unique_ptr<RunningComponent> LaunchComponent(std::string url,
@@ -129,13 +138,9 @@ class PresentViewIntegrationTest : public gtest::TestWithEnvironmentFixture {
     return component;
   }
 
-  std::unique_ptr<RunningComponent> RunComponentUntilTerminated(std::string url,
-                                                                std::vector<std::string> args) {
-    std::unique_ptr<RunningComponent> present_view =
-        LaunchComponent(kPresentViewComponentUri, std::move(args));
-    RunUntilTerminated(present_view.get());
-
-    return present_view;
+  void TerminateComponent(RunningComponent* component) {
+    component->controller->Kill();
+    RunLoopWithTestTimeoutOrUntil([&component] { return component->terminated(); });
   }
 
   std::unique_ptr<RunningComponent> LaunchPresentView(std::vector<std::string> args) {
@@ -143,7 +148,10 @@ class PresentViewIntegrationTest : public gtest::TestWithEnvironmentFixture {
   }
 
   std::unique_ptr<RunningComponent> RunPresentViewUntilTerminated(std::vector<std::string> args) {
-    return RunComponentUntilTerminated(kPresentViewComponentUri, std::move(args));
+    std::unique_ptr<RunningComponent> present_view = LaunchPresentView(std::move(args));
+    RunLoopWithTestTimeoutOrUntil([&present_view] { return present_view->terminated(); });
+
+    return present_view;
   }
 
   sys::testing::ComponentInterceptor interceptor_;
@@ -163,12 +171,12 @@ TEST_F(PresentViewIntegrationTest, NoParams) {
   std::unique_ptr<RunningComponent> present_view = RunPresentViewUntilTerminated({});
   auto* result = std::get_if<sys::testing::TerminationResult>(&present_view->return_val);
   ASSERT_NE(result, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_EQ(fake_view_, nullptr);
-  EXPECT_FALSE(fake_presenter_->bound());
-  EXPECT_FALSE(fake_presenter_->presentation());
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, result->reason);
   EXPECT_EQ(1, result->return_code);
+  ASSERT_NE(fake_presenter_, nullptr);
+  EXPECT_FALSE(fake_presenter_->bound());
+  EXPECT_FALSE(fake_presenter_->presentation());
+  ASSERT_EQ(fake_view_, nullptr);
 }
 
 TEST_F(PresentViewIntegrationTest, NoPositionalParams) {
@@ -181,12 +189,12 @@ TEST_F(PresentViewIntegrationTest, NoPositionalParams) {
       RunPresentViewUntilTerminated({{"--locale=en-US"}});
   auto* result = std::get_if<sys::testing::TerminationResult>(&present_view->return_val);
   ASSERT_NE(result, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_EQ(fake_view_, nullptr);
-  EXPECT_FALSE(fake_presenter_->bound());
-  EXPECT_FALSE(fake_presenter_->presentation());
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, result->reason);
   EXPECT_EQ(1, result->return_code);
+  ASSERT_NE(fake_presenter_, nullptr);
+  EXPECT_FALSE(fake_presenter_->bound());
+  EXPECT_FALSE(fake_presenter_->presentation());
+  ASSERT_EQ(fake_view_, nullptr);
 }
 
 TEST_F(PresentViewIntegrationTest, NonexistentComponentURI) {
@@ -198,43 +206,58 @@ TEST_F(PresentViewIntegrationTest, NonexistentComponentURI) {
       RunPresentViewUntilTerminated({{testing::kNonexistentViewUri}});
   auto* result = std::get_if<sys::testing::TerminationResult>(&present_view->return_val);
   ASSERT_NE(result, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_TRUE(fake_presenter_->presentation());
-  ASSERT_EQ(fake_view_, nullptr);
-  EXPECT_FALSE(fake_presenter_->bound());
-  EXPECT_TRUE(fake_presenter_->presentation()->token().value);
-  EXPECT_TRUE(fake_presenter_->presentation()->peer_disconnected());
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, result->reason);
   EXPECT_EQ(1, result->return_code);
+
+  // bound signals come asynchronously; wait for them to settle before verifying.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] {
+    const bool objects_valid = fake_presenter_ && fake_presenter_->presentation().has_value();
+    return objects_valid && !fake_presenter_->bound() && !fake_presenter_->presentation()->bound();
+  }));
+  // peer_disconnected signals come asynchronously; wait for them to settle before verifying.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] {
+    const bool objects_valid = fake_presenter_ && fake_presenter_->presentation().has_value();
+    return objects_valid && fake_presenter_->presentation()->peer_disconnected();
+  }));
+
+  // All state is settled.  Verify final state.
+  ASSERT_EQ(fake_view_, nullptr);  // This test case has no view.
+  EXPECT_TRUE(fake_presenter_->presentation()->token().value.is_valid());
 }
 
-TEST_F(PresentViewIntegrationTest, Launch) {
+class PresentViewLaunchTest : public PresentViewIntegrationTest,
+                              public ::testing::WithParamInterface<std::vector<std::string>> {};
+
+TEST_P(PresentViewLaunchTest, Launch) {
+  std::vector<std::string> present_view_args = GetParam();
   // present_view should create a token pair and launch the specified component,
   // passing one end to |Presenter| and the other end to a |ViewProvider| from
   // the component.
-  std::unique_ptr<RunningComponent> present_view = LaunchPresentView({{testing::kFakeViewUri}});
+  std::unique_ptr<RunningComponent> present_view = LaunchPresentView(std::move(present_view_args));
 
-  // Run the loop until either both tokens have been created or present_view terminates.
-  RunLoopUntil([this, &present_view] {
-    const bool presenter_bound = fake_presenter_->bound();
-    const bool presentation_bound = presenter_bound && fake_presenter_->presentation();
-    const bool presentation_has_token =
-        presentation_bound && fake_presenter_->presentation()->token().value;
-    const bool view_created = (fake_view_ != nullptr);
-    const bool view_bound = view_created && fake_view_->bound();
-    const bool view_has_token = view_bound && fake_view_->token().value;
+  // Run the loop until both tokens have been created.
+  // Creating tokens implies binding interfaces, so don't explicitly wait on bound signals.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] {
+    const bool objects_valid = fake_presenter_ && fake_presenter_->presentation().has_value();
+    return objects_valid && fake_presenter_->presentation()->token().value.is_valid();
+  }));
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil(
+      [this] { return fake_view_ && fake_view_->token().value.is_valid(); }));
 
-    return (presentation_has_token && view_has_token) || present_view->terminated();
-  });
+  // Check steady state -- that interfaces are bound correctly.
   auto* running_result = std::get_if<std::nullptr_t>(&present_view->return_val);
   ASSERT_NE(running_result, nullptr);
-  ASSERT_NE(fake_view_, nullptr);
   ASSERT_NE(fake_presenter_, nullptr);
   ASSERT_TRUE(fake_presenter_->presentation());
+  EXPECT_TRUE(fake_presenter_->bound());
+  EXPECT_FALSE(fake_presenter_->presentation()->bound());
   EXPECT_FALSE(fake_presenter_->presentation()->peer_disconnected());
+  ASSERT_NE(fake_view_, nullptr);
   EXPECT_FALSE(fake_view_->killed());
+  EXPECT_TRUE(fake_view_->bound());
   EXPECT_FALSE(fake_view_->peer_disconnected());
 
+  // Check steady state -- that correlated tokens exist.
   auto& view_holder_token = fake_presenter_->presentation()->token();
   auto& view_token = fake_view_->token();
   EXPECT_TRUE(view_holder_token.value);
@@ -244,73 +267,38 @@ TEST_F(PresentViewIntegrationTest, Launch) {
   EXPECT_EQ(fsl::GetKoid(view_holder_token.value.get()),
             fsl::GetRelatedKoid(view_token.value.get()));
 
+  // Terminate `present_view` which should also terminate the view-providing component.
   TerminateComponent(present_view.get());
   auto* killed_result = std::get_if<sys::testing::TerminationResult>(&present_view->return_val);
   ASSERT_NE(killed_result, nullptr);
-  ASSERT_NE(fake_view_, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_TRUE(fake_presenter_->presentation());
-  EXPECT_FALSE(fake_presenter_->bound());
-  EXPECT_FALSE(fake_presenter_->presentation()->bound());
-  EXPECT_TRUE(fake_presenter_->presentation()->peer_disconnected());
-  EXPECT_FALSE(fake_view_->bound());
-  EXPECT_TRUE(fake_view_->killed());
-  EXPECT_FALSE(fake_view_->peer_disconnected());  // Wait was cancelled by Kill()
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, killed_result->reason);
   EXPECT_EQ(ZX_TASK_RETCODE_SYSCALL_KILL, killed_result->return_code);
+
+  // killed signals come asynchronously; wait for them to settle before verifying.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] { return fake_view_ && fake_view_->killed(); }));
+  // bound signals come asynchronously; wait for them to settle before verifying.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] {
+    const bool objects_valid =
+        fake_view_ && fake_presenter_ && fake_presenter_->presentation().has_value();
+    return objects_valid && !fake_view_->bound() && !fake_presenter_->bound() &&
+           !fake_presenter_->presentation()->bound();
+  }));
+  // peer_disconnected signals come asynchronously; wait for them to settle before verifying.
+  EXPECT_TRUE(RunLoopWithTestTimeoutOrUntil([this] {
+    const bool objects_valid =
+        fake_view_ && fake_presenter_ && fake_presenter_->presentation().has_value();
+    return objects_valid && !fake_view_->peer_disconnected() /* Wait was cancelled by Kill() */ &&
+           fake_presenter_->presentation()->peer_disconnected();
+  }));
+
+  // All state is settled.  Verify final state.
+  EXPECT_TRUE(!fake_view_->token().value.is_valid()); /* Token was destroyed by Kill() */
+  EXPECT_TRUE(fake_presenter_->presentation()->token().value.is_valid());
 }
 
-TEST_F(PresentViewIntegrationTest, LaunchWithLocale) {
-  // present_view should create a token pair and launch the specified component,
-  // passing one end to |Presenter| and the other end to a |ViewProvider| from
-  // the component.
-  std::unique_ptr<RunningComponent> present_view =
-      LaunchPresentView({{"--locale=en-US"}, {testing::kFakeViewUri}});
-
-  // Run the loop until either both tokens have been created or present_view terminates.
-  RunLoopUntil([this, &present_view] {
-    const bool presenter_bound = fake_presenter_->bound();
-    const bool presentation_bound = presenter_bound && fake_presenter_->presentation();
-    const bool presentation_has_token =
-        presentation_bound && fake_presenter_->presentation()->token().value;
-    const bool view_created = (fake_view_ != nullptr);
-    const bool view_bound = view_created && fake_view_->bound();
-    const bool view_has_token = view_bound && fake_view_->token().value;
-
-    return (presentation_has_token && view_has_token) || present_view->terminated();
-  });
-  auto* running_result = std::get_if<std::nullptr_t>(&present_view->return_val);
-  ASSERT_NE(running_result, nullptr);
-  ASSERT_NE(fake_view_, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_TRUE(fake_presenter_->presentation());
-  EXPECT_FALSE(fake_presenter_->presentation()->peer_disconnected());
-  EXPECT_FALSE(fake_view_->killed());
-  EXPECT_FALSE(fake_view_->peer_disconnected());
-
-  auto& view_holder_token = fake_presenter_->presentation()->token();
-  auto& view_token = fake_view_->token();
-  EXPECT_TRUE(view_holder_token.value);
-  EXPECT_TRUE(view_token.value);
-  EXPECT_EQ(fsl::GetKoid(view_token.value.get()),
-            fsl::GetRelatedKoid(view_holder_token.value.get()));
-  EXPECT_EQ(fsl::GetKoid(view_holder_token.value.get()),
-            fsl::GetRelatedKoid(view_token.value.get()));
-
-  TerminateComponent(present_view.get());
-  auto* killed_result = std::get_if<sys::testing::TerminationResult>(&present_view->return_val);
-  ASSERT_NE(killed_result, nullptr);
-  ASSERT_NE(fake_view_, nullptr);
-  ASSERT_NE(fake_presenter_, nullptr);
-  ASSERT_TRUE(fake_presenter_->presentation());
-  EXPECT_FALSE(fake_presenter_->bound());
-  EXPECT_FALSE(fake_presenter_->presentation()->bound());
-  EXPECT_TRUE(fake_presenter_->presentation()->peer_disconnected());
-  EXPECT_FALSE(fake_view_->bound());
-  EXPECT_TRUE(fake_view_->killed());
-  EXPECT_FALSE(fake_view_->peer_disconnected());  // Wait was cancelled by Kill()
-  EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, killed_result->reason);
-  EXPECT_EQ(ZX_TASK_RETCODE_SYSCALL_KILL, killed_result->return_code);
-}
+INSTANTIATE_TEST_SUITE_P(DifferentArgs, PresentViewLaunchTest,
+                         ::testing::Values(std::vector<std::string>{{testing::kFakeViewUri}},
+                                           std::vector<std::string>{{"--locale=en-US"},
+                                                                    {testing::kFakeViewUri}}));
 
 }  // namespace present_view::test

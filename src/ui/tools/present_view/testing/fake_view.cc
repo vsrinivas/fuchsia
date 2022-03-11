@@ -30,10 +30,10 @@ void FakeView::CreateViewWithViewRef(zx::eventpair view_token,
                                      fuchsia::ui::views::ViewRefControl view_ref_control,
                                      fuchsia::ui::views::ViewRef view_ref) {
   // Wait on the passed-in |ViewToken| so we can detect if the peer token is destroyed.
-  token_waiter_ =
-      std::make_unique<async::Wait>(view_token.get(), __ZX_OBJECT_PEER_CLOSED, 0,
-                                    std::bind([this] { token_peer_disconnected_ = true; }));
   token_.value = std::move(view_token);
+  token_waiter_ =
+      std::make_unique<async::Wait>(token_.value.get(), __ZX_OBJECT_PEER_CLOSED, 0,
+                                    std::bind([this] { token_peer_disconnected_ = true; }));
 
   zx_status_t wait_status = token_waiter_->Begin(async_get_default_dispatcher());
   EXPECT_EQ(wait_status, ZX_OK);
@@ -61,9 +61,10 @@ void FakeView::Bind(fidl::InterfaceRequest<fuchsia::ui::views::View> request) {
 
 void FakeView::OnKill() {
   token_waiter_.reset();
+  token_ = fuchsia::ui::views::ViewToken();  // Must outlive `token_waiter_`.
+
   legacy_binding_.Unbind();
   binding_.Unbind();
-  token_ = fuchsia::ui::views::ViewToken();
   killed_ = true;
 }
 

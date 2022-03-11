@@ -40,10 +40,10 @@ class FakePresentation : public fuchsia::ui::policy::testing::Presentation_TestB
   void NotImplemented_(const std::string& name) override;
 
  private:
+  fuchsia::ui::views::ViewHolderToken token_;  // Must outlive `token_waiter_`.
   std::unique_ptr<async::Wait> token_waiter_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> binding_;
-  fuchsia::ui::views::ViewHolderToken token_;
 
   bool token_peer_disconnected_ = false;
 };

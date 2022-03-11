@@ -71,11 +71,11 @@ class FakeView : public fuchsia::ui::app::testing::ViewProvider_TestBase,
   void OnKill();
 
  private:
+  fuchsia::ui::views::ViewToken token_;  // Must outlive `token_waiter_`.
   std::unique_ptr<async::Wait> token_waiter_;
 
   fidl::Binding<fuchsia::ui::app::ViewProvider> legacy_binding_;
   fidl::Binding<fuchsia::ui::views::View> binding_;
-  fuchsia::ui::views::ViewToken token_;
 
   bool token_peer_disconnected_ = false;
   bool killed_ = false;

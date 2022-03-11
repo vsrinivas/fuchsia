@@ -16,11 +16,11 @@ namespace present_view::testing {
 FakePresentation::FakePresentation(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request)
-    : token_waiter_(
-          std::make_unique<async::Wait>(view_holder_token.value.get(), __ZX_OBJECT_PEER_CLOSED, 0,
+    : token_(std::move(view_holder_token)),
+      token_waiter_(
+          std::make_unique<async::Wait>(token_.value.get(), __ZX_OBJECT_PEER_CLOSED, 0,
                                         std::bind([this] { token_peer_disconnected_ = true; }))),
-      binding_(this, std::move(presentation_request)),
-      token_(std::move(view_holder_token)) {
+      binding_(this, std::move(presentation_request)) {
   zx_status_t wait_status = token_waiter_->Begin(async_get_default_dispatcher());
   EXPECT_EQ(wait_status, ZX_OK);
 }
