@@ -24,6 +24,9 @@ lazy_static! {
     pub static ref LIBRARY_IDENTIFIER_RE: Regex =
         Regex::new(r#"^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)*$"#).unwrap();
     pub static ref VERSION_RE: Regex = Regex::new(r#"^[0-9]+\.[0-9]+\.[0-9]+$"#).unwrap();
+    pub static ref UNFLATTENED_PARAMETER_NAME: Identifier = Identifier { 0: "payload".to_string() };
+    pub static ref EMPTY_FIELD_SHAPE: FieldShape =
+        FieldShape { offset: Count(0), padding: Count(0) };
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -444,10 +447,10 @@ pub struct TypeShape {
 pub struct MethodParameter<'a> {
     pub field_shape_v1: FieldShape,
     pub maybe_attributes: &'a Option<Vec<Attribute>>,
-    pub _type: &'a Type,
+    pub _type: Type,
     pub name: &'a Identifier,
     pub location: &'a Option<Location>,
-    pub experimental_maybe_from_type_alias: &'a Option<FieldTypeConstructor>,
+    pub experimental_maybe_from_type_alias: Option<&'a FieldTypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -697,6 +700,10 @@ impl FidlIr {
         fetch_declaration!(self, table_declarations, identifier)
     }
 
+    pub fn get_union(&self, identifier: &CompoundIdentifier) -> Result<&Union, Error> {
+        fetch_declaration!(self, union_declarations, identifier)
+    }
+
     pub fn get_const(&self, identifier: &CompoundIdentifier) -> Result<&Const, Error> {
         fetch_declaration!(self, const_declarations, identifier)
     }
@@ -824,17 +831,35 @@ fn get_payload_parameters<'a>(
                 };
                 out.push(MethodParameter {
                     maybe_attributes: &member.maybe_attributes,
-                    _type: &member._type,
+                    _type: member._type.clone(),
                     name: &member.name,
                     location: &member.location,
                     field_shape_v1: offset_field_shape,
-                    experimental_maybe_from_type_alias: &member.experimental_maybe_from_type_alias,
+                    experimental_maybe_from_type_alias: member
+                        .experimental_maybe_from_type_alias
+                        .as_ref(),
                 });
             }
             Ok(Some(out))
         }
-        // TODO(fxbug.dev/88343): add support for union and table with no flattening.
-        _ => Err(anyhow!("payload must point to a struct type: {:?}", payload)),
+        Declaration::Table => Err(anyhow!(
+            "{:?} uses a table as a message payload, which is not yet supported (fxbug.dev/82088)",
+            payload
+        )),
+        Declaration::Union => {
+            let mut out = vec![];
+            let union_decl = ir.get_union(identifier)?;
+            out.push(MethodParameter {
+                maybe_attributes: &union_decl.maybe_attributes,
+                _type: Type::Identifier { identifier: identifier.clone(), nullable: false },
+                name: &UNFLATTENED_PARAMETER_NAME,
+                location: &union_decl.location,
+                field_shape_v1: EMPTY_FIELD_SHAPE.clone(),
+                experimental_maybe_from_type_alias: None,
+            });
+            Ok(Some(out))
+        }
+        _ => Err(anyhow!("payload must point to a struct or union type: {:?}", payload)),
     }
 }
 

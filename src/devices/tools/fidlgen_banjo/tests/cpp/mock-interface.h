@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <tuple>
+
 #include <banjo/examples/interface/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
@@ -42,6 +44,11 @@ public:
         return *this;
     }
 
+    virtual MockBaker& ExpectChange(change_args_t payload, change_args_t out_payload) {
+        mock_change_.ExpectCall({out_payload}, payload);
+        return *this;
+    }
+
     virtual MockBaker& ExpectDeRegister() {
         mock_de_register_.ExpectCall();
         return *this;
@@ -49,6 +56,7 @@ public:
 
     void VerifyAndClear() {
         mock_register_.VerifyAndClear();
+        mock_change_.VerifyAndClear();
         mock_de_register_.VerifyAndClear();
     }
 
@@ -56,15 +64,22 @@ public:
         mock_register_.Call(cookie_maker_protocol_t{intf_ops, intf_ctx}, cookie_jarrer_protocol_t{jar_ops, jar_ctx});
     }
 
+    virtual void BakerChange(const change_args_t* payload, change_args_t* out_payload) {
+        std::tuple<change_args_t> ret = mock_change_.Call(*payload);
+        *out_payload = std::get<0>(ret);
+    }
+
     virtual void BakerDeRegister() {
         mock_de_register_.Call();
     }
 
     mock_function::MockFunction<void, cookie_maker_protocol_t, cookie_jarrer_protocol_t>& mock_register() { return mock_register_; }
+    mock_function::MockFunction<std::tuple<change_args_t>, change_args_t>& mock_change() { return mock_change_; }
     mock_function::MockFunction<void>& mock_de_register() { return mock_de_register_; }
 
 protected:
     mock_function::MockFunction<void, cookie_maker_protocol_t, cookie_jarrer_protocol_t> mock_register_;
+    mock_function::MockFunction<std::tuple<change_args_t>, change_args_t> mock_change_;
     mock_function::MockFunction<void> mock_de_register_;
 
 private:

@@ -62,6 +62,12 @@ protocol CookieJarrer {
     });
 };
 
+/// Swap devices at the bakery, changing either the maker OR the jarrer out.
+type ChangeArgs = resource flexible union {
+    1: intf client_end:CookieMaker;
+    2: jarrer client_end:CookieJarrer;
+};
+
 /// Protocol for a baker who outsources all of it's baking duties to others.
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
@@ -72,6 +78,8 @@ protocol Baker {
         intf client_end:CookieMaker;
         jar client_end:CookieJarrer;
     }) -> ();
+    /// Swap out the maker or jarrer for a different one.
+    Change(ChangeArgs) -> (ChangeArgs);
     /// De-registers a cookie maker device when it's no longer available.
     DeRegister() -> ();
 };

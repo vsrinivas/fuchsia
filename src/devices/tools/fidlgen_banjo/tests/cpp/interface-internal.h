@@ -15,6 +15,9 @@ namespace internal {
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_register, BakerRegister,
         void (C::*)(const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar));
 
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_change, BakerChange,
+        void (C::*)(const change_args_t* payload, change_args_t* out_payload));
+
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_de_register, BakerDeRegister,
         void (C::*)());
 
@@ -24,6 +27,10 @@ constexpr void CheckBakerProtocolSubclass() {
     static_assert(internal::has_baker_protocol_register<D>::value,
         "BakerProtocol subclasses must implement "
         "void BakerRegister(const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar);");
+
+    static_assert(internal::has_baker_protocol_change<D>::value,
+        "BakerProtocol subclasses must implement "
+        "void BakerChange(const change_args_t* payload, change_args_t* out_payload);");
 
     static_assert(internal::has_baker_protocol_de_register<D>::value,
         "BakerProtocol subclasses must implement "

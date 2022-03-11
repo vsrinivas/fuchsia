@@ -25,6 +25,7 @@ typedef struct cookie_maker_protocol_ops cookie_maker_protocol_ops_t;
 typedef struct cookie_jar_args cookie_jar_args_t;
 typedef struct cookie_jarrer_protocol cookie_jarrer_protocol_t;
 typedef struct cookie_jarrer_protocol_ops cookie_jarrer_protocol_ops_t;
+typedef union change_args change_args_t;
 typedef struct baker_protocol baker_protocol_t;
 typedef struct baker_protocol_ops baker_protocol_ops_t;
 
@@ -58,8 +59,15 @@ struct cookie_jarrer_protocol {
     void* ctx;
 };
 
+// Swap devices at the bakery, changing either the maker OR the jarrer out.
+union change_args {
+    cookie_maker_protocol_t intf;
+    cookie_jarrer_protocol_t jarrer;
+};
+
 struct baker_protocol_ops {
     void (*register)(void* ctx, const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar);
+    void (*change)(void* ctx, const change_args_t* payload, change_args_t* out_payload);
     void (*de_register)(void* ctx);
 };
 
@@ -112,6 +120,11 @@ static inline void baker_register(const baker_protocol_t* proto, void* intf_ctx,
     };
     const cookie_jarrer_protocol_t* jar = &jar2;
     proto->ops->register(proto->ctx, intf, jar);
+}
+
+// Swap out the maker or jarrer for a different one.
+static inline void baker_change(const baker_protocol_t* proto, const change_args_t* payload, change_args_t* out_payload) {
+    proto->ops->change(proto->ctx, payload, out_payload);
 }
 
 // De-registers a cookie maker device when it's no longer available.

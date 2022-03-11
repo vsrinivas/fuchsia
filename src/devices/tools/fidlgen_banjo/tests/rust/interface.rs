@@ -66,5 +66,18 @@ impl std::ops::BitXorAssign for CookieKind {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union ChangeArgs {
+    pub intf: cookie_maker,
+    pub jarrer: cookie_jarrer,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for ChangeArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<ChangeArgs>")
+    }
+}
 
 

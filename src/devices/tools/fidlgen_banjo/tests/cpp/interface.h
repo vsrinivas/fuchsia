@@ -43,6 +43,8 @@
 //
 //     void BakerRegister(const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar);
 //
+//     void BakerChange(const change_args_t* payload, change_args_t* out_payload);
+//
 //     void BakerDeRegister();
 //
 //     ...
@@ -189,6 +191,7 @@ public:
     BakerProtocol() {
         internal::CheckBakerProtocolSubclass<D>();
         baker_protocol_ops_.register = BakerRegister;
+        baker_protocol_ops_.change = BakerChange;
         baker_protocol_ops_.de_register = BakerDeRegister;
 
         if constexpr (internal::is_base_proto<Base>::value) {
@@ -208,6 +211,10 @@ private:
     // which they can place their completed cookies.
     static void BakerRegister(void* ctx, const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar) {
         static_cast<D*>(ctx)->BakerRegister(intf, jar);
+    }
+    // Swap out the maker or jarrer for a different one.
+    static void BakerChange(void* ctx, const change_args_t* payload, change_args_t* out_payload) {
+        static_cast<D*>(ctx)->BakerChange(payload, out_payload);
     }
     // De-registers a cookie maker device when it's no longer available.
     static void BakerDeRegister(void* ctx) {
@@ -300,6 +307,11 @@ public:
         };
         const cookie_jarrer_protocol_t* jar = &jar2;
         ops_->register(ctx_, intf, jar);
+    }
+
+    // Swap out the maker or jarrer for a different one.
+    void Change(const change_args_t* payload, change_args_t* out_payload) const {
+        ops_->change(ctx_, payload, out_payload);
     }
 
     // De-registers a cookie maker device when it's no longer available.
