@@ -1944,13 +1944,8 @@ TEST(Table, EchoTableWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayload) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
         false;
     fidl::test::compatibility::RequestTable sent;
@@ -1980,13 +1975,8 @@ TEST(Table, EchoTablePayload) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (table result success)"] = false;
     fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
@@ -2020,13 +2010,8 @@ TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (table result success)"] = false;
     fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
@@ -2059,13 +2044,8 @@ TEST(Table, EchoTablePayloadWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
         false;
     fidl::test::compatibility::RequestTable sent;
@@ -2098,10 +2078,8 @@ TEST(Table, EchoTablePayloadNoRetval) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Table, EchoTableRequestComposed) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
   const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return proxy_url == server_url &&
-           Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
+    return proxy_url == server_url;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2236,13 +2214,8 @@ TEST(Union, EchoUnionsWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayload) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
         false;
     fidl::test::compatibility::RequestUnion sent;
@@ -2271,13 +2244,8 @@ TEST(Union, EchoUnionPayload) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (union result success)"] = false;
     fidl::test::compatibility::UnsignedErrorable unsigned_errorable;
@@ -2314,13 +2282,8 @@ TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (union result success)"] = false;
     fidl::test::compatibility::SignedErrorable signed_errorable;
@@ -2356,13 +2319,8 @@ TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
-  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
-  };
-
-  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
         false;
     fidl::test::compatibility::RequestUnion sent;
@@ -2394,10 +2352,8 @@ TEST(Union, EchoUnionPayloadNoRetval) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
   const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return proxy_url == server_url &&
-           Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
+    return proxy_url == server_url;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2434,10 +2390,8 @@ TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Union, EchoUnionResponseWithErrorComposedErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for Rust.
   const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
-    return proxy_url == server_url &&
-           Exclude(std::initializer_list<const char*>{"rust"})(proxy_url, server_url);
+    return proxy_url == server_url;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,

@@ -514,6 +514,7 @@ type compiler struct {
 	library                fidlgen.LibraryIdentifier
 	externCrates           map[string]struct{}
 	messageBodyStructs     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	messageBodyTypes       fidlgen.EncodedCompoundIdentifierSet
 	structs                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	results                map[fidlgen.EncodedCompoundIdentifier]Result
 	handleMetadataWrappers map[string]HandleMetadataWrapper
@@ -984,6 +985,22 @@ func (c *compiler) compileParameterArray(payload fidlgen.Struct) []Parameter {
 	return parameters
 }
 
+// compileParameterSingleton converts a union or table payload into a form that
+// is ready for code generation, providing a Rust-friendly type and name (always
+// "payload"). Unlike compileParameterArray, this does not result in the payload
+// layout being "flattened" into its constituent members.
+func (c *compiler) compileParameterSingleton(val *fidlgen.Type) []Parameter {
+	wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(val)
+	return []Parameter{{
+		OGType:            *val,
+		Type:              c.compileType(*val),
+		BorrowedType:      c.compileBorrowedType(*val),
+		Name:              "payload",
+		HandleWrapperName: wrapperName,
+		HasHandleMetadata: hasHandleMetadata,
+	}}
+}
+
 // TODO(fxbug.dev/76655): Remove this.
 const maximumAllowedParameters = 12
 
@@ -999,16 +1016,20 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	for _, v := range val.Methods {
 		var compiledRequestParameterList []Parameter
 		if v.RequestPayload != nil {
-			if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
-				if len(val.Members) > maximumAllowedParameters {
-					panic(fmt.Sprintf(
-						`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
-							`only support up to %d. See https://fxbug.dev/76655 for details.`,
-						val.Name, v.Name, len(val.Members), maximumAllowedParameters))
+			if _, ok := c.messageBodyTypes[v.RequestPayload.Identifier]; ok {
+				if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
+					if len(val.Members) > maximumAllowedParameters {
+						panic(fmt.Sprintf(
+							`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
+								`only support up to %d. See https://fxbug.dev/76655 for details.`,
+							val.Name, v.Name, len(val.Members), maximumAllowedParameters))
+					}
+					compiledRequestParameterList = c.compileParameterArray(val)
+				} else {
+					compiledRequestParameterList = c.compileParameterSingleton(v.RequestPayload)
 				}
-				compiledRequestParameterList = c.compileParameterArray(val)
 			} else {
-				panic(fmt.Sprintf("unknown request/response struct: %v", v.RequestPayload.Identifier))
+				panic(fmt.Sprintf("unknown request/response layout: %v", v.RequestPayload.Identifier))
 			}
 		}
 
@@ -1017,16 +1038,20 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		var compiledResponseParameterList []Parameter
 		var foundResult *Result
 		if v.ResponsePayload != nil {
-			if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
-				if len(val.Members) == 1 && val.Members[0].Type.Kind == fidlgen.IdentifierType {
-					responseType := val.Members[0].Type
-					if result, ok := c.results[responseType.Identifier]; ok {
-						foundResult = &result
+			if _, ok := c.messageBodyTypes[v.ResponsePayload.Identifier]; ok {
+				if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
+					if len(val.Members) == 1 && val.Members[0].Type.Kind == fidlgen.IdentifierType {
+						responseType := val.Members[0].Type
+						if result, ok := c.results[responseType.Identifier]; ok {
+							foundResult = &result
+						}
 					}
+					compiledResponseParameterList = c.compileParameterArray(val)
+				} else {
+					compiledResponseParameterList = c.compileParameterSingleton(v.ResponsePayload)
 				}
-				compiledResponseParameterList = c.compileParameterArray(val)
 			} else {
-				panic(fmt.Sprintf("unknown request/response struct: %v", v.ResponsePayload.Identifier))
+				panic(fmt.Sprintf("unknown request/response layout: %v", v.ResponsePayload.Identifier))
 			}
 		}
 
@@ -1311,14 +1336,32 @@ func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
 		ErrType:   c.compileType(*m.ErrorType),
 	}
 
-	for _, m := range root.findStruct(m.ValueType.Identifier, true).Members {
-		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
+	declInfo, ok := c.decls[m.ValueType.Identifier]
+	if !ok {
+		panic(fmt.Sprintf("declaration not found: %v", m.ValueType.Identifier))
+	}
+
+	switch declInfo.Type {
+	case fidlgen.StructDeclType:
+		for _, m := range root.findStruct(m.ValueType.Identifier, true).Members {
+			wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
+			r.Ok = append(r.Ok, ResultOkEntry{
+				OGType:            m.OGType,
+				Type:              m.Type,
+				HasHandleMetadata: hasHandleMetadata,
+				HandleWrapperName: wrapperName,
+			})
+		}
+	case fidlgen.TableDeclType, fidlgen.UnionDeclType:
+		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(m.ValueType)
 		r.Ok = append(r.Ok, ResultOkEntry{
-			OGType:            m.OGType,
-			Type:              m.Type,
+			OGType:            *m.ValueType,
+			Type:              c.compileType(*m.ValueType),
 			HasHandleMetadata: hasHandleMetadata,
 			HandleWrapperName: wrapperName,
 		})
+	default:
+		panic("payload must be struct, table, or union")
 	}
 
 	c.results[r.ECI] = r
@@ -1683,15 +1726,12 @@ func Compile(r fidlgen.Root) Root {
 		decls:                  r.DeclsWithDependencies(),
 		library:                thisLibParsed,
 		externCrates:           map[string]struct{}{},
+		messageBodyTypes:       r.GetMessageBodyTypeNames(),
 		messageBodyStructs:     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 		structs:                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 		results:                map[fidlgen.EncodedCompoundIdentifier]Result{},
 		handleMetadataWrappers: map[string]HandleMetadataWrapper{},
 	}
-
-	// Do a first pass of the protocols, creating a set of all names of types that are used as a
-	// transactional message bodies.
-	mbtn := r.GetMessageBodyTypeNames()
 
 	for _, s := range r.Structs {
 		c.structs[s.Name] = s
@@ -1718,7 +1758,7 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if _, ok := mbtn[v.Name]; ok {
+		if _, ok := c.messageBodyTypes[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
 			if v.IsAnonymous() {
 				continue
@@ -1728,7 +1768,7 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.ExternalStructs {
-		if _, ok := mbtn[v.Name]; ok {
+		if _, ok := c.messageBodyTypes[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
 			if v.IsAnonymous() {
 				continue
