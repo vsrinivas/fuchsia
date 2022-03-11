@@ -22,6 +22,7 @@ constexpr char kFrameRateDefaultHz[] = "48000";
 
 constexpr char kSineWaveSwitch[] = "sine";
 constexpr char kSquareWaveSwitch[] = "square";
+constexpr char kPulseWaveSwitch[] = "pulse";
 constexpr char kSawtoothWaveSwitch[] = "saw";
 constexpr char kTriangleWaveSwitch[] = "tri";
 constexpr char kFrequencyDefaultHz[] = "440.0";
@@ -35,6 +36,8 @@ constexpr char kDurationDefaultSecs[] = "2.0";
 constexpr char kAmplitudeSwitch[] = "amp";
 constexpr char kAmplitudeNoValueScale[] = "1.0";
 constexpr char kAmplitudeNotSpecifiedScale[] = "0.25";
+constexpr char kDutyCycleSwitch[] = "duty";
+constexpr char kDutyCycleDefaultPercent[] = "50.0";
 
 constexpr char kSaveToFileSwitch[] = "wav";
 constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
@@ -119,7 +122,10 @@ void usage(const char* prog_name) {
   printf("\n    By default, signal is a sine wave. If no frequency is provided, %s Hz is used\n",
          kFrequencyDefaultHz);
   printf("  --%s[=<FREQ>]  \t   Play sine wave at given frequency, in Hz\n", kSineWaveSwitch);
+  printf("  --%s[=<FREQ>]  \t   Play variable-duty-cycle pulse wave at given frequency\n",
+         kPulseWaveSwitch);
   printf("  --%s[=<FREQ>]  \t   Play square wave at given frequency\n", kSquareWaveSwitch);
+  printf("\t\t\t   (equivalent to '--pulse' with '--duty=50.0')\n");
   printf("  --%s[=<FREQ>]  \t   Play rising sawtooth wave at given frequency\n",
          kSawtoothWaveSwitch);
   printf("  --%s[=<FREQ>]  \t   Play rising-then-falling triangle wave at given frequency\n",
@@ -134,6 +140,10 @@ void usage(const char* prog_name) {
   printf("  --%s=<SECS>\t\t   Set playback length, in seconds\n", kDurationSwitch);
   printf("  --%s[=<AMPL>]\t   Set amplitude (0.0=silence, 1.0=full-scale, %s if only '--%s')\n",
          kAmplitudeSwitch, kAmplitudeNoValueScale, kAmplitudeSwitch);
+  printf(
+      "  --%s[=<PERCENT>]\t   Set duty cycle, in percent. Only for pulse waves.\n"
+      "\t\t\t   (%s%% if only '--%s')\n",
+      kDutyCycleSwitch, kDutyCycleDefaultPercent, kDutyCycleSwitch);
 
   printf("\n  --%s[=<FILEPATH>]\t   Save to .wav file (default '%s')\n", kSaveToFileSwitch,
          kSaveToFileDefaultName);
@@ -306,8 +316,12 @@ int main(int argc, const char** argv) {
     media_app.set_output_type(kOutputTypeSine);
     command_line.GetOptionValue(kSineWaveSwitch, &frequency_str);
   } else if (command_line.HasOption(kSquareWaveSwitch)) {
-    media_app.set_output_type(kOutputTypeSquare);
+    media_app.set_output_type(kOutputTypePulse);
+    media_app.set_duty_cycle_percent(std::stof(kDutyCycleDefaultPercent));
     command_line.GetOptionValue(kSquareWaveSwitch, &frequency_str);
+  } else if (command_line.HasOption(kPulseWaveSwitch)) {
+    media_app.set_output_type(kOutputTypePulse);
+    command_line.GetOptionValue(kPulseWaveSwitch, &frequency_str);
   } else if (command_line.HasOption(kSawtoothWaveSwitch)) {
     media_app.set_output_type(kOutputTypeSawtooth);
     command_line.GetOptionValue(kSawtoothWaveSwitch, &frequency_str);
@@ -345,6 +359,16 @@ int main(int argc, const char** argv) {
       command_line.GetOptionValueWithDefault(kDurationSwitch, kDurationDefaultSecs);
   if (duration_str != "") {
     media_app.set_duration(std::stod(duration_str));
+  }
+
+  if (command_line.HasOption(kPulseWaveSwitch)) {
+    std::string duty_cycle_str =
+        command_line.GetOptionValueWithDefault(kDutyCycleSwitch, kDutyCycleDefaultPercent);
+    if (duty_cycle_str != "") {
+      media_app.set_duty_cycle_percent(std::stof(duty_cycle_str));
+    } else {
+      media_app.set_duty_cycle_percent(std::stof(kDutyCycleDefaultPercent));
+    }
   }
 
   // Handle packet size

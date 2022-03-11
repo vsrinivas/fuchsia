@@ -28,7 +28,7 @@ typedef enum {
   kOutputTypeNoise,
   kOutputTypePinkNoise,
   kOutputTypeSine,
-  kOutputTypeSquare,
+  kOutputTypePulse,
   kOutputTypeSawtooth,
   kOutputTypeTriangle,
   kOutputTypeImpulse,
@@ -73,6 +73,11 @@ class MediaApp {
 
   void set_duration(double duration_secs) { duration_secs_ = duration_secs; }
   double get_duration() { return duration_secs_; }
+
+  void set_duty_cycle_percent(float duty_cycle_percent) {
+    duty_cycle_percent_ = duty_cycle_percent;
+  }
+  float duty_cycle_percent() const { return duty_cycle_percent_; }
 
   void set_frames_per_packet(uint32_t set_frames_per_packet) {
     frames_per_packet_ = set_frames_per_packet;
@@ -186,6 +191,9 @@ class MediaApp {
 
   double amplitude_;         // Amplitude between 0.0 and 1.0 (full-scale).
   double amplitude_scalar_;  // Amp translated to container-specific magn.
+
+  // Duty cycle between 0.0 and 100.0 (not inclusive).
+  float duty_cycle_percent_;
 
   uint32_t bytes_per_packet_;
   uint32_t frames_per_packet_;

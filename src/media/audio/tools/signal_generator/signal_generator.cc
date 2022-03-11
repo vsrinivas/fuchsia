@@ -207,6 +207,15 @@ void MediaApp::ParameterRangeChecks() {
     success = false;
   }
 
+  if (duty_cycle_percent_ >= 100.0f) {
+    std::cerr << "Duty cycle must be smaller than 100.0%" << std::endl;
+    success = false;
+  }
+  if (duty_cycle_percent_ <= 0.0f) {
+    std::cerr << "Duty cycle must be greater than 0.0%" << std::endl;
+    success = false;
+  }
+
   if (duration_secs_ < 0.0) {
     std::cerr << "Duration cannot be negative" << std::endl;
     success = false;
@@ -489,8 +498,8 @@ void MediaApp::DisplayConfigurationSettings() {
     printf("a single-frame impulse");
   } else {
     printf("a %.3f Hz ", frequency_);
-    if (output_signal_type_ == kOutputTypeSquare) {
-      printf("square wave");
+    if (output_signal_type_ == kOutputTypePulse) {
+      printf("pulse wave with duty cycle %2.1f%%", duty_cycle_percent_);
     } else if (output_signal_type_ == kOutputTypeSine) {
       printf("sine wave");
     } else if (output_signal_type_ == kOutputTypeSawtooth) {
@@ -857,9 +866,11 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
           case kOutputTypeSine:
             raw_val = sin(rads_per_frame * running_frame);
             break;
-          case kOutputTypeSquare:
-            raw_val =
-                (fmod(running_frame, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
+          case kOutputTypePulse:
+            raw_val = (fmod(running_frame, frames_per_period_) >=
+                       (static_cast<float>(frames_per_period_) * duty_cycle_percent_) / 100.0f)
+                          ? -1.0
+                          : 1.0;
             break;
           case kOutputTypeSawtooth:
             raw_val = (fmod(running_frame / frames_per_period_, 1.0) * 2.0) - 1.0;

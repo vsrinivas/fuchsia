@@ -9,7 +9,8 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--chans=<NUM_CHANS>]
       [--int16 | --int24]
       [--rate=<FRAME_RATE>]
-      [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --tri[=<FREQ>] | --noise | --pink]
+      [--sine[=<FREQ>] | --square[=<FREQ>] | --pulse[=<FREQ>] | --saw[=<FREQ>] | --tri[=<FREQ>]
+        | --noise | --pink]
       [--dur=<DURATION_SEC>]
       [--amp[=<AMPL>]]
       [--wav[=<FILEPATH>]]
@@ -44,7 +45,9 @@ These optional parameters are interpreted as follows:
 
       By default, signal is a sine wave. If no frequency is provided, 440.0 Hz is used
     --sine[=<FREQ>]          Play sine wave at given frequency (Hz)
+    --pulse[=<FREQ>]         Play variable-duty-cycle pulse wave at given frequency
     --square[=<FREQ>]        Play square wave at given frequency
+                             (equivalent to '--pulse' with '--duty=50.0')
     --saw[=<FREQ>]           Play rising sawtooth wave at given frequency
     --tri[=<FREQ>]           Play rising-then-falling triangle wave at given frequency
     --noise                  Play pseudo-random 'white' noise
@@ -53,6 +56,8 @@ These optional parameters are interpreted as follows:
       By default, play signal for 2.0 seconds, at amplitude 0.25
     --dur=<DURATION_SECS>    Set playback length, in seconds
     --amp[=<AMPL>]           Set amplitude (silence=0.0, full-scale=1.0, 1.0 if no value provided)
+    --duty[=<PERCENT>]       Set duty cycle, in percent. Only for pulse waves.
+                             (50.0 if only '--duty')
 
     --wav[=<FILEPATH>]       Save to .wav file (default '/tmp/signal_generator.wav')
 
