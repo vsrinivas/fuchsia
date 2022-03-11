@@ -252,8 +252,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// This is the primary target that a command will be run against and that
 	// logs will be streamed from.
 	t0 := targetSlice[0]
-	ffx, err := ffxutil.NewFFXInstance(r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(),
-		filepath.Join(os.Getenv(testrunnerconstants.TestOutDirEnvKey), "ffx_outputs"))
+	ffxOutputsDir := filepath.Join(os.Getenv(testrunnerconstants.TestOutDirEnvKey), "ffx_outputs")
+	ffx, err := ffxutil.NewFFXInstance(r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(), ffxOutputsDir)
 	if err != nil {
 		return err
 	}
@@ -387,7 +387,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return err
 	})
 
-	return eg.Wait()
+	err = eg.Wait()
+	if err == nil {
+		// In the case of a successful run, remove the ffx_outputs dir which contains ffx logs.
+		// These logs can be very large, so we should only upload them in the case of a failure.
+		os.RemoveAll(ffxOutputsDir)
+	}
+	return err
 }
 
 // createTestbedConfig creates a configuration file that describes the targets
