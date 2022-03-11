@@ -370,24 +370,30 @@ TEST_F(ControllerTest, Minimize) {
 }
 
 TEST_F(ControllerTest, Cleanse) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  ::fuchsia::fuzzer::Controller_Cleanse_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input cleansed({0x20, 0x20, 0xbe, 0xff});
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
-  EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
+  ZxBridge<FidlInput> bridge1;
+  controller->Cleanse(AsyncSocketWrite(executor(), input.Duplicate()),
+                      ZxBind<FidlInput>(std::move(bridge1.completer)));
+  FUZZING_EXPECT_ERROR(bridge1.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)),
+                       ZX_ERR_WRONG_TYPE);
+  RunUntilIdle();
 
   runner()->set_error(ZX_OK);
   runner()->set_result_input(cleansed);
-  EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  auto& response = result.response();
-  auto received = Receive(std::move(response.cleansed));
-  EXPECT_EQ(received.ToHex(), cleansed.ToHex());
+  ZxBridge<FidlInput> bridge2;
+  controller->Cleanse(AsyncSocketWrite(executor(), input.Duplicate()),
+                      ZxBind<FidlInput>(std::move(bridge2.completer)));
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED))
+                        .and_then([&](FidlInput& fidl_input) {
+                          return AsyncSocketRead(executor(), std::move(fidl_input));
+                        }),
+                    std::move(cleansed));
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, Fuzz) {

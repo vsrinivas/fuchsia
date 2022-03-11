@@ -180,13 +180,17 @@ void ControllerImpl::Minimize(FidlInput fidl_input, MinimizeCallback callback) {
 }
 
 void ControllerImpl::Cleanse(FidlInput fidl_input, CleanseCallback callback) {
-  ReceiveAndThen(std::move(fidl_input), NewResponse(std::move(callback)),
-                 [this](Input received, Response response) {
-                   runner_->Cleanse(std::move(received), [this, response = std::move(response)](
-                                                             zx_status_t status) mutable {
-                     response.Send(status, runner_->result(), runner_->result_input());
-                   });
-                 });
+  auto task = AsyncSocketRead(executor_, std::move(fidl_input))
+                  .and_then([runner = runner_](Input& received) {
+                    return runner->Cleanse(std::move(received));
+                  })
+                  .and_then([executor = executor_](Input& input) {
+                    return fpromise::ok(AsyncSocketWrite(executor, std::move(input)));
+                  })
+                  .then([callback = std::move(callback)](ZxResult<FidlInput>& result) {
+                    callback(std::move(result));
+                  });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::Fuzz(FuzzCallback callback) {

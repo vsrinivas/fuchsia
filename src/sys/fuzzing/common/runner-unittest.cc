@@ -213,24 +213,29 @@ void RunnerTest::MinimizeNewError(const RunnerPtr& runner) {
 void RunnerTest::CleanseNoReplacement(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x07, 0x17, 0x27});
-  runner->Cleanse(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
+  Input cleansed;
+  FUZZING_EXPECT_OK(runner->Cleanse(input.Duplicate()), &cleansed);
+
   // Simulate no error after cleansing any byte.
   for (size_t i = 0; i < input.size(); ++i) {
     for (size_t j = 0; j < kNumReplacements; ++j) {
       RunOne(FuzzResult::NO_ERRORS);
     }
   }
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
+
+  RunUntilIdle();
+  EXPECT_EQ(cleansed, input);
 }
 
 void RunnerTest::CleanseAlreadyClean(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({' ', 0xff});
-  runner->Cleanse(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
+  Input cleansed;
+  FUZZING_EXPECT_OK(runner->Cleanse(input.Duplicate()), &cleansed);
+
   // All bytes match replacements, so this should be done.
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
+  RunUntilIdle();
+  EXPECT_EQ(cleansed, input);
 }
 
 void RunnerTest::CleanseTwoBytes(const RunnerPtr& runner) {
@@ -245,7 +250,8 @@ void RunnerTest::CleanseTwoBytes(const RunnerPtr& runner) {
   Input input2({0x20, 0x18, 0xff});
   SetResult(input2, FuzzResult::DEATH);
 
-  runner->Cleanse(input0.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
+  Input cleansed;
+  FUZZING_EXPECT_OK(runner->Cleanse(input0.Duplicate()), &cleansed);
 
   EXPECT_EQ(RunOne().ToHex(), "201828");  // 1st attempt.
   EXPECT_EQ(RunOne().ToHex(), "ff1828");
@@ -259,8 +265,8 @@ void RunnerTest::CleanseTwoBytes(const RunnerPtr& runner) {
   EXPECT_EQ(RunOne().ToHex(), "2020ff");  // Third attempt.
   EXPECT_EQ(RunOne().ToHex(), "20ffff");
 
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result_input().ToHex(), "2018ff");
+  RunUntilIdle();
+  EXPECT_EQ(cleansed.ToHex(), "2018ff");
 }
 
 void RunnerTest::FuzzUntilError(const RunnerPtr& runner) {

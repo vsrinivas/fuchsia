@@ -96,8 +96,10 @@ ZxPromise<Input> Runner::Minimize(Input input) {
   });
 }
 
-void Runner::Cleanse(Input input, fit::function<void(zx_status_t)> callback) {
-  Pend(kCleanse, std::move(input), std::move(callback));
+ZxPromise<Input> Runner::Cleanse(Input input) {
+  return PendAsync(kCleanse, std::move(input)).and_then([this]() {
+    return fpromise::ok(result_input_.Duplicate());
+  });
 }
 
 void Runner::Fuzz(fit::function<void(zx_status_t)> callback) {
