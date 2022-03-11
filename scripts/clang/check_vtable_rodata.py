@@ -273,7 +273,7 @@ def check_fuchsia_main(args):
     if binary["os"] != "fuchsia":
       continue
 
-    path = os.path.join(args.build, binary["debug"])
+    path = binary["debug"]
     if os.path.exists(path):
       check_vtables_in_file(path, args.readelf, excludes, args.output)
       files.append(path)
