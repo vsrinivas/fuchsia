@@ -75,6 +75,9 @@ extern "C" {
 #define IEEE80211_HT_MCS_TX_MAX_STREAMS 4
 #define IEEE80211_HT_MCS_TX_UNEQUAL_MODULATION 0x10
 
+// Ids of information elements referred in this driver.
+#define WLAN_EID_SSID 0
+
 // The order of access categories is not clearly specified in 802.11-2016 Std.
 // Therefore it cannot be moved into ieee80211 banjo file.
 enum ieee80211_ac_numbers {

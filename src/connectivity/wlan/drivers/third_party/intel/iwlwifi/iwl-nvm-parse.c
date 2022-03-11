@@ -1164,7 +1164,6 @@ void iwl_parse_nvm_mcc_info(struct mcc_info* mcc_info, const struct iwl_cfg* cfg
     uint16_t ch_flags = (uint16_t)le32_to_cpup(channels + ch_idx);
 
     iwl_nvm_print_channel_flags(NULL, IWL_DL_LAR, nvm_chan[ch_idx], ch_flags);
-
     mcc_info->channels[ch_idx] = nvm_chan[ch_idx];
     mcc_info->ch_flags[ch_idx] = ch_flags;
 

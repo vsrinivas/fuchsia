@@ -74,7 +74,8 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 
-#define IWLWIFI_IF_DELETE_TIMEOUT (ZX_MSEC(100))  // Interface create waiting for delete to complete.
+#define IWLWIFI_IF_DELETE_TIMEOUT \
+  (ZX_MSEC(100))  // Interface create waiting for delete to complete.
 
 ////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
 
@@ -529,13 +530,52 @@ zx_status_t mac_start_passive_scan(void* ctx,
                                    const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                    uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-  return iwl_mvm_mac_hw_scan_passive(mvmvif, passive_scan_args, out_scan_id);
+  struct iwl_mvm_scan_req scan_req = {
+      .channels_list = passive_scan_args->channels_list,
+      .channels_count = passive_scan_args->channels_count,
+      .ssids = NULL,
+      .ssids_count = 0,
+      .mac_header_buffer = NULL,
+      .mac_header_size = 0,
+      .ies_buffer = NULL,
+      .ies_size = 0,
+  };
+  return iwl_mvm_mac_hw_scan(mvmvif, &scan_req, out_scan_id);
 }
 
 zx_status_t mac_start_active_scan(void* ctx,
                                   const wlan_softmac_active_scan_args_t* active_scan_args,
                                   uint64_t* out_scan_id) {
-  return ZX_ERR_NOT_SUPPORTED;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  zx_status_t ret = ZX_OK;
+  struct iwl_mvm_scan_req scan_req = {
+      .channels_list = active_scan_args->channels_list,
+      .channels_count = active_scan_args->channels_count,
+      .mac_header_buffer = active_scan_args->mac_header_buffer,
+      .mac_header_size = active_scan_args->mac_header_size,
+      .ies_buffer = active_scan_args->ies_buffer,
+      .ies_size = active_scan_args->ies_size,
+  };
+
+  // If the ssid list in wlanmac_active_scan_args_t is empty, set scan_req for wildcard active scan.
+  if (active_scan_args->ssids_count == 0) {
+    scan_req.ssids_count = 1;
+    scan_req.ssids = (struct iwl_mvm_ssid*)calloc(1, sizeof(struct iwl_mvm_ssid));
+    scan_req.ssids[0].ssid_len = 0;
+  } else {
+    scan_req.ssids_count = active_scan_args->ssids_count;
+    scan_req.ssids =
+        (struct iwl_mvm_ssid*)calloc(scan_req.ssids_count, sizeof(struct iwl_mvm_ssid));
+    for (uint32_t i = 0; i < scan_req.ssids_count; ++i) {
+      scan_req.ssids[i].ssid_len = active_scan_args->ssids_list[i].len;
+      memcpy(scan_req.ssids[i].ssid_data, active_scan_args->ssids_list[i].data,
+             scan_req.ssids[i].ssid_len);
+    }
+  }
+
+  ret = iwl_mvm_mac_hw_scan(mvmvif, &scan_req, out_scan_id);
+  free(scan_req.ssids);
+  return ret;
 }
 
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx) {

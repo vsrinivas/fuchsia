@@ -41,7 +41,6 @@ zx_status_t HandleMccUpdate(struct iwl_host_cmd* cmd, SimMvmResponse* resp) {
   // We just return it for easy unit testing.
   mcc_resp->n_channels = n_chan;  // See enum iwl_nvm_channel_flags below:
   memcpy(mcc_resp->channels, channels, sizeof(channels));
-
   return ZX_OK;
 }
 

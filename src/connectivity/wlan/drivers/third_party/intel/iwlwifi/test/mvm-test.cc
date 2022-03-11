@@ -295,8 +295,8 @@ TEST_F(MvmTest, scanLmacErrorChecking) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_scan_lmac(mvm_, &params));
 }
 
-// This test focuses on testing the scan_cmd filling.
-TEST_F(MvmTest, scanLmacNormal) {
+// This test focuses on testing the scan_cmd filling for LMAC passive scan.
+TEST_F(MvmTest, scanLmacPassiveCmdFilling) {
   ASSERT_NE(nullptr, mvm_->scan_cmd);  // scan cmd should have been allocated during init.
 
   struct iwl_mvm_scan_params params = {
@@ -352,9 +352,10 @@ TEST_F(MvmTest, scanLmacNormal) {
 ///////////////////////////////////////////////////////////////////////////////
 //                                  Scan Test
 //
-class PassiveScanTest : public MvmTest {
+// LMAC scan currently only supports passive scan.
+class LmacScanTest : public MvmTest {
  public:
-  PassiveScanTest() {
+  LmacScanTest() {
     // Fake callback registered to capture scan completion responses.
     ops.scan_complete = [](void* ctx, zx_status_t status, uint64_t scan_id) {
       // TODO(fxbug.dev/88934): scan_id is always 0
@@ -372,13 +373,13 @@ class PassiveScanTest : public MvmTest {
     trans_ = sim_trans_.iwl_trans();
   }
 
-  ~PassiveScanTest() {}
+  ~LmacScanTest() {}
 
   struct iwl_trans* trans_;
   wlan_softmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;
   uint8_t channels_to_scan_[4] = {7, 1, 40, 136};
-  wlan_softmac_passive_scan_args_t passive_scan_args_{
+  iwl_mvm_scan_req passive_scan_args_{
       .channels_list = channels_to_scan_, .channels_count = 4,
       // TODO(fxbug.dev/88943): Fill in other fields once support determined.
   };
@@ -390,10 +391,22 @@ class PassiveScanTest : public MvmTest {
   } scan_result;
 };
 
-class PassiveUmacScanTest : public FakeUcodeTest {
+// UMAC scan currently supports both passive and active scan.
+class UmacScanTest : public FakeUcodeTest {
  public:
-  PassiveUmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS
-      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN), 0, 0) {
+  static constexpr size_t kChannelNum = 4;
+  const uint8_t kChannelsToScan_[kChannelNum] = {7, 1, 40, 136};
+  static constexpr size_t kFakeSsidLen = 6;
+  const uint8_t kFakeSsid[kFakeSsidLen] = {'F', 'a', 'k', 'e', 'A', 'p'};
+  static constexpr size_t kFakeIesLen = 6;
+  const uint8_t kFakeIes[kFakeIesLen] = {'F', 'a', 'k', 'e', 'I', 'E'};
+  static constexpr size_t kFakeMacHdrLen = 8;
+  const uint8_t kFakeMacHdr[kFakeMacHdrLen] = {'F', 'a', 'k', 'e', 'H', 'e', 'a', 'd'};
+
+  UmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS
+      : FakeUcodeTest(IWL_UCODE_TLV_CAPA_UMAC_SCAN / 32, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN % 32),
+                      IWL_UCODE_TLV_API_ADAPTIVE_DWELL / 32,
+                      BIT(IWL_UCODE_TLV_API_ADAPTIVE_DWELL % 32)) {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
@@ -402,6 +415,16 @@ class PassiveUmacScanTest : public FakeUcodeTest {
         calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
+
+    // Set the channel filter to the exact channel that we want to conduct scan on to pass the
+    // filtering.
+    // TODO(fxbug.dev/95207): Remove the hardcode and read mcc_info from the firmware when
+    // FakeUcodeTest supports multiple api_flag input.
+    mvm_->mcc_info.num_ch = kChannelNum;
+    memcpy(&(mvm_->mcc_info.channels[0]), &kChannelsToScan_[0], 4);
+    for (uint16_t i = 0; i < kChannelNum; i++) {
+      mvm_->mcc_info.ch_flags[i] = BIT(0) | BIT(3);  // NVM_CHANNEL_VALID and NVM_CHANNEL_ACTIVE
+    }
 
     mtx_lock(&mvm_->mutex);
 
@@ -419,21 +442,38 @@ class PassiveUmacScanTest : public FakeUcodeTest {
     mvmvif_sta_.ifc.ops = &ops_;
     mvmvif_sta_.ifc.ctx = &scan_result_;
 
+    active_scan_args_.ssids =
+        (struct iwl_mvm_ssid*)calloc(active_scan_args_.ssids_count, sizeof(struct iwl_mvm_ssid));
+    active_scan_args_.ssids->ssid_len = 6;
+    memcpy(active_scan_args_.ssids->ssid_data, kFakeSsid, 6);
+
     trans_ = sim_trans_.iwl_trans();
   }
 
-  ~PassiveUmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  ~UmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS {
     free(mvmvif_->ifc.ops);
     free(mvmvif_);
+    free(active_scan_args_.ssids);
     mtx_unlock(&mvm_->mutex);
   }
 
   struct iwl_trans* trans_;
   wlan_softmac_ifc_protocol_ops_t ops_;
   struct iwl_mvm_vif mvmvif_sta_;
-  uint8_t channels_to_scan_[4] = {7, 1, 40, 136};
-  wlan_softmac_passive_scan_args_t passive_scan_args_{
-      .channels_list = channels_to_scan_, .channels_count = 4,
+
+  iwl_mvm_scan_req passive_scan_args_{
+      .channels_list = kChannelsToScan_, .channels_count = kChannelNum,
+      // TODO(fxbug.dev/89693): iwlwifi ignores all other fields.
+  };
+
+  iwl_mvm_scan_req active_scan_args_{
+      .channels_list = kChannelsToScan_,
+      .channels_count = kChannelNum,
+      .ssids_count = 1,
+      .mac_header_buffer = kFakeMacHdr,
+      .mac_header_size = 5,
+      .ies_buffer = kFakeIes,
+      .ies_size = 6,
       // TODO(fxbug.dev/89693): iwlwifi ignores all other fields.
   };
 
@@ -450,13 +490,13 @@ class PassiveUmacScanTest : public FakeUcodeTest {
 
 /* Tests for LMAC scan */
 // Tests scenario for a successful scan completion.
-TEST_F(PassiveScanTest, RegPassiveLmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveLmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
 
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
@@ -474,13 +514,13 @@ TEST_F(PassiveScanTest, RegPassiveLmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSI
 }
 
 // Tests scenario where the scan request aborted / failed.
-TEST_F(PassiveScanTest, RegPassiveLmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveLmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
@@ -499,13 +539,13 @@ TEST_F(PassiveScanTest, RegPassiveLmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSI
 }
 
 /* Tests for UMAC scan */
-// Tests scenario for a successful scan completion.
-TEST_F(PassiveUmacScanTest, RegPassiveUmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
+// Tests scenario for a successful passive scan completion.
+TEST_F(UmacScanTest, RegPassiveUmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
   ASSERT_EQ(false, scan_result_.sme_notified);
   ASSERT_EQ(false, scan_result_.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta_, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
 
@@ -524,14 +564,85 @@ TEST_F(PassiveUmacScanTest, RegPassiveUmacScanSuccess) __TA_NO_THREAD_SAFETY_ANA
   EXPECT_EQ(true, scan_result_.success);
 }
 
+// Tests scenario for a successful active scan completion.
+TEST_F(UmacScanTest, RegActiveUmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
+  // Check some assumptions before running the test.
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+  ASSERT_EQ(false, scan_result_.sme_notified);
+  ASSERT_EQ(false, scan_result_.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &active_scan_args_));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
+
+  // Verify the scan cmd filling is correct.
+  struct iwl_scan_req_umac* cmd = reinterpret_cast<struct iwl_scan_req_umac*>(mvm_->scan_cmd);
+  // IWL_UCODE_TLV_API_ADAPTIVE_DWELL is set when constructing the UmacScanTest class, the
+  // corresponding data type is v7.
+  uint8_t* cmd_data = (uint8_t*)&cmd->v7.data;
+
+  EXPECT_EQ(4, cmd->v7.channel.count);
+  // Verify that it's an active scan.
+  EXPECT_EQ(0, le16_to_cpu(cmd->general_flags) & IWL_UMAC_SCAN_GEN_FLAGS_PASSIVE);
+  struct iwl_scan_channel_cfg_umac* channel_cfg =
+      reinterpret_cast<struct iwl_scan_channel_cfg_umac*>(cmd_data);
+
+  // Verify ssid_bitmap.
+  EXPECT_EQ(BIT(0), le32_to_cpu(channel_cfg[0].flags));
+  EXPECT_EQ(1, le32_to_cpu(channel_cfg[0].iter_count));
+  EXPECT_EQ(0, le32_to_cpu(channel_cfg[0].iter_interval));
+
+  // Verify the first and the last channel number.
+  EXPECT_EQ(7, le16_to_cpu(channel_cfg[0].channel_num));
+  EXPECT_EQ(136, le16_to_cpu(channel_cfg[3].channel_num));
+
+  struct iwl_scan_req_umac_tail* sec_part_of_cmd_data =
+      (struct iwl_scan_req_umac_tail*)(cmd_data + sizeof(struct iwl_scan_channel_cfg_umac) *
+                                                      mvm_->fw->ucode_capa.n_scan_channels);
+
+  struct iwl_scan_probe_req* preq = &sec_part_of_cmd_data->preq;
+  uint8_t* frame_data = (uint8_t*)preq->buf;
+
+  // Verify schedule data.
+  EXPECT_EQ(1, sec_part_of_cmd_data->schedule[0].iter_count);
+  EXPECT_EQ(0, sec_part_of_cmd_data->schedule[0].interval);
+
+  // Verify MAC header.
+  EXPECT_EQ(0, memcmp(kFakeMacHdr, frame_data + le16_to_cpu(preq->mac_header.offset),
+                      le16_to_cpu(preq->mac_header.len) - 2));
+
+  // Verify common IE.
+  EXPECT_EQ(0, memcmp(kFakeIes, frame_data + le16_to_cpu(preq->common_data.offset),
+                      le16_to_cpu(preq->common_data.len)));
+
+  // Verify ssid.
+  EXPECT_EQ(WLAN_EID_SSID, sec_part_of_cmd_data->direct_scan[0].id);
+  EXPECT_EQ(6, sec_part_of_cmd_data->direct_scan[0].len);
+  EXPECT_EQ(0, memcmp(kFakeSsid, sec_part_of_cmd_data->direct_scan[0].ssid, 6));
+
+  struct iwl_umac_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_COMPLETED
+  };
+  TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
+
+  // Call notify complete to simulate scan completion.
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_rx_umac_scan_complete_notif(mvm_, &rxb);
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result_.sme_notified);
+  EXPECT_EQ(true, scan_result_.success);
+}
+
 // Tests scenario where the scan request aborted / failed.
-TEST_F(PassiveUmacScanTest, RegPassiveUmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(UmacScanTest, RegPassiveUmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
   ASSERT_EQ(false, scan_result_.sme_notified);
   ASSERT_EQ(false, scan_result_.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta_, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
 
@@ -552,13 +663,13 @@ TEST_F(PassiveUmacScanTest, RegPassiveUmacScanAborted) __TA_NO_THREAD_SAFETY_ANA
 }
 
 // Tests explicit abort of Passive Umac scan in progress.
-TEST_F(PassiveUmacScanTest, RegPassiveUmacAbortScan) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(UmacScanTest, RegPassiveUmacAbortScan) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
   ASSERT_EQ(false, scan_result_.sme_notified);
   ASSERT_EQ(false, scan_result_.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta_, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
 
@@ -571,13 +682,13 @@ TEST_F(PassiveUmacScanTest, RegPassiveUmacAbortScan) __TA_NO_THREAD_SAFETY_ANALY
 
 /* Tests for both LMAC and UMAC scans */
 // Tests condition where scan completion timeouts out due to no response from FW.
-TEST_F(PassiveScanTest, RegPassiveScanTimeout) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveScanTimeout) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
@@ -592,13 +703,13 @@ TEST_F(PassiveScanTest, RegPassiveScanTimeout) __TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 // Tests condition where timer is shutdown and there is no response from FW.
-TEST_F(PassiveScanTest, RegPassiveScanTimerShutdown) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveScanTimerShutdown) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
@@ -612,11 +723,11 @@ TEST_F(PassiveScanTest, RegPassiveScanTimerShutdown) __TA_NO_THREAD_SAFETY_ANALY
 }
 
 // Tests condition where iwl_mvm_mac_stop() is invoked while timer is pending.
-TEST_F(PassiveScanTest, RegPassiveScanTimerMvmStop) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveScanTimerMvmStop) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
@@ -626,11 +737,11 @@ TEST_F(PassiveScanTest, RegPassiveScanTimerMvmStop) __TA_NO_THREAD_SAFETY_ANALYS
 }
 
 // Tests condition where multiple calls to the scan API returns appropriate error.
-TEST_F(PassiveScanTest, RegPassiveScanParallel) __TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(LmacScanTest, RegPassiveScanParallel) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
-  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
-  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, iwl_mvm_reg_scan_start_passive(&mvmvif_sta, &passive_scan_args_));
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, iwl_mvm_reg_scan_start(&mvmvif_sta, &passive_scan_args_));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

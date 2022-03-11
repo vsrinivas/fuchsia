@@ -305,21 +305,23 @@ static inline bool iwl_mvm_rrm_scan_needed(struct iwl_mvm* mvm) {
   return fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT);
 }
 
-#if 0   // NEEDS_PORTING
-static int iwl_mvm_max_scan_ie_fw_cmd_room(struct iwl_mvm* mvm) {
-    int max_probe_len;
+static size_t iwl_mvm_max_scan_ie_fw_cmd_room(struct iwl_mvm* mvm) {
+  size_t max_ies_len;
 
-    max_probe_len = SCAN_OFFLOAD_PROBE_REQ_SIZE;
+  max_ies_len = SCAN_OFFLOAD_PROBE_REQ_SIZE;
 
-    /* we create the 802.11 header and SSID element */
-    max_probe_len -= 24 + 2;
+  /* we create the 802.11 header and SSID element */
+  max_ies_len -= 24 + 2;
 
+#if 0  // TODO(fxbug.dev/90863): Support RRM scan.
     /* DS parameter set element is added on 2.4GHZ band if required */
-    if (iwl_mvm_rrm_scan_needed(mvm)) { max_probe_len -= 3; }
+    if (iwl_mvm_rrm_scan_needed(mvm)) { max_ies_len -= 3; }
+#endif
 
-    return max_probe_len;
+  return max_ies_len;
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_mvm_max_scan_ie_len(struct iwl_mvm* mvm) {
     int max_ie_len = iwl_mvm_max_scan_ie_fw_cmd_room(mvm);
 
@@ -469,22 +471,31 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
 
 #if 0   // NEEDS_PORTING
 static int iwl_ssid_exist(uint8_t* ssid, uint8_t ssid_len, struct iwl_ssid_ie* ssid_list) {
-    int i;
+  int i;
 
-    for (i = 0; i < PROBE_OPTION_MAX; i++) {
-        if (!ssid_list[i].len) { break; }
-        if (ssid_list[i].len == ssid_len && !memcmp(ssid_list->ssid, ssid, ssid_len)) { return i; }
+  for (i = 0; i < PROBE_OPTION_MAX; i++) {
+    if (!ssid_list[i].len) {
+      break;
     }
-    return -1;
+    if (ssid_list[i].len == ssid_len && !memcmp(ssid_list->ssid, ssid, ssid_len)) {
+      return i;
+    }
+  }
+  return -1;
 }
+#endif  // NEEDS_PORTING
 
 /* We insert the SSIDs in an inverted order, because the FW will
  * invert it back.
- * TODO(43481): Scan specific SSID
  */
-static void iwl_scan_build_ssids(struct iwl_mvm_scan_params* params, struct iwl_ssid_ie* ssids,
-                                 uint32_t* ssid_bitmap) {
-    int i, j;
+static void iwl_scan_build_ssids(const struct iwl_mvm_scan_params* params,
+                                 struct iwl_ssid_ie* ssids, uint32_t* ssid_bitmap) {
+  int i = 0, j, index;
+  ZX_ASSERT(params);
+  ZX_ASSERT(ssids);
+  ZX_ASSERT(ssid_bitmap);
+
+#if 0  // TODO(fxbug.dev/90864): Implement or remove match_sets in params.
     int index;
 
     /*
@@ -492,6 +503,7 @@ static void iwl_scan_build_ssids(struct iwl_mvm_scan_params* params, struct iwl_
      * iwl_config_sched_scan_profiles() uses the order of these ssids to
      * config match list.
      */
+
     for (i = 0, j = params->n_match_sets - 1; j >= 0 && i < PROBE_OPTION_MAX; i++, j--) {
         /* skip empty SSID matchsets */
         if (!params->match_sets[j].ssid.ssid_len) { continue; }
@@ -499,22 +511,33 @@ static void iwl_scan_build_ssids(struct iwl_mvm_scan_params* params, struct iwl_
         ssids[i].len = params->match_sets[j].ssid.ssid_len;
         memcpy(ssids[i].ssid, params->match_sets[j].ssid.ssid, ssids[i].len);
     }
+#endif
 
-    /* add SSIDs from scan SSID list */
-    *ssid_bitmap = 0;
-    for (j = params->n_ssids - 1; j >= 0 && i < PROBE_OPTION_MAX; i++, j--) {
-        index = iwl_ssid_exist(params->ssids[j].ssid, params->ssids[j].ssid_len, ssids);
-        if (index < 0) {
-            ssids[i].id = WLAN_EID_SSID;
-            ssids[i].len = params->ssids[j].ssid_len;
-            memcpy(ssids[i].ssid, params->ssids[j].ssid, ssids[i].len);
-            *ssid_bitmap |= BIT(i);
-        } else {
-            *ssid_bitmap |= BIT(index);
-        }
+  /* add SSIDs from scan SSID list */
+  // Before the match set is supported, the bitmap is simply the 1s that fill the bits from 0 to
+  // [number of ssid ies] - 1.
+  *ssid_bitmap = 0;
+  for (j = params->n_ssids - 1; j >= 0 && i < PROBE_OPTION_MAX; i++, j--) {
+#if 0
+    // TODO(fxbug.dev/90864): Implement or remove match_sets in params.
+    index = iwl_ssid_exist(params->ssids[j].ssid, params->ssids[j].ssid_len, ssids);
+#else
+    index = -1;
+#endif
+
+    if (index < 0) {
+      ssids[i].id = WLAN_EID_SSID;
+      ssids[i].len = params->ssids[j].ssid_len;
+      ZX_ASSERT(ssids[i].len <= ARRAY_SIZE(ssids[i].ssid));
+      memcpy(ssids[i].ssid, params->ssids[j].ssid_data, ssids[i].len);
+      *ssid_bitmap |= BIT(i);
+    } else {
+      *ssid_bitmap |= BIT(index);
     }
+  }
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_config_sched_scan_profiles(struct iwl_mvm* mvm,
                                               struct cfg80211_sched_scan_request* req) {
     struct iwl_scan_offload_profile* profile;
@@ -651,34 +674,34 @@ static void iwl_mvm_lmac_scan_cfg_channels(struct iwl_mvm* mvm, uint8_t* channel
 #if 0  // NEEDS_PORTING
 static uint8_t* iwl_mvm_copy_and_insert_ds_elem(struct iwl_mvm* mvm, const uint8_t* ies, size_t len,
                                                 uint8_t* const pos) {
-    static const uint8_t before_ds_params[] = {
-        WLAN_EID_SSID,
-        WLAN_EID_SUPP_RATES,
-        WLAN_EID_REQUEST,
-        WLAN_EID_EXT_SUPP_RATES,
-    };
-    size_t offs;
-    uint8_t* newpos = pos;
+  static const uint8_t before_ds_params[] = {
+      WLAN_EID_SSID,
+      WLAN_EID_SUPP_RATES,
+      WLAN_EID_REQUEST,
+      WLAN_EID_EXT_SUPP_RATES,
+  };
+  size_t offs;
+  uint8_t* newpos = pos;
 
-    if (!iwl_mvm_rrm_scan_needed(mvm)) {
-        memcpy(newpos, ies, len);
-        return newpos + len;
-    }
+  if (!iwl_mvm_rrm_scan_needed(mvm)) {
+    memcpy(newpos, ies, len);
+    return newpos + len;
+  }
 
-    offs = ieee80211_ie_split(ies, len, before_ds_params, ARRAY_SIZE(before_ds_params), 0);
+  offs = ieee80211_ie_split(ies, len, before_ds_params, ARRAY_SIZE(before_ds_params), 0);
 
-    memcpy(newpos, ies, offs);
-    newpos += offs;
+  memcpy(newpos, ies, offs);
+  newpos += offs;
 
-    /* Add a placeholder for DS Parameter Set element */
-    *newpos++ = WLAN_EID_DS_PARAMS;
-    *newpos++ = 1;
-    *newpos++ = 0;
+  /* Add a placeholder for DS Parameter Set element */
+  *newpos++ = WLAN_EID_DS_PARAMS;
+  *newpos++ = 1;
+  *newpos++ = 0;
 
-    memcpy(newpos, ies + offs, len - offs);
-    newpos += len - offs;
+  memcpy(newpos, ies + offs, len - offs);
+  newpos += len - offs;
 
-    return newpos;
+  return newpos;
 }
 
 #define WFA_TPC_IE_LEN 9
@@ -695,63 +718,72 @@ static void iwl_mvm_add_tpc_report_ie(uint8_t* pos) {
     pos[7] = 0;
     pos[8] = 0;
 }
-
-static void iwl_mvm_build_scan_probe(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                     struct ieee80211_scan_ies* ies,
-                                     struct iwl_mvm_scan_params* params) {
-    struct ieee80211_mgmt* frame = (void*)params->preq.buf;
-    uint8_t *pos, *newpos;
-    const uint8_t* mac_addr =
-        params->flags & NL80211_SCAN_FLAG_RANDOM_ADDR ? params->mac_addr : NULL;
-
-    /*
-     * Unfortunately, right now the offload scan doesn't support randomising
-     * within the firmware, so until the firmware API is ready we implement
-     * it in the driver. This means that the scan iterations won't really be
-     * random, only when it's restarted, but at least that helps a bit.
-     */
-    if (mac_addr) {
-        get_random_mask_addr(frame->sa, mac_addr, params->mac_addr_mask);
-    } else {
-        memcpy(frame->sa, vif->addr, ETH_ALEN);
-    }
-
-    frame->frame_control = cpu_to_le16(IEEE80211_STYPE_PROBE_REQ);
-    eth_broadcast_addr(frame->da);
-    eth_broadcast_addr(frame->bssid);
-    frame->seq_ctrl = 0;
-
-    pos = frame->u.probe_req.variable;
-    *pos++ = WLAN_EID_SSID;
-    *pos++ = 0;
-
-    params->preq.mac_header.offset = 0;
-    params->preq.mac_header.len = cpu_to_le16(24 + 2);
-
-    /* Insert ds parameter set element on 2.4 GHz band */
-    newpos = iwl_mvm_copy_and_insert_ds_elem(mvm, ies->ies[NL80211_BAND_2GHZ],
-                                             ies->len[NL80211_BAND_2GHZ], pos);
-    params->preq.band_data[0].offset = cpu_to_le16(pos - params->preq.buf);
-    params->preq.band_data[0].len = cpu_to_le16(newpos - pos);
-    pos = newpos;
-
-    memcpy(pos, ies->ies[NL80211_BAND_5GHZ], ies->len[NL80211_BAND_5GHZ]);
-    params->preq.band_data[1].offset = cpu_to_le16(pos - params->preq.buf);
-    params->preq.band_data[1].len = cpu_to_le16(ies->len[NL80211_BAND_5GHZ]);
-    pos += ies->len[NL80211_BAND_5GHZ];
-
-    memcpy(pos, ies->common_ies, ies->common_ie_len);
-    params->preq.common_data.offset = cpu_to_le16(pos - params->preq.buf);
-
-    if (iwl_mvm_rrm_scan_needed(mvm) &&
-        !fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT)) {
-        iwl_mvm_add_tpc_report_ie(pos + ies->common_ie_len);
-        params->preq.common_data.len = cpu_to_le16(ies->common_ie_len + WFA_TPC_IE_LEN);
-    } else {
-        params->preq.common_data.len = cpu_to_le16(ies->common_ie_len);
-    }
-}
 #endif  // NEEDS_PORTING
+
+static void iwl_mvm_build_scan_probe(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                     const struct iwl_mvm_scan_req* scan_req,
+                                     struct iwl_mvm_scan_params* params) {
+  uint8_t* frame_data = (uint8_t*)params->preq.buf;
+  uint8_t* pos = 0;
+
+#if 0  // TODO(90367): Support random MAC addr for active scan.
+  /*
+   * Unfortunately, right now the offload scan doesn't support randomising
+   * within the firmware, so until the firmware API is ready we implement
+   * it in the driver. This means that the scan iterations won't really be
+   * random, only when it's restarted, but at least that helps a bit.
+   */
+  if (mac_addr) {
+    get_random_mask_addr(frame->sa, mac_addr, params->mac_addr_mask);
+  } else {
+    memcpy(frame->sa, mvmvif->addr, ETH_ALEN);
+  }
+#endif
+
+  size_t hdr_len = scan_req->mac_header_size;
+  ZX_ASSERT(hdr_len < SCAN_OFFLOAD_PROBE_REQ_SIZE);
+  memcpy(frame_data, scan_req->mac_header_buffer, hdr_len);
+
+  pos = frame_data + hdr_len;
+
+  *pos++ = WLAN_EID_SSID;
+  *pos++ = 0;
+
+  params->preq.mac_header.offset = 0;
+  params->preq.mac_header.len = cpu_to_le16(hdr_len + 2);
+
+#if 0  // NEEDS PORTING
+  /* Insert ds parameter set element on 2.4 GHz band */
+  newpos = iwl_mvm_copy_and_insert_ds_elem(mvm, ies->ies[NL80211_BAND_2GHZ],
+                                           ies->len[NL80211_BAND_2GHZ], pos);
+
+
+  params->preq.band_data[0].offset = cpu_to_le16(pos - params->preq.buf);
+  params->preq.band_data[0].len = cpu_to_le16(newpos - pos);
+  pos = newpos;
+
+  memcpy(pos, ies->ies[NL80211_BAND_5GHZ], ies->len[NL80211_BAND_5GHZ]);
+  params->preq.band_data[1].offset = cpu_to_le16(pos - params->preq.buf);
+  params->preq.band_data[1].len = cpu_to_le16(ies->len[NL80211_BAND_5GHZ]);
+  pos += ies->len[NL80211_BAND_5GHZ];
+#endif
+
+  ZX_ASSERT(pos - frame_data + scan_req->ies_size <= SCAN_OFFLOAD_PROBE_REQ_SIZE);
+  memcpy(pos, scan_req->ies_buffer, scan_req->ies_size);
+  params->preq.common_data.offset = cpu_to_le16(pos - params->preq.buf);
+  params->preq.common_data.len = cpu_to_le16(scan_req->ies_size);
+
+#if 0  // NEEDS_PORTING
+  // TODO(fxbug.dev/90863): Support RRM scan.
+  if (iwl_mvm_rrm_scan_needed(mvm) &&
+      !fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT)) {
+    iwl_mvm_add_tpc_report_ie(pos + ies->common_ie_len);
+    params->preq.common_data.len = cpu_to_le16(ies->common_ie_len + WFA_TPC_IE_LEN);
+  } else {
+    params->preq.common_data.len = cpu_to_le16(ies->common_ie_len);
+  }
+#endif
+}
 
 static void iwl_mvm_scan_lmac_dwell(struct iwl_mvm* mvm, struct iwl_scan_req_lmac* cmd,
                                     struct iwl_mvm_scan_params* params) {
@@ -764,14 +796,13 @@ static void iwl_mvm_scan_lmac_dwell(struct iwl_mvm* mvm, struct iwl_scan_req_lma
   cmd->scan_prio = cpu_to_le32(IWL_SCAN_PRIORITY_EXT_6);
 }
 
-#if 0   // NEEDS_PORTING
-static inline bool iwl_mvm_scan_fits(struct iwl_mvm* mvm, int n_ssids,
-                                     struct ieee80211_scan_ies* ies, int n_channels) {
-    return ((n_ssids <= PROBE_OPTION_MAX) &&
-            (n_channels <= mvm->fw->ucode_capa.n_scan_channels) &
-                (ies->common_ie_len + ies->len[NL80211_BAND_2GHZ] + ies->len[NL80211_BAND_5GHZ] <=
-                 iwl_mvm_max_scan_ie_fw_cmd_room(mvm)));
+static inline bool iwl_mvm_scan_fits(struct iwl_mvm* mvm, size_t n_ssids, size_t ies_size,
+                                     size_t n_channels) {
+  return ((n_ssids <= PROBE_OPTION_MAX) && (n_channels <= mvm->fw->ucode_capa.n_scan_channels) &
+                                               (ies_size <= iwl_mvm_max_scan_ie_fw_cmd_room(mvm)));
 }
+
+#if 0   // NEEDS_PORTING
 
 static inline bool iwl_mvm_scan_use_ebs(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     const struct iwl_ucode_capabilities* capa = &mvm->fw->ucode_capa;
@@ -815,12 +846,9 @@ static int iwl_mvm_scan_lmac_flags(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
     flags |= IWL_MVM_LMAC_SCAN_FLAG_PASSIVE;
   }
 
-#if 0   // NEEDS_PORTING
-    // TODO(43481): Scan specific SSID
-    if (params->n_ssids == 1 && params->ssids[0].ssid_len != 0) {
-        flags |= IWL_MVM_LMAC_SCAN_FLAG_PRE_CONNECTION;
-    }
-#endif  // NEEDS_PORTING
+  if (params->n_ssids == 1 && params->ssids[0].ssid_len != 0) {
+    flags |= IWL_MVM_LMAC_SCAN_FLAG_PRE_CONNECTION;
+  }
 
   if (iwl_mvm_is_scan_fragmented(params->type)) {
     flags |= IWL_MVM_LMAC_SCAN_FLAG_FRAGMENTED;
@@ -1160,22 +1188,15 @@ static void iwl_mvm_scan_umac_dwell(struct iwl_mvm* mvm, struct iwl_scan_req_uma
   timing = &scan_timing[params->type];
   active_dwell = params->measurement_dwell ? params->measurement_dwell : IWL_SCAN_DWELL_ACTIVE;
   passive_dwell = params->measurement_dwell ? params->measurement_dwell : IWL_SCAN_DWELL_PASSIVE;
-
   if (iwl_mvm_is_adaptive_dwell_supported(mvm)) {
     cmd->v7.adwell_default_n_aps_social = IWL_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL;
     cmd->v7.adwell_default_n_aps = IWL_SCAN_ADWELL_DEFAULT_N_APS;
-
     /* if custom max budget was configured with debugfs */
     if (IWL_MVM_ADWELL_MAX_BUDGET) {
       cmd->v7.adwell_max_budget = cpu_to_le16(IWL_MVM_ADWELL_MAX_BUDGET);
-    }
-#if 0   // NEEDS_PORTING
-        // TODO(fxbug.dev/43481): Scan specific SSID.
-        else if (params->ssids && params->ssids[0].ssid_len) {
-            cmd->v7.adwell_max_budget = cpu_to_le16(IWL_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
-        }
-#endif  // NEEDS_PORTING
-    else {
+    } else if (params->ssids && params->ssids[0].ssid_len) {
+      cmd->v7.adwell_max_budget = cpu_to_le16(IWL_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
+    } else {
       cmd->v7.adwell_max_budget = cpu_to_le16(IWL_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
     }
 
@@ -1254,12 +1275,9 @@ static uint16_t iwl_mvm_scan_umac_flags(struct iwl_mvm* mvm, struct iwl_mvm_scan
     flags = IWL_UMAC_SCAN_GEN_FLAGS_PASSIVE;
   }
 
-#if 0   // NEEDS_PORTING
-        // TODO(fxbug.dev/43481): Scan specific SSID.
-    if (params->n_ssids == 1 && params->ssids[0].ssid_len != 0) {
-        flags |= IWL_UMAC_SCAN_GEN_FLAGS_PRE_CONNECT;
-    }
-#endif  // NEEDS_PORTING
+  if (params->n_ssids == 1 && params->ssids && params->ssids[0].ssid_len != 0) {
+    flags |= IWL_UMAC_SCAN_GEN_FLAGS_PRE_CONNECT;
+  }
 
   if (iwl_mvm_is_scan_fragmented(params->type)) {
     flags |= IWL_UMAC_SCAN_GEN_FLAGS_FRAGMENTED;
@@ -1415,11 +1433,7 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_
 
   chan_param->flags = channel_flags;
   chan_param->count = params->n_channels;
-
-#if 0   // NEEDS_PORTING
   iwl_scan_build_ssids(params, sec_part->direct_scan, &ssid_bitmap);
-#endif  // NEEDS_PORTING
-
   iwl_mvm_umac_scan_cfg_channels(mvm, params->channels, params->n_channels, ssid_bitmap, cmd_data);
 
 #if 1
@@ -1566,17 +1580,9 @@ static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
 }
 #endif  // NEEDS_PORTING
 
-// TODO(fxbug.dev/89682): Fuchsia-specific wlan_softmac_passive_scan_args_t should be moved out
-// of these function arguments or this function should be moved to platform/mvm-mlme.cc.
-zx_status_t iwl_mvm_reg_scan_start_passive(
-    struct iwl_mvm_vif* mvmvif, const wlan_softmac_passive_scan_args_t* passive_scan_args) {
-  // TODO(fxbug.dev/89693): iwlwifi only uses the channels field.
-  return iwl_mvm_reg_scan_start(mvmvif, passive_scan_args->channels_list,
-                                passive_scan_args->channels_count);
-}
-
-zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channels_list,
-                                   size_t channels_count) {
+// TODO(fxbug.dev/89693): iwlwifi only uses the channels field.
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
+                                   const struct iwl_mvm_scan_req* scan_req) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_host_cmd hcmd = {
       .len =
@@ -1593,7 +1599,6 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
           },
   };
   zx_status_t ret;
-
   iwl_assert_lock_held(&mvm->mutex);
 
 #if 0   // NEEDS_PORTING
@@ -1621,32 +1626,38 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
     return ZX_ERR_SHOULD_WAIT;
   }
 
-// TODO(fxbug.dev/89683): The number of SSIDs and channels is not actually limitless
-// and should be checked.
-#if 0   // NEEDS_PORTING
-    if (!iwl_mvm_scan_fits(mvm, req->n_ssids, ies, req->n_channels)) { return ZX_ERR_BUFFER_TOO_SMALL; }
-#endif  // NEEDS_PORTING
+  if (!iwl_mvm_scan_fits(mvm, scan_req->ssids_count, scan_req->ies_size,
+                         scan_req->channels_count)) {
+    IWL_WARN(mvm, "Buffer size is too small to cover all scan information.");
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
-  // TODO(43481): Scan specific SSID
   struct iwl_mvm_scan_params params = {
-      .n_ssids = 0,
-      .ssids = NULL,
+      .n_ssids = scan_req->ssids_count,
+      .ssids = scan_req->ssids,
       .flags = 0,
       .delay = 0,
   };
 
-  params.n_channels = channels_count;
-  for (uint32_t i = 0; i < params.n_channels; ++i) {
-    params.channels[i] = channels_list[i];
+  // When performing active scan, only send probe req packet on the allowed channels.
+  params.n_channels = reg_filter_channels(params.n_ssids, &mvm->mcc_info, scan_req->channels_count,
+                                          scan_req->channels_list, params.channels);
+  if (!params.n_channels) {
+    // If no channel is left after filtering, return immediately and notify MLME that the scan is
+    // done.
+    notify_mlme_scan_completion(mvmvif, ZX_OK);
+    return ZX_OK;
   }
 
+  params.mac_addr = mvmvif->addr;
+
 #if 0   // NEEDS_PORTING
-    // TODO(43487): Support Active Scan
-    params.mac_addr = req->mac_addr;
+    // TODO(fxbug.com/90367): Support random MAC addr.
     params.mac_addr_mask = req->mac_addr_mask;
 
     params.no_cck = req->no_cck;
 #endif  // NEEDS_PORTING
+
   params.pass_all = true;
   params.n_match_sets = 0;
   params.match_sets = NULL;
@@ -1656,22 +1667,18 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
   params.n_scan_plans = 1;
 
   params.type = IWL_SCAN_TYPE_WILD;
+
 #if 0   // NEEDS_PORTING
     iwl_mvm_fill_scan_type(mvm, &params, vif);
-#endif  // NEEDS_PORTING
 
-  params.measurement_dwell = 0;
-#if 0   // NEEDS_PORTING
+    params.measurement_dwell = 0;
     ret = iwl_mvm_get_measurement_dwell(mvm, req, &params);
     if (ret < 0) { return ret; }
 
     params.measurement_dwell = ret;
 #endif  // NEEDS_PORTING
 
-#if 0   // NEEDS_PORTING
-    // TODO(43487): Support Active Scan
-    iwl_mvm_build_scan_probe(mvm, vif, ies, &params);
-#endif  // NEEDS_PORTING
+  iwl_mvm_build_scan_probe(mvm, mvmvif, scan_req, &params);
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
     hcmd.id = iwl_cmd_id(SCAN_REQ_UMAC, IWL_ALWAYS_LONG_GROUP, 0);
@@ -1688,7 +1695,6 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
 #if 0   // NEEDS_PORTING
     iwl_mvm_pause_tcm(mvm, false);
 #endif  // NEEDS_PORTING
-
   ret = iwl_mvm_send_cmd(mvm, &hcmd);
   if (ret != ZX_OK) {
     /* If the scan failed, it usually means that the FW was unable
@@ -1699,6 +1705,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
 #if 0   // NEEDS_PORTING
         iwl_mvm_resume_tcm(mvm);
 #endif  // NEEDS_PORTING
+
     return ret;
   }
 

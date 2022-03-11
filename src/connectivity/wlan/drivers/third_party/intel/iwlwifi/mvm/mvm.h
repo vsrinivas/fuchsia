@@ -1296,6 +1296,25 @@ enum iwl_mvm_init_status {
   IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE = BIT(3),
 };
 
+struct iwl_mvm_ssid {
+  size_t ssid_len;
+  uint8_t ssid_data[fuchsia_wlan_ieee80211_MAX_SSID_BYTE_LEN];
+};
+
+// This struct is carrying the scan request data which comes from FIDL and is needed by mvm
+// driver(for both active and passive scan), while iwl_mvm_scan_params is used for scan command
+// construction.
+struct iwl_mvm_scan_req {
+  const uint8_t* channels_list;
+  size_t channels_count;
+  struct iwl_mvm_ssid* ssids;
+  size_t ssids_count;
+  const uint8_t* mac_header_buffer;
+  size_t mac_header_size;
+  const uint8_t* ies_buffer;
+  size_t ies_size;
+};
+
 // Internal struct used in scan.c. Exported here for testing only.
 struct iwl_mvm_scan_params {
   /* For CDB this is low band scan type, for non-CDB - type. */
@@ -1304,8 +1323,8 @@ struct iwl_mvm_scan_params {
   uint32_t n_channels;
   uint8_t channels[fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS];  // ch_num. e.g. 1..14, 36..
   uint16_t delay;
-  int n_ssids;
-  struct cfg80211_ssid* ssids;
+  uint16_t n_ssids;
+  struct iwl_mvm_ssid* ssids;
   uint32_t flags;
   uint8_t* mac_addr;
   uint8_t* mac_addr_mask;
@@ -1769,10 +1788,8 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
-zx_status_t iwl_mvm_reg_scan_start_passive(
-    struct iwl_mvm_vif* mvmvif, const wlan_softmac_passive_scan_args_t* passive_scan_args);
-zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channel_list_buffer,
-                                   size_t channel_list_size);
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
+                                   const struct iwl_mvm_scan_req* scan_req);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);
 int iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify);
 int iwl_mvm_max_scan_ie_len(struct iwl_mvm* mvm);
@@ -2167,9 +2184,8 @@ zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 
 void iwl_mvm_configure_filter(struct iwl_mvm* mvm);
 
-zx_status_t iwl_mvm_mac_hw_scan_passive(struct iwl_mvm_vif* mvmvif,
-                                        const wlan_softmac_passive_scan_args_t* passive_scan_args,
-                                        uint64_t* out_scan_id);
+zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif, const struct iwl_mvm_scan_req* scan_req,
+                                uint64_t* out_scan_id);
 
 zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
                                   enum iwl_sta_state old_state, enum iwl_sta_state new_state);
