@@ -361,7 +361,9 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
                                           OnHeapServerClose(info, server_end.TakeChannel());
                                         });
         auto result = fidl::WireSendEvent(binding)->OnRegister(std::move(heap_properties));
-        ZX_ASSERT(result.ok());
+        if (!result.ok()) {
+          zxlogf(ERROR, "OnRegister() failed: %s", result.FormatDescription().c_str());
+        }
       });
 
   // Start vsync loop.
