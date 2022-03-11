@@ -68,13 +68,16 @@ template("clippy") {
     _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
 
     args = [
+      "--output",
       rebase_path(_output, root_build_dir),
+      "--jq",
       rebase_path(_jq, root_build_dir),
     ]
     if (clippy_cause_failure) {
       args += [ "--fail" ]
     }
     args += [
+      "--",
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(source_root, root_build_dir),
       "-${level}clippy::all",

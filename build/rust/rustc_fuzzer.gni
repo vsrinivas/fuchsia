@@ -4,7 +4,6 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/rust/rustc_staticlib.gni")
-import("//build/toolchain/rbe.gni")
 
 # Defines a Rust fuzzer
 #
@@ -98,19 +97,6 @@ template("rustc_fuzzer") {
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
-    }
-
-    inputs = []
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
-    }
-    _use_rbe = enable_rbe
-    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-      _use_rbe = false
-    }
-    if (_use_rbe) {
-      # Depend on Rust/RBE scripts and tools
-      inputs += rust_rbe_deps
     }
   }
 

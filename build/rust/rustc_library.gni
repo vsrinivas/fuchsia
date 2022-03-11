@@ -5,7 +5,6 @@
 import("//build/rust/clippy.gni")
 import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/toolchain/rbe.gni")
 
 # Defines a Rust library
 #
@@ -173,20 +172,6 @@ template("rustc_library") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
-  _use_rbe = enable_rbe
-  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-    _use_rbe = false
-  }
-  _remote_rbe_inputs = []
-  if (defined(invoker.inputs)) {
-    _remote_rbe_inputs = invoker.inputs
-  }
-  _local_inputs = _remote_rbe_inputs
-  if (_use_rbe) {
-    # Depend on Rust/RBE scripts and tools
-    _local_inputs += rust_rbe_deps
-  }
-
   disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
   if (generate_clippy && !disable_clippy) {
     clippy("$target_name.clippy") {
@@ -238,26 +223,12 @@ template("rustc_library") {
 
     forward_variables_from(invoker,
                            [
+                             "disable_rbe",
                              "edition",
                              "features",
+                             "inputs",
                            ])
 
-    inputs = _local_inputs
-    rustflags = []
-    if (enable_rbe && !_use_rbe) {
-      # Disable RBE for this target through a fake rustflag,
-      # that is intercepted by rustc-remote-wrapper.sh.
-      rustflags += [ "--remote-disable" ]
-    }
-    if (_use_rbe && _remote_rbe_inputs != []) {
-      # Signal to rustc-remote-wrapper.sh that there are additional
-      # inputs to upload.  This flag is stripped away from the eventual
-      # rustc command.
-      rustflags += [
-        "--remote-inputs",
-        string_join(",", rebase_path(_remote_rbe_inputs, root_build_dir)),
-      ]
-    }
     if (generate_clippy && !disable_clippy) {
       pass_through.gen_deps = [ ":$target_name.clippy" ]
       _outputs = get_target_outputs(":$target_name.clippy")

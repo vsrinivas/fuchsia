@@ -5,7 +5,6 @@
 import("//build/rust/clippy.gni")
 import("//build/rust/rustc_artifact.gni")
 import("//build/testing/host_test.gni")
-import("//build/toolchain/rbe.gni")
 
 # Internal template supporting rustc_test.
 #
@@ -99,18 +98,9 @@ template("rustc_test_internal") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
-  _use_rbe = enable_rbe
-  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-    _use_rbe = false
-  }
-  _remote_rbe_inputs = []
-  if (defined(invoker.inputs)) {
-    _remote_rbe_inputs = invoker.inputs
-  }
-  _local_inputs = _remote_rbe_inputs
-  if (_use_rbe) {
-    # Depend on Rust/RBE scripts and tools
-    _local_inputs += rust_rbe_deps
+  rustflags = []
+  if (defined(invoker.rustflags)) {
+    rustflags = invoker.rustflags
   }
 
   disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
@@ -124,7 +114,7 @@ template("rustc_test_internal") {
                                "sources",
                              ])
       crate_type = "lib"
-      rustflags = _features_rustflags + [ "--test" ]
+      rustflags += _features_rustflags + [ "--test" ]
       if (defined(invoker.test_deps)) {
         if (!defined(deps)) {
           deps = []
@@ -157,12 +147,14 @@ template("rustc_test_internal") {
     crate_name = crate_name
 
     # tell rustc to compile in the test harness
-    rustflags = [ "--test" ]
+    rustflags += [ "--test" ]
 
     forward_variables_from(invoker,
                            [
+                             "disable_rbe",
                              "features",
                              "edition",
+                             "inputs",
                            ])
 
     deps = _deps
@@ -228,22 +220,6 @@ template("rustc_test_internal") {
     pass_through.data_deps = _data_deps
 
     sources = _sources
-
-    inputs = _local_inputs
-    if (enable_rbe && !_use_rbe) {
-      # Disable RBE for this target through a fake rustflag,
-      # that is intercepted by rustc-remote-wrapper.sh.
-      rustflags += [ "--remote-disable" ]
-    }
-    if (_use_rbe && _remote_rbe_inputs != []) {
-      # Signal to rustc-remote-wrapper.sh that there are additional
-      # inputs to upload.  This flag is stripped away from the eventual
-      # rustc command.
-      rustflags += [
-        "--remote-inputs",
-        string_join(",", rebase_path(_remote_rbe_inputs, root_build_dir)),
-      ]
-    }
   }
 }
 

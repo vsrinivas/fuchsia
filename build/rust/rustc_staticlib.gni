@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/toolchain/rbe.gni")
 
 # Defines a Rust static library
 #
@@ -194,23 +193,11 @@ template("rustc_staticlib") {
                            [
                              "features",
                              "edition",
+                             "inputs",
                            ])
 
     configs = []
     configs = invoker.configs
-
-    inputs = []
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
-    }
-    _use_rbe = enable_rbe
-    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-      _use_rbe = false
-    }
-    if (_use_rbe) {
-      # Depend on Rust/RBE scripts and tools
-      inputs += rust_rbe_deps
-    }
   }
 
   public_hdrs = []

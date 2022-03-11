@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/rbe.gni")
+
 # Common logic for implementing the other rustc_* templates in this directory.
 # Should not be called directly outside of //build/rust.
 #
@@ -52,6 +54,10 @@
 #     The Rust compiler discovers source files by following `mod` declarations
 #     starting at the `crate_root`. The discovered source files must match this
 #     list.
+#
+#   disable_rbe (optional)
+#     Set to true to force this target to build locally, overriding the global `enable_rbe`.
+#
 template("rustc_artifact") {
   # _invoker = invoker
   # invoker = {
@@ -64,6 +70,12 @@ template("rustc_artifact") {
   _crate_name = string_replace(invoker.crate_name, "-", "_")
   _crate_root = invoker.crate_root
 
+  _remote_inputs = []
+  if (defined(invoker.inputs)) {
+    _remote_inputs = invoker.inputs
+  }
+  _local_inputs = _remote_inputs
+
   # enable these features for the target
   _rustflags = []
   if (defined(invoker.features)) {
@@ -75,15 +87,45 @@ template("rustc_artifact") {
     _rustflags += invoker.rustflags
   }
 
+  _use_rbe = enable_rbe
+  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+    _use_rbe = false
+  }
+  if (enable_rbe && !_use_rbe) {
+    # Disable RBE for this target through a fake rustflag,
+    # that is intercepted by rustc-remote-wrapper.sh.
+    _rustflags += [ "--remote-disable" ]
+  }
+  if (_use_rbe) {
+    # Depend on Rust/RBE scripts and tools
+    _local_inputs += rust_rbe_deps
+  }
+
   target(invoker.target_type, target_name) {
     crate_root = _crate_root
     crate_name = _crate_name
-    rustflags = _rustflags
+
+    rustflags = []
+    if (enable_rbe) {
+      rustflags +=
+          [ "--remote-flag=--label='" +
+            get_label_info(":$target_name", "label_with_toolchain") + "'" ]
+    }
+    if (_use_rbe && _remote_inputs != []) {
+      # Signal to rustc-remote-wrapper.sh that there are additional
+      # inputs to upload.  This flag is stripped away from the eventual
+      # rustc command.
+      rustflags += [
+        "--remote-inputs",
+        string_join(",", rebase_path(_remote_inputs, root_build_dir)),
+      ]
+    }
+    rustflags += _rustflags
 
     configs = []
     configs = invoker.configs
     deps = invoker.deps
-    inputs = invoker.inputs
+    inputs = _local_inputs
     sources = invoker.sources
 
     # in-tree default is 2018 edition

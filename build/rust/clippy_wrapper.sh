@@ -4,30 +4,89 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# the first arg is the rebased path to `target_name.clippy` in the generated
-# output directory, which is used to form all other output paths.
-output="$1"
-shift
-# the next arg is the path to jq.
-jq="$1"
-shift
-# the next arg is true or false based on clippy_cause_failure
-if [ "$1" == "--fail" ]; then
-    fail=$1
+function usage() {
+  cat <<EOF
+$0 [options] -- clippy-driver-arguments...
+
+Options:
+  --help | -h : print help and exit
+  --output FILE : clippy file to output (required)
+  --jq FILE : path to 'jq' (required)
+  --fail : clippy cause failure
+
+EOF
+}
+
+output=
+jq=
+driver_options=()
+fail=0
+
+# Extract options before --
+prev_opt=
+for opt
+do
+  # handle --option arg
+  if test -n "$prev_opt"
+  then
+    eval "$prev_opt"=\$opt
+    prev_opt=
     shift
-fi
-# after that the positional args are the clippy-driver command and args set
-# in the clippy GN template
+    continue
+  fi
+  # Extract optarg from --opt=optarg
+  case "$opt" in
+    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
+    *=) optarg= ;;
+  esac
+  case "$opt" in
+    --help|-h) usage ; exit ;;
+    --output) prev_opt=output ;;
+    --output=*) output="$optarg" ;;
+    --jq) prev_opt=jq ;;
+    --jq=*) jq="$optarg" ;;
+    --fail) fail=1 ;;
+    # stop option processing
+    --) shift; break ;;
+    # Forward all other options to clippy-driver
+    *) driver_options+=( "$opt" ) ;;
+  esac
+  shift
+done
+test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
+
+test -n "$output" || { echo "Error: --output required, but missing." ; exit 1 ;}
+test -n "$jq" || { echo "Error: --jq required, but missing." ; exit 1 ;}
+
+# After -- the remaining args are the clippy-driver command and args set
+# in the clippy GN template.
+filtered_driver_options=()
+for opt in "${driver_options[@]}" "$@"
+do case "$opt" in
+  --remote* ) ;;  # pseudoflag for RBE parameters, drop it
+  *) filtered_driver_options+=( "$opt" )
+esac
+done
 
 deps=( $(<"$output.deps") )
 transdeps=( $(sort -u "$output.transdeps") )
 
-RUSTC_LOG=error "$@" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
-    ${deps[@]} ${transdeps[@]} --emit metadata="$output.rmeta" \
-    --error-format=json --json=diagnostic-rendered-ansi 2>"$output"
-result=$?
+command=(
+  "${filtered_driver_options[@]}"
+  -Cpanic=abort
+  -Zpanic_abort_tests
+  -Zno_codegen
+  "${deps[@]}"
+  "${transdeps[@]}"
+  --emit metadata="$output.rmeta"
+  --error-format=json
+  --json=diagnostic-rendered-ansi
+)
 
-if [[ $result != 0 && $fail ]]; then
+RUSTC_LOG=error "${command[@]}" 2>"$output"
+result="$?"
+
+if [[ "$result" != 0 && "$fail" = 1 ]]; then
     "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output"
-    exit $result
+    exit "$result"
 fi
