@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package syslog
@@ -187,8 +188,8 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 		initLevel := options.LogLevel
 		go func() {
 			for {
-				_ = l.InfoTf(tag, "waiting for fuchsia.logger/LogSink.OnRegisterInterest...")
-				interest, err := logSink.ExpectOnRegisterInterest(ctx)
+				_ = l.InfoTf(tag, "calling fuchsia.logger/LogSink.WaitForInterestChange...")
+				interest, err := logSink.WaitForInterestChange(ctx)
 				if err != nil {
 					func() {
 						switch err := err.(type) {
@@ -197,18 +198,24 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 							case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 								return
 							}
-							_ = l.WarnTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest(): %s", err)
+							_ = l.WarnTf(tag, "fuchsia.logger/LogSink.WaitForInterestChange(): %s", err)
 						}
 					}()
-					break
+					return
 				}
-				if interest.HasMinSeverity() {
-					minSeverity := interest.GetMinSeverity()
-					l.SetSeverity(minSeverity)
-					_ = l.InfoTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest({MinSeverity: %s})", minSeverity)
-				} else {
-					_ = l.InfoTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest({})")
-					l.SetSeverity(diagnostics.Severity(initLevel))
+				switch interest.Which() {
+				case logger.LogSinkWaitForInterestChangeResultResponse:
+					if interest.Response.Data.HasMinSeverity() {
+						minSeverity := interest.Response.Data.GetMinSeverity()
+						l.SetSeverity(minSeverity)
+						_ = l.InfoTf(tag, "fuchsia.logger/LogSink.WaitForInterestChange({MinSeverity: %s})", minSeverity)
+					} else {
+						_ = l.InfoTf(tag, "fuchsia.logger/LogSink.WaitForInterestChange({})")
+						l.SetSeverity(diagnostics.Severity(initLevel))
+					}
+				case logger.LogSinkWaitForInterestChangeResultErr:
+					_ = l.ErrorTf(tag, "fuchsia.logger/LogSink.WaitForInterestChange(): %s", interest.Err)
+					return
 				}
 			}
 		}()

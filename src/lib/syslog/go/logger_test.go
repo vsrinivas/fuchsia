@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,6 +25,7 @@ import (
 
 	"fidl/fuchsia/diagnostics"
 	"fidl/fuchsia/logger"
+
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
@@ -35,19 +37,24 @@ var pid = uint64(os.Getpid())
 var _ logger.LogSinkWithCtx = (*logSinkImpl)(nil)
 
 type logSinkImpl struct {
-	onConnect func(fidl.Context, zx.Socket) error
+	onConnect             func(fidl.Context, zx.Socket)
+	waitForInterestChange <-chan logger.LogSinkWaitForInterestChangeResult
 }
 
 func (impl *logSinkImpl) Connect(ctx fidl.Context, socket zx.Socket) error {
-	return impl.onConnect(ctx, socket)
+	impl.onConnect(ctx, socket)
+	return nil
 }
 
 func (*logSinkImpl) ConnectStructured(fidl.Context, zx.Socket) error {
 	return nil
 }
 
-func (*logSinkImpl) WaitForInterestChange(fidl.Context) (logger.LogSinkWaitForInterestChangeResult, error) {
-	return logger.LogSinkWaitForInterestChangeResult{}, nil
+func (impl *logSinkImpl) WaitForInterestChange(fidl.Context) (logger.LogSinkWaitForInterestChangeResult, error) {
+	if result := <-impl.waitForInterestChange; result != (logger.LogSinkWaitForInterestChangeResult{}) {
+		return result, nil
+	}
+	return logger.LogSinkWaitForInterestChangeResult{}, &zx.Error{Status: zx.ErrCanceled}
 }
 
 func TestLogSimple(t *testing.T) {
@@ -72,7 +79,7 @@ func TestLogSimple(t *testing.T) {
 	}
 }
 
-func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, *syslog.Logger) {
+func setup(t *testing.T, tags ...string) (chan<- logger.LogSinkWaitForInterestChangeResult, zx.Socket, *syslog.Logger) {
 	req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
@@ -85,6 +92,9 @@ func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, 
 		<-ch
 	})
 
+	waitForInterestChange := make(chan logger.LogSinkWaitForInterestChangeResult)
+	t.Cleanup(func() { close(waitForInterestChange) })
+
 	sinChan := make(chan zx.Socket, 1)
 	defer close(sinChan)
 	go func() {
@@ -92,16 +102,16 @@ func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, 
 
 		component.Serve(ctx, &logger.LogSinkWithCtxStub{
 			Impl: &logSinkImpl{
-				onConnect: func(_ fidl.Context, socket zx.Socket) error {
+				onConnect: func(_ fidl.Context, socket zx.Socket) {
 					sinChan <- socket
-					return nil
 				},
+				waitForInterestChange: waitForInterestChange,
 			},
 		}, req.Channel, component.ServeOptions{
 			OnError: func(err error) {
-				switch err := err.(type) {
-				case *zx.Error:
-					if err.Status == zx.ErrCanceled {
+				var zxError *zx.Error
+				if errors.As(err, &zxError) {
+					if zxError.Status == zx.ErrCanceled {
 						return
 					}
 				}
@@ -133,9 +143,7 @@ func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, 
 		}
 	}
 
-	return &logger.LogSinkEventProxy{
-		Channel: req.Channel,
-	}, s, log
+	return waitForInterestChange, s, log
 }
 
 func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslog.LogLevel, tags ...string) {
@@ -301,7 +309,7 @@ func TestLoggerVerbosity(t *testing.T) {
 }
 
 func TestLoggerRegisterInterest(t *testing.T) {
-	proxy, sin, log := setup(t)
+	ch, sin, log := setup(t)
 	defer func() {
 		if err := log.Close(); err != nil {
 			t.Error(err)
@@ -314,9 +322,10 @@ func TestLoggerRegisterInterest(t *testing.T) {
 	registerInterest := func(interest diagnostics.Interest) {
 		t.Helper()
 
-		if err := proxy.OnRegisterInterest(interest); err != nil {
-			t.Fatal(err)
-		}
+		ch <- logger.LogSinkWaitForInterestChangeResultWithResponse(logger.LogSinkWaitForInterestChangeResponse{
+			Data: interest,
+		})
+
 		// Consume the system-generated messages.
 		for i := 0; i < 2; i++ {
 			if _, err := zxwait.WaitContext(context.Background(), zx.Handle(sin), zx.SignalSocketReadable); err != nil {
