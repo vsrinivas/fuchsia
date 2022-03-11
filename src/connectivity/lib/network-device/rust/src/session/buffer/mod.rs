@@ -599,9 +599,9 @@ mod tests {
     use const_unwrap::const_unwrap_option;
 
     // Safety: These are safe because none of the values are zero.
-    const TX_BUFFERS: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(1));
-    const RX_BUFFERS: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(2));
-    const BUFFER_STRIDE: NonZeroU64 = const_unwrap_option!(NonZeroU64::new(4));
+    const TX_BUFFERS: NonZeroU16 = const_unwrap_option(NonZeroU16::new(1));
+    const RX_BUFFERS: NonZeroU16 = const_unwrap_option(NonZeroU16::new(2));
+    const BUFFER_STRIDE: NonZeroU64 = const_unwrap_option(NonZeroU64::new(4));
 
     #[test]
     fn test_get_descriptor_after_vmo_write() {

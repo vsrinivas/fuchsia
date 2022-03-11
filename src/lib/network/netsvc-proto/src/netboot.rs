@@ -26,9 +26,9 @@ pub use witness::ErrorValue;
 type U32 = zerocopy::U32<LittleEndian>;
 
 /// The UDP port a netboot server listens on.
-pub const SERVER_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33330));
+pub const SERVER_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33330));
 /// The UDP port multicast advertisements are sent to.
-pub const ADVERT_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33331));
+pub const ADVERT_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33331));
 
 const MAGIC: u32 = 0xAA774217;
 

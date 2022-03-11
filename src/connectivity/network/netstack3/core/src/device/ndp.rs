@@ -892,7 +892,7 @@ fn regen_advance(
     dad_transmits: u8,
 ) -> NonZeroDuration {
     const TWO_SECONDS: NonZeroDuration =
-        NonZeroDuration::from_nonzero_secs(const_unwrap::const_unwrap_option!(NonZeroU64::new(2)));
+        NonZeroDuration::from_nonzero_secs(const_unwrap::const_unwrap_option(NonZeroU64::new(2)));
     // Per the RFC, REGEN_ADVANCE in seconds =
     //   2 + (TEMP_IDGEN_RETRIES * DupAddrDetectTransmits * RetransTimer / 1000)
     //

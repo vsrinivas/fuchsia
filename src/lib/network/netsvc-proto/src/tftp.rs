@@ -35,10 +35,10 @@ use zerocopy::{
 };
 
 /// The port netsvc uses to send TFTP traffic from.
-pub const OUTGOING_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33340));
+pub const OUTGOING_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33340));
 
 /// The port netsvc uses to listen to TFTP traffic.
-pub const INCOMING_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33341));
+pub const INCOMING_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33341));
 
 /// The default block size option value, according to [RFC 1350].
 ///

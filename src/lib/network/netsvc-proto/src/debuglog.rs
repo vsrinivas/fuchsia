@@ -17,8 +17,8 @@ use zerocopy::{
     byteorder::LittleEndian, AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned, U32,
 };
 
-pub const MULTICAST_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33337));
-pub const ACK_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33338));
+pub const MULTICAST_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33337));
+pub const ACK_PORT: NonZeroU16 = const_unwrap_option(NonZeroU16::new(33338));
 
 const MAGIC: u32 = 0xAEAE1123;
 const MAX_LOG_DATA: usize = 1216;
