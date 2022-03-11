@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
@@ -253,7 +254,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    BuildRealm(this->GetTestComponents(), this->GetTestRoutes());
+    BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
     // Get the display dimensions
     scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
@@ -273,6 +274,10 @@ class TouchInputBase : public gtest::RealLoopFixture {
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
   virtual std::vector<Route> GetTestRoutes() { return {}; }
+
+  // Subclass should implement this method to add components to the test realm
+  // next to the base ones added.
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
@@ -491,7 +496,8 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
  private:
   void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
-                  const std::vector<Route>& routes) {
+                  const std::vector<Route>& routes,
+                  const std::vector<std::pair<ChildName, std::string>>& v2_components) {
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<ResponseListenerServer>(dispatcher());
@@ -503,6 +509,10 @@ class TouchInputBase : public gtest::RealLoopFixture {
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
       builder()->AddLegacyChild(name, component);
+    }
+
+    for (const auto& [name, component] : v2_components) {
+      builder()->AddChild(name, component);
     }
 
     // Add the necessary routing for each of the base components added above.
@@ -667,7 +677,7 @@ TEST_F(GfxInputTest, CppGfxClientTap) {
 
 class WebEngineTest : public TouchInputBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
         std::make_pair(kOneChromiumClient, kOneChromiumUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
@@ -680,7 +690,13 @@ class WebEngineTest : public TouchInputBase {
     };
   }
 
-  std::vector<Route> GetTestRoutes() {
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+    return {
+        std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+    };
+  }
+
+  std::vector<Route> GetTestRoutes() override {
     return merge({GetWebEngineRoutes(ChildRef{kOneChromiumClient}),
                   {
                       {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
@@ -824,6 +840,9 @@ class WebEngineTest : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
          .source = ChildRef{kNetstack},
          .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
+         .source = ChildRef{kBuildInfoProvider},
+         .targets = {target, ChildRef{kWebContextProvider}}},
     };
   }
 
@@ -858,6 +877,10 @@ class WebEngineTest : public TouchInputBase {
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerUrl =
       "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
+
+  static constexpr auto kBuildInfoProvider = "build_info_provider";
+  static constexpr auto kBuildInfoProviderUrl =
+      "fuchsia-pkg://fuchsia.com/touch-input-test#meta/fake_build_info.cm";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being

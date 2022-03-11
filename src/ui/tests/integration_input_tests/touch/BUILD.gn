@@ -33,6 +33,7 @@ executable("touch-input-test-bin") {
   deps = [
     ":test.touch",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
@@ -93,6 +94,7 @@ fuchsia_test_package("touch-input-test") {
   deps = [
     ":touch-input-test-display_rotation",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/developer/build_info/testing:fake-build-info-component",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
@@ -125,6 +127,7 @@ executable("touch-input-test-ip-bin") {
   deps = [
     ":test.touch",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
@@ -188,6 +191,7 @@ fuchsia_test_package("touch-input-test-ip") {
   deps = [
     ":touch-input-test-display_rotation-ip",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/developer/build_info/testing:fake-build-info-component",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",

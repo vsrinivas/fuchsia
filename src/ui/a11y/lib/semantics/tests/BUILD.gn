@@ -167,6 +167,7 @@ fuchsia_test_package("semantics-integration-tests") {
     ":offscreen_node",
     ":static",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/developer/build_info/testing:fake-build-info-component",
     "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
 
@@ -213,6 +214,7 @@ executable("web_semantics_tests_bin") {
   sources = [ "web_semantics_tests.cc" ]
   deps = [
     ":semantics_integration_test_fixture_v2",
+    "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",

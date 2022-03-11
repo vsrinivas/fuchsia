@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
@@ -269,6 +270,11 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
+  static constexpr auto kBuildInfoProvider = "build_info_provider";
+  static constexpr auto kBuildInfoProviderRef = ChildRef{kBuildInfoProvider};
+  static constexpr auto kBuildInfoProviderUrl =
+      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/fake_build_info.cm";
+
   WebSemanticsTest() = default;
   ~WebSemanticsTest() override = default;
 
@@ -283,6 +289,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm_builder->AddLegacyChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
     realm_builder->AddLegacyChild(kNetstack, kNetstackUrl);
     realm_builder->AddLegacyChild(kWebContextProvider, kWebContextProviderUrl);
+    realm_builder->AddChild(kBuildInfoProvider, kBuildInfoProviderUrl);
 
     // Second, add all necessary routing.
     realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
@@ -345,6 +352,9 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                              .source = kWebViewRef,
                              .targets = {ParentRef()}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
+                             .source = kBuildInfoProviderRef,
+                             .targets = {kWebViewRef, kWebContextProviderRef}});
   }
 
   void SetUp() override {
