@@ -26,8 +26,9 @@ func TestFFXConfig(t *testing.T) {
 		"overnet": map[string]string{
 			"socket": expectedSocket,
 		},
-		"log": map[string][]string{
-			"dir": {filepath.Join(tmpDir, "logs")},
+		"log": map[string]interface{}{
+			"dir":   []string{filepath.Join(tmpDir, "logs")},
+			"level": "Trace",
 		},
 		"test": map[string][]string{
 			"output_path": {filepath.Join(tmpDir, "saved_test_runs")},

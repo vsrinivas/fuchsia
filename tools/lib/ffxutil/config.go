@@ -39,7 +39,7 @@ func newIsolatedFFXConfig(dir string) *FFXConfig {
 		env:    env,
 	}
 	config.Set("overnet", map[string]string{"socket": socketPath})
-	config.Set("log", map[string][]string{"dir": {filepath.Join(dir, "logs")}})
+	config.Set("log", map[string]interface{}{"dir": []string{filepath.Join(dir, "logs")}, "level": "Trace"})
 	config.Set("test", map[string][]string{"output_path": {filepath.Join(dir, "saved_test_runs")}})
 	config.Set("fastboot", map[string]map[string]bool{"usb": {"disabled": true}})
 	config.Set("ffx", map[string]map[string]bool{"analytics": {"disabled": true}})
