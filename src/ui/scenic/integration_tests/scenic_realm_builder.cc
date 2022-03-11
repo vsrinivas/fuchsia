@@ -4,17 +4,21 @@
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
+namespace integration_tests {
 namespace {
+
 // Name for the scenic subrealm.
-constexpr auto kScenicSubRealm = "scenic_subrealm";
+constexpr auto kScenicRealm = "scenic_realm";
+constexpr auto kScenicRealmUrl = "#meta/scenic_realm.cm";
+
 }  // namespace
 
-namespace integration_tests {
 using Route = sys::testing::Route;
 using RealmRoot = sys::testing::experimental::RealmRoot;
 using Protocol = sys::testing::Protocol;
@@ -22,35 +26,32 @@ using ChildRef = sys::testing::ChildRef;
 using ParentRef = sys::testing::ParentRef;
 using RealmBuilder = sys::testing::experimental::RealmBuilder;
 
-ScenicRealmBuilder::ScenicRealmBuilder(const SubRealmUrl& url)
-    : realm_builder_(RealmBuilder::Create()) {
-  Init(url);
-}
+ScenicRealmBuilder::ScenicRealmBuilder() : realm_builder_(RealmBuilder::Create()) { Init(); }
 
-ScenicRealmBuilder& ScenicRealmBuilder::Init(const SubRealmUrl& url) {
-  realm_builder_.AddChild(kScenicSubRealm, url);
+ScenicRealmBuilder& ScenicRealmBuilder::Init() {
+  realm_builder_.AddChild(kScenicRealm, kScenicRealmUrl);
 
   // Route the protocols required by the scenic subrealm from the test_manager.
   realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_},
+      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
                              Protocol{fuchsia::sysmem::Allocator::Name_},
-                             Protocol{fuchsia::tracing::provider::Registry::Name_}},
+                             Protocol{fuchsia::tracing::provider::Registry::Name_},
+                             Protocol{fuchsia::vulkan::loader::Loader::Name_}},
             .source = ParentRef(),
-            .targets = {ChildRef{kScenicSubRealm}}});
+            .targets = {ChildRef{kScenicRealm}}});
 
   return *this;
 }
 
-ScenicRealmBuilder& ScenicRealmBuilder::AddScenicSubRealmProtocol(const ProtocolName& protocol) {
+ScenicRealmBuilder& ScenicRealmBuilder::AddRealmProtocol(const ProtocolName& protocol) {
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{protocol}},
-                                .source = ChildRef{kScenicSubRealm},
+                                .source = ChildRef{kScenicRealm},
                                 .targets = {ParentRef()}});
 
   return *this;
 }
 
-std::unique_ptr<RealmRoot> ScenicRealmBuilder::Build() {
-  return std::make_unique<RealmRoot>(realm_builder_.Build());
-}
+RealmRoot ScenicRealmBuilder::Build() { return realm_builder_.Build(); }
+
 }  // namespace integration_tests

@@ -9,10 +9,10 @@
 #include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
 
-#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
@@ -25,7 +25,7 @@
 // - Target(s) specified by View (using view ref koids)
 // - Dispatch done to fuchsia.ui.pointer.MouseSource in receiver View Space.
 namespace integration_tests {
-namespace {
+
 using fuc_ParentViewportWatcher = fuchsia::ui::composition::ParentViewportWatcher;
 using fuc_ChildViewWatcher = fuchsia::ui::composition::ChildViewWatcher;
 using fuc_Flatland = fuchsia::ui::composition::Flatland;
@@ -78,13 +78,13 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
   void SetUp() override {
     // Build the realm topology and route the protocols required by this test fixture from the
     // scenic subrealm.
-    realm_ = ScenicRealmBuilder(
-                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
-                 .Build();
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+            .AddRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
+            .Build());
 
     flatland_display_ = realm_->Connect<fuc_FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
@@ -518,5 +518,4 @@ TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheelBundled) {
   EXPECT_FALSE(child_events[4].pointer_sample().has_pressed_buttons());
 }
 
-}  // namespace
 }  // namespace integration_tests

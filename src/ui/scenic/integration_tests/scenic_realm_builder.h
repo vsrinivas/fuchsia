@@ -9,38 +9,43 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
 namespace integration_tests {
-using ProtocolName = std::string;
-using SubRealmUrl = std::string;
 
-// Helper class for building a scenic subrealm. The scenic subrealm consists of a scenic component
-// and a fake display provider component. This class sets up the component topology and routes
-// protocols between the test manager and its child components.
+using ProtocolName = std::string;
+
+// Helper class for building a scenic realm. The scenic realm consists of three
+// components:
+//   * Scenic
+//   * Mock Cobalt
+//   * Fake Display Provider
+// This class sets up the component topology and routes protocols between the test
+// manager and its child components.
 //
-// The realm builder library is used to construct a realm during runtime with a topology as follows:
-//    test_manager
-//        |
-//   <Test component>
-//        |
-//   <realm root>
-//        |
-// ------------------
-//     /     \ Scenic subrealm
-//  Scenic    Hdcp
+// The realm builder library is used to construct a realm during runtime with a
+// topology as follows:
+//       test_manager
+//            |
+//     <test component>
+//            |
+//       <realm root>
+//            |          <-Test realm
+// ----------------------------
+//     /      |     \    <-Scenic realm
+//  Scenic  Cobalt  Hdcp
 class ScenicRealmBuilder {
  public:
-  ScenicRealmBuilder(const SubRealmUrl& url);
+  ScenicRealmBuilder();
 
-  // Routes |protocol| from the scenic subrealm to the test fixtures component. Should be used only
-  // for the protocols which are required by the test component.
-  ScenicRealmBuilder& AddScenicSubRealmProtocol(const ProtocolName& protocol);
+  // Routes |protocol| from the realm root returned by |Build()| to the test fixtures
+  // component. Should be used only for the protocols which are required by the test component.
+  ScenicRealmBuilder& AddRealmProtocol(const ProtocolName& protocol);
 
   // Builds the realm with the provided components and routes and returns the realm root.
-  std::unique_ptr<sys::testing::experimental::RealmRoot> Build();
+  sys::testing::experimental::RealmRoot Build();
 
  private:
-  // Adds child components in the scenic subrealm and routes required protocols from the
-  // test_manager to the subrealm. |url| refers to the package url for the scenic subrealm.
-  ScenicRealmBuilder& Init(const SubRealmUrl& url);
+  // Adds child components in the scenic realm and routes required protocols from the
+  // test_manager to the realm.
+  ScenicRealmBuilder& Init();
 
   sys::testing::experimental::RealmBuilder realm_builder_;
 };

@@ -6,6 +6,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
 
@@ -13,7 +14,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
@@ -26,14 +26,12 @@
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
-using allocation::BufferCollectionImporter;
-using fuchsia::ui::composition::CreateImageArgs;
-using fuchsia::ui::composition::ScreenshotError;
-using testing::_;
-
 namespace integration_tests {
 
+using allocation::BufferCollectionImporter;
 using flatland::MapHostPointer;
+using fuchsia::math::SizeU;
+using fuchsia::math::Vec;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
 using fuchsia::ui::composition::CreateImageArgs;
@@ -43,43 +41,37 @@ using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
 using fuchsia::ui::composition::RegisterBufferCollectionUsage;
 using fuchsia::ui::composition::Screenshot;
+using fuchsia::ui::composition::ScreenshotError;
 using fuchsia::ui::composition::TransformId;
 using fuchsia::ui::composition::ViewBoundProtocols;
 using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
+using testing::_;
 using RealmRoot = sys::testing::experimental::RealmRoot;
 
-using fuchsia::math::SizeU;
-using fuchsia::math::Vec;
 class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
  public:
-  ScreenshotIntegrationTest() {}
+  ScreenshotIntegrationTest()
+      : realm_(ScenicRealmBuilder()
+                   .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                   .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                   .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                   .AddRealmProtocol(fuchsia::ui::composition::Screenshot::Name_)
+                   .Build()) {
+    auto context = sys::ComponentContext::Create();
+    context->svc()->Connect(sysmem_allocator_.NewRequest());
 
-  void SetUp() override {
-    // Build the realm topology and route the protocols required by this test fixture from the
-    // scenic subrealm.
-    realm_ = ScenicRealmBuilder(
-                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Screenshot::Name_)
-                 .Build();
-
-    flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
+    flatland_display_ = realm_.Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
-    allocator_ = realm_->ConnectSync<fuchsia::ui::composition::Allocator>();
-
-    auto context = sys::ComponentContext::Create();
-    context->svc()->Connect(sysmem_allocator_.NewRequest());
+    flatland_allocator_ = realm_.ConnectSync<fuchsia::ui::composition::Allocator>();
 
     // Set up root view.
-    root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    root_session_ = realm_.Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -122,7 +114,7 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     BlockingPresent(root_session_);
 
     // Set up the child view.
-    child_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    child_session_ = realm_.Connect<fuchsia::ui::composition::Flatland>();
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
     auto identity = scenic::NewViewIdentityOnCreation();
     auto child_view_ref = fidl::Clone(identity.view_ref);
@@ -134,8 +126,8 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     BlockingPresent(child_session_);
 
     // Create Screenshot client.
-    screenshot_ptr_ = realm_->Connect<fuchsia::ui::composition::Screenshot>();
-    screenshot_ptr_.set_error_handler(
+    screenshot_ = realm_.Connect<fuchsia::ui::composition::Screenshot>();
+    screenshot_.set_error_handler(
         [](zx_status_t status) { FAIL() << "Lost connection to screenshot"; });
   }
 
@@ -211,7 +203,7 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
 
     fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result result;
 
-    allocator_->RegisterBufferCollection(std::move(args), &result);
+    flatland_allocator_->RegisterBufferCollection(std::move(args), &result);
     EXPECT_FALSE(result.is_err());
 
     zx_status_t allocation_status;
@@ -224,18 +216,6 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
     return buffer_collection_info;
   }
 
-  uint32_t display_width_ = 0;
-  uint32_t display_height_ = 0;
-  uint32_t num_pixels_ = 0;
-
-  fuchsia::ui::composition::FlatlandPtr root_session_;
-  fuchsia::ui::composition::FlatlandPtr child_session_;
-  fuchsia::ui::views::ViewRef root_view_ref_;
-  fuchsia::ui::composition::AllocatorSyncPtr allocator_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
-  fuchsia::ui::composition::ScreenshotPtr screenshot_ptr_;
-  std::unique_ptr<RealmRoot> realm_;
-
   const TransformId kChildRootTransform{.value = 1};
   static constexpr uint32_t kBytesPerPixel = 4;
   static constexpr zx::duration kEventDelay = zx::msec(5000);
@@ -245,8 +225,19 @@ class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
   static constexpr uint32_t blue = (255U << 24) | (255U);
   static constexpr uint32_t yellow = green | blue;
 
- private:
+  RealmRoot realm_;
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  fuchsia::ui::composition::AllocatorSyncPtr flatland_allocator_;
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
+  fuchsia::ui::composition::FlatlandPtr root_session_;
+  fuchsia::ui::composition::FlatlandPtr child_session_;
+  fuchsia::ui::composition::ScreenshotPtr screenshot_;
+  fuchsia::ui::views::ViewRef root_view_ref_;
+
+  uint32_t display_width_ = 0;
+  uint32_t display_height_ = 0;
+  uint32_t num_pixels_ = 0;
 };
 
 struct SysmemTokens {
@@ -392,7 +383,7 @@ std::vector<uint32_t> TakeAndExtractScreenshot(
   return read_values;
 }
 
-TEST_F(ScreenshotIntegrationTest, SingleColor_Unrotated_Screenshot) {
+TEST_F(ScreenshotIntegrationTest, DISABLED_SingleColor_Unrotated_Screenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_width_;
@@ -437,7 +428,7 @@ TEST_F(ScreenshotIntegrationTest, SingleColor_Unrotated_Screenshot) {
   scr_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_ptr_->CreateImage(
+  screenshot_->CreateImage(
       std::move(scr_args),
       [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -448,8 +439,8 @@ TEST_F(ScreenshotIntegrationTest, SingleColor_Unrotated_Screenshot) {
 
   // Take Screenshot!
   const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_ptr_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES,
-      scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
+      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES, scr_buffer_collection_info,
+      0, kBytesPerPixel, render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
@@ -475,7 +466,7 @@ TEST_F(ScreenshotIntegrationTest, SingleColor_Unrotated_Screenshot) {
 //          GGGGGGGG
 //          RRRRRRRR
 //          RRRRRRRR
-TEST_F(ScreenshotIntegrationTest, MultiColor_180DegreeRotation_Screenshot) {
+TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_180DegreeRotation_Screenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_width_;
@@ -528,7 +519,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_180DegreeRotation_Screenshot) {
   scr_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_ptr_->CreateImage(
+  screenshot_->CreateImage(
       std::move(scr_args),
       [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -539,7 +530,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_180DegreeRotation_Screenshot) {
 
   // Take Screenshot!
   const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_ptr_, 1, fuchsia::ui::composition::Rotation::CW_180_DEGREES,
+      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_180_DEGREES,
       scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
@@ -579,7 +570,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_180DegreeRotation_Screenshot) {
 //          BBGG
 //          BBGG
 //          BBGG
-TEST_F(ScreenshotIntegrationTest, MultiColor_90DegreeRotation_Screenshot) {
+TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_90DegreeRotation_Screenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_height_;
@@ -661,7 +652,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_90DegreeRotation_Screenshot) {
   scr_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_ptr_->CreateImage(
+  screenshot_->CreateImage(
       std::move(scr_args),
       [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -672,8 +663,8 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_90DegreeRotation_Screenshot) {
 
   // Take Screenshot!
   const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_ptr_, 1, fuchsia::ui::composition::Rotation::CW_90_DEGREES,
-      scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
+      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_90_DEGREES, scr_buffer_collection_info,
+      0, kBytesPerPixel, render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
 
@@ -732,7 +723,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_90DegreeRotation_Screenshot) {
 //          RRYY
 //          RRYY
 //          RRYY
-TEST_F(ScreenshotIntegrationTest, MultiColor_270DegreeRotation_Screenshot) {
+TEST_F(ScreenshotIntegrationTest, DISABLED_MultiColor_270DegreeRotation_Screenshot) {
   const uint32_t image_width = display_width_;
   const uint32_t image_height = display_height_;
   const uint32_t render_target_width = display_height_;
@@ -814,7 +805,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_270DegreeRotation_Screenshot) {
   scr_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_ptr_->CreateImage(
+  screenshot_->CreateImage(
       std::move(scr_args),
       [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -825,7 +816,7 @@ TEST_F(ScreenshotIntegrationTest, MultiColor_270DegreeRotation_Screenshot) {
 
   // Take Screenshot!
   const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_ptr_, 1, fuchsia::ui::composition::Rotation::CW_270_DEGREES,
+      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_270_DEGREES,
       scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), write_values.size());
@@ -908,7 +899,7 @@ TEST_F(ScreenshotIntegrationTest, FilledRect_Screenshot) {
   scr_args.set_size({render_target_width, render_target_height});
 
   bool alloc_result = false;
-  screenshot_ptr_->CreateImage(
+  screenshot_->CreateImage(
       std::move(scr_args),
       [&alloc_result](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -919,8 +910,8 @@ TEST_F(ScreenshotIntegrationTest, FilledRect_Screenshot) {
 
   // Take Screenshot!
   const auto& read_values = TakeAndExtractScreenshot(
-      screenshot_ptr_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES,
-      scr_buffer_collection_info, 0, kBytesPerPixel, render_target_width, render_target_height);
+      screenshot_, 1, fuchsia::ui::composition::Rotation::CW_0_DEGREES, scr_buffer_collection_info,
+      0, kBytesPerPixel, render_target_width, render_target_height);
 
   EXPECT_EQ(read_values.size(), num_pixels_);
 

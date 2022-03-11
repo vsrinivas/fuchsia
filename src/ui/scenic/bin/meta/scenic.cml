@@ -5,6 +5,7 @@
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -28,11 +29,9 @@
     use: [
         {
             protocol: [
+                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.display.Provider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
             ],
         },
     ],

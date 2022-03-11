@@ -14,6 +14,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -23,7 +24,6 @@
 #include <string>
 #include <vector>
 
-#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
@@ -32,6 +32,7 @@
 // This test exercises the fuchsia.ui.observation.test.Registry protocol implemented by Scenic.
 
 namespace {
+
 using ExpectedLayout = std::pair<float, float>;
 
 // Stores information about a view node present in a fuog_ViewDescriptor. Used for assertions.
@@ -63,6 +64,7 @@ class ViewBuilder {
 }  // namespace
 
 namespace integration_tests {
+
 using fuc_ChildViewWatcher = fuchsia::ui::composition::ChildViewWatcher;
 using fuc_ContentId = fuchsia::ui::composition::ContentId;
 using fuc_Flatland = fuchsia::ui::composition::Flatland;
@@ -201,14 +203,14 @@ class FlatlandObserverRegistryIntegrationTest : public zxtest::Test,
   void SetUp() override {
     // Build the realm topology and route the protocols required by this test fixture from the
     // scenic subrealm.
-    realm_ = ScenicRealmBuilder(
-                 "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic_subrealm.cm")
-                 .AddScenicSubRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::focus::FocusChainListenerRegistry::Name_)
-                 .Build();
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+            .AddRealmProtocol(fuchsia::ui::focus::FocusChainListenerRegistry::Name_)
+            .Build());
 
     // Set up focus chain listener and wait for the initial null focus chain.
     fidl::InterfaceHandle<fuf_FocusChainListener> listener_handle;
@@ -322,14 +324,14 @@ class GfxObserverRegistryIntegrationTest : public zxtest::Test, public loop_fixt
   void SetUp() override {
     // Build the realm topology and route the protocols required by this test fixture from the
     // scenic subrealm.
-    realm_ = ScenicRealmBuilder(
-                 "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic_subrealm.cm")
-                 .AddScenicSubRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-                 .AddScenicSubRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
-                 .Build();
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+            .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+            .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+            .Build());
 
     scenic_ = realm_->Connect<fus_Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {

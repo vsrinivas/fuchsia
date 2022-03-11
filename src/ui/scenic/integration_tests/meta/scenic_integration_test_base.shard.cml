@@ -8,17 +8,11 @@
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
-    use: [
-        {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
-        },
-    ],
     offer: [
         {
             protocol: [
+                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",

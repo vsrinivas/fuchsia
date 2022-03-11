@@ -56,12 +56,24 @@ source_set("scenic_realm_builder") {
     "scenic_realm_builder.h",
   ]
   public_deps = [
+    ":scenic_realm",
     "//sdk//fidl/fuchsia.logger",
     "//sdk//fidl/fuchsia.scheduler",
     "//sdk//fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_component("scenic_realm") {
+  testonly = true
+  manifest = "meta/scenic_realm.cml"
+  deps = [
+    "//examples/fidl/rust/server:echo-server",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2",
   ]
 }
 
@@ -72,16 +84,6 @@ executable("gfx_focus_integration_test_bin") {
     ":common_deps",
     "//sdk/fidl/fuchsia.ui.focus",
     "//src/ui/scenic/lib/utils",
-  ]
-}
-
-fuchsia_component("scenic_subrealm") {
-  testonly = true
-  manifest = "meta/scenic_subrealm.cml"
-  deps = [
-    "//examples/fidl/rust/server:echo-server",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2",
   ]
 }
 
@@ -309,7 +311,6 @@ fuchsia_test_package("flatland_integration_tests") {
     # Flatland display compositor currently crashes on aemu, so we skip it for now.
     environments = magma_libvulkan_hardware_envs
   }
-  deps = [ ":scenic_subrealm" ]
 }
 
 fuchsia_test_package("observer_integration_tests") {
@@ -317,5 +318,4 @@ fuchsia_test_package("observer_integration_tests") {
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
-  deps = [ ":scenic_subrealm" ]
 }

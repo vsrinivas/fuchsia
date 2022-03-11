@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -20,24 +20,50 @@
             url: "#meta/hdcp.cm",
         },
         {
+            name: "mock_cobalt",
+            url: "#meta/mock_cobalt.cm",
+        },
+        {
             name: "scenic",
             url: "#meta/scenic.cm",
+
+            // Known missing capabilities:
+            //
         },
     ],
     use: [
         {
+            // Scenic protocols used from the parent - these are not offered to
+            // RealmBuilder by default, and they are not required for correct
+            // Scenic operation.  If a test wishes to provide these protocols,
+            // it can fake them and explicitly route the fake(s) to the Scenic
+            // realm.
+            //
+            // fuchsia.scheduler.ProfileProvider: Required to change the scheduling
+            // profile used by scenic's main thread (e.g. deadline scheduling).
+            //
+            // fuchsia.stash.Store: Required to inject stash configuration for
+            // flags like `i_can_haz_display` and `i_can_haz_flatland`.
             protocol: [
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
+                "fuchsia.stash.Store",
             ],
         },
     ],
     offer: [
         {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fake_display_provider",
+                "#mock_cobalt",
+                "#scenic",
+            ],
+        },
+        {
             protocol: [
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
@@ -56,6 +82,11 @@
         {
             protocol: [ "fuchsia.hardware.display.Provider" ],
             from: "#fake_display_provider",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
             to: [ "#scenic" ],
         },
     ],
