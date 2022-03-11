@@ -595,7 +595,7 @@ type ResponseUnion = strict union {
 
 @discoverable
 protocol Echo {
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     compose imp.Composed;
 
     // If `forward_to_server` is empty, just returns `value`.
@@ -710,23 +710,23 @@ protocol Echo {
     EchoNamedStructNoRetVal(imp.EventTriggeringRequestStruct);
     -> OnEchoNamedEvent(imp.ResponseStruct);
 
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoTablePayload(RequestTable) -> (ResponseTable);
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoTablePayloadWithError(table {
         1: value uint64;
         2: forward_to_server string;
         3: result_err default_enum;
         4: result_variant RespondWith;
     }) -> (ResponseTable) error default_enum;
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoTablePayloadNoRetVal(RequestTable);
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     -> OnEchoTablePayloadEvent(ResponseTable);
 
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoUnionPayload(RequestUnion) -> (ResponseUnion);
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoUnionPayloadWithError(flexible union {
         1: unsigned @generated_name("UnsignedErrorable") struct {
             value uint64;
@@ -741,8 +741,8 @@ protocol Echo {
             result_variant RespondWith;
         };
     }) -> (ResponseUnion) error default_enum;
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     EchoUnionPayloadNoRetVal(RequestUnion);
-    @bindings_denylist("dart, rust, syzkaller")
+    @bindings_denylist("rust, syzkaller")
     -> OnEchoUnionPayloadEvent(ResponseUnion);
 };

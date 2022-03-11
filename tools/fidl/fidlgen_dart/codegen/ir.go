@@ -21,6 +21,7 @@ type Documented struct {
 
 // Type represents a FIDL datatype.
 type Type struct {
+	fidlgen.Type
 	Decl          string // type in traditional bindings
 	SyncDecl      string // type in async bindings when referring to traditional bindings
 	AsyncDecl     string // type in async bindings when referring to async bindings
@@ -78,10 +79,30 @@ type BitsMember struct {
 	Documented
 }
 
+type PayloadableName struct {
+	Name string
+}
+
+// AsParameters default behavior for all payloadable types (Struct, Table, and
+// Union) is to simple make a single "parameter" of the type in question (aka
+// the "unflattend" representation), always named `value`. Note that *Struct has
+// its own override of `AsParameters` which does in fact perform flattening.
+func (u *PayloadableName) AsParameters(ty Type) []Parameter {
+	return []Parameter{
+		{
+			Type:       ty,
+			TypeSymbol: ty.typeExpr,
+			Name:       unflattenedPayloadName,
+			Flattened:  false,
+			typeExpr:   fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offsetV1: 0, offsetV2: 0)", ty.Decl, ty.typeExpr),
+		},
+	}
+}
+
 // Union represents a union declaration.
 type Union struct {
 	fidlgen.Union
-	Name          string
+	PayloadableName
 	TagName       string
 	Members       []UnionMember
 	TypeSymbol    string
@@ -103,8 +124,8 @@ type UnionMember struct {
 
 // Struct represents a struct declaration.
 type Struct struct {
-	Identifier       fidlgen.EncodedCompoundIdentifier
-	Name             string
+	fidlgen.Struct
+	PayloadableName
 	Members          []StructMember
 	Paddings         []StructPadding
 	TypeSymbol       string
@@ -112,6 +133,43 @@ type Struct struct {
 	HasNullableField bool
 	Documented
 	isEmptyStruct bool
+}
+
+// AsParameters produces a "flattened" representation of the Struct's members,
+// so that they may be used in certain contexts, like rendering method
+// signatures. Thus, if we have a FIDL payload like:
+//
+//   type MyStruct = struct {
+//     a bool;
+//     b int8;
+//   };
+//   protocol MyProtocol {
+//     MyMethod(MyStruct);
+//   };
+//
+// It will produce a "flattened" Dart function signature like:
+//
+//   Future<void> myMethod(bool a, int b);
+//
+// Rather than an "unflattened" one like:
+//
+//   Future<void> myMethod(MyStruct value);
+//
+func (s *Struct) AsParameters(_ Type) []Parameter {
+	var parameters []Parameter
+	if s.isEmptyStruct {
+		return parameters
+	}
+	for _, v := range s.Members {
+		parameters = append(parameters, Parameter{
+			Type:       v.Type,
+			TypeSymbol: v.typeExpr,
+			Name:       v.Name,
+			Flattened:  true,
+			typeExpr:   v.typeExpr,
+		})
+	}
+	return parameters
 }
 
 // StructMember represents a member of a struct declaration.
@@ -134,7 +192,7 @@ type StructPadding struct {
 // Table represents a table declaration.
 type Table struct {
 	fidlgen.Table
-	Name       string
+	PayloadableName
 	Members    []TableMember
 	TypeSymbol string
 	TypeExpr   string
@@ -166,15 +224,28 @@ type Protocol struct {
 	Documented
 }
 
+// Parameter represents a method request/response payload parameter. In the
+// "unflattened" case (valid for union/table payloads), there is always one
+// parameter per payload, representing the entire union/table being transported.
+// In the "flattened" case, each parameter represents a single member of the
+// struct in question.
+type Parameter struct {
+	Type       Type
+	TypeSymbol string
+	Name       string
+	Flattened  bool
+	typeExpr   string
+}
+
 type MethodResponse struct {
 	// WireParameters represent the parameters of the top level response struct
 	// that is sent on the wire
-	WireParameters []StructMember
+	WireParameters []Parameter
 	// MethodParameters represent the parameters that the user interacts with
 	// when using generated methods. When HasError is false, this is the same as
 	// WireParameters. When HasError is true, MethodParameters corresponds to the
 	// fields of a successful response.
-	MethodParameters  []StructMember
+	MethodParameters  []Parameter
 	HasError          bool
 	ResultTypeName    string
 	ResultTypeTagName string
@@ -188,7 +259,7 @@ type Method struct {
 	OrdinalName string
 	Name        string
 	HasRequest  bool
-	Request     []StructMember
+	Request     []Parameter
 	HasResponse bool
 	Response    MethodResponse
 	// AsyncResponseClass is a named tuple that wraps the MethodParameters of
@@ -211,6 +282,67 @@ func (m Method) ResponseMessageType() string {
 		return m.Response.ResultTypeName
 	}
 	return m.AsyncResponseClass
+}
+
+func (m Method) AsyncResponseCompleter() string {
+	if !m.HasResponse || !m.Response.HasError {
+		return "$completer.complete($response);"
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, "if ($response.$tag == %s.response) {\n", m.Response.ResultTypeTagName)
+	out.WriteString("$completer.complete(")
+	switch len(m.Response.MethodParameters) {
+	case 0:
+		out.WriteString("null);")
+	case 1:
+		param := m.Response.MethodParameters[0]
+		if param.Flattened {
+			fmt.Fprintf(&out, "$response.response!.%s);", param.Name)
+		} else {
+			out.WriteString("$response.response!);")
+		}
+	default:
+		out.WriteString(m.AsyncResponseClass + "(")
+		for _, p := range m.Response.MethodParameters {
+			fmt.Fprintf(&out, "$response.response!.%s, ", p.Name)
+		}
+		out.WriteString("));")
+	}
+
+	out.WriteString(`} else {
+		$completer.completeError($fidl.MethodException($response.err));
+	}`)
+	return out.String()
+}
+
+func (m Method) AsyncResultResponse() string {
+	if !m.HasResponse || !m.Response.HasError {
+		return ""
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, "return %s.withResponse(\n", m.Response.ResultTypeName)
+	switch len(m.Response.MethodParameters) {
+	case 0:
+		fmt.Fprintf(&out, `%s()`, m.Response.ValueType.Decl)
+	case 1:
+		param := m.Response.MethodParameters[0]
+		if param.Flattened {
+			fmt.Fprintf(&out, "%s(%s: $responseValue)", m.Response.ValueType.Decl, param.Name)
+		} else {
+			out.WriteString("$responseValue")
+		}
+	default:
+		fmt.Fprintf(&out, `%s(`, m.Response.ValueType.Decl)
+		for _, p := range m.Response.MethodParameters {
+			fmt.Fprintf(&out, "%s: $responseValue.%s, ", p.Name, p.Name)
+		}
+		out.WriteString(")")
+	}
+
+	out.WriteString(");")
+	return out.String()
 }
 
 // Import describes another FIDL library that will be imported.
@@ -266,6 +398,8 @@ var (
 	declarationContext = newNameContext()
 	// Name of a method
 	methodContext = newNameContext()
+	// For unflattened payloads, always use the same name in function signatures.
+	unflattenedPayloadName = "payload"
 )
 
 func init() {
@@ -387,7 +521,7 @@ func formatInt(val *int) string {
 	return strconv.Itoa(*val)
 }
 
-func formatParameterList(params []StructMember) string {
+func formatParameterList(params []Parameter) string {
 	if len(params) == 0 {
 		return "[]"
 	}
@@ -452,35 +586,37 @@ func libraryPrefix(library fidlgen.LibraryIdentifier) string {
 
 type compiler struct {
 	Root
-	decls              fidlgen.DeclInfoMap
-	library            fidlgen.LibraryIdentifier
-	typesRoot          fidlgen.Root
-	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	decls          fidlgen.DeclInfoMap
+	library        fidlgen.LibraryIdentifier
+	typesRoot      fidlgen.Root
+	paramableTypes map[fidlgen.EncodedCompoundIdentifier]Parameterizer
 }
 
-func (c *compiler) findStruct(name fidlgen.EncodedCompoundIdentifier) (Struct, bool) {
-	for _, s := range c.Root.Structs {
-		if name == s.Identifier {
-			return s, true
-		}
-	}
-	for _, s := range c.Root.ExternalStructs {
-		if name == s.Identifier {
-			return s, true
-		}
-	}
-	return Struct{}, false
+// Parameterizer should be implemented by all "payloadable" layout types (that
+// is, Struct, Table, and Union) so that method signatures and encoding/decoding
+// type lists may be built out for each of them.
+type Parameterizer interface {
+	AsParameters(Type) []Parameter
 }
 
-func (c *compiler) getPayload(name fidlgen.EncodedCompoundIdentifier) fidlgen.Struct {
-	val, ok := c.messageBodyStructs[name]
+// Assert that parameterizable layouts conform to the payloader interface.
+var _ = []Parameterizer{
+	(*PayloadableName)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
+	(*Union)(nil),
+}
+
+func (c *compiler) compileParameters(t *fidlgen.Type) []Parameter {
+	ty := c.compileType(*t)
+	val, ok := c.paramableTypes[ty.Identifier]
 	if !ok {
-		panic(fmt.Sprintf("Unknown request/response struct: %s", name))
+		panic(fmt.Sprintf("Unknown request/response layout: %s", ty.Identifier))
 	}
-	return val
+	return val.AsParameters(ty)
 }
 
-func (c *compiler) typeExprForMethod(val fidlgen.Method, request []StructMember, response []StructMember, name string) string {
+func (c *compiler) typeExprForMethod(val fidlgen.Method, request []Parameter, response []Parameter, name string) string {
 	var (
 		requestSizeV1  = 0
 		requestSizeV2  = 0
@@ -488,19 +624,18 @@ func (c *compiler) typeExprForMethod(val fidlgen.Method, request []StructMember,
 		responseSizeV2 = 0
 	)
 	if val.RequestPayload != nil {
-		payload := c.getPayload(val.RequestPayload.Identifier)
-		requestSizeV1 = payload.TypeShapeV1.InlineSize
-		requestSizeV2 = payload.TypeShapeV2.InlineSize
+		requestSizeV1 = val.RequestPayload.TypeShapeV1.InlineSize
+		requestSizeV2 = val.RequestPayload.TypeShapeV2.InlineSize
 	}
 	if val.ResponsePayload != nil {
-		payload := c.getPayload(val.ResponsePayload.Identifier)
-		responseSizeV1 = payload.TypeShapeV1.InlineSize
-		responseSizeV2 = payload.TypeShapeV2.InlineSize
+		responseSizeV1 = val.ResponsePayload.TypeShapeV1.InlineSize
+		responseSizeV2 = val.ResponsePayload.TypeShapeV2.InlineSize
 	}
 
-	// request/response and requestInlineSize/responseInlineSize are null/0 for both empty
-	// payloads and when there are no request/responses. The HasRequest and HasResponse fields
-	// are used to distinguish between these two cases during codegen.
+	// request/response and requestInlineSize/responseInlineSize are null/0 for
+	// both empty payloads and when there are no request/responses. The HasRequest
+	// and HasResponse fields are used to distinguish between these two cases
+	// during codegen.
 	return fmt.Sprintf(`$fidl.MethodType(
 	    request: %s,
 		response: %s,
@@ -648,19 +783,14 @@ func (c *compiler) compilePrimitiveSubtype(val fidlgen.PrimitiveSubtype) string 
 	return ""
 }
 
-func (c *compiler) maybeCompileConstant(val *fidlgen.Constant, t *Type) string {
-	if val == nil {
-		return "null"
-	}
-	return c.compileConstant(*val, t)
-}
-
 func (c *compiler) compileType(val fidlgen.Type) Type {
 	nullablePrefix := ""
 	if val.Nullable {
 		nullablePrefix = "Nullable"
 	}
-	r := Type{}
+	r := Type{
+		Type: val,
+	}
 	r.Nullable = val.Nullable
 	switch val.Kind {
 	case fidlgen.ArrayType:
@@ -883,30 +1013,11 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	return b
 }
 
-func (c *compiler) compileParameterArray(payload *fidlgen.Type) []StructMember {
-	var parameters []StructMember
-	if payload != nil {
-		for _, v := range c.getPayload(payload.Identifier).Members {
-			parameters = append(parameters, c.compileStructMember(v))
-		}
-	}
-	return parameters
-}
-
 func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 	if method.HasError {
-		var parameters []StructMember
-		if s, ok := c.findStruct(method.ValueType.Identifier); ok {
-			if !s.isEmptyStruct {
-				parameters = s.Members
-			}
-		} else {
-			panic(fmt.Sprintf("Unknown request/response struct: %s", method.ValueType.Identifier))
-		}
-
 		return MethodResponse{
-			WireParameters:    c.compileParameterArray(method.ResponsePayload),
-			MethodParameters:  parameters,
+			WireParameters:    c.compileParameters(method.ResponsePayload),
+			MethodParameters:  c.compileParameters(method.ValueType),
 			HasError:          true,
 			ResultTypeName:    c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "", declarationContext),
 			ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "Tag", declarationContext),
@@ -915,7 +1026,7 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 		}
 	}
 
-	response := c.compileParameterArray(method.ResponsePayload)
+	response := c.compileParameters(method.ResponsePayload)
 	return MethodResponse{
 		WireParameters:   response,
 		MethodParameters: response,
@@ -925,30 +1036,27 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProtocol fidlgen.Protocol) Method {
 	var (
 		name               = c.compileLowerCamelIdentifier(val.Name, methodContext)
-		request            []StructMember
+		request            []Parameter
 		response           MethodResponse
 		asyncResponseClass string
 		asyncResponseType  string
 	)
-	if val.HasRequest {
-		request = c.compileParameterArray(val.RequestPayload)
+	if val.RequestPayload != nil {
+		request = c.compileParameters(val.RequestPayload)
 	}
-	if val.HasResponse {
+	if val.ResponsePayload != nil {
 		response = c.compileMethodResponse(val)
 	}
 
-	if len(response.MethodParameters) > 1 {
-		asyncResponseClass = fmt.Sprintf("%s$%s$Response", protocol.Name, val.Name)
-	}
 	if val.HasResponse {
 		switch len(response.MethodParameters) {
 		case 0:
 			asyncResponseType = "void"
 		case 1:
-			responseType := response.MethodParameters[0].Type
-			asyncResponseType = responseType.Decl
+			asyncResponseType = response.MethodParameters[0].Type.Decl
 		default:
-			asyncResponseType = asyncResponseClass
+			asyncResponseType = fmt.Sprintf("%s$%s$Response", protocol.Name, val.Name)
+			asyncResponseClass = asyncResponseType
 		}
 	}
 
@@ -1022,9 +1130,9 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	ci := val.Name.Parse()
 	name := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	r := Struct{
-		Identifier: val.Name,
-		Name:       name,
-		TypeSymbol: c.typeSymbolForCompoundIdentifier(ci),
+		PayloadableName: PayloadableName{name},
+		Struct:          val,
+		TypeSymbol:      c.typeSymbolForCompoundIdentifier(ci),
 		TypeExpr: fmt.Sprintf(
 			`$fidl.StructType<%s>(inlineSizeV1: %v, inlineSizeV2: %v, structDecode: %s._structDecode)`,
 			name, val.TypeShapeV1.InlineSize, val.TypeShapeV2.InlineSize, name),
@@ -1101,10 +1209,10 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember) TableMember {
 func (c *compiler) compileTable(val fidlgen.Table) Table {
 	ci := val.Name.Parse()
 	r := Table{
-		Table:      val,
-		Name:       c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
-		TypeSymbol: c.typeSymbolForCompoundIdentifier(ci),
-		Documented: docString(val),
+		Table:           val,
+		PayloadableName: PayloadableName{c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)},
+		TypeSymbol:      c.typeSymbolForCompoundIdentifier(ci),
+		Documented:      docString(val),
 	}
 
 	for _, v := range val.SortedMembersNoReserved() {
@@ -1138,14 +1246,15 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	}
 
 	ci := val.Name.Parse()
+	name := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	r := Union{
-		Union:         val,
-		Name:          c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
-		TagName:       c.compileUpperCamelCompoundIdentifier(ci, "Tag", declarationContext),
-		TypeSymbol:    c.typeSymbolForCompoundIdentifier(ci),
-		OptTypeSymbol: c.optTypeSymbolForCompoundIdentifier(ci),
-		Members:       members,
-		Documented:    docString(val),
+		Union:           val,
+		PayloadableName: PayloadableName{name},
+		TagName:         c.compileUpperCamelCompoundIdentifier(ci, "Tag", declarationContext),
+		TypeSymbol:      c.typeSymbolForCompoundIdentifier(ci),
+		OptTypeSymbol:   c.optTypeSymbolForCompoundIdentifier(ci),
+		Members:         members,
+		Documented:      docString(val),
 	}
 	r.TypeExpr = fmt.Sprintf(`$fidl.UnionType<%s>(
   members: %s,
@@ -1163,19 +1272,52 @@ resource: %t,
 	return r
 }
 
+// isParamableType checks to see if a type is ever used as either a message body
+// type or a payload type. If it is, we will need to render the type as a list
+// of parameters in some contexts (for example, for a method-calling function
+// signature), which will require special treatment depending on whether or not
+// the underlying FIDL layout is a `struct`.
+//
+// By way of example, consider the following FIDL:
+//
+//   MyMethod(struct{...}) -> (struct{...}) error uint32;
+//           |-----A-----|    |-----B-----| |-----C-----|
+//                            |------------D------------|
+//
+// Types `A` and `B` are payloads (included in the `methodTypes` set). These
+// types, or their parameterized representations, are ones that users of the
+// Dart bindings will interact with when sending and replying to FIDL method
+// calls.
+//
+// Types `A` and `C` are message bodies (included in the `wireTypes` set). These
+// are the types that are actually sent over the wire, and may need to be
+// internally constructed from their constituent parts ("unflattened").
+//
+// If the `error` syntax were not used in the example above, the message body
+// type name and payload type name sets for the method would be identical.
+func isParamableType(name fidlgen.EncodedCompoundIdentifier, wireTypes fidlgen.EncodedCompoundIdentifierSet, methodTypes fidlgen.EncodedCompoundIdentifierSet) bool {
+	if _, ok := wireTypes[name]; ok {
+		return true
+	}
+	if _, ok := methodTypes[name]; ok {
+		return true
+	}
+	return false
+}
+
 // Compile the language independent type definition into the Dart-specific representation.
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("dart")
 	c := compiler{
-		decls:              r.DeclsWithDependencies(),
-		library:            r.Name.Parse(),
-		typesRoot:          r,
-		messageBodyStructs: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
+		decls:          r.DeclsWithDependencies(),
+		library:        r.Name.Parse(),
+		typesRoot:      r,
+		paramableTypes: map[fidlgen.EncodedCompoundIdentifier]Parameterizer{},
 	}
 
-	// Do a first pass of the protocols, creating a set of all names of types that are used as a
-	// transactional message bodies.
-	mbtn := r.GetMessageBodyTypeNames()
+	// Do a first pass of the protocols, creating a set of all names of types that
+	// are used as a transactional message payloads and/or wire bodies.
+	mtum := r.MethodTypeUsageMap()
 
 	c.Root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
 
@@ -1192,32 +1334,64 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if _, ok := mbtn[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = v
-			if v.IsAnonymous() {
+		compiled := c.compileStruct(v)
+		if k, ok := mtum[v.Name]; ok {
+			c.paramableTypes[v.Name] = &compiled
+			if v.IsAnonymous() && k != fidlgen.UsedOnlyAsPayload {
+				// Because anonymous payload struct definitions are always exposed to
+				// the user in "flattened" form as parameter lists consisting of the
+				// struct's members, it is pointless to generate a Dart class for this
+				// unusable Struct definition.
 				continue
 			}
 		}
-		c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
-
+		c.Root.Structs = append(c.Root.Structs, compiled)
 	}
 
 	for _, v := range r.ExternalStructs {
-		if _, ok := mbtn[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = v
-			if v.IsAnonymous() {
+		compiled := c.compileStruct(v)
+		if k, ok := mtum[v.Name]; ok {
+			c.paramableTypes[v.Name] = &compiled
+			if v.IsAnonymous() && k != fidlgen.UsedOnlyAsPayload {
+				// Because anonymous payload struct definitions are always exposed to
+				// the user in "flattened" form as parameter lists consisting of the
+				// struct's members, it is pointless to generate a Dart class for this
+				// unusable Struct definition.
 				continue
 			}
 		}
-		c.Root.ExternalStructs = append(c.Root.ExternalStructs, c.compileStruct(v))
+		c.Root.ExternalStructs = append(c.Root.ExternalStructs, compiled)
 	}
 
 	for _, v := range r.Tables {
-		c.Root.Tables = append(c.Root.Tables, c.compileTable(v))
+		t := c.compileTable(v)
+		if _, ok := mtum[v.Name]; ok {
+			c.paramableTypes[v.Name] = &t
+		}
+		c.Root.Tables = append(c.Root.Tables, t)
 	}
 
 	for _, v := range r.Unions {
-		c.Root.Unions = append(c.Root.Unions, c.compileUnion(v))
+		u := c.compileUnion(v)
+		if _, ok := mtum[v.Name]; ok {
+			c.paramableTypes[v.Name] = &u
+		}
+		c.Root.Unions = append(c.Root.Unions, u)
+	}
+
+	// For imported table and union payloads, generate the appropriate payloadable
+	// names.
+	for _, v := range r.Libraries {
+		for n, d := range v.Decls {
+			if d.Type == fidlgen.TableDeclType || d.Type == fidlgen.UnionDeclType {
+				if _, ok := mtum[n]; ok {
+					ci := n.Parse()
+					name := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
+					pn := PayloadableName{name}
+					c.paramableTypes[n] = &pn
+				}
+			}
+		}
 	}
 
 	for _, v := range r.Protocols {

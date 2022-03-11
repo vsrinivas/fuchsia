@@ -19,6 +19,10 @@ class EchoImpl extends Echo {
   final _echoMinimalEventStreamController = StreamController<void>();
   final _onEchoNamedEventStreamController =
       StreamController<imported.SimpleStruct>();
+  final _onEchoTablePayloadEventStreamController =
+      StreamController<ResponseTable>();
+  final _onEchoUnionPayloadEventStreamController =
+      StreamController<ResponseUnion>();
 
   // Saves references to proxies from which we're expecting events.
   Map<String, EchoProxy> proxies = {};
@@ -282,6 +286,204 @@ class EchoImpl extends Echo {
   @override
   Stream<imported.SimpleStruct> get onEchoNamedEvent =>
       _onEchoNamedEventStreamController.stream;
+
+  @override
+  Future<ResponseTable> echoTablePayload(RequestTable payload) async {
+    if (payload != null &&
+        payload.forwardToServer != null &&
+        payload.forwardToServer.isNotEmpty) {
+      return (await proxy(payload.forwardToServer))
+          .echoTablePayload(RequestTable(value: payload.value));
+    }
+    return ResponseTable(value: payload.value);
+  }
+
+  @override
+  Future<ResponseTable> echoTablePayloadWithError(
+      EchoEchoTablePayloadWithErrorRequest payload) async {
+    if (payload != null &&
+        payload.forwardToServer != null &&
+        payload.forwardToServer.isNotEmpty) {
+      return (await proxy(payload.forwardToServer)).echoTablePayloadWithError(
+          EchoEchoTablePayloadWithErrorRequest(
+              value: payload.value,
+              resultErr: payload.resultErr,
+              resultVariant: payload.resultVariant));
+    }
+    if (payload.resultVariant == RespondWith.err) {
+      throw MethodException(payload.resultErr);
+    } else {
+      return ResponseTable(value: payload.value);
+    }
+  }
+
+  void _handleOnEchoTablePayloadEvent(ResponseTable val, String serverUrl) {
+    _onEchoTablePayloadEventStreamController.add(val);
+    // Not technically safe if there's more than one outstanding event on this
+    // proxy, but that shouldn't happen in the existing test.
+    proxies.remove(serverUrl);
+  }
+
+  @override
+  Future<void> echoTablePayloadNoRetVal(RequestTable payload) async {
+    if (payload != null &&
+        payload.forwardToServer != null &&
+        payload.forwardToServer.isNotEmpty) {
+      final echo = await proxy(payload.forwardToServer);
+      // Keep echo around until we process the expected event.
+      proxies[payload.forwardToServer] = echo;
+      echo.onEchoTablePayloadEvent.listen((ResponseTable val) {
+        _handleOnEchoTablePayloadEvent(val, payload.forwardToServer);
+      });
+      return echo.echoTablePayloadNoRetVal(RequestTable(value: payload.value));
+    }
+    return _onEchoTablePayloadEventStreamController
+        .add(ResponseTable(value: payload.value));
+  }
+
+  @override
+  Stream<ResponseTable> get onEchoTablePayloadEvent =>
+      _onEchoTablePayloadEventStreamController.stream;
+
+  @override
+  Future<imported.SimpleStruct> echoTableRequestComposed(
+      imported.ComposedEchoTableRequestComposedRequest payload) async {
+    if (payload != null &&
+        payload.forwardToServer != null &&
+        payload.forwardToServer.isNotEmpty) {
+      return (await proxy(payload.forwardToServer)).echoTableRequestComposed(
+          imported.ComposedEchoTableRequestComposedRequest(
+              value: payload.value));
+    }
+    return imported.SimpleStruct(f1: true, f2: payload.value);
+  }
+
+  @override
+  Future<ResponseUnion> echoUnionPayload(RequestUnion payload) async {
+    // Unsigned variant path.
+    if (payload.$tag == RequestUnionTag.unsigned) {
+      if (payload.unsigned.forwardToServer.isNotEmpty) {
+        return (await proxy(payload.unsigned.forwardToServer)).echoUnionPayload(
+            RequestUnion.withUnsigned(
+                Unsigned(value: payload.unsigned.value, forwardToServer: '')));
+      }
+      return ResponseUnion.withUnsigned(payload.unsigned.value);
+    }
+
+    // Signed variant path.
+    if (payload.signed.forwardToServer.isNotEmpty) {
+      return (await proxy(payload.signed.forwardToServer)).echoUnionPayload(
+          RequestUnion.withSigned(
+              Signed(value: payload.signed.value, forwardToServer: '')));
+    }
+    return ResponseUnion.withSigned(payload.signed.value);
+  }
+
+  @override
+  Future<ResponseUnion> echoUnionPayloadWithError(
+      EchoEchoUnionPayloadWithErrorRequest payload) async {
+    // Unsigned variant path.
+    if (payload.$tag == EchoEchoUnionPayloadWithErrorRequestTag.unsigned) {
+      if (payload.unsigned.forwardToServer.isNotEmpty) {
+        return (await proxy(payload.unsigned.forwardToServer))
+            .echoUnionPayloadWithError(
+                EchoEchoUnionPayloadWithErrorRequest.withUnsigned(
+                    UnsignedErrorable(
+                        value: payload.unsigned.value,
+                        forwardToServer: '',
+                        resultErr: payload.unsigned.resultErr,
+                        resultVariant: payload.unsigned.resultVariant)));
+      }
+      if (payload.unsigned.resultVariant == RespondWith.err) {
+        throw MethodException(payload.unsigned.resultErr);
+      } else {
+        return ResponseUnion.withUnsigned(payload.unsigned.value);
+      }
+    }
+
+    // Signed variant path.
+    if (payload.signed.forwardToServer.isNotEmpty) {
+      return (await proxy(payload.signed.forwardToServer))
+          .echoUnionPayloadWithError(
+              EchoEchoUnionPayloadWithErrorRequest.withSigned(SignedErrorable(
+                  value: payload.signed.value,
+                  forwardToServer: '',
+                  resultErr: payload.signed.resultErr,
+                  resultVariant: payload.signed.resultVariant)));
+    }
+    if (payload.signed.resultVariant == RespondWith.err) {
+      throw MethodException(payload.signed.resultErr);
+    } else {
+      return ResponseUnion.withSigned(payload.signed.value);
+    }
+  }
+
+  void _handleOnEchoUnionPayloadEvent(ResponseUnion val, String serverUrl) {
+    _onEchoUnionPayloadEventStreamController.add(val);
+    // Not technically safe if there's more than one outstanding event on this
+    // proxy, but that shouldn't happen in the existing test.
+    proxies.remove(serverUrl);
+  }
+
+  @override
+  Future<void> echoUnionPayloadNoRetVal(RequestUnion payload) async {
+    // Unsigned variant path.
+    if (payload.$tag == RequestUnionTag.unsigned) {
+      if (payload.unsigned.forwardToServer.isNotEmpty) {
+        final echo = await proxy(payload.unsigned.forwardToServer);
+        // Keep echo around until we process the expected event.
+        proxies[payload.unsigned.forwardToServer] = echo;
+        echo.onEchoUnionPayloadEvent.listen((ResponseUnion val) {
+          _handleOnEchoUnionPayloadEvent(val, payload.unsigned.forwardToServer);
+        });
+        return echo.echoUnionPayloadNoRetVal(RequestUnion.withUnsigned(
+            Unsigned(value: payload.unsigned.value, forwardToServer: '')));
+      }
+      return _onEchoUnionPayloadEventStreamController
+          .add(ResponseUnion.withUnsigned(payload.unsigned.value));
+    }
+
+    // Signed variant path.
+    if (payload.signed.forwardToServer.isNotEmpty) {
+      final echo = await proxy(payload.signed.forwardToServer);
+      // Keep echo around until we process the expected event.
+      proxies[payload.signed.forwardToServer] = echo;
+      echo.onEchoUnionPayloadEvent.listen((ResponseUnion val) {
+        _handleOnEchoUnionPayloadEvent(val, payload.signed.forwardToServer);
+      });
+      return echo.echoUnionPayloadNoRetVal(RequestUnion.withSigned(
+          Signed(value: payload.signed.value, forwardToServer: '')));
+    }
+    return _onEchoUnionPayloadEventStreamController
+        .add(ResponseUnion.withSigned(payload.signed.value));
+  }
+
+  @override
+  Stream<ResponseUnion> get onEchoUnionPayloadEvent =>
+      _onEchoUnionPayloadEventStreamController.stream;
+
+  @override
+  Future<imported.ComposedEchoUnionResponseWithErrorComposedResponse>
+      echoUnionResponseWithErrorComposed(
+          int value,
+          bool wantAbsoluteValue,
+          String forwardToServer,
+          int resultErr,
+          imported.WantResponse resultVariant) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      return (await proxy(forwardToServer)).echoUnionResponseWithErrorComposed(
+          value, wantAbsoluteValue, '', resultErr, resultVariant);
+    }
+
+    if (resultVariant == imported.WantResponse.err) {
+      throw MethodException(resultErr);
+    } else if (wantAbsoluteValue) {
+      return imported.ComposedEchoUnionResponseWithErrorComposedResponse
+          .withUnsigned(value.abs());
+    }
+    return imported.ComposedEchoUnionResponseWithErrorComposedResponse
+        .withSigned(value);
+  }
 }
 
 void main(List<String> args) {

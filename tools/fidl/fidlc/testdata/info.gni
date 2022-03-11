@@ -308,10 +308,9 @@ fidl_testdata_info = [
     name = "protocol_layouts"
     target = "//tools/fidl/fidlc/testdata/protocol_layouts:test.protocollayouts"
 
-    # TODO(fxbug.dev/88343): No backend support yet
+    # TODO(fxbug.dev/88343): Add backend support for syzkaller, rust, and fidldoc
     denylist = [
       "fidldoc",
-      "fidlgen_dart",
       "fidlgen_rust",
       "fidlgen_syzkaller",
     ]

@@ -1316,8 +1316,8 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 
 type EncodedCompoundIdentifierSet map[EncodedCompoundIdentifier]struct{}
 
-// GetMessageBodyTypeNames calculates set of ECIs that refer to types used as message bodies by this
-// library.
+// GetMessageBodyTypeNames calculates set of ECIs that refer to types used as
+// message bodies by this library.
 func (r *Root) GetMessageBodyTypeNames() EncodedCompoundIdentifierSet {
 	mbtn := EncodedCompoundIdentifierSet{}
 	for _, protocol := range r.Protocols {
@@ -1333,9 +1333,86 @@ func (r *Root) GetMessageBodyTypeNames() EncodedCompoundIdentifierSet {
 	return mbtn
 }
 
-// deniedContexts produces a list of scopedNamingContexts. Any types/methods that begin with the
-// scopedNamingContext in that list should be denied as well when run through the isDenied()
-// function.
+// payloadTypeNames calculates set of ECIs that refer to types used user-defined
+// payloads by this library. Specifically, for the following FIDL method
+// definition:
+//
+//   MyMethod(struct{...}) -> (struct{...}) error uint32;
+//           |-----A-----|    |-----B-----| |-----C-----|
+//                            |------------D------------|
+//
+// types `A` and `B` are payloads, but `C` (the error) and `D` (the result) are
+// not. If the `error` syntax is not used, the message body type name and
+// payload type name sets for a method are identical.
+func (r *Root) payloadTypeNames() EncodedCompoundIdentifierSet {
+	ptn := EncodedCompoundIdentifierSet{}
+	for _, protocol := range r.Protocols {
+		for _, method := range protocol.Methods {
+			if method.RequestPayload != nil {
+				ptn[method.RequestPayload.Identifier] = struct{}{}
+			}
+			if method.ResponsePayload != nil {
+				if method.HasError {
+					ptn[method.ValueType.Identifier] = struct{}{}
+				} else {
+					ptn[method.ResponsePayload.Identifier] = struct{}{}
+				}
+			}
+		}
+	}
+	return ptn
+}
+
+// MethodTypeUsage is an enum that stores whether a type referenced by a payload
+// is used only as a payload parameter list, a wire message shape, or both. For
+// example, consider the following FIDL method:
+//
+//   MyMethod(struct{...}) -> (struct{...}) error uint32;
+//           |-----A-----|    |-----B-----| |-----C-----|
+//                            |------------D------------|
+//
+// Types `B` is `OnlyPayloadMethodTypeUsage` (it is exposed to the user, but
+// never sent over the wire), type `D` is `OnlyWireMethodTypeUsage` (it
+// describes the shape of a message body sent over the wire, but the wrapper
+// struct is never exposed to the user as a payload that they may send) and type
+// `A` is `BothMethodTypeUsage` (it is both exposed to the user, via the
+// signature of the request-sending function, and describes the shape of the
+// message sent over the wire).
+type MethodTypeUsage string
+
+const (
+	UsedOnlyAsPayload               MethodTypeUsage = "asOnlyPayload"
+	UsedOnlyAsMessageBody           MethodTypeUsage = "asOnlyWire"
+	UsedBothAsPayloadAndMessageBody MethodTypeUsage = "asBoth"
+)
+
+// MethodTypeUsageMap maps the names of types referenced by methods (ResultType,
+// ValueType, ResponsePayload) to the MethodTypeUsage exhibited by that type.
+type MethodTypeUsageMap map[EncodedCompoundIdentifier]MethodTypeUsage
+
+// MethodTypeUsageMap creates a map from the names of all non-error types
+// references by methods to their MethodTypeUsage.
+func (r *Root) MethodTypeUsageMap() MethodTypeUsageMap {
+	out := MethodTypeUsageMap{}
+	mbtn := r.GetMessageBodyTypeNames()
+	ptn := r.payloadTypeNames()
+	for name := range mbtn {
+		if _, ok := ptn[name]; ok {
+			out[name] = UsedBothAsPayloadAndMessageBody
+			delete(ptn, name)
+		} else {
+			out[name] = UsedOnlyAsMessageBody
+		}
+	}
+	for name := range ptn {
+		out[name] = UsedOnlyAsPayload
+	}
+	return out
+}
+
+// deniedContexts produces a list of scopedNamingContexts. Any types/methods
+// that begin with the scopedNamingContext in that list should be denied as well
+// when run through the isDenied() function.
 func deniedContexts(r *Root, language string) []scopedNamingContext {
 	var denied []scopedNamingContext
 

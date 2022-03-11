@@ -124,7 +124,7 @@ class {{ .AsyncResponseClass }} {
 {{- range .Doc }}
 ///{{ . -}}
 {{- end }}
-abstract class {{ .Name }} 
+abstract class {{ .Name }}
 {{- if .ServiceName }}
       extends $fidl.Service
 {{- end }}
@@ -258,28 +258,8 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           // ignore: prefer_const_declarations
           final {{ .ResponseMessageType }} $response = {{- template "DecodeResponse" . -}};
-          {{ if .Response.HasError }}
-            if ($response.$tag == {{ .Response.ResultTypeTagName }}.response) {
-              {{ if .AsyncResponseClass }}
-                $completer.complete(
-                  {{ .AsyncResponseClass }}(
-                  {{ range $param := .Response.MethodParameters }}
-                    $response.response!.{{ $param.Name }},
-                  {{ end }}
-                  ));
-              {{ else }}
-                {{ if (eq .AsyncResponseType "void") }}
-                  $completer.complete(null);
-                {{ else }}
-                  $completer.complete($response.response!.{{ (index .Response.MethodParameters 0).Name }});
-                {{ end }}
-              {{ end }}
-            } else {
-              $completer.completeError($fidl.MethodException($response.err));
-            }
-          {{ else }}
-            $completer.complete($response);
-          {{ end }}
+
+          {{ .AsyncResponseCompleter }}
         }, 'method response');
         break;
     {{- end }}
@@ -400,21 +380,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                 $future
                 {{ if .Response.HasError }}
                 .then(($responseValue) {
-                  {{ if .AsyncResponseClass }}
-                    return {{ .Response.ResultTypeName }}.withResponse(
-                      {{ .Response.ValueType.Decl }}(
-                      {{ range $param := .Response.MethodParameters }}
-                        {{ $param.Name }}: $responseValue.{{ $param.Name }},
-                      {{ end }}
-                      ));
-                  {{ else }}
-                    return {{ .Response.ResultTypeName }}.withResponse(
-                      {{ .Response.ValueType.Decl }}(
-                        {{ if (ne .AsyncResponseType "void") }}
-                          {{ (index .Response.MethodParameters 0).Name }}: $responseValue
-                        {{ end }}
-                        ));
-                  {{ end }}
+                  {{ .AsyncResultResponse }}
                 }, onError: ($error) {
                   if ($error is $fidl.MethodException) {
                     return {{ .Response.ResultTypeName }}.withErr($error.value);
