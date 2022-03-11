@@ -642,11 +642,13 @@ template("assemble_system") {
                            ])
     product_config = files.image_assembly_config
     board_config = files.board_config
+    images_config = files.images_config
     output_path = files.assembly_inputs
 
     deps = [
       ":${labels.board_config}",
       ":${labels.image_assembly_config}",
+      ":${labels.images_config}",
     ]
   }
 

@@ -18,6 +18,8 @@ def main():
         '--product-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--board-config', type=argparse.FileType('r'), required=True)
+    parser.add_argument(
+        '--images-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
@@ -90,6 +92,20 @@ def main():
     if "zbi" in board_config:
         if "signing_script" in board_config["zbi"]:
             add_file(board_config["zbi"]["signing_script"]["tool"])
+
+    # Add the images config.
+    add_file(args.images_config.name)
+    images = json.load(args.images_config).get("images", [])
+    for image in images:
+        if image["type"] == "vbmeta":
+            add_file(image["key"])
+            add_file(image["key_metadata"])
+            if "additional_descriptor_files" in image:
+                for descriptor in image["additional_descriptor_files"]:
+                    add_file(descriptor)
+        elif image["type"] == "zbi":
+            if "postprocessing_script" in image:
+                add_file(image["postprocessing_script"]["path"])
 
     # Convert the map into a list of maps.
     files = []
