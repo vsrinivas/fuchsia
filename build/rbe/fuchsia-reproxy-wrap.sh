@@ -96,10 +96,11 @@ EOF
 "$gcloud" auth list 2>&1 | grep -q "$USER@google.com" || {
   cat <<EOF
 Did not find credentialed account (\`gcloud auth list\`): $USER@google.com.
+You may need to re-authenticate every 20 hours.
 
 To authenticate, run:
 
-  gcloud auth login --update-adc --no-browser
+  gcloud auth login --update-adc
 
 EOF
   exit 1
