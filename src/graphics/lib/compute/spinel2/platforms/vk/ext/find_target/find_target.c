@@ -192,9 +192,9 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
         //
         // AMD GCN
         //
-        // FIXME(allanmac): Assumes 64-wide subgroup which are supported by
-        // both GCN* and RDNA*.  At some point we should add an RDNA-tuned
-        // target.
+        // FIXME(allanmac): Assumes 64-wide subgroup which are supported by both
+        // GCN* and RDNA*.  At some point we should add both a GCN5/fp16 and an
+        // RDNA-tuned target.
         //
         SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_amd_gcn3);
         break;

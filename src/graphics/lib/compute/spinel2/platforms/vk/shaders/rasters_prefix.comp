@@ -442,12 +442,21 @@ spn_ballots_clear_lte(SPN_SUBGROUP_UNIFORM inout u32vec4  new_x_ballot,
       new_x_ballot[1] = SPN_BITFIELD_INSERT(new_x_ballot[1], 0, 0, bits_33_64);
       new_y_ballot[1] = SPN_BITFIELD_INSERT(new_y_ballot[1], 0, 0, bits_33_64);
 
-      bits -= 32;
+      new_x_ballot[0] = SPN_BITFIELD_INSERT(new_x_ballot[0], 0, 0, 32);
+      new_y_ballot[0] = SPN_BITFIELD_INSERT(new_y_ballot[0], 0, 0, 32);
     }
-#endif
+  else
+    {
+      new_x_ballot[0] = SPN_BITFIELD_INSERT(new_x_ballot[0], 0, 0, bits);
+      new_y_ballot[0] = SPN_BITFIELD_INSERT(new_y_ballot[0], 0, 0, bits);
+    }
+
+#else
 
   new_x_ballot[0] = SPN_BITFIELD_INSERT(new_x_ballot[0], 0, 0, bits);
   new_y_ballot[0] = SPN_BITFIELD_INSERT(new_y_ballot[0], 0, 0, bits);
+
+#endif
 }
 
 //

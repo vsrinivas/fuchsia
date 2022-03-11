@@ -76,10 +76,6 @@ SPN_BUFFER_DEFINE_SURFACE(writeonly);
 //
 #elif defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16)
 
-#ifdef SPN_DEVICE_AMD_GCN3
-#extension GL_AMD_gpu_shader_half_float : require  // GCN3/AMDVLK disables float16
-#endif
-
 #define SPN_RENDER_TILE_CHANNEL                     float16_t
 #define SPN_RENDER_TILE_COVER                       SPN_RENDER_TILE_CHANNEL
 #define SPN_RENDER_TILE_COLOR                       f16vec4
