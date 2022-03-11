@@ -982,9 +982,9 @@ func (p *MainProtocolWithCtxInterface) OneWayAnonComposed(ctx_ _bindings.Context
 	return err_
 }
 
-func (p *MainProtocolWithCtxInterface) TwoWayAnonComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedRequest) (testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedTopResponse, error) {
+func (p *MainProtocolWithCtxInterface) TwoWayAnonComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedRequest) (testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedResponse, error) {
 	req_ := &payload
-	resp_ := &testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedTopResponse{}
+	resp_ := &testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayAnonComposedOrdinal, req_, resp_)
 	return (*resp_), err_
 }
@@ -1138,7 +1138,7 @@ func (p *MainProtocolWithCtxInterface) ExpectOnAnonWithError(ctx_ _bindings.Cont
 
 type MainProtocolWithCtx interface {
 	OneWayAnonComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolOneWayAnonComposedRequest) error
-	TwoWayAnonComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedRequest) (testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedTopResponse, error)
+	TwoWayAnonComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedRequest) (testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedResponse, error)
 	TwoWayAnonComposedWithError(ctx_ _bindings.Context, payload testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedWithErrorRequest) (testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedWithErrorResult, error)
 	OneWayNamedComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ImportTablePayload) error
 	TwoWayNamedComposed(ctx_ _bindings.Context, payload testprotocollayoutsimported.ImportUnionPayload) (testprotocollayoutsimported.ImportTablePayload, error)

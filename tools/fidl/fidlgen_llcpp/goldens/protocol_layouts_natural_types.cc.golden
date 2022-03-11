@@ -50,8 +50,8 @@ test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::CloneStorage_()
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
 
-::test_protocollayouts::MainProtocolTwoWayAnonTopResponse::Storage_
-test_protocollayouts::MainProtocolTwoWayAnonTopResponse::CloneStorage_() const {
+::test_protocollayouts::MainProtocolTwoWayAnonResponse::Storage_
+test_protocollayouts::MainProtocolTwoWayAnonResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
 

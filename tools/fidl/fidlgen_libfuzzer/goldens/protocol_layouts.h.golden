@@ -36,8 +36,8 @@ using MainProtocolOnAnonWithErrorRequest =
     ::test::protocollayouts::MainProtocolOnAnonWithErrorRequest;
 using MainProtocolTwoWayAnonWithErrorRequest =
     ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest;
-using MainProtocolTwoWayAnonTopResponse =
-    ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse;
+using MainProtocolTwoWayAnonResponse =
+    ::test::protocollayouts::MainProtocolTwoWayAnonResponse;
 using MainProtocolTwoWayAnonRequest =
     ::test::protocollayouts::MainProtocolTwoWayAnonRequest;
 using MainProtocolOneWayAnonRequest =
@@ -378,16 +378,16 @@ struct Allocate<MainProtocolTwoWayAnonWithErrorRequest> {
   }
 };
 template <>
-struct MinSize<MainProtocolTwoWayAnonTopResponse> {
+struct MinSize<MainProtocolTwoWayAnonResponse> {
   operator size_t() { return MinSize<uint16_t>(); }
 };
 template <>
-struct Allocate<MainProtocolTwoWayAnonTopResponse> {
-  MainProtocolTwoWayAnonTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonTopResponse>());
-    MainProtocolTwoWayAnonTopResponse out;
+struct Allocate<MainProtocolTwoWayAnonResponse> {
+  MainProtocolTwoWayAnonResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonResponse>());
+    MainProtocolTwoWayAnonResponse out;
     const size_t slack_per_member =
-        (*size - MinSize<MainProtocolTwoWayAnonTopResponse>()) / 1;
+        (*size - MinSize<MainProtocolTwoWayAnonResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<uint16_t>() + slack_per_member;
     out.set_a(Allocate<uint16_t>{}(src, &out_size));

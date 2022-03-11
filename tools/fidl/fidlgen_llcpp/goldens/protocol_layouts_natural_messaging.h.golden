@@ -21,7 +21,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -66,7 +66,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -508,31 +508,29 @@ class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
   Response(::test_protocollayouts_imported::
-               ComposedProtocolTwoWayAnonComposedTopResponse payload)
+               ComposedProtocolTwoWayAnonComposedResponse payload)
       : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedTopResponse*
-      operator->() {
+  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse*
+  operator->() {
     return &payload_;
   }
   const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedTopResponse*
+      ComposedProtocolTwoWayAnonComposedResponse*
       operator->() const {
     return &payload_;
   }
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedTopResponse&
-      operator*() {
+  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse&
+  operator*() {
     return payload_;
   }
   const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedTopResponse&
+      ComposedProtocolTwoWayAnonComposedResponse&
       operator*() const {
     return payload_;
   }
 
  private:
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedTopResponse
+  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse
       payload_;
 };
 
@@ -543,7 +541,7 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedTopResponse;
+      ComposedProtocolTwoWayAnonComposedResponse;
 };
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 template <>
@@ -964,25 +962,25 @@ class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon> final
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::MainProtocolTwoWayAnonTopResponse payload)
+  Response(::test_protocollayouts::MainProtocolTwoWayAnonResponse payload)
       : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse* operator->() {
+  ::test_protocollayouts::MainProtocolTwoWayAnonResponse* operator->() {
     return &payload_;
   }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse* operator->()
+  const ::test_protocollayouts::MainProtocolTwoWayAnonResponse* operator->()
       const {
     return &payload_;
   }
-  ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse& operator*() {
+  ::test_protocollayouts::MainProtocolTwoWayAnonResponse& operator*() {
     return payload_;
   }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse& operator*()
+  const ::test_protocollayouts::MainProtocolTwoWayAnonResponse& operator*()
       const {
     return payload_;
   }
 
  private:
-  ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse payload_;
+  ::test_protocollayouts::MainProtocolTwoWayAnonResponse payload_;
 };
 
 template <>
@@ -991,7 +989,7 @@ struct ::fidl::internal::MessageTraits<
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse;
+  using Payload = ::test_protocollayouts::MainProtocolTwoWayAnonResponse;
 };
 template <>
 class ::fidl::internal::ClientCallbackTraits<
@@ -2001,7 +1999,7 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(::test_protocollayouts_imported::
-                 ComposedProtocolTwoWayAnonComposedTopResponse&& payload);
+                 ComposedProtocolTwoWayAnonComposedResponse&& payload);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2153,8 +2151,7 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse&& payload);
+  void Reply(::test_protocollayouts::MainProtocolTwoWayAnonResponse&& payload);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

@@ -417,13 +417,12 @@ void ConsumeStep::ConsumeProtocolDeclaration(
     bool has_error = false;
     if (has_response) {
       has_error = method->maybe_error_ctor != nullptr;
-
-      SourceSpan response_span = method->maybe_response->span();
-      auto response_context = has_request ? protocol_context->EnterResponse(method_name)
-                                          : protocol_context->EnterEvent(method_name);
-
-      std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
       if (has_error) {
+        SourceSpan response_span = method->maybe_response->span();
+        const auto response_context = has_request ? protocol_context->EnterResult(method_name)
+                                                  : protocol_context->EnterEvent(method_name);
+        std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
+
         // TODO(fxbug.dev/88343): update this comment once top-level union support is added, and
         //  the outer-most struct below is no longer used.
         // The error syntax for protocol P and method M desugars to the following type:
@@ -457,27 +456,29 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         err_variant_context = result_context->EnterMember(generated_source_file()->AddLine("err"));
         err_variant_context->set_name_override(
             utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Error"}, "_"));
-      }
 
-      // The context for the user specified type within the response part of the method
-      // (i.e. `Foo() -> («this source») ...`) is either the top level response context
-      // or that of the success variant of the result type
-      std::unique_ptr<TypeConstructor> result_payload;
-      auto ctx = has_error ? success_variant_context : response_context;
-      bool result = ConsumeParameterList(method_name, ctx, std::move(method->maybe_response),
-                                         !has_error, &result_payload);
-      if (!result)
-        return;
+        std::unique_ptr<TypeConstructor> result_payload;
+        if (!ConsumeParameterList(method_name, success_variant_context,
+                                  std::move(method->maybe_response), false, &result_payload)) {
+          return;
+        }
 
-      if (has_error) {
         assert(err_variant_context != nullptr &&
                "compiler bug: error type contexts should have been computed");
-        // we move out of `response_context` only if !has_error, so it's safe to use here
         if (!CreateMethodResult(success_variant_context, err_variant_context, response_span,
-                                method.get(), std::move(result_payload), &maybe_response))
+                                method.get(), std::move(result_payload), &maybe_response)) {
           return;
+        }
       } else {
-        maybe_response = std::move(result_payload);
+        const auto response_context = has_request ? protocol_context->EnterResponse(method_name)
+                                                  : protocol_context->EnterEvent(method_name);
+        std::unique_ptr<TypeConstructor> response_payload;
+        if (!ConsumeParameterList(method_name, response_context, std::move(method->maybe_response),
+                                  true, &response_payload)) {
+          return;
+        }
+
+        maybe_response = std::move(response_payload);
       }
     }
 
@@ -705,6 +706,7 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                                       const std::shared_ptr<NamingContext>& context,
                                       std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                       Decl** out_decl) {
+  const std::shared_ptr<NamingContext>& maybe_renamed_context = context->SwapStructPayloadContext();
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -714,7 +716,8 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor),
-                                context->EnterMember(member->identifier->span()), &type_ctor))
+                                maybe_renamed_context->EnterMember(member->identifier->span()),
+                                &type_ctor))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -728,15 +731,15 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(raw_attribute_list), &attributes);
-  MaybeOverrideName(*attributes, context.get());
+  MaybeOverrideName(*attributes, maybe_renamed_context.get());
 
   auto resourceness = types::Resourceness::kValue;
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness.has_value())
     resourceness = layout->modifiers->maybe_resourceness->value;
 
-  Decl* decl = RegisterDecl(std::make_unique<Struct>(std::move(attributes),
-                                                     context->ToName(library(), layout->span()),
-                                                     std::move(members), resourceness));
+  Decl* decl = RegisterDecl(std::make_unique<Struct>(
+      std::move(attributes), maybe_renamed_context->ToName(library(), layout->span()),
+      std::move(members), resourceness));
   if (out_decl) {
     *out_decl = decl;
   }

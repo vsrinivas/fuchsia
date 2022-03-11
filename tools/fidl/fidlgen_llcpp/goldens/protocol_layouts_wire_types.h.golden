@@ -41,7 +41,7 @@ class MainProtocolOnAnonWithErrorResponse;
 
 class MainProtocolTwoWayAnonWithErrorRequest;
 
-class MainProtocolTwoWayAnonTopResponse;
+class MainProtocolTwoWayAnonResponse;
 
 class MainProtocolOneWayAnonRequest;
 
@@ -283,7 +283,7 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 }  // namespace test_protocollayouts
 template <>
 struct ::fidl::WireTableFrame<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
     final {
  public:
   WireTableFrame() = default;
@@ -301,15 +301,15 @@ struct ::fidl::WireTableFrame<
   bool HasUnknownData() const;
   ::fidl::Envelope<uint16_t> a_;
 
-  friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse;
+  friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
 };
 
 namespace test_protocollayouts {
 namespace wire {
 extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 
-class MainProtocolTwoWayAnonTopResponse {
+class MainProtocolTwoWayAnonResponse {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -326,55 +326,53 @@ class MainProtocolTwoWayAnonTopResponse {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
-  MainProtocolTwoWayAnonTopResponse& set_a(uint16_t elem) {
+  MainProtocolTwoWayAnonResponse& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
 
-  MainProtocolTwoWayAnonTopResponse& clear_a() {
+  MainProtocolTwoWayAnonResponse& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
     return *this;
   }
 
-  MainProtocolTwoWayAnonTopResponse() = default;
-  explicit MainProtocolTwoWayAnonTopResponse(::fidl::AnyArena& allocator)
+  MainProtocolTwoWayAnonResponse() = default;
+  explicit MainProtocolTwoWayAnonResponse(::fidl::AnyArena& allocator)
       : frame_ptr_(
-            ::fidl::ObjectView<
-                ::fidl::WireTableFrame<::test_protocollayouts::wire::
-                                           MainProtocolTwoWayAnonTopResponse>>(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>(
                 allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit MainProtocolTwoWayAnonTopResponse(
+  explicit MainProtocolTwoWayAnonResponse(
       ::fidl::ObjectView<::fidl::WireTableFrame<
-          ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>>&&
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~MainProtocolTwoWayAnonTopResponse() = default;
-  MainProtocolTwoWayAnonTopResponse(
-      const MainProtocolTwoWayAnonTopResponse& other) noexcept = default;
-  MainProtocolTwoWayAnonTopResponse& operator=(
-      const MainProtocolTwoWayAnonTopResponse& other) noexcept = default;
-  MainProtocolTwoWayAnonTopResponse(
-      MainProtocolTwoWayAnonTopResponse&& other) noexcept = default;
-  MainProtocolTwoWayAnonTopResponse& operator=(
-      MainProtocolTwoWayAnonTopResponse&& other) noexcept = default;
+  ~MainProtocolTwoWayAnonResponse() = default;
+  MainProtocolTwoWayAnonResponse(
+      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse& operator=(
+      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse(
+      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse& operator=(
+      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<
-        ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>>(
+        ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>(
         allocator);
   }
-  void Init(
-      ::fidl::ObjectView<::fidl::WireTableFrame<
-          ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>>&&
-          frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>&&
+                frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -382,7 +380,7 @@ class MainProtocolTwoWayAnonTopResponse {
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>>
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>
       frame_ptr_;
 };
 
@@ -2029,10 +2027,10 @@ static_assert(
 
 template <>
 struct TypeTraits<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse> {
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocollayouts::wire::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
@@ -2042,14 +2040,13 @@ struct TypeTraits<
 };
 
 template <>
-struct IsFidlType<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>
+struct IsFidlType<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
     : public std::true_type {};
 template <>
-struct IsTable<::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>
+struct IsTable<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>);
+              ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>);
 
 template <>
 struct TypeTraits<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest> {

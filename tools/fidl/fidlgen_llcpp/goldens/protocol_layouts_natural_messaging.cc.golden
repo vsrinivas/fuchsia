@@ -935,7 +935,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocollayouts::MainProtocol>::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>::
     Reply(::test_protocollayouts_imported::
-              ComposedProtocolTwoWayAnonComposedTopResponse&& payload) {
+              ComposedProtocolTwoWayAnonComposedResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
@@ -1027,7 +1027,7 @@ void fidl::internal::NaturalCompleterBase<
 
 void fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>::
-    Reply(::test_protocollayouts::MainProtocolTwoWayAnonTopResponse&& payload) {
+    Reply(::test_protocollayouts::MainProtocolTwoWayAnonResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal};

@@ -27,7 +27,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -72,7 +72,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -351,13 +351,13 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
     final : public ::test_protocollayouts_imported::wire::
-                ComposedProtocolTwoWayAnonComposedTopResponse {
+                ComposedProtocolTwoWayAnonComposedResponse {
   explicit WireResponse(::test_protocollayouts_imported::wire::
-                            ComposedProtocolTwoWayAnonComposedTopResponse
-                                ComposedProtocolTwoWayAnonComposedTopResponse)
+                            ComposedProtocolTwoWayAnonComposedResponse
+                                ComposedProtocolTwoWayAnonComposedResponse)
       : ::test_protocollayouts_imported::wire::
-            ComposedProtocolTwoWayAnonComposedTopResponse(
-                ComposedProtocolTwoWayAnonComposedTopResponse) {}
+            ComposedProtocolTwoWayAnonComposedResponse(
+                ComposedProtocolTwoWayAnonComposedResponse) {}
   WireResponse() = default;
 };
 
@@ -372,11 +372,11 @@ struct ::fidl::internal::TransactionalResponse<
       body;
   explicit TransactionalResponse(
       ::test_protocollayouts_imported::wire::
-          ComposedProtocolTwoWayAnonComposedTopResponse
-              ComposedProtocolTwoWayAnonComposedTopResponse)
+          ComposedProtocolTwoWayAnonComposedResponse
+              ComposedProtocolTwoWayAnonComposedResponse)
       : body(::fidl::WireResponse<
              ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(
-            ComposedProtocolTwoWayAnonComposedTopResponse)) {
+            ComposedProtocolTwoWayAnonComposedResponse)) {
     _InitHeader();
   }
   TransactionalResponse() { _InitHeader(); }
@@ -1349,12 +1349,12 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>
     final
-    : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse {
+    : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse {
   explicit WireResponse(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse
-          MainProtocolTwoWayAnonTopResponse)
-      : ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse(
-            MainProtocolTwoWayAnonTopResponse) {}
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse
+          MainProtocolTwoWayAnonResponse)
+      : ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse(
+            MainProtocolTwoWayAnonResponse) {}
   WireResponse() = default;
 };
 
@@ -1367,11 +1367,11 @@ struct ::fidl::internal::TransactionalResponse<
 
   ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon> body;
   explicit TransactionalResponse(
-      ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse
-          MainProtocolTwoWayAnonTopResponse)
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse
+          MainProtocolTwoWayAnonResponse)
       : body(::fidl::WireResponse<
              ::test_protocollayouts::MainProtocol::TwoWayAnon>(
-            MainProtocolTwoWayAnonTopResponse)) {
+            MainProtocolTwoWayAnonResponse)) {
     _InitHeader();
   }
   TransactionalResponse() { _InitHeader(); }
@@ -1815,7 +1815,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocollayouts::
-          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1849,7 +1849,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocollayouts::
-          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
@@ -3863,7 +3863,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocollayouts::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3894,7 +3894,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocollayouts::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
@@ -6500,8 +6500,8 @@ class ::fidl::internal::WireCompleterImpl<
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::
-                 ComposedProtocolTwoWayAnonComposedTopResponse
-                     ComposedProtocolTwoWayAnonComposedTopResponse);
+                 ComposedProtocolTwoWayAnonComposedResponse
+                     ComposedProtocolTwoWayAnonComposedResponse);
 };
 
 template <>
@@ -6512,8 +6512,8 @@ class ::fidl::internal::WireBufferCompleterImpl<
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocollayouts_imported::wire::
-                 ComposedProtocolTwoWayAnonComposedTopResponse
-                     ComposedProtocolTwoWayAnonComposedTopResponse);
+                 ComposedProtocolTwoWayAnonComposedResponse
+                     ComposedProtocolTwoWayAnonComposedResponse);
 };
 
 template <>
@@ -6875,8 +6875,8 @@ class ::fidl::internal::WireCompleterImpl<
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse
-                 MainProtocolTwoWayAnonTopResponse);
+  void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse
+                 MainProtocolTwoWayAnonResponse);
 };
 
 template <>
@@ -6886,8 +6886,8 @@ class ::fidl::internal::WireBufferCompleterImpl<
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse
-                 MainProtocolTwoWayAnonTopResponse);
+  void Reply(::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse
+                 MainProtocolTwoWayAnonResponse);
 };
 
 template <>

@@ -192,12 +192,12 @@ bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest::
 }
 
 bool ::fidl::WireTableFrame<
-    ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse>::
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>::
     HasUnknownData() const {
   return false;
 }
 
-bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonTopResponse::
+bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse::
     HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;

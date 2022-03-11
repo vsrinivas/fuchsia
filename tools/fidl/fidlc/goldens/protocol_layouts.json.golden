@@ -28,7 +28,7 @@
           "kind": "table",
           "resource": false
         },
-        "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedTopResponse": {
+        "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedResponse": {
           "kind": "table",
           "resource": false
         },
@@ -177,7 +177,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedTopResponse",
+            "identifier": "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1645,7 +1645,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocollayouts/MainProtocolTwoWayAnonTopResponse",
+            "identifier": "test.protocollayouts/MainProtocolTwoWayAnonResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -2768,7 +2768,7 @@
       }
     },
     {
-      "name": "test.protocollayouts/MainProtocolTwoWayAnonTopResponse",
+      "name": "test.protocollayouts/MainProtocolTwoWayAnonResponse",
       "naming_context": [
         "MainProtocol",
         "TwoWayAnon",
@@ -3995,7 +3995,7 @@
     "test.protocollayouts/MainProtocol_OnAnonWithError_Result",
     "test.protocollayouts/MainProtocolOnAnonWithErrorRequest",
     "test.protocollayouts/MainProtocolTwoWayAnonWithErrorRequest",
-    "test.protocollayouts/MainProtocolTwoWayAnonTopResponse",
+    "test.protocollayouts/MainProtocolTwoWayAnonResponse",
     "test.protocollayouts/MainProtocolTwoWayAnonRequest",
     "test.protocollayouts/MainProtocolOneWayAnonRequest",
     "test.protocollayouts/MainProtocolOnAnonRequest",
@@ -4016,7 +4016,7 @@
     "test.protocollayouts/MainProtocolTwoWayAnonWithErrorTopResponse": "struct",
     "test.protocollayouts/MainProtocolOnAnonWithErrorRequest": "struct",
     "test.protocollayouts/MainProtocolOneWayAnonRequest": "table",
-    "test.protocollayouts/MainProtocolTwoWayAnonTopResponse": "table",
+    "test.protocollayouts/MainProtocolTwoWayAnonResponse": "table",
     "test.protocollayouts/MainProtocolTwoWayAnonWithErrorRequest": "table",
     "test.protocollayouts/MainProtocol_OnAnonWithError_Response": "table",
     "test.protocollayouts/LocalTablePayload": "table",

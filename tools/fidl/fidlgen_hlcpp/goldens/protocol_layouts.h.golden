@@ -33,7 +33,7 @@ class MainProtocolOnAnonWithErrorRequest;
 
 class MainProtocolTwoWayAnonWithErrorRequest;
 
-class MainProtocolTwoWayAnonTopResponse;
+class MainProtocolTwoWayAnonResponse;
 
 class MainProtocolTwoWayAnonRequest;
 
@@ -1027,7 +1027,7 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
 using MainProtocolTwoWayAnonWithErrorRequestPtr =
     ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest>;
 
-class MainProtocolTwoWayAnonTopResponse final {
+class MainProtocolTwoWayAnonResponse final {
  public:
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
@@ -1046,7 +1046,7 @@ class MainProtocolTwoWayAnonTopResponse final {
     }
     return &a_value_.value;
   }
-  MainProtocolTwoWayAnonTopResponse& set_a(uint16_t _value) {
+  MainProtocolTwoWayAnonResponse& set_a(uint16_t _value) {
     if (!field_presence_.IsSet<0>()) {
       field_presence_.Set<0>();
       Construct(&a_value_.value, std::move(_value));
@@ -1073,22 +1073,22 @@ class MainProtocolTwoWayAnonTopResponse final {
     _unknown_data.insert({ord, std::move(data)});
   }
 
-  MainProtocolTwoWayAnonTopResponse();
-  MainProtocolTwoWayAnonTopResponse(MainProtocolTwoWayAnonTopResponse&& other);
-  ~MainProtocolTwoWayAnonTopResponse();
-  MainProtocolTwoWayAnonTopResponse& operator=(
-      MainProtocolTwoWayAnonTopResponse&& other);
+  MainProtocolTwoWayAnonResponse();
+  MainProtocolTwoWayAnonResponse(MainProtocolTwoWayAnonResponse&& other);
+  ~MainProtocolTwoWayAnonResponse();
+  MainProtocolTwoWayAnonResponse& operator=(
+      MainProtocolTwoWayAnonResponse&& other);
 
-  static inline ::std::unique_ptr<MainProtocolTwoWayAnonTopResponse> New() {
-    return ::std::make_unique<MainProtocolTwoWayAnonTopResponse>();
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonResponse> New() {
+    return ::std::make_unique<MainProtocolTwoWayAnonResponse>();
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
-                     MainProtocolTwoWayAnonTopResponse* _value, size_t _offset);
-  zx_status_t Clone(MainProtocolTwoWayAnonTopResponse* _result) const;
+                     MainProtocolTwoWayAnonResponse* _value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonResponse* _result) const;
 
  private:
   template <class T, class... Args>
@@ -1132,8 +1132,8 @@ class MainProtocolTwoWayAnonTopResponse final {
   std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
-using MainProtocolTwoWayAnonTopResponsePtr =
-    ::std::unique_ptr<MainProtocolTwoWayAnonTopResponse>;
+using MainProtocolTwoWayAnonResponsePtr =
+    ::std::unique_ptr<MainProtocolTwoWayAnonResponse>;
 
 class MainProtocolTwoWayAnonRequest final {
  public:
@@ -2477,7 +2477,7 @@ class MainProtocol_RequestEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
@@ -2504,7 +2504,7 @@ __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
@@ -2518,8 +2518,8 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayAnonComposed(
       ::fidl::MessageEncoder* _encoder,
       ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedTopResponse*
-              ComposedProtocolTwoWayAnonComposedTopResponse) {
+          ComposedProtocolTwoWayAnonComposedResponse*
+              ComposedProtocolTwoWayAnonComposedResponse) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2531,18 +2531,18 @@ class MainProtocol_ResponseEncoder {
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ComposedProtocolTwoWayAnonComposedTopResponse,
+      ::fidl::Encode(_encoder, ComposedProtocolTwoWayAnonComposedResponse,
                      0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, ComposedProtocolTwoWayAnonComposedTopResponse,
+      ::fidl::Encode(_encoder, ComposedProtocolTwoWayAnonComposedResponse,
                      0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocollayouts::_internal::
-            test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable,
+            test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -3004,8 +3004,8 @@ class MainProtocol_ResponseEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayAnon(
       ::fidl::MessageEncoder* _encoder,
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse*
-          MainProtocolTwoWayAnonTopResponse) {
+      ::test::protocollayouts::MainProtocolTwoWayAnonResponse*
+          MainProtocolTwoWayAnonResponse) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -3017,17 +3017,17 @@ class MainProtocol_ResponseEncoder {
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, MainProtocolTwoWayAnonTopResponse,
+      ::fidl::Encode(_encoder, MainProtocolTwoWayAnonResponse,
                      0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, MainProtocolTwoWayAnonTopResponse,
+      ::fidl::Encode(_encoder, MainProtocolTwoWayAnonResponse,
                      0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocollayouts::_internal::
-                   test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable,
+                   test_protocollayouts_MainProtocolTwoWayAnonResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -3795,21 +3795,20 @@ struct Equality<
   }
 };
 template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonTopResponse>
+struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonResponse>
     : public EncodableCodingTraits<
-          ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse, 16, 16> {
-};
+          ::test::protocollayouts::MainProtocolTwoWayAnonResponse, 16, 16> {};
 
 inline zx_status_t Clone(
-    const ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse& _value,
-    ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse* result) {
+    const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _value,
+    ::test::protocollayouts::MainProtocolTwoWayAnonResponse* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonTopResponse> {
+struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonResponse> {
   bool operator()(
-      const ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse& _lhs,
-      const ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse& _rhs)
+      const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _lhs,
+      const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _rhs)
       const {
     if (_lhs.has_a()) {
       if (!_rhs.has_a()) {
@@ -4424,7 +4423,7 @@ class MainProtocol {
               ComposedProtocolOneWayAnonComposedRequest) = 0;
   using TwoWayAnonComposedCallback =
       fit::function<void(::test::protocollayouts::imported::
-                             ComposedProtocolTwoWayAnonComposedTopResponse)>;
+                             ComposedProtocolTwoWayAnonComposedResponse)>;
 
   virtual void TwoWayAnonComposed(
       ::test::protocollayouts::imported::
@@ -4511,7 +4510,7 @@ class MainProtocol {
   virtual void OneWayAnon(::test::protocollayouts::MainProtocolOneWayAnonRequest
                               MainProtocolOneWayAnonRequest) = 0;
   using TwoWayAnonCallback = fit::function<void(
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse)>;
+      ::test::protocollayouts::MainProtocolTwoWayAnonResponse)>;
 
   virtual void TwoWayAnon(::test::protocollayouts::MainProtocolTwoWayAnonRequest
                               MainProtocolTwoWayAnonRequest,
@@ -4586,8 +4585,8 @@ class MainProtocol_ResponseDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal);
   virtual void TwoWayAnonComposed(
       ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedTopResponse
-              ComposedProtocolTwoWayAnonComposedTopResponse) = 0;
+          ComposedProtocolTwoWayAnonComposedResponse
+              ComposedProtocolTwoWayAnonComposedResponse) = 0;
   virtual void TwoWayAnonComposedWithError(
       ::test::protocollayouts::imported::
           ComposedProtocol_TwoWayAnonComposedWithError_Result result) = 0;
@@ -4630,8 +4629,8 @@ class MainProtocol_ResponseDecoder {
   virtual void OnLocalWithError(
       ::test::protocollayouts::MainProtocol_OnLocalWithError_Result result) = 0;
   virtual void TwoWayAnon(
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse
-          MainProtocolTwoWayAnonTopResponse) = 0;
+      ::test::protocollayouts::MainProtocolTwoWayAnonResponse
+          MainProtocolTwoWayAnonResponse) = 0;
   virtual void TwoWayAnonWithError(
       ::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result
           result) = 0;
@@ -4684,8 +4683,8 @@ class MainProtocol_Sync {
           ComposedProtocolTwoWayAnonComposedRequest
               ComposedProtocolTwoWayAnonComposedRequest,
       ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedTopResponse*
-              out_ComposedProtocolTwoWayAnonComposedTopResponse) = 0;
+          ComposedProtocolTwoWayAnonComposedResponse*
+              out_ComposedProtocolTwoWayAnonComposedResponse) = 0;
   virtual zx_status_t TwoWayAnonComposedWithError(
       ::test::protocollayouts::imported::
           ComposedProtocolTwoWayAnonComposedWithErrorRequest
@@ -4729,8 +4728,8 @@ class MainProtocol_Sync {
   virtual zx_status_t TwoWayAnon(
       ::test::protocollayouts::MainProtocolTwoWayAnonRequest
           MainProtocolTwoWayAnonRequest,
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse*
-          out_MainProtocolTwoWayAnonTopResponse) = 0;
+      ::test::protocollayouts::MainProtocolTwoWayAnonResponse*
+          out_MainProtocolTwoWayAnonResponse) = 0;
   virtual zx_status_t TwoWayAnonWithError(
       ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest
           MainProtocolTwoWayAnonWithErrorRequest,
@@ -4883,8 +4882,8 @@ class MainProtocol_SyncProxy
           ComposedProtocolTwoWayAnonComposedRequest
               ComposedProtocolTwoWayAnonComposedRequest,
       ::test::protocollayouts::imported::
-          ComposedProtocolTwoWayAnonComposedTopResponse*
-              out_ComposedProtocolTwoWayAnonComposedTopResponse) override;
+          ComposedProtocolTwoWayAnonComposedResponse*
+              out_ComposedProtocolTwoWayAnonComposedResponse) override;
   // cts-coverage-fidl-name:test.protocollayouts/MainProtocol.TwoWayAnonComposedWithError
   zx_status_t TwoWayAnonComposedWithError(
       ::test::protocollayouts::imported::
@@ -4941,8 +4940,8 @@ class MainProtocol_SyncProxy
   zx_status_t TwoWayAnon(
       ::test::protocollayouts::MainProtocolTwoWayAnonRequest
           MainProtocolTwoWayAnonRequest,
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse*
-          out_MainProtocolTwoWayAnonTopResponse) override;
+      ::test::protocollayouts::MainProtocolTwoWayAnonResponse*
+          out_MainProtocolTwoWayAnonResponse) override;
   // cts-coverage-fidl-name:test.protocollayouts/MainProtocol.TwoWayAnonWithError
   zx_status_t TwoWayAnonWithError(
       ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest

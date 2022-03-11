@@ -2055,14 +2055,14 @@ zx_status_t MainProtocolTwoWayAnonWithErrorRequest::Clone(
 }
 
 extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
-const fidl_type_t* MainProtocolTwoWayAnonTopResponse::FidlType =
-    &test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
+const fidl_type_t* MainProtocolTwoWayAnonResponse::FidlType =
+    &test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 
-MainProtocolTwoWayAnonTopResponse::MainProtocolTwoWayAnonTopResponse() {}
+MainProtocolTwoWayAnonResponse::MainProtocolTwoWayAnonResponse() {}
 
-MainProtocolTwoWayAnonTopResponse::MainProtocolTwoWayAnonTopResponse(
-    MainProtocolTwoWayAnonTopResponse&& other) {
+MainProtocolTwoWayAnonResponse::MainProtocolTwoWayAnonResponse(
+    MainProtocolTwoWayAnonResponse&& other) {
   field_presence_ = other.field_presence_;
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
@@ -2070,14 +2070,14 @@ MainProtocolTwoWayAnonTopResponse::MainProtocolTwoWayAnonTopResponse(
   _unknown_data = std::move(other._unknown_data);
 }
 
-MainProtocolTwoWayAnonTopResponse::~MainProtocolTwoWayAnonTopResponse() {
+MainProtocolTwoWayAnonResponse::~MainProtocolTwoWayAnonResponse() {
   if (field_presence_.IsSet<0>()) {
     Destruct(&a_value_.value);
   }
 }
 
-MainProtocolTwoWayAnonTopResponse& MainProtocolTwoWayAnonTopResponse::operator=(
-    MainProtocolTwoWayAnonTopResponse&& other) {
+MainProtocolTwoWayAnonResponse& MainProtocolTwoWayAnonResponse::operator=(
+    MainProtocolTwoWayAnonResponse&& other) {
   if (other.field_presence_.IsSet<0>()) {
     if (field_presence_.IsSet<0>()) {
       a_value_.value = std::move(other.a_value_.value);
@@ -2093,11 +2093,11 @@ MainProtocolTwoWayAnonTopResponse& MainProtocolTwoWayAnonTopResponse::operator=(
   return *this;
 }
 
-bool MainProtocolTwoWayAnonTopResponse::IsEmpty() const {
+bool MainProtocolTwoWayAnonResponse::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void MainProtocolTwoWayAnonTopResponse::Encode(
+void MainProtocolTwoWayAnonResponse::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
@@ -2178,8 +2178,8 @@ void MainProtocolTwoWayAnonTopResponse::Encode(
   }
 }
 
-void MainProtocolTwoWayAnonTopResponse::Decode(
-    ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonTopResponse* _value,
+void MainProtocolTwoWayAnonResponse::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonResponse* _value,
     size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
@@ -2233,8 +2233,8 @@ done_1:
   return;
 }
 
-zx_status_t MainProtocolTwoWayAnonTopResponse::Clone(
-    MainProtocolTwoWayAnonTopResponse* result) const {
+zx_status_t MainProtocolTwoWayAnonResponse::Clone(
+    MainProtocolTwoWayAnonResponse* result) const {
   if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
     if (_status != ZX_OK) return _status;
@@ -3967,7 +3967,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+    test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -4012,7 +4012,7 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+    test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -4120,7 +4120,7 @@ const fidl_type_t* MainProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::protocollayouts::internal::
         kMainProtocol_TwoWayAnonComposed_Ordinal:
       return &::test::protocollayouts::_internal::
-          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
       ;
     case ::test::protocollayouts::internal::
         kMainProtocol_TwoWayAnonComposedWithError_Ordinal:
@@ -4195,7 +4195,7 @@ const fidl_type_t* MainProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
       ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayAnon_Ordinal:
       return &::test::protocollayouts::_internal::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
       ;
     case ::test::protocollayouts::internal::
         kMainProtocol_TwoWayAnonWithError_Ordinal:
@@ -4520,12 +4520,12 @@ MainProtocol_TwoWayAnonComposed_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::test::protocollayouts::imported::
-                                 ComposedProtocolTwoWayAnonComposedTopResponse>(
+                                 ComposedProtocolTwoWayAnonComposedResponse>(
                 &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocollayouts::_internal::
-          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable);
+          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable);
 }
 
 }  // namespace
@@ -4870,12 +4870,12 @@ MainProtocol_TwoWayAnon_ResponseHandler(
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
-                  ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse>(
+                  ::test::protocollayouts::MainProtocolTwoWayAnonResponse>(
             &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocollayouts::_internal::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable);
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable);
 }
 
 }  // namespace
@@ -4950,19 +4950,19 @@ class MainProtocol_TwoWayAnonComposed_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::protocollayouts::imported::
-                      ComposedProtocolTwoWayAnonComposedTopResponse
-                          ComposedProtocolTwoWayAnonComposedTopResponse) {
+                      ComposedProtocolTwoWayAnonComposedResponse
+                          ComposedProtocolTwoWayAnonComposedResponse) {
     ::fidl::MessageEncoder _encoder(
         ::test::protocollayouts::internal::
             kMainProtocol_TwoWayAnonComposed_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocollayouts::_internal::
-            test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+            test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
     response_.Send(
         resp_type,
         ::test::protocollayouts::MainProtocol_ResponseEncoder::
             TwoWayAnonComposed(&_encoder,
-                               &ComposedProtocolTwoWayAnonComposedTopResponse));
+                               &ComposedProtocolTwoWayAnonComposedResponse));
   }
 
  private:
@@ -5138,17 +5138,17 @@ class MainProtocol_TwoWayAnon_Responder final {
   MainProtocol_TwoWayAnon_Responder(::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(::test::protocollayouts::MainProtocolTwoWayAnonTopResponse
-                      MainProtocolTwoWayAnonTopResponse) {
+  void operator()(::test::protocollayouts::MainProtocolTwoWayAnonResponse
+                      MainProtocolTwoWayAnonResponse) {
     ::fidl::MessageEncoder _encoder(
         ::test::protocollayouts::internal::kMainProtocol_TwoWayAnon_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocollayouts::_internal::
-            test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+            test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
     response_.Send(
         resp_type,
         ::test::protocollayouts::MainProtocol_ResponseEncoder::TwoWayAnon(
-            &_encoder, &MainProtocolTwoWayAnonTopResponse));
+            &_encoder, &MainProtocolTwoWayAnonResponse));
   }
 
  private:
@@ -5504,8 +5504,8 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnonComposed(
     ::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest
         ComposedProtocolTwoWayAnonComposedRequest,
     ::test::protocollayouts::imported::
-        ComposedProtocolTwoWayAnonComposedTopResponse*
-            out_ComposedProtocolTwoWayAnonComposedTopResponse) {
+        ComposedProtocolTwoWayAnonComposedResponse*
+            out_ComposedProtocolTwoWayAnonComposedResponse) {
   ::fidl::MessageEncoder _encoder(::test::protocollayouts::internal::
                                       kMainProtocol_TwoWayAnonComposed_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
@@ -5515,7 +5515,7 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnonComposed(
           test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocollayouts::_internal::
-          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+          test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocollayouts::MainProtocol_RequestEncoder::TwoWayAnonComposed(
@@ -5523,9 +5523,9 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnonComposed(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_ComposedProtocolTwoWayAnonComposedTopResponse =
+  *out_ComposedProtocolTwoWayAnonComposedResponse =
       ::fidl::DecodeAs<::test::protocollayouts::imported::
-                           ComposedProtocolTwoWayAnonComposedTopResponse>(
+                           ComposedProtocolTwoWayAnonComposedResponse>(
           &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
@@ -5782,8 +5782,8 @@ zx_status_t MainProtocol_SyncProxy::OneWayAnon(
 zx_status_t MainProtocol_SyncProxy::TwoWayAnon(
     ::test::protocollayouts::MainProtocolTwoWayAnonRequest
         MainProtocolTwoWayAnonRequest,
-    ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse*
-        out_MainProtocolTwoWayAnonTopResponse) {
+    ::test::protocollayouts::MainProtocolTwoWayAnonResponse*
+        out_MainProtocolTwoWayAnonResponse) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocollayouts::internal::kMainProtocol_TwoWayAnon_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
@@ -5793,7 +5793,7 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnon(
           test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocollayouts::_internal::
-          test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+          test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocollayouts::MainProtocol_RequestEncoder::TwoWayAnon(
@@ -5801,9 +5801,9 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnon(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_MainProtocolTwoWayAnonTopResponse = ::fidl::DecodeAs<
-      ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse>(
-      &decoder_, 0 + sizeof(fidl_message_header_t));
+  *out_MainProtocolTwoWayAnonResponse =
+      ::fidl::DecodeAs<::test::protocollayouts::MainProtocolTwoWayAnonResponse>(
+          &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 

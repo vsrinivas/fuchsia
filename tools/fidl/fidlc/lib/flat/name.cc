@@ -31,8 +31,14 @@ std::string NamingContext::FlattenedName() const {
     case Kind::kMethodResponse: {
       std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
       result.append(utils::to_upper_camel_case(std::string(name_.data())));
-      // We can't use [protocol][method]Response, because that may be occupied by
-      // the success variant of the result type, if this method has an error.
+      result.append("Response");
+      return result;
+    }
+    case Kind::kMethodResult: {
+      std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
+      result.append(utils::to_upper_camel_case(std::string(name_.data())));
+      // We can't use [protocol][method]Response, because that is occupied by the success variant of
+      // the result type, if this method has an error.
       result.append("TopResponse");
       return result;
     }
@@ -47,10 +53,19 @@ std::vector<std::string> NamingContext::Context() const {
     // layout is the request or response, since this bit of information is
     // embedded in the Kind. When collapsing the stack of contexts into a list
     // of strings, we need to flatten this case out to avoid losing this data.
-    if (current->kind_ == Kind::kMethodRequest) {
-      names.push_back("Request");
-    } else if (current->kind_ == Kind::kMethodResponse) {
-      names.push_back("Response");
+    switch (current->kind_) {
+      case Kind::kMethodRequest: {
+        names.push_back("Request");
+        break;
+      };
+      case Kind::kMethodResponse:
+      case Kind::kMethodResult: {
+        names.push_back("Response");
+        break;
+      }
+      case Kind::kDecl:
+      case Kind::kLayoutMember:
+        break;
     }
 
     names.emplace_back(current->name_.data());

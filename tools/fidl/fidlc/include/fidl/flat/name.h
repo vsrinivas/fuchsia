@@ -68,8 +68,29 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return Push(method_name, Kind::kMethodResponse);
   }
 
+  std::shared_ptr<NamingContext> EnterResult(SourceSpan method_name) {
+    assert(kind_ == Kind::kDecl && "result must follow protocol");
+    return Push(method_name, Kind::kMethodResult);
+  }
+
   std::shared_ptr<NamingContext> EnterMember(SourceSpan member_name) {
     return Push(member_name, Kind::kLayoutMember);
+  }
+
+  // For backwards compatibility with already existing bindings, non-`error` response success
+  // payloads of the `struct` layout must be named `MyProtocolMyMethodTopResponse`, instead of
+  // `MyProtocolMyMethodResponse` as would be expected in all other cases. This function should be
+  // called during struct layout consumption to make the shimming adjustment if necessary.
+  //
+  // TODO(fxbug.dev/95231): Unnecessary once we remove `TopResponse` wrappers altogether.
+  std::shared_ptr<NamingContext> SwapStructPayloadContext() {
+    if (kind_ == Kind::kMethodResponse) {
+      assert(parent_ != nullptr);
+      assert(!name_override_.has_value() && "must perform swap before setting name override");
+      auto swapped = parent_->EnterResult(name_);
+      return swapped;
+    }
+    return shared_from_this();
   }
 
   SourceSpan name() const { return name_; }
@@ -115,6 +136,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     kLayoutMember,
     kMethodRequest,
     kMethodResponse,
+    kMethodResult,
   };
 
   NamingContext(SourceSpan name, Kind kind) : name_(name), kind_(kind) {}

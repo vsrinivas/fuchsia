@@ -177,8 +177,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           std::move(ComposedProtocolTwoWayAnonComposedRequest),
           [signaller = fuzzer_.NewCallbackSignaller()](
               ::test::protocollayouts::imported::
-                  ComposedProtocolTwoWayAnonComposedTopResponse
-                      ComposedProtocolTwoWayAnonComposedTopResponse) {
+                  ComposedProtocolTwoWayAnonComposedResponse
+                      ComposedProtocolTwoWayAnonComposedResponse) {
             xprintf(
                 "Invoked "
                 "test_protocollayouts_MainProtocol.TwoWayAnonComposed\n");
@@ -766,8 +766,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->TwoWayAnon(
           std::move(MainProtocolTwoWayAnonRequest),
           [signaller = fuzzer_.NewCallbackSignaller()](
-              ::test::protocollayouts::MainProtocolTwoWayAnonTopResponse
-                  MainProtocolTwoWayAnonTopResponse) {
+              ::test::protocollayouts::MainProtocolTwoWayAnonResponse
+                  MainProtocolTwoWayAnonResponse) {
             xprintf("Invoked test_protocollayouts_MainProtocol.TwoWayAnon\n");
             zx_status_t status_ = signaller.SignalCallback();
             if (status_ != ZX_OK) {

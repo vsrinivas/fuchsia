@@ -22,7 +22,7 @@ __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_imported_Compos
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_imported_ComposedProtocol_OnAnonComposedWithError_ResultNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_protocollayouts_imported_ComposedProtocolOnAnonComposedWithErrorRequestTable;
 __LOCAL extern const struct FidlCodedTable test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
-__LOCAL extern const struct FidlCodedTable test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedTopResponseTable;
+__LOCAL extern const struct FidlCodedTable test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestNullableRefTable;
 __LOCAL extern const struct FidlCodedTable test_protocollayouts_imported_ComposedProtocolOneWayAnonComposedRequestTable;
@@ -44,7 +44,7 @@ __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_MainProtocol_On
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_MainProtocol_OnAnonWithError_ResultNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
 __LOCAL extern const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
-__LOCAL extern const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern const struct FidlCodedXUnion test_protocollayouts_MainProtocolTwoWayAnonRequestNullableRefTable;
 __LOCAL extern const struct FidlCodedTable test_protocollayouts_MainProtocolOneWayAnonRequestTable;
@@ -160,10 +160,10 @@ static const struct FidlTableField Fields59test_protocollayouts_MainProtocolTwoW
 };
 const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable = {.tag=kFidlTypeTable, .fields=Fields59test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequest, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.protocollayouts/MainProtocolTwoWayAnonWithErrorRequest"};
 
-static const struct FidlTableField Fields54test_protocollayouts_MainProtocolTwoWayAnonTopResponse[] = {
+static const struct FidlTableField Fields51test_protocollayouts_MainProtocolTwoWayAnonResponse[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kUint16Table), .ordinal=1u}
 };
-const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonTopResponseTable = {.tag=kFidlTypeTable, .fields=Fields54test_protocollayouts_MainProtocolTwoWayAnonTopResponse, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.protocollayouts/MainProtocolTwoWayAnonTopResponse"};
+const struct FidlCodedTable test_protocollayouts_MainProtocolTwoWayAnonResponseTable = {.tag=kFidlTypeTable, .fields=Fields51test_protocollayouts_MainProtocolTwoWayAnonResponse, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.protocollayouts/MainProtocolTwoWayAnonResponse"};
 
 static const struct FidlXUnionField Fields50test_protocollayouts_MainProtocolTwoWayAnonRequest[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kBoolTable)}
