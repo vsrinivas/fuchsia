@@ -499,27 +499,27 @@ mod tests {
         let mut fidl_config_values = fconfig::ValuesData {
             values: Some(vec![
                 fconfig::ValueSpec {
-                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Bool(false))),
                     ..fconfig::ValueSpec::EMPTY
                 },
                 fconfig::ValueSpec {
-                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Unsigned8(5))),
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Uint8(5))),
                     ..fconfig::ValueSpec::EMPTY
                 },
                 fconfig::ValueSpec {
-                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Text(
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::String(
                         "hello!".to_string(),
                     ))),
                     ..fconfig::ValueSpec::EMPTY
                 },
                 fconfig::ValueSpec {
-                    value: Some(fconfig::Value::List(fconfig::ListValue::FlagList(vec![
+                    value: Some(fconfig::Value::Vector(fconfig::VectorValue::BoolVector(vec![
                         true, false,
                     ]))),
                     ..fconfig::ValueSpec::EMPTY
                 },
                 fconfig::ValueSpec {
-                    value: Some(fconfig::Value::List(fconfig::ListValue::TextList(vec![
+                    value: Some(fconfig::Value::Vector(fconfig::VectorValue::StringVector(vec![
                         "hello!".to_string(),
                         "world!".to_string(),
                     ]))),
@@ -532,19 +532,23 @@ mod tests {
         let config_values = cm_rust::ValuesData {
             values: vec![
                 cm_rust::ValueSpec {
-                    value: cm_rust::Value::Single(cm_rust::SingleValue::Flag(false)),
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::Bool(false)),
                 },
                 cm_rust::ValueSpec {
-                    value: cm_rust::Value::Single(cm_rust::SingleValue::Unsigned8(5)),
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::Uint8(5)),
                 },
                 cm_rust::ValueSpec {
-                    value: cm_rust::Value::Single(cm_rust::SingleValue::Text("hello!".to_string())),
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::String(
+                        "hello!".to_string(),
+                    )),
                 },
                 cm_rust::ValueSpec {
-                    value: cm_rust::Value::List(cm_rust::ListValue::FlagList(vec![true, false])),
+                    value: cm_rust::Value::Vector(cm_rust::VectorValue::BoolVector(vec![
+                        true, false,
+                    ])),
                 },
                 cm_rust::ValueSpec {
-                    value: cm_rust::Value::List(cm_rust::ListValue::TextList(vec![
+                    value: cm_rust::Value::Vector(cm_rust::VectorValue::StringVector(vec![
                         "hello!".to_string(),
                         "world!".to_string(),
                     ])),

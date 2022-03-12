@@ -13,33 +13,33 @@ library fuchsia.component.config;
 /// Used both for storing configuration at-rest and in runtime configuration APIs.
 type Value = flexible union {
     1: single SingleValue;
-    2: list ListValue;
+    2: vector VectorValue;
 };
 
 /// A single configuration value.
 type SingleValue = flexible union {
-    1: flag bool;
-    2: unsigned_8 uint8;
-    3: unsigned_16 uint16;
-    4: unsigned_32 uint32;
-    5: unsigned_64 uint64;
-    6: signed_8 int8;
-    7: signed_16 int16;
-    8: signed_32 int32;
-    9: signed_64 int64;
-   10: text string:MAX;
+    1: bool bool;
+    2: uint8 uint8;
+    3: uint16 uint16;
+    4: uint32 uint32;
+    5: uint64 uint64;
+    6: int8 int8;
+    7: int16 int16;
+    8: int32 int32;
+    9: int64 int64;
+   10: string string:MAX;
 };
 
-/// A list-like configuration value.
-type ListValue = flexible union {
-    1: flag_list vector<bool>:MAX;
-    2: unsigned_8_list vector<uint8>:MAX;
-    3: unsigned_16_list vector<uint16>:MAX;
-    4: unsigned_32_list vector<uint32>:MAX;
-    5: unsigned_64_list vector<uint64>:MAX;
-    6: signed_8_list vector<int8>:MAX;
-    7: signed_16_list vector<int16>:MAX;
-    8: signed_32_list vector<int32>:MAX;
-    9: signed_64_list vector<int64>:MAX;
-   10: text_list vector<string:MAX>:MAX;
+/// A vector configuration value.
+type VectorValue = flexible union {
+    1: bool_vector vector<bool>:MAX;
+    2: uint8_vector vector<uint8>:MAX;
+    3: uint16_vector vector<uint16>:MAX;
+    4: uint32_vector vector<uint32>:MAX;
+    5: uint64_vector vector<uint64>:MAX;
+    6: int8_vector vector<int8>:MAX;
+    7: int16_vector vector<int16>:MAX;
+    8: int32_vector vector<int32>:MAX;
+    9: int64_vector vector<int64>:MAX;
+   10: string_vector vector<string:MAX>:MAX;
 };

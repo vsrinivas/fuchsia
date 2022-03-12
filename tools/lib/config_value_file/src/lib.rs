@@ -65,7 +65,7 @@ pub enum FileError {
 #[cfg(test)]
 mod tests {
     use super::{field::JsonTy, *};
-    use cm_rust::{ConfigChecksum, ListValue::*, SingleValue::*, Value::*};
+    use cm_rust::{ConfigChecksum, SingleValue, Value, VectorValue};
     use fidl_fuchsia_component_config_ext::{config_decl, values_data};
     use serde_json::json;
 
@@ -134,26 +134,26 @@ mod tests {
 
         let expected = values_data![
             ck@ test_checksum(),
-            Single(Flag(false)),
-            Single(Unsigned8(255u8)),
-            Single(Unsigned16(65535u16)),
-            Single(Unsigned32(4000000000u32)),
-            Single(Unsigned64(8000000000u64)),
-            Single(Signed8(-127i8)),
-            Single(Signed16(-32766i16)),
-            Single(Signed32(-2000000000i32)),
-            Single(Signed64(-4000000000i64)),
-            Single(Text("hello, world!".into())),
-            List(FlagList(vec![true, false])),
-            List(Unsigned8List(vec![1, 2, 3])),
-            List(Unsigned16List(vec![2, 3, 4])),
-            List(Unsigned32List(vec![3, 4, 5])),
-            List(Unsigned64List(vec![4, 5, 6])),
-            List(Signed8List(vec![-1, -2, 3])),
-            List(Signed16List(vec![-2, -3, 4])),
-            List(Signed32List(vec![-3, -4, 5])),
-            List(Signed64List(vec![-4, -5, 6])),
-            List(TextList(vec!["hello, world!".into(), "hello, again!".into()])),
+            Value::Single(SingleValue::Bool(false)),
+            Value::Single(SingleValue::Uint8(255u8)),
+            Value::Single(SingleValue::Uint16(65535u16)),
+            Value::Single(SingleValue::Uint32(4000000000u32)),
+            Value::Single(SingleValue::Uint64(8000000000u64)),
+            Value::Single(SingleValue::Int8(-127i8)),
+            Value::Single(SingleValue::Int16(-32766i16)),
+            Value::Single(SingleValue::Int32(-2000000000i32)),
+            Value::Single(SingleValue::Int64(-4000000000i64)),
+            Value::Single(SingleValue::String("hello, world!".into())),
+            Value::Vector(VectorValue::BoolVector(vec![true, false])),
+            Value::Vector(VectorValue::Uint8Vector(vec![1, 2, 3])),
+            Value::Vector(VectorValue::Uint16Vector(vec![2, 3, 4])),
+            Value::Vector(VectorValue::Uint32Vector(vec![3, 4, 5])),
+            Value::Vector(VectorValue::Uint64Vector(vec![4, 5, 6])),
+            Value::Vector(VectorValue::Int8Vector(vec![-1, -2, 3])),
+            Value::Vector(VectorValue::Int16Vector(vec![-2, -3, 4])),
+            Value::Vector(VectorValue::Int32Vector(vec![-3, -4, 5])),
+            Value::Vector(VectorValue::Int64Vector(vec![-4, -5, 6])),
+            Value::Vector(VectorValue::StringVector(vec!["hello, world!".into(), "hello, again!".into()])),
         ];
 
         let observed = populate_value_file(&decl, values).unwrap();

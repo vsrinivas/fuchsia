@@ -4,7 +4,7 @@
 
 //! Validating and encoding individual configuration fields.
 
-use cm_rust::{ConfigNestedValueType, ConfigValueType, ListValue, SingleValue, Value};
+use cm_rust::{ConfigNestedValueType, ConfigValueType, SingleValue, Value, VectorValue};
 use serde_json::Value as JsonValue;
 use std::{
     convert::TryFrom,
@@ -19,30 +19,30 @@ pub fn config_value_from_json_value(
     value_type: &ConfigValueType,
 ) -> Result<Value, FieldError> {
     Ok(match value_type {
-        ConfigValueType::Bool => Value::Single(SingleValue::Flag(val.parse_bool()?)),
-        ConfigValueType::Uint8 => Value::Single(SingleValue::Unsigned8(val.parse_u8()?)),
-        ConfigValueType::Uint16 => Value::Single(SingleValue::Unsigned16(val.parse_u16()?)),
-        ConfigValueType::Uint32 => Value::Single(SingleValue::Unsigned32(val.parse_u32()?)),
-        ConfigValueType::Uint64 => Value::Single(SingleValue::Unsigned64(val.parse_u64()?)),
-        ConfigValueType::Int8 => Value::Single(SingleValue::Signed8(val.parse_i8()?)),
-        ConfigValueType::Int16 => Value::Single(SingleValue::Signed16(val.parse_i16()?)),
-        ConfigValueType::Int32 => Value::Single(SingleValue::Signed32(val.parse_i32()?)),
-        ConfigValueType::Int64 => Value::Single(SingleValue::Signed64(val.parse_i64()?)),
+        ConfigValueType::Bool => Value::Single(SingleValue::Bool(val.parse_bool()?)),
+        ConfigValueType::Uint8 => Value::Single(SingleValue::Uint8(val.parse_u8()?)),
+        ConfigValueType::Uint16 => Value::Single(SingleValue::Uint16(val.parse_u16()?)),
+        ConfigValueType::Uint32 => Value::Single(SingleValue::Uint32(val.parse_u32()?)),
+        ConfigValueType::Uint64 => Value::Single(SingleValue::Uint64(val.parse_u64()?)),
+        ConfigValueType::Int8 => Value::Single(SingleValue::Int8(val.parse_i8()?)),
+        ConfigValueType::Int16 => Value::Single(SingleValue::Int16(val.parse_i16()?)),
+        ConfigValueType::Int32 => Value::Single(SingleValue::Int32(val.parse_i32()?)),
+        ConfigValueType::Int64 => Value::Single(SingleValue::Int64(val.parse_i64()?)),
         ConfigValueType::String { max_size } => {
-            Value::Single(SingleValue::Text(val.parse_string(*max_size)?))
+            Value::Single(SingleValue::String(val.parse_string(*max_size)?))
         }
         ConfigValueType::Vector { max_count, nested_type } => {
-            Value::List(list_value_from_json(val, max_count, nested_type)?)
+            Value::Vector(vector_value_from_json(val, max_count, nested_type)?)
         }
     })
 }
 
-/// Parse `val` as a list/vector of configuration values.
-fn list_value_from_json(
+/// Parse `val` as a vector of configuration values.
+fn vector_value_from_json(
     val: &JsonValue,
     max_count: &u32,
     nested_type: &ConfigNestedValueType,
-) -> Result<ListValue, FieldError> {
+) -> Result<VectorValue, FieldError> {
     // define our array up here so its identifier is available for our helper macro
     let array = val.as_array().ok_or_else(|| FieldError::JsonTypeMismatch {
         expected: JsonTy::Array,
@@ -53,39 +53,39 @@ fn list_value_from_json(
         return Err(FieldError::VectorTooLong { max, actual: array.len() });
     }
 
-    /// Build a ListValue out of all the array elements.
+    /// Build a VectorValue out of all the array elements.
     ///
     /// A macro because enum variants don't exist at the type level in Rust at time of writing.
-    macro_rules! list_from_array {
+    macro_rules! vector_from_array {
         ($list_variant:ident, $val:ident => $convert:expr) => {{
             let mut list = vec![];
             for $val in array {
                 list.push($convert);
             }
-            ListValue::$list_variant(list)
+            VectorValue::$list_variant(list)
         }};
     }
 
     Ok(match nested_type {
         ConfigNestedValueType::Bool => {
-            list_from_array!(FlagList, v => v.parse_bool()?)
+            vector_from_array!(BoolVector, v => v.parse_bool()?)
         }
-        ConfigNestedValueType::Uint8 => list_from_array!(Unsigned8List, v => v.parse_u8()?),
+        ConfigNestedValueType::Uint8 => vector_from_array!(Uint8Vector, v => v.parse_u8()?),
         ConfigNestedValueType::Uint16 => {
-            list_from_array!(Unsigned16List, v => v.parse_u16()?)
+            vector_from_array!(Uint16Vector, v => v.parse_u16()?)
         }
         ConfigNestedValueType::Uint32 => {
-            list_from_array!(Unsigned32List, v => v.parse_u32()?)
+            vector_from_array!(Uint32Vector, v => v.parse_u32()?)
         }
         ConfigNestedValueType::Uint64 => {
-            list_from_array!(Unsigned64List, v => v.parse_u64()?)
+            vector_from_array!(Uint64Vector, v => v.parse_u64()?)
         }
-        ConfigNestedValueType::Int8 => list_from_array!(Signed8List,  v => v.parse_i8()?),
-        ConfigNestedValueType::Int16 => list_from_array!(Signed16List, v => v.parse_i16()?),
-        ConfigNestedValueType::Int32 => list_from_array!(Signed32List, v => v.parse_i32()?),
-        ConfigNestedValueType::Int64 => list_from_array!(Signed64List, v => v.parse_i64()?),
+        ConfigNestedValueType::Int8 => vector_from_array!(Int8Vector,  v => v.parse_i8()?),
+        ConfigNestedValueType::Int16 => vector_from_array!(Int16Vector, v => v.parse_i16()?),
+        ConfigNestedValueType::Int32 => vector_from_array!(Int32Vector, v => v.parse_i32()?),
+        ConfigNestedValueType::Int64 => vector_from_array!(Int64Vector, v => v.parse_i64()?),
         ConfigNestedValueType::String { max_size } => {
-            list_from_array!(TextList, v => v.parse_string(*max_size)?)
+            vector_from_array!(StringVector, v => v.parse_string(*max_size)?)
         }
     })
 }
@@ -374,9 +374,6 @@ mod tests {
         mod: parse_uint64,
         type: { uint64 },
         tests: [
-            // TODO(http://fxbug.dev/91616): serde_json5 does not currently support values
-            // between i64::MAX and u64::MAX. Enable this test once this is fixed.
-            // can_be_larger_than_i64_max: json!(9_223_372_036_854_775_808u64)=> Ok(Value::Single(SingleValue::Unsigned64(9_223_372_036_854_775_808u64))),
             cant_be_negative: json!(-1) =>
                 Err(NumberNotUnsigned),
             cant_be_float: json!(1.0) =>
@@ -482,9 +479,9 @@ mod tests {
         mod: parse_string,
         type: { string, max_size: 13 },
         tests: [
-            can_be_empty: json!("") => Ok(Value::Single(SingleValue::Text("".into()))),
+            can_be_empty: json!("") => Ok(Value::Single(SingleValue::String("".into()))),
             max_length_fits: json!("hello, world!") =>
-                Ok(Value::Single(SingleValue::Text("hello, world!".into()))),
+                Ok(Value::Single(SingleValue::String("hello, world!".into()))),
             cant_be_too_long: json!("1234567890 uhoh") =>
                 Err(StringTooLong { max: 13, actual: 15 }),
             cant_be_null: json!(null) =>
@@ -505,8 +502,8 @@ mod tests {
         type: { vector, element: int32, max_count: 5 },
         tests: [
             max_length_fits: json!([1, 2, 3, 4, 5]) =>
-                Ok(Value::List(ListValue::Signed32List(vec![1, 2, 3, 4, 5]))),
-            can_be_empty: json!([]) => Ok(Value::List(ListValue::Signed32List(vec![]))),
+                Ok(Value::Vector(VectorValue::Int32Vector(vec![1, 2, 3, 4, 5]))),
+            can_be_empty: json!([]) => Ok(Value::Vector(VectorValue::Int32Vector(vec![]))),
             cant_be_too_long: json!([1, 2, 3, 4, 5, 6]) => Err(VectorTooLong { max: 5, actual: 6}),
             element_type_must_match: json!(["foo"]) =>
                 Err(JsonTypeMismatch { expected: JsonTy::Number, received: JsonTy::String }),

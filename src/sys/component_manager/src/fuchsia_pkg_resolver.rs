@@ -233,7 +233,7 @@ mod tests {
                 },
                 &mut fconfig::ValuesData {
                     values: Some(vec![fconfig::ValueSpec {
-                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
+                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Bool(false))),
                         ..fconfig::ValueSpec::EMPTY
                     }]),
                     checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
@@ -388,7 +388,7 @@ mod tests {
 
         let expected_values = Some(cm_rust::ValuesData {
             values: vec![cm_rust::ValueSpec {
-                value: cm_rust::Value::Single(cm_rust::SingleValue::Flag(false)),
+                value: cm_rust::Value::Single(cm_rust::SingleValue::Bool(false)),
             }],
             checksum: cm_rust::ConfigChecksum::Sha256([0; 32]),
         });

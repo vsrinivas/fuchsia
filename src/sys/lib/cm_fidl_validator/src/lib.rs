@@ -32,32 +32,32 @@ pub fn validate_values_data(data: &fconfig::ValuesData) -> Result<(), ErrorList>
             if let Some(value) = &spec.value {
                 match value {
                     fconfig::Value::Single(s) => match s {
-                        fconfig::SingleValue::Flag(_)
-                        | fconfig::SingleValue::Unsigned8(_)
-                        | fconfig::SingleValue::Unsigned16(_)
-                        | fconfig::SingleValue::Unsigned32(_)
-                        | fconfig::SingleValue::Unsigned64(_)
-                        | fconfig::SingleValue::Signed8(_)
-                        | fconfig::SingleValue::Signed16(_)
-                        | fconfig::SingleValue::Signed32(_)
-                        | fconfig::SingleValue::Signed64(_)
-                        | fconfig::SingleValue::Text(_) => {}
+                        fconfig::SingleValue::Bool(_)
+                        | fconfig::SingleValue::Uint8(_)
+                        | fconfig::SingleValue::Uint16(_)
+                        | fconfig::SingleValue::Uint32(_)
+                        | fconfig::SingleValue::Uint64(_)
+                        | fconfig::SingleValue::Int8(_)
+                        | fconfig::SingleValue::Int16(_)
+                        | fconfig::SingleValue::Int32(_)
+                        | fconfig::SingleValue::Int64(_)
+                        | fconfig::SingleValue::String(_) => {}
                         fconfig::SingleValueUnknown!() => {
                             errors.push(Error::invalid_field("ValueSpec", "value"));
                         }
                     },
-                    fconfig::Value::List(l) => match l {
-                        fconfig::ListValue::FlagList(_)
-                        | fconfig::ListValue::Unsigned8List(_)
-                        | fconfig::ListValue::Unsigned16List(_)
-                        | fconfig::ListValue::Unsigned32List(_)
-                        | fconfig::ListValue::Unsigned64List(_)
-                        | fconfig::ListValue::Signed8List(_)
-                        | fconfig::ListValue::Signed16List(_)
-                        | fconfig::ListValue::Signed32List(_)
-                        | fconfig::ListValue::Signed64List(_)
-                        | fconfig::ListValue::TextList(_) => {}
-                        fconfig::ListValueUnknown!() => {
+                    fconfig::Value::Vector(l) => match l {
+                        fconfig::VectorValue::BoolVector(_)
+                        | fconfig::VectorValue::Uint8Vector(_)
+                        | fconfig::VectorValue::Uint16Vector(_)
+                        | fconfig::VectorValue::Uint32Vector(_)
+                        | fconfig::VectorValue::Uint64Vector(_)
+                        | fconfig::VectorValue::Int8Vector(_)
+                        | fconfig::VectorValue::Int16Vector(_)
+                        | fconfig::VectorValue::Int32Vector(_)
+                        | fconfig::VectorValue::Int64Vector(_)
+                        | fconfig::VectorValue::StringVector(_) => {}
+                        fconfig::VectorValueUnknown!() => {
                             errors.push(Error::invalid_field("ValueSpec", "value"));
                         }
                     },
@@ -2512,7 +2512,7 @@ mod tests {
             input = fconfig::ValuesData {
                 values: Some(vec![
                     fconfig::ValueSpec {
-                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(true))),
+                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Bool(true))),
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),
@@ -2597,7 +2597,7 @@ mod tests {
             input = fconfig::ValuesData {
                 values: Some(vec![
                     fconfig::ValueSpec {
-                        value: Some(fconfig::Value::List(fconfig::ListValue::unknown(0, vec![]))),
+                        value: Some(fconfig::Value::Vector(fconfig::VectorValue::unknown(0, vec![]))),
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),

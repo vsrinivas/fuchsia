@@ -8,7 +8,7 @@
 
 use cm_rust::{
     ConfigChecksum, ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType,
-    ConfigValueType, ListValue, SingleValue, Value, ValueSpec, ValuesData,
+    ConfigValueType, SingleValue, Value, ValueSpec, ValuesData, VectorValue,
 };
 use dynfidl::{BasicField, Field, Structure, VectorField};
 use thiserror::Error;
@@ -64,65 +64,65 @@ impl ConfigFields {
         let mut structure = Structure::default();
         for ConfigField { value, .. } in fields {
             structure = match value {
-                Value::Single(SingleValue::Flag(b)) => {
+                Value::Single(SingleValue::Bool(b)) => {
                     structure.field(Field::Basic(BasicField::Bool(b)))
                 }
-                Value::Single(SingleValue::Unsigned8(n)) => {
+                Value::Single(SingleValue::Uint8(n)) => {
                     structure.field(Field::Basic(BasicField::UInt8(n)))
                 }
-                Value::Single(SingleValue::Unsigned16(n)) => {
+                Value::Single(SingleValue::Uint16(n)) => {
                     structure.field(Field::Basic(BasicField::UInt16(n)))
                 }
-                Value::Single(SingleValue::Unsigned32(n)) => {
+                Value::Single(SingleValue::Uint32(n)) => {
                     structure.field(Field::Basic(BasicField::UInt32(n)))
                 }
-                Value::Single(SingleValue::Unsigned64(n)) => {
+                Value::Single(SingleValue::Uint64(n)) => {
                     structure.field(Field::Basic(BasicField::UInt64(n)))
                 }
-                Value::Single(SingleValue::Signed8(n)) => {
+                Value::Single(SingleValue::Int8(n)) => {
                     structure.field(Field::Basic(BasicField::Int8(n)))
                 }
-                Value::Single(SingleValue::Signed16(n)) => {
+                Value::Single(SingleValue::Int16(n)) => {
                     structure.field(Field::Basic(BasicField::Int16(n)))
                 }
-                Value::Single(SingleValue::Signed32(n)) => {
+                Value::Single(SingleValue::Int32(n)) => {
                     structure.field(Field::Basic(BasicField::Int32(n)))
                 }
-                Value::Single(SingleValue::Signed64(n)) => {
+                Value::Single(SingleValue::Int64(n)) => {
                     structure.field(Field::Basic(BasicField::Int64(n)))
                 }
-                Value::Single(SingleValue::Text(s)) => {
+                Value::Single(SingleValue::String(s)) => {
                     // TODO(https://fxbug.dev/88174) improve string representation too
                     structure.field(Field::Vector(VectorField::UInt8Vector(s.into_bytes())))
                 }
-                Value::List(ListValue::FlagList(b)) => {
+                Value::Vector(VectorValue::BoolVector(b)) => {
                     structure.field(Field::Vector(VectorField::BoolVector(b)))
                 }
-                Value::List(ListValue::Unsigned8List(n)) => {
+                Value::Vector(VectorValue::Uint8Vector(n)) => {
                     structure.field(Field::Vector(VectorField::UInt8Vector(n)))
                 }
-                Value::List(ListValue::Unsigned16List(n)) => {
+                Value::Vector(VectorValue::Uint16Vector(n)) => {
                     structure.field(Field::Vector(VectorField::UInt16Vector(n)))
                 }
-                Value::List(ListValue::Unsigned32List(n)) => {
+                Value::Vector(VectorValue::Uint32Vector(n)) => {
                     structure.field(Field::Vector(VectorField::UInt32Vector(n)))
                 }
-                Value::List(ListValue::Unsigned64List(n)) => {
+                Value::Vector(VectorValue::Uint64Vector(n)) => {
                     structure.field(Field::Vector(VectorField::UInt64Vector(n)))
                 }
-                Value::List(ListValue::Signed8List(n)) => {
+                Value::Vector(VectorValue::Int8Vector(n)) => {
                     structure.field(Field::Vector(VectorField::Int8Vector(n)))
                 }
-                Value::List(ListValue::Signed16List(n)) => {
+                Value::Vector(VectorValue::Int16Vector(n)) => {
                     structure.field(Field::Vector(VectorField::Int16Vector(n)))
                 }
-                Value::List(ListValue::Signed32List(n)) => {
+                Value::Vector(VectorValue::Int32Vector(n)) => {
                     structure.field(Field::Vector(VectorField::Int32Vector(n)))
                 }
-                Value::List(ListValue::Signed64List(n)) => {
+                Value::Vector(VectorValue::Int64Vector(n)) => {
                     structure.field(Field::Vector(VectorField::Int64Vector(n)))
                 }
-                Value::List(ListValue::TextList(s)) => structure.field(Field::Vector(
+                Value::Vector(VectorValue::StringVector(s)) => structure.field(Field::Vector(
                     // TODO(https://fxbug.dev/88174) improve string representation too
                     VectorField::UInt8VectorVector(s.into_iter().map(|s| s.into_bytes()).collect()),
                 )),
@@ -152,34 +152,34 @@ impl ConfigField {
         let key = decl_field.key.clone();
 
         match (&spec_field.value, &decl_field.type_) {
-            (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool)
-            | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8)
-            | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16)
-            | (Value::Single(SingleValue::Unsigned32(_)), ConfigValueType::Uint32)
-            | (Value::Single(SingleValue::Unsigned64(_)), ConfigValueType::Uint64)
-            | (Value::Single(SingleValue::Signed8(_)), ConfigValueType::Int8)
-            | (Value::Single(SingleValue::Signed16(_)), ConfigValueType::Int16)
-            | (Value::Single(SingleValue::Signed32(_)), ConfigValueType::Int32)
-            | (Value::Single(SingleValue::Signed64(_)), ConfigValueType::Int64) => (),
-            (Value::Single(SingleValue::Text(text)), ConfigValueType::String { max_size }) => {
+            (Value::Single(SingleValue::Bool(_)), ConfigValueType::Bool)
+            | (Value::Single(SingleValue::Uint8(_)), ConfigValueType::Uint8)
+            | (Value::Single(SingleValue::Uint16(_)), ConfigValueType::Uint16)
+            | (Value::Single(SingleValue::Uint32(_)), ConfigValueType::Uint32)
+            | (Value::Single(SingleValue::Uint64(_)), ConfigValueType::Uint64)
+            | (Value::Single(SingleValue::Int8(_)), ConfigValueType::Int8)
+            | (Value::Single(SingleValue::Int16(_)), ConfigValueType::Int16)
+            | (Value::Single(SingleValue::Int32(_)), ConfigValueType::Int32)
+            | (Value::Single(SingleValue::Int64(_)), ConfigValueType::Int64) => (),
+            (Value::Single(SingleValue::String(text)), ConfigValueType::String { max_size }) => {
                 let max_size = *max_size as usize;
                 if text.len() > max_size {
                     return Err(ValueError::StringTooLong { max: max_size, actual: text.len() });
                 }
             }
-            (Value::List(list), ConfigValueType::Vector { nested_type, max_count }) => {
+            (Value::Vector(list), ConfigValueType::Vector { nested_type, max_count }) => {
                 let max_count = *max_count as usize;
                 let actual_count = match (list, nested_type) {
-                    (ListValue::FlagList(l), ConfigNestedValueType::Bool) => l.len(),
-                    (ListValue::Unsigned8List(l), ConfigNestedValueType::Uint8) => l.len(),
-                    (ListValue::Unsigned16List(l), ConfigNestedValueType::Uint16) => l.len(),
-                    (ListValue::Unsigned32List(l), ConfigNestedValueType::Uint32) => l.len(),
-                    (ListValue::Unsigned64List(l), ConfigNestedValueType::Uint64) => l.len(),
-                    (ListValue::Signed8List(l), ConfigNestedValueType::Int8) => l.len(),
-                    (ListValue::Signed16List(l), ConfigNestedValueType::Int16) => l.len(),
-                    (ListValue::Signed32List(l), ConfigNestedValueType::Int32) => l.len(),
-                    (ListValue::Signed64List(l), ConfigNestedValueType::Int64) => l.len(),
-                    (ListValue::TextList(l), ConfigNestedValueType::String { max_size }) => {
+                    (VectorValue::BoolVector(l), ConfigNestedValueType::Bool) => l.len(),
+                    (VectorValue::Uint8Vector(l), ConfigNestedValueType::Uint8) => l.len(),
+                    (VectorValue::Uint16Vector(l), ConfigNestedValueType::Uint16) => l.len(),
+                    (VectorValue::Uint32Vector(l), ConfigNestedValueType::Uint32) => l.len(),
+                    (VectorValue::Uint64Vector(l), ConfigNestedValueType::Uint64) => l.len(),
+                    (VectorValue::Int8Vector(l), ConfigNestedValueType::Int8) => l.len(),
+                    (VectorValue::Int16Vector(l), ConfigNestedValueType::Int16) => l.len(),
+                    (VectorValue::Int32Vector(l), ConfigNestedValueType::Int32) => l.len(),
+                    (VectorValue::Int64Vector(l), ConfigNestedValueType::Int64) => l.len(),
+                    (VectorValue::StringVector(l), ConfigNestedValueType::String { max_size }) => {
                         let max_size = *max_size as usize;
                         for (i, s) in l.iter().enumerate() {
                             if s.len() > max_size {
@@ -260,9 +260,9 @@ mod tests {
     use super::*;
     use fidl_fuchsia_component_config_ext::{config_decl, values_data};
 
-    use ListValue::*;
     use SingleValue::*;
     use Value::*;
+    use VectorValue::*;
 
     #[test]
     fn basic_success() {
@@ -296,82 +296,82 @@ mod tests {
 
         let specs = values_data![
             ck@ decl.checksum.clone(),
-            Single(Flag(false)),
-            Single(Unsigned8(255u8)),
-            Single(Unsigned16(65535u16)),
-            Single(Unsigned32(4000000000u32)),
-            Single(Unsigned64(8000000000u64)),
-            Single(Signed8(-127i8)),
-            Single(Signed16(-32766i16)),
-            Single(Signed32(-2000000000i32)),
-            Single(Signed64(-4000000000i64)),
-            Single(Text("hello, world!".into())),
-            List(FlagList(vec![true, false])),
-            List(Unsigned8List(vec![1, 2, 3])),
-            List(Unsigned16List(vec![2, 3, 4])),
-            List(Unsigned32List(vec![3, 4, 5])),
-            List(Unsigned64List(vec![4, 5, 6])),
-            List(Signed8List(vec![-1, -2, 3])),
-            List(Signed16List(vec![-2, -3, 4])),
-            List(Signed32List(vec![-3, -4, 5])),
-            List(Signed64List(vec![-4, -5, 6])),
-            List(TextList(vec!["valid".into(), "valid".into()])),
+            Single(Bool(false)),
+            Single(Uint8(255u8)),
+            Single(Uint16(65535u16)),
+            Single(Uint32(4000000000u32)),
+            Single(Uint64(8000000000u64)),
+            Single(Int8(-127i8)),
+            Single(Int16(-32766i16)),
+            Single(Int32(-2000000000i32)),
+            Single(Int64(-4000000000i64)),
+            Single(String("hello, world!".into())),
+            Vector(BoolVector(vec![true, false])),
+            Vector(Uint8Vector(vec![1, 2, 3])),
+            Vector(Uint16Vector(vec![2, 3, 4])),
+            Vector(Uint32Vector(vec![3, 4, 5])),
+            Vector(Uint64Vector(vec![4, 5, 6])),
+            Vector(Int8Vector(vec![-1, -2, 3])),
+            Vector(Int16Vector(vec![-2, -3, 4])),
+            Vector(Int32Vector(vec![-3, -4, 5])),
+            Vector(Int64Vector(vec![-4, -5, 6])),
+            Vector(StringVector(vec!["valid".into(), "valid".into()])),
         ];
 
         let expected = ConfigFields {
             fields: vec![
-                ConfigField { key: "my_flag".to_string(), value: Single(Flag(false)) },
-                ConfigField { key: "my_uint8".to_string(), value: Single(Unsigned8(255)) },
-                ConfigField { key: "my_uint16".to_string(), value: Single(Unsigned16(65535)) },
-                ConfigField { key: "my_uint32".to_string(), value: Single(Unsigned32(4000000000)) },
-                ConfigField { key: "my_uint64".to_string(), value: Single(Unsigned64(8000000000)) },
-                ConfigField { key: "my_int8".to_string(), value: Single(Signed8(-127)) },
-                ConfigField { key: "my_int16".to_string(), value: Single(Signed16(-32766)) },
-                ConfigField { key: "my_int32".to_string(), value: Single(Signed32(-2000000000)) },
-                ConfigField { key: "my_int64".to_string(), value: Single(Signed64(-4000000000)) },
+                ConfigField { key: "my_flag".to_string(), value: Single(Bool(false)) },
+                ConfigField { key: "my_uint8".to_string(), value: Single(Uint8(255)) },
+                ConfigField { key: "my_uint16".to_string(), value: Single(Uint16(65535)) },
+                ConfigField { key: "my_uint32".to_string(), value: Single(Uint32(4000000000)) },
+                ConfigField { key: "my_uint64".to_string(), value: Single(Uint64(8000000000)) },
+                ConfigField { key: "my_int8".to_string(), value: Single(Int8(-127)) },
+                ConfigField { key: "my_int16".to_string(), value: Single(Int16(-32766)) },
+                ConfigField { key: "my_int32".to_string(), value: Single(Int32(-2000000000)) },
+                ConfigField { key: "my_int64".to_string(), value: Single(Int64(-4000000000)) },
                 ConfigField {
                     key: "my_string".to_string(),
-                    value: Single(Text("hello, world!".into())),
+                    value: Single(String("hello, world!".into())),
                 },
                 ConfigField {
                     key: "my_vector_of_flag".to_string(),
-                    value: List(FlagList(vec![true, false])),
+                    value: Vector(BoolVector(vec![true, false])),
                 },
                 ConfigField {
                     key: "my_vector_of_uint8".to_string(),
-                    value: List(Unsigned8List(vec![1, 2, 3])),
+                    value: Vector(Uint8Vector(vec![1, 2, 3])),
                 },
                 ConfigField {
                     key: "my_vector_of_uint16".to_string(),
-                    value: List(Unsigned16List(vec![2, 3, 4])),
+                    value: Vector(Uint16Vector(vec![2, 3, 4])),
                 },
                 ConfigField {
                     key: "my_vector_of_uint32".to_string(),
-                    value: List(Unsigned32List(vec![3, 4, 5])),
+                    value: Vector(Uint32Vector(vec![3, 4, 5])),
                 },
                 ConfigField {
                     key: "my_vector_of_uint64".to_string(),
-                    value: List(Unsigned64List(vec![4, 5, 6])),
+                    value: Vector(Uint64Vector(vec![4, 5, 6])),
                 },
                 ConfigField {
                     key: "my_vector_of_int8".to_string(),
-                    value: List(Signed8List(vec![-1, -2, 3])),
+                    value: Vector(Int8Vector(vec![-1, -2, 3])),
                 },
                 ConfigField {
                     key: "my_vector_of_int16".to_string(),
-                    value: List(Signed16List(vec![-2, -3, 4])),
+                    value: Vector(Int16Vector(vec![-2, -3, 4])),
                 },
                 ConfigField {
                     key: "my_vector_of_int32".to_string(),
-                    value: List(Signed32List(vec![-3, -4, 5])),
+                    value: Vector(Int32Vector(vec![-3, -4, 5])),
                 },
                 ConfigField {
                     key: "my_vector_of_int64".to_string(),
-                    value: List(Signed64List(vec![-4, -5, 6])),
+                    value: Vector(Int64Vector(vec![-4, -5, 6])),
                 },
                 ConfigField {
                     key: "my_vector_of_string".to_string(),
-                    value: List(TextList(vec!["valid".into(), "valid".into()])),
+                    value: Vector(StringVector(vec!["valid".into(), "valid".into()])),
                 },
             ],
             checksum: decl.checksum.clone(),
@@ -389,7 +389,7 @@ mod tests {
         };
         let specs = values_data! [
             ck@ received.clone(),
-            Value::Single(SingleValue::Flag(true)),
+            Value::Single(SingleValue::Bool(true)),
         ];
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
@@ -405,8 +405,8 @@ mod tests {
         };
         let specs = values_data! [
             ck@ decl.checksum.clone(),
-            Value::Single(SingleValue::Flag(true)),
-            Value::Single(SingleValue::Flag(false)),
+            Value::Single(SingleValue::Bool(true)),
+            Value::Single(SingleValue::Bool(false)),
         ];
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
@@ -437,7 +437,7 @@ mod tests {
         };
         let specs = values_data! [
             ck@ decl.checksum.clone(),
-            Value::Single(SingleValue::Text("hello, world!".into())),
+            Value::Single(SingleValue::String("hello, world!".into())),
         ];
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
@@ -456,7 +456,7 @@ mod tests {
         };
         let specs = values_data! [
             ck@ decl.checksum.clone(),
-            Value::List(ListValue::Unsigned8List(vec![1, 2, 3])),
+            Value::Vector(VectorValue::Uint8Vector(vec![1, 2, 3])),
         ];
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
@@ -475,7 +475,7 @@ mod tests {
         };
         let specs = values_data! [
             ck@ decl.checksum.clone(),
-            Value::List(ListValue::TextList(vec![
+            Value::Vector(VectorValue::StringVector(vec![
                 "valid".into(),
                 "invalid".into(),
             ])),
@@ -500,26 +500,26 @@ mod tests {
                 let decl = ConfigFieldDecl { key: "test_key".to_string(), type_ };
                 for value in [
                     // one value of each type
-                    Single(Flag(true)),
-                    Single(Unsigned8(1)),
-                    Single(Unsigned16(1)),
-                    Single(Unsigned32(1)),
-                    Single(Unsigned64(1)),
-                    Single(Signed8(1)),
-                    Single(Signed16(1)),
-                    Single(Signed32(1)),
-                    Single(Signed64(1)),
-                    Single(Text("".to_string())),
-                    List(FlagList(vec![])),
-                    List(Unsigned8List(vec![])),
-                    List(Unsigned16List(vec![])),
-                    List(Unsigned32List(vec![])),
-                    List(Unsigned64List(vec![])),
-                    List(Signed8List(vec![])),
-                    List(Signed16List(vec![])),
-                    List(Signed32List(vec![])),
-                    List(Signed64List(vec![])),
-                    List(TextList(vec![])),
+                    Single(Bool(true)),
+                    Single(Uint8(1)),
+                    Single(Uint16(1)),
+                    Single(Uint32(1)),
+                    Single(Uint64(1)),
+                    Single(Int8(1)),
+                    Single(Int16(1)),
+                    Single(Int32(1)),
+                    Single(Int64(1)),
+                    Single(String("".to_string())),
+                    Vector(BoolVector(vec![])),
+                    Vector(Uint8Vector(vec![])),
+                    Vector(Uint16Vector(vec![])),
+                    Vector(Uint32Vector(vec![])),
+                    Vector(Uint64Vector(vec![])),
+                    Vector(Int8Vector(vec![])),
+                    Vector(Int16Vector(vec![])),
+                    Vector(Int32Vector(vec![])),
+                    Vector(Int64Vector(vec![])),
+                    Vector(StringVector(vec![])),
                 ] {
                     let should_succeed = matches!(value, $valid_spec);
                     let spec = ValueSpec { value };
@@ -536,63 +536,63 @@ mod tests {
         };
     }
 
-    type_mismatch_test!(bool_type_mismatches: { bool }, Single(Flag(..)));
-    type_mismatch_test!(uint8_type_mismatches:  { uint8 },  Single(Unsigned8(..)));
-    type_mismatch_test!(uint16_type_mismatches: { uint16 }, Single(Unsigned16(..)));
-    type_mismatch_test!(uint32_type_mismatches: { uint32 }, Single(Unsigned32(..)));
-    type_mismatch_test!(uint64_type_mismatches: { uint64 }, Single(Unsigned64(..)));
-    type_mismatch_test!(int8_type_mismatches:  { int8 },  Single(Signed8(..)));
-    type_mismatch_test!(int16_type_mismatches: { int16 }, Single(Signed16(..)));
-    type_mismatch_test!(int32_type_mismatches: { int32 }, Single(Signed32(..)));
-    type_mismatch_test!(int64_type_mismatches: { int64 }, Single(Signed64(..)));
-    type_mismatch_test!(string_type_mismatches: { string, max_size: 10 }, Single(Text(..)));
+    type_mismatch_test!(bool_type_mismatches: { bool }, Single(Bool(..)));
+    type_mismatch_test!(uint8_type_mismatches:  { uint8 },  Single(Uint8(..)));
+    type_mismatch_test!(uint16_type_mismatches: { uint16 }, Single(Uint16(..)));
+    type_mismatch_test!(uint32_type_mismatches: { uint32 }, Single(Uint32(..)));
+    type_mismatch_test!(uint64_type_mismatches: { uint64 }, Single(Uint64(..)));
+    type_mismatch_test!(int8_type_mismatches:  { int8 },  Single(Int8(..)));
+    type_mismatch_test!(int16_type_mismatches: { int16 }, Single(Int16(..)));
+    type_mismatch_test!(int32_type_mismatches: { int32 }, Single(Int32(..)));
+    type_mismatch_test!(int64_type_mismatches: { int64 }, Single(Int64(..)));
+    type_mismatch_test!(string_type_mismatches: { string, max_size: 10 }, Single(String(..)));
 
     type_mismatch_test!(
-        bool_vector_type_mismatches: { vector, element: bool, max_count: 1 }, List(FlagList(..))
+        bool_vector_type_mismatches: { vector, element: bool, max_count: 1 }, Vector(BoolVector(..))
     );
     type_mismatch_test!(
         uint8_vector_type_mismatches:
         { vector, element: uint8, max_count: 1 },
-        List(Unsigned8List(..))
+        Vector(Uint8Vector(..))
     );
     type_mismatch_test!(
         uint16_vector_type_mismatches:
         { vector, element: uint16, max_count: 1 },
-        List(Unsigned16List(..))
+        Vector(Uint16Vector(..))
     );
     type_mismatch_test!(
         uint32_vector_type_mismatches:
         { vector, element: uint32, max_count: 1 },
-        List(Unsigned32List(..))
+        Vector(Uint32Vector(..))
     );
     type_mismatch_test!(
         uint64_vector_type_mismatches:
         { vector, element: uint64, max_count: 1 },
-        List(Unsigned64List(..))
+        Vector(Uint64Vector(..))
     );
     type_mismatch_test!(
         int8_vector_type_mismatches:
         { vector, element: int8, max_count: 1 },
-        List(Signed8List(..))
+        Vector(Int8Vector(..))
     );
     type_mismatch_test!(
         int16_vector_type_mismatches:
         { vector, element: int16, max_count: 1 },
-        List(Signed16List(..))
+        Vector(Int16Vector(..))
     );
     type_mismatch_test!(
         int32_vector_type_mismatches:
         { vector, element: int32, max_count: 1 },
-        List(Signed32List(..))
+        Vector(Int32Vector(..))
     );
     type_mismatch_test!(
         int64_vector_type_mismatches:
         { vector, element: int64, max_count: 1 },
-        List(Signed64List(..))
+        Vector(Int64Vector(..))
     );
     type_mismatch_test!(
         string_vector_type_mismatches:
         { vector, element: { string, max_size: 10 }, max_count: 1 },
-        List(TextList(..))
+        Vector(StringVector(..))
     );
 }

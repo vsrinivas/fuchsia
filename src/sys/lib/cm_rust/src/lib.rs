@@ -980,14 +980,14 @@ pub struct ValueSpec {
 #[fidl_decl(fidl_union = "fconfig::Value")]
 pub enum Value {
     Single(SingleValue),
-    List(ListValue),
+    Vector(VectorValue),
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Single(sv) => sv.fmt(f),
-            Value::List(lv) => lv.fmt(f),
+            Value::Vector(lv) => lv.fmt(f),
         }
     }
 }
@@ -995,54 +995,54 @@ impl fmt::Display for Value {
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fconfig::SingleValue")]
 pub enum SingleValue {
-    Flag(bool),
-    Unsigned8(u8),
-    Unsigned16(u16),
-    Unsigned32(u32),
-    Unsigned64(u64),
-    Signed8(i8),
-    Signed16(i16),
-    Signed32(i32),
-    Signed64(i64),
-    Text(String),
+    Bool(bool),
+    Uint8(u8),
+    Uint16(u16),
+    Uint32(u32),
+    Uint64(u64),
+    Int8(i8),
+    Int16(i16),
+    Int32(i32),
+    Int64(i64),
+    String(String),
 }
 
 impl fmt::Display for SingleValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use SingleValue::*;
         match self {
-            Flag(v) => write!(f, "{}", v),
-            Unsigned8(v) => write!(f, "{}", v),
-            Unsigned16(v) => write!(f, "{}", v),
-            Unsigned32(v) => write!(f, "{}", v),
-            Unsigned64(v) => write!(f, "{}", v),
-            Signed8(v) => write!(f, "{}", v),
-            Signed16(v) => write!(f, "{}", v),
-            Signed32(v) => write!(f, "{}", v),
-            Signed64(v) => write!(f, "{}", v),
-            Text(v) => write!(f, "\"{}\"", v),
+            Bool(v) => write!(f, "{}", v),
+            Uint8(v) => write!(f, "{}", v),
+            Uint16(v) => write!(f, "{}", v),
+            Uint32(v) => write!(f, "{}", v),
+            Uint64(v) => write!(f, "{}", v),
+            Int8(v) => write!(f, "{}", v),
+            Int16(v) => write!(f, "{}", v),
+            Int32(v) => write!(f, "{}", v),
+            Int64(v) => write!(f, "{}", v),
+            String(v) => write!(f, "\"{}\"", v),
         }
     }
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fconfig::ListValue")]
-pub enum ListValue {
-    FlagList(Vec<bool>),
-    Unsigned8List(Vec<u8>),
-    Unsigned16List(Vec<u16>),
-    Unsigned32List(Vec<u32>),
-    Unsigned64List(Vec<u64>),
-    Signed8List(Vec<i8>),
-    Signed16List(Vec<i16>),
-    Signed32List(Vec<i32>),
-    Signed64List(Vec<i64>),
-    TextList(Vec<String>),
+#[fidl_decl(fidl_union = "fconfig::VectorValue")]
+pub enum VectorValue {
+    BoolVector(Vec<bool>),
+    Uint8Vector(Vec<u8>),
+    Uint16Vector(Vec<u16>),
+    Uint32Vector(Vec<u32>),
+    Uint64Vector(Vec<u64>),
+    Int8Vector(Vec<i8>),
+    Int16Vector(Vec<i16>),
+    Int32Vector(Vec<i32>),
+    Int64Vector(Vec<i64>),
+    StringVector(Vec<String>),
 }
 
-impl fmt::Display for ListValue {
+impl fmt::Display for VectorValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ListValue::*;
+        use VectorValue::*;
         macro_rules! print_list {
             ($f:ident, $list:ident) => {{
                 $f.write_str("[")?;
@@ -1058,16 +1058,16 @@ impl fmt::Display for ListValue {
             }};
         }
         match self {
-            FlagList(l) => print_list!(f, l),
-            Unsigned8List(l) => print_list!(f, l),
-            Unsigned16List(l) => print_list!(f, l),
-            Unsigned32List(l) => print_list!(f, l),
-            Unsigned64List(l) => print_list!(f, l),
-            Signed8List(l) => print_list!(f, l),
-            Signed16List(l) => print_list!(f, l),
-            Signed32List(l) => print_list!(f, l),
-            Signed64List(l) => print_list!(f, l),
-            TextList(l) => {
+            BoolVector(l) => print_list!(f, l),
+            Uint8Vector(l) => print_list!(f, l),
+            Uint16Vector(l) => print_list!(f, l),
+            Uint32Vector(l) => print_list!(f, l),
+            Uint64Vector(l) => print_list!(f, l),
+            Int8Vector(l) => print_list!(f, l),
+            Int16Vector(l) => print_list!(f, l),
+            Int32Vector(l) => print_list!(f, l),
+            Int64Vector(l) => print_list!(f, l),
+            StringVector(l) => {
                 f.write_str("[")?;
                 for (i, item) in l.iter().enumerate() {
                     if i > 0 {

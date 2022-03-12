@@ -769,9 +769,9 @@ mod tests {
             self, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum, ConfigDecl,
             ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
             DirectoryDecl, EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, ListValue, ProtocolDecl, SingleValue,
-            UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
-            UseSource, Value, ValueSpec, ValuesData,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, SingleValue, UseDecl,
+            UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
+            UseSource, Value, ValueSpec, ValuesData, VectorValue,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -1048,12 +1048,12 @@ mod tests {
                     "meta/root.cvf",
                     ValuesData {
                         values: vec![
-                            ValueSpec { value: Value::Single(SingleValue::Flag(true)) },
+                            ValueSpec { value: Value::Single(SingleValue::Bool(true)) },
                             ValueSpec {
-                                value: Value::Single(SingleValue::Text("DEBUG".to_string())),
+                                value: Value::Single(SingleValue::String("DEBUG".to_string())),
                             },
                             ValueSpec {
-                                value: Value::List(ListValue::TextList(vec![
+                                value: Value::Vector(VectorValue::StringVector(vec![
                                     "foo".into(),
                                     "bar".into(),
                                 ])),
