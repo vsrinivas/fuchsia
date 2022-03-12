@@ -89,6 +89,11 @@ class FakeLogSink : public fuchsia::logger::LogSink {
     abort();
   }
 
+  void WaitForInterestChange(WaitForInterestChangeCallback callback) override {
+    // Not supported by this test.
+    abort();
+  }
+
   struct Wait : async_wait_t {
     FakeLogSink* this_ptr;
     Wait* next = this;

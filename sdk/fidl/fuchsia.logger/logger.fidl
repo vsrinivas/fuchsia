@@ -153,7 +153,6 @@ protocol LogSink {
     /// e.g. compile time configuration. Each client may only poll this once at a time.
     /// Invoking WaitForInterestChange a second time before the first call returns will
     /// result in an error being returned.
-    @transitional
     WaitForInterestChange() -> (struct {
         data fuchsia.diagnostics.Interest;
     }) error InterestChangeError;

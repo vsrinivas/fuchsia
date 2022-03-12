@@ -47,6 +47,8 @@ class FakeLogSink : public fuchsia::logger::LogSink {
     return fpromise::ok(std::make_tuple(log_packet->metadata.time, tag, msg));
   }
 
+  void WaitForInterestChange(WaitForInterestChangeCallback callback) override {}
+
  private:
   fidl::Binding<fuchsia::logger::LogSink> binding_;
   zx::socket socket_;
