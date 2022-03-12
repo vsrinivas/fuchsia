@@ -22,9 +22,7 @@ use {
         WidevineFactoryStoreProviderMarker, WidevineFactoryStoreProviderRequest,
         WidevineFactoryStoreProviderRequestStream,
     },
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker},
     fuchsia_async::{self as fasync},
@@ -101,7 +99,7 @@ async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
 }
 
 async fn read_file_from_proxy<'a>(
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
     let file =
@@ -115,7 +113,7 @@ fn load_config_file(path: &str) -> Result<FactoryConfig, Error> {
 
 async fn create_dir_from_context<'a>(
     context: &'a ConfigContext,
-    dir: &'a DirectoryProxy,
+    dir: &'a fio::DirectoryProxy,
 ) -> Arc<directory::immutable::Simple> {
     let mut tree_builder = TreeBuilder::empty_dir();
 
@@ -163,8 +161,8 @@ async fn create_dir_from_context<'a>(
     tree_builder.build()
 }
 
-async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> DirectoryProxy {
-    let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+async fn apply_config(config: Config, dir: Arc<Mutex<fio::DirectoryProxy>>) -> fio::DirectoryProxy {
+    let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
     let dir_mtx = dir.clone();
 
@@ -177,10 +175,10 @@ async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> Direct
 
     dir.open(
         ExecutionScope::new(),
-        OPEN_RIGHT_READABLE,
-        MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::MODE_TYPE_DIRECTORY,
         vfs::path::Path::dot(),
-        ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+        ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
     );
 
     directory_proxy
@@ -188,20 +186,18 @@ async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> Direct
 
 async fn handle_request_stream<RS, G>(
     mut stream: RS,
-    directory_mutex: Arc<Mutex<DirectoryProxy>>,
+    directory_mutex: Arc<Mutex<fio::DirectoryProxy>>,
     mut get_directory_request_fn: G,
 ) -> Result<(), Error>
 where
     RS: RequestStream,
-    G: FnMut(
-        Request<RS::Protocol>,
-    ) -> Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
+    G: FnMut(Request<RS::Protocol>) -> Option<fidl::endpoints::ServerEnd<fio::DirectoryMarker>>,
 {
     while let Some(request) = stream.try_next().await? {
         if let Some(directory_request) = get_directory_request_fn(request) {
             if let Err(err) = directory_mutex.lock().await.clone(
-                OPEN_RIGHT_READABLE,
-                ServerEnd::<NodeMarker>::new(directory_request.into_channel()),
+                fio::OPEN_RIGHT_READABLE,
+                ServerEnd::<fio::NodeMarker>::new(directory_request.into_channel()),
             ) {
                 syslog::fx_log_err!(
                     "Failed to clone directory connection for {}: {:?}",
@@ -215,8 +211,8 @@ where
 }
 
 #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95067)
-async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryProxy, Error> {
-    let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
+async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::DirectoryProxy, Error> {
+    let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     match factory_config {
         FactoryConfig::FactoryItems => {
             syslog::fx_log_info!("{}", "Reading from FactoryItems service");
@@ -231,10 +227,10 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryP
 
             factory_items_directory.open(
                 ExecutionScope::new(),
-                OPEN_RIGHT_READABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
-                ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+                ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
             );
 
             Ok(directory_proxy)
@@ -255,7 +251,10 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryP
             let ext4_server = fuchsia_component::client::connect_to_protocol::<Server_Marker>()?;
 
             syslog::fx_log_info!("Mounting EXT4 VMO");
-            match ext4_server.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, directory_server_end).await {
+            match ext4_server
+                .mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, directory_server_end)
+                .await
+            {
                 Ok(MountVmoResult::Success(_)) => Ok(directory_proxy),
                 Ok(MountVmoResult::VmoReadFailure(status)) => {
                     Err(format_err!("Failed to read ext4 vmo: {}", status))
@@ -269,7 +268,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryP
         }
         FactoryConfig::FactoryVerity => {
             syslog::fx_log_info!("reading from factory verity");
-            fdio::open("/factory", OPEN_RIGHT_READABLE, directory_server_end.into_channel())?;
+            fdio::open("/factory", fio::OPEN_RIGHT_READABLE, directory_server_end.into_channel())?;
             Ok(directory_proxy)
         }
     }
@@ -424,12 +423,12 @@ mod tests {
                 "c" => read_only_static("c content"),
             },
         };
-        let (dir_proxy, dir_server) = create_proxy::<DirectoryMarker>().unwrap();
+        let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),
         );

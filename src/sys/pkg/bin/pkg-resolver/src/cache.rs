@@ -4,7 +4,7 @@
 
 use {
     crate::{repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
-    cobalt_sw_delivery_registry as metrics,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt::CobaltSender,
@@ -808,8 +808,8 @@ async fn read_local_blob(
     expected_len: Option<u64>,
     dest: pkg::cache::Blob<pkg::cache::NeedsTruncate>,
 ) -> Result<(), FetchError> {
-    let (local_file, remote) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::FileMarker>()
-        .map_err(FetchError::FidlError)?;
+    let (local_file, remote) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(FetchError::FidlError)?;
 
     inspect.state(inspect::LocalMirror::GetBlob);
     proxy
@@ -835,7 +835,7 @@ async fn read_local_blob(
     loop {
         inspect.state(inspect::LocalMirror::ReadBlob);
         let data = local_file
-            .read(fidl_fuchsia_io::MAX_BUF)
+            .read(fio::MAX_BUF)
             .await
             .map_err(FetchError::FidlError)?
             .map_err(Status::from_raw)

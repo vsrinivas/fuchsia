@@ -6,6 +6,7 @@
 
 #![deny(missing_docs)]
 
+use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
 use fuchsia_zircon_status::{self as zx, assoc_values};
 
@@ -27,17 +28,17 @@ use std::task::{Context, Poll};
 /// Describes the type of event that occurred in the directory being watched.
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub struct WatchEvent(fidl_fuchsia_io::WatchEvent);
+pub struct WatchEvent(fio::WatchEvent);
 
 assoc_values!(WatchEvent, [
     /// A file was added.
-    ADD_FILE    = fidl_fuchsia_io::WatchEvent::Added;
+    ADD_FILE    = fio::WatchEvent::Added;
     /// A file was removed.
-    REMOVE_FILE = fidl_fuchsia_io::WatchEvent::Removed;
+    REMOVE_FILE = fio::WatchEvent::Removed;
     /// A file existed at the time the Watcher was created.
-    EXISTING    = fidl_fuchsia_io::WatchEvent::Existing;
+    EXISTING    = fio::WatchEvent::Existing;
     /// All existing files have been enumerated.
-    IDLE        = fidl_fuchsia_io::WatchEvent::Idle;
+    IDLE        = fio::WatchEvent::Idle;
 ]);
 
 /// A message containing a `WatchEvent` and the filename (relative to the directory being watched)
@@ -64,13 +65,13 @@ impl Unpin for Watcher {}
 
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
-    pub async fn new(dir: fidl_fuchsia_io::DirectoryProxy) -> Result<Watcher, anyhow::Error> {
+    pub async fn new(dir: fio::DirectoryProxy) -> Result<Watcher, anyhow::Error> {
         let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
         let options = 0u32;
-        let status = dir.watch(fidl_fuchsia_io::WatchMask::all(), options, server_end).await?;
+        let status = dir.watch(fio::WatchMask::all(), options, server_end).await?;
         zx::Status::ok(status)?;
         let mut buf = MessageBuf::new();
-        buf.ensure_capacity_bytes(fidl_fuchsia_io::MAX_BUF as usize);
+        buf.ensure_capacity_bytes(fio::MAX_BUF as usize);
         Ok(Watcher { ch: fasync::Channel::from_channel(client_end.into_channel())?, buf, idx: 0 })
     }
 
@@ -141,7 +142,7 @@ impl<T> ::std::fmt::Debug for IncompleteArrayField<T> {
 #[repr(C)]
 #[derive(Debug)]
 struct vfs_watch_msg_t {
-    event: fidl_fuchsia_io::WatchEvent,
+    event: fio::WatchEvent,
     len: u8,
     name: IncompleteArrayField<u8>,
 }

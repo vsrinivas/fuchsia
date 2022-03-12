@@ -42,6 +42,7 @@ use spinel::SpinelDeviceSink;
 
 use anyhow::Error;
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_lowpan_driver::{RegisterMarker, RegisterProxyInterface};
 use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
@@ -304,9 +305,9 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDev
     const OT_PROTOCOL_PATH: &str = "/dev/class/ot-radio";
 
     let ot_radio_dir = File::open(OT_PROTOCOL_PATH).context("opening dir in devmgr")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&ot_radio_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&ot_radio_dir)?,
+    )?);
 
     let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
 

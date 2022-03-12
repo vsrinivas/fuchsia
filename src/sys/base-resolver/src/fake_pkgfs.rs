@@ -14,10 +14,7 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
-    fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, NodeInfo,
-        NodeMarker,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::Task,
     fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
@@ -27,7 +24,7 @@ use {
 
 /// All nodes (directories, files, etc) implement this.
 pub trait Entry {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>);
+    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<fio::NodeMarker>);
 }
 
 /// The implementation of a mock directory.
@@ -45,19 +42,19 @@ impl MockDir {
         self
     }
 
-    async fn serve(self: Arc<Self>, object: ServerEnd<DirectoryMarker>) {
+    async fn serve(self: Arc<Self>, object: ServerEnd<fio::DirectoryMarker>) {
         let mut stream = object.into_stream().unwrap();
         // If we can't send an event, the client closed their connection. This is not an error.
         let _ = stream.control_handle().send_on_open_(
             Status::OK.into_raw(),
-            Some(&mut NodeInfo::Directory(DirectoryObject {})),
+            Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
         );
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
-                DirectoryRequest::Open { flags, mode, path, object, .. } => {
+                fio::DirectoryRequest::Open { flags, mode, path, object, .. } => {
                     self.clone().open(flags, mode, &path, object);
                 }
-                DirectoryRequest::Clone { flags, object, .. } => {
+                fio::DirectoryRequest::Clone { flags, object, .. } => {
                     self.clone().open(flags, fio::MODE_TYPE_DIRECTORY, ".", object);
                 }
                 _ => panic!("unsupported request"),
@@ -67,7 +64,13 @@ impl MockDir {
 }
 
 impl Entry for MockDir {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
+    fn open(
+        self: Arc<Self>,
+        flags: u32,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
         let path = Path::new(path);
         let mut path_iter = path.iter();
         let segment = if let Some(segment) = path_iter.next() {
@@ -92,9 +95,15 @@ impl Entry for MockDir {
     }
 }
 
-impl Entry for DirectoryProxy {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
-        let _ = DirectoryProxy::open(&*self, flags, mode, path, object);
+impl Entry for fio::DirectoryProxy {
+    fn open(
+        self: Arc<Self>,
+        flags: u32,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
+        let _ = fio::DirectoryProxy::open(&*self, flags, mode, path, object);
     }
 }
 
@@ -119,7 +128,13 @@ impl MockFile {
 }
 
 impl Entry for MockFile {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
+    fn open(
+        self: Arc<Self>,
+        flags: u32,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
         if !path.is_empty() {
             send_error(object, Status::BAD_PATH);
             return;
@@ -134,7 +149,7 @@ impl Entry for MockFile {
     }
 }
 
-fn send_error(object: ServerEnd<NodeMarker>, status: Status) {
+fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
     let stream = object.into_stream().expect("failed to create stream");
     let control_handle = stream.control_handle();
     let _ = control_handle.send_on_open_(status.into_raw(), None);

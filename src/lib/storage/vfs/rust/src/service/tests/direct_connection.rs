@@ -10,7 +10,7 @@ use crate::file::test_utils::run_server_client;
 
 use {
     fidl::endpoints::{Proxy, RequestStream},
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fidl_test_placeholders::{EchoProxy, EchoRequest, EchoRequestStream},
     futures::{
         channel::{mpsc, oneshot},
@@ -45,7 +45,7 @@ async fn echo_server(
     }
 }
 
-const READ_WRITE: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+const READ_WRITE: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 #[test]
 fn construction() {

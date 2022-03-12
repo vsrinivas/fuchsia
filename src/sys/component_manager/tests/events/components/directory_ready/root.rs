@@ -8,22 +8,20 @@ use {
         matcher::EventMatcher,
     },
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ServerEnd},
-    fidl_fidl_test_components as ftest,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    files_async,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, files_async,
     futures::StreamExt,
     io_util,
     maplit::hashmap,
 };
 
-async fn list_entries(directory: &DirectoryProxy) -> Vec<String> {
+async fn list_entries(directory: &fio::DirectoryProxy) -> Vec<String> {
     files_async::readdir_recursive(&directory, /*timeout=*/ None)
         .map(|entry_result| entry_result.expect("entry ok").name)
         .collect::<Vec<_>>()
         .await
 }
 
-async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
+async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
     for path in paths {
         let (trigger, server_end) = create_proxy::<ftest::TriggerMarker>().unwrap();
         directory

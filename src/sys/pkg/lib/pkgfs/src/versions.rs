@@ -9,10 +9,7 @@ use {
         endpoints::{Proxy, RequestStream},
         AsHandleRef,
     },
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
-        NodeInfo,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -23,26 +20,26 @@ pub use crate::packages::OpenError;
 /// An open handle to /pkgfs/versions
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
-        let proxy = io_util::directory::open_in_namespace(
-            "/pkgfs/versions",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )?;
+        let proxy =
+            io_util::directory::open_in_namespace("/pkgfs/versions", fio::OPEN_RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_pkgfs_root(
+        pkgfs: &fio::DirectoryProxy,
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "versions",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -53,9 +50,9 @@ impl Client {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, DirectoryRequestStream) {
+    pub fn new_test() -> (Self, fio::DirectoryRequestStream) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
     }
@@ -68,7 +65,7 @@ impl Client {
     /// Panics on error
     pub fn new_mock() -> (Self, Mock) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, Mock { stream })
     }
@@ -79,7 +76,7 @@ impl Client {
         meta_far_merkle: &Hash,
     ) -> Result<fuchsia_pkg::PackageDirectory, OpenError> {
         // TODO(fxbug.dev/37858) allow opening as executable too
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         let dir =
             io_util::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
                 .await
@@ -96,7 +93,7 @@ impl Client {
 ///
 /// Mock does not handle requests until instructed to do so.
 pub struct Mock {
-    stream: DirectoryRequestStream,
+    stream: fio::DirectoryRequestStream,
 }
 
 impl Mock {
@@ -108,7 +105,7 @@ impl Mock {
     /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
     pub async fn expect_open_package(&mut self, merkle: Hash) -> MockPackage {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Open {
+            Some(Ok(fio::DirectoryRequest::Open {
                 flags: _,
                 mode: _,
                 path,
@@ -141,12 +138,12 @@ impl Mock {
 ///
 /// MockBlob does not send the OnOpen event or handle requests until instructed to do so.
 pub struct MockPackage {
-    stream: DirectoryRequestStream,
+    stream: fio::DirectoryRequestStream,
 }
 
 impl MockPackage {
     fn send_on_open(&mut self, status: Status) {
-        let mut info = NodeInfo::Directory(DirectoryObject);
+        let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
         let () =
             self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
     }
@@ -179,7 +176,7 @@ impl MockPackage {
     /// Panics on error or assertion violation (unexpected requests or a mismatched clone call)
     pub async fn expect_clone(&mut self) -> MockPackage {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Clone { flags: _, object, control_handle: _ })) => {
+            Some(Ok(fio::DirectoryRequest::Clone { flags: _, object, control_handle: _ })) => {
                 let stream = object.into_stream().unwrap().cast_stream();
                 MockPackage { stream }
             }
@@ -193,7 +190,7 @@ impl MockPackage {
     /// # Panics
     ///
     /// Panics on error or if the objects are not using the same channel.
-    pub fn verify_are_same_channel(self, proxy: DirectoryProxy) {
+    pub fn verify_are_same_channel(self, proxy: fio::DirectoryProxy) {
         let expected_server_end_koid = proxy.as_channel().basic_info().unwrap().related_koid;
         let actual_server_end_koid = self.stream.into_inner().0.channel().get_koid().unwrap();
 

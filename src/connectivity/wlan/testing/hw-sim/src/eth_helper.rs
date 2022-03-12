@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fdio,
+    fdio, fidl_fuchsia_io as fio,
     files_async::readdir,
     fuchsia_async::{
         self,
@@ -31,9 +31,9 @@ const ETH_BUF_FRAME_COUNT: u64 = 256;
 pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, anyhow::Error> {
     const ETH_PATH: &str = "/dev/class/ethernet";
     let eth_dir = RealDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&eth_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&eth_dir)?,
+    )?);
     let files = readdir(&directory_proxy).await?;
     for file in files {
         let vmo = zx::Vmo::create(ETH_BUF_FRAME_COUNT * ethernet::DEFAULT_BUFFER_SIZE as u64)?;

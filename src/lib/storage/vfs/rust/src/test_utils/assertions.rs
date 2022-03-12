@@ -8,12 +8,7 @@
 pub mod reexport {
     pub use {
         crate::directory::test_utils::DirentsSameInodeBuilder,
-        fidl_fuchsia_io::{
-            DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
-            NodeInfo, SeekOrigin, Service, Vmofile, WatchEvent, DIRENT_TYPE_BLOCK_DEVICE,
-            DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET,
-            DIRENT_TYPE_UNKNOWN, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-        },
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_mem::Buffer,
         fuchsia_zircon::{MessageBuf, Status},
         futures::stream::StreamExt,
@@ -214,10 +209,10 @@ macro_rules! assert_write_at_err {
 #[macro_export]
 macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, $start:ident, $expected:expr) => {{
-        use $crate::test_utils::assertions::reexport::{SeekOrigin, Status};
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         let actual = $proxy
-            .seek(SeekOrigin::$start, $pos)
+            .seek(fio::SeekOrigin::$start, $pos)
             .await
             .expect("seek failed")
             .map_err(Status::from_raw);
@@ -273,19 +268,17 @@ macro_rules! assert_get_attr {
 #[macro_export]
 macro_rules! assert_get_attr_path {
     ($proxy:expr, $flags:expr, $path:expr, $expected:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            DirectoryEvent, DirectoryMarker, DirectoryObject, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         let proxy = open_get_proxy_assert!(
             $proxy,
             $flags,
             $path,
-            DirectoryMarker,
-            DirectoryEvent::OnOpen_ { s, info },
+            fio::DirectoryMarker,
+            fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))),);
+                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))));
             }
         );
 
@@ -390,17 +383,25 @@ macro_rules! open_get_proxy_assert {
 #[macro_export]
 macro_rules! open_get_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, FileObject, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            assert_eq!(
-                info,
-                Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),
-            );
-        })
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(fio::NodeInfo::File(fio::FileObject {
+                        event: None,
+                        stream: None
+                    }))),
+                );
+            }
+        )
     }};
 }
 
@@ -408,22 +409,28 @@ macro_rules! open_get_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! open_get_vmo_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, FileObject, NodeInfo, Status, Vmofile,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            let info = *info.expect("Empty NodeInfo");
-            assert!(
-                matches!(
-                    info,
-                    NodeInfo::Vmofile(Vmofile { .. }) | NodeInfo::File(FileObject { .. })
-                ),
-                "Expected Vmofile but got {:?}",
-                info
-            );
-        })
+        open_get_proxy_assert!(
+            $proxy,
+            $flags,
+            $path,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                let info = *info.expect("Empty fio::NodeInfo");
+                assert!(
+                    matches!(
+                        info,
+                        fio::NodeInfo::Vmofile(fio::Vmofile { .. })
+                            | fio::NodeInfo::File(fio::FileObject { .. })
+                    ),
+                    "Expected fio::Vmofile but got {:?}",
+                    info
+                );
+            }
+        )
     }};
 }
 
@@ -431,14 +438,14 @@ macro_rules! open_get_vmo_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! open_as_file_assert_err {
     ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {{
-        use $crate::test_utils::assertions::reexport::{FileEvent, FileMarker, Status};
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         open_get_proxy_assert!(
             $proxy,
             $flags,
             $path,
-            FileMarker,
-            FileEvent::OnOpen_ { s, info },
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), $expected_status);
                 assert_eq!(info, None);
@@ -451,19 +458,17 @@ macro_rules! open_as_file_assert_err {
 #[macro_export]
 macro_rules! open_get_directory_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            DirectoryEvent, DirectoryMarker, DirectoryObject, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         open_get_proxy_assert!(
             $proxy,
             $flags,
             $path,
-            DirectoryMarker,
-            DirectoryEvent::OnOpen_ { s, info },
+            fio::DirectoryMarker,
+            fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))),);
+                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))),);
             }
         )
     }};
@@ -473,14 +478,14 @@ macro_rules! open_get_directory_proxy_assert_ok {
 #[macro_export]
 macro_rules! open_as_directory_assert_err {
     ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {{
-        use $crate::test_utils::assertions::reexport::{DirectoryEvent, DirectoryMarker, Status};
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         open_get_proxy_assert!(
             $proxy,
             $flags,
             $path,
-            DirectoryMarker,
-            DirectoryEvent::OnOpen_ { s, info },
+            fio::DirectoryMarker,
+            fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), $expected_status);
                 assert_eq!(info, None);
@@ -504,17 +509,24 @@ macro_rules! clone_get_proxy_assert {
 #[macro_export]
 macro_rules! clone_get_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, FileObject, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            assert_eq!(
-                info,
-                Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),
-            );
-        })
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(fio::NodeInfo::File(fio::FileObject {
+                        event: None,
+                        stream: None
+                    }))),
+                );
+            }
+        )
     }};
 }
 
@@ -522,22 +534,27 @@ macro_rules! clone_get_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_get_vmo_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, FileObject, NodeInfo, Status, Vmofile,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            let info = *info.expect("Empty NodeInfo");
-            assert!(
-                matches!(
-                    info,
-                    NodeInfo::Vmofile(Vmofile { .. }) | NodeInfo::File(FileObject { .. })
-                ),
-                "Expected Vmofile but got {:?}",
-                info
-            );
-        })
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                let info = *info.expect("Empty fio::NodeInfo");
+                assert!(
+                    matches!(
+                        info,
+                        fio::NodeInfo::Vmofile(fio::Vmofile { .. })
+                            | fio::NodeInfo::File(fio::FileObject { .. })
+                    ),
+                    "Expected fio::Vmofile but got {:?}",
+                    info
+                );
+            }
+        )
     }};
 }
 
@@ -545,19 +562,26 @@ macro_rules! clone_get_vmo_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_get_vmo_file_proxy_assert_err {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, FileObject, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            let info = *info.expect("Empty NodeInfo");
-            assert!(
-                matches!(info, NodeInfo::File(FileObject { event: None, stream: None })),
-                "Expected error but got {:?}",
-                info
-            );
-        })
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                let info = *info.expect("Empty fio::NodeInfo");
+                assert!(
+                    matches!(
+                        info,
+                        fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
+                    ),
+                    "Expected error but got {:?}",
+                    info
+                );
+            }
+        )
     }};
 }
 
@@ -565,12 +589,18 @@ macro_rules! clone_get_vmo_file_proxy_assert_err {
 #[macro_export]
 macro_rules! clone_as_file_assert_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
-        use $crate::test_utils::assertions::reexport::{FileEvent, FileMarker, Status};
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), $expected_status);
-            assert_eq!(info, None);
-        })
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), $expected_status);
+                assert_eq!(info, None);
+            }
+        )
     }};
 }
 
@@ -578,14 +608,18 @@ macro_rules! clone_as_file_assert_err {
 #[macro_export]
 macro_rules! clone_get_service_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            FileEvent, FileMarker, NodeInfo, Service, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
-        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
-            assert_eq!(Status::from_raw(s), Status::OK);
-            assert_eq!(info, Some(Box::new(NodeInfo::Service(Service {}))),);
-        })
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            fio::FileMarker,
+            fio::FileEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(info, Some(Box::new(fio::NodeInfo::Service(fio::Service))),);
+            }
+        )
     }};
 }
 
@@ -593,18 +627,16 @@ macro_rules! clone_get_service_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_get_directory_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::{
-            DirectoryEvent, DirectoryMarker, NodeInfo, Status,
-        };
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         clone_get_proxy_assert!(
             $proxy,
             $flags,
-            DirectoryMarker,
-            DirectoryEvent::OnOpen_ { s, info },
+            fio::DirectoryMarker,
+            fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))),);
+                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))),);
             }
         )
     }};
@@ -614,13 +646,13 @@ macro_rules! clone_get_directory_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_as_directory_assert_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
-        use $crate::test_utils::assertions::reexport::{DirectoryEvent, DirectoryMarker, Status};
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         clone_get_proxy_assert!(
             $proxy,
             $flags,
-            DirectoryMarker,
-            DirectoryEvent::OnOpen_ { s, info },
+            fio::DirectoryMarker,
+            fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), $expected_status);
                 assert_eq!(info, None);
@@ -658,15 +690,9 @@ macro_rules! assert_read_dirents {
 #[macro_export]
 macro_rules! assert_read_dirents_one_listing {
     ($proxy:expr, $max_bytes:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
-        use $crate::test_utils::assertions::reexport::{DirentsSameInodeBuilder, INO_UNKNOWN};
+        use $crate::test_utils::assertions::reexport::{DirentsSameInodeBuilder, fio};
 
-        #[allow(unused)]
-        use $crate::test_utils::assertions::reexport::{
-            DIRENT_TYPE_UNKNOWN, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_FILE,
-            DIRENT_TYPE_SOCKET, DIRENT_TYPE_SERVICE,
-        };
-
-        let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+        let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
         expected
             $(.add(assert_read_dirents_one_listing!(@expand_dirent_type $type), $name))*
             ;
@@ -674,20 +700,20 @@ macro_rules! assert_read_dirents_one_listing {
         assert_read_dirents!($proxy, $max_bytes, expected.into_vec());
     }};
 
-    (@expand_dirent_type UNKNOWN) => { DIRENT_TYPE_UNKNOWN };
-    (@expand_dirent_type DIRECTORY) => { DIRENT_TYPE_DIRECTORY };
-    (@expand_dirent_type BLOCK_DEVICE) => { DIRENT_TYPE_BLOCK_DEVICE };
-    (@expand_dirent_type FILE) => { DIRENT_TYPE_FILE };
-    (@expand_dirent_type SOCKET) => { DIRENT_TYPE_SOCKET };
-    (@expand_dirent_type SERVICE) => { DIRENT_TYPE_SERVICE };
+    (@expand_dirent_type UNKNOWN) => { fio::DIRENT_TYPE_UNKNOWN };
+    (@expand_dirent_type DIRECTORY) => { fio::DIRENT_TYPE_DIRECTORY };
+    (@expand_dirent_type BLOCK_DEVICE) => { fio::DIRENT_TYPE_BLOCK_DEVICE };
+    (@expand_dirent_type FILE) => { fio::DIRENT_TYPE_FILE };
+    (@expand_dirent_type SOCKET) => { fio::DIRENT_TYPE_SOCKET };
+    (@expand_dirent_type SERVICE) => { fio::DIRENT_TYPE_SERVICE };
 }
 
 #[macro_export]
 macro_rules! assert_read_dirents_path_one_listing {
     ($proxy:expr, $path:expr, $max_bytes:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
-        use $crate::test_utils::assertions::reexport::OPEN_FLAG_DESCRIBE;
+        use $crate::test_utils::assertions::reexport::fio;
 
-        let flags = OPEN_FLAG_DESCRIBE;
+        let flags = fio::OPEN_FLAG_DESCRIBE;
         let path = open_get_directory_proxy_assert_ok!($proxy, flags, $path);
 
         assert_read_dirents_one_listing!(path, $max_bytes, $( { $type, $name }, )*);
@@ -779,7 +805,7 @@ macro_rules! assert_get_buffer_err {
 macro_rules! assert_unlink {
     ($proxy:expr, $path:expr) => {{
         $proxy
-            .unlink($path, fidl_fuchsia_io::UnlinkOptions::EMPTY)
+            .unlink($path, fio::UnlinkOptions::EMPTY)
             .await
             .expect("fidl failed")
             .expect("unlink failed");
@@ -790,12 +816,12 @@ macro_rules! assert_unlink {
 #[macro_export]
 macro_rules! assert_unlink_err {
     ($proxy:expr, $path:expr, $expected_status:expr) => {{
-        use $crate::test_utils::assertions::reexport::Status;
+        use $crate::test_utils::assertions::reexport::{fio, Status};
 
         assert_eq!(
             Status::from_raw(
                 $proxy
-                    .unlink($path, fidl_fuchsia_io::UnlinkOptions::EMPTY)
+                    .unlink($path, fio::UnlinkOptions::EMPTY)
                     .await
                     .expect("fidl failed")
                     .expect_err("unlink succeeded")

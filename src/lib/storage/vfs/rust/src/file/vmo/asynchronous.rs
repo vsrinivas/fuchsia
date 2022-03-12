@@ -34,7 +34,7 @@ use crate::{
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{Status, Vmo, VmoOptions},
     futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
@@ -111,7 +111,7 @@ where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, false, INO_UNKNOWN)
+    VmoFile::new(init_vmo, None, true, false, false, fio::INO_UNKNOWN)
 }
 
 /// Creates a new read-exec-only `VmoFile` backed by the specified `init_vmo` handler. It is the
@@ -132,7 +132,7 @@ where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, true, INO_UNKNOWN)
+    VmoFile::new(init_vmo, None, true, false, true, fio::INO_UNKNOWN)
 }
 
 fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
@@ -274,7 +274,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false, INO_UNKNOWN)
+    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false, fio::INO_UNKNOWN)
 }
 
 /// Creates new `VmoFile` backed by the specified `init_vmo` and `consume_vmo` handlers.
@@ -300,7 +300,7 @@ where
     ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
     ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false, INO_UNKNOWN)
+    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false, fio::INO_UNKNOWN)
 }
 
 /// Implementation of an asynchronous VMO-backed file in a virtual file system. This is created by
@@ -464,7 +464,7 @@ where
         flags: u32,
         _mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             send_on_open_with_error(flags, server_end, Status::NOT_DIR);
@@ -475,6 +475,6 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(self.inode, DIRENT_TYPE_FILE)
+        EntryInfo::new(self.inode, fio::DIRENT_TYPE_FILE)
     }
 }

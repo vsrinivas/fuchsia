@@ -6,8 +6,7 @@ use {
     anyhow::Error,
     fidl::endpoints::*,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryRequest, NodeMarker},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::*,
     fuchsia_runtime,
     fuchsia_zircon::{self as zx},
@@ -54,22 +53,26 @@ async fn main() -> Result<(), Error> {
 struct FakePkgfs;
 
 impl FakePkgfs {
-    pub fn new(server_end: ServerEnd<DirectoryMarker>) -> Result<(), Error> {
+    pub fn new(server_end: ServerEnd<fio::DirectoryMarker>) -> Result<(), Error> {
         Self::new_internal(false, server_end)
     }
 
     fn new_internal(
         inside_pkgfs: bool,
-        server_end: ServerEnd<DirectoryMarker>,
+        server_end: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<(), Error> {
         let mut stream = server_end.into_stream().expect("failed to create stream");
         fasync::Task::local(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
-                    DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
-                        Self::handle_open(inside_pkgfs, &path, flags, object)
-                    }
-                    DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                    fio::DirectoryRequest::Open {
+                        flags,
+                        mode: _,
+                        path,
+                        object,
+                        control_handle: _,
+                    } => Self::handle_open(inside_pkgfs, &path, flags, object),
+                    fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                         if flags != fio::CLONE_FLAG_SAME_RIGHTS {
                             panic!(
                                 "Fake doesn't support these flags in Directory.Clone: {:#x}",
@@ -89,7 +92,12 @@ impl FakePkgfs {
         Ok(())
     }
 
-    fn handle_open(inside_pkgfs: bool, path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+    fn handle_open(
+        inside_pkgfs: bool,
+        path: &str,
+        flags: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) {
         // Only support opening the base_resolver_test package's directory. All other paths just
         // drop the server_end.
         let path = Path::new(path);

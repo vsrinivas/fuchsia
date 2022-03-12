@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     epoch::EpochFile,
     fidl::endpoints::ProtocolMarker as _,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::{
         PackageCacheProxy, PackageResolverProxy, RetainedPackagesMarker, RetainedPackagesProxy,
@@ -324,7 +324,7 @@ impl<'a> Attempt<'a> {
         co: &mut async_generator::Yield<State>,
         phase: &mut metrics::Phase,
         target_version: &mut history::Version,
-    ) -> Result<(state::WaitToReboot, UpdateMode, Vec<DirectoryProxy>), Error> {
+    ) -> Result<(state::WaitToReboot, UpdateMode, Vec<fio::DirectoryProxy>), Error> {
         // Prepare
         let state = state::Prepare::enter(co).await;
 
@@ -473,7 +473,7 @@ impl<'a> Attempt<'a> {
         state: &mut state::Fetch,
         packages_to_fetch: Vec<PkgUrl>,
         mode: UpdateMode,
-    ) -> Result<Vec<DirectoryProxy>, FetchError> {
+    ) -> Result<Vec<fio::DirectoryProxy>, FetchError> {
         let mut packages = Vec::with_capacity(packages_to_fetch.len());
 
         let package_dir_futs =

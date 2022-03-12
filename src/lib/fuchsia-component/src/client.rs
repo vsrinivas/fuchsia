@@ -13,7 +13,7 @@ use {
     },
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_component_decl::ChildRef,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerProxy,
         FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy, ServiceList,
@@ -43,12 +43,12 @@ use {
 const SVC_DIR: &'static str = "/svc";
 
 /// A protocol connection request that allows checking if the protocol exists.
-pub struct ProtocolConnector<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> {
+pub struct ProtocolConnector<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> {
     svc_dir: D,
     _svc_marker: PhantomData<P>,
 }
 
-impl<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConnector<D, P> {
+impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConnector<D, P> {
     /// Returns a new `ProtocolConnector` to `P` in the specified service directory.
     fn new(svc_dir: D) -> ProtocolConnector<D, P> {
         ProtocolConnector { svc_dir, _svc_marker: PhantomData }
@@ -79,7 +79,7 @@ impl<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConnector
         self.svc_dir
             .borrow()
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
                 0, /* mode */
                 P::NAME,
                 fidl::endpoints::ServerEnd::new(server_end),
@@ -101,15 +101,15 @@ impl<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConnector
 }
 
 /// Clone the handle to the service directory in the application's root namespace.
-pub fn clone_namespace_svc() -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
-    io_util::directory::open_in_namespace(SVC_DIR, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+pub fn clone_namespace_svc() -> Result<fio::DirectoryProxy, Error> {
+    io_util::directory::open_in_namespace(SVC_DIR, fio::OPEN_RIGHT_READABLE)
         .context("error opening svc directory")
 }
 
 /// Return a FIDL protocol connector at the default service directory in the
 /// application's root namespace.
 pub fn new_protocol_connector<P: DiscoverableProtocolMarker>(
-) -> Result<ProtocolConnector<DirectoryProxy, P>, Error> {
+) -> Result<ProtocolConnector<fio::DirectoryProxy, P>, Error> {
     new_protocol_connector_at::<P>(SVC_DIR)
 }
 
@@ -119,20 +119,18 @@ pub fn new_protocol_connector<P: DiscoverableProtocolMarker>(
 /// The service directory path must be an absolute path.
 pub fn new_protocol_connector_at<P: DiscoverableProtocolMarker>(
     service_directory_path: &str,
-) -> Result<ProtocolConnector<DirectoryProxy, P>, Error> {
-    let dir = io_util::directory::open_in_namespace(
-        service_directory_path,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    )
-    .context("error opening service directory")?;
+) -> Result<ProtocolConnector<fio::DirectoryProxy, P>, Error> {
+    let dir =
+        io_util::directory::open_in_namespace(service_directory_path, fio::OPEN_RIGHT_READABLE)
+            .context("error opening service directory")?;
 
     Ok(ProtocolConnector::new(dir))
 }
 
 /// Return a FIDL protocol connector at the specified service directory.
 pub fn new_protocol_connector_in_dir<P: DiscoverableProtocolMarker>(
-    dir: &DirectoryProxy,
-) -> ProtocolConnector<&DirectoryProxy, P> {
+    dir: &fio::DirectoryProxy,
+) -> ProtocolConnector<&fio::DirectoryProxy, P> {
     ProtocolConnector::new(dir)
 }
 
@@ -188,21 +186,21 @@ pub fn connect_to_protocol_at_path<P: ProtocolMarker>(
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`.
 pub fn connect_to_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
-    directory: &DirectoryProxy,
+    directory: &fio::DirectoryProxy,
 ) -> Result<P::Proxy, Error> {
     connect_to_named_protocol_at_dir_root::<P>(directory, P::PROTOCOL_NAME)
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory` using the given `filename`.
 pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
-    directory: &DirectoryProxy,
+    directory: &fio::DirectoryProxy,
     filename: &str,
 ) -> Result<P::Proxy, Error> {
     let proxy = io_util::open_node(
         directory,
         &PathBuf::from(filename),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
     let proxy = P::Proxy::from_channel(proxy.into_channel().unwrap());
@@ -211,30 +209,25 @@ pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`, in the `svc/` subdir.
 pub fn connect_to_protocol_at_dir_svc<P: DiscoverableProtocolMarker>(
-    directory: &DirectoryProxy,
+    directory: &fio::DirectoryProxy,
 ) -> Result<P::Proxy, Error> {
     let proxy = io_util::open_node(
         directory,
         &PathBuf::from(format!("svc/{}", P::PROTOCOL_NAME)),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
     let proxy = P::Proxy::from_channel(proxy.into_channel().unwrap());
     Ok(proxy)
 }
 
-struct DirectoryProtocolImpl(DirectoryProxy);
+struct DirectoryProtocolImpl(fio::DirectoryProxy);
 
 impl MemberOpener for DirectoryProtocolImpl {
     fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), fidl::Error> {
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
-        self.0.open(
-            flags,
-            fidl_fuchsia_io::MODE_TYPE_SERVICE,
-            member,
-            ServerEnd::new(server_end),
-        )?;
+        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+        self.0.open(flags, fio::MODE_TYPE_SERVICE, member, ServerEnd::new(server_end))?;
         Ok(())
     }
 }
@@ -279,7 +272,7 @@ pub fn connect_to_service_instance_at<S: ServiceMarker>(
 /// Connect to the "default" instance of a FIDL service hosted on the directory protocol
 /// channel `directory`.
 pub fn connect_to_service_at_dir<S: ServiceMarker>(
-    directory: &DirectoryProxy,
+    directory: &fio::DirectoryProxy,
 ) -> Result<S::Proxy, Error> {
     connect_to_service_instance_at_dir::<S>(directory, DEFAULT_SERVICE_INSTANCE)
 }
@@ -290,7 +283,7 @@ pub fn connect_to_service_at_dir<S: ServiceMarker>(
 // inputs but Rust limits specifying explicit generic parameters when `impl-traits`
 // are present.
 pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
-    directory: &DirectoryProxy,
+    directory: &fio::DirectoryProxy,
     instance: &str,
 ) -> Result<S::Proxy, Error> {
     let service_path = Path::new(S::SERVICE_NAME).join(instance);
@@ -316,17 +309,14 @@ pub fn connect_to_service_instance_at_channel<S: ServiceMarker>(
     instance: &str,
 ) -> Result<S::Proxy, Error> {
     let service_path = Path::new(S::SERVICE_NAME).join(instance);
-    let (directory_proxy, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
-    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-        | fidl_fuchsia_io::OPEN_RIGHT_READABLE
-        | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+    let (directory_proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
     fdio::open_at(directory, service_path.to_str().unwrap(), flags, server_end.into_channel())?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
 /// Opens a FIDL service as a directory, which holds instances of the service.
-pub fn open_service<S: ServiceMarker>() -> Result<DirectoryProxy, Error> {
+pub fn open_service<S: ServiceMarker>() -> Result<fio::DirectoryProxy, Error> {
     let service_path = Path::new(SVC_DIR).join(S::SERVICE_NAME);
     io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
@@ -337,8 +327,8 @@ pub fn open_service<S: ServiceMarker>() -> Result<DirectoryProxy, Error> {
 /// Opens a FIDL service hosted in `directory` as a directory, which holds
 /// instances of the service.
 pub fn open_service_at_dir<S: ServiceMarker>(
-    directory: &DirectoryProxy,
-) -> Result<DirectoryProxy, Error> {
+    directory: &fio::DirectoryProxy,
+) -> Result<fio::DirectoryProxy, Error> {
     io_util::open_directory(
         directory,
         Path::new(S::SERVICE_NAME),
@@ -351,10 +341,9 @@ pub fn open_service_at_dir<S: ServiceMarker>(
 pub async fn open_childs_exposed_directory(
     child_name: impl Into<String>,
     collection_name: Option<String>,
-) -> Result<DirectoryProxy, Error> {
+) -> Result<fio::DirectoryProxy, Error> {
     let realm_proxy = connect_to_protocol::<RealmMarker>()?;
-    let (directory_proxy, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let (directory_proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
     let name: String = child_name.into();
     realm_proxy
         .open_exposed_dir(
@@ -1001,13 +990,12 @@ mod tests {
         let dir = pseudo_directory! {
             ServiceBMarker::PROTOCOL_NAME => read_only_static("read_only"),
         };
-        let (dir_proxy, dir_server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+        let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),
         );

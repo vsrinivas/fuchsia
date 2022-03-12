@@ -13,11 +13,7 @@ use {
     async_trait::async_trait,
     fatfs::validate_filename,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY,
-        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
     std::{
@@ -50,7 +46,7 @@ use {
 };
 
 fn check_open_flags_for_existing_entry(flags: u32) -> Result<(), Status> {
-    if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+    if flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0 {
         return Err(Status::ALREADY_EXISTS);
     }
     // Other flags are verified by VFS's new_connection_validate_flags method.
@@ -275,7 +271,7 @@ impl FatDirectory {
             let (child_flags, child_mode) = if path.is_single_component() {
                 (flags, mode)
             } else {
-                (OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)
+                (fio::OPEN_FLAG_DIRECTORY, fio::MODE_TYPE_DIRECTORY)
             };
 
             match cur_entry {
@@ -342,12 +338,12 @@ impl FatDirectory {
                         name.to_owned(),
                     )))
                 }
-            } else if flags & OPEN_FLAG_CREATE != 0 {
+            } else if flags & fio::OPEN_FLAG_CREATE != 0 {
                 // Child entry does not exist, but we've been asked to create it.
                 created = true;
                 let dir = self.borrow_dir(&fs_lock)?;
-                if flags & OPEN_FLAG_DIRECTORY != 0
-                    || (mode & MODE_TYPE_MASK == MODE_TYPE_DIRECTORY)
+                if flags & fio::OPEN_FLAG_DIRECTORY != 0
+                    || (mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_DIRECTORY)
                 {
                     let dir = dir.create_dir(name).map_err(fatfs_error_to_status)?;
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
@@ -524,7 +520,7 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = self.borrow_dir_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
@@ -556,7 +552,7 @@ impl DirectoryEntry for FatDirectory {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let mut closer = Closer::new(&self.filesystem);
 
@@ -619,11 +615,11 @@ impl Directory for FatDirectory {
                             None
                         } else {
                             let entry_type = if entry.is_dir() {
-                                DIRENT_TYPE_DIRECTORY
+                                fio::DIRENT_TYPE_DIRECTORY
                             } else {
-                                DIRENT_TYPE_FILE
+                                fio::DIRENT_TYPE_FILE
                             };
-                            Some((name, EntryInfo::new(INO_UNKNOWN, entry_type)))
+                            Some((name, EntryInfo::new(fio::INO_UNKNOWN, entry_type)))
                         }
                     })
                     .transpose()
@@ -632,7 +628,10 @@ impl Directory for FatDirectory {
 
         // If it's the root directory, we need to synthesize a "." entry if appropriate.
         if self.data.read().unwrap().parent.is_none() && filter(".") {
-            entries.push((".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)));
+            entries.push((
+                ".".to_owned(),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+            ));
         }
 
         // Sort them by alphabetical order.
@@ -657,7 +656,7 @@ impl Directory for FatDirectory {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
@@ -665,7 +664,7 @@ impl Directory for FatDirectory {
         let is_deleted = data.deleted;
         let is_root = data.parent.is_none();
         let controller = data.watchers.add(scope, self.clone(), mask, watcher);
-        if mask.contains(WatchMask::EXISTING) && !is_deleted {
+        if mask.contains(fio::WatchMask::EXISTING) && !is_deleted {
             let entries = {
                 let dir = self.borrow_dir(&fs_lock)?;
                 let synthesized_dot = if is_root {
@@ -701,15 +700,15 @@ impl Directory for FatDirectory {
         self.data.write().unwrap().watchers.remove(key);
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = self.borrow_dir(&fs_lock)?;
 
         let creation_time = dos_to_unix_time(dir.created());
         let modification_time = dos_to_unix_time(dir.modified());
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR,
-            id: INO_UNKNOWN,
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR,
+            id: fio::INO_UNKNOWN,
             content_size: 0,
             storage_size: 0,
             link_count: 1,
@@ -723,7 +722,7 @@ impl Directory for FatDirectory {
         Ok(())
     }
 
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         self.filesystem.query_filesystem()
     }
 }
@@ -734,7 +733,6 @@ mod tests {
     use {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         scopeguard::defer,
         vfs::directory::dirents_sink::{AppendResult, Sealed},
     };
@@ -827,10 +825,13 @@ mod tests {
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                ("directory".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                (
+                    "directory".to_owned(),
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                ),
+                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
             ]
         );
 
@@ -840,7 +841,7 @@ mod tests {
                 .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),]
+            vec![("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),]
         );
     }
 
@@ -868,11 +869,14 @@ mod tests {
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                ("directory".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                ("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                (
+                    "directory".to_owned(),
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                ),
+                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                ("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
             ]
         );
     }
@@ -895,7 +899,7 @@ mod tests {
         .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![("!".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))]
+            vec![("!".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))]
         );
 
         let (_, sealed) =
@@ -903,7 +907,7 @@ mod tests {
                 .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
         );
     }
 
@@ -917,9 +921,8 @@ mod tests {
         let dir = fs.get_root().expect("get_root OK");
 
         let scope = ExecutionScope::new();
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
-        dir.clone().open(scope.clone(), OPEN_RIGHT_READABLE, 0, Path::dot(), server_end);
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
+        dir.clone().open(scope.clone(), fio::OPEN_RIGHT_READABLE, 0, Path::dot(), server_end);
         let scope_clone = scope.clone();
 
         proxy
@@ -928,11 +931,10 @@ mod tests {
             .expect("Send request OK")
             .map_err(Status::from_raw)
             .expect("First close OK");
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         dir.clone().open(
             scope_clone,
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             Path::validate_and_split("test").unwrap(),
             server_end,

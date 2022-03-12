@@ -280,13 +280,8 @@ mod tests {
         };
 
         use {
-            async_trait::async_trait,
-            fidl::endpoints::ServerEnd,
-            fidl_fuchsia_io::{
-                NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-            },
-            fuchsia_zircon::Status,
-            std::sync::Arc,
+            async_trait::async_trait, fidl::endpoints::ServerEnd, fidl_fuchsia_io as fio,
+            fuchsia_zircon::Status, std::sync::Arc,
         };
 
         pub(super) struct MockDirectory {}
@@ -304,12 +299,12 @@ mod tests {
                 _flags: u32,
                 _mode: u32,
                 _path: Path,
-                _server_end: ServerEnd<NodeMarker>,
+                _server_end: ServerEnd<fio::NodeMarker>,
             ) {
             }
 
             fn entry_info(&self) -> EntryInfo {
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
             }
         }
 
@@ -326,13 +321,13 @@ mod tests {
             fn register_watcher(
                 self: Arc<Self>,
                 _scope: ExecutionScope,
-                _mask: WatchMask,
+                _mask: fio::WatchMask,
                 _watcher: DirectoryWatcher,
             ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 
-            async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+            async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
                 panic!("Not implemented!")
             }
 
@@ -358,7 +353,7 @@ mod tests {
             async fn set_attrs(
                 &self,
                 _flags: u32,
-                _attributes: NodeAttributes,
+                _attributes: fio::NodeAttributes,
             ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }

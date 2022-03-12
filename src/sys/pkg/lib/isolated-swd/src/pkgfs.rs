@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     scoped_task::{self, Scoped},
@@ -18,12 +18,12 @@ const PKGSVR_PATH: &str = "/pkg/bin/pkgsvr";
 /// Represents the sandboxed pkgfs.
 pub struct Pkgfs {
     _process: Scoped,
-    root: DirectoryProxy,
+    root: fio::DirectoryProxy,
 }
 
 impl Pkgfs {
     /// Launch pkgfs using the given blobfs as the backing blob store.
-    pub fn launch(blobfs: ClientEnd<DirectoryMarker>) -> Result<Self, Error> {
+    pub fn launch(blobfs: ClientEnd<fio::DirectoryMarker>) -> Result<Self, Error> {
         Pkgfs::launch_with_args(blobfs, true)
     }
 
@@ -31,10 +31,10 @@ impl Pkgfs {
     /// If enforce_non_static_allowlist is false, will disable the non-static package allowlist
     /// (for use in tests).
     fn launch_with_args(
-        blobfs: ClientEnd<DirectoryMarker>,
+        blobfs: ClientEnd<fio::DirectoryMarker>,
         enforce_non_static_allowlist: bool,
     ) -> Result<Self, Error> {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         let handle_info = HandleInfo::new(HandleType::User0, 0);
 
         // we use a scoped_task to prevent the pkgfs hanging around
@@ -67,9 +67,9 @@ impl Pkgfs {
     }
 
     /// Get a handle to the root directory of the pkgfs.
-    pub fn root_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    pub fn root_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
-        self.root.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.root.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 }
@@ -105,13 +105,13 @@ pub mod for_tests {
             Ok(PkgfsForTest { blobfs, pkgfs })
         }
 
-        pub fn root_proxy(&self) -> Result<DirectoryProxy, Error> {
+        pub fn root_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
             Ok(self.pkgfs.root_handle()?.into_proxy()?)
         }
     }
 
     /// Install the given package to pkgfs.
-    pub async fn install_package(root: &DirectoryProxy, pkg: &Package) -> Result<(), Error> {
+    pub async fn install_package(root: &fio::DirectoryProxy, pkg: &Package) -> Result<(), Error> {
         let installer =
             pkgfs::install::Client::open_from_pkgfs_root(root).context("Opening pkgfs")?;
 

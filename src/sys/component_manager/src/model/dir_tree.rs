@@ -175,10 +175,7 @@ mod tests {
             UseDirectoryDecl, UseProtocolDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
-        fidl_fuchsia_io as fio,
-        fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-        fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio, fuchsia_zircon as zx,
         std::{
             convert::{TryFrom, TryInto},
             sync::Weak,
@@ -233,12 +230,12 @@ mod tests {
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             path::Path::dot(),
-            ServerEnd::<NodeMarker>::new(in_dir_server.into()),
+            ServerEnd::<fio::NodeMarker>::new(in_dir_server.into()),
         );
-        let in_dir_proxy = ClientEnd::<DirectoryMarker>::new(in_dir_client)
+        let in_dir_proxy = ClientEnd::<fio::DirectoryMarker>::new(in_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
@@ -312,12 +309,12 @@ mod tests {
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             path::Path::dot(),
-            ServerEnd::<NodeMarker>::new(expose_dir_server.into()),
+            ServerEnd::<fio::NodeMarker>::new(expose_dir_server.into()),
         );
-        let expose_dir_proxy = ClientEnd::<DirectoryMarker>::new(expose_dir_client)
+        let expose_dir_proxy = ClientEnd::<fio::DirectoryMarker>::new(expose_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(

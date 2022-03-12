@@ -7,9 +7,7 @@ use account_common::{AccountManagerError, ResultExt};
 use anyhow::format_err;
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_io::{
-    DirectoryProxy, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-};
+use fidl_fuchsia_io as fio;
 use files_async::{DirEntry, DirentKind};
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
@@ -73,7 +71,7 @@ pub struct InsecureKeyDirectoryStorageManager {
     /// The current state of the `InsecureKeyDirectoryStorageManager`.
     state: Mutex<StorageManagerState>,
     /// A handle to the root of the managed directory.
-    managed_dir: DirectoryProxy,
+    managed_dir: fio::DirectoryProxy,
 }
 
 #[async_trait(?Send)]
@@ -145,13 +143,14 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
                         ))
                     })?;
 
-                let remove_result =
-                    self.managed_dir.unlink(KEY_FILE_PATH, UnlinkOptions::EMPTY).await.map_err(
-                        |e| {
-                            AccountManagerError::new(ApiError::Resource)
-                                .with_cause(format_err!("Failed to destroy keyfile: {:?}", e))
-                        },
-                    )?;
+                let remove_result = self
+                    .managed_dir
+                    .unlink(KEY_FILE_PATH, fio::UnlinkOptions::EMPTY)
+                    .await
+                    .map_err(|e| {
+                        AccountManagerError::new(ApiError::Resource)
+                            .with_cause(format_err!("Failed to destroy keyfile: {:?}", e))
+                    })?;
                 if let Err(remove_status) = remove_result {
                     return Err(AccountManagerError::new(ApiError::Resource).with_cause(
                         format_err!("Failed to destroy keyfile: {:?}", remove_status),
@@ -169,13 +168,13 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         }
     }
 
-    async fn get_root_dir(&self) -> Result<DirectoryProxy, AccountManagerError> {
+    async fn get_root_dir(&self) -> Result<fio::DirectoryProxy, AccountManagerError> {
         let state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Available => io_util::open_directory(
                 &self.managed_dir,
                 Path::new(CLIENT_ROOT_PATH),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .account_manager_error(ApiError::Resource),
             ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
@@ -192,7 +191,7 @@ impl InsecureKeyDirectoryStorageManager {
     /// directory.  The directory must be either empty or previously managed
     /// by a `InsecureKeyDirectoryStorageManager`.
     #[allow(dead_code)]
-    pub async fn new(managed_dir: DirectoryProxy) -> Result<Self, AccountManagerError> {
+    pub async fn new(managed_dir: fio::DirectoryProxy) -> Result<Self, AccountManagerError> {
         // check internal state of filesystem to derive state
         let dir_entries =
             files_async::readdir(&managed_dir).await.account_manager_error(ApiError::Resource)?;
@@ -217,7 +216,7 @@ impl InsecureKeyDirectoryStorageManager {
         let key_file = io_util::open_file(
             &self.managed_dir,
             &Path::new(KEY_FILE_PATH),
-            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
         )
         .map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
@@ -231,12 +230,15 @@ impl InsecureKeyDirectoryStorageManager {
 
     /// Verify if the given key is the correct key needed for unlock.
     async fn check_unlock_key(&self, key: &Key) -> Result<(), AccountManagerError> {
-        let file_proxy =
-            io_util::open_file(&self.managed_dir, &Path::new(KEY_FILE_PATH), OPEN_RIGHT_READABLE)
-                .map_err(|e| {
-                AccountManagerError::new(ApiError::Resource)
-                    .with_cause(format_err!("Failed to open keyfile: {:?}", e))
-            })?;
+        let file_proxy = io_util::open_file(
+            &self.managed_dir,
+            &Path::new(KEY_FILE_PATH),
+            fio::OPEN_RIGHT_READABLE,
+        )
+        .map_err(|e| {
+            AccountManagerError::new(ApiError::Resource)
+                .with_cause(format_err!("Failed to open keyfile: {:?}", e))
+        })?;
         let serialized_correct_key = io_util::read_file(&file_proxy).await.map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed to read keyfile: {:?}", e))
@@ -267,29 +269,33 @@ mod test {
 
     /// Creates a TempDir and DirectoryProxy handle to it.  The TempDir must
     /// be kept in scope for the duration that DirectoryProxy is used.
-    fn create_temp_directory() -> (TempDir, DirectoryProxy) {
+    fn create_temp_directory() -> (TempDir, fio::DirectoryProxy) {
         let temp_dir = TempDir::new().unwrap();
         let dir_proxy = io_util::open_directory_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         (temp_dir, dir_proxy)
     }
 
-    async fn create_file_with_content(dir: &DirectoryProxy, path: &str, content: &str) {
-        let file = io_util::open_file(dir, Path::new(path), OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)
-            .unwrap();
+    async fn create_file_with_content(dir: &fio::DirectoryProxy, path: &str, content: &str) {
+        let file = io_util::open_file(
+            dir,
+            Path::new(path),
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+        )
+        .unwrap();
         io_util::write_file(&file, content).await.unwrap();
     }
 
-    async fn assert_directory_empty(dir: &DirectoryProxy) {
+    async fn assert_directory_empty(dir: &fio::DirectoryProxy) {
         let dir_entries = files_async::readdir(dir).await.unwrap();
         assert!(dir_entries.is_empty());
     }
 
-    async fn assert_file_contents(dir: &DirectoryProxy, path: &str, content: &str) {
-        let file = io_util::open_file(dir, Path::new(path), OPEN_RIGHT_READABLE).unwrap();
+    async fn assert_file_contents(dir: &fio::DirectoryProxy, path: &str, content: &str) {
+        let file = io_util::open_file(dir, Path::new(path), fio::OPEN_RIGHT_READABLE).unwrap();
         let file_content = io_util::read_file(&file).await.unwrap();
         assert_eq!(content, &file_content);
     }
@@ -366,7 +372,7 @@ mod test {
             // Create a new manager with the same directory.
             let new_dir_proxy = io_util::open_directory_in_namespace(
                 dir.path().to_str().unwrap(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
 

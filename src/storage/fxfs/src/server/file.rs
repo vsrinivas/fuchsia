@@ -21,7 +21,7 @@ use {
     async_trait::async_trait,
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, FilesystemInfo, NodeAttributes, NodeMarker, VmoFlags},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -144,7 +144,7 @@ impl FxFile {
         this: OpenedNode<FxFile>,
         scope: ExecutionScope,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
         FileConnection::<FxFile>::create_connection_async(
@@ -354,7 +354,7 @@ impl DirectoryEntry for FxFile {
         flags: u32,
         _mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             send_on_open_with_error(flags, server_end, Status::NOT_FILE);
@@ -405,21 +405,23 @@ impl File for FxFile {
     }
 
     // Returns a VMO handle that supports paging.
-    async fn get_buffer(&self, flags: VmoFlags) -> Result<Buffer, Status> {
+    async fn get_buffer(&self, flags: fio::VmoFlags) -> Result<Buffer, Status> {
         // We do not support exact/duplicate sharing mode.
-        if flags.contains(VmoFlags::SHARED_BUFFER) {
+        if flags.contains(fio::VmoFlags::SHARED_BUFFER) {
             log::error!("get_buffer does not support exact sharing mode!");
             return Err(Status::NOT_SUPPORTED);
         }
         // We only support the combination of WRITE when a private COW clone is explicitly
         // specified. This implicitly restricts any mmap call that attempts to use MAP_SHARED +
         // PROT_WRITE.
-        if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
-            log::error!("get_buffer only supports VmoFlags::WRITE with VmoFlags::PRIVATE_CLONE!");
+        if flags.contains(fio::VmoFlags::WRITE) && !flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
+            log::error!(
+                "get_buffer only supports fio::VmoFlags::WRITE with fio::VmoFlags::PRIVATE_CLONE!"
+            );
             return Err(Status::NOT_SUPPORTED);
         }
         // We do not support executable VMO handles.
-        if flags.contains(VmoFlags::EXECUTE) {
+        if flags.contains(fio::VmoFlags::EXECUTE) {
             log::error!("get_buffer does not support execute rights!");
             return Err(Status::NOT_SUPPORTED);
         }
@@ -429,7 +431,7 @@ impl File for FxFile {
 
         let mut child_options = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
         // By default, SNAPSHOT includes WRITE, so we explicitly remove it if not required.
-        if !flags.contains(VmoFlags::WRITE) {
+        if !flags.contains(fio::VmoFlags::WRITE) {
             child_options |= zx::VmoChildOptions::NO_WRITE
         }
 
@@ -445,9 +447,9 @@ impl File for FxFile {
         Ok(self.handle.get_size())
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let props = self.handle.get_properties().await.map_err(map_to_status)?;
-        Ok(NodeAttributes {
+        Ok(fio::NodeAttributes {
             mode: V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH,
             id: self.handle.object_id(),
             content_size: props.data_attribute_size,
@@ -458,13 +460,13 @@ impl File for FxFile {
         })
     }
 
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
-        let crtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
+    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
+        let crtime = if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
             Some(Timestamp::from_nanos(attrs.creation_time))
         } else {
             None
         };
-        let mtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
+        let mtime = if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
             Some(Timestamp::from_nanos(attrs.modification_time))
         } else {
             None
@@ -492,7 +494,7 @@ impl File for FxFile {
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
     }
 
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         let store = self.handle.store();
         Ok(store
             .filesystem()
@@ -510,11 +512,7 @@ mod tests {
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
-        fidl_fuchsia_io::{
-            self as fio, SeekOrigin, UnlinkOptions, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
-            OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
-        fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::Status,
         futures::join,
         io_util::{read_file_bytes, write_file_bytes},
@@ -530,9 +528,13 @@ mod tests {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
-        let file =
-            open_file_checked(&root, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
-                .await;
+        let file = open_file_checked(
+            &root,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
+            "foo",
+        )
+        .await;
 
         let buf = file
             .read(fio::MAX_BUF)
@@ -564,8 +566,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -580,7 +582,7 @@ mod tests {
         attrs.creation_time = crtime;
         attrs.modification_time = mtime;
         let status = file
-            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
+            .set_attr(fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");
@@ -595,7 +597,7 @@ mod tests {
         attrs.creation_time = 0u64; // This should be ignored since we don't set the flag.
         attrs.modification_time = mtime;
         let status = file
-            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
+            .set_attr(fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");
@@ -618,8 +620,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -675,11 +677,11 @@ mod tests {
             let root = fixture.root();
 
             let flags = if i == 0 {
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
             } else {
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
             };
-            let file = open_file_checked(&root, flags, MODE_TYPE_FILE, "foo").await;
+            let file = open_file_checked(&root, flags, fio::MODE_TYPE_FILE, "foo").await;
 
             if i == 0 {
                 let _: u64 = file
@@ -718,8 +720,11 @@ mod tests {
         for input in inputs {
             let file = open_file_checked(
                 &root,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND,
-                MODE_TYPE_FILE,
+                fio::OPEN_FLAG_CREATE
+                    | fio::OPEN_RIGHT_READABLE
+                    | fio::OPEN_RIGHT_WRITABLE
+                    | fio::OPEN_FLAG_APPEND,
+                fio::MODE_TYPE_FILE,
                 "foo",
             )
             .await;
@@ -734,7 +739,8 @@ mod tests {
             close_file_checked(file).await;
         }
 
-        let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
+        let file =
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
         let buf = file
             .read_at(fio::MAX_BUF, 0)
             .await
@@ -760,8 +766,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -776,7 +782,7 @@ mod tests {
 
         {
             let offset = file
-                .seek(SeekOrigin::Start, 0)
+                .seek(fio::SeekOrigin::Start, 0)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -792,7 +798,7 @@ mod tests {
         }
         {
             let offset = file
-                .seek(SeekOrigin::Current, 2)
+                .seek(fio::SeekOrigin::Current, 2)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -808,7 +814,7 @@ mod tests {
         }
         {
             let offset = file
-                .seek(SeekOrigin::Current, -5)
+                .seek(fio::SeekOrigin::Current, -5)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -824,7 +830,7 @@ mod tests {
         }
         {
             let offset = file
-                .seek(SeekOrigin::End, -1)
+                .seek(fio::SeekOrigin::End, -1)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -850,8 +856,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -867,7 +873,7 @@ mod tests {
             .expect("File write was successful");
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("FIDL call failed")
             .map_err(Status::from_raw)
@@ -899,7 +905,7 @@ mod tests {
             .expect("File write was successful");
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("FIDL call failed")
             .map_err(Status::from_raw)
@@ -921,8 +927,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -947,7 +953,7 @@ mod tests {
             .expect("resize error");
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("FIDL call failed")
             .map_err(Status::from_raw)
@@ -973,7 +979,7 @@ mod tests {
         };
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("seek failed")
             .map_err(Status::from_raw)
@@ -995,8 +1001,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -1025,7 +1031,7 @@ mod tests {
         }
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("Seek failed")
             .map_err(Status::from_raw)
@@ -1051,7 +1057,7 @@ mod tests {
         };
 
         let offset = file
-            .seek(SeekOrigin::Start, 0)
+            .seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("seek failed")
             .map_err(Status::from_raw)
@@ -1081,8 +1087,8 @@ mod tests {
                 while !done1.load(atomic::Ordering::Relaxed) {
                     let file = open_file_checked(
                         &root,
-                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                        MODE_TYPE_FILE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                        fio::MODE_TYPE_FILE,
                         "foo",
                     )
                     .await;
@@ -1099,8 +1105,8 @@ mod tests {
                 while !done2.load(atomic::Ordering::Relaxed) {
                     let file = open_file_checked(
                         &root,
-                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                        MODE_TYPE_FILE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                        fio::MODE_TYPE_FILE,
                         "foo",
                     )
                     .await;
@@ -1117,8 +1123,8 @@ mod tests {
                 for _ in 0..300 {
                     let file = open_file_checked(
                         &root,
-                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                        MODE_TYPE_FILE,
+                        fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                        fio::MODE_TYPE_FILE,
                         "foo",
                     )
                     .await;
@@ -1126,7 +1132,7 @@ mod tests {
                         file.close().await.expect("FIDL call failed").map_err(Status::from_raw),
                         Ok(())
                     );
-                    root.unlink("foo", UnlinkOptions::EMPTY)
+                    root.unlink("foo", fio::UnlinkOptions::EMPTY)
                         .await
                         .expect("FIDL call failed")
                         .expect("unlink failed");

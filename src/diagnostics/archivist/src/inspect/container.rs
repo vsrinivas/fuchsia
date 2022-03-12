@@ -10,7 +10,7 @@ use crate::{
 };
 use diagnostics_data as schema;
 use diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher};
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree};
 use fuchsia_zircon as zx;
@@ -23,7 +23,7 @@ use tracing::warn;
 pub struct InspectArtifactsContainer {
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
-    pub component_diagnostics_proxy: DirectoryProxy,
+    pub component_diagnostics_proxy: fio::DirectoryProxy,
     /// The time when the DiagnosticsReady event that caused the creation of
     /// the inspect artifact container was created.
     pub event_timestamp: zx::Time,
@@ -205,7 +205,7 @@ pub struct UnpopulatedInspectDataContainer {
     pub identity: Arc<ComponentIdentity>,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
-    pub component_diagnostics_proxy: DirectoryProxy,
+    pub component_diagnostics_proxy: fio::DirectoryProxy,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
@@ -272,7 +272,6 @@ impl<'a> UnpopulatedInspectDataContainer {
 mod test {
     use super::*;
     use crate::diagnostics::GlobalConnectionStats;
-    use fidl_fuchsia_io::DirectoryMarker;
     use fuchsia_inspect::Node;
     use fuchsia_zircon::DurationNum;
     use futures::StreamExt;
@@ -286,7 +285,7 @@ mod test {
         // Simulate a directory that hangs indefinitely in any request so that we consistently
         // trigger the 0 timeout.
         let (directory, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
         fasync::Task::spawn(async move {
             while let Some(_) = stream.next().await {
                 fasync::Timer::new(fasync::Time::after(100000.second())).await;

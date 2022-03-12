@@ -13,10 +13,7 @@ use {
     cm_moniker::{InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     cm_rust::CapabilityPath,
     fidl::endpoints,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     moniker::{ChildMonikerBase, RelativeMonikerBase},
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
@@ -27,7 +24,7 @@ use {
 
 // TODO: The `use` declaration for storage implicitly carries these rights. While this is
 // correct, it would be more consistent to get the rights from `CapabilityState`.
-const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+const FLAGS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 pub type StorageCapabilitySource =
     ::routing::capability_source::StorageCapabilitySource<ComponentInstance>;
@@ -161,9 +158,9 @@ async fn open_storage_root(
     storage_source_info: &StorageCapabilitySource,
     open_mode: u32,
     start_reason: &StartReason,
-) -> Result<DirectoryProxy, ModelError> {
+) -> Result<fio::DirectoryProxy, ModelError> {
     let (mut dir_proxy, local_server_end) =
-        endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+        endpoints::create_proxy::<fio::DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
     let full_backing_directory_path = match storage_source_info.backing_directory_subdir.as_ref() {
         Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
@@ -216,7 +213,7 @@ pub async fn open_isolated_storage(
     instance_id: Option<&ComponentInstanceId>,
     open_mode: u32,
     start_reason: &StartReason,
-) -> Result<DirectoryProxy, ModelError> {
+) -> Result<fio::DirectoryProxy, ModelError> {
     let root_dir = open_storage_root(&storage_source_info, open_mode, start_reason).await?;
     let storage_path = instance_id
         .map(|id| generate_instance_id_based_storage_path(id))
@@ -239,9 +236,9 @@ pub async fn open_isolated_storage_by_id(
     storage_source_info: StorageCapabilitySource,
     instance_id: ComponentInstanceId,
     start_reason: &StartReason,
-) -> Result<DirectoryProxy, ModelError> {
+) -> Result<fio::DirectoryProxy, ModelError> {
     let root_dir =
-        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, start_reason).await?;
+        open_storage_root(&storage_source_info, fio::MODE_TYPE_DIRECTORY, start_reason).await?;
     let storage_path = generate_instance_id_based_storage_path(&instance_id);
 
     io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
@@ -261,9 +258,12 @@ pub async fn delete_isolated_storage(
     relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
-    let root_dir =
-        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, &StartReason::StorageAdmin)
-            .await?;
+    let root_dir = open_storage_root(
+        &storage_source_info,
+        fio::MODE_TYPE_DIRECTORY,
+        &StartReason::StorageAdmin,
+    )
+    .await?;
 
     let (dir, name) = if let Some(instance_id) = instance_id {
         let storage_path = generate_instance_id_based_storage_path(instance_id);
@@ -474,7 +474,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -493,7 +493,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -514,7 +514,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -565,7 +565,7 @@ mod tests {
             },
             relative_moniker.clone(),
             instance_id.as_ref(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -601,7 +601,7 @@ mod tests {
             },
             relative_moniker.clone(),
             instance_id.as_ref(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -636,7 +636,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await;
@@ -689,7 +689,7 @@ mod tests {
             },
             child_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -708,7 +708,7 @@ mod tests {
             },
             parent_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -741,7 +741,7 @@ mod tests {
             },
             parent_moniker.clone(),
             None,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await
@@ -815,7 +815,7 @@ mod tests {
             },
             child_moniker.clone(),
             instance_id.as_ref(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             &StartReason::Eager,
         )
         .await

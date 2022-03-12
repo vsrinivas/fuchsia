@@ -10,7 +10,7 @@ use crate::{
     },
     identity::ComponentIdentity,
 };
-use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys_internal::{
     ComponentEventListenerMarker, ComponentEventListenerRequest, ComponentEventProviderProxy,
     SourceIdentity,
@@ -100,7 +100,7 @@ impl ComponentEventProvider {
     async fn handle_on_directory_ready(
         &mut self,
         component: SourceIdentity,
-        directory: fidl::endpoints::ClientEnd<DirectoryMarker>,
+        directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
     ) -> Result<(), EventError> {
         let component = ComponentIdentity::try_from(component)?;
         if let Ok(directory) = directory.into_proxy() {
@@ -128,7 +128,6 @@ impl EventProducer for ComponentEventProvider {
 mod tests {
     use super::*;
     use crate::events::sources::event_source::tests::*;
-    use fidl_fuchsia_io::DirectoryMarker;
     use fidl_fuchsia_sys_internal::{
         ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
     };
@@ -201,7 +200,7 @@ mod tests {
             instance_id: "12345".to_string(),
         };
         listener.on_start(identity.clone().into()).expect("failed to send event 1");
-        let (dir, _) = fidl::endpoints::create_request_stream::<DirectoryMarker>().unwrap();
+        let (dir, _) = fidl::endpoints::create_request_stream::<fio::DirectoryMarker>().unwrap();
         listener
             .on_diagnostics_dir_ready(identity.clone().into(), dir)
             .expect("failed to send event 2");

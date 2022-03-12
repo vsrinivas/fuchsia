@@ -6,7 +6,7 @@ use {
     crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_merkle::MerkleTree,
@@ -44,7 +44,7 @@ async fn get_single_package_with_no_content_blobs() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache
@@ -53,7 +53,8 @@ async fn get_single_package_with_no_content_blobs() {
 
     let (meta_far, _) = pkg.contents();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
@@ -126,7 +127,7 @@ async fn get_and_hold_directory() {
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
 
-    let (dir_2, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir_2, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     // Request same package again.
     let get_fut = env
         .proxies
@@ -135,7 +136,8 @@ async fn get_and_hold_directory() {
         .map_ok(|res| res.map_err(Status::from_raw));
 
     // `OpenMetaBlob()` for already cached package closes the channel with with a `ZX_OK` epitaph.
-    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (_meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert_matches!(
         needed_blobs.open_meta_blob(meta_blob_server_end).await,
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
@@ -159,7 +161,7 @@ async fn unavailable_when_client_drops_needed_blobs_channel() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache
@@ -284,7 +286,7 @@ async fn get_package_already_present_on_fs() {
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
 
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
     // Call `PackageCache.Get()` for already cached package.
     let get_fut = env
@@ -294,7 +296,8 @@ async fn get_package_already_present_on_fs() {
         .map_ok(|res| res.map_err(Status::from_raw));
 
     // `OpenMetaBlob()` for already cached package closes the channel with with a `ZX_OK` epitaph.
-    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (_meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert_matches!(
         needed_blobs.open_meta_blob(meta_blob_server_end).await,
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })

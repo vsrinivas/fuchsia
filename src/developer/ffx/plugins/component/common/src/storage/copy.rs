@@ -82,7 +82,7 @@ mod test {
     use {
         super::*,
         crate::storage::test::{node_to_file, setup_fake_storage_admin},
-        fidl_fuchsia_io::*,
+        fidl_fuchsia_io as fio,
         futures::TryStreamExt,
         std::fs::{read, write},
         tempfile::tempdir,
@@ -92,18 +92,19 @@ mod test {
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
     // Currently VFS is not cross-platform.
-    fn setup_fake_directory(mut root_dir: DirectoryRequestStream) {
+    fn setup_fake_directory(mut root_dir: fio::DirectoryRequestStream) {
         fuchsia_async::Task::local(async move {
             // Serve the root directory
             // Rewind on root directory should succeed
             let request = root_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::Open { path, flags, mode, object, .. })) = request {
+            if let Ok(Some(fio::DirectoryRequest::Open { path, flags, mode, object, .. })) = request
+            {
                 if path == "from_host" {
-                    assert!(flags & OPEN_FLAG_CREATE != 0);
-                    assert!(mode & MODE_TYPE_FILE != 0);
+                    assert!(flags & fio::OPEN_FLAG_CREATE != 0);
+                    assert!(mode & fio::MODE_TYPE_FILE != 0);
                     setup_fake_file_from_host(node_to_file(object));
                 } else if path == "from_device" {
-                    assert!(mode & MODE_TYPE_FILE != 0);
+                    assert!(mode & fio::MODE_TYPE_FILE != 0);
                     setup_fake_file_from_device(node_to_file(object));
                 } else {
                     panic!("incorrect path: {}", path);
@@ -115,12 +116,12 @@ mod test {
         .detach();
     }
 
-    fn setup_fake_file_from_host(mut file: FileRequestStream) {
+    fn setup_fake_file_from_host(mut file: fio::FileRequestStream) {
         fuchsia_async::Task::local(async move {
             // Serve the root directory
             // Truncating the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Resize { length, responder })) = request {
+            if let Ok(Some(fio::FileRequest::Resize { length, responder })) = request {
                 assert_eq!(length, 0);
                 responder.send(&mut Ok(())).unwrap();
             } else {
@@ -129,7 +130,7 @@ mod test {
 
             // Writing the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Write { data, responder })) = request {
+            if let Ok(Some(fio::FileRequest::Write { data, responder })) = request {
                 assert_eq!(data, DATA);
                 responder.send(&mut Ok(data.len() as u64)).unwrap();
             } else {
@@ -138,7 +139,7 @@ mod test {
 
             // Closing file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Close { responder })) = request {
+            if let Ok(Some(fio::FileRequest::Close { responder })) = request {
                 responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)
@@ -147,12 +148,12 @@ mod test {
         .detach();
     }
 
-    fn setup_fake_file_from_device(mut file: FileRequestStream) {
+    fn setup_fake_file_from_device(mut file: fio::FileRequestStream) {
         fuchsia_async::Task::local(async move {
             // Serve the root directory
             // Reading the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
+            if let Ok(Some(fio::FileRequest::Read { responder, .. })) = request {
                 responder.send(&mut Ok(DATA.to_vec())).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)
@@ -160,7 +161,7 @@ mod test {
 
             // Reading the file should not return any more data
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
+            if let Ok(Some(fio::FileRequest::Read { responder, .. })) = request {
                 responder.send(&mut Ok(vec![])).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)
@@ -168,7 +169,7 @@ mod test {
 
             // Closing file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Close { responder })) = request {
+            if let Ok(Some(fio::FileRequest::Close { responder })) = request {
                 responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)

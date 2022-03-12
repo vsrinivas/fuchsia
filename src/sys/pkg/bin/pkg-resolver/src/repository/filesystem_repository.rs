@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Error},
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, MAX_BUF, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
     io_util::file::AsyncReader,
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
@@ -28,7 +25,7 @@ pub struct FuchsiaFileSystemRepository<D>
 where
     D: DataInterchange,
 {
-    repo_proxy: DirectoryProxy,
+    repo_proxy: fio::DirectoryProxy,
     _interchange: PhantomData<D>,
 }
 
@@ -36,7 +33,7 @@ impl<D> FuchsiaFileSystemRepository<D>
 where
     D: DataInterchange,
 {
-    pub fn new(repo_proxy: DirectoryProxy) -> Self {
+    pub fn new(repo_proxy: fio::DirectoryProxy) -> Self {
         Self { repo_proxy, _interchange: PhantomData }
     }
 
@@ -45,7 +42,7 @@ where
         Self::new(
             io_util::directory::open_in_namespace(
                 temp.path().to_str().unwrap(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap(),
         )
@@ -56,7 +53,7 @@ where
         path: String,
     ) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>> {
         let file_proxy =
-            io_util::directory::open_file(&self.repo_proxy, &path, OPEN_RIGHT_READABLE)
+            io_util::directory::open_file(&self.repo_proxy, &path, fio::OPEN_RIGHT_READABLE)
                 .await
                 .map_err(|err| match err {
                     io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND) => {
@@ -92,7 +89,7 @@ where
         let (temp_path, temp_proxy) = io_util::directory::create_randomly_named_file(
             &self.repo_proxy,
             &path,
-            OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .with_context(|| format!("creating file: {}", path))
@@ -126,10 +123,10 @@ fn make_opaque_error(e: Error) -> tuf::Error {
 
 // Read everything from `reader` and write it to the file proxy.
 async fn write_all(
-    file: &FileProxy,
+    file: &fio::FileProxy,
     reader: &mut (dyn AsyncRead + Send + Unpin),
 ) -> Result<(), Error> {
-    let mut buf = vec![0; MAX_BUF.try_into().unwrap()];
+    let mut buf = vec![0; fio::MAX_BUF.try_into().unwrap()];
     loop {
         let read_len = reader.read(&mut buf).await?;
         if read_len == 0 {

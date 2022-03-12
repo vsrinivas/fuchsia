@@ -5,8 +5,7 @@ use {
     crate::{setup::DevhostConfig, storage::Storage},
     anyhow::{Context, Error},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_paver as fpaver, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_paver as fpaver, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -23,7 +22,7 @@ enum PaverType {
     Real,
     /// Use a fake paver, which can be connected to using the given connector.
     #[allow(dead_code)]
-    Fake { connector: ClientEnd<DirectoryMarker> },
+    Fake { connector: ClientEnd<fio::DirectoryMarker> },
 }
 
 enum OtaType {
@@ -46,7 +45,7 @@ enum StorageType {
     Real,
     /// Use the given DirectoryMarker for blobfs, and the given path for minfs.
     #[allow(dead_code)]
-    Fake { blobfs_root: ClientEnd<DirectoryMarker>, minfs_path: String },
+    Fake { blobfs_root: ClientEnd<fio::DirectoryMarker>, minfs_path: String },
 }
 
 /// Helper for constructing OTAs.
@@ -80,7 +79,7 @@ impl OtaEnvBuilder {
     /// Use the given blobfs root and path for minfs.
     pub fn fake_storage(
         mut self,
-        blobfs_root: ClientEnd<DirectoryMarker>,
+        blobfs_root: ClientEnd<fio::DirectoryMarker>,
         minfs_path: String,
     ) -> Self {
         self.storage_type = StorageType::Fake { blobfs_root, minfs_path };
@@ -95,7 +94,7 @@ impl OtaEnvBuilder {
 
     #[cfg(test)]
     /// Use the given connector to connect to a paver service.
-    pub fn fake_paver(mut self, connector: ClientEnd<DirectoryMarker>) -> Self {
+    pub fn fake_paver(mut self, connector: ClientEnd<fio::DirectoryMarker>) -> Self {
         self.paver = PaverType::Fake { connector };
         self
     }
@@ -163,7 +162,7 @@ impl OtaEnvBuilder {
     /// Wipe the system's disk and mount the clean minfs/blobfs partitions.
     async fn init_real_storage(
         &self,
-    ) -> Result<(Option<Storage>, ClientEnd<DirectoryMarker>, String), Error> {
+    ) -> Result<(Option<Storage>, ClientEnd<fio::DirectoryMarker>, String), Error> {
         let mut storage = Storage::new().await.context("initialising storage")?;
         let blobfs_root = storage.get_blobfs().context("Opening blobfs")?;
         storage.mount_minfs().context("Mounting minfs")?;
@@ -224,10 +223,10 @@ impl OtaEnvBuilder {
 
 pub struct OtaEnv {
     authorized_keys: Option<String>,
-    blobfs_root: ClientEnd<DirectoryMarker>,
+    blobfs_root: ClientEnd<fio::DirectoryMarker>,
     board_name: String,
     minfs_root_path: String,
-    paver_connector: ClientEnd<DirectoryMarker>,
+    paver_connector: ClientEnd<fio::DirectoryMarker>,
     repo_dir: File,
     ssl_certificates: File,
     _storage: Option<Storage>,
@@ -311,7 +310,7 @@ mod tests {
         }
 
         /// Get the blobfs root directory.
-        pub fn blobfs_root(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        pub fn blobfs_root(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
             self.blobfs.root_dir_handle()
         }
 

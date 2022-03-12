@@ -9,7 +9,7 @@ use {
     },
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
@@ -94,7 +94,7 @@ async fn packages_are_retained_gc_mid_process() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache

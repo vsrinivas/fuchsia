@@ -157,8 +157,7 @@ mod tests {
         super::*,
         crate::file::{self, AsyncFile},
         fidl::endpoints,
-        fidl_fuchsia_io::{FileMarker, FileRequest},
-        fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
         futures::{
             future::{self},
             StreamExt as _,
@@ -171,7 +170,7 @@ mod tests {
         let path =
             dir.path().join("read_to_end_with_expected_contents").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, expected_contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fidl_fuchsia_io::OPEN_RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncFile::from_proxy(file);
         let mut actual_contents = vec![];
@@ -187,7 +186,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_to_end_large() {
-        let expected_contents = vec![7u8; (fidl_fuchsia_io::MAX_BUF * 3).try_into().unwrap()];
+        let expected_contents = vec![7u8; (fio::MAX_BUF * 3).try_into().unwrap()];
         read_to_end_file_with_expected_contents(&expected_contents[..]).await;
     }
 
@@ -197,7 +196,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("read_at_different_offsets").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, &file_contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fidl_fuchsia_io::OPEN_RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncFile::from_proxy(file);
         for &(offset, length) in &[(0, 100), (100, 200), (50, 10), (500, 300)] {
@@ -210,7 +209,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_at_exact() {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncFile::from_proxy(proxy);
 
@@ -223,12 +222,12 @@ mod tests {
         };
         let handle_requests = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAtDeprecated { count, offset, responder } => {
+                fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
                     assert_eq!(count, 50);
                     assert_eq!(offset, 20);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[..20]).unwrap();
                 }
-                FileRequest::ReadAt { count, offset, responder } => {
+                fio::FileRequest::ReadAt { count, offset, responder } => {
                     assert_eq!(count, 50);
                     assert_eq!(offset, 20);
                     responder.send(&mut Ok(contents[..20].to_vec())).unwrap();
@@ -236,12 +235,12 @@ mod tests {
                 req => panic!("unhandled request {:?}", req),
             }
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAtDeprecated { count, offset, responder } => {
+                fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
                     assert_eq!(count, 30);
                     assert_eq!(offset, 40);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[20..]).unwrap();
                 }
-                FileRequest::ReadAt { count, offset, responder } => {
+                fio::FileRequest::ReadAt { count, offset, responder } => {
                     assert_eq!(count, 30);
                     assert_eq!(offset, 40);
                     responder.send(&mut Ok(contents[20..].to_vec())).unwrap();

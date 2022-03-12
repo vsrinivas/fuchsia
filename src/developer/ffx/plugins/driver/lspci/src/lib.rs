@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_driver_lspci_args::DriverLspci,
-    fidl::endpoints::Proxy, lspci::bridge::Bridge, lspci::device::Device, lspci::Args,
-    zstd::block::decompress,
+    fidl::endpoints::Proxy, fidl_fuchsia_io as fio, lspci::bridge::Bridge, lspci::device::Device,
+    lspci::Args, zstd::block::decompress,
 };
 
 #[ffx_plugin("driver_enabled")]
@@ -14,14 +14,9 @@ pub async fn lspci(
 ) -> Result<()> {
     let dev = ffx_driver::get_devfs_proxy(remote_control, cmd.select).await?;
     // Creates the proxy and server
-    let (proxy, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>()?;
+    let (proxy, server) = fidl::endpoints::create_proxy::<fio::NodeMarker>()?;
 
-    dev.open(
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        0,
-        &cmd.service,
-        server,
-    )?;
+    dev.open(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0, &cmd.service, server)?;
 
     let bus = fidl_fuchsia_hardware_pci::BusProxy::new(proxy.into_channel().unwrap());
     let pci_ids = include_bytes!("../../../../../../../third_party/pciids/pci.ids.zst");

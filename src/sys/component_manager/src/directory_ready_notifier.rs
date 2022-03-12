@@ -22,8 +22,7 @@ use {
         ExposeSource, ExposeTarget,
     },
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeEvent, NodeMarker, NodeProxy},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::stream::StreamExt,
     io_util,
     log::*,
@@ -49,7 +48,7 @@ pub struct DirectoryReadyNotifier {
     model: Weak<Model>,
     /// Capabilities offered by component manager that we wish to provide through `DirectoryReady`
     /// events. For example, the diagnostics directory hosting inspect data.
-    builtin_capabilities: Mutex<Vec<(String, NodeProxy)>>,
+    builtin_capabilities: Mutex<Vec<(String, fio::NodeProxy)>>,
 }
 
 impl DirectoryReadyNotifier {
@@ -65,7 +64,11 @@ impl DirectoryReadyNotifier {
         )]
     }
 
-    pub fn register_component_manager_capability(&self, name: impl Into<String>, node: NodeProxy) {
+    pub fn register_component_manager_capability(
+        &self,
+        name: impl Into<String>,
+        node: fio::NodeProxy,
+    ) {
         if let Ok(mut guard) = self.builtin_capabilities.lock() {
             guard.push((name.into(), node));
         }
@@ -74,7 +77,7 @@ impl DirectoryReadyNotifier {
     async fn on_component_started(
         self: &Arc<Self>,
         target_moniker: &InstancedAbsoluteMoniker,
-        outgoing_dir: &DirectoryProxy,
+        outgoing_dir: &fio::DirectoryProxy,
         decl: ComponentDecl,
     ) -> Result<(), ModelError> {
         // Forward along errors into the new task so that dispatch can forward the
@@ -116,18 +119,17 @@ impl DirectoryReadyNotifier {
     /// serving that directory. The directory should have been cloned/opened with DESCRIBE.
     async fn wait_for_on_open(
         &self,
-        node: &NodeProxy,
+        node: &fio::NodeProxy,
         target_moniker: &InstancedAbsoluteMoniker,
         path: String,
     ) -> Result<(), ModelError> {
         let mut events = node.take_event_stream();
         match events.next().await {
-            Some(Ok(NodeEvent::OnOpen_ { s: status, info: _ })) => {
-                zx::Status::ok(status).map_err(|_| {
+            Some(Ok(fio::NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
+                .map_err(|_| {
                     ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)
-                })
-            }
-            Some(Ok(NodeEvent::OnConnectionInfo { .. })) => Ok(()),
+                }),
+            Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => Ok(()),
             _ => Err(ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)),
         }
     }
@@ -136,7 +138,7 @@ impl DirectoryReadyNotifier {
     /// inside it that were exposed to the framework by the component.
     async fn dispatch_capabilities_ready(
         &self,
-        outgoing_node_result: Result<NodeProxy, ModelError>,
+        outgoing_node_result: Result<fio::NodeProxy, ModelError>,
         decl: &ComponentDecl,
         matching_exposes: Vec<&ExposeDecl>,
         target: &Arc<ComponentInstance>,
@@ -152,7 +154,7 @@ impl DirectoryReadyNotifier {
 
     async fn create_events(
         &self,
-        outgoing_node_result: Result<NodeProxy, ModelError>,
+        outgoing_node_result: Result<fio::NodeProxy, ModelError>,
         decl: &ComponentDecl,
         matching_exposes: Vec<&ExposeDecl>,
         target: &Arc<ComponentInstance>,
@@ -209,7 +211,7 @@ impl DirectoryReadyNotifier {
     async fn create_event(
         &self,
         target: &Arc<ComponentInstance>,
-        outgoing_dir_result: Result<&DirectoryProxy, &ModelError>,
+        outgoing_dir_result: Result<&fio::DirectoryProxy, &ModelError>,
         rights: Rights,
         source_path: &CapabilityPath,
         target_name: &CapabilityName,
@@ -269,12 +271,12 @@ impl DirectoryReadyNotifier {
 
     async fn try_opening(
         &self,
-        outgoing_dir: &DirectoryProxy,
+        outgoing_dir: &fio::DirectoryProxy,
         source_path: &str,
         rights: &Rights,
-    ) -> Result<NodeProxy, TryOpenError> {
+    ) -> Result<fio::NodeProxy, TryOpenError> {
         let canonicalized_path = io_util::canonicalize_path(&source_path);
-        let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         outgoing_dir
             .open(
                 rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
@@ -363,9 +365,9 @@ fn filter_matching_exposes<'a>(
 }
 
 async fn clone_outgoing_root(
-    outgoing_dir: &DirectoryProxy,
+    outgoing_dir: &fio::DirectoryProxy,
     target_moniker: &InstancedAbsoluteMoniker,
-) -> Result<NodeProxy, ModelError> {
+) -> Result<fio::NodeProxy, ModelError> {
     let outgoing_dir = io_util::clone_directory(
         &outgoing_dir,
         fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
@@ -374,7 +376,7 @@ async fn clone_outgoing_root(
     let outgoing_dir_channel = outgoing_dir
         .into_channel()
         .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
-    Ok(NodeProxy::from_channel(outgoing_dir_channel))
+    Ok(fio::NodeProxy::from_channel(outgoing_dir_channel))
 }
 
 #[async_trait]

@@ -115,7 +115,7 @@ async fn enumerate_tee_devices() -> Result<Vec<PathBuf>, Error> {
                 break;
             }
             _ => {
-                unreachable!("Non-WatchEvent::EXISTING found before WatchEvent::IDLE");
+                unreachable!("Non-fio::WatchEvent::EXISTING found before fio::WatchEvent::IDLE");
             }
         }
     }

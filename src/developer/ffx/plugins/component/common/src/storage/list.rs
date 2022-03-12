@@ -45,7 +45,7 @@ pub async fn list(storage_admin: StorageAdminProxy, path: String) -> Result<Vec<
 #[cfg(test)]
 mod test {
     use {
-        super::*, crate::storage::test::setup_fake_storage_admin, fidl_fuchsia_io::*,
+        super::*, crate::storage::test::setup_fake_storage_admin, fidl_fuchsia_io as fio,
         futures::TryStreamExt,
     };
 
@@ -59,7 +59,7 @@ mod test {
             // size: u8
             bytes.push(name.len() as u8);
             // type: u8
-            bytes.push(DIRENT_TYPE_FILE);
+            bytes.push(fio::DIRENT_TYPE_FILE);
             // name: [u8]
             for byte in name.bytes() {
                 bytes.push(byte);
@@ -70,14 +70,14 @@ mod test {
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
     // Currently VFS is not cross-platform.
-    fn setup_fake_directory(mut root_dir: DirectoryRequestStream) {
+    fn setup_fake_directory(mut root_dir: fio::DirectoryRequestStream) {
         fuchsia_async::Task::local(async move {
             let dirents = dirents(vec!["foo", "bar"]);
 
             // Serve the root directory
             // Rewind on root directory should succeed
             let request = root_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::Rewind { responder, .. })) = request {
+            if let Ok(Some(fio::DirectoryRequest::Rewind { responder, .. })) = request {
                 responder.send(0).unwrap();
             } else {
                 panic!("did not get rewind request: {:?}", request)
@@ -85,7 +85,7 @@ mod test {
 
             // ReadDirents should report two files in the root directory
             let request = root_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::ReadDirents { max_bytes, responder })) = request {
+            if let Ok(Some(fio::DirectoryRequest::ReadDirents { max_bytes, responder })) = request {
                 assert!(dirents.len() as u64 <= max_bytes);
                 responder.send(0, dirents.as_slice()).unwrap();
             } else {
@@ -94,7 +94,7 @@ mod test {
 
             // ReadDirents should not report any more contents
             let request = root_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::ReadDirents { responder, .. })) = request {
+            if let Ok(Some(fio::DirectoryRequest::ReadDirents { responder, .. })) = request {
                 responder.send(0, &[]).unwrap();
             } else {
                 panic!("did not get readdirents request: {:?}", request)

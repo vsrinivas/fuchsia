@@ -5,7 +5,7 @@
 use {
     crate::local_mirror_manager::LocalMirrorManager,
     anyhow::{Context as _, Error},
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{LocalMirrorRequest, LocalMirrorRequestStream},
     fidl_fuchsia_pkg_ext::RepositoryUrl,
     futures::stream::TryStreamExt as _,
@@ -20,7 +20,7 @@ pub struct PkgLocalMirror {
 }
 
 impl PkgLocalMirror {
-    pub async fn new(usb_dir: &DirectoryProxy) -> Result<Self, Error> {
+    pub async fn new(usb_dir: &fio::DirectoryProxy) -> Result<Self, Error> {
         Ok(Self { manager: LocalMirrorManager::new(usb_dir).await? })
     }
 

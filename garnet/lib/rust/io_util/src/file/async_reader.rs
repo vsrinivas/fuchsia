@@ -4,8 +4,7 @@
 
 use {
     fidl::{client::QueryResponseFut, endpoints::Proxy as _},
-    fidl_fuchsia_io::FileProxy,
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx_status,
     futures::io::AsyncRead,
     std::{
         cmp::min,
@@ -20,7 +19,7 @@ use {
 /// to perform asynchronous file reads that don't block the current thread while waiting for data.
 #[derive(Debug)]
 pub struct AsyncReader {
-    file: FileProxy,
+    file: fio::FileProxy,
     state: State,
 }
 
@@ -43,9 +42,9 @@ impl AsyncReader {
     /// `AsyncRead` implementation that wraps `fuchsia.io/File.Read`, a `poll_read` call that
     /// returns `Pending` would advance the file offset, meaning that interleaving usage of
     /// `AsyncRead` objects that share a channel would return file contents in surprising order.
-    pub fn from_proxy(file: FileProxy) -> Result<Self, AsyncReaderError> {
+    pub fn from_proxy(file: fio::FileProxy) -> Result<Self, AsyncReaderError> {
         let file = match file.into_channel() {
-            Ok(channel) => FileProxy::new(channel),
+            Ok(channel) => fio::FileProxy::new(channel),
             Err(file) => {
                 return Err(AsyncReaderError::NonExclusiveChannelOwnership(file));
             }
@@ -64,9 +63,9 @@ impl AsyncRead for AsyncReader {
             match self.state {
                 State::Empty => {
                     let len = if let Ok(len) = buf.len().try_into() {
-                        min(len, fidl_fuchsia_io::MAX_BUF)
+                        min(len, fio::MAX_BUF)
                     } else {
-                        fidl_fuchsia_io::MAX_BUF
+                        fio::MAX_BUF
                     };
                     self.state =
                         State::Forwarding { fut: self.file.read(len), zero_byte_request: len == 0 };
@@ -126,7 +125,7 @@ impl AsyncRead for AsyncReader {
 #[derive(Debug, thiserror::Error)]
 pub enum AsyncReaderError {
     #[error("Supplied FileProxy did not have exclusive ownership of the underlying channel")]
-    NonExclusiveChannelOwnership(FileProxy),
+    NonExclusiveChannelOwnership(fio::FileProxy),
 }
 
 #[cfg(test)]
@@ -136,7 +135,6 @@ mod tests {
         crate::file,
         assert_matches::assert_matches,
         fidl::endpoints,
-        fidl_fuchsia_io::{FileMarker, FileRequest},
         fuchsia_async as fasync,
         futures::{
             future::poll_fn, io::AsyncReadExt as _, join, StreamExt as _, TryStreamExt as _,
@@ -147,7 +145,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn exclusive_ownership() {
-        let (proxy, _) = endpoints::create_proxy::<FileMarker>().unwrap();
+        let (proxy, _) = endpoints::create_proxy::<fio::FileMarker>().unwrap();
         let _stream = proxy.take_event_stream();
 
         assert_matches!(AsyncReader::from_proxy(proxy), Err(_));
@@ -158,7 +156,7 @@ mod tests {
         let path =
             dir.path().join("read_to_end_with_expected_contents").to_str().unwrap().to_owned();
         let () = file::write_in_namespace(&path, expected_contents).await.unwrap();
-        let file = file::open_in_namespace(&path, fidl_fuchsia_io::OPEN_RIGHT_READABLE).unwrap();
+        let file = file::open_in_namespace(&path, fio::OPEN_RIGHT_READABLE).unwrap();
 
         let mut reader = AsyncReader::from_proxy(file).unwrap();
         let mut actual_contents = vec![];
@@ -174,12 +172,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_to_end_large() {
-        let expected_contents = vec![7u8; (fidl_fuchsia_io::MAX_BUF * 3).try_into().unwrap()];
+        let expected_contents = vec![7u8; (fio::MAX_BUF * 3).try_into().unwrap()];
         read_to_end_file_with_expected_contents(&expected_contents[..]).await;
     }
 
     async fn poll_read_with_specific_buf_size(poll_read_size: u64, expected_file_read_size: u64) {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -191,7 +189,7 @@ mod tests {
         .await;
 
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, .. } => {
+            fio::FileRequest::Read { count, .. } => {
                 assert_eq!(count, expected_file_read_size);
             }
             req => panic!("unhandled request {:?}", req),
@@ -205,13 +203,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_caps_buf_size() {
-        poll_read_with_specific_buf_size(fidl_fuchsia_io::MAX_BUF * 2, fidl_fuchsia_io::MAX_BUF)
-            .await;
+        poll_read_with_specific_buf_size(fio::MAX_BUF * 2, fio::MAX_BUF).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_pending_saves_future() {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -237,7 +234,7 @@ mod tests {
             while let Some(req) = stream.try_next().await.unwrap() {
                 file_read_requests += 1;
                 match req {
-                    FileRequest::Read { count, responder } => {
+                    fio::FileRequest::Read { count, responder } => {
                         assert_eq!(count, 1);
                         responder.send(&mut Ok(vec![file_read_requests])).unwrap();
                     }
@@ -252,7 +249,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_with_smaller_buf_after_pending() {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -268,7 +265,7 @@ mod tests {
         // Respond to the three byte File.Read request.
         let () = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                fio::FileRequest::Read { count, responder } => {
                     assert_eq!(count, 3);
                     responder.send(&mut Ok(b"012".to_vec())).unwrap();
                 }
@@ -302,7 +299,7 @@ mod tests {
 
         let handle_second_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                fio::FileRequest::Read { count, responder } => {
                     assert_eq!(count, 4);
                     responder.send(&mut Ok(b"3456".to_vec())).unwrap();
                 }
@@ -317,7 +314,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn transition_to_empty_on_fidl_error() {
-        let (proxy, _) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, _) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -340,7 +337,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn recover_from_file_read_error() {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -350,7 +347,7 @@ mod tests {
 
         let failing_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                fio::FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Err(zx_status::Status::NO_MEMORY.into_raw())).unwrap();
                 }
@@ -368,7 +365,7 @@ mod tests {
 
         let succeeding_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                fio::FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Ok(b"0".to_vec())).unwrap();
                 }
@@ -383,7 +380,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_zero_then_read_nonzero() {
-        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -396,7 +393,7 @@ mod tests {
 
         // Handle the zero-length File.Read request.
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, responder } => {
+            fio::FileRequest::Read { count, responder } => {
                 assert_eq!(count, 0);
                 responder.send(&mut Ok(vec![])).unwrap();
             }
@@ -413,7 +410,7 @@ mod tests {
         // not.
         let handle_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                fio::FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Ok(vec![1])).unwrap();
                 }
@@ -435,7 +432,7 @@ mod tests {
             for file_size in 0..5 {
                 for second_poll_read_len in 0..5 {
                     let (proxy, mut stream) =
-                        endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+                        endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
                     let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
@@ -453,7 +450,7 @@ mod tests {
                     // Respond to the File.Read request with at most as many bytes as the poll_read
                     // requested.
                     match stream.next().await.unwrap().unwrap() {
-                        FileRequest::Read { count, responder } => {
+                        fio::FileRequest::Read { count, responder } => {
                             assert_eq!(count, u64::try_from(first_poll_read_len).unwrap());
                             let resp = vec![7u8; min(file_size, first_poll_read_len)];
                             responder.send(&mut Ok(resp)).unwrap();
@@ -470,7 +467,7 @@ mod tests {
                     let handle_conditional_file_request = async {
                         if first_poll_read_len == 0 && second_poll_read_len != 0 {
                             match stream.next().await.unwrap().unwrap() {
-                                FileRequest::Read { count, responder } => {
+                                fio::FileRequest::Read { count, responder } => {
                                     assert_eq!(count, u64::try_from(second_poll_read_len).unwrap());
                                     let resp = vec![7u8; min(file_size, second_poll_read_len)];
                                     responder.send(&mut Ok(resp)).unwrap();

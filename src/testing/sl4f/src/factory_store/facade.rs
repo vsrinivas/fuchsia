@@ -13,7 +13,7 @@ use fidl_fuchsia_factory::{
     MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
     WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
 };
-use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE};
+use fidl_fuchsia_io as fio;
 use files_async::{readdir_recursive, DirentKind};
 use fuchsia_component::client::connect_to_protocol;
 use futures::stream::TryStreamExt;
@@ -75,7 +75,8 @@ impl FactoryStoreFacade {
         let req: ReadFileRequest = from_value(args)?;
         let dir_proxy = self.get_directory_for_provider(req.provider)?;
 
-        let file = io_util::open_file(&dir_proxy, &Path::new(&req.filename), OPEN_RIGHT_READABLE)?;
+        let file =
+            io_util::open_file(&dir_proxy, &Path::new(&req.filename), fio::OPEN_RIGHT_READABLE)?;
         let contents = io_util::read_file_bytes(&file).await?;
         Ok(to_value(base64::encode(&contents))?)
     }
@@ -87,8 +88,8 @@ impl FactoryStoreFacade {
     fn get_directory_for_provider(
         &self,
         provider: FactoryStoreProvider,
-    ) -> Result<DirectoryProxy, Error> {
-        let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    ) -> Result<fio::DirectoryProxy, Error> {
+        let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
 
         match provider {
             FactoryStoreProvider::Alpha => {

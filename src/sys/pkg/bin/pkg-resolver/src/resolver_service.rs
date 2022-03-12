@@ -17,7 +17,7 @@ use {
     async_lock::RwLock as AsyncRwLock,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self, DirectoryMarker},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
         PackageResolverRequestStream,
@@ -501,7 +501,7 @@ async fn get_hash(
 async fn resolve(
     package_fetcher: &PackageFetcher,
     url: String,
-    dir_request: ServerEnd<DirectoryMarker>,
+    dir_request: ServerEnd<fio::DirectoryMarker>,
 ) -> Result<(), pkg::ResolveError> {
     trace::duration_begin!("app", "resolve", "url" => url.as_str());
     let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
@@ -578,7 +578,7 @@ async fn resolve_font<'a>(
     font_package_manager: &'a Arc<FontPackageManager>,
     package_fetcher: &'a PackageFetcher,
     package_url: String,
-    directory_request: ServerEnd<DirectoryMarker>,
+    directory_request: ServerEnd<fio::DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
 ) -> Result<(), pkg::ResolveError> {
     let parsed_package_url =

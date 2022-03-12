@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fdio::SpawnBuilder,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryProxy, FileInfo, FileMarker, FileObject, NodeInfo, Representation},
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg::{MetaContents, MetaPackage},
     fuchsia_url::pkg_url::PackageName,
@@ -220,7 +220,10 @@ impl Package {
     }
 
     /// Verifies that the given directory serves the contents of this package.
-    pub async fn verify_contents(&self, dir: &DirectoryProxy) -> Result<(), VerificationError> {
+    pub async fn verify_contents(
+        &self,
+        dir: &fio::DirectoryProxy,
+    ) -> Result<(), VerificationError> {
         let mut raw_meta_far = self.meta_far()?;
         let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
         let mut expected_paths = HashSet::new();
@@ -258,17 +261,17 @@ impl Package {
     }
 }
 
-async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, VerificationError> {
-    let (file, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, VerificationError> {
+    let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-    let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE;
     dir.open(flags, 0, path, ServerEnd::new(server_end.into_channel()))
         .expect("open request to send");
 
     let mut events = file.take_event_stream();
     let open = async move {
         let event = match events.next().await.expect("Some(event)").expect("no fidl error") {
-            fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } => {
+            fio::FileEvent::OnOpen_ { s, info } => {
                 match Status::ok(s) {
                     Err(Status::NOT_FOUND) => {
                         Err(VerificationError::MissingFile { path: path.to_owned() })
@@ -279,24 +282,22 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
                     Ok(()) => Ok(()),
                 }?;
 
-                match *info.expect("FileEvent to have NodeInfo") {
-                    NodeInfo::File(FileObject { event, .. }) => event,
+                match *info.expect("fio::FileEvent to have fio::NodeInfo") {
+                    fio::NodeInfo::File(fio::FileObject { event, .. }) => event,
                     other => {
                         panic!(
-                            "NodeInfo from FileEventStream to be File variant with event: {:?}",
+                            "fio::NodeInfo from fio::FileEventStream to be File variant with event: {:?}",
                             other
                         )
                     }
                 }
             }
-            fidl_fuchsia_io::FileEvent::OnConnectionInfo { info } => {
-                match info.representation {
-                    Some(Representation::File(FileInfo { observer, .. })) => observer,
-                    other => {
-                        panic!("ConnectionInfo from FileEventStream to be File variant with event: {:?}", other)
-                    }
+            fio::FileEvent::OnConnectionInfo { info } => match info.representation {
+                Some(fio::Representation::File(fio::FileInfo { observer, .. })) => observer,
+                other => {
+                    panic!("ConnectionInfo from fio::FileEventStream to be File variant with event: {:?}", other)
                 }
-            }
+            },
         };
 
         // Files served by the package will either provide an event in its describe info (if that
@@ -328,10 +329,7 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     };
 
     let read = async {
-        let result = file
-            .get_backing_memory(fidl_fuchsia_io::VmoFlags::READ)
-            .await?
-            .map_err(Status::from_raw);
+        let result = file.get_backing_memory(fio::VmoFlags::READ).await?.map_err(Status::from_raw);
 
         let mut expect_empty_blob = false;
 
@@ -367,7 +365,7 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
         let mut buf = vec![];
         loop {
             let chunk = file
-                .read(fidl_fuchsia_io::MAX_BUF)
+                .read(fio::MAX_BUF)
                 .await
                 .context("file read to respond")?
                 .map_err(Status::from_raw)

@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Error},
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_test_fidl_pkg::{Backing, HarnessRequest, HarnessRequestStream},
     fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
@@ -54,7 +54,7 @@ async fn main_inner() -> Result<(), Error> {
     let pkgfs_backed_package = io_util::directory::open_directory(
         &pkgfs.root_dir_proxy().unwrap(),
         &format!("packages/{}/0", test_package.name()),
-        fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
+        fio::OPEN_FLAG_DIRECTORY,
     )
     .await
     .unwrap();
@@ -64,7 +64,7 @@ async fn main_inner() -> Result<(), Error> {
         vfs::execution_scope::ExecutionScope::new(),
         blobfs_client,
         *test_package.meta_far_merkle_root(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         dir_request,
     )
     .await
@@ -101,8 +101,8 @@ async fn main_inner() -> Result<(), Error> {
 /// Serve test.fidl.pkg.Harness.
 async fn serve_harness(
     mut stream: HarnessRequestStream,
-    pkgfs_backed_package: DirectoryProxy,
-    pkgdir_backed_package: DirectoryProxy,
+    pkgfs_backed_package: fio::DirectoryProxy,
+    pkgdir_backed_package: fio::DirectoryProxy,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await.context("while pulling next event")? {
         let HarnessRequest::ConnectPackage { backing, dir, responder } = event;
@@ -112,7 +112,7 @@ async fn serve_harness(
         };
 
         let () = pkg
-            .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(dir.into_channel()))
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(dir.into_channel()))
             .expect("clone to succeed");
 
         responder.send(&mut Ok(())).context("while sending success response")?;
@@ -122,8 +122,7 @@ async fn serve_harness(
 
 /// Constructs a test package to be used in the integration tests.
 async fn make_test_package() -> Package {
-    let exceeds_max_buf_contents =
-        repeat_by_n('a', (fidl_fuchsia_io::MAX_BUF + 1).try_into().unwrap());
+    let exceeds_max_buf_contents = repeat_by_n('a', (fio::MAX_BUF + 1).try_into().unwrap());
 
     // Each file's contents is the file's path as bytes for testing simplicity.
     let mut builder = PackageBuilder::new("test-package")
@@ -189,11 +188,7 @@ async fn make_test_package() -> Package {
         */
         for seed in ('a'..='z').chain('A'..='E') {
             builder = builder.add_resource_at(
-                format!(
-                    "{}{}",
-                    base,
-                    repeat_by_n(seed, fidl_fuchsia_io::MAX_FILENAME.try_into().unwrap())
-                ),
+                format!("{}{}", base, repeat_by_n(seed, fio::MAX_FILENAME.try_into().unwrap())),
                 &b""[..],
             )
         }

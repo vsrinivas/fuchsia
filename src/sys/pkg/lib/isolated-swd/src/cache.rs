@@ -6,7 +6,7 @@ use {
     crate::pkgfs::Pkgfs,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -31,7 +31,7 @@ pub struct Cache {
 
 impl Cache {
     /// Launch the package cache using the given pkgfs and blobfs.
-    pub fn launch(pkgfs: &Pkgfs, blobfs: ClientEnd<DirectoryMarker>) -> Result<Self, Error> {
+    pub fn launch(pkgfs: &Pkgfs, blobfs: ClientEnd<fio::DirectoryMarker>) -> Result<Self, Error> {
         Self::launch_with_components(pkgfs, blobfs, CACHE_URL)
     }
 
@@ -39,7 +39,7 @@ impl Cache {
     /// manifest must be provided.
     fn launch_with_components(
         pkgfs: &Pkgfs,
-        blobfs: ClientEnd<DirectoryMarker>,
+        blobfs: ClientEnd<fio::DirectoryMarker>,
         cache_url: &str,
     ) -> Result<Self, Error> {
         let mut pkg_cache = AppBuilder::new(cache_url)

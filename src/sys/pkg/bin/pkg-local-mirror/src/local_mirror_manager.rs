@@ -5,33 +5,28 @@
 use {
     anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileMarker, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{GetBlobError, GetMetadataError},
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryUrl},
     fuchsia_syslog::fx_log_info,
 };
 
 pub struct LocalMirrorManager {
-    blobs_dir: DirectoryProxy,
-    metadata_dir: DirectoryProxy,
+    blobs_dir: fio::DirectoryProxy,
+    metadata_dir: fio::DirectoryProxy,
 }
 
 impl LocalMirrorManager {
-    pub async fn new(usb_dir: &DirectoryProxy) -> Result<Self, Error> {
-        let blobs_dir = io_util::directory::open_directory(
-            usb_dir,
-            "blobs",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )
-        .await
-        .context("while opening blobs dir")?;
+    pub async fn new(usb_dir: &fio::DirectoryProxy) -> Result<Self, Error> {
+        let blobs_dir =
+            io_util::directory::open_directory(usb_dir, "blobs", fio::OPEN_RIGHT_READABLE)
+                .await
+                .context("while opening blobs dir")?;
 
         let metadata_dir = io_util::directory::open_directory(
             usb_dir,
             "repository_metadata",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
         .await
         .context("while opening metadata dir")?;
@@ -48,14 +43,14 @@ impl LocalMirrorManager {
         &self,
         repo_url: RepositoryUrl,
         path: &str,
-        metadata: ServerEnd<FileMarker>,
+        metadata: ServerEnd<fio::FileMarker>,
     ) -> Result<(), GetMetadataError> {
         let path = format!("{}/{}", repo_url.url().host(), path);
         let () = self
             .metadata_dir
             .open(
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                MODE_TYPE_FILE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(metadata.into_channel()),
             )
@@ -71,7 +66,7 @@ impl LocalMirrorManager {
     pub async fn get_blob(
         &self,
         blob_id: BlobId,
-        blob: ServerEnd<FileMarker>,
+        blob: ServerEnd<fio::FileMarker>,
     ) -> Result<(), GetBlobError> {
         let blob_id = blob_id.to_string();
         let (first, last) = blob_id.split_at(2);
@@ -80,8 +75,8 @@ impl LocalMirrorManager {
         let () = self
             .blobs_dir
             .open(
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                MODE_TYPE_FILE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                fio::MODE_TYPE_FILE,
                 &path,
                 ServerEnd::new(blob.into_channel()),
             )

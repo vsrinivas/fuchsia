@@ -1,15 +1,14 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl_fuchsia_io::DirectoryProxy;
+
+use fidl_fuchsia_io as fio;
 use fuchsia_async::futures::TryStreamExt;
 
-async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
-        dir,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    )?)
-    .await?;
+async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
+    let mut watcher =
+        fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(dir, fio::OPEN_RIGHT_READABLE)?)
+            .await?;
     while let Some(msg) = watcher.try_next().await? {
         if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
             && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
@@ -27,11 +26,11 @@ async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::E
 /// directory to be available before it opens it. If the path never appears
 /// this function will wait forever.
 pub async fn recursive_wait_and_open_node_with_flags(
-    initial_dir: &DirectoryProxy,
+    initial_dir: &fio::DirectoryProxy,
     name: &str,
     flags: u32,
     mode: u32,
-) -> Result<fidl_fuchsia_io::NodeProxy, anyhow::Error> {
+) -> Result<fio::NodeProxy, anyhow::Error> {
     let mut dir = io_util::clone_directory(initial_dir, flags)?;
     let path = std::path::Path::new(name);
     let components = path.components().collect::<Vec<_>>();
@@ -60,14 +59,14 @@ pub async fn recursive_wait_and_open_node_with_flags(
 /// This function opens node as a RW service. This has the correct permissions
 /// to connect to a driver's API.
 pub async fn recursive_wait_and_open_node(
-    initial_dir: &DirectoryProxy,
+    initial_dir: &fio::DirectoryProxy,
     name: &str,
-) -> Result<fidl_fuchsia_io::NodeProxy, anyhow::Error> {
+) -> Result<fio::NodeProxy, anyhow::Error> {
     recursive_wait_and_open_node_with_flags(
         initial_dir,
         name,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_SERVICE,
     )
     .await
 }
@@ -80,8 +79,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_two_directories() {
-        let (client, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        let (client, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
         let fs_scope = vfs::execution_scope::ExecutionScope::new();
         let root = vfs::pseudo_directory! {
@@ -91,7 +89,7 @@ mod tests {
         };
         root.open(
             fs_scope.clone(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             0,
             vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(server.into_channel()),

@@ -5,6 +5,7 @@
 use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_hardware_display::{self as display, ControllerEvent},
+    fidl_fuchsia_io as fio,
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::{self as zx, HandleBased},
@@ -357,11 +358,11 @@ impl ControllerInner {
 // watching the directory.
 async fn watch_first_file<P: AsRef<Path> + AsRef<OsStr>>(dir: P) -> Result<PathBuf> {
     let path = Path::new(&dir);
-    let dir: fidl_fuchsia_io::DirectoryProxy = {
+    let dir: fio::DirectoryProxy = {
         let raw_dir = File::open(&path)?;
         let zx_channel = fdio::clone_channel(&raw_dir)?;
         let fasync_channel = fasync::Channel::from_channel(zx_channel)?;
-        fidl_fuchsia_io::DirectoryProxy::from_channel(fasync_channel)
+        fio::DirectoryProxy::from_channel(fasync_channel)
     };
 
     let mut watcher = Watcher::new(dir).await.map_err(|_| Error::VfsWatcherError)?;

@@ -18,6 +18,8 @@ use crate::{
     execution_scope::ExecutionScope,
 };
 
+use fidl_fuchsia_io as fio;
+
 use {slab::Slab, std::sync::Arc};
 
 /// Wraps all watcher connections observing one directory.  The directory is responsible for
@@ -45,13 +47,13 @@ impl Watchers {
     /// of additional managing of functions and state.  Traits do not support async methods yet, so
     /// we would need to manage futures returned by the [`EventProducer`] methods explicitly.
     /// Plus, for the [`crate::directory::simple::Simple`] directory it is all unnecessary.
-    #[must_use = "Caller of add() must send WATCH_EVENT_EXISTING and WatchMask::IDLE on the \
+    #[must_use = "Caller of add() must send WATCH_EVENT_EXISTING and fio::WatchMask::IDLE on the \
                   returned controller"]
     pub fn add(
         &mut self,
         scope: ExecutionScope,
         directory: Arc<dyn Directory>,
-        mask: fidl_fuchsia_io::WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Arc<Controller> {
         let entry = self.0.vacant_entry();

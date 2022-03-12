@@ -8,10 +8,7 @@ use {
     anyhow::Error,
     fidl::endpoints::{create_proxy, ProtocolMarker, Proxy, RequestStream},
     fidl_fuchsia_hardware_input as finput,
-    fidl_fuchsia_hardware_power_statecontrol as statecontrol,
-    fidl_fuchsia_io::{
-        DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_hardware_power_statecontrol as statecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_syslog::{self as syslog, macros::*},
@@ -161,12 +158,12 @@ async fn main() -> Result<(), Error> {
     let (proxy, server_end) = create_proxy()?;
     input_dir.clone().open(
         ExecutionScope::new(),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_DIRECTORY,
         pfsPath::dot(),
         server_end,
     );
-    fs.add_remote("input", DirectoryProxy::from_channel(proxy.into_channel().unwrap()));
+    fs.add_remote("input", fio::DirectoryProxy::from_channel(proxy.into_channel().unwrap()));
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
 

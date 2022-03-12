@@ -198,7 +198,7 @@ impl ScopedInstanceFactory {
             name: child_name.clone(),
             collection: Some(self.collection_name.clone()),
         };
-        let (exposed_dir, server) = endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+        let (exposed_dir, server) = endpoints::create_proxy::<fio::DirectoryMarker>()
             .context("Failed to create directory proxy")?;
         let () = realm
             .open_exposed_dir(&mut child_ref, server)
@@ -330,8 +330,8 @@ impl ScopedInstance {
     ) -> Result<(), anyhow::Error> {
         self.exposed_dir
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_SERVICE,
                 protocol_name,
                 ServerEnd::new(server_end),
             )

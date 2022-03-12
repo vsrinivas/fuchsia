@@ -7,10 +7,7 @@ use {
     cm_rust::CapabilityPath,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{EchoRequest, EchoRequestStream},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     futures::TryStreamExt,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
     vfs::{
@@ -47,11 +44,11 @@ impl OutDir {
     }
 
     /// Adds the given directory proxy at location "/data".
-    pub fn add_directory_proxy(&mut self, test_dir_proxy: &DirectoryProxy) {
+    pub fn add_directory_proxy(&mut self, test_dir_proxy: &fio::DirectoryProxy) {
         self.add_entry(
             CapabilityPath::try_from("/data").unwrap(),
             remote_dir(
-                io_util::clone_directory(&test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                io_util::clone_directory(&test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
                     .expect("could not clone directory"),
             ),
         );
@@ -77,11 +74,11 @@ impl OutDir {
 
         // Construct a function. Each time it is invoked, we connect a new Zircon channel
         // `server_end` to the directory.
-        Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+        Box::new(move |server_end: ServerEnd<fio::DirectoryMarker>| {
             dir.clone().open(
                 ExecutionScope::new(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
                 ServerEnd::new(server_end.into_channel()),
             );

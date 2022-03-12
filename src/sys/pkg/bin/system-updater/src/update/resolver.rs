@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy, fidl_fuchsia_pkg::PackageResolverProxy,
-    fuchsia_url::pkg_url::PkgUrl, futures::prelude::*, thiserror::Error,
-    update_package::UpdatePackage,
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverProxy, fuchsia_url::pkg_url::PkgUrl,
+    futures::prelude::*, thiserror::Error, update_package::UpdatePackage,
 };
 
 const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
@@ -38,7 +37,7 @@ pub(super) async fn resolve_update_package(
 pub(super) fn resolve_packages<'a, I>(
     pkg_resolver: &'a PackageResolverProxy,
     urls: I,
-) -> impl Stream<Item = Result<DirectoryProxy, ResolveError>> + 'a
+) -> impl Stream<Item = Result<fio::DirectoryProxy, ResolveError>> + 'a
 where
     I: 'a + Iterator<Item = &'a PkgUrl>,
 {
@@ -50,7 +49,7 @@ where
 async fn resolve_package(
     pkg_resolver: &PackageResolverProxy,
     url: &PkgUrl,
-) -> Result<DirectoryProxy, ResolveError> {
+) -> Result<fio::DirectoryProxy, ResolveError> {
     let (dir, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(ResolveError::CreateProxy)?;
     let res = pkg_resolver.resolve(&url.to_string(), dir_server_end);

@@ -20,7 +20,7 @@ use {
     },
     anyhow::{anyhow, Error},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     futures::lock::Mutex,
     futures::prelude::*,
     log::error,
@@ -58,8 +58,8 @@ async fn get_omaha_config(version: &str, service_url: &str) -> Config {
 
 /// Get the update URL to use from Omaha, and install the update.
 pub async fn install_update(
-    blobfs: ClientEnd<DirectoryMarker>,
-    paver: ClientEnd<DirectoryMarker>,
+    blobfs: ClientEnd<fio::DirectoryMarker>,
+    paver: ClientEnd<fio::DirectoryMarker>,
     cache: Arc<Cache>,
     resolver: Arc<Resolver>,
     board_name: String,
@@ -95,8 +95,8 @@ pub async fn install_update(
 }
 
 async fn install_update_with_http<HR>(
-    blobfs: ClientEnd<DirectoryMarker>,
-    paver: ClientEnd<DirectoryMarker>,
+    blobfs: ClientEnd<fio::DirectoryMarker>,
+    paver: ClientEnd<fio::DirectoryMarker>,
     cache: Arc<Cache>,
     resolver: Arc<Resolver>,
     board_name: String,

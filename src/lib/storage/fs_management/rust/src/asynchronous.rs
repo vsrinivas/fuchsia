@@ -12,10 +12,7 @@ use {
     cstr::cstr,
     fdio::SpawnAction,
     fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FilesystemInfo, NodeMarker, NodeProxy,
-        CLONE_FLAG_SAME_RIGHTS,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_runtime::{HandleInfo, HandleType},
@@ -26,24 +23,24 @@ use {
 /// Asynchronously manages a block device for filesystem operations.
 pub struct Filesystem<FSC> {
     config: FSC,
-    block_device: NodeProxy,
+    block_device: fio::NodeProxy,
 }
 
 impl<FSC: FSConfig> Filesystem<FSC> {
     /// Creates a new `Filesystem` with the block device represented by `node_proxy`.
-    pub fn from_node(node_proxy: NodeProxy, config: FSC) -> Self {
+    pub fn from_node(node_proxy: fio::NodeProxy, config: FSC) -> Self {
         Self { config, block_device: node_proxy }
     }
 
     /// Creates a new `Filesystem` with the block device represented by `channel`.
     pub fn from_channel(channel: Channel, config: FSC) -> Result<Self, fidl::Error> {
-        Ok(Self::from_node(ClientEnd::<NodeMarker>::new(channel).into_proxy()?, config))
+        Ok(Self::from_node(ClientEnd::<fio::NodeMarker>::new(channel).into_proxy()?, config))
     }
 
     // Clone a Channel to the block device.
     fn get_block_handle(&self) -> Result<Handle, fidl::Error> {
         let (block_device, server) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.block_device.clone(CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server))?;
+        self.block_device.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server))?;
         Ok(block_device.into())
     }
 
@@ -118,8 +115,10 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         }
     }
 
-    async fn do_serve(&self) -> Result<(Process, DirectoryProxy, DirectoryProxy), ServeError> {
-        let (export_root, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    async fn do_serve(
+        &self,
+    ) -> Result<(Process, fio::DirectoryProxy, fio::DirectoryProxy), ServeError> {
+        let (export_root, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
         // SpawnAction is not Send, so make sure it is dropped before any `await`s.
         let process = {
@@ -143,11 +142,11 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         };
 
         // Wait until the filesystem is ready to take incoming requests.
-        let (root_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (root_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         export_root.open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE,
+            fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_POSIX_WRITABLE,
             0,
             "root",
             server_end.into_channel().into(),
@@ -161,13 +160,13 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 pub struct ServingFilesystem<FSC> {
     filesystem: Option<Filesystem<FSC>>,
     process: Process,
-    export_root: DirectoryProxy,
-    root_dir: DirectoryProxy,
+    export_root: fio::DirectoryProxy,
+    root_dir: fio::DirectoryProxy,
 }
 
 impl<FSC: FSConfig> ServingFilesystem<FSC> {
     /// Returns a proxy to the root directory of the serving filesystem.
-    pub fn root(&self) -> &DirectoryProxy {
+    pub fn root(&self) -> &fio::DirectoryProxy {
         &self.root_dir
     }
 
@@ -180,7 +179,7 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     /// Returns [`Err`] if binding failed.
     pub fn bind_to_path<'a>(&'a self, path: &str) -> Result<BindGuard<'a, FSC>, BindError> {
         let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.root_dir.clone(CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        self.root_dir.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
         let namespace = fdio::Namespace::installed().map_err(BindError::LocalNamespace)?;
         namespace.bind(path, client_end).map_err(BindError::Bind)?;
         Ok(BindGuard { _filesystem: self, namespace, path: path.to_string() })
@@ -228,7 +227,7 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if querying the filesystem failed.
-    pub async fn query(&self) -> Result<Box<FilesystemInfo>, QueryError> {
+    pub async fn query(&self) -> Result<Box<fio::FilesystemInfo>, QueryError> {
         let (status, info) = self.root_dir.query_filesystem().await?;
         Status::ok(status).map_err(QueryError::DirectoryQuery)?;
         info.ok_or(QueryError::DirectoryEmptyResult)

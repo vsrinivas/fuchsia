@@ -14,10 +14,7 @@ use {
     },
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     std::sync::Arc,
     storage_device::{fake_device::FakeDevice, DeviceHolder},
@@ -30,7 +27,7 @@ use {
 struct State {
     filesystem: OpenFxFilesystem,
     volume: FxVolumeAndRoot,
-    root: DirectoryProxy,
+    root: fio::DirectoryProxy,
 }
 
 impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
@@ -72,11 +69,12 @@ impl TestFixture {
             (filesystem, vol)
         };
         let scope = ExecutionScope::build().token_registry(token_registry::Simple::new()).new();
-        let (root, server_end) = create_proxy::<DirectoryMarker>().expect("create_proxy failed");
+        let (root, server_end) =
+            create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
         volume.root().clone().open(
             scope.clone(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
@@ -147,7 +145,7 @@ impl TestFixture {
         device
     }
 
-    pub fn root(&self) -> &DirectoryProxy {
+    pub fn root(&self) -> &fio::DirectoryProxy {
         &self.state.as_ref().unwrap().root
     }
 
@@ -162,23 +160,23 @@ impl Drop for TestFixture {
     }
 }
 
-pub async fn close_file_checked(file: FileProxy) {
+pub async fn close_file_checked(file: fio::FileProxy) {
     file.sync().await.expect("FIDL call failed").map_err(Status::from_raw).expect("sync failed");
     file.close().await.expect("FIDL call failed").map_err(Status::from_raw).expect("close failed");
 }
 
-pub async fn close_dir_checked(dir: DirectoryProxy) {
+pub async fn close_dir_checked(dir: fio::DirectoryProxy) {
     dir.close().await.expect("FIDL call failed").map_err(Status::from_raw).expect("close failed");
 }
 
 // Utility function to open a new node connection under |dir|.
 pub async fn open_file(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> Result<FileProxy, Error> {
-    let (proxy, server_end) = create_proxy::<FileMarker>().expect("create_proxy failed");
+) -> Result<fio::FileProxy, Error> {
+    let (proxy, server_end) = create_proxy::<fio::FileMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
     proxy.describe().await?;
     Ok(proxy)
@@ -186,22 +184,22 @@ pub async fn open_file(
 
 // Like |open_file|, but asserts if the open call fails.
 pub async fn open_file_checked(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> FileProxy {
+) -> fio::FileProxy {
     open_file(dir, flags, mode, path).await.expect("open_file failed")
 }
 
 // Utility function to open a new node connection under |dir|.
 pub async fn open_dir(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> Result<DirectoryProxy, Error> {
-    let (proxy, server_end) = create_proxy::<DirectoryMarker>().expect("create_proxy failed");
+) -> Result<fio::DirectoryProxy, Error> {
+    let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
     proxy.describe().await?;
     Ok(proxy)
@@ -209,10 +207,10 @@ pub async fn open_dir(
 
 // Like |open_dir|, but asserts if the open call fails.
 pub async fn open_dir_checked(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> DirectoryProxy {
+) -> fio::DirectoryProxy {
     open_dir(dir, flags, mode, path).await.expect("open_dir failed")
 }

@@ -6,7 +6,7 @@ use {
     crate::{do_fetch, TestEnv},
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::{DirectoryProxy, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::PackageIndexIteratorMarker,
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
@@ -47,8 +47,8 @@ fn sorted<T: Ord>(mut vec: Vec<T>) -> Vec<T> {
     vec
 }
 
-async fn ls(dir: &DirectoryProxy, path: &str) -> Result<Vec<String>, files_async::Error> {
-    let d = &open_directory(&dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+async fn ls(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<String>, files_async::Error> {
+    let d = &open_directory(&dir, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
     Ok(files_async::readdir(&d).await?.into_iter().map(|dir_entry| dir_entry.name).collect())
 }
 
@@ -132,14 +132,14 @@ async fn test_pkgfs_with_cache_index() {
     let d = &env.proxies.pkgfs;
 
     system_image_package
-        .verify_contents(&open_directory(d, "system", OPEN_RIGHT_READABLE).await.unwrap())
+        .verify_contents(&open_directory(d, "system", fio::OPEN_RIGHT_READABLE).await.unwrap())
         .await
         .expect("valid system_image");
 
     assert_eq!(sorted(ls(&d, "packages").await.unwrap()), ["example", "system_image"]);
 
     pkg.verify_contents(
-        &open_directory(d, "packages/example/0", OPEN_RIGHT_READABLE).await.unwrap(),
+        &open_directory(d, "packages/example/0", fio::OPEN_RIGHT_READABLE).await.unwrap(),
     )
     .await
     .expect("valid example package");
@@ -178,14 +178,14 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
     let d = &env.proxies.pkgfs;
 
     system_image_package
-        .verify_contents(&open_directory(d, "system", OPEN_RIGHT_READABLE).await.unwrap())
+        .verify_contents(&open_directory(d, "system", fio::OPEN_RIGHT_READABLE).await.unwrap())
         .await
         .expect("valid system_image");
 
     assert_eq!(ls(&d, "packages").await.unwrap(), ["system_image"]);
 
     assert_matches!(
-        open_file(d, "packages/example/0/meta", OPEN_RIGHT_READABLE).await,
+        open_file(d, "packages/example/0/meta", fio::OPEN_RIGHT_READABLE).await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))
     );
 
@@ -193,7 +193,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
         open_file(
             d,
             format!("versions/{}/meta", pkg.meta_far_merkle_root()).as_str(),
-            OPEN_RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         )
         .await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))
@@ -232,14 +232,14 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     let d = &env.proxies.pkgfs;
 
     system_image_package
-        .verify_contents(&open_directory(d, "system", OPEN_RIGHT_READABLE).await.unwrap())
+        .verify_contents(&open_directory(d, "system", fio::OPEN_RIGHT_READABLE).await.unwrap())
         .await
         .expect("valid system_image");
 
     assert_eq!(ls(&d, "packages").await.unwrap(), ["system_image"]);
 
     assert_matches!(
-        open_file(d, "packages/example/0/meta", OPEN_RIGHT_READABLE).await,
+        open_file(d, "packages/example/0/meta", fio::OPEN_RIGHT_READABLE).await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))
     );
 
@@ -247,7 +247,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
         open_file(
             d,
             format!("versions/{}/meta", pkg.meta_far_merkle_root()).as_str(),
-            OPEN_RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         )
         .await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))
@@ -295,7 +295,7 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let _ = do_fetch(&env.proxies.package_cache, &pkg2).await;
 
     pkg2.verify_contents(
-        &open_directory(&d, "packages/example/0", OPEN_RIGHT_READABLE).await.unwrap(),
+        &open_directory(&d, "packages/example/0", fio::OPEN_RIGHT_READABLE).await.unwrap(),
     )
     .await
     .expect("pkg2 replaced pkg");
@@ -305,7 +305,7 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
         open_file(
             d,
             format!("versions/{}", pkg.meta_far_merkle_root()).as_str(),
-            OPEN_RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         )
         .await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))
@@ -320,7 +320,7 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
 
     // cache version is accessible again.
     pkg.verify_contents(
-        &open_directory(&d, "packages/example/0", OPEN_RIGHT_READABLE).await.unwrap(),
+        &open_directory(&d, "packages/example/0", fio::OPEN_RIGHT_READABLE).await.unwrap(),
     )
     .await
     .unwrap();
@@ -329,7 +329,7 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
         &open_directory(
             &d,
             &format!("versions/{}", pkg.meta_far_merkle_root()),
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
         .await
         .unwrap(),
@@ -342,7 +342,7 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
         open_file(
             d,
             format!("versions/{}", pkg2.meta_far_merkle_root()).as_str(),
-            OPEN_RIGHT_READABLE
+            fio::OPEN_RIGHT_READABLE
         )
         .await,
         Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND))

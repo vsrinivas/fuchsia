@@ -4,7 +4,7 @@
 
 use {
     crate::{image::Image, image::ImageClass, image::ImageType, update_mode::UpdateMode},
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     std::collections::BTreeSet,
     thiserror::Error,
 };
@@ -73,7 +73,9 @@ impl UnverifiedImageList {
     }
 }
 
-async fn list_dir_files(proxy: &DirectoryProxy) -> Result<BTreeSet<String>, ResolveImagesError> {
+async fn list_dir_files(
+    proxy: &fio::DirectoryProxy,
+) -> Result<BTreeSet<String>, ResolveImagesError> {
     let entries = files_async::readdir(proxy).await.map_err(ResolveImagesError::ListCandidates)?;
 
     let names = entries
@@ -101,7 +103,7 @@ fn resolve(requests: &[ImageType], available: &BTreeSet<String>) -> UnverifiedIm
 }
 
 pub(crate) async fn resolve_images(
-    proxy: &DirectoryProxy,
+    proxy: &fio::DirectoryProxy,
     requests: &[ImageType],
 ) -> Result<UnverifiedImageList, ResolveImagesError> {
     let files = list_dir_files(proxy).await?;
@@ -114,7 +116,6 @@ mod tests {
         super::*,
         crate::{TestUpdatePackage, UpdatePackage},
         assert_matches::assert_matches,
-        fidl_fuchsia_io::DirectoryMarker,
         maplit::btreeset,
         std::sync::Arc,
         vfs::{
@@ -204,8 +205,9 @@ mod tests {
         );
     }
 
-    fn spawn_vfs(dir: Arc<vfs::directory::immutable::simple::Simple>) -> DirectoryProxy {
-        let (proxy, proxy_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    fn spawn_vfs(dir: Arc<vfs::directory::immutable::simple::Simple>) -> fio::DirectoryProxy {
+        let (proxy, proxy_server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let scope = ExecutionScope::new();
         dir.open(
             scope,
@@ -238,7 +240,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_images_fails_on_closed_directory() {
-        let (proxy, _) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let pkg = UpdatePackage::new(proxy);
 
         assert_matches!(pkg.resolve_images(&[]).await, Err(ResolveImagesError::ListCandidates(_)));

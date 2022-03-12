@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_driver_test as fdt,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io as fio,
     fidl_test_structuredconfig_receiver as scr, fidl_test_structuredconfig_receiver_shim as scrs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -19,7 +18,7 @@ enum IncomingRequest {
 }
 
 async fn connect_to_puppet(
-    expose_dir: &DirectoryProxy,
+    expose_dir: &fio::DirectoryProxy,
 ) -> anyhow::Result<scr::ConfigReceiverPuppetProxy> {
     // Find an instance of `ConfigService`.
     let instance_name;

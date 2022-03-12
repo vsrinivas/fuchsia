@@ -35,7 +35,7 @@ pub fn unwrap_add_entry_span(entry: &str, location: &str, res: Result<(), Status
 
 #[cfg(test)]
 mod tests {
-    use {fidl_fuchsia_io::MAX_FILENAME, vfs_macros::pseudo_directory_max_filename};
+    use {fidl_fuchsia_io as fio, vfs_macros::pseudo_directory_max_filename};
 
     #[test]
     fn macros_max_filename_constant() {
@@ -44,13 +44,13 @@ mod tests {
         // in there and then make sure that the values are in sync.
         let in_macros = pseudo_directory_max_filename! {};
         assert!(
-            MAX_FILENAME == in_macros,
+            fio::MAX_FILENAME == in_macros,
             "\n`fidl_fuchsia_io::MAX_FILENAME` and the value hardcoded in \
              `vfs/rust/macros/src/lib.rs` have diverged.\n\
              Please update the `MAX_FILENAME` value in `vfs/rust/macros/src/lib.rs`.\n\
              `fidl_fuchsia_io::MAX_FILENAME`: {}\n\
              vfs/rust/macros/src/lib.rs:MAX_FILENAME: {}",
-            MAX_FILENAME,
+            fio::MAX_FILENAME,
             in_macros
         );
     }

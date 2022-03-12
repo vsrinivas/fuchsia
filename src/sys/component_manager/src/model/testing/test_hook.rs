@@ -16,8 +16,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
     moniker::{AbsoluteMonikerBase, ChildMonikerBase},
     routing::capability_source::InternalCapability,
@@ -381,7 +380,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             .open(task_scope, flags, open_mode, PathBuf::new(), &mut server_chan)
             .await?;
 
-        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
+        let hub_proxy = ClientEnd::<fio::DirectoryMarker>::new(client_chan)
             .into_proxy()
             .expect("failed to create directory proxy");
 

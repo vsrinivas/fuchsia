@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Error},
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         PackageResolverMarker, PackageResolverProxy, PackageResolverRequestStream,
         PackageResolverResolveResponder,
@@ -42,10 +42,10 @@ impl TestPackage {
         self
     }
 
-    fn serve_on(&self, dir_request: ServerEnd<DirectoryMarker>) {
+    fn serve_on(&self, dir_request: ServerEnd<fio::DirectoryMarker>) {
         // Connect to the backing directory which we'll proxy _most_ requests to.
         let (backing_dir_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         fdio::service_connect(self.root.to_str().unwrap(), server_end.into_channel()).unwrap();
 
         // Open the package directory using the directory request given by the client
@@ -61,10 +61,10 @@ impl TestPackage {
 
 // Should roughly be kept in sync with the heuristic under Open in pkgfs/package_directory.go
 fn should_redirect_request_to_merkle_file(path: &str, flags: u32, mode: u32) -> bool {
-    let mode_file = mode & fidl_fuchsia_io::MODE_TYPE_MASK == fidl_fuchsia_io::MODE_TYPE_FILE;
-    let file_flag = flags & fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY != 0;
-    let dir_flag = flags & fidl_fuchsia_io::OPEN_FLAG_DIRECTORY != 0;
-    let path_flag = flags & fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE != 0;
+    let mode_file = mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_FILE;
+    let file_flag = flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0;
+    let dir_flag = flags & fio::OPEN_FLAG_DIRECTORY != 0;
+    let path_flag = flags & fio::OPEN_FLAG_NODE_REFERENCE != 0;
 
     let open_as_file = mode_file || file_flag;
     let open_as_directory = dir_flag || path_flag;
@@ -75,16 +75,16 @@ fn should_redirect_request_to_merkle_file(path: &str, flags: u32, mode: u32) -> 
 /// Handles a stream of requests for a package directory,
 /// redirecting file-mode Open requests for /meta to an internal file.
 pub fn handle_package_directory_stream(
-    mut stream: DirectoryRequestStream,
-    backing_dir_proxy: DirectoryProxy,
+    mut stream: fio::DirectoryRequestStream,
+    backing_dir_proxy: fio::DirectoryProxy,
 ) -> impl Future<Output = ()> {
     async move {
         let (package_contents_node_proxy, package_contents_dir_server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         backing_dir_proxy
             .open(
-                fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-                fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 PACKAGE_CONTENTS_PATH,
                 package_contents_dir_server_end,
             )
@@ -92,11 +92,11 @@ pub fn handle_package_directory_stream(
 
         // Effectively cast our package_contents_node_proxy to a directory, as it must be in order for these tests to work.
         let package_contents_dir_proxy =
-            DirectoryProxy::new(package_contents_node_proxy.into_channel().unwrap());
+            fio::DirectoryProxy::new(package_contents_node_proxy.into_channel().unwrap());
 
         while let Some(req) = stream.next().await {
             match req.unwrap() {
-                DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+                fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                     // If the client is trying to read the meta directory _as a file_, redirect them
                     // to the file which actually holds the merkle for the purposes of these tests.
                     // Otherwise, redirect to the real package contents.
@@ -113,14 +113,14 @@ pub fn handle_package_directory_stream(
                         package_contents_dir_proxy.open(flags, mode, &path, object).unwrap();
                     }
                 }
-                DirectoryRequest::ReadDirents { max_bytes, responder } => {
+                fio::DirectoryRequest::ReadDirents { max_bytes, responder } => {
                     let results = package_contents_dir_proxy
                         .read_dirents(max_bytes)
                         .await
                         .expect("read package contents dir");
                     responder.send(results.0, &results.1).expect("send ReadDirents response");
                 }
-                DirectoryRequest::Rewind { responder } => {
+                fio::DirectoryRequest::Rewind { responder } => {
                     responder
                         .send(
                             package_contents_dir_proxy
@@ -130,11 +130,11 @@ pub fn handle_package_directory_stream(
                         )
                         .expect("could send Rewind Response");
                 }
-                DirectoryRequest::CloseDeprecated { responder } => {
+                fio::DirectoryRequest::CloseDeprecated { responder } => {
                     // Don't do anything with this for now.
                     responder.send(Status::OK.into_raw()).expect("send Close response")
                 }
-                DirectoryRequest::Close { responder } => {
+                fio::DirectoryRequest::Close { responder } => {
                     // Don't do anything with this for now.
                     responder.send(&mut Ok(())).expect("send Close response")
                 }
@@ -272,7 +272,7 @@ impl MockResolverService {
     async fn handle_resolve(
         &self,
         package_url: String,
-        dir: ServerEnd<DirectoryMarker>,
+        dir: ServerEnd<fio::DirectoryMarker>,
         responder: PackageResolverResolveResponder,
     ) -> Result<(), Error> {
         eprintln!("TEST: Got resolve request for {:?}", package_url);
@@ -362,7 +362,7 @@ impl<'a> ForUrl<'a> {
 #[derive(Debug)]
 pub struct PendingResolve {
     responder: PackageResolverResolveResponder,
-    dir_request: ServerEnd<DirectoryMarker>,
+    dir_request: ServerEnd<fio::DirectoryMarker>,
 }
 
 #[derive(Debug)]
@@ -407,11 +407,9 @@ impl ResolveHandler {
 mod tests {
     use {super::*, assert_matches::assert_matches, fidl_fuchsia_pkg::ResolveError};
 
-    async fn read_file(dir_proxy: &DirectoryProxy, path: &str) -> String {
+    async fn read_file(dir_proxy: &fio::DirectoryProxy, path: &str) -> String {
         let file_proxy =
-            io_util::directory::open_file(dir_proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-                .await
-                .unwrap();
+            io_util::directory::open_file(dir_proxy, path, fio::OPEN_RIGHT_READABLE).await.unwrap();
 
         io_util::file::read_to_string(&file_proxy).await.unwrap()
     }
@@ -419,7 +417,7 @@ mod tests {
     fn do_resolve(
         proxy: &PackageResolverProxy,
         url: &str,
-    ) -> impl Future<Output = Result<DirectoryProxy, ResolveError>> {
+    ) -> impl Future<Output = Result<fio::DirectoryProxy, ResolveError>> {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
         let fut = proxy.resolve(url, package_dir_server_end);
 

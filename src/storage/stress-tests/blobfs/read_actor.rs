@@ -4,7 +4,7 @@
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     log::{debug, info},
     rand::{prelude::SliceRandom, rngs::SmallRng, Rng},
@@ -38,7 +38,7 @@ impl ReadActor {
 
         // Choose a random blob and open a handle to it
         let blob = blob_list.choose(&mut self.rng).unwrap();
-        let file = self.root_dir.open_file(blob, OPEN_RIGHT_READABLE).await?;
+        let file = self.root_dir.open_file(blob, fio::OPEN_RIGHT_READABLE).await?;
 
         debug!("Reading from {}", blob);
         let data_size_bytes = file.uncompressed_size().await?;
@@ -58,7 +58,7 @@ impl ReadActor {
         let length = end_pos - offset;
 
         // Read the data from the handle and verify it
-        file.seek(SeekOrigin::Start, offset).await?;
+        file.seek(fio::SeekOrigin::Start, offset).await?;
         let actual_data_bytes = file.read_num_bytes(length).await?;
         assert_eq!(actual_data_bytes.len(), length as usize);
 

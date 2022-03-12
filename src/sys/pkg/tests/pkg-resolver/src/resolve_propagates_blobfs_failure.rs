@@ -12,10 +12,7 @@ use {
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
-        FileControlHandle, FileMarker, FileObject, FileRequest, FileRequestStream, NodeInfo,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::{self as fasync, Task},
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{Package, RepositoryBuilder, SystemImageBuilder},
@@ -30,22 +27,22 @@ trait FileStreamHandler: Send + Sync + 'static {
     fn handle_file_stream(
         &self,
         call_count: Arc<AtomicU64>,
-        stream: FileRequestStream,
-        ch: FileControlHandle,
+        stream: fio::FileRequestStream,
+        ch: fio::FileControlHandle,
     ) -> BoxFuture<'static, ()>;
 }
 
 impl<Func, Fut> FileStreamHandler for Func
 where
-    Func: Fn(Arc<AtomicU64>, FileRequestStream, FileControlHandle) -> Fut,
+    Func: Fn(Arc<AtomicU64>, fio::FileRequestStream, fio::FileControlHandle) -> Fut,
     Func: Unpin + Send + Sync + Clone + 'static,
     Fut: Future<Output = ()> + Send + Sync + 'static,
 {
     fn handle_file_stream(
         &self,
         call_count: Arc<AtomicU64>,
-        stream: FileRequestStream,
-        ch: FileControlHandle,
+        stream: fio::FileRequestStream,
+        ch: fio::FileControlHandle,
     ) -> BoxFuture<'static, ()> {
         (self)(call_count, stream, ch).boxed()
     }
@@ -60,15 +57,14 @@ struct BlobFsWithFileCreateOverride {
 }
 
 impl PkgFs for BlobFsWithFileCreateOverride {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         self.pkgfs.root_dir_handle()
     }
 
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let inner = self.pkgfs.blobfs().root_dir_handle()?.into_proxy()?;
 
-        let (client, server) =
-            fidl::endpoints::create_request_stream::<fidl_fuchsia_io::DirectoryMarker>()?;
+        let (client, server) = fidl::endpoints::create_request_stream::<fio::DirectoryMarker>()?;
 
         DirectoryWithFileCreateOverride { inner, target: self.target.clone() }.spawn(server);
 
@@ -82,31 +78,31 @@ impl PkgFs for BlobFsWithFileCreateOverride {
 
 #[derive(Clone)]
 struct DirectoryWithFileCreateOverride {
-    inner: DirectoryProxy,
+    inner: fio::DirectoryProxy,
     target: (String, FakeFile),
 }
 
 impl DirectoryWithFileCreateOverride {
-    fn spawn(self, stream: DirectoryRequestStream) {
+    fn spawn(self, stream: fio::DirectoryRequestStream) {
         Task::spawn(self.serve(stream)).detach();
     }
 
-    async fn serve(self, mut stream: DirectoryRequestStream) {
+    async fn serve(self, mut stream: fio::DirectoryRequestStream) {
         while let Some(req) = stream.next().await {
             match req.unwrap() {
-                DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                    assert_eq!(flags, fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS);
+                fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                    assert_eq!(flags, fio::CLONE_FLAG_SAME_RIGHTS);
                     let stream = object.into_stream().unwrap().cast_stream();
                     self.clone().spawn(stream);
                 }
-                DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                    let is_create = flags & fidl_fuchsia_io::OPEN_FLAG_CREATE != 0;
+                fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+                    let is_create = flags & fio::OPEN_FLAG_CREATE != 0;
 
                     if path == "." {
                         let stream = object.into_stream().unwrap().cast_stream();
                         self.clone().spawn(stream);
                     } else if path == self.target.0 && is_create {
-                        let server_end = ServerEnd::<FileMarker>::new(object.into_channel());
+                        let server_end = ServerEnd::<fio::FileMarker>::new(object.into_channel());
                         let handler = self.target.1.clone();
 
                         Task::spawn(async move { handler.handle_file_stream(server_end).await })
@@ -115,8 +111,8 @@ impl DirectoryWithFileCreateOverride {
                         let () = self.inner.open(flags, mode, &path, object).unwrap();
                     }
                 }
-                DirectoryRequest::Close { .. } => (),
-                DirectoryRequest::GetToken { .. } => (),
+                fio::DirectoryRequest::Close { .. } => (),
+                fio::DirectoryRequest::GetToken { .. } => (),
                 req => panic!("DirectoryStreamHandler unhandled request {:?}", req),
             }
         }
@@ -138,7 +134,7 @@ impl FakeFile {
         )
     }
 
-    async fn handle_file_stream(self, server_end: ServerEnd<fidl_fuchsia_io::FileMarker>) {
+    async fn handle_file_stream(self, server_end: ServerEnd<fio::FileMarker>) {
         let (stream, ch) =
             server_end.into_stream_and_control_handle().expect("split file server end");
 
@@ -148,8 +144,8 @@ impl FakeFile {
 
 async fn handle_file_stream_fail_on_open(
     call_count: Arc<AtomicU64>,
-    mut stream: FileRequestStream,
-    ch: FileControlHandle,
+    mut stream: fio::FileRequestStream,
+    ch: fio::FileControlHandle,
 ) {
     ch.send_on_open_(Status::NO_MEMORY.into_raw(), None).expect("send on open");
     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -160,12 +156,12 @@ async fn handle_file_stream_fail_on_open(
 
 async fn handle_file_stream_fail_truncate(
     call_count: Arc<AtomicU64>,
-    mut stream: FileRequestStream,
-    ch: FileControlHandle,
+    mut stream: fio::FileRequestStream,
+    ch: fio::FileControlHandle,
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
+        Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {
@@ -175,44 +171,44 @@ async fn handle_file_stream_fail_truncate(
 
 async fn handle_file_stream_fail_write(
     call_count: Arc<AtomicU64>,
-    mut stream: FileRequestStream,
-    ch: FileControlHandle,
+    mut stream: fio::FileRequestStream,
+    ch: fio::FileControlHandle,
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
+        Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_fail_write(call_count.clone(), req.expect("file request unpack")).await;
     }
 }
-async fn handle_file_req_panic(_req: FileRequest) {
+async fn handle_file_req_panic(_req: fio::FileRequest) {
     panic!("should not be called");
 }
 
-async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: FileRequest) {
+async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: fio::FileRequest) {
     match req {
-        FileRequest::Resize { length: _length, responder } => {
+        fio::FileRequest::Resize { length: _length, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send truncate response");
         }
-        FileRequest::Close { responder } => {
+        fio::FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
         req => panic!("unexpected request: {:?}", req),
     }
 }
 
-async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest) {
+async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: fio::FileRequest) {
     match req {
-        FileRequest::Resize { length: _length, responder } => {
+        fio::FileRequest::Resize { length: _length, responder } => {
             responder.send(&mut Ok(())).expect("send resize response");
         }
-        FileRequest::Close { responder } => {
+        fio::FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
-        FileRequest::Write { data: _data, responder } => {
+        fio::FileRequest::Write { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send write response");
         }

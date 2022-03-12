@@ -7,8 +7,7 @@ use {
     crate::*,
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::UnlinkOptions,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{OpenRights, PackageDirectory},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
@@ -1385,10 +1384,8 @@ async fn test_pkgfs_set_flags() {
     // thinfs returns an error for this call, which closes the channel.
     let this_pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
         .expect("opening /pkg");
-    let status = this_pkg_dir
-        .set_flags(fidl_fuchsia_io::OPEN_FLAG_APPEND)
-        .await
-        .expect("setting directory flags");
+    let status =
+        this_pkg_dir.set_flags(fio::OPEN_FLAG_APPEND).await.expect("setting directory flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
 
     // Try set_flags on a file within our package directory.
@@ -1396,10 +1393,8 @@ async fn test_pkgfs_set_flags() {
     let meta_far_file_proxy =
         io_util::open_file_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)
             .expect("opening /pkg/meta as file");
-    let status = meta_far_file_proxy
-        .set_flags(fidl_fuchsia_io::OPEN_FLAG_APPEND)
-        .await
-        .expect("setting file flags");
+    let status =
+        meta_far_file_proxy.set_flags(fio::OPEN_FLAG_APPEND).await.expect("setting file flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
 
     // We should still be able to read our own package directory and read our own merkle root,
@@ -1450,9 +1445,7 @@ async fn test_multiple_opens_on_meta_file() {
 
     file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
     let vmo = file_a_2
-        .get_backing_memory(
-            fidl_fuchsia_io::VmoFlags::READ | fidl_fuchsia_io::VmoFlags::PRIVATE_CLONE,
-        )
+        .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::PRIVATE_CLONE)
         .await
         .unwrap()
         .map_err(Status::from_raw)
@@ -1645,7 +1638,7 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
 
     // Delete the meta.far blob of the open pkg dir
     blobfs_proxy
-        .unlink(&package_to_corrupt.meta_far_merkle_root().to_string(), UnlinkOptions::EMPTY)
+        .unlink(&package_to_corrupt.meta_far_merkle_root().to_string(), fio::UnlinkOptions::EMPTY)
         .await
         .expect("unlink fidl")
         .expect("unlink status");

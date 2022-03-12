@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
@@ -26,7 +26,7 @@ pub struct RewriteManager {
     static_rules: Vec<Rule>,
     dynamic_rules: Vec<Rule>,
     generation: u32,
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
     dynamic_rules_path: Option<String>,
     inspect: RewriteManagerInspectState,
 }
@@ -79,7 +79,7 @@ impl RewriteManager {
 
     async fn save(
         dynamic_rules: &mut Vec<Rule>,
-        data_proxy: &DirectoryProxy,
+        data_proxy: &fio::DirectoryProxy,
         dynamic_rules_path: &str,
     ) -> Result<(), anyhow::Error> {
         let config = RuleConfig::Version1(std::mem::replace(dynamic_rules, vec![]));
@@ -261,7 +261,7 @@ pub struct UnsetInspectNode;
 pub struct RewriteManagerBuilder<N> {
     static_rules: Vec<Rule>,
     dynamic_rules: Vec<Rule>,
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
     dynamic_rules_path: Option<String>,
     enable_dynamic_configuration: bool,
     inspect_node: N,
@@ -273,7 +273,7 @@ impl RewriteManagerBuilder<UnsetInspectNode> {
     /// method returns an [RewriteManagerBuilder] initialized with no rules and configured with the
     /// given dynamic config path.
     pub async fn new<P>(
-        data_proxy: Option<DirectoryProxy>,
+        data_proxy: Option<fio::DirectoryProxy>,
         dynamic_rules_path: Option<P>,
     ) -> Result<Self, (Self, LoadRulesError)>
     where
@@ -331,7 +331,7 @@ impl<N> RewriteManagerBuilder<N> {
     /// return this [RewriteManagerBuilder] unmodified along with the encountered error.
     pub async fn static_rules_path(
         mut self,
-        config_proxy: Option<DirectoryProxy>,
+        config_proxy: Option<fio::DirectoryProxy>,
         static_rules_path: &str,
     ) -> Result<Self, (Self, LoadRulesError)> {
         match Self::load_rules(&config_proxy, static_rules_path).await {
@@ -344,7 +344,7 @@ impl<N> RewriteManagerBuilder<N> {
     }
 
     async fn load_rules(
-        dir_proxy: &Option<DirectoryProxy>,
+        dir_proxy: &Option<fio::DirectoryProxy>,
         path: &str,
     ) -> Result<Vec<Rule>, LoadRulesError> {
         let dir_proxy = dir_proxy
@@ -464,7 +464,7 @@ pub(crate) mod tests {
 
     pub(crate) fn temp_path_into_proxy_and_path(
         path: &tempfile::TempPath,
-    ) -> (Option<DirectoryProxy>, Option<String>) {
+    ) -> (Option<fio::DirectoryProxy>, Option<String>) {
         let filename = Some(path.file_name().unwrap().to_str().unwrap().to_string());
         let dir = path.parent().unwrap().to_str().unwrap().to_string();
         let proxy = io_util::directory::open_in_namespace(

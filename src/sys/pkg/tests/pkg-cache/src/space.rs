@@ -6,8 +6,7 @@ use {
     crate::{get_missing_blobs, write_blob, TestEnv},
     assert_matches::assert_matches,
     blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
-    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
-    fidl_fuchsia_paver as paver,
+    fidl_fuchsia_io as fio, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::ErrorCode,
@@ -29,7 +28,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
@@ -40,7 +39,8 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
         .map(|blob| (BlobId::from(blob.merkle), blob.contents))
         .collect::<HashMap<_, Vec<u8>>>();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
@@ -50,7 +50,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
         let buf = contents.remove(&blob.blob_id.into()).unwrap();
 
         let (content_blob, content_blob_server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
             .open_blob(&mut blob.blob_id, content_blob_server_end)
             .await
@@ -192,7 +192,7 @@ async fn gc_dynamic_index_protected() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
@@ -203,7 +203,8 @@ async fn gc_dynamic_index_protected() {
         .map(|blob| (BlobId::from(blob.merkle), blob.contents))
         .collect::<HashMap<_, Vec<u8>>>();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
@@ -220,7 +221,7 @@ async fn gc_dynamic_index_protected() {
         let buf = contents.remove(&blob.blob_id.into()).unwrap();
 
         let (content_blob, content_blob_server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
             .open_blob(&mut blob.blob_id, content_blob_server_end)
             .await
@@ -322,7 +323,7 @@ async fn gc_updated_static_package() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
@@ -333,7 +334,8 @@ async fn gc_updated_static_package() {
         .map(|blob| (BlobId::from(blob.merkle), blob.contents))
         .collect::<HashMap<_, Vec<u8>>>();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
@@ -350,7 +352,7 @@ async fn gc_updated_static_package() {
         let buf = contents.remove(&blob.blob_id.into()).unwrap();
 
         let (content_blob, content_blob_server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
             .open_blob(&mut blob.blob_id, content_blob_server_end)
             .await
@@ -428,14 +430,15 @@ async fn blob_write_fails_when_out_of_space() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let _get_fut = env
         .proxies
         .package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
 

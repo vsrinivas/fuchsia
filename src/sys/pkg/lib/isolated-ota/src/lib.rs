@@ -4,8 +4,7 @@
 
 use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     isolated_swd::{cache::Cache, omaha, pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
     std::sync::Arc,
     thiserror::Error,
@@ -63,8 +62,8 @@ pub struct OmahaConfig {
 /// * `omaha_cfg` - The |OmahaConfig| to use for Omaha. If None, the update will not use Omaha to
 ///     determine the updater URL.
 pub async fn download_and_apply_update(
-    blobfs: ClientEnd<DirectoryMarker>,
-    paver_connector: ClientEnd<DirectoryMarker>,
+    blobfs: ClientEnd<fio::DirectoryMarker>,
+    paver_connector: ClientEnd<fio::DirectoryMarker>,
     repository_config_file: std::fs::File,
     ssl_cert_dir: std::fs::File,
     channel_name: &str,
@@ -72,7 +71,7 @@ pub async fn download_and_apply_update(
     version: &str,
     omaha_cfg: Option<OmahaConfig>,
 ) -> Result<(), UpdateError> {
-    let blobfs_proxy = DirectoryProxy::from_channel(
+    let blobfs_proxy = fio::DirectoryProxy::from_channel(
         fasync::Channel::from_channel(blobfs.into_channel())
             .map_err(|e| UpdateError::FidlError(fidl::Error::AsyncChannel(e)))?,
     );
@@ -120,11 +119,13 @@ pub async fn download_and_apply_update(
     Ok(())
 }
 
-fn clone_blobfs(blobfs_proxy: &DirectoryProxy) -> Result<ClientEnd<DirectoryMarker>, UpdateError> {
-    let (blobfs_clone, remote) =
-        fidl::endpoints::create_endpoints::<DirectoryMarker>().map_err(UpdateError::FidlError)?;
+fn clone_blobfs(
+    blobfs_proxy: &fio::DirectoryProxy,
+) -> Result<ClientEnd<fio::DirectoryMarker>, UpdateError> {
+    let (blobfs_clone, remote) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()
+        .map_err(UpdateError::FidlError)?;
     blobfs_proxy
-        .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
+        .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
         .map_err(UpdateError::FidlError)?;
     Ok(blobfs_clone)
 }

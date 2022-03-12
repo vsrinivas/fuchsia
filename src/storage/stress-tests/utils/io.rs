@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, SeekOrigin, UnlinkOptions, CLONE_FLAG_SAME_RIGHTS,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{Event, Status},
     io_util::{directory::*, file::*, node::OpenError},
     log::debug,
@@ -15,7 +13,7 @@ use {
 // A convenience wrapper over a FIDL DirectoryProxy.
 // Functions of this struct do not tolerate FIDL errors and will panic when they encounter them.
 pub struct Directory {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Directory {
@@ -103,7 +101,7 @@ impl Directory {
 
     // Delete a file from the directory
     pub async fn remove(&self, filename: &str) -> Result<(), Status> {
-        match self.proxy.unlink(filename, UnlinkOptions::EMPTY).await {
+        match self.proxy.unlink(filename, fio::UnlinkOptions::EMPTY).await {
             Ok(result) => Status::ok(match result {
                 Ok(()) => 0,
                 Err(status) => status,
@@ -174,7 +172,7 @@ impl Directory {
 // Functions of this struct do not tolerate FIDL errors and will panic when they encounter them.
 #[derive(Debug)]
 pub struct File {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
 }
 
 impl File {
@@ -276,7 +274,7 @@ impl File {
     }
 
     // Set the offset of the file
-    pub async fn seek(&self, origin: SeekOrigin, offset: u64) -> Result<(), Status> {
+    pub async fn seek(&self, origin: fio::SeekOrigin, offset: u64) -> Result<(), Status> {
         match self.proxy.seek(origin, offset as i64).await {
             Ok(result) => result.map_err(Status::from_raw).map(|_: u64| ()),
             Err(e) => {
@@ -306,7 +304,7 @@ impl File {
 
 impl Clone for Directory {
     fn clone(&self) -> Self {
-        let new_proxy = clone_no_describe(&self.proxy, Some(CLONE_FLAG_SAME_RIGHTS)).unwrap();
+        let new_proxy = clone_no_describe(&self.proxy, Some(fio::CLONE_FLAG_SAME_RIGHTS)).unwrap();
         Self { proxy: new_proxy }
     }
 }

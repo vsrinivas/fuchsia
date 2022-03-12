@@ -7,7 +7,7 @@ use {
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fdio::Namespace,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -340,7 +340,7 @@ async fn load_repo_manager(
     mut cobalt_sender: CobaltSender,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
@@ -404,8 +404,8 @@ async fn load_rewrite_manager(
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
     cobalt_sender: CobaltSender,
-    data_proxy: Option<DirectoryProxy>,
-    config_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
+    config_proxy: Option<fio::DirectoryProxy>,
 ) -> RewriteManager {
     let dynamic_rules_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_RULES_PATH) } else { None };

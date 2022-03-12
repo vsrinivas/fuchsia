@@ -8,10 +8,7 @@ use {
         endpoints::{create_proxy, Proxy, ServerEnd},
         AsHandleRef,
     },
-    fidl_fuchsia_io::{
-        DirectoryMarker, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_bootfs::BootfsParser,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased, Resource},
@@ -335,13 +332,13 @@ impl BootfsSvc {
         let mut get_inode = |_| -> u64 { BootfsSvc::get_next_inode(&mut self.next_inode) };
 
         let vfs = tree_builder.build_with_inode_generator(&mut get_inode);
-        let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
+        let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>()?;
         vfs.open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
-            ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+            ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
         );
 
         let ns = fdio::Namespace::installed()?;

@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context, Error};
 use fdio::{create_fd, device_get_topo_path};
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fs_management as fs;
 use fuchsia_component::client::connect_to_protocol;
@@ -98,9 +98,13 @@ impl Storage {
         self.minfs.mount("/m")
     }
 
-    pub fn get_blobfs(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
-        let (blobfs_root, remote) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
-        fdio::open("/b", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, remote.into_channel())?;
+    pub fn get_blobfs(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
+        let (blobfs_root, remote) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
+        fdio::open(
+            "/b",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            remote.into_channel(),
+        )?;
         Ok(blobfs_root)
     }
 }

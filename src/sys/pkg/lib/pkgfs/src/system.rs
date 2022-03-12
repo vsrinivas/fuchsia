@@ -7,7 +7,7 @@
 use {
     anyhow::anyhow,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_io::{DirectoryProxy, FileProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_hash::{Hash, ParseHashError},
     std::fs,
     thiserror::Error,
@@ -44,7 +44,7 @@ pub enum SystemImageFileHashError {
 /// An open handle to /pkgfs/system.
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
@@ -53,18 +53,20 @@ impl Client {
         Ok(Self {
             proxy: io_util::directory::open_in_namespace(
                 "/pkgfs/system",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
 
     /// Returns a `Client` connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_pkgfs_root(
+        pkgfs: &fio::DirectoryProxy,
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Self {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "system",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -93,15 +95,18 @@ impl Client {
         Ok(hash)
     }
 
-    async fn open_file_as_proxy(&self, path: &str) -> Result<FileProxy, SystemImageFileOpenError> {
-        io_util::directory::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-            .map_err(|e| match e {
+    async fn open_file_as_proxy(
+        &self,
+        path: &str,
+    ) -> Result<fio::FileProxy, SystemImageFileOpenError> {
+        io_util::directory::open_file(&self.proxy, path, fio::OPEN_RIGHT_READABLE).await.map_err(
+            |e| match e {
                 io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
                     SystemImageFileOpenError::NotFound
                 }
                 other => SystemImageFileOpenError::Io(other),
-            })
+            },
+        )
     }
 }
 

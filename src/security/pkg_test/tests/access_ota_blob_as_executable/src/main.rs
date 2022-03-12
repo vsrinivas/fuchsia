@@ -6,10 +6,7 @@ use {
     anyhow::Result,
     argh::{from_env, FromArgs},
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, VmoFlags, MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_pkg::{BlobId, PackageCacheMarker, PackageResolverMarker, PackageUrl},
     fidl_fuchsia_sys2::{StorageAdminMarker, StorageIteratorMarker},
@@ -172,7 +169,7 @@ impl AccessCheckRequest {
             fx_log_info!("Opening package from pkgfs-versions: {}", pkgfs_versions_path);
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_versions_path,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .unwrap();
             Some((
@@ -190,7 +187,7 @@ impl AccessCheckRequest {
             fx_log_info!("Opening package from pkgfs-packages: {}", pkgfs_packages_path);
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_packages_path,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .unwrap();
             Some((
@@ -207,7 +204,7 @@ impl AccessCheckRequest {
             fx_log_info!("Opening package via pkg-cache: {}", package_merkle);
             let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
             let (package_directory_proxy, package_directory_server_end) =
-                create_proxy::<DirectoryMarker>().unwrap();
+                create_proxy::<fio::DirectoryMarker>().unwrap();
             pkg_cache_proxy
                 .open(&mut package_blob_id, package_directory_server_end)
                 .await
@@ -278,9 +275,9 @@ impl AccessCheckRequest {
         }
     }
 
-    async fn resolve_package(&self, package_url: &str) -> DirectoryProxy {
+    async fn resolve_package(&self, package_url: &str) -> fio::DirectoryProxy {
         let (package_directory_proxy, package_directory_server_end) =
-            create_proxy::<DirectoryMarker>().unwrap();
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         connect_to_protocol::<PackageResolverMarker>()
             .unwrap()
             .resolve(package_url, package_directory_server_end)
@@ -312,16 +309,16 @@ impl AccessCheckRequest {
 
     async fn attempt_executable(
         &self,
-        package_directory_proxy: &DirectoryProxy,
+        package_directory_proxy: &fio::DirectoryProxy,
     ) -> Result<Box<Buffer>> {
         let bin_file = open_file(
             package_directory_proxy,
             &self.config.packaged_binary_path,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .await?;
         let vmo = bin_file
-            .get_backing_memory(VmoFlags::READ | VmoFlags::EXECUTE)
+            .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
             .await
             .unwrap()
             .map_err(Status::from_raw)?;
@@ -332,11 +329,11 @@ impl AccessCheckRequest {
         Ok(Box::new(Buffer { vmo, size }))
     }
 
-    async fn attempt_readable(&self, package_directory_proxy: &DirectoryProxy) -> Result<()> {
+    async fn attempt_readable(&self, package_directory_proxy: &fio::DirectoryProxy) -> Result<()> {
         let bin_file = open_file(
             package_directory_proxy,
             &self.config.packaged_binary_path,
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
         .await?;
         read_file_bytes(&bin_file).await.unwrap();
@@ -350,7 +347,7 @@ impl AccessCheckRequest {
     }
 }
 
-async fn get_storage_for_component_instance(moniker_prefix: &str) -> DirectoryProxy {
+async fn get_storage_for_component_instance(moniker_prefix: &str) -> fio::DirectoryProxy {
     let storage_admin = connect_to_protocol::<StorageAdminMarker>().unwrap();
     let (storage_user_iterator, storage_user_iterator_server_end) =
         create_proxy::<StorageIteratorMarker>().unwrap();
@@ -370,12 +367,12 @@ async fn get_storage_for_component_instance(moniker_prefix: &str) -> DirectoryPr
         matching_storage_users.append(&mut matches);
     }
     assert_eq!(1, matching_storage_users.len());
-    let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
     storage_admin
         .open_component_storage(
             matching_storage_users.first().unwrap(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             ServerEnd::new(server_end.into_channel()),
         )
         .unwrap();

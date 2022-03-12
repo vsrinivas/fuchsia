@@ -5,6 +5,7 @@
 use {
     crate::TestEnv,
     blobfs_ramdisk::BlobfsRamdisk,
+    fidl_fuchsia_io as fio,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     pkgfs_ramdisk::PkgfsRamdisk,
 };
@@ -27,7 +28,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
         let () = blobfs
             .root_dir_proxy()
             .unwrap()
-            .unlink(&hash, fidl_fuchsia_io::UnlinkOptions::EMPTY)
+            .unlink(&hash, fio::UnlinkOptions::EMPTY)
             .await
             .unwrap()
             .unwrap();
@@ -44,7 +45,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
     let missing = io_util::directory::open_file(
         &env.proxies.pkgfs,
         "ctl/validation/missing",
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
     )
     .await
     .unwrap();

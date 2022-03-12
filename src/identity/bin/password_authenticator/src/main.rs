@@ -15,9 +15,7 @@ mod testing;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
-use fidl_fuchsia_io::{
-    OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-};
+use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
@@ -45,12 +43,15 @@ async fn main() -> Result<(), Error> {
         err
     })?;
 
-    let dev_root = open_in_namespace("/dev", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)?;
+    let dev_root = open_in_namespace("/dev", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)?;
     let disk_manager = DevDiskManager::new(dev_root);
 
     let metadata_root = open_in_namespace(
         "/data/accounts",
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE,
+        fio::OPEN_RIGHT_READABLE
+            | fio::OPEN_RIGHT_WRITABLE
+            | fio::OPEN_FLAG_DIRECTORY
+            | fio::OPEN_FLAG_CREATE,
     )?;
     let mut account_metadata_store = DataDirAccountMetadataStore::new(metadata_root);
     // Clean up any not-committed files laying around in the account metadata directory.

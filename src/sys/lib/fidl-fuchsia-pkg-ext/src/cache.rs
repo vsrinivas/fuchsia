@@ -8,7 +8,7 @@
 
 use crate::types::{BlobId, BlobInfo};
 use fidl::client::QueryResponseFut;
-use fidl_fuchsia_io::{FileMarker, FileProxy, FileRequestStream};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_pkg::{
     BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsMarker, NeededBlobsProxy,
     PackageCacheProxy,
@@ -93,7 +93,7 @@ async fn open_blob(
     kind: OpenKind,
     pkg_present: Option<&SharedBoolEvent>,
 ) -> Result<Option<NeededBlob>, OpenBlobError> {
-    let (blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
+    let (blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()?;
 
     let open_fut = match kind {
         OpenKind::Meta => needed_blobs.open_meta_blob(blob_server_end),
@@ -278,7 +278,7 @@ pub struct NeededBlob {
 #[derive(Debug)]
 #[must_use = "Subsequent opens of this blob may race with closing this one"]
 pub struct BlobCloser {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     closed: bool,
 }
 
@@ -324,7 +324,7 @@ pub struct NeedsData {
 /// A blob in the process of being written.
 #[derive(Debug)]
 pub struct Blob<S> {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     state: S,
 }
 
@@ -348,8 +348,9 @@ impl Blob<NeedsTruncate> {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, BlobCloser, FileRequestStream) {
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+    pub fn new_test() -> (Self, BlobCloser, fio::FileRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         (
             Blob { proxy: Clone::clone(&proxy), state: NeedsTruncate },
@@ -370,7 +371,7 @@ impl Blob<NeedsData> {
 
         while !buf.is_empty() {
             // Don't try to write more than MAX_BUF bytes at a time.
-            let limit = buf.len().min(fidl_fuchsia_io::MAX_BUF as usize);
+            let limit = buf.len().min(fio::MAX_BUF as usize);
 
             let written = self.write_some(&buf[..limit]).await?;
 
@@ -512,7 +513,6 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use fidl::prelude::*;
-    use fidl_fuchsia_io::{DirectoryRequestStream, FileMarker, FileRequest, FileRequestStream};
     use fidl_fuchsia_pkg::{
         BlobInfoIteratorRequest, NeededBlobsRequest, NeededBlobsRequestStream,
         PackageCacheGetResponder, PackageCacheMarker, PackageCacheOpenResponder,
@@ -566,7 +566,7 @@ mod tests {
     }
 
     struct PendingOpen {
-        dir: DirectoryRequestStream,
+        dir: fio::DirectoryRequestStream,
         responder: PackageCacheOpenResponder,
     }
 
@@ -582,7 +582,7 @@ mod tests {
 
     struct PendingGet {
         stream: NeededBlobsRequestStream,
-        dir: DirectoryRequestStream,
+        dir: fio::DirectoryRequestStream,
         responder: PackageCacheGetResponder,
     }
 
@@ -685,7 +685,7 @@ mod tests {
     }
 
     struct PackageDirProvider {
-        stream: DirectoryRequestStream,
+        stream: fio::DirectoryRequestStream,
     }
 
     impl PackageDirProvider {
@@ -955,12 +955,13 @@ mod tests {
     }
 
     struct MockNeededBlob {
-        stream: FileRequestStream,
+        stream: fio::FileRequestStream,
     }
 
     impl MockNeededBlob {
         fn new() -> (NeededBlob, Self) {
-            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+            let (proxy, stream) =
+                fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
             (
                 NeededBlob {
                     blob: Blob { proxy: Clone::clone(&proxy), state: NeedsTruncate },
@@ -972,7 +973,7 @@ mod tests {
 
         async fn fail_truncate(mut self) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Resize { length: _, responder })) => {
+                Some(Ok(fio::FileRequest::Resize { length: _, responder })) => {
                     responder.send(&mut Err(Status::NO_SPACE.into_raw())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
@@ -982,7 +983,7 @@ mod tests {
 
         async fn expect_truncate(mut self, expected_length: u64) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Resize { length, responder })) => {
+                Some(Ok(fio::FileRequest::Resize { length, responder })) => {
                     assert_eq!(length, expected_length);
                     responder.send(&mut Ok(())).unwrap();
                 }
@@ -993,7 +994,7 @@ mod tests {
 
         async fn fail_write(mut self) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data: _, responder })) => {
+                Some(Ok(fio::FileRequest::Write { data: _, responder })) => {
                     responder.send(&mut Err(Status::NO_SPACE.into_raw())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
@@ -1003,7 +1004,7 @@ mod tests {
 
         async fn expect_write(mut self, expected_payload: &[u8]) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data, responder })) => {
+                Some(Ok(fio::FileRequest::Write { data, responder })) => {
                     assert_eq!(data, expected_payload);
                     responder.send(&mut Ok(data.len() as u64)).unwrap();
                 }
@@ -1018,7 +1019,7 @@ mod tests {
             bytes_to_consume: u64,
         ) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Write { data, responder })) => {
+                Some(Ok(fio::FileRequest::Write { data, responder })) => {
                     assert_eq!(data, expected_payload);
                     responder.send(&mut Ok(bytes_to_consume)).unwrap();
                 }
@@ -1029,10 +1030,10 @@ mod tests {
 
         async fn expect_close(mut self) {
             match self.stream.next().await {
-                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
+                Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(fio::FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
@@ -1148,7 +1149,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn blob_write_chunkize_payload() {
-        const CHUNK_SIZE: usize = fidl_fuchsia_io::MAX_BUF as usize;
+        const CHUNK_SIZE: usize = fio::MAX_BUF as usize;
 
         let (NeededBlob { blob, closer }, blob_server) = MockNeededBlob::new();
 

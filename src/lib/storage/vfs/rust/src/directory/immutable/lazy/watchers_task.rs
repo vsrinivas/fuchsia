@@ -21,7 +21,7 @@ use crate::{
 };
 
 use {
-    fidl_fuchsia_io::WatchMask,
+    fidl_fuchsia_io as fio,
     futures::{
         channel::mpsc::UnboundedReceiver,
         select,
@@ -85,11 +85,11 @@ async fn handle_register_watcher(
     watchers: &mut Watchers,
     directory: Arc<dyn Directory>,
     scope: ExecutionScope,
-    mask: WatchMask,
+    mask: fio::WatchMask,
     watcher: DirectoryWatcher,
 ) {
     // Optimize the case when we do not need to send the list of existing entries.
-    if !mask.contains(WatchMask::EXISTING) {
+    if !mask.contains(fio::WatchMask::EXISTING) {
         let controller = watchers.add(scope, directory, mask, watcher);
         controller.send_event(&mut SingleNameEventProducer::idle());
         return;
@@ -151,7 +151,7 @@ mod single_buffer {
         watchers::event_producers::{encode_name, SingleBufferEventProducer},
     };
 
-    use {fidl_fuchsia_io::WatchEvent, std::any::Any};
+    use {fidl_fuchsia_io as fio, std::any::Any};
 
     pub(super) fn existing() -> Box<Sink> {
         Box::new(Sink { buffer: vec![] })
@@ -177,7 +177,7 @@ mod single_buffer {
         ) -> dirents_sink::AppendResult {
             use dirents_sink::AppendResult;
 
-            if encode_name(&mut self.buffer, WatchEvent::Existing, name) {
+            if encode_name(&mut self.buffer, fio::WatchEvent::Existing, name) {
                 AppendResult::Ok(self)
             } else {
                 AppendResult::Sealed(Sealed::new(self.buffer))

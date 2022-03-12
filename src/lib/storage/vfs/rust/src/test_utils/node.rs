@@ -6,10 +6,10 @@
 
 use {
     fidl::endpoints::{create_proxy, ProtocolMarker, ServerEnd},
-    fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
+    fidl_fuchsia_io as fio,
 };
 
-pub fn open_get_proxy<M>(proxy: &DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
+pub fn open_get_proxy<M>(proxy: &fio::DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
 where
     M: ProtocolMarker,
 {
@@ -17,7 +17,7 @@ where
         create_proxy::<M>().expect("Failed to create connection endpoints");
 
     proxy
-        .open(flags, mode, path, ServerEnd::<NodeMarker>::new(new_server_end.into_channel()))
+        .open(flags, mode, path, ServerEnd::<fio::NodeMarker>::new(new_server_end.into_channel()))
         .unwrap();
 
     new_proxy
@@ -32,7 +32,7 @@ where
 ///
 /// Add methods to this trait when they are necessary to reduce the maintenance effort.
 pub trait NodeProxyApi {
-    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error>;
+    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error>;
 }
 
 /// Calls .clone() on the proxy object, and returns a client side of the connection passed into the
@@ -50,20 +50,20 @@ where
     new_proxy
 }
 
-impl NodeProxyApi for NodeProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
-        NodeProxy::clone(self, flags, server_end)
+impl NodeProxyApi for fio::NodeProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+        Self::clone(self, flags, server_end)
     }
 }
 
-impl NodeProxyApi for FileProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
-        FileProxy::clone(self, flags, server_end)
+impl NodeProxyApi for fio::FileProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+        Self::clone(self, flags, server_end)
     }
 }
 
-impl NodeProxyApi for DirectoryProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
-        DirectoryProxy::clone(self, flags, server_end)
+impl NodeProxyApi for fio::DirectoryProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+        Self::clone(self, flags, server_end)
     }
 }

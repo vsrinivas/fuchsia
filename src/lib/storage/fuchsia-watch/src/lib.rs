@@ -11,8 +11,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_io::NodeInfo,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_vfs_watcher::Watcher,
     futures::{
         channel::mpsc::{channel, Sender},
@@ -60,8 +59,8 @@ impl NodeType {
         ))?;
         let dir_proxy = open_node_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
         Ok(match dir_proxy.describe().await {
-            Ok(NodeInfo::Directory(_)) => NodeType::Directory,
-            Ok(NodeInfo::File(_)) | Ok(NodeInfo::Vmofile(_)) => NodeType::File,
+            Ok(fio::NodeInfo::Directory(_)) => NodeType::Directory,
+            Ok(fio::NodeInfo::File(_)) | Ok(fio::NodeInfo::Vmofile(_)) => NodeType::File,
             _ => NodeType::Unknown,
         })
     }

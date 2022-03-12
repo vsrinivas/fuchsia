@@ -370,10 +370,7 @@ pub fn wait_for_device_at(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        assert_matches::assert_matches,
-        fidl_fuchsia_io::{NodeInfo, NodeProxy},
-        fuchsia_async as fasync,
+        super::*, assert_matches::assert_matches, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     };
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.
@@ -440,9 +437,9 @@ mod tests {
         // ask it to describe itself using the Node interface
         let fasync_channel =
             fasync::Channel::from_channel(device).expect("failed to convert to fasync channel");
-        let proxy = NodeProxy::new(fasync_channel);
+        let proxy = fio::NodeProxy::new(fasync_channel);
         let info = proxy.describe().await.expect("failed to get node info");
-        assert_matches!(info, NodeInfo::Device(_));
+        assert_matches!(info, fio::NodeInfo::Device(_));
 
         assert_eq!(ramdisk.destroy(), Ok(()));
     }

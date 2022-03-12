@@ -28,11 +28,7 @@ use {
     anyhow::{bail, Error},
     either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
-        NodeInfo, NodeMarker, UnlinkFlags, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     futures::{channel::oneshot, future::BoxFuture},
     std::sync::Arc,
@@ -80,7 +76,7 @@ impl DerivedConnection for MutableConnection {
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if let Ok((connection, requests)) =
             Self::prepare_connection(scope.clone(), directory, flags, server_end)
@@ -103,7 +99,7 @@ impl DerivedConnection for MutableConnection {
         name: &str,
         path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if flags & OPEN_FLAG_CREATE == 0 {
+        if flags & fio::OPEN_FLAG_CREATE == 0 {
             return Err(Status::NOT_FOUND);
         }
 
@@ -119,7 +115,7 @@ impl DerivedConnection for MutableConnection {
 
     fn handle_request(
         &mut self,
-        request: DirectoryRequest,
+        request: fio::DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move {
             match self.handle_request(request).await {
@@ -140,7 +136,7 @@ impl MutableConnection {
         scope: ExecutionScope,
         directory: Arc<dyn MutableConnectionClient>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
         if let Ok((connection, requests)) =
@@ -152,37 +148,37 @@ impl MutableConnection {
 
     async fn handle_request(
         &mut self,
-        request: DirectoryRequest,
-    ) -> Result<Either<ConnectionState, DirectoryRequest>, Error> {
+        request: fio::DirectoryRequest,
+    ) -> Result<Either<ConnectionState, fio::DirectoryRequest>, Error> {
         match request {
-            DirectoryRequest::Unlink { name, options, responder } => {
+            fio::DirectoryRequest::Unlink { name, options, responder } => {
                 self.handle_unlink(name, options, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DirectoryRequest::GetToken { responder } => {
+            fio::DirectoryRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }
-            DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
+            fio::DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DirectoryRequest::SetAttr { flags, attributes, responder } => {
+            fio::DirectoryRequest::SetAttr { flags, attributes, responder } => {
                 let status = match self.handle_setattr(flags, attributes).await {
                     Ok(()) => Status::OK,
                     Err(status) => status,
                 };
                 responder.send(status.into_raw())?;
             }
-            DirectoryRequest::SyncDeprecated { responder } => {
+            fio::DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(
                     self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
                 )?;
             }
-            DirectoryRequest::Sync { responder } => {
+            fio::DirectoryRequest::Sync { responder } => {
                 responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
             }
             // TODO(https:/fxbug.dev/77623): which other io2 methods need to be implemented here?
@@ -198,9 +194,9 @@ impl MutableConnection {
     async fn handle_setattr(
         &mut self,
         flags: u32,
-        attributes: NodeAttributes,
+        attributes: fio::NodeAttributes,
     ) -> Result<(), Status> {
-        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return Err(Status::BAD_HANDLE);
         }
 
@@ -212,13 +208,13 @@ impl MutableConnection {
     async fn handle_unlink<R>(
         &mut self,
         name: String,
-        options: UnlinkOptions,
+        options: fio::UnlinkOptions,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -232,7 +228,10 @@ impl MutableConnection {
             .clone()
             .unlink(
                 &name,
-                options.flags.map(|f| f.contains(UnlinkFlags::MUST_BE_DIRECTORY)).unwrap_or(false),
+                options
+                    .flags
+                    .map(|f| f.contains(fio::UnlinkFlags::MUST_BE_DIRECTORY))
+                    .unwrap_or(false),
             )
             .await
         {
@@ -245,7 +244,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status, Option<Handle>) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE, None);
         }
 
@@ -275,7 +274,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -326,8 +325,8 @@ impl MutableConnection {
         scope: ExecutionScope,
         directory: Arc<dyn MutableConnectionClient>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(Self, DirectoryRequestStream), Error> {
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(Self, fio::DirectoryRequestStream), Error> {
         // Ensure we close the directory if we fail to prepare the connection.
         let directory = OpenDirectory::new(directory);
 
@@ -342,11 +341,11 @@ impl MutableConnection {
         };
 
         let (requests, control_handle) =
-            ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+            ServerEnd::<fio::DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
 
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject);
+        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info))?;
         }
 
@@ -355,7 +354,7 @@ impl MutableConnection {
 
     async fn handle_requests(
         self,
-        requests: DirectoryRequestStream,
+        requests: fio::DirectoryRequestStream,
         shutdown: oneshot::Receiver<()>,
     ) {
         handle_requests::<Self>(requests, self, shutdown).await;
@@ -378,11 +377,6 @@ mod tests {
             registry::token_registry,
         },
         async_trait::async_trait,
-        fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, NodeAttributes, WatchMask, DIRENT_TYPE_DIRECTORY,
-            NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-            OPEN_RIGHT_READABLE,
-        },
         fuchsia_async as fasync,
         std::{
             any::Any,
@@ -395,7 +389,7 @@ mod tests {
         Link { id: u32, path: String },
         Unlink { id: u32, name: String },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
-        SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
+        SetAttr { id: u32, flags: u32, attrs: fio::NodeAttributes },
         Sync,
         Close,
     }
@@ -425,13 +419,13 @@ mod tests {
             _flags: u32,
             _mode: u32,
             _path: Path,
-            _server_end: ServerEnd<NodeMarker>,
+            _server_end: ServerEnd<fio::NodeMarker>,
         ) {
             panic!("Not implemented!");
         }
 
         fn entry_info(&self) -> EntryInfo {
-            EntryInfo::new(0, DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(0, fio::DIRENT_TYPE_DIRECTORY)
         }
     }
 
@@ -448,13 +442,13 @@ mod tests {
         fn register_watcher(
             self: Arc<Self>,
             _scope: ExecutionScope,
-            _mask: WatchMask,
+            _mask: fio::WatchMask,
             _watcher: DirectoryWatcher,
         ) -> Result<(), Status> {
             panic!("Not implemented");
         }
 
-        async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
             panic!("Not implemented");
         }
 
@@ -489,7 +483,7 @@ mod tests {
             })
         }
 
-        async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+        async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
@@ -531,11 +525,12 @@ mod tests {
         pub fn make_connection(
             self: &Arc<Self>,
             flags: u32,
-        ) -> (Arc<MockDirectory>, DirectoryProxy) {
+        ) -> (Arc<MockDirectory>, fio::DirectoryProxy) {
             let mut cur_id = self.cur_id.lock().unwrap();
             let dir = MockDirectory::new(*cur_id, self.clone());
             *cur_id += 1;
-            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             MutableConnection::create_connection(
                 self.scope.clone(),
                 dir.clone(),
@@ -585,8 +580,10 @@ mod tests {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
 
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let (dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        let (dir2, proxy2) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -610,8 +607,9 @@ mod tests {
     async fn test_setattr() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let mut attrs = NodeAttributes {
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        let mut attrs = fio::NodeAttributes {
             mode: 0,
             id: 0,
             content_size: 0,
@@ -622,7 +620,7 @@ mod tests {
         };
         let status = proxy
             .set_attr(
-                NODE_ATTRIBUTE_FLAG_CREATION_TIME | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
                 &mut attrs,
             )
             .await
@@ -634,7 +632,8 @@ mod tests {
             *events,
             vec![MutableDirectoryAction::SetAttr {
                 id: 0,
-                flags: NODE_ATTRIBUTE_FLAG_CREATION_TIME | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                flags: fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME
+                    | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
                 attrs
             }]
         );
@@ -644,8 +643,10 @@ mod tests {
     async fn test_link() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let (_dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        let (_dir2, proxy2) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -660,9 +661,10 @@ mod tests {
     async fn test_unlink() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         proxy
-            .unlink("test", UnlinkOptions::EMPTY)
+            .unlink("test", fio::UnlinkOptions::EMPTY)
             .await
             .expect("fidl call failed")
             .expect("unlink failed");
@@ -677,7 +679,8 @@ mod tests {
     async fn test_sync() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let () = proxy.sync().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
@@ -687,7 +690,8 @@ mod tests {
     async fn test_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let () = proxy.close().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
@@ -697,7 +701,8 @@ mod tests {
     async fn test_implicit_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
-        let (_dir, _proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, _proxy) =
+            fs.clone().make_connection(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         fs.scope.shutdown();
         fs.scope.wait().await;

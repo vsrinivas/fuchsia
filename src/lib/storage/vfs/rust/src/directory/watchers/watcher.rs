@@ -10,6 +10,7 @@ use crate::{
 };
 
 use {
+    fidl_fuchsia_io as fio,
     fuchsia_async::Channel,
     fuchsia_zircon::MessageBuf,
     futures::{
@@ -28,7 +29,7 @@ use {
 /// of a failure.
 pub(crate) fn new(
     scope: ExecutionScope,
-    mask: fidl_fuchsia_io::WatchMask,
+    mask: fio::WatchMask,
     watcher: DirectoryWatcher,
     done: impl FnOnce() + Send + 'static,
 ) -> Controller {
@@ -67,7 +68,7 @@ pub(crate) fn new(
 }
 
 pub struct Controller {
-    mask: fidl_fuchsia_io::WatchMask,
+    mask: fio::WatchMask,
     commands: UnboundedSender<Command>,
 }
 
@@ -75,11 +76,7 @@ impl Controller {
     /// Sends a buffer to the connected watcher.  `mask` specifies the type of the event the buffer
     /// is for.  If the watcher mask does not include the event specified by the `mask` then the
     /// buffer is not sent and `buffer` is not even invoked.
-    pub(crate) fn send_buffer(
-        &self,
-        mask: fidl_fuchsia_io::WatchMask,
-        buffer: impl FnOnce() -> Vec<u8>,
-    ) {
+    pub(crate) fn send_buffer(&self, mask: fio::WatchMask, buffer: impl FnOnce() -> Vec<u8>) {
         if !self.mask.intersects(mask) {
             return;
         }

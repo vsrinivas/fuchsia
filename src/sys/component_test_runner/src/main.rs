@@ -7,7 +7,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_proxy, ServerEnd};
 use fidl::prelude::*;
-use fidl_fuchsia_io::{DirectoryProxy, FileMarker, NodeMarker};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -41,11 +41,11 @@ fn extract_directory_with_name(ns: &mut FlatNamespace, name: &str) -> Result<zx:
 }
 
 async fn file_contents_at_path(dir: zx::Channel, path: &str) -> Result<Vec<u8>, Error> {
-    let dir_proxy = DirectoryProxy::new(fasync::Channel::from_channel(dir)?);
+    let dir_proxy = fio::DirectoryProxy::new(fasync::Channel::from_channel(dir)?);
 
-    let (file, server) = create_proxy::<FileMarker>()?;
+    let (file, server) = create_proxy::<fio::FileMarker>()?;
 
-    dir_proxy.open(0, 0, path, ServerEnd::<NodeMarker>::new(server.into_channel()))?;
+    dir_proxy.open(0, 0, path, ServerEnd::<fio::NodeMarker>::new(server.into_channel()))?;
 
     let attr = file.get_attr().await?.1;
 

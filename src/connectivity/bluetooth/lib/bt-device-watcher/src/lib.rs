@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Error},
     fidl::{endpoints::Proxy, HandleBased},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
@@ -54,7 +54,7 @@ pub struct DeviceWatcher {
     debug_dir_name: PathBuf,
     watcher: VfsWatcher,
     timeout: zx::Duration,
-    watched_dir: DirectoryProxy,
+    watched_dir: fio::DirectoryProxy,
 }
 
 /// Filter used when watching for new devices.
@@ -74,7 +74,7 @@ impl DeviceWatcher {
     /// met, or in an error if the condition is not met within `timeout`.
     pub async fn new(
         debug_dir_name: &str,
-        open_dir: DirectoryProxy,
+        open_dir: fio::DirectoryProxy,
         timeout: zx::Duration,
     ) -> Result<DeviceWatcher, Error> {
         let watched_dir = Clone::clone(&open_dir);
@@ -113,7 +113,9 @@ impl DeviceWatcher {
     ) -> impl Future<Output = Result<DeviceFile, Error>> + 'a {
         let events = match filter {
             WatchFilter::AddedOnly => vec![WatchEvent::ADD_FILE],
-            WatchFilter::AddedOrExisting => vec![WatchEvent::ADD_FILE, WatchEvent::EXISTING],
+            WatchFilter::AddedOrExisting => {
+                vec![WatchEvent::ADD_FILE, WatchEvent::EXISTING]
+            }
         };
         self.watch_with_timeout(topo_path, events)
     }
@@ -250,9 +252,9 @@ mod tests {
         // The realm holding the IsolatedDevMgr
         _realm: RealmInstance,
         // The root `/dev` directory.
-        dev_dir: DirectoryProxy,
+        dev_dir: fio::DirectoryProxy,
         // The test root controller, generally found at `/dev/sys/test/test`
-        control_dev_dir: DirectoryProxy,
+        control_dev_dir: fio::DirectoryProxy,
     }
 
     /// On success, returns the RealmInstance containing an IsolatedDevMgr, alongside the DevMgrs's
@@ -289,7 +291,7 @@ mod tests {
     // directory of an IsolatedDevMgr.
     fn create_test_dev_in_devmgr(
         name: &str,
-        dev_dir: &DirectoryProxy,
+        dev_dir: &fio::DirectoryProxy,
     ) -> Result<DeviceFile, Error> {
         // Open the control device as a file, then convert the channel to a RootDeviceProxy
         let control_dev_file = io_util::open_file(

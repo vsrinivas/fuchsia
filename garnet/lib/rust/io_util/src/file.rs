@@ -8,8 +8,7 @@ use {
     crate::node::{CloseError, OpenError},
     anyhow::Error,
     fidl::encoding::{decode_persistent, encode_persistent_with_context, Persistable},
-    fidl_fuchsia_io::{FileProxy, MAX_BUF},
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx_status,
     thiserror::Error,
 };
 
@@ -26,7 +25,6 @@ pub use buffered_async_read_at::BufferedAsyncReadAt;
 #[cfg(target_os = "fuchsia")]
 use {
     crate::node,
-    fidl_fuchsia_io::FileMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon::Duration,
 };
@@ -115,9 +113,9 @@ impl WriteNamedError {
 /// Opens the given `path` from the current namespace as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
 #[cfg(target_os = "fuchsia")]
-pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError> {
+pub fn open_in_namespace(path: &str, flags: u32) -> Result<fio::FileProxy, OpenError> {
     let (dir, server_end) =
-        fidl::endpoints::create_proxy::<FileMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(OpenError::CreateProxy)?;
 
     node::connect_in_namespace(path, flags, server_end.into_channel())
         .map_err(OpenError::Namespace)?;
@@ -126,7 +124,7 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError>
 }
 
 /// Gracefully closes the file proxy from the remote end.
-pub async fn close(file: FileProxy) -> Result<(), CloseError> {
+pub async fn close(file: fio::FileProxy) -> Result<(), CloseError> {
     let result = file.close().await.map_err(CloseError::SendCloseRequest)?;
     result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
@@ -141,9 +139,7 @@ where
     D: AsRef<[u8]>,
 {
     async {
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-            | fidl_fuchsia_io::OPEN_FLAG_CREATE
-            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE;
         let file = open_in_namespace(path, flags)?;
 
         write(&file, data).await?;
@@ -156,7 +152,7 @@ where
 }
 
 /// Writes the given data into the given file.
-pub async fn write<D>(file: &FileProxy, data: D) -> Result<(), WriteError>
+pub async fn write<D>(file: &fio::FileProxy, data: D) -> Result<(), WriteError>
 where
     D: AsRef<[u8]>,
 {
@@ -164,7 +160,7 @@ where
 
     while !data.is_empty() {
         let bytes_written = file
-            .write(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
+            .write(&data[..std::cmp::min(fio::MAX_BUF as usize, data.len())])
             .await?
             .map_err(|s| WriteError::WriteError(zx_status::Status::from_raw(s)))?;
 
@@ -178,7 +174,7 @@ where
 }
 
 /// Write the given FIDL message in a binary form into a file open for writing.
-pub async fn write_fidl<T: Persistable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+pub async fn write_fidl<T: Persistable>(file: &fio::FileProxy, data: &mut T) -> Result<(), Error> {
     write(
         file,
         encode_persistent_with_context(
@@ -210,12 +206,12 @@ pub async fn write_fidl_in_namespace<T: Persistable>(
 }
 
 /// Reads all data from the given file's current offset to the end of the file.
-pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
+pub async fn read(file: &fio::FileProxy) -> Result<Vec<u8>, ReadError> {
     let mut out = Vec::new();
 
     loop {
         let mut bytes = file
-            .read(MAX_BUF)
+            .read(fio::MAX_BUF)
             .await?
             .map_err(|s| ReadError::ReadError(zx_status::Status::from_raw(s)))?;
         if bytes.is_empty() {
@@ -228,14 +224,14 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
 
 /// Attempts to read a number of bytes from the given file's current offset.
 /// This function may return less data than expected.
-pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>, ReadError> {
+pub async fn read_num_bytes(file: &fio::FileProxy, num_bytes: u64) -> Result<Vec<u8>, ReadError> {
     let mut data = vec![];
 
     // Read in chunks of |MAX_BUF| bytes.
     // This is the maximum buffer size supported over FIDL.
     let mut bytes_left = num_bytes;
     while bytes_left > 0 {
-        let bytes_to_read = std::cmp::min(bytes_left, MAX_BUF);
+        let bytes_to_read = std::cmp::min(bytes_left, fio::MAX_BUF);
         let mut bytes = file
             .read(bytes_to_read)
             .await?
@@ -263,7 +259,7 @@ pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>,
 #[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
     async {
-        let file = open_in_namespace(path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
+        let file = open_in_namespace(path, fio::OPEN_RIGHT_READABLE)?;
         read(&file).await
     }
     .await
@@ -271,7 +267,7 @@ pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
 }
 
 /// Reads a utf-8 encoded string from the given file's current offset to the end of the file.
-pub async fn read_to_string(file: &FileProxy) -> Result<String, ReadError> {
+pub async fn read_to_string(file: &fio::FileProxy) -> Result<String, ReadError> {
     let bytes = read(file).await?;
     let string = String::from_utf8(bytes)?;
     Ok(string)
@@ -305,7 +301,7 @@ pub async fn read_in_namespace_to_string_with_timeout(
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
-pub async fn read_fidl<T: Persistable>(file: &FileProxy) -> Result<T, Error> {
+pub async fn read_fidl<T: Persistable>(file: &fio::FileProxy) -> Result<T, Error> {
     let bytes = read(file).await?;
     Ok(decode_persistent(&bytes)?)
 }
@@ -416,7 +412,7 @@ mod tests {
         .unwrap();
 
         // Write contents.
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         let data = b"\x80"; // Non UTF-8 data: a continuation byte as the first byte.
         write(&file, data).await.unwrap();
@@ -436,7 +432,7 @@ mod tests {
         .unwrap();
 
         // Write contents.
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         let data = "abc".repeat(10000);
         write(&file, &data).await.unwrap();
@@ -456,7 +452,7 @@ mod tests {
         .unwrap();
 
         // Create and write to the file.
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
         write(&file, "Hello ").await.unwrap();
         write(&file, "World!\n").await.unwrap();
@@ -538,7 +534,7 @@ mod tests {
         .unwrap();
 
         // Write contents.
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
 
         let mut data = DataTable1 {

@@ -17,8 +17,7 @@ use {
     cm_rust::{CapabilityName, ComponentDecl},
     cm_util::io::clone_dir,
     config_encoder::ConfigFields,
-    fidl_fuchsia_diagnostics_types as fdiagnostics,
-    fidl_fuchsia_io::{DirectoryProxy, NodeProxy},
+    fidl_fuchsia_diagnostics_types as fdiagnostics, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
     rand::random,
@@ -290,7 +289,7 @@ pub enum EventPayload {
     Purged,
     DirectoryReady {
         name: String,
-        node: NodeProxy,
+        node: fio::NodeProxy,
     },
     Discovered,
     Destroyed,
@@ -299,7 +298,7 @@ pub enum EventPayload {
         resolved_url: String,
         decl: ComponentDecl,
         config: Option<ConfigFields>,
-        package_dir: Option<DirectoryProxy>,
+        package_dir: Option<fio::DirectoryProxy>,
     },
     Started {
         component: WeakComponentInstance,
@@ -319,9 +318,9 @@ pub enum EventPayload {
 #[derive(Clone)]
 pub struct RuntimeInfo {
     pub resolved_url: String,
-    pub package_dir: Option<DirectoryProxy>,
-    pub outgoing_dir: Option<DirectoryProxy>,
-    pub runtime_dir: Option<DirectoryProxy>,
+    pub package_dir: Option<fio::DirectoryProxy>,
+    pub outgoing_dir: Option<fio::DirectoryProxy>,
+    pub runtime_dir: Option<fio::DirectoryProxy>,
     pub diagnostics_receiver:
         Arc<Mutex<Option<oneshot::Receiver<fdiagnostics::ComponentDiagnostics>>>>,
 }

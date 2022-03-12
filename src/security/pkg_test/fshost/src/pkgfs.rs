@@ -5,7 +5,7 @@
 use {
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_syslog::fx_log_info,
@@ -18,13 +18,13 @@ const PKGSVR_PATH: &str = "/pkg/bin/pkgsvr";
 pub struct PkgfsInstance {
     _system_image_merkle: Hash,
     _process: Scoped<fuchsia_zircon::Process>,
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl PkgfsInstance {
     /// Instantiate pkgfs in a sub-process with two inputs: the blobfs root
     /// directory handle and the system image merkle root hash.
-    pub fn new(blobfs_root_dir: DirectoryProxy, system_image_merkle: Hash) -> Self {
+    pub fn new(blobfs_root_dir: fio::DirectoryProxy, system_image_merkle: Hash) -> Self {
         let args = vec![
             CString::new(PKGSVR_PATH).unwrap(),
             CString::new(system_image_merkle.to_string().as_bytes()).unwrap(),
@@ -32,7 +32,7 @@ impl PkgfsInstance {
         let argv = args.iter().map(AsRef::as_ref).collect::<Vec<&CStr>>();
 
         let pkgfs_root_handle_info = HandleInfo::new(HandleType::User0, 0);
-        let (proxy, pkgfs_root_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, pkgfs_root_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
         fx_log_info!("Spawning pkgfs process; binary: {}", PKGSVR_PATH);
 
@@ -60,10 +60,10 @@ impl PkgfsInstance {
         Self { _system_image_merkle: system_image_merkle, _process: process, proxy }
     }
 
-    pub fn proxy(&self) -> DirectoryProxy {
-        let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    pub fn proxy(&self) -> fio::DirectoryProxy {
+        let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end = server_end.into_channel().into();
-        self.proxy.clone(CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
+        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
         proxy
     }
 }

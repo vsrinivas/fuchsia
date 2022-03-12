@@ -62,7 +62,7 @@ impl EventProducer for EventSource {
 pub mod tests {
     use super::*;
     use crate::{events::types::*, identity::ComponentIdentity};
-    use fidl_fuchsia_io::NodeMarker;
+    use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::StreamExt;
@@ -119,7 +119,7 @@ pub mod tests {
             .expect("send running event ok");
 
         // Send a `DirectoryReady` event for diagnostics.
-        let (node, _) = fidl::endpoints::create_request_stream::<NodeMarker>().unwrap();
+        let (node, _) = fidl::endpoints::create_request_stream::<fio::NodeMarker>().unwrap();
         stream_server
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {

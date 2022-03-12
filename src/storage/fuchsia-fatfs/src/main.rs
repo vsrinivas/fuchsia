@@ -5,8 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
-    fidl_fuchsia_io::{self as fio, DirectoryMarker},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_fatfs::FatFs,
     fuchsia_runtime::HandleType,
@@ -61,7 +60,7 @@ async fn main() -> Result<(), Error> {
 
     // Start the filesystem and open the root directory.
     let fatfs = FatFs::new(device).map_err(|_| Status::IO)?;
-    let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
     let root = fatfs.get_root()?;
     root.clone().open(
         scope.clone(),

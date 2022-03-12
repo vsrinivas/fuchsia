@@ -10,7 +10,7 @@ use {
     fidl::prelude::*,
     fidl::Error as FidlError,
     fidl_fuchsia_bluetooth_snoop::{SnoopRequest, SnoopRequestStream},
-    fidl_fuchsia_io, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect, fuchsia_trace as trace,
@@ -341,13 +341,11 @@ async fn run(
     let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
     let channel = fdio::clone_channel(&hci_dir)?;
     let async_channel = fasync::Channel::from_channel(channel)?;
-    let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
-    let mut hci_device_events = Watcher::new(io_util::clone_directory(
-        &directory,
-        fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
-    )?)
-    .await
-    .context("Cannot create device watcher")?;
+    let directory = fio::DirectoryProxy::from_channel(async_channel);
+    let mut hci_device_events =
+        Watcher::new(io_util::clone_directory(&directory, fio::CLONE_FLAG_SAME_RIGHTS)?)
+            .await
+            .context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
@@ -383,7 +381,7 @@ async fn run(
                         warn!("VFS Watcher has died with error: {:?}", e);
                         hci_device_events = Watcher::new(io_util::clone_directory(
                             &directory,
-                            fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
+                            fio::CLONE_FLAG_SAME_RIGHTS,
                         )?)
                             .await
                             .context("Cannot create device watcher")?;

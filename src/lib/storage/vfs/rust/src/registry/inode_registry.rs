@@ -7,7 +7,7 @@
 use super::{InodeRegistry, InodeRegistryClient};
 
 use {
-    fidl_fuchsia_io::INO_UNKNOWN,
+    fidl_fuchsia_io as fio,
     std::collections::hash_map::HashMap,
     std::sync::{Arc, Mutex, Weak},
 };
@@ -56,7 +56,7 @@ impl InodeRegistry for Simple {
             this
         } else {
             debug_assert!(false, "Another thread has panicked while holding the `inner` lock");
-            return INO_UNKNOWN;
+            return fio::INO_UNKNOWN;
         };
 
         match this.assigned.get(&node_id) {
@@ -135,11 +135,7 @@ mod tests {
             path::Path,
         };
 
-        use {
-            fidl::endpoints::ServerEnd,
-            fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
-            std::sync::Arc,
-        };
+        use {fidl::endpoints::ServerEnd, fidl_fuchsia_io as fio, std::sync::Arc};
 
         pub(super) struct MockFile {}
 
@@ -156,13 +152,13 @@ mod tests {
                 _flags: u32,
                 _mode: u32,
                 path: Path,
-                _server_end: ServerEnd<NodeMarker>,
+                _server_end: ServerEnd<fio::NodeMarker>,
             ) {
                 assert!(path.is_empty());
             }
 
             fn entry_info(&self) -> EntryInfo {
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
             }
         }
     }

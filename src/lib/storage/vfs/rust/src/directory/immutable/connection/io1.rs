@@ -23,15 +23,8 @@ use crate::{
 };
 
 use {
-    anyhow::Error,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
-        OPEN_FLAG_DESCRIBE,
-    },
-    fuchsia_zircon::Status,
-    futures::future::BoxFuture,
-    std::sync::Arc,
+    anyhow::Error, fidl::endpoints::ServerEnd, fidl_fuchsia_io as fio, fuchsia_zircon::Status,
+    futures::future::BoxFuture, std::sync::Arc,
 };
 
 pub trait ImmutableConnectionClient: BaseConnectionClient {}
@@ -53,7 +46,7 @@ impl DerivedConnection for ImmutableConnection {
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // Ensure we close the directory if we fail to create the connection.
         let directory = OpenDirectory::new(directory);
@@ -69,7 +62,7 @@ impl DerivedConnection for ImmutableConnection {
         };
 
         let (requests, control_handle) =
-            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+            match ServerEnd::<fio::DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()
             {
                 Ok((requests, control_handle)) => (requests, control_handle),
@@ -80,8 +73,8 @@ impl DerivedConnection for ImmutableConnection {
                 }
             };
 
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject);
+        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
@@ -107,7 +100,7 @@ impl DerivedConnection for ImmutableConnection {
         _name: &str,
         _path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if flags & OPEN_FLAG_CREATE == 0 {
+        if flags & fio::OPEN_FLAG_CREATE == 0 {
             Err(Status::NOT_FOUND)
         } else {
             Err(Status::NOT_SUPPORTED)
@@ -116,7 +109,7 @@ impl DerivedConnection for ImmutableConnection {
 
     fn handle_request(
         &mut self,
-        request: DirectoryRequest,
+        request: fio::DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move { self.base.handle_request(request).await })
     }

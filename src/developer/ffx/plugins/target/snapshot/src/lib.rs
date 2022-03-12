@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_feedback::{
         Annotation, DataProviderProxy, GetAnnotationsParameters, GetSnapshotParameters,
     },
-    fidl_fuchsia_io::{FileMarker, MAX_BUF},
+    fidl_fuchsia_io as fio,
     futures::stream::{FuturesOrdered, StreamExt},
     std::convert::{TryFrom, TryInto},
     std::fs,
@@ -27,13 +27,13 @@ use {
 // The implementation attempts to maintain 8 concurrent in-flight requests so as
 // to overcome the BDP that otherwise leads to a performance problem with a
 // networked peer and only 8kb buffers in fuchsia.io.
-pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
+pub async fn read_data(file: &fio::FileProxy) -> Result<Vec<u8>> {
     // Number of concurrent read operations to maintain (aim for a 128kb
     // in-flight buffer, divided by the fuchsia.io chunk size). On a short range
     // network, 64kb should be more than sufficient, but on an LFN such as a
     // work-from-home scenario, having some more space further optimizes
     // performance.
-    const CONCURRENCY: u64 = 131072 / fidl_fuchsia_io::MAX_BUF;
+    const CONCURRENCY: u64 = 131072 / fio::MAX_BUF;
 
     let mut out = Vec::new();
 
@@ -49,7 +49,7 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
     let mut queue = FuturesOrdered::new();
 
     for _ in 0..CONCURRENCY {
-        queue.push(file.read(MAX_BUF));
+        queue.push(file.read(fio::MAX_BUF));
     }
 
     loop {
@@ -65,7 +65,7 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
         out.append(&mut bytes);
 
         while queue.len() < CONCURRENCY.try_into().unwrap() {
-            queue.push(file.read(MAX_BUF));
+            queue.push(file.read(fio::MAX_BUF));
         }
     }
 
@@ -176,7 +176,7 @@ pub async fn snapshot_impl<W: Write>(
         };
 
         // Make file proxy and channel for snapshot
-        let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
+        let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()?;
 
         // Build parameters
         let params = GetSnapshotParameters {
@@ -230,11 +230,10 @@ mod test {
         super::*,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_feedback::{Annotations, DataProviderRequest, Snapshot},
-        fidl_fuchsia_io::{FileRequest, NodeAttributes},
         futures::TryStreamExt,
     };
 
-    fn serve_fake_file(server: ServerEnd<FileMarker>) {
+    fn serve_fake_file(server: ServerEnd<fio::FileMarker>) {
         fuchsia_async::Task::local(async move {
             let data: [u8; 3] = [1, 2, 3];
             let mut stream =
@@ -243,7 +242,7 @@ mod test {
             let mut cc: u32 = 0;
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    FileRequest::ReadDeprecated { count: _, responder } => {
+                    fio::FileRequest::ReadDeprecated { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder
@@ -253,7 +252,7 @@ mod test {
                             responder.send(/*Status*/ 0, &[]).expect("writing file test response");
                         }
                     }
-                    FileRequest::Read { count: _, responder } => {
+                    fio::FileRequest::Read { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder
@@ -263,8 +262,8 @@ mod test {
                             responder.send(&mut Ok(vec![])).expect("writing file test response");
                         }
                     }
-                    FileRequest::GetAttr { responder } => {
-                        let mut attrs = NodeAttributes {
+                    fio::FileRequest::GetAttr { responder } => {
+                        let mut attrs = fio::NodeAttributes {
                             mode: 0,
                             id: 0,
                             content_size: data.len() as u64,
@@ -292,7 +291,7 @@ mod test {
         setup_fake_data_provider_proxy(move |req| match req {
             DataProviderRequest::GetSnapshot { params, responder } => {
                 let channel = params.response_channel.unwrap();
-                let server_end = ServerEnd::<FileMarker>::new(channel);
+                let server_end = ServerEnd::<fio::FileMarker>::new(channel);
 
                 serve_fake_file(server_end);
 

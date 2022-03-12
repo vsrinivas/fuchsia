@@ -6,6 +6,7 @@ use {
     crate::{isolated_devmgr_utils::*, ot_radio_driver_utils::ot_radio_set_channel},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_lowpan_spinel::DeviceProxy,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
@@ -19,9 +20,9 @@ const OT_PROTOCOL_PATH: &str = "class/ot-radio";
 pub async fn get_ot_device_in_isolated_devmgr(dir_path_str: &str) -> Result<File, Error> {
     let ot_radio_dir =
         open_dir_in_isolated_devmgr(dir_path_str).context("opening dir in isolated devmgr")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&ot_radio_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&ot_radio_dir)?,
+    )?);
     let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
     // Should have 1 device that implements OT_RADIO
     if ot_radio_devices.len() != 1 {
@@ -60,9 +61,9 @@ pub async fn validate_removal_of_device_in_isolated_devmgr(
 ) -> Result<(), Error> {
     let protocol_dir =
         open_dir_in_isolated_devmgr(dir_path_str).context("opening dir in isolated devmgr")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&protocol_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&protocol_dir)?,
+    )?);
     loop {
         let ot_devices = files_async::readdir(&directory_proxy).await?;
         if ot_devices.is_empty() {

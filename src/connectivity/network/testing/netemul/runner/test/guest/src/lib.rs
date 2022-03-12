@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::FileMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_netemul_guest::{CommandListenerEvent, CommandListenerEventStream},
     fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -23,7 +23,7 @@ use {
 /// let local_file = "/data/local";
 /// let client_end = file_to_client(&File::create(local_file)?)?;
 /// ```
-pub fn file_to_client(file: &File) -> Result<ClientEnd<FileMarker>, Error> {
+pub fn file_to_client(file: &File) -> Result<ClientEnd<fio::FileMarker>, Error> {
     let channel = fdio::clone_channel(file)?;
     Ok(ClientEnd::new(channel))
 }

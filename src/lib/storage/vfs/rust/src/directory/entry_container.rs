@@ -13,13 +13,13 @@ use crate::{
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes, WatchMask},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
 };
 
 mod private {
-    use std::convert::TryFrom;
+    use {fidl_fuchsia_io as fio, std::convert::TryFrom};
 
     /// A type-preserving wrapper around [`fuchsia_async::Channel`].
     #[derive(Debug)]
@@ -35,13 +35,11 @@ mod private {
         }
     }
 
-    impl TryFrom<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryWatcherMarker>>
-        for DirectoryWatcher
-    {
+    impl TryFrom<fidl::endpoints::ServerEnd<fio::DirectoryWatcherMarker>> for DirectoryWatcher {
         type Error = fuchsia_zircon::Status;
 
         fn try_from(
-            server_end: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryWatcherMarker>,
+            server_end: fidl::endpoints::ServerEnd<fio::DirectoryWatcherMarker>,
         ) -> Result<Self, Self::Error> {
             let channel = fuchsia_async::Channel::from_channel(server_end.into_channel())?;
             Ok(Self { channel })
@@ -69,7 +67,7 @@ pub trait Directory: DirectoryEntry {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status>;
 
@@ -79,13 +77,13 @@ pub trait Directory: DirectoryEntry {
 
     /// Get this directory's attributes.
     /// The "mode" field will be filled in by the connection.
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status>;
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status>;
 
     /// Called when the directory is closed.
     fn close(&self) -> Result<(), Status>;
 
     /// Returns information about the filesystem.
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         Err(Status::NOT_SUPPORTED)
     }
 }
@@ -108,7 +106,7 @@ pub trait MutableDirectory: Directory + Send + Sync {
 
     /// Set the attributes of this directory based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    async fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
+    async fn set_attrs(&self, flags: u32, attributes: fio::NodeAttributes) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
     async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status>;

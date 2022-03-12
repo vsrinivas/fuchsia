@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use fidl_fuchsia_io as fio;
 use files_async;
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use std::path::Path;
@@ -19,7 +20,7 @@ pub async fn find_devices() -> Result<Vec<DigitalAudioInterface>, Error> {
 }
 
 async fn find_devices_internal(
-    directory_proxy: fidl_fuchsia_io::DirectoryProxy,
+    directory_proxy: fio::DirectoryProxy,
 ) -> Result<Vec<DigitalAudioInterface>, Error> {
     let files = files_async::readdir(&directory_proxy).await?;
 
@@ -34,7 +35,7 @@ async fn find_devices_internal(
 mod tests {
     use {
         anyhow::Error,
-        fidl_fuchsia_io as fio, fuchsia,
+        fuchsia,
         fuchsia_component_test::new::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Route,
         },

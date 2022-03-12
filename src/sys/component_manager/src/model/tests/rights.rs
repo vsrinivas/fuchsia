@@ -19,8 +19,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{
         convert::TryFrom,
         path::PathBuf,
@@ -66,10 +65,10 @@ async fn offer_from_component_manager_namespace_directory_incompatible_rights() 
 }
 
 struct MockFrameworkDirectoryProvider {
-    test_dir_proxy: DirectoryProxy,
+    test_dir_proxy: fio::DirectoryProxy,
 }
 struct MockFrameworkDirectoryHost {
-    test_dir_proxy: DirectoryProxy,
+    test_dir_proxy: fio::DirectoryProxy,
 }
 
 #[async_trait]

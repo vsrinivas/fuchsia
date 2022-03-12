@@ -11,8 +11,7 @@ use {
         DEFAULT_TUF_METADATA_TIMEOUT,
     },
     anyhow::{anyhow, Context as _},
-    cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_io::DirectoryProxy,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
@@ -46,7 +45,7 @@ pub struct RepositoryManager {
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
 }
 
 #[derive(Debug)]
@@ -223,7 +222,7 @@ impl RepositoryManager {
     /// If persistent dynamic configs are enabled, save the current configs to disk. Log, and
     /// ultimately ignore, any errors that occur to make sure forward progress can always be made.
     async fn save(
-        data_proxy: &Option<DirectoryProxy>,
+        data_proxy: &Option<fio::DirectoryProxy>,
         dynamic_configs_path: &str,
         dynamic_configs: &mut HashMap<RepoUrl, InspectableRepositoryConfig>,
     ) {
@@ -242,21 +241,16 @@ impl RepositoryManager {
 
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
-            let data_proxy = io_util::directory::open_directory(
-                &data_proxy,
-                ".",
-                fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-            )
-            .await
-            .context("reopen /data")?;
+            let data_proxy =
+                io_util::directory::open_directory(&data_proxy, ".", fio::OPEN_RIGHT_WRITABLE)
+                    .await
+                    .context("reopen /data")?;
 
             let path = format!("{}.new", dynamic_configs_path);
             let proxy = io_util::directory::open_file(
                 &data_proxy,
                 &path,
-                fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE
-                    | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE,
+                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_TRUNCATE,
             )
             .await
             .with_context(|| format!("creating file: {}", path))?;
@@ -368,7 +362,7 @@ impl RepositoryManager {
 }
 
 async fn open_cached_or_new_repository(
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
     persisted_repos_dir: Arc<Option<String>>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
@@ -426,7 +420,7 @@ pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode>
     inspect_node: N,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
 }
 
 impl<S, N> RepositoryManagerBuilder<S, N> {
@@ -481,7 +475,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     /// [RepositoryManager], or error out if we encounter errors during the load. The
     /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
     pub async fn new<P>(
-        data_proxy: Option<DirectoryProxy>,
+        data_proxy: Option<fio::DirectoryProxy>,
         dynamic_configs_path: Option<P>,
         experiments: Experiments,
     ) -> Result<Self, (Self, LoadError)>
@@ -766,7 +760,7 @@ fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, L
 }
 
 async fn load_configs_file_from_proxy(
-    proxy: &DirectoryProxy,
+    proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<Vec<RepositoryConfig>, LoadError> {
     let file = match io_util::directory::open_file(proxy, path, io_util::OPEN_RIGHT_READABLE).await

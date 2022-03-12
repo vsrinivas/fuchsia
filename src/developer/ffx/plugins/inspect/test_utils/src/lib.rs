@@ -17,10 +17,7 @@ use {
         RemoteControlRequest, RemoteDiagnosticsBridgeProxy, RemoteDiagnosticsBridgeRequest,
     },
     fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, DataType, StreamMode},
-    fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, NodeInfo,
-        NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     futures::{StreamExt, TryStreamExt},
     iquery::types::ToText,
@@ -272,7 +269,7 @@ pub fn fake_hub_directory() -> MockDir {
 }
 
 pub trait Entry {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>);
+    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<fio::NodeMarker>);
     fn encode(&self, buf: &mut Vec<u8>);
     fn name(&self) -> String;
 }
@@ -293,25 +290,25 @@ impl MockDir {
         self
     }
 
-    async fn serve(self: Arc<Self>, object: ServerEnd<DirectoryMarker>) {
+    async fn serve(self: Arc<Self>, object: ServerEnd<fio::DirectoryMarker>) {
         let mut stream = object.into_stream().unwrap();
         let _ = stream.control_handle().send_on_open_(
             Status::OK.into_raw(),
-            Some(&mut NodeInfo::Directory(DirectoryObject {})),
+            Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
         );
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
-                DirectoryRequest::Open { flags, mode, path, object, .. } => {
+                fio::DirectoryRequest::Open { flags, mode, path, object, .. } => {
                     self.clone().open(flags, mode, &path, object);
                 }
-                DirectoryRequest::Clone { flags, object, .. } => {
+                fio::DirectoryRequest::Clone { flags, object, .. } => {
                     self.clone().open(flags, fio::MODE_TYPE_DIRECTORY, ".", object);
                 }
-                DirectoryRequest::Rewind { responder, .. } => {
+                fio::DirectoryRequest::Rewind { responder, .. } => {
                     self.at_end.store(false, Ordering::Relaxed);
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
-                DirectoryRequest::ReadDirents { max_bytes: _, responder, .. } => {
+                fio::DirectoryRequest::ReadDirents { max_bytes: _, responder, .. } => {
                     let entries = match self.at_end.compare_exchange(
                         false,
                         true,
@@ -341,7 +338,13 @@ fn encode_entries(subdirs: &HashMap<String, Arc<dyn Entry>>) -> Vec<u8> {
 }
 
 impl Entry for MockDir {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
+    fn open(
+        self: Arc<Self>,
+        flags: u32,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
         let path = Path::new(path);
         let mut path_iter = path.iter();
         let segment = if let Some(segment) = path_iter.next() {
@@ -368,9 +371,9 @@ impl Entry for MockDir {
 
     #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
-        buf.write_u64::<LittleEndian>(INO_UNKNOWN).expect("writing mockdir ino to work");
+        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
-        buf.write_u8(DIRENT_TYPE_DIRECTORY).expect("writing mockdir type to work");
+        buf.write_u8(fio::DIRENT_TYPE_DIRECTORY).expect("writing mockdir type to work");
         buf.write(self.name.as_ref()).expect("writing mockdir name to work");
     }
 
@@ -379,9 +382,15 @@ impl Entry for MockDir {
     }
 }
 
-impl Entry for DirectoryProxy {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<NodeMarker>) {
-        let _ = DirectoryProxy::open(&*self, flags, mode, path, object);
+impl Entry for fio::DirectoryProxy {
+    fn open(
+        self: Arc<Self>,
+        flags: u32,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
+        let _ = fio::DirectoryProxy::open(&*self, flags, mode, path, object);
     }
 
     fn encode(&self, _buf: &mut Vec<u8>) {
@@ -404,15 +413,21 @@ impl MockFile {
 }
 
 impl Entry for MockFile {
-    fn open(self: Arc<Self>, _flags: u32, _mode: u32, _path: &str, _object: ServerEnd<NodeMarker>) {
+    fn open(
+        self: Arc<Self>,
+        _flags: u32,
+        _mode: u32,
+        _path: &str,
+        _object: ServerEnd<fio::NodeMarker>,
+    ) {
         unimplemented!();
     }
 
     #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
-        buf.write_u64::<LittleEndian>(INO_UNKNOWN).expect("writing mockdir ino to work");
+        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
-        buf.write_u8(DIRENT_TYPE_FILE).expect("writing mockdir type to work");
+        buf.write_u8(fio::DIRENT_TYPE_FILE).expect("writing mockdir type to work");
         buf.write(self.name.as_ref()).expect("writing mockdir name to work");
     }
 
@@ -421,7 +436,7 @@ impl Entry for MockFile {
     }
 }
 
-fn send_error(object: ServerEnd<NodeMarker>, status: Status) {
+fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
     let stream = object.into_stream().expect("failed to create stream");
     let control_handle = stream.control_handle();
     let _ = control_handle.send_on_open_(status.into_raw(), None);

@@ -5,7 +5,7 @@
 #![cfg(test)]
 use {
     blobfs_ramdisk::BlobfsRamdisk,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     pkgfs_ramdisk::PkgfsRamdisk,
@@ -67,9 +67,7 @@ async fn meta_far_file() {
         .unwrap();
 
         let vmo = meta_far_file
-            .get_backing_memory(
-                fidl_fuchsia_io::VmoFlags::READ | fidl_fuchsia_io::VmoFlags::PRIVATE_CLONE,
-            )
+            .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::PRIVATE_CLONE)
             .await
             .unwrap()
             .map_err(Status::from_raw)

@@ -4,7 +4,7 @@
 
 //! Fake implementation of blobfs for blobfs::Client.
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, std::fs::File, tempfile::TempDir};
+use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, std::fs::File, tempfile::TempDir};
 
 /// A fake blobfs backed by temporary storage.
 /// The name of the blob file is not guaranteed to match the merkle root of the content.
@@ -35,8 +35,8 @@ impl Fake {
         std::fs::write(self.root.path().join(hash.to_string()), data).unwrap();
     }
 
-    fn root_proxy(&self) -> DirectoryProxy {
-        DirectoryProxy::new(
+    fn root_proxy(&self) -> fio::DirectoryProxy {
+        fio::DirectoryProxy::new(
             fuchsia_async::Channel::from_channel(
                 fdio::transfer_fd(File::open(self.root.path()).unwrap()).unwrap().into(),
             )

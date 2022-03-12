@@ -6,9 +6,7 @@ mod test_server;
 
 use {
     anyhow::Context as _,
-    fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fuchsia_async as fasync,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::prelude::*,
@@ -80,7 +78,7 @@ fn get_new_test_server() -> TestServer {
     fs::create_dir(&test_data_path).expect("cannot create test output directory.");
     let test_data_dir = io_util::open_directory_in_namespace(
         &test_data_path,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
     )
     .expect("Cannot open data directory");
 

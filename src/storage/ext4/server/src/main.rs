@@ -17,7 +17,7 @@ use {
     ext4_parser::{construct_fs, ConstructFsError, FsSourceType},
     ext4_read_only::structs::{InvalidAddressErrorType, ParsingError},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{
         BadDirectory, BadEntryType, BadFile, BannedFeatureIncompat, BlockNumberOutOfBounds,
@@ -152,7 +152,7 @@ fn serve_vmo(
     scope: ExecutionScope,
     source: Buffer,
     flags: u32,
-    root: ServerEnd<DirectoryMarker>,
+    root: ServerEnd<fio::DirectoryMarker>,
 ) -> MountVmoResult {
     let tree = match construct_fs(FsSourceType::Vmo(source)) {
         Ok(tree) => tree,
@@ -192,7 +192,7 @@ async fn main() -> Result<(), Error> {
         let scope = ExecutionScope::new();
         tree.open(
             scope.clone(),
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             Path::dot(),
             Channel::from(directory_handle).into(),

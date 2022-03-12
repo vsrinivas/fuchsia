@@ -5,15 +5,8 @@
 //! Typesafe wrappers around the /pkgfs/install filesystem.
 
 use {
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileMarker,
-        FileObject, FileProxy, FileRequest, FileRequestStream, NodeInfo,
-    },
-    fuchsia_hash::Hash,
-    fuchsia_zircon::Status,
-    futures::prelude::*,
-    thiserror::Error,
+    fidl::endpoints::RequestStream, fidl_fuchsia_io as fio, fuchsia_hash::Hash,
+    fuchsia_zircon::Status, futures::prelude::*, thiserror::Error,
 };
 
 /// The kind of blob to be installed.
@@ -53,7 +46,7 @@ pub enum BlobCreateError {
 /// An open handle to /pkgfs/install
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
@@ -61,18 +54,20 @@ impl Client {
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
         let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/install",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_pkgfs_root(
+        pkgfs: &fio::DirectoryProxy,
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "install",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )?,
         })
     }
@@ -83,9 +78,9 @@ impl Client {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, DirectoryRequestStream) {
+    pub fn new_test() -> (Self, fio::DirectoryRequestStream) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
     }
@@ -98,7 +93,7 @@ impl Client {
     /// Panics on error
     pub fn new_mock() -> (Self, Mock) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, Mock { stream })
     }
@@ -109,7 +104,7 @@ impl Client {
         merkle: Hash,
         blob_kind: BlobKind,
     ) -> Result<(Blob<NeedsTruncate>, BlobCloser), BlobCreateError> {
-        let flags = fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+        let flags = fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE;
 
         let blob = io_util::directory::open_file(
             &self.proxy,
@@ -141,7 +136,7 @@ impl Client {
 ///
 /// Mock does not handle requests until instructed to do so.
 pub struct Mock {
-    stream: DirectoryRequestStream,
+    stream: fio::DirectoryRequestStream,
 }
 
 impl Mock {
@@ -153,7 +148,7 @@ impl Mock {
     /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
     pub async fn expect_create_blob(&mut self, merkle: Hash, kind: BlobKind) -> MockBlob {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Open {
+            Some(Ok(fio::DirectoryRequest::Open {
                 flags: _,
                 mode: _,
                 path,
@@ -186,19 +181,19 @@ impl Mock {
 ///
 /// MockBlob does not send the OnOpen event or handle requests until instructed to do so.
 pub struct MockBlob {
-    stream: FileRequestStream,
+    stream: fio::FileRequestStream,
 }
 
 impl MockBlob {
     fn send_on_open(&mut self, status: Status) {
-        let mut info = NodeInfo::File(FileObject { event: None, stream: None });
+        let mut info = fio::NodeInfo::File(fio::FileObject { event: None, stream: None });
         let () =
             self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
     }
 
     async fn handle_truncate(&mut self, status: Status) -> u64 {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Resize { length, responder })) => {
+            Some(Ok(fio::FileRequest::Resize { length, responder })) => {
                 responder.send(&mut Err(status.into_raw())).unwrap();
 
                 length
@@ -213,11 +208,11 @@ impl MockBlob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(FileRequest::WriteDeprecated { data, responder })) => {
+            Some(Ok(fio::FileRequest::WriteDeprecated { data, responder })) => {
                 responder.send(status.into_raw(), data.len() as u64).unwrap();
                 data
             }
-            Some(Ok(FileRequest::Write { data, responder })) => {
+            Some(Ok(fio::FileRequest::Write { data, responder })) => {
                 if status == Status::OK {
                     responder.send(&mut Ok(data.len() as u64)).unwrap();
                 } else {
@@ -257,8 +252,7 @@ impl MockBlob {
 
         let length = self.expect_truncate().await;
         // divide rounding up
-        let expected_write_calls =
-            (length + (fidl_fuchsia_io::MAX_BUF - 1)) / fidl_fuchsia_io::MAX_BUF;
+        let expected_write_calls = (length + (fio::MAX_BUF - 1)) / fio::MAX_BUF;
         for _ in 0..(expected_write_calls - 1) {
             self.handle_write(Status::OK).await;
         }
@@ -286,10 +280,10 @@ impl MockBlob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::CloseDeprecated { responder })) => {
+            Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
                 let _ = responder.send(Status::OK.into_raw());
             }
-            Some(Ok(FileRequest::Close { responder })) => {
+            Some(Ok(fio::FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
             }
             Some(other) => panic!("unexpected request: {:?}", other),
@@ -310,8 +304,8 @@ impl MockBlob {
 
             let mut rest = expected;
             while !rest.is_empty() {
-                let expected_chunk = if rest.len() > fidl_fuchsia_io::MAX_BUF as usize {
-                    &rest[..fidl_fuchsia_io::MAX_BUF as usize]
+                let expected_chunk = if rest.len() > fio::MAX_BUF as usize {
+                    &rest[..fio::MAX_BUF as usize]
                 } else {
                     rest
                 };
@@ -320,10 +314,10 @@ impl MockBlob {
             }
 
             match self.stream.next().await {
-                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
+                Some(Ok(fio::FileRequest::CloseDeprecated { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(fio::FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
@@ -371,7 +365,7 @@ pub enum BlobWriteError {
 #[derive(Debug)]
 #[must_use]
 pub struct BlobCloser {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     closed: bool,
 }
 
@@ -417,7 +411,7 @@ pub struct NeedsData {
 /// A blob in the process of being written.
 #[derive(Debug)]
 pub struct Blob<S> {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     kind: BlobKind,
     state: S,
 }
@@ -445,8 +439,9 @@ impl Blob<NeedsTruncate> {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test(kind: BlobKind) -> (Self, BlobCloser, FileRequestStream) {
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+    pub fn new_test(kind: BlobKind) -> (Self, BlobCloser, fio::FileRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         (
             Blob { proxy: Clone::clone(&proxy), kind, state: NeedsTruncate },
@@ -467,7 +462,7 @@ impl Blob<NeedsData> {
 
         while !buf.is_empty() {
             // Don't try to write more than MAX_BUF bytes at a time.
-            let limit = buf.len().min(fidl_fuchsia_io::MAX_BUF as usize);
+            let limit = buf.len().min(fio::MAX_BUF as usize);
 
             let written = self.write_some(&buf[..limit]).await?;
 

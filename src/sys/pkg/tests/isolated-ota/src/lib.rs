@@ -6,10 +6,7 @@ use {
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
-    fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream,
-        NodeAttributes, NodeInfo, NodeMarker,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
@@ -49,7 +46,7 @@ enum OmahaState {
 }
 
 struct TestEnvBuilder {
-    blobfs: Option<ClientEnd<DirectoryMarker>>,
+    blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
     board: String,
     channel: String,
     images: HashMap<String, Vec<u8>>,
@@ -89,7 +86,7 @@ impl TestEnvBuilder {
         self
     }
 
-    pub fn blobfs(mut self, client: ClientEnd<DirectoryMarker>) -> Self {
+    pub fn blobfs(mut self, client: ClientEnd<fio::DirectoryMarker>) -> Self {
         self.blobfs = Some(client);
         self
     }
@@ -212,7 +209,7 @@ impl TestEnvBuilder {
 }
 
 struct TestEnv {
-    blobfs: Option<ClientEnd<DirectoryMarker>>,
+    blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
     board: String,
     channel: String,
     omaha: OmahaState,
@@ -490,14 +487,14 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
     Ok(())
 }
 
-fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u32) {
+fn launch_cloned_blobfs(end: ServerEnd<fio::NodeMarker>, flags: u32, parent_flags: u32) {
     let flags = if (flags & fio::CLONE_FLAG_SAME_RIGHTS) == fio::CLONE_FLAG_SAME_RIGHTS {
         parent_flags
     } else {
         flags
     };
     let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
-    let stream = DirectoryRequestStream::from_channel(chan);
+    let stream = fio::DirectoryRequestStream::from_channel(chan);
     fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, flags)
             .await
@@ -507,7 +504,7 @@ fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u3
 }
 
 async fn serve_failing_blobfs(
-    mut stream: DirectoryRequestStream,
+    mut stream: fio::DirectoryRequestStream,
     open_flags: u32,
 ) -> Result<(), Error> {
     if (open_flags & fio::OPEN_FLAG_DESCRIBE) == fio::OPEN_FLAG_DESCRIBE {
@@ -515,45 +512,45 @@ async fn serve_failing_blobfs(
             .control_handle()
             .send_on_open_(
                 zx::Status::OK.into_raw(),
-                Some(&mut NodeInfo::Directory(DirectoryObject)),
+                Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject)),
             )
             .context("sending on open")?;
     }
     while let Some(req) = stream.try_next().await? {
         match req {
-            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+            fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 launch_cloned_blobfs(object, flags, open_flags)
             }
-            DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            DirectoryRequest::CloseDeprecated { responder } => {
+            fio::DirectoryRequest::CloseDeprecated { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing close")?
             }
-            DirectoryRequest::Close { responder } => {
+            fio::DirectoryRequest::Close { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
             }
-            DirectoryRequest::Describe { responder } => {
-                responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
-            }
-            DirectoryRequest::Describe2 { query, responder } => {
+            fio::DirectoryRequest::Describe { responder } => responder
+                .send(&mut fio::NodeInfo::Directory(fio::DirectoryObject))
+                .context("describing")?,
+            fio::DirectoryRequest::Describe2 { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            DirectoryRequest::SyncDeprecated { responder } => {
+            fio::DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing sync")?
             }
-            DirectoryRequest::Sync { responder } => {
+            fio::DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing sync")?
             }
-            DirectoryRequest::AdvisoryLock { request: _, responder } => {
+            fio::DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
-            DirectoryRequest::GetAttr { responder } => responder
+            fio::DirectoryRequest::GetAttr { responder } => responder
                 .send(
                     zx::Status::IO.into_raw(),
-                    &mut NodeAttributes {
+                    &mut fio::NodeAttributes {
                         mode: 0,
                         id: 0,
                         content_size: 0,
@@ -564,31 +561,37 @@ async fn serve_failing_blobfs(
                     },
                 )
                 .context("failing getattr")?,
-            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
+            fio::DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setattr")?
             }
-            DirectoryRequest::GetAttributes { query, responder } => {
+            fio::DirectoryRequest::GetAttributes { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            DirectoryRequest::UpdateAttributes { attributes, responder } => {
+            fio::DirectoryRequest::UpdateAttributes { attributes, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            DirectoryRequest::GetFlags { responder } => {
+            fio::DirectoryRequest::GetFlags { responder } => {
                 responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
             }
-            DirectoryRequest::SetFlags { flags: _, responder } => {
+            fio::DirectoryRequest::SetFlags { flags: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
             }
-            DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
+            fio::DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
                 if &path == "." {
                     launch_cloned_blobfs(object, flags, open_flags);
                 } else {
                     object.close_with_epitaph(zx::Status::IO).context("failing open")?;
                 }
             }
-            DirectoryRequest::Open2 { path, mode, options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Open2 {
+                path,
+                mode,
+                options,
+                object_request,
+                control_handle: _,
+            } => {
                 let _ = object_request;
                 todo!(
                     "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
@@ -597,7 +600,7 @@ async fn serve_failing_blobfs(
                     options
                 );
             }
-            DirectoryRequest::AddInotifyFilter {
+            fio::DirectoryRequest::AddInotifyFilter {
                 path,
                 filter,
                 watch_descriptor,
@@ -611,32 +614,32 @@ async fn serve_failing_blobfs(
                     watch_descriptor
                 );
             }
-            DirectoryRequest::Unlink { name: _, options: _, responder } => {
+            fio::DirectoryRequest::Unlink { name: _, options: _, responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink")?
             }
-            DirectoryRequest::ReadDirents { max_bytes: _, responder } => {
+            fio::DirectoryRequest::ReadDirents { max_bytes: _, responder } => {
                 responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
             }
-            DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
+            fio::DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
                 let _ = iterator;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            DirectoryRequest::Rewind { responder } => {
+            fio::DirectoryRequest::Rewind { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing rewind")?
             }
-            DirectoryRequest::GetToken { responder } => {
+            fio::DirectoryRequest::GetToken { responder } => {
                 responder.send(zx::Status::IO.into_raw(), None).context("failing gettoken")?
             }
-            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
+            fio::DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing rename")?
             }
-            DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
+            fio::DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing link")?
             }
-            DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
+            fio::DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
             }
-            DirectoryRequest::QueryFilesystem { responder } => responder
+            fio::DirectoryRequest::QueryFilesystem { responder } => responder
                 .send(zx::Status::IO.into_raw(), None)
                 .context("failing queryfilesystem")?,
         };
@@ -659,7 +662,8 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
         .await
         .context("Building TestEnv")?;
 
-    let stream = DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
+    let stream =
+        fio::DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
 
     fasync::Task::spawn(async move {
         serve_failing_blobfs(stream, 0)

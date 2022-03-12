@@ -17,10 +17,7 @@ use {
     anyhow::{format_err, Error},
     fidl::encoding::Persistable,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
-    },
+    fidl_fuchsia_io as fio,
     std::path::{Component, Path},
 };
 
@@ -32,19 +29,17 @@ pub mod file;
 pub mod node;
 
 // Reexported from fidl_fuchsia_io for convenience
-pub const OPEN_RIGHT_READABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-pub const OPEN_RIGHT_WRITABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
-pub const OPEN_RIGHT_EXECUTABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE;
+pub use fio::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 
 /// open_node will return a NodeProxy opened to the node at the given path relative to the
 /// given directory, or return an error if no such node exists (or some other FIDL error was
 /// encountered). This function will not block.
 pub fn open_node<'a>(
-    dir: &'a DirectoryProxy,
+    dir: &'a fio::DirectoryProxy,
     path: &'a Path,
     flags: u32,
     mode: u32,
-) -> Result<NodeProxy, Error> {
+) -> Result<fio::NodeProxy, Error> {
     let path = check_path(path)?;
     let node = directory::open_node_no_describe(dir, path, flags, mode)?;
     Ok(node)
@@ -53,10 +48,10 @@ pub fn open_node<'a>(
 /// open_directory will open a NodeProxy at the given path relative to the given directory, and
 /// convert it into a DirectoryProxy. This function will not block.
 pub fn open_directory<'a>(
-    dir: &'a DirectoryProxy,
+    dir: &'a fio::DirectoryProxy,
     path: &'a Path,
     flags: u32,
-) -> Result<DirectoryProxy, Error> {
+) -> Result<fio::DirectoryProxy, Error> {
     let path = check_path(path)?;
     let node = directory::open_directory_no_describe(dir, path, flags)?;
     Ok(node)
@@ -65,10 +60,10 @@ pub fn open_directory<'a>(
 /// open_file will open a NodeProxy at the given path relative to the given directory, and convert
 /// it into a FileProxy. This function will not block.
 pub fn open_file<'a>(
-    dir: &'a DirectoryProxy,
+    dir: &'a fio::DirectoryProxy,
     path: &'a Path,
     flags: u32,
-) -> Result<FileProxy, Error> {
+) -> Result<fio::FileProxy, Error> {
     let path = check_path(path)?;
     let node = directory::open_file_no_describe(dir, path, flags)?;
     Ok(node)
@@ -78,9 +73,9 @@ pub fn open_file<'a>(
 ///
 /// Panics if any path component of `path` is not a valid utf-8 encoded string.
 pub fn create_sub_directories(
-    root_dir: &DirectoryProxy,
+    root_dir: &fio::DirectoryProxy,
     path: &Path,
-) -> Result<DirectoryProxy, Error> {
+) -> Result<fio::DirectoryProxy, Error> {
     if path.components().next().is_none() {
         return Err(format_err!("path must not be empty"));
     }
@@ -92,13 +87,13 @@ pub fn create_sub_directories(
                     Some(r) => r,
                     None => root_dir,
                 };
-                let (subdir, local_server_end) = create_proxy::<DirectoryMarker>()?;
+                let (subdir, local_server_end) = create_proxy::<fio::DirectoryMarker>()?;
                 dir_ref.open(
-                    OPEN_FLAG_DIRECTORY
+                    fio::OPEN_FLAG_DIRECTORY
                         | OPEN_RIGHT_READABLE
                         | OPEN_RIGHT_WRITABLE
-                        | OPEN_FLAG_CREATE,
-                    MODE_TYPE_DIRECTORY,
+                        | fio::OPEN_FLAG_CREATE,
+                    fio::MODE_TYPE_DIRECTORY,
                     part.to_str().unwrap(),
                     ServerEnd::new(local_server_end.into_channel()),
                 )?;
@@ -127,7 +122,7 @@ pub fn connect_in_namespace(
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error> {
+pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<fio::NodeProxy, Error> {
     let node = node::open_in_namespace(path, flags)?;
     Ok(node)
 }
@@ -135,7 +130,7 @@ pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, Error> {
+pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<fio::DirectoryProxy, Error> {
     let node = directory::open_in_namespace(path, flags)?;
     Ok(node)
 }
@@ -143,29 +138,29 @@ pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryPr
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
 /// The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error> {
+pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<fio::FileProxy, Error> {
     let node = file::open_in_namespace(path, flags)?;
     Ok(node)
 }
 
-pub async fn read_file_bytes(file: &FileProxy) -> Result<Vec<u8>, Error> {
+pub async fn read_file_bytes(file: &fio::FileProxy) -> Result<Vec<u8>, Error> {
     let bytes = file::read(file).await?;
     Ok(bytes)
 }
 
-pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
+pub async fn read_file(file: &fio::FileProxy) -> Result<String, Error> {
     let string = file::read_to_string(file).await?;
     Ok(string)
 }
 
 /// Write the given bytes into a file open for writing.
-pub async fn write_file_bytes(file: &FileProxy, data: &[u8]) -> Result<(), Error> {
+pub async fn write_file_bytes(file: &fio::FileProxy, data: &[u8]) -> Result<(), Error> {
     file::write(file, data).await?;
     Ok(())
 }
 
 /// Write the given string as UTF-8 bytes into a file open for writing.
-pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
+pub async fn write_file(file: &fio::FileProxy, data: &str) -> Result<(), Error> {
     file::write(file, data).await?;
     Ok(())
 }
@@ -183,7 +178,7 @@ pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
-pub async fn read_file_fidl<T: Persistable>(file: &FileProxy) -> Result<T, Error> {
+pub async fn read_file_fidl<T: Persistable>(file: &fio::FileProxy) -> Result<T, Error> {
     Ok(file::read_fidl(file).await?)
 }
 
@@ -198,7 +193,10 @@ pub async fn read_path_fidl<T: Persistable>(path: &str) -> Result<T, Error> {
 }
 
 /// Write the given FIDL message in a binary form into a file open for writing.
-pub async fn write_file_fidl<T: Persistable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+pub async fn write_file_fidl<T: Persistable>(
+    file: &fio::FileProxy,
+    data: &mut T,
+) -> Result<(), Error> {
     file::write_fidl(file, data).await?;
     Ok(())
 }
@@ -214,21 +212,24 @@ pub async fn write_path_fidl<T: Persistable>(path: &str, data: &mut T) -> Result
 
 /// node_to_directory will convert the given NodeProxy into a DirectoryProxy. This is unsafe if the
 /// type of the node is not checked first.
-pub fn node_to_directory(node: NodeProxy) -> Result<DirectoryProxy, Error> {
+pub fn node_to_directory(node: fio::NodeProxy) -> Result<fio::DirectoryProxy, Error> {
     let node_chan = node.into_channel().map_err(|e| format_err!("{:?}", e))?;
-    Ok(DirectoryProxy::from_channel(node_chan))
+    Ok(fio::DirectoryProxy::from_channel(node_chan))
 }
 
 /// node_to_file will convert the given NodeProxy into a FileProxy. This is unsafe if the
 /// type of the node is not checked first.
-pub fn node_to_file(node: NodeProxy) -> Result<FileProxy, Error> {
+pub fn node_to_file(node: fio::NodeProxy) -> Result<fio::FileProxy, Error> {
     let node_chan = node.into_channel().map_err(|e| format_err!("{:?}", e))?;
-    Ok(FileProxy::from_channel(node_chan))
+    Ok(fio::FileProxy::from_channel(node_chan))
 }
 
 /// clone_directory will create a clone of the given DirectoryProxy by calling its clone function.
 /// This function will not block.
-pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProxy, Error> {
+pub fn clone_directory(
+    dir: &fio::DirectoryProxy,
+    flags: u32,
+) -> Result<fio::DirectoryProxy, Error> {
     let node = directory::clone_no_describe(dir, Some(flags))?;
     Ok(node)
 }
@@ -263,7 +264,6 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{Proxy, ServerEnd},
-        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
         futures::future,
         std::fs,
@@ -304,7 +304,7 @@ mod tests {
         // Write contents.
         let file_name = Path::new("myfile");
         let data = "abc".repeat(10000);
-        let file = open_file(&dir, &file_name, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)
+        let file = open_file(&dir, &file_name, OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
             .expect("could not open file");
         write_file(&file, &data).await.expect("could not write file");
 
@@ -348,12 +348,12 @@ mod tests {
             "write_only" => write_only(simple_init_vmo_with_capacity(&[], 100), |_| future::ready(())),
         };
         let (example_dir_proxy, example_dir_service) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         let scope = ExecutionScope::new();
         example_dir.open(
             scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(example_dir_service.into_channel()),
         );
@@ -424,7 +424,7 @@ mod tests {
         let file = open_file(
             &sub_dir,
             &file_name,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )?;
 
         write_file(&file, &data).await.expect("writing to the file failed");

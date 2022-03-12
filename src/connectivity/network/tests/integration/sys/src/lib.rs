@@ -50,7 +50,7 @@ async fn start_with_cache_no_space() {
         .expect("failed to create FIDL endpoints");
     let () = root.open(
         vfs::execution_scope::ExecutionScope::build().entry_constructor(constructor.clone()).new(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         0,
         vfs::path::Path::dot(),
         server.into_channel().into(),
@@ -203,7 +203,7 @@ async fn start_with_cache_no_space() {
         .expect("failed to open diagnostics directory exposed from netstack");
     let client_channel = fuchsia_async::Channel::from_channel(client_channel)
         .expect("failed to create async channel");
-    let proxy = fidl_fuchsia_io::DirectoryProxy::new(client_channel);
+    let proxy = fio::DirectoryProxy::new(client_channel);
 
     let () = futures::select! {
         res = netstack_fut => panic!("netstack unexpectedly exited; got signals: {:?}", res),
@@ -211,7 +211,7 @@ async fn start_with_cache_no_space() {
             let info = res.expect("failed to describe diagnostics directory");
             assert_eq!(
                 info,
-                fidl_fuchsia_io::NodeInfo::Directory(fidl_fuchsia_io::DirectoryObject)
+                fio::NodeInfo::Directory(fio::DirectoryObject)
             );
         }
     };

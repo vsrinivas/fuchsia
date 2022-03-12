@@ -21,9 +21,8 @@ use {
         Vmo,
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
@@ -245,10 +244,14 @@ async fn make_execution_runtime(
     // Set up channels into/out of the new component. These are absent from non-executable
     // components.
     let outgoing_dir_client = decl.get_runner().map(|_| {
-        DirectoryProxy::from_channel(fasync::Channel::from_channel(outgoing_dir_client).unwrap())
+        fio::DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+        )
     });
     let runtime_dir_client = decl.get_runner().map(|_| {
-        DirectoryProxy::from_channel(fasync::Channel::from_channel(runtime_dir_client).unwrap())
+        fio::DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+        )
     });
 
     let encoded_config = if let Some(config) = config {

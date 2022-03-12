@@ -8,8 +8,7 @@ use {
     diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Task,
     fuchsia_component::client,
     futures::StreamExt,
@@ -170,7 +169,7 @@ async fn start_child_component(realm: &fcomponent::RealmProxy, component: &Compo
         collection: Some(COLLECTION_NAME.to_owned()),
     };
 
-    let (exposed_dir, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
     realm
         .open_exposed_dir(&mut child_ref, server_end)
         .await

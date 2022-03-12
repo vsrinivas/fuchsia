@@ -20,15 +20,10 @@ use crate::{
 
 use {
     fidl::{self, endpoints::ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-        INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_NO_REMOTE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
 };
 
-fn set_up_remote(scope: ExecutionScope) -> DirectoryProxy {
+fn set_up_remote(scope: ExecutionScope) -> fio::DirectoryProxy {
     let r = pseudo_directory! {
         "a" => read_only_static("a content"),
         "dir" => pseudo_directory! {
@@ -37,11 +32,11 @@ fn set_up_remote(scope: ExecutionScope) -> DirectoryProxy {
     };
 
     let (remote_proxy, remote_server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     r.open(
         scope,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_DIRECTORY,
         Path::dot(),
         ServerEnd::new(remote_server_end.into_channel()),
     );
@@ -68,8 +63,8 @@ fn remote_dir_construction_open_node_ref() {
     let server = remote_dir(remote_proxy);
 
     run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let flags = OPEN_FLAG_NODE_REFERENCE;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
@@ -84,8 +79,8 @@ fn remote_dir_construction_open_no_remote() {
     let server = remote_dir(remote_proxy);
 
     run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let flags = OPEN_FLAG_NO_REMOTE;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let flags = fio::OPEN_FLAG_NO_REMOTE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
@@ -100,8 +95,8 @@ fn remote_dir_node_ref_with_path() {
     let server = remote_dir(remote_proxy);
 
     run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let flags = OPEN_FLAG_NODE_REFERENCE;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
         server.open(
             scope,
             flags,
@@ -124,22 +119,22 @@ fn remote_dir_direct_connection() {
     let server = remote_dir(remote_proxy);
 
     run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let flags = OPEN_RIGHT_READABLE;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let flags = fio::OPEN_RIGHT_READABLE;
         server.open(
             scope,
             flags,
-            MODE_TYPE_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             server_end.into_channel().into(),
         );
 
-        let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+        let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
         expected
             // (10 + 1) = 11
-            .add(DIRENT_TYPE_DIRECTORY, b".")
+            .add(fio::DIRENT_TYPE_DIRECTORY, b".")
             // 11 + (10 + 1) = 22
-            .add(DIRENT_TYPE_FILE, b"a");
+            .add(fio::DIRENT_TYPE_FILE, b"a");
         assert_read_dirents!(proxy, 22, expected.into_vec());
 
         assert_close!(proxy);
@@ -155,10 +150,10 @@ fn remote_dir_direct_connection_dir_contents() {
     let server = remote_dir(remote_proxy);
 
     run_client(exec, || async move {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-        let flags = OPEN_RIGHT_READABLE;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+        let flags = fio::OPEN_RIGHT_READABLE;
         let path = Path::validate_and_split("a").unwrap();
-        server.open(scope, flags, MODE_TYPE_FILE, path, server_end.into_channel().into());
+        server.open(scope, flags, fio::MODE_TYPE_FILE, path, server_end.into_channel().into());
 
         assert_read!(proxy, "a content");
         assert_close!(proxy);

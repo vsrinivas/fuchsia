@@ -12,10 +12,7 @@ use {
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
         PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
@@ -66,19 +63,19 @@ pub const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 600_000;
 pub mod mock_filesystem;
 
 pub trait PkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
 
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
 
     fn system_image_hash(&self) -> Option<Hash>;
 }
 
 impl PkgFs for PkgfsRamdisk {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         PkgfsRamdisk::root_dir_handle(self)
     }
 
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         self.blobfs().root_dir_handle()
     }
 
@@ -254,11 +251,11 @@ impl Mounts {
 
 pub enum DirOrProxy {
     Dir(TempDir),
-    Proxy(DirectoryProxy),
+    Proxy(fio::DirectoryProxy),
 }
 
 impl DirOrProxy {
-    fn to_proxy(&self, rights: u32) -> DirectoryProxy {
+    fn to_proxy(&self, rights: u32) -> fio::DirectoryProxy {
         match &self {
             DirOrProxy::Dir(d) => {
                 io_util::directory::open_in_namespace(d.path().to_str().unwrap(), rights).unwrap()
@@ -268,10 +265,10 @@ impl DirOrProxy {
     }
 }
 
-pub fn clone_directory_proxy(proxy: &DirectoryProxy, rights: u32) -> DirectoryProxy {
+pub fn clone_directory_proxy(proxy: &fio::DirectoryProxy, rights: u32) -> fio::DirectoryProxy {
     let (client, server) = fidl::endpoints::create_endpoints().unwrap();
     proxy.clone(rights, server).unwrap();
-    ClientEnd::<DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap()
+    ClientEnd::<fio::DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap()
 }
 
 async fn pkgfs_with_system_image() -> PkgfsRamdisk {
@@ -435,16 +432,16 @@ where
                 pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap()
             ),
             "data" => vfs::remote::remote_dir(
-                mounts.pkg_resolver_data.to_proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+                mounts.pkg_resolver_data.to_proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)
             ),
             "config" => vfs::pseudo_directory! {
                 "data" => vfs::remote::remote_dir(
-                    mounts.pkg_resolver_config_data.to_proxy(OPEN_RIGHT_READABLE)
+                    mounts.pkg_resolver_config_data.to_proxy(fio::OPEN_RIGHT_READABLE)
                 ),
                 "ssl" => vfs::remote::remote_dir(
                     io_util::directory::open_in_namespace(
                         "/pkg/data/ssl",
-                        OPEN_RIGHT_READABLE
+                        fio::OPEN_RIGHT_READABLE
                     ).unwrap()
                 ),
             },
@@ -455,7 +452,7 @@ where
         if let Some((repo, url)) = self.local_mirror_repo {
             let proxy = io_util::directory::open_in_namespace(
                 local_mirror_dir.path().to_str().unwrap(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
             let () = repo.copy_local_repository_to_dir(&proxy, &url).await;
@@ -495,7 +492,9 @@ where
                     let scope = vfs::execution_scope::ExecutionScope::new();
                     let () = local_child_out_dir.open(
                         scope.clone(),
-                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE
+                            | fio::OPEN_RIGHT_WRITABLE
+                            | fio::OPEN_RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
@@ -591,14 +590,10 @@ where
             .add_route(
                 Route::new()
                     .capability(
-                        Capability::directory("pkgfs")
-                            .path("/pkgfs")
-                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
+                        Capability::directory("pkgfs").path("/pkgfs").rights(fio::RW_STAR_DIR),
                     )
                     .capability(
-                        Capability::directory("blob")
-                            .path("/blob")
-                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
+                        Capability::directory("blob").path("/blob").rights(fio::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_cache),
@@ -610,11 +605,7 @@ where
         builder
             .add_route(
                 Route::new()
-                    .capability(
-                        Capability::directory("usb")
-                            .path("/usb")
-                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
-                    )
+                    .capability(Capability::directory("usb").path("/usb").rights(fio::RW_STAR_DIR))
                     .from(&service_reflector)
                     .to(&local_mirror),
             )
@@ -627,12 +618,12 @@ where
                     .capability(
                         Capability::directory("config-data")
                             .path("/config/data")
-                            .rights(fidl_fuchsia_io::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("root-ssl-certificates")
                             .path("/config/ssl")
-                            .rights(fidl_fuchsia_io::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_resolver_wrapper),
@@ -645,9 +636,7 @@ where
             .add_route(
                 Route::new()
                     .capability(
-                        Capability::directory("data")
-                            .path("/data")
-                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
+                        Capability::directory("data").path("/data").rights(fio::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_resolver_wrapper),
@@ -955,7 +944,7 @@ impl<P: PkgFs> TestEnv<P> {
     pub fn resolve_package(
         &self,
         url: &str,
-    ) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
+    ) -> impl Future<Output = Result<fio::DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
         resolve_package(&self.proxies.resolver, url)
     }
 
@@ -965,7 +954,10 @@ impl<P: PkgFs> TestEnv<P> {
         async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
     }
 
-    pub async fn open_cached_package(&self, hash: BlobId) -> Result<DirectoryProxy, zx::Status> {
+    pub async fn open_cached_package(
+        &self,
+        hash: BlobId,
+    ) -> Result<fio::DirectoryProxy, zx::Status> {
         let cache_service = self
             .apps
             .realm_instance
@@ -1079,7 +1071,7 @@ pub async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
 pub fn resolve_package(
     resolver: &PackageResolverProxy,
     url: &str,
-) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
+) -> impl Future<Output = Result<fio::DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let response_fut = resolver.resolve(url, package_server_end);
     async move {

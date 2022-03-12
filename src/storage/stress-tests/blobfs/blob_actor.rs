@@ -4,7 +4,7 @@
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::{OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
     log::info,
@@ -37,7 +37,7 @@ impl BlobActor {
             .root_dir
             .open_file(
                 &merkle_root_hash,
-                OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_WRITABLE,
             )
             .await?;
         file.truncate(data_bytes.len() as u64).await?;

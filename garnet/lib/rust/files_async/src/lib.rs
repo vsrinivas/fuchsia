@@ -7,10 +7,7 @@
 //! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryProxy, UnlinkFlags, UnlinkOptions, MAX_BUF,
-        MODE_TYPE_DIRECTORY,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::{Duration, DurationExt, TimeoutExt},
     fuchsia_zircon_status as zx_status,
     futures::future::BoxFuture,
@@ -115,7 +112,7 @@ impl DirEntry {
 /// |timeout| can be provided optionally to specify the maximum time to wait for a directory to be
 /// read.
 pub fn readdir_recursive(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     timeout: Option<Duration>,
 ) -> BoxStream<'_, Result<DirEntry, Error>> {
     let mut pending = VecDeque::new();
@@ -141,7 +138,7 @@ pub fn readdir_recursive(
                 let dir_entry = pending.pop_front().unwrap();
 
                 let (subdir, subdir_server) =
-                    match fidl::endpoints::create_proxy::<DirectoryMarker>() {
+                    match fidl::endpoints::create_proxy::<fio::DirectoryMarker>() {
                         Ok((subdir, server)) => (subdir, server),
                         Err(e) => {
                             return Some((Err(Error::Fidl("create_proxy", e)), (results, pending)))
@@ -152,7 +149,7 @@ pub fn readdir_recursive(
                 } else {
                     let open_dir_result = dir.open(
                         fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
-                        MODE_TYPE_DIRECTORY,
+                        fio::MODE_TYPE_DIRECTORY,
                         &dir_entry.name,
                         ServerEnd::new(subdir_server.into_channel()),
                     );
@@ -203,7 +200,7 @@ pub fn readdir_recursive(
 
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
 /// returned entries will not include "." or nodes from any subdirectories.
-pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+pub async fn readdir(dir: &fio::DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let status = dir.rewind().await.map_err(|e| Error::Fidl("rewind", e))?;
     zx_status::Status::ok(status).map_err(Error::Rewind)?;
 
@@ -211,7 +208,7 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 
     loop {
         let (status, buf) =
-            dir.read_dirents(MAX_BUF).await.map_err(|e| Error::Fidl("read_dirents", e))?;
+            dir.read_dirents(fio::MAX_BUF).await.map_err(|e| Error::Fidl("read_dirents", e))?;
         zx_status::Status::ok(status).map_err(Error::ReadDirents)?;
 
         if buf.is_empty() {
@@ -235,14 +232,14 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 /// returned entries will not include "." or nodes from any subdirectories. Timeouts if the read
 /// takes longer than the given `timeout` duration.
 pub async fn readdir_with_timeout(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     timeout: Duration,
 ) -> Result<Vec<DirEntry>, Error> {
     readdir(&dir).on_timeout(timeout.after_now(), || Err(Error::Timeout)).await
 }
 
 /// Returns `true` if an entry with the specified name exists in the given directory.
-pub async fn dir_contains(dir: &DirectoryProxy, name: &str) -> Result<bool, Error> {
+pub async fn dir_contains(dir: &fio::DirectoryProxy, name: &str) -> Result<bool, Error> {
     Ok(readdir(&dir).await?.iter().any(|e| e.name == name))
 }
 
@@ -251,7 +248,7 @@ pub async fn dir_contains(dir: &DirectoryProxy, name: &str) -> Result<bool, Erro
 /// Timesout if reading the directory's entries takes longer than the given `timeout`
 /// duration.
 pub async fn dir_contains_with_timeout(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     name: &str,
     timeout: Duration,
 ) -> Result<bool, Error> {
@@ -322,17 +319,20 @@ const DIR_FLAGS: u32 =
 /// Removes a directory and all of its children. `name` must be a subdirectory of `root_dir`.
 ///
 /// The async analogue of `std::fs::remove_dir_all`.
-pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Result<(), Error> {
+pub async fn remove_dir_recursive(root_dir: &fio::DirectoryProxy, name: &str) -> Result<(), Error> {
     let (dir, dir_server) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().expect("failed to create proxy");
     root_dir
-        .open(DIR_FLAGS, MODE_TYPE_DIRECTORY, name, ServerEnd::new(dir_server.into_channel()))
+        .open(DIR_FLAGS, fio::MODE_TYPE_DIRECTORY, name, ServerEnd::new(dir_server.into_channel()))
         .map_err(|e| Error::Fidl("open", e))?;
     remove_dir_contents(dir).await?;
     root_dir
         .unlink(
             name,
-            UnlinkOptions { flags: Some(UnlinkFlags::MUST_BE_DIRECTORY), ..UnlinkOptions::EMPTY },
+            fio::UnlinkOptions {
+                flags: Some(fio::UnlinkFlags::MUST_BE_DIRECTORY),
+                ..fio::UnlinkOptions::EMPTY
+            },
         )
         .await
         .map_err(|e| Error::Fidl("unlink", e))?
@@ -340,17 +340,17 @@ pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Resu
 }
 
 // Returns a `BoxFuture` instead of being async because async doesn't support recursion.
-fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Error>> {
+fn remove_dir_contents(dir: fio::DirectoryProxy) -> BoxFuture<'static, Result<(), Error>> {
     let fut = async move {
         for dirent in readdir(&dir).await? {
             match dirent.kind {
                 DirentKind::Directory => {
                     let (subdir, subdir_server) =
-                        fidl::endpoints::create_proxy::<DirectoryMarker>()
+                        fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
                             .expect("failed to create proxy");
                     dir.open(
                         DIR_FLAGS,
-                        MODE_TYPE_DIRECTORY,
+                        fio::MODE_TYPE_DIRECTORY,
                         &dirent.name,
                         ServerEnd::new(subdir_server.into_channel()),
                     )
@@ -359,7 +359,7 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
                 }
                 _ => {}
             }
-            dir.unlink(&dirent.name, UnlinkOptions::EMPTY)
+            dir.unlink(&dirent.name, fio::UnlinkOptions::EMPTY)
                 .await
                 .map_err(|e| Error::Fidl("unlink", e))?
                 .map_err(|s| Error::Unlink(zx_status::Status::from_raw(s)))?;
@@ -477,7 +477,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir() {
-        let (dir_client, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir_client, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let dir = pseudo_directory! {
             "afile" => read_only_static(""),
             "zzz" => read_only_static(""),
@@ -510,7 +511,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dir_contains() -> Result<(), anyhow::Error> {
-        let (dir_client, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir_client, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let dir = pseudo_directory! {
             "afile" => read_only_static(""),
             "zzz" => read_only_static(""),
@@ -592,7 +594,8 @@ mod tests {
         // This test must use a forever-pending server in order to ensure that the timeout
         // triggers before the function under test finishes, even if the timeout is
         // in the past.
-        let (dir, _server) = create_proxy::<DirectoryMarker>().expect("could not create proxy");
+        let (dir, _server) =
+            create_proxy::<fio::DirectoryMarker>().expect("could not create proxy");
         let result = readdir_recursive(&dir, Some(0.nanos()))
             .collect::<Vec<Result<DirEntry, Error>>>()
             .await
@@ -744,7 +747,7 @@ mod tests {
         }
     }
 
-    async fn create_nested_dir(tempdir: &TempDir) -> DirectoryProxy {
+    async fn create_nested_dir(tempdir: &TempDir) -> fio::DirectoryProxy {
         let dir = io_util::open_directory_in_namespace(
             tempdir.path().to_str().unwrap(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
@@ -761,7 +764,7 @@ mod tests {
         dir
     }
 
-    async fn create_file(dir: &DirectoryProxy, path: &str) {
+    async fn create_file(dir: &fio::DirectoryProxy, path: &str) {
         io_util::open_file(
             dir,
             Path::new(path),

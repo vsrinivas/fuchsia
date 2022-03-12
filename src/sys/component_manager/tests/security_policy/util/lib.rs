@@ -7,8 +7,7 @@ use {
     component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_component,
+    fidl_fuchsia_io as fio, fuchsia_component,
     test_utils_lib::opaque_test::{OpaqueTest, OpaqueTestBuilder},
 };
 
@@ -51,7 +50,7 @@ pub async fn start_policy_test(
 pub async fn open_exposed_dir(
     realm: &fcomponent::RealmProxy,
     name: &str,
-) -> Result<DirectoryProxy, fcomponent::Error> {
+) -> Result<fio::DirectoryProxy, fcomponent::Error> {
     let mut child_ref = fdecl::ChildRef { name: name.to_string(), collection: None };
     let (exposed_dir, server_end) = create_proxy().unwrap();
     realm

@@ -7,7 +7,7 @@ use {
     super::*,
     assert_matches::assert_matches,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::FileEvent::OnOpen_,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{GetMetadataError, RepositoryUrl},
     fuchsia_zircon::Status,
     futures::channel::oneshot,
@@ -25,7 +25,7 @@ async fn verify_get_metadata_with_read_success(env: &TestEnv, path: &str, file_c
     assert_eq!(res.unwrap(), Ok(()));
     assert_matches!(
         file_proxy.take_event_stream().next().await,
-        Some(Ok(OnOpen_{s, info: Some(_)})) if Status::ok(s) == Ok(())
+        Some(Ok(fio::FileEvent::OnOpen_{s, info: Some(_)})) if Status::ok(s) == Ok(())
     );
     assert_eq!(io_util::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
 }
@@ -97,7 +97,7 @@ async fn verify_get_metadata_with_on_open_failure_status(
     assert_eq!(res.unwrap(), Ok(()));
     assert_matches!(
         file_proxy.take_event_stream().next().await,
-        Some(Ok(OnOpen_{s, info: None})) if  Status::from_raw(s) == status
+        Some(Ok(fio::FileEvent::OnOpen_{s, info: None})) if  Status::from_raw(s) == status
     );
     assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }

@@ -6,10 +6,7 @@ use {
     assert_matches::assert_matches,
     async_trait::async_trait,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::{
-        NodeMarker, WatchMask, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        RX_STAR_DIR, R_STAR_DIR,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::*,
     fuchsia_component_test::new::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
@@ -92,7 +89,9 @@ impl TestEnvBuilder {
                     let scope = ExecutionScope::new();
                     let () = out_dir.open(
                         scope.clone(),
-                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE
+                            | fio::OPEN_RIGHT_WRITABLE
+                            | fio::OPEN_RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
@@ -107,16 +106,18 @@ impl TestEnvBuilder {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("blob").path("/blob").rights(RX_STAR_DIR))
+                    .capability(
+                        Capability::directory("blob").path("/blob").rights(fio::RX_STAR_DIR),
+                    )
                     .capability(
                         Capability::directory("pkgfs-packages-delayed")
                             .path("/pkgfs-packages")
-                            .rights(RX_STAR_DIR),
+                            .rights(fio::RX_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("minfs-delayed")
                             .path("/minfs-delayed")
-                            .rights(R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .from(&local_mocks)
@@ -253,7 +254,7 @@ impl vfs::directory::entry::DirectoryEntry for MinfsSyncOnOpenSelf {
         flags: u32,
         _mode: u32,
         path: vfs::path::Path,
-        server_end: fidl::endpoints::ServerEnd<NodeMarker>,
+        server_end: fidl::endpoints::ServerEnd<fio::NodeMarker>,
     ) {
         if path.is_empty() {
             let sync_point = self.sync_point.clone();
@@ -270,10 +271,7 @@ impl vfs::directory::entry::DirectoryEntry for MinfsSyncOnOpenSelf {
     }
 
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        vfs::directory::entry::EntryInfo::new(
-            fidl_fuchsia_io::INO_UNKNOWN,
-            fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
-        )
+        vfs::directory::entry::EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -293,10 +291,7 @@ impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
         let sink = match pos {
             vfs::directory::traversal_position::TraversalPosition::Start => {
                 match sink.append(
-                    &vfs::directory::entry::EntryInfo::new(
-                        0,
-                        fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
-                    ),
+                    &vfs::directory::entry::EntryInfo::new(0, fio::DIRENT_TYPE_DIRECTORY),
                     ".",
                 ) {
                     vfs::directory::dirents_sink::AppendResult::Ok(sink) => (sink),
@@ -313,7 +308,7 @@ impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: WatchMask,
+        _: fio::WatchMask,
         _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
@@ -321,9 +316,9 @@ impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
 
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
-    async fn get_attrs(&self) -> Result<fidl_fuchsia_io::NodeAttributes, zx::Status> {
-        Ok(fidl_fuchsia_io::NodeAttributes {
-            mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,

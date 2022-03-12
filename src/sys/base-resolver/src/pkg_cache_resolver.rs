@@ -6,7 +6,7 @@ use {
     crate::ResolverError,
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_io::{self as fio},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     futures::stream::TryStreamExt as _,
     log::error,

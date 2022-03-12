@@ -7,8 +7,7 @@ use {
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl_fuchsia_boot as fboot,
-    fidl_fuchsia_io::FileProxy,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
     fuchsia_zbi::{ZbiParser, ZbiResult, ZbiType},
     fuchsia_zircon_status::Status,
     futures::prelude::*,
@@ -97,7 +96,7 @@ impl Arguments {
         env: Env,
         cmdline_args: Option<Vec<ZbiResult>>,
         image_args: Option<Vec<ZbiResult>>,
-        config_file: Option<FileProxy>,
+        config_file: Option<fio::FileProxy>,
     ) -> Result<Arc<Self>, Error> {
         // There is an arbitrary (but consistent) ordering between these four sources, where
         // duplicate arguments in lower priority sources will be overwritten by arguments in
@@ -308,13 +307,10 @@ mod tests {
         )
         .unwrap();
 
-        let config = directory::open_file(
-            &dir,
-            "file",
-            fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-        )
-        .await
-        .unwrap();
+        let config =
+            directory::open_file(&dir, "file", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
+                .await
+                .unwrap();
         write(&config, data.clone()).await.unwrap();
 
         // Invalid config file.
@@ -377,20 +373,16 @@ mod tests {
 
         // Finally, overrides one of the two arguments passed via image args. Note the comment
         // which is ignored.
-        let config = directory::open_file(
-            &dir,
-            "file",
-            fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-        )
-        .await
-        .unwrap();
+        let config =
+            directory::open_file(&dir, "file", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)
+                .await
+                .unwrap();
 
         // Write and flush to disk.
         write(&config, b"# Comment!\narg4=config4").await.unwrap();
         close(config).await.unwrap();
 
-        let config =
-            directory::open_file(&dir, "file", fidl_fuchsia_io::OPEN_RIGHT_READABLE).await.unwrap();
+        let config = directory::open_file(&dir, "file", fio::OPEN_RIGHT_READABLE).await.unwrap();
 
         let args = Arguments::new_from_sources(env, Some(cmdline), Some(image_args), Some(config))
             .await

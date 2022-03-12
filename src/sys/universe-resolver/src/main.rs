@@ -5,8 +5,7 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -111,10 +110,10 @@ async fn resolve_component(
 async fn resolve_package(
     package_url: &PkgUrl,
     package_resolver: &PackageResolverProxy,
-) -> Result<DirectoryProxy, ResolverError> {
+) -> Result<fio::DirectoryProxy, ResolverError> {
     let package_url = package_url.root_url();
     let (proxy, server_end) =
-        create_proxy::<DirectoryMarker>().expect("failed to create channel pair");
+        create_proxy::<fio::DirectoryMarker>().expect("failed to create channel pair");
     package_resolver
         .resolve(&package_url.to_string(), server_end)
         .await

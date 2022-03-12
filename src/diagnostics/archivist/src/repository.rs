@@ -31,7 +31,7 @@ use {
         self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,
         Selector, StreamMode,
     },
-    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
     fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
@@ -412,7 +412,7 @@ impl DataRepoState {
     pub fn add_inspect_artifacts(
         &mut self,
         identity: ComponentIdentity,
-        directory_proxy: DirectoryProxy,
+        directory_proxy: fio::DirectoryProxy,
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
         let inspect_container = InspectArtifactsContainer {
@@ -584,7 +584,7 @@ impl DataRepoState {
                 // This artifact contains inspect and matches a passed selector.
                 io_util::clone_directory(
                     &inspect_artifacts.component_diagnostics_proxy,
-                    CLONE_FLAG_SAME_RIGHTS,
+                    fio::CLONE_FLAG_SAME_RIGHTS,
                 )
                 .ok()
                 .map(|directory| UnpopulatedInspectDataContainer {
@@ -663,7 +663,6 @@ mod tests {
         diagnostics_log_encoding::{
             encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
         },
-        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
         selectors::{self, FastError},
         std::{io::Cursor, time::Duration},
@@ -681,15 +680,15 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
@@ -720,8 +719,8 @@ mod tests {
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .expect("instantiated new component.");
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         data_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
@@ -804,8 +803,8 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         data_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
@@ -866,8 +865,8 @@ mod tests {
         mutable_values
             .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         assert!(data_repo.add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0)).is_err());
     }

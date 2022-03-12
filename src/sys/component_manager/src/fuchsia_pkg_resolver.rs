@@ -12,8 +12,7 @@ use {
     cm_fidl_validator,
     cm_rust::FidlIntoNative,
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{self as fio, DirectoryMarker},
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::LoaderProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
@@ -63,7 +62,7 @@ impl FuchsiaPkgResolver {
         )))?;
 
         // Read component manifest from package.
-        let dir = ClientEnd::<DirectoryMarker>::new(dir)
+        let dir = ClientEnd::<fio::DirectoryMarker>::new(dir)
             .into_proxy()
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, fio::OPEN_RIGHT_READABLE)

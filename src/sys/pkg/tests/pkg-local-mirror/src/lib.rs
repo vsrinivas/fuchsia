@@ -9,9 +9,7 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, NodeInfo, NodeMarker,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
@@ -154,12 +152,13 @@ impl TestEnv {
     }
 }
 
-fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
-    let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
+    let (client_end, server_end) =
+        fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
     let scope = vfs::execution_scope::ExecutionScope::new();
     dir.open(
         scope,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
         ServerEnd::new(server_end.into_channel()),
@@ -193,14 +192,17 @@ impl DirectoryEntry for DropAndSignal {
         flags: u32,
         _mode: u32,
         _path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         assert!(flags & fio::OPEN_FLAG_DESCRIBE != 0);
         let (_, ch) = server_end.into_stream_and_control_handle().unwrap();
 
         // Need to send OnOpen because of the Describe flag.
-        ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::Directory(DirectoryObject)))
-            .unwrap();
+        ch.send_on_open_(
+            Status::OK.into_raw(),
+            Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject)),
+        )
+        .unwrap();
 
         // Make sure the connection is dropped before signalling.
         drop(ch);

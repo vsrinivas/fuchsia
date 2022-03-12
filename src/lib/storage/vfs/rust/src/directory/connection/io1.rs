@@ -19,12 +19,7 @@ use crate::{
 use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
-    fidl_fuchsia_io::{
-        DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, WatchMask, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
@@ -57,7 +52,7 @@ pub trait DerivedConnection: Send + Sync {
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     );
 
     fn entry_not_found(
@@ -71,7 +66,7 @@ pub trait DerivedConnection: Send + Sync {
 
     fn handle_request(
         &mut self,
-        request: DirectoryRequest,
+        request: fio::DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
 }
 
@@ -116,7 +111,7 @@ where
 }
 
 pub(in crate::directory) async fn handle_requests<Connection>(
-    mut requests: DirectoryRequestStream,
+    mut requests: fio::DirectoryRequestStream,
     mut connection: Connection,
     mut shutdown: oneshot::Receiver<()>,
 ) where
@@ -174,19 +169,19 @@ where
     /// directory operations.
     pub(in crate::directory) async fn handle_request(
         &mut self,
-        request: DirectoryRequest,
+        request: fio::DirectoryRequest,
     ) -> Result<ConnectionState, Error> {
         match request {
-            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+            fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
-            DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Reopen");
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            DirectoryRequest::CloseDeprecated { responder } => {
+            fio::DirectoryRequest::CloseDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::CloseDeprecated");
                 let status = match self.directory.close() {
                     Ok(()) => Status::OK,
@@ -195,29 +190,29 @@ where
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryRequest::Close { responder } => {
+            fio::DirectoryRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close");
                 responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryRequest::Describe { responder } => {
+            fio::DirectoryRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
-                let mut info = NodeInfo::Directory(DirectoryObject);
+                let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
                 responder.send(&mut info)?;
             }
-            DirectoryRequest::Describe2 { query, responder } => {
+            fio::DirectoryRequest::Describe2 { query, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe2");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            DirectoryRequest::GetAttr { responder } => {
+            fio::DirectoryRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
                 let (mut attrs, status) = match self.directory.get_attrs().await {
                     Ok(attrs) => (attrs, ZX_OK),
                     Err(status) => (
-                        NodeAttributes {
+                        fio::NodeAttributes {
                             mode: 0,
-                            id: INO_UNKNOWN,
+                            id: fio::INO_UNKNOWN,
                             content_size: 0,
                             storage_size: 0,
                             link_count: 1,
@@ -229,29 +224,35 @@ where
                 };
                 responder.send(status, &mut attrs)?;
             }
-            DirectoryRequest::GetAttributes { query, responder } => {
+            fio::DirectoryRequest::GetAttributes { query, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttributes");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            DirectoryRequest::UpdateAttributes { attributes, responder } => {
+            fio::DirectoryRequest::UpdateAttributes { attributes, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::UpdateAttributes");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            DirectoryRequest::GetFlags { responder } => {
+            fio::DirectoryRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            DirectoryRequest::SetFlags { flags: _, responder } => {
+            fio::DirectoryRequest::SetFlags { flags: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::SetFlags");
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+            fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            DirectoryRequest::Open2 { path, mode, options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Open2 {
+                path,
+                mode,
+                options,
+                object_request,
+                control_handle: _,
+            } => {
                 fuchsia_trace::duration!("storage", "Directory::Open2");
                 let _ = object_request;
                 todo!(
@@ -261,7 +262,7 @@ where
                     options
                 );
             }
-            DirectoryRequest::AddInotifyFilter {
+            fio::DirectoryRequest::AddInotifyFilter {
                 path,
                 filter,
                 watch_descriptor,
@@ -276,35 +277,35 @@ where
                     watch_descriptor
                 );
             }
-            DirectoryRequest::AdvisoryLock { request: _, responder } => {
+            fio::DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryRequest::ReadDirents { max_bytes, responder } => {
+            fio::DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::ReadDirents");
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
             }
-            DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
+            fio::DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Enumerate");
                 let _ = iterator;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            DirectoryRequest::Rewind { responder } => {
+            fio::DirectoryRequest::Rewind { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Rewind");
                 self.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
-            DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
+            fio::DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Link");
                 self.handle_link(&src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
             }
-            DirectoryRequest::Watch { mask, options, watcher, responder } => {
+            fio::DirectoryRequest::Watch { mask, options, watcher, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Watch");
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
@@ -314,36 +315,36 @@ where
                     })?;
                 }
             }
-            DirectoryRequest::QueryFilesystem { responder } => {
+            fio::DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
                 match self.directory.query_filesystem() {
                     Err(status) => responder.send(status.into_raw(), None)?,
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            DirectoryRequest::Unlink { name: _, options: _, responder } => {
+            fio::DirectoryRequest::Unlink { name: _, options: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryRequest::GetToken { responder } => {
+            fio::DirectoryRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
+            fio::DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
+            fio::DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::SyncDeprecated { responder } => {
+            fio::DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Sync { responder } => {
+            fio::DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
         }
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_clone(&self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
+    fn handle_clone(&self, flags: u32, mode: u32, server_end: ServerEnd<fio::NodeMarker>) {
         let flags = match inherit_rights_for_clone(self.flags, flags) {
             Ok(updated) => updated,
             Err(status) => {
@@ -360,9 +361,9 @@ where
         mut flags: u32,
         mode: u32,
         path: String,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
             send_on_open_with_error(flags, server_end, Status::BAD_HANDLE);
             return;
         }
@@ -376,7 +377,7 @@ where
         };
 
         if path.is_dir() {
-            flags |= OPEN_FLAG_DIRECTORY;
+            flags |= fio::OPEN_FLAG_DIRECTORY;
         }
 
         let (flags, mode) = match check_child_connection_flags(self.flags, flags, mode) {
@@ -391,7 +392,10 @@ where
         // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
         // filesystems.
         if path.is_dot()
-            && flags & (OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_NOT_DIRECTORY)
+            && flags
+                & (fio::OPEN_FLAG_CREATE
+                    | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                    | fio::OPEN_FLAG_NOT_DIRECTORY)
                 != 0
         {
             send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
@@ -411,7 +415,7 @@ where
     where
         R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
             return responder(Status::BAD_HANDLE, &[]);
         }
 
@@ -458,7 +462,7 @@ where
             Some(registry) => registry,
         };
 
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -477,7 +481,7 @@ where
 
     fn handle_watch<R>(
         &mut self,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
         responder: R,
     ) -> Result<(), fidl::Error>
@@ -497,27 +501,20 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::directory::immutable::simple::simple,
-        assert_matches::assert_matches,
-        fidl_fuchsia_io::{
-            DirectoryMarker, NodeEvent, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-            OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
-        },
-        fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::prelude::*,
+        super::*, crate::directory::immutable::simple::simple, assert_matches::assert_matches,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_not_found() {
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("Create proxy to succeed");
 
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
@@ -527,7 +524,7 @@ mod tests {
 
         // Try to open a file that doesn't exist.
         assert_matches!(
-            dir_proxy.open(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo", node_server_end),
+            dir_proxy.open(fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo", node_server_end),
             Ok(())
         );
 
@@ -543,14 +540,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_not_found_event_stream() {
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("Create proxy to succeed");
 
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
@@ -560,7 +557,7 @@ mod tests {
 
         // Try to open a file that doesn't exist.
         assert_matches!(
-            dir_proxy.open(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo", node_server_end),
+            dir_proxy.open(fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo", node_server_end),
             Ok(())
         );
 
@@ -578,14 +575,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_with_describe_not_found() {
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("Create proxy to succeed");
 
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
@@ -596,8 +593,8 @@ mod tests {
         // Try to open a file that doesn't exist.
         assert_matches!(
             dir_proxy.open(
-                OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
-                MODE_TYPE_FILE,
+                fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_FILE,
                 "foo",
                 node_server_end,
             ),
@@ -616,14 +613,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_describe_not_found_event_stream() {
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("Create proxy to succeed");
 
         let dir = simple();
         dir.open(
             ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
@@ -634,8 +631,8 @@ mod tests {
         // Try to open a file that doesn't exist.
         assert_matches!(
             dir_proxy.open(
-                OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
-                MODE_TYPE_FILE,
+                fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_FILE,
                 "foo",
                 node_server_end,
             ),
@@ -646,7 +643,7 @@ mod tests {
         let mut event_stream = node_proxy.take_event_stream();
         assert_matches!(
             event_stream.try_next().await,
-            Ok(Some(NodeEvent::OnOpen_ {
+            Ok(Some(fio::NodeEvent::OnOpen_ {
                 s,
                 info: None,
             }))

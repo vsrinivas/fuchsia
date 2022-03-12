@@ -4,6 +4,7 @@
 
 use {
     crate::file::{AsyncGetSize, AsyncReadAt},
+    fidl_fuchsia_io as fio,
     pin_project::pin_project,
     std::{
         cmp::min,
@@ -51,7 +52,7 @@ pub struct BufferedAsyncReadAt<T> {
     offset: usize,
     // Length of valid `cache` contents.
     len: usize,
-    cache: Option<Box<[u8; fidl_fuchsia_io::MAX_TRANSFER_SIZE as usize]>>,
+    cache: Option<Box<[u8; fio::MAX_TRANSFER_SIZE as usize]>>,
 }
 
 impl<T> BufferedAsyncReadAt<T> {
@@ -70,9 +71,8 @@ impl<T: AsyncReadAt> AsyncReadAt for BufferedAsyncReadAt<T> {
         let this = self.project();
         let offset = u64_to_usize_safe(offset_u64);
 
-        let cache = this
-            .cache
-            .get_or_insert_with(|| Box::new([0u8; fidl_fuchsia_io::MAX_TRANSFER_SIZE as usize]));
+        let cache =
+            this.cache.get_or_insert_with(|| Box::new([0u8; fio::MAX_TRANSFER_SIZE as usize]));
 
         if *this.offset <= offset && this.offset.add(*this.len)? > offset {
             let start = offset - *this.offset;
@@ -118,8 +118,8 @@ mod tests {
     #[test]
     fn max_transfer_size_fits_in_usize() {
         assert_eq!(
-            fidl_fuchsia_io::MAX_TRANSFER_SIZE,
-            u64::try_from(usize::try_from(fidl_fuchsia_io::MAX_TRANSFER_SIZE).unwrap()).unwrap()
+            fio::MAX_TRANSFER_SIZE,
+            u64::try_from(usize::try_from(fio::MAX_TRANSFER_SIZE).unwrap()).unwrap()
         );
     }
 
@@ -174,7 +174,7 @@ mod tests {
         ) -> Poll<std::io::Result<usize>> {
             self.recorded_offsets.borrow_mut().push(offset);
             let offset = super::u64_to_usize_safe(offset);
-            assert_eq!(buf.len(), usize::try_from(fidl_fuchsia_io::MAX_TRANSFER_SIZE).unwrap());
+            assert_eq!(buf.len(), usize::try_from(fio::MAX_TRANSFER_SIZE).unwrap());
             let start = std::cmp::min(offset, self.content.len());
             let n = std::cmp::min(buf.len(), self.content.len() - start);
             let end = start + n;
@@ -246,7 +246,7 @@ mod tests {
         let content = (0u8..8)
             .into_iter()
             .cycle()
-            .take(fidl_fuchsia_io::MAX_TRANSFER_SIZE.try_into().unwrap())
+            .take(fio::MAX_TRANSFER_SIZE.try_into().unwrap())
             .chain([8])
             .collect();
         let (mock, offsets) = Mock::new(content);
@@ -274,12 +274,11 @@ mod tests {
         offsets.borrow_mut().clear();
 
         let mut buf = vec![9; 1];
-        let bytes_read =
-            reader.read_at(fidl_fuchsia_io::MAX_TRANSFER_SIZE, buf.as_mut_slice()).await.unwrap();
+        let bytes_read = reader.read_at(fio::MAX_TRANSFER_SIZE, buf.as_mut_slice()).await.unwrap();
 
         assert_eq!(bytes_read, 1);
         assert_eq!(buf, vec![8]);
-        assert_eq!(*offsets.borrow(), vec![fidl_fuchsia_io::MAX_TRANSFER_SIZE]);
+        assert_eq!(*offsets.borrow(), vec![fio::MAX_TRANSFER_SIZE]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

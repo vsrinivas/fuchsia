@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_bluetooth::{EmulatorControllerProxy, EmulatorProxy},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         constants::{HOST_DEVICE_DIR, INTEGRATION_TIMEOUT as WATCH_TIMEOUT},
@@ -141,7 +141,7 @@ impl Drop for Emulator {
 struct TestDevice {
     file: File,
     /// If present, the test device was opened relative to a ScopedInstance's existing `/dev` dir
-    pub dev_directory: Option<DirectoryProxy>,
+    pub dev_directory: Option<fio::DirectoryProxy>,
 }
 
 impl TestDevice {
@@ -182,7 +182,7 @@ impl TestDevice {
 
     async fn create_internal(
         controller_channel: fasync::Channel,
-        dev_directory: Option<DirectoryProxy>,
+        dev_directory: Option<fio::DirectoryProxy>,
     ) -> Result<(TestDevice, HciEmulatorProxy), Error> {
         let controller = EmulatorControllerProxy::new(controller_channel);
         let name = controller
@@ -245,7 +245,7 @@ impl TestDevice {
 //   - `path` within the component's namespace, if `dev_dir` is not present.
 async fn dev_watcher_maybe_in_namespace(
     path: &str,
-    dev_dir: Option<&DirectoryProxy>,
+    dev_dir: Option<&fio::DirectoryProxy>,
 ) -> Result<DeviceWatcher, Error> {
     if let Some(dir) = dev_dir {
         let stripped_path = Path::new(path).strip_prefix("/dev")?.to_string_lossy();

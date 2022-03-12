@@ -13,7 +13,7 @@ use {
     ::routing::capability_source::ComponentCapability,
     cm_rust::{ExposeDecl, UseDecl},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::NodeMarker,
+    fidl_fuchsia_io as fio,
     log::*,
     vfs::{execution_scope::ExecutionScope, path::Path, remote::RoutingFn},
 };
@@ -24,7 +24,7 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
               flags: u32,
               mode: u32,
               path: Path,
-              server_end: ServerEnd<NodeMarker>| {
+              server_end: ServerEnd<fio::NodeMarker>| {
             let component = component.clone();
             let use_ = use_.clone();
             scope.spawn(async move {
@@ -71,7 +71,7 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
               flags: u32,
               mode: u32,
               path: Path,
-              server_end: ServerEnd<NodeMarker>| {
+              server_end: ServerEnd<fio::NodeMarker>| {
             let component = component.clone();
             let expose = expose.clone();
             scope.spawn(async move {

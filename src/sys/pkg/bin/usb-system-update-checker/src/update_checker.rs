@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Error},
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_update_installer::{
         Initiator, InstallerMarker, InstallerProxy, MonitorMarker, MonitorRequest, Options,
@@ -52,7 +52,7 @@ impl UsbUpdateChecker<'_> {
     async fn do_check(
         &self,
         unpinned_update_url: &str,
-        _logs_dir: Option<fidl::endpoints::ClientEnd<DirectoryMarker>>,
+        _logs_dir: Option<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
         monitor: Option<fidl::endpoints::ClientEnd<UsbMonitorMarker>>,
     ) -> Result<CheckSuccess, CheckError> {
         let unpinned_update_url = PkgUrl::parse(unpinned_update_url)
@@ -223,7 +223,7 @@ impl UsbUpdateChecker<'_> {
         url: PkgUrl,
         resolver: PackageResolverProxy,
     ) -> Result<(UpdatePackage, PkgUrl), Error> {
-        let (dir, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>()
+        let (dir, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .context("Creating directory proxy")?;
         resolver
             .resolve(&url.to_string(), remote)
@@ -232,12 +232,9 @@ impl UsbUpdateChecker<'_> {
             .map_err(|e| anyhow!("Package resolver error: {:?}", e))
             .context("Resolving pacakge")?;
 
-        let meta_proxy = io_util::open_file(
-            &dir,
-            std::path::Path::new("meta"),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )
-        .context("Opening meta in update package")?;
+        let meta_proxy =
+            io_util::open_file(&dir, std::path::Path::new("meta"), fio::OPEN_RIGHT_READABLE)
+                .context("Opening meta in update package")?;
         let hash =
             io_util::file::read_to_string(&meta_proxy).await.context("Reading package hash")?;
 

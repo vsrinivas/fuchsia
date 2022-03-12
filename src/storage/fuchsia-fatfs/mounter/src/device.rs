@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_block_partition::{Guid, PartitionProxy},
-    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
+    fidl_fuchsia_io as fio,
     fuchsia_fatfs::FatFs,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
@@ -35,7 +35,7 @@ impl FatDevice {
 
     /// Try and create a new FatDevice, searching for partitions in the given channel.
     async fn new_at(dir: zx::Channel) -> Result<Option<Self>, Error> {
-        let dir_proxy = DirectoryProxy::new(fidl::AsyncChannel::from_channel(dir)?);
+        let dir_proxy = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dir)?);
         let partition = match Self::find_fat_partition(&dir_proxy).await? {
             Some(value) => value,
             None => return Ok(None),
@@ -60,10 +60,10 @@ impl FatDevice {
     }
 
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.
-    async fn find_fat_partition(dir_proxy: &DirectoryProxy) -> Result<Option<String>, Error> {
+    async fn find_fat_partition(dir_proxy: &fio::DirectoryProxy) -> Result<Option<String>, Error> {
         let children = files_async::readdir(&dir_proxy).await?;
         let (channel, remote) = zx::Channel::create()?;
-        dir_proxy.clone(CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
+        dir_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
 
         for entry in children.iter() {
             let guid = match Self::get_guid_at(&channel, &entry.name).await {
@@ -117,7 +117,6 @@ pub mod test {
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_hardware_block::BlockMarker,
         fidl_fuchsia_hardware_block_partition::{Guid, PartitionMarker, PartitionRequest},
-        fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         futures::prelude::*,
@@ -225,8 +224,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fidl_fuchsia_io::OPEN_RIGHT_READABLE, remote)
-            .expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
         let result = FatDevice::get_guid_at(&dev_dir, "000").await.expect("get guid succeeds");
         assert_eq!(result.unwrap().value, MICROSOFT_BASIC_DATA_GUID);
     }
@@ -244,9 +242,8 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fidl_fuchsia_io::OPEN_RIGHT_READABLE, remote)
-            .expect("Open OK");
-        let dev_dir = DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
+        let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), Some("002".to_owned()));
     }
@@ -264,9 +261,8 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(&local, "dev", fidl_fuchsia_io::OPEN_RIGHT_READABLE, remote)
-            .expect("Open OK");
-        let dev_dir = DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
+        fdio::open_at(&local, "dev", fio::OPEN_RIGHT_READABLE, remote).expect("Open OK");
+        let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), None);
     }
@@ -316,7 +312,7 @@ pub mod test {
         let root = dev.get_root().unwrap();
         root.clone().open(
             dev.scope.clone(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             fidl::endpoints::ServerEnd::new(channel),
@@ -335,7 +331,7 @@ pub mod test {
         let dev =
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
-        let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         open_root(&dev, remote.into_channel()).await;
 
         let mut children: Vec<_> = files_async::readdir(&proxy)
@@ -376,7 +372,7 @@ pub mod test {
         let dev =
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
-        let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         open_root(&dev, remote.into_channel()).await;
 
         let mut children: Vec<_> = files_async::readdir(&proxy)

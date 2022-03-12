@@ -6,7 +6,7 @@ use {
     anyhow::{bail, Result},
     argh::{from_env, FromArgs},
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::PackageUrl,
     fidl_fuchsia_sys2::{StorageAdminMarker, StorageIteratorMarker},
     fidl_fuchsia_update_installer::{
@@ -44,7 +44,7 @@ pub struct Args {
     nocapture: bool,
 }
 
-async fn get_storage_for_component_instance(moniker_prefix: &str) -> DirectoryProxy {
+async fn get_storage_for_component_instance(moniker_prefix: &str) -> fio::DirectoryProxy {
     let storage_admin = connect_to_protocol::<StorageAdminMarker>().unwrap();
     let (storage_user_iterator, storage_user_iterator_server_end) =
         create_proxy::<StorageIteratorMarker>().unwrap();
@@ -64,12 +64,12 @@ async fn get_storage_for_component_instance(moniker_prefix: &str) -> DirectoryPr
         matching_storage_users.append(&mut matches);
     }
     assert_eq!(1, matching_storage_users.len());
-    let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
     storage_admin
         .open_component_storage(
             matching_storage_users.first().unwrap(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             ServerEnd::new(server_end.into_channel()),
         )
         .unwrap();

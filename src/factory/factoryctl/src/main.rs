@@ -11,7 +11,7 @@ use {
         MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
         WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     files_async::{self, DirentKind},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -67,7 +67,7 @@ fn hexdump(data: &[u8]) {
 }
 
 /// Walks the given `dir`, printing the full path to every file.
-async fn print_files(dir_proxy: &DirectoryProxy) -> Result<(), Error> {
+async fn print_files(dir_proxy: &fio::DirectoryProxy) -> Result<(), Error> {
     let mut stream = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None);
     while let Some(entry) = stream.try_next().await? {
         if entry.kind == DirentKind::File {
@@ -80,16 +80,16 @@ async fn print_files(dir_proxy: &DirectoryProxy) -> Result<(), Error> {
 /// Processes a command from the command line.
 async fn process_cmd<F>(cmd: FactoryStoreCmd, mut connect_fn: F) -> Result<(), Error>
 where
-    F: FnMut(ServerEnd<DirectoryMarker>) -> (),
+    F: FnMut(ServerEnd<fio::DirectoryMarker>) -> (),
 {
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     connect_fn(dir_server_end);
 
     match cmd {
         FactoryStoreCmd::List => print_files(&dir_proxy).await?,
         FactoryStoreCmd::Dump { name } => {
             let file =
-                io_util::open_file(&dir_proxy, &PathBuf::from(name), io_util::OPEN_RIGHT_READABLE)?;
+                io_util::open_file(&dir_proxy, &PathBuf::from(name), fio::OPEN_RIGHT_READABLE)?;
             let contents = io_util::read_file_bytes(&file).await?;
 
             match std::str::from_utf8(&contents) {
@@ -179,7 +179,6 @@ mod tests {
             WeaveFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
             WidevineFactoryStoreProviderRequestStream,
         },
-        fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
         fuchsia_component::{
             client::AppBuilder,
             server::{NestedEnvironment, ServiceFs},
@@ -240,7 +239,7 @@ mod tests {
         contents: &'static str,
         name2: &'static str,
         contents2: &'static [u8],
-    ) -> Result<DirectoryProxy, Error> {
+    ) -> Result<fio::DirectoryProxy, Error> {
         let mut tree = TreeBuilder::empty_dir();
         tree.add_entry(&name.split("/").collect::<Vec<&str>>(), read_only_static(contents))
             .unwrap();
@@ -249,11 +248,11 @@ mod tests {
         let test_dir = tree.build();
 
         let (test_dir_proxy, test_dir_service) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         test_dir.open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             test_dir_service.into_channel().into(),
         );
@@ -304,8 +303,10 @@ mod tests {
                                         ALPHA_BIN_FILE_NAME,
                                         ALPHA_BIN_FILE_CONTENTS,
                                     )?;
-                                    alpha_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    alpha_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },
@@ -328,8 +329,10 @@ mod tests {
                                         CAST_BIN_FILE_NAME,
                                         CAST_BIN_FILE_CONTENTS,
                                     )?;
-                                    cast_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    cast_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },
@@ -352,8 +355,10 @@ mod tests {
                                         MISC_BIN_FILE_NAME,
                                         MISC_BIN_FILE_CONTENTS,
                                     )?;
-                                    misc_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    misc_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },
@@ -376,8 +381,10 @@ mod tests {
                                         PLAYREADY_BIN_FILE_NAME,
                                         PLAYREADY_BIN_FILE_CONTENTS,
                                     )?;
-                                    playready_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    playready_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },
@@ -400,8 +407,10 @@ mod tests {
                                         WEAVE_BIN_FILE_NAME,
                                         WEAVE_BIN_FILE_CONTENTS,
                                     )?;
-                                    weave_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    weave_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },
@@ -424,8 +433,10 @@ mod tests {
                                         WIDEVINE_BIN_FILE_NAME,
                                         WIDEVINE_BIN_FILE_CONTENTS,
                                     )?;
-                                    widevine_proxy
-                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    widevine_proxy.clone(
+                                        fio::OPEN_RIGHT_READABLE,
+                                        dir.into_channel().into(),
+                                    )?;
                                     Ok(())
                                 }
                             },

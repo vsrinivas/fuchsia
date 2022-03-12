@@ -9,7 +9,7 @@ use {
     },
     cm_rust::ComponentDecl,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::NodeMarker,
+    fidl_fuchsia_io as fio,
     std::sync::Arc,
     vfs::{
         directory::{entry::DirectoryEntry, immutable as pfs},
@@ -41,7 +41,7 @@ impl ExposedDir {
     }
 
     /// Opens a new connection to this ExposedDir that is closed once this ExposedDir is dropped.
-    pub fn open(&self, flags: u32, mode: u32, path: Path, server_end: ServerEnd<NodeMarker>) {
+    pub fn open(&self, flags: u32, mode: u32, path: Path, server_end: ServerEnd<fio::NodeMarker>) {
         self.root_dir.clone().open(self.execution_scope.clone(), flags, mode, path, server_end);
     }
 }

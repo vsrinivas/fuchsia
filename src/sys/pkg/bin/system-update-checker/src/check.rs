@@ -274,6 +274,7 @@ pub mod test_check_for_system_update_impl {
         super::*,
         crate::update_manager::tests::FakeTargetChannelUpdater,
         assert_matches::assert_matches,
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_paver::Configuration,
         fidl_fuchsia_pkg::{
             PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
@@ -443,7 +444,7 @@ pub mod test_check_for_system_update_impl {
         fn resolve(
             &self,
             package_url: &str,
-            dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+            dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
         ) -> Self::ResolveResponseFut {
             assert_eq!(package_url, self.expected_package_url);
             fdio::service_connect(
@@ -557,7 +558,7 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::err(fidl::Error::Invalid)
             }
@@ -616,7 +617,7 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 package_url: &str,
-                dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+                dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 *self.call_count.lock() += 1;
 
@@ -674,7 +675,7 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace))
             }
@@ -720,7 +721,7 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
             }
@@ -760,7 +761,7 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+                _dir: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Ok(()))
             }

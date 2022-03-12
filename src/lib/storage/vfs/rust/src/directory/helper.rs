@@ -11,7 +11,7 @@ use {
         filesystem::Filesystem,
     },
     async_trait::async_trait,
-    fidl_fuchsia_io::NodeAttributes,
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     std::sync::Arc,
 };
@@ -140,7 +140,7 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         }
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(&self, _flags: u32, _attrs: fio::NodeAttributes) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
     }
 

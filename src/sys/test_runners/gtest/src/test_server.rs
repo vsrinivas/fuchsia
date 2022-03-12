@@ -5,11 +5,7 @@
 use {
     async_trait::async_trait,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_io::{
-        self as fio, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
-    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc,
     fidl_fuchsia_test::{
         self as ftest, Invocation, Result_ as TestResult, RunListenerProxy, Status,
     },
@@ -144,9 +140,9 @@ struct TestOutput {
 }
 
 /// Opens and reads file defined by `path` in `dir`.
-async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
+async fn read_file(dir: &fio::DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
     // Open the file in read-only mode.
-    let result_file_proxy = io_util::open_file(dir, path, OPEN_RIGHT_READABLE)?;
+    let result_file_proxy = io_util::open_file(dir, path, fio::OPEN_RIGHT_READABLE)?;
     return io_util::read_file(&result_file_proxy).await;
 }
 
@@ -230,7 +226,7 @@ impl SuiteServer for TestServer {
             // longer needed and they are consuming space.
             let test_data_dir = io_util::open_directory_in_namespace(
                 &test_data_parent,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .expect("Cannot open data directory");
             if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
@@ -340,7 +336,7 @@ impl TestServer {
 
     fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
         let client_channnel =
-            io_util::clone_directory(&self.output_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+            io_util::clone_directory(&self.output_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
                 .map_err(IoError::CloneProxy)?
                 .into_channel()
                 .map_err(|_| FidlError::ProxyToChannel)
@@ -713,7 +709,6 @@ mod tests {
         anyhow::{Context as _, Error},
         assert_matches::assert_matches,
         fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
-        fio::OPEN_RIGHT_WRITABLE,
         pretty_assertions::assert_eq,
         std::fs,
         test_runners_test_lib::{
@@ -737,7 +732,7 @@ mod tests {
         fn proxy(&self) -> Result<fio::DirectoryProxy, Error> {
             io_util::open_directory_in_namespace(
                 &self.dir_name,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .context("Cannot open test data directory")
         }

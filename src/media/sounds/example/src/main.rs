@@ -5,6 +5,7 @@
 #![recursion_limit = "512"]
 
 use anyhow::{Context as _, Error};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
 use fuchsia_async::{self as fasync, Time, Timer};
@@ -105,27 +106,23 @@ async fn main() -> Result<()> {
 }
 
 /// Creates a file channel from a resource file.
-fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
+fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fio::FileMarker>> {
     // We try two paths here, because normal components see their package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
-    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
-        fdio::transfer_fd(
-            File::open(format!("/pkg/data/{}", name))
-                .or_else(|_| {
-                    File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name))
-                })
-                .context("Opening package data file")?,
-        )?,
-    )))
+    Ok(fidl::endpoints::ClientEnd::<fio::FileMarker>::new(zx::Channel::from(fdio::transfer_fd(
+        File::open(format!("/pkg/data/{}", name))
+            .or_else(|_| File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name)))
+            .context("Opening package data file")?,
+    )?)))
 }
 
 /// Creates a file channel from a file name.
-fn sound_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
+fn sound_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fio::FileMarker>> {
     // We try two paths here, because normal components see their package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
-    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
-        fdio::transfer_fd(File::open(name).context("Opening sound file")?)?,
-    )))
+    Ok(fidl::endpoints::ClientEnd::<fio::FileMarker>::new(zx::Channel::from(fdio::transfer_fd(
+        File::open(name).context("Opening sound file")?,
+    )?)))
 }
 
 /// Creates a VMO-based sound containing a decaying sine wave using the slope iteration method.

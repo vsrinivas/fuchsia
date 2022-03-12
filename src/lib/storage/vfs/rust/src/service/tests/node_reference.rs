@@ -21,10 +21,7 @@ use crate::{
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::{
-        FileEvent, FileMarker, NodeAttributes, NodeInfo, Service, CLONE_FLAG_SAME_RIGHTS,
-        INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::TestExecutor,
     fuchsia_zircon::sys::ZX_OK,
     libc::{S_IRUSR, S_IWUSR},
@@ -33,7 +30,7 @@ use {
 #[test]
 fn construction() {
     run_server_client(
-        OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |proxy| async move {
             assert_close!(proxy);
@@ -44,14 +41,14 @@ fn construction() {
 #[test]
 fn get_attr() {
     run_server_client(
-        OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |proxy| async move {
             assert_get_attr!(
                 proxy,
-                NodeAttributes {
-                    mode: MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
-                    id: INO_UNKNOWN,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
                     link_count: 1,
@@ -73,14 +70,14 @@ fn describe() {
     run_client(exec, || async move {
         let scope = ExecutionScope::new();
         let (proxy, server_end) =
-            create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+            create_proxy::<fio::FileMarker>().expect("Failed to create connection endpoints");
 
-        let flags = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
-        assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+        assert_event!(proxy, fio::FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
-            assert_eq!(info, Some(Box::new(NodeInfo::Service(Service {}))));
+            assert_eq!(info, Some(Box::new(fio::NodeInfo::Service(fio::Service))));
         });
     });
 }
@@ -88,14 +85,14 @@ fn describe() {
 #[test]
 fn clone() {
     run_server_client(
-        OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |first_proxy| async move {
             assert_get_attr!(
                 first_proxy,
-                NodeAttributes {
-                    mode: MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
-                    id: INO_UNKNOWN,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
                     link_count: 1,
@@ -106,16 +103,16 @@ fn clone() {
 
             let second_proxy = clone_get_service_proxy_assert_ok!(
                 &first_proxy,
-                OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE
+                fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE
             );
 
             assert_read_err!(second_proxy, Status::ACCESS_DENIED);
 
             assert_get_attr!(
                 first_proxy,
-                NodeAttributes {
-                    mode: MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
-                    id: INO_UNKNOWN,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
                     link_count: 1,
@@ -133,14 +130,14 @@ fn clone() {
 #[test]
 fn clone_same_rights() {
     run_server_client(
-        OPEN_FLAG_NODE_REFERENCE,
+        fio::OPEN_FLAG_NODE_REFERENCE,
         endpoint(|_scope, _channel| ()),
         |first_proxy| async move {
             assert_get_attr!(
                 first_proxy,
-                NodeAttributes {
-                    mode: MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
-                    id: INO_UNKNOWN,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
                     link_count: 1,
@@ -151,16 +148,16 @@ fn clone_same_rights() {
 
             let second_proxy = clone_get_service_proxy_assert_ok!(
                 &first_proxy,
-                CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
+                fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE
             );
 
             assert_read_err!(second_proxy, Status::ACCESS_DENIED);
 
             assert_get_attr!(
                 first_proxy,
-                NodeAttributes {
-                    mode: MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
-                    id: INO_UNKNOWN,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
                     content_size: 0,
                     storage_size: 0,
                     link_count: 1,

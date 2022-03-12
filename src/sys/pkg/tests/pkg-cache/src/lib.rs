@@ -10,10 +10,7 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
     fidl_fuchsia_cobalt::CobaltEvent,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, RW_STAR_DIR,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
@@ -62,7 +59,7 @@ mod retained_packages;
 mod space;
 mod sync;
 
-async fn write_blob(contents: &[u8], file: FileProxy) -> Result<(), zx::Status> {
+async fn write_blob(contents: &[u8], file: fio::FileProxy) -> Result<(), zx::Status> {
     let () =
         file.resize(contents.len() as u64).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
@@ -91,13 +88,13 @@ async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
     res
 }
 
-async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> DirectoryProxy {
+async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> fio::DirectoryProxy {
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
@@ -113,7 +110,8 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
 }
 
 pub async fn write_meta_far(needed_blobs: &NeededBlobsProxy, meta_far: BlobContents) {
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
     write_blob(&meta_far.contents, meta_blob).await.unwrap();
 }
@@ -128,7 +126,7 @@ pub async fn write_needed_blobs(needed_blobs: &NeededBlobsProxy, contents: Vec<B
         let buf = contents.remove(&blob.blob_id.into()).unwrap();
 
         let (content_blob, content_blob_server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
             .open_blob(&mut blob.blob_id, content_blob_server_end)
             .await
@@ -153,13 +151,14 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
 
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
     let get_fut = proxy
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
-    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (_meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
     // If the package is fully cached, server will close the channel with a `ZX_OK` epitaph.
     // In some cases, server will reply with `Ok(false)`, meaning that the metadata
@@ -234,19 +233,19 @@ async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package])
 }
 
 trait PkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
 
-    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error>;
+    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error>;
 
     fn system_image_hash(&self) -> Option<Hash>;
 }
 
 impl PkgFs for PkgfsRamdisk {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         PkgfsRamdisk::root_dir_handle(self)
     }
 
-    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
+    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
         self.blobfs().root_dir_proxy()
     }
 
@@ -421,7 +420,9 @@ where
                     let scope = vfs::execution_scope::ExecutionScope::new();
                     let () = local_child_out_dir.open(
                         scope.clone(),
-                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                        fio::OPEN_RIGHT_READABLE
+                            | fio::OPEN_RIGHT_WRITABLE
+                            | fio::OPEN_RIGHT_EXECUTABLE,
                         0,
                         vfs::path::Path::dot(),
                         handles.outgoing_dir.into_channel().into(),
@@ -449,8 +450,12 @@ where
                     .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
-                    .capability(Capability::directory("pkgfs").path("/pkgfs").rights(RW_STAR_DIR))
-                    .capability(Capability::directory("blob").path("/blob").rights(RW_STAR_DIR))
+                    .capability(
+                        Capability::directory("pkgfs").path("/pkgfs").rights(fio::RW_STAR_DIR),
+                    )
+                    .capability(
+                        Capability::directory("blob").path("/blob").rights(fio::RW_STAR_DIR),
+                    )
                     .from(&service_reflector)
                     .to(&pkg_cache),
             )
@@ -517,19 +522,19 @@ where
             pkgfs_packages: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-packages",
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-packages"),
             pkgfs_versions: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-versions",
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-versions"),
             pkgfs: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs",
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs"),
         };
@@ -552,9 +557,9 @@ struct Proxies {
     space_manager: SpaceManagerProxy,
     package_cache: PackageCacheProxy,
     retained_packages: RetainedPackagesProxy,
-    pkgfs_packages: DirectoryProxy,
-    pkgfs_versions: DirectoryProxy,
-    pkgfs: DirectoryProxy,
+    pkgfs_packages: fio::DirectoryProxy,
+    pkgfs_versions: fio::DirectoryProxy,
+    pkgfs: fio::DirectoryProxy,
 }
 
 pub struct Mocks {
@@ -606,7 +611,7 @@ impl<P: PkgFs> TestEnv<P> {
         get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await
     }
 
-    pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {
+    pub async fn open_package(&self, merkle: &str) -> Result<fio::DirectoryProxy, zx::Status> {
         let (package, server_end) = fidl::endpoints::create_proxy().unwrap();
         let status_fut = self
             .proxies
@@ -659,11 +664,11 @@ impl<P: PkgFs> TestEnv<P> {
     /// Get a DirectoryProxy to pkg-cache's exposed /system directory.
     /// This proxy is not stored in Proxies because the directory is not served when there is no
     /// system_image package.
-    async fn system_dir(&self) -> fidl_fuchsia_io::DirectoryProxy {
+    async fn system_dir(&self) -> fio::DirectoryProxy {
         io_util::directory::open_directory(
             self.apps.realm_instance.root.get_exposed_dir(),
             "system",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .await
         .expect("open system")
@@ -814,16 +819,16 @@ impl TempDirPkgFs {
 }
 
 impl PkgFs for TempDirPkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         Ok(fdio::transfer_fd(File::open(self.root.path()).unwrap()).unwrap().into())
     }
 
-    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
+    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
         if self.disable_blobfs {
-            let (proxy, _) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             Ok(proxy)
         } else {
-            let dir_handle: ClientEnd<DirectoryMarker> =
+            let dir_handle: ClientEnd<fio::DirectoryMarker> =
                 fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap())
                     .unwrap()
                     .into();

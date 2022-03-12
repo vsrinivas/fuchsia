@@ -15,7 +15,7 @@ use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
-use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_io as fio;
 use fuchsia_async::Task;
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_component_test::new::{
@@ -179,7 +179,8 @@ impl PuppetEnv {
         assert!(id < self.max_puppets);
         let mut child_ref = ChildRef { name: format!("puppet-{}", id), collection: None };
 
-        let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (exposed_dir, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let realm = self.instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
         realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
 

@@ -7,7 +7,7 @@ use crate::{
     identity::ComponentIdentity,
 };
 use fidl::endpoints::{ProtocolMarker, ServerEnd};
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger as flogger;
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::SourceIdentity;
@@ -184,7 +184,7 @@ pub struct DiagnosticsReadyPayload {
     /// The component which diagnostics directory is available.
     pub component: ComponentIdentity,
     /// The `out/diagnostics` directory of the component.
-    pub directory: Option<DirectoryProxy>,
+    pub directory: Option<fio::DirectoryProxy>,
 }
 
 impl Clone for DiagnosticsReadyPayload {

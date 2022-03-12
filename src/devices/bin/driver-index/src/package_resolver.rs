@@ -5,10 +5,8 @@
 use anyhow::Context;
 use futures::TryStreamExt;
 use {
-    fidl_fuchsia_io::{self as fio},
-    fidl_fuchsia_pkg::PackageResolverRequestStream,
-    fuchsia_url::pkg_url::PkgUrl,
-    futures::StreamExt,
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::PackageResolverRequestStream,
+    fuchsia_url::pkg_url::PkgUrl, futures::StreamExt,
 };
 pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
     stream

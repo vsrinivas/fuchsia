@@ -6,7 +6,7 @@ use {
     crate::fmt::{FmtArgsLogger, LOGGER},
     anyhow::{Context, Error},
     fidl::endpoints::Proxy,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::LogSinkProxy,
     fuchsia_syslog::{get_fx_logger_level as fx_log_level, Logger},
     fuchsia_zircon as zx,
@@ -28,12 +28,15 @@ impl ScopedLogger {
 
     /// Instantiate a ScopedLogger by connecting to the provided path within
     /// the directory.
-    pub async fn from_directory(dir: &DirectoryProxy, path: String) -> Result<ScopedLogger, Error> {
+    pub async fn from_directory(
+        dir: &fio::DirectoryProxy,
+        path: String,
+    ) -> Result<ScopedLogger, Error> {
         let log_sink_node = io_util::open_node(
             &dir,
             &PathBuf::from(path.trim_start_matches("/")),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-            fidl_fuchsia_io::MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )?;
         let mut sink = LogSinkProxy::from_channel(log_sink_node.into_channel().unwrap());
         Ok(ScopedLogger::new(connect_to_logger(&mut sink).await?))

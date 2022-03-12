@@ -8,7 +8,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_hardware_block_partition::Guid,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fs_management::{FSConfig, Filesystem},
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
@@ -36,7 +36,7 @@ const MOUNT_PATH: &str = "/fs";
 
 pub fn open_dir_at_root(subdir: &str) -> Directory {
     let path = PathBuf::from(MOUNT_PATH).join(subdir);
-    Directory::from_namespace(path, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE).unwrap()
+    Directory::from_namespace(path, fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE).unwrap()
 }
 
 /// Describes the environment that this stress test will run under.
@@ -79,11 +79,13 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         let mut rng = SmallRng::seed_from_u64(seed);
 
         // Make a home directory for file actor and deletion actor
-        let root_dir =
-            Directory::from_namespace(MOUNT_PATH, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE)
-                .unwrap();
+        let root_dir = Directory::from_namespace(
+            MOUNT_PATH,
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+        )
+        .unwrap();
         root_dir
-            .create_directory("home1", OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE)
+            .create_directory("home1", fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE)
             .await
             .unwrap();
 

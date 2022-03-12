@@ -11,7 +11,6 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_ldsvc::{LoaderMarker, LoaderRequest},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -113,7 +112,7 @@ type VmoKeyMap = HashMap<String, (i32, Option<zx::Vmo>)>;
 #[derive(Debug)]
 struct LibraryLoaderCache {
     /// Proxy to /pkg/lib
-    lib_proxy: Arc<DirectoryProxy>,
+    lib_proxy: Arc<fio::DirectoryProxy>,
 
     /// Mapping of config key with loaded VMOs map.
     load_response_map: FutMutex<HashMap<String, Arc<FutMutex<VmoKeyMap>>>>,
@@ -179,7 +178,7 @@ impl Component {
     pub async fn new<F>(
         start_info: fcrunner::ComponentStartInfo,
         validate_args: F,
-    ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError>
+    ) -> Result<(Self, ServerEnd<fio::DirectoryMarker>), ComponentError>
     where
         F: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     {
@@ -381,7 +380,7 @@ fn vmo_create_child(vmo: &zx::Vmo) -> Result<zx::Vmo, anyhow::Error> {
 fn get_pkg_and_lib_proxy<'a>(
     ns: &'a ComponentNamespace,
     url: &String,
-) -> Result<(&'a DirectoryProxy, DirectoryProxy), ComponentError> {
+) -> Result<(&'a fio::DirectoryProxy, fio::DirectoryProxy), ComponentError> {
     // Locate the '/pkg' directory proxy previously added to the new component's namespace.
     let (_, pkg_proxy) = ns
         .items()
@@ -614,7 +613,6 @@ mod tests {
         anyhow::Error,
         assert_matches::assert_matches,
         fidl::endpoints::{self, ClientEnd, Proxy},
-        fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fidl_fuchsia_test::{Invocation, RunListenerProxy},
         fuchsia_runtime::job_default,
         futures::future::{AbortHandle, Aborted},
@@ -650,8 +648,10 @@ mod tests {
     }
 
     async fn sample_test_component() -> Result<Arc<Component>, Error> {
-        let ns =
-            create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)])?;
+        let ns = create_ns_from_current_ns(vec![(
+            "/pkg",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )])?;
 
         Ok(Arc::new(
             Component::create_for_tests(BuilderArgs {
@@ -764,7 +764,7 @@ mod tests {
         assert_eq!(Arc::strong_count(&component), 1);
     }
 
-    async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
+    async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
         let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("Failed to clone DirectoryProxy");
         let entries = files_async::readdir(&dir).await.expect("readdir failed");

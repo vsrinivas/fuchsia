@@ -8,12 +8,7 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -87,7 +82,7 @@ impl vfs::directory::entry_container::Directory for PkgfsVersions {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: WatchMask,
+        _: fio::WatchMask,
         _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
@@ -96,9 +91,9 @@ impl vfs::directory::entry_container::Directory for PkgfsVersions {
     // `register_watcher` is unsupported so this is a no-op.
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY,
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -120,22 +115,22 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
         flags: u32,
         mode: u32,
         mut path: VfsPath,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.unset(OPEN_FLAG_POSIX_WRITABLE);
-        let flags = if flags.is_any_set(OPEN_FLAG_POSIX_DEPRECATED) {
-            flags.unset(OPEN_FLAG_POSIX_DEPRECATED).set(OPEN_FLAG_POSIX_EXECUTABLE)
+        let flags = flags.unset(fio::OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.is_any_set(fio::OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.unset(fio::OPEN_FLAG_POSIX_DEPRECATED).set(fio::OPEN_FLAG_POSIX_EXECUTABLE)
         } else {
             flags
         };
 
         // This directory and all child nodes are read-only
         if flags.is_any_set(
-            OPEN_RIGHT_WRITABLE
-                | OPEN_FLAG_CREATE
-                | OPEN_FLAG_CREATE_IF_ABSENT
-                | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_CREATE
+                | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                | fio::OPEN_FLAG_TRUNCATE
+                | fio::OPEN_FLAG_APPEND,
         ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
@@ -162,7 +157,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                         &package_status,
                         self.non_static_allow_list.as_ref(),
                     );
-                    let executablity_requested = flags.is_any_set(OPEN_RIGHT_EXECUTABLE);
+                    let executablity_requested = flags.is_any_set(fio::OPEN_RIGHT_EXECUTABLE);
                     let flags = match (executability_status, executablity_requested) {
                         (ExecutabilityStatus::Forbidden, true) => {
                             let () = send_on_open_with_error(
@@ -173,7 +168,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                             return;
                         }
                         (ExecutabilityStatus::Forbidden, false) => {
-                            flags.unset(OPEN_FLAG_POSIX_EXECUTABLE)
+                            flags.unset(fio::OPEN_FLAG_POSIX_EXECUTABLE)
                         }
                         (ExecutabilityStatus::Allowed, _) => flags,
                     };
@@ -204,7 +199,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -261,7 +256,6 @@ mod tests {
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
         assert_matches::assert_matches,
         blobfs_ramdisk::BlobfsRamdisk,
-        fidl_fuchsia_io::{OPEN_FLAG_POSIX_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_pkg::{PackagePath, PackageVariant},
         fuchsia_pkg_testing::{Package, PackageBuilder},
         std::collections::HashSet,
@@ -269,9 +263,9 @@ mod tests {
     };
 
     impl PkgfsVersions {
-        fn proxy(self: &Arc<Self>, flags: u32) -> fidl_fuchsia_io::DirectoryProxy {
+        fn proxy(self: &Arc<Self>, flags: u32) -> fio::DirectoryProxy {
             let (proxy, server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
             vfs::directory::entry::DirectoryEntry::open(
                 Arc::clone(&self),
@@ -374,7 +368,7 @@ mod tests {
 
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
         );
         assert_eq!(pos, TraversalPosition::End);
     }
@@ -407,12 +401,18 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                (hash(0).to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                (hash(1).to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                (hash(2).to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                (hash(10).to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                (hash(14).to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (hash(0).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (hash(1).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (hash(2).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (
+                    hash(10).to_string(),
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                ),
+                (
+                    hash(14).to_string(),
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                ),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
@@ -429,11 +429,15 @@ mod tests {
 
         register_dynamic_package(&env.package_index, create_path("dynamic"), hash(1)).await;
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(1).to_string(), OPEN_RIGHT_EXECUTABLE)
-                .await,
+            io_util::directory::open_directory(
+                &proxy,
+                &hash(1).to_string(),
+                fio::OPEN_RIGHT_EXECUTABLE
+            )
+            .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
         );
     }
@@ -456,25 +460,25 @@ mod tests {
         )
         .await;
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
         // Open a package directory with OPEN_FLAG_POSIX_EXECUTABLE set
         let pkg_dir = io_util::directory::open_directory(
             &proxy,
             &pkg.meta_far_merkle_root().to_string(),
-            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE,
         )
         .await
         .unwrap();
 
         // DirectoryEntry::open should have unset OPEN_FLAG_POSIX_EXECUTABLE (instead of allowing
-        // the upgrade to OPEN_RIGHT_EXECUTABLE), so re-opening self with OPEN_RIGHT_EXECUTABLE
+        // the upgrade to fio::OPEN_RIGHT_EXECUTABLE), so re-opening self with fio::OPEN_RIGHT_EXECUTABLE
         // should be rejected.
         assert_matches!(
             io_util::directory::open_directory(
                 &pkg_dir,
                 ".",
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
@@ -490,11 +494,11 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
+        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_WRITABLE);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, OPEN_RIGHT_READABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -506,11 +510,12 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
+        let proxy =
+            pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_DEPRECATED);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -522,11 +527,15 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(0).to_string(), OPEN_RIGHT_EXECUTABLE)
-                .await,
+            io_util::directory::open_directory(
+                &proxy,
+                &hash(0).to_string(),
+                fio::OPEN_RIGHT_EXECUTABLE
+            )
+            .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
@@ -540,17 +549,25 @@ mod tests {
             &[],
         );
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        let proxy = pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(0).to_string(), OPEN_RIGHT_EXECUTABLE)
-                .await,
+            io_util::directory::open_directory(
+                &proxy,
+                &hash(0).to_string(),
+                fio::OPEN_RIGHT_EXECUTABLE
+            )
+            .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(1).to_string(), OPEN_RIGHT_READABLE)
-                .await,
+            io_util::directory::open_directory(
+                &proxy,
+                &hash(1).to_string(),
+                fio::OPEN_RIGHT_READABLE
+            )
+            .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
@@ -563,13 +580,12 @@ mod tests {
             ExecutabilityRestrictions::DoNotEnforce,
             &[],
         );
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
         vfs::directory::entry::DirectoryEntry::open(
             pkgfs_versions,
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),
@@ -607,9 +623,9 @@ mod tests {
         .await;
 
         let proxy = io_util::directory::open_directory(
-            &pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE),
+            &pkgfs_versions.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
             &pkg.meta_far_merkle_root().to_string(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .await
         .unwrap();
@@ -631,7 +647,7 @@ mod tests {
         let file = io_util::directory::open_file(
             &proxy,
             "message",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .await
         .unwrap();

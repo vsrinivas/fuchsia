@@ -5,7 +5,7 @@
 use crate::codec::CodecInterface;
 use crate::configurator::Configurator;
 use anyhow::{format_err, Error};
-use fidl_fuchsia_io;
+use fidl_fuchsia_io as fio;
 use futures::TryStreamExt;
 use std::path::Path;
 
@@ -13,7 +13,7 @@ use std::path::Path;
 /// If `break_on_idle` is true then not finding a codec is an error.
 /// If `dev_proxy` can't be cloned an error is returned.
 pub async fn find_codecs<T: Configurator>(
-    dev_proxy: fidl_fuchsia_io::DirectoryProxy,
+    dev_proxy: fio::DirectoryProxy,
     break_on_idle: bool,
     mut configurator: T,
 ) -> Result<(), Error> {

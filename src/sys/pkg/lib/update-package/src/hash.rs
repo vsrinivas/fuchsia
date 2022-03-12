@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, thiserror::Error};
+use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, thiserror::Error};
 
 /// An error encountered while extracting the package hash.
 #[derive(Debug, Error)]
@@ -18,7 +18,7 @@ pub enum HashError {
     Parse(#[source] fuchsia_hash::ParseHashError),
 }
 
-pub(crate) async fn hash(proxy: &DirectoryProxy) -> Result<Hash, HashError> {
+pub(crate) async fn hash(proxy: &fio::DirectoryProxy) -> Result<Hash, HashError> {
     let meta = io_util::directory::open_file(proxy, "meta", io_util::OPEN_RIGHT_READABLE)
         .await
         .map_err(HashError::Open)?;

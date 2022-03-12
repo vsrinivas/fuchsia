@@ -328,7 +328,7 @@ mod tests {
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
         fidl_fuchsia_inspect::TreeMarker,
-        fidl_fuchsia_io::DirectoryMarker,
+        fidl_fuchsia_io as fio,
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::{assert_data_tree, reader, testing::AnyProperty, Inspector},
@@ -610,15 +610,15 @@ mod tests {
             ComponentIdentifier::Legacy { instance_id, moniker: vec!["a", "b", "foo.cmx"].into() },
             TEST_URL,
         );
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))

@@ -10,8 +10,8 @@ use {
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_tap as wlantap,
+    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
@@ -110,7 +110,7 @@ impl TestHelper {
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fuchsia_async::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
-        let dir = DirectoryProxy::from_channel(async_channel);
+        let dir = fio::DirectoryProxy::from_channel(async_channel);
         info!("Waiting for /dev/sys/test/wlantapctl to appear.");
         device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl").await.unwrap();
 

@@ -13,7 +13,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
-    fidl_fuchsia_io::FilesystemInfo,
+    fidl_fuchsia_io as fio,
     fuchsia_async::{Task, Time, Timer},
     fuchsia_zircon::{AsHandleRef, Event},
     fuchsia_zircon::{Duration, Status},
@@ -327,7 +327,7 @@ impl FatFilesystem {
         Ok(())
     }
 
-    pub fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    pub fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         let fs_lock = self.lock().unwrap();
 
         let cluster_size = fs_lock.cluster_size() as u64;
@@ -336,7 +336,7 @@ impl FatFilesystem {
         let total_bytes = cluster_size * total_clusters;
         let used_bytes = cluster_size * (total_clusters - free_clusters);
 
-        Ok(FilesystemInfo {
+        Ok(fio::FilesystemInfo {
             total_bytes,
             used_bytes,
             total_nodes: 0,
@@ -420,7 +420,6 @@ mod tests {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
         fidl::endpoints::Proxy,
-        fidl_fuchsia_io::{FileProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         scopeguard::defer,
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
@@ -440,18 +439,17 @@ mod tests {
         defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) };
 
         let scope = ExecutionScope::new();
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         dir.clone().open(
             scope.clone(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::validate_and_split("test").unwrap(),
             server_end,
         );
 
         assert!(fs.filesystem().dirty_task.lock().unwrap().is_none());
-        let file = FileProxy::new(proxy.into_channel().unwrap());
+        let file = fio::FileProxy::new(proxy.into_channel().unwrap());
         file.write("hello there".as_bytes()).await.unwrap().map_err(Status::from_raw).unwrap();
         {
             let fs_lock = fs.filesystem().lock().unwrap();

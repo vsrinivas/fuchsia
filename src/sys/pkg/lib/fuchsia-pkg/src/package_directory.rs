@@ -6,7 +6,7 @@
 
 use crate::{MetaContents, MetaContentsError, MetaPackage, MetaPackageError};
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileProxy};
+use fidl_fuchsia_io as fio;
 use fuchsia_hash::{Hash, ParseHashError};
 use thiserror::Error;
 
@@ -52,27 +52,26 @@ pub enum LoadMetaContentsError {
 /// An open package directory
 #[derive(Debug, Clone)]
 pub struct PackageDirectory {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl PackageDirectory {
     /// Interprets the provided directory proxy as a package dir.
-    pub fn from_proxy(proxy: DirectoryProxy) -> Self {
+    pub fn from_proxy(proxy: fio::DirectoryProxy) -> Self {
         Self { proxy }
     }
 
     /// Creates a new channel pair, returning the client end as Self and the server end as a
     /// channel.
-    pub fn create_request() -> Result<(Self, ServerEnd<DirectoryMarker>), fidl::Error> {
-        let (proxy, request) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    pub fn create_request() -> Result<(Self, ServerEnd<fio::DirectoryMarker>), fidl::Error> {
+        let (proxy, request) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         Ok((Self::from_proxy(proxy), request))
     }
 
     /// Returns the current component's package directory.
     #[cfg(target_os = "fuchsia")]
     pub fn open_from_namespace() -> Result<Self, OpenError> {
-        let dir =
-            io_util::directory::open_in_namespace("/pkg", fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
+        let dir = io_util::directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)?;
         Ok(Self::from_proxy(dir))
     }
 
@@ -82,17 +81,21 @@ impl PackageDirectory {
     }
 
     /// Send request to also serve this package directory on the given directory request.
-    pub fn reopen(&self, dir_request: ServerEnd<DirectoryMarker>) -> Result<(), CloneError> {
+    pub fn reopen(&self, dir_request: ServerEnd<fio::DirectoryMarker>) -> Result<(), CloneError> {
         io_util::directory::clone_onto_no_describe(&self.proxy, None, dir_request)
     }
 
     /// Unwraps the inner DirectoryProxy, consuming self.
-    pub fn into_proxy(self) -> DirectoryProxy {
+    pub fn into_proxy(self) -> fio::DirectoryProxy {
         self.proxy
     }
 
     /// Open the file in the package given by `path` with the given access `rights`.
-    pub async fn open_file(&self, path: &str, rights: OpenRights) -> Result<FileProxy, OpenError> {
+    pub async fn open_file(
+        &self,
+        path: &str,
+        rights: OpenRights,
+    ) -> Result<fio::FileProxy, OpenError> {
         io_util::directory::open_file(&self.proxy, path, rights.to_flags()).await
     }
 
@@ -143,10 +146,8 @@ pub enum OpenRights {
 impl OpenRights {
     fn to_flags(&self) -> u32 {
         match self {
-            OpenRights::Read => fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            OpenRights::ReadExecute => {
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE
-            }
+            OpenRights::Read => fio::OPEN_RIGHT_READABLE,
+            OpenRights::ReadExecute => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         }
     }
 }

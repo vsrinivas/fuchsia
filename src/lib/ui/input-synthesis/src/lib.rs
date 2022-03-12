@@ -5,7 +5,7 @@
 use {
     crate::synthesizer::*,
     anyhow::{format_err, Error},
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     fuchsia_component::client::{new_protocol_connector, new_protocol_connector_in_dir},
     keymaps::{
@@ -287,7 +287,7 @@ async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
 ///
 /// See [get_backend] for the discussion of the returned values.
 pub async fn get_modern_backend_at(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
 ) -> Result<Box<dyn InputDeviceRegistry>, Error> {
     let modern_registry = new_protocol_connector_in_dir::<
         fidl_fuchsia_input_injection::InputDeviceRegistryMarker,

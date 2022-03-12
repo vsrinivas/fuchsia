@@ -5,6 +5,7 @@ use {
     crate::isolated_devmgr,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
+    fidl_fuchsia_io as fio,
     fuchsia_async::{DurationExt, Timer},
     fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf},
     std::fs::File,
@@ -33,9 +34,9 @@ pub fn is_equal_vec(lhs: &Vec<u8>, rhs: &Vec<u8>) -> bool {
 pub async fn get_fake_device_in_isolated_devmgr(dir_path_str: &str) -> Result<File, Error> {
     let tel_dir = isolated_devmgr::open_dir_in_isolated_devmgr(dir_path_str)
         .context("err opening tel dir")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&tel_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&tel_dir)?,
+    )?);
     let tel_devices = files_async::readdir(&directory_proxy).await?;
     // Should have one and only one fake device available in IsolatedDevmgr
     if tel_devices.len() != 1 {
@@ -52,9 +53,9 @@ pub async fn get_fake_device_in_isolated_devmgr(dir_path_str: &str) -> Result<Fi
 pub async fn validate_removal_of_fake_device(dir_path_str: &str) -> Result<(), Error> {
     let tel_dir = isolated_devmgr::open_dir_in_isolated_devmgr(dir_path_str)
         .context("err opening tel dir")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&tel_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&tel_dir)?,
+    )?);
     loop {
         let tel_devices = files_async::readdir(&directory_proxy).await?;
         if tel_devices.is_empty() {

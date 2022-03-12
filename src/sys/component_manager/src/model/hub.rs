@@ -24,7 +24,7 @@ use {
     cm_util::{channel, io::clone_dir},
     config_encoder::ConfigFields,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -136,7 +136,7 @@ impl Hub {
         mut server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let root_moniker = InstancedAbsoluteMoniker::root();
-        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::dot(), &mut server_end)
+        self.open(&root_moniker, flags, fio::MODE_TYPE_DIRECTORY, pfsPath::dot(), &mut server_end)
             .await?;
         Ok(())
     }
@@ -177,7 +177,7 @@ impl Hub {
             flags,
             open_mode,
             relative_path,
-            ServerEnd::<NodeMarker>::new(server_end),
+            ServerEnd::<fio::NodeMarker>::new(server_end),
         );
         Ok(())
     }
@@ -323,7 +323,7 @@ impl Hub {
         component_decl: ComponentDecl,
         target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
-        pkg_dir: Option<DirectoryProxy>,
+        pkg_dir: Option<fio::DirectoryProxy>,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
         let mut use_dir = pfs::simple();
@@ -341,7 +341,7 @@ impl Hub {
     fn add_in_directory(
         execution_directory: Directory,
         component_decl: ComponentDecl,
-        package_dir: Option<DirectoryProxy>,
+        package_dir: Option<fio::DirectoryProxy>,
         target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
@@ -374,7 +374,7 @@ impl Hub {
                       _flags: u32,
                       _mode: u32,
                       _relative_path: pfsPath,
-                      server_end: ServerEnd<NodeMarker>| {
+                      server_end: ServerEnd<fio::NodeMarker>| {
                     log::info!("Connecting fuchsia.sys2.LifecycleController");
                     let lifecycle_controller = lifecycle_controller.clone();
                     let server_end =
@@ -409,7 +409,7 @@ impl Hub {
 
     fn add_out_directory(
         execution_directory: Directory,
-        outgoing_dir: Option<DirectoryProxy>,
+        outgoing_dir: Option<fio::DirectoryProxy>,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_out_directory");
@@ -421,7 +421,7 @@ impl Hub {
 
     fn add_runtime_directory(
         execution_directory: Directory,
-        runtime_dir: Option<DirectoryProxy>,
+        runtime_dir: Option<fio::DirectoryProxy>,
         instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_runtime_directory");
@@ -468,7 +468,7 @@ impl Hub {
         resolved_url: String,
         component_decl: &'a ComponentDecl,
         config: &Option<ConfigFields>,
-        pkg_dir: Option<&DirectoryProxy>,
+        pkg_dir: Option<&fio::DirectoryProxy>,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
@@ -775,10 +775,7 @@ mod tests {
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
-        },
+        fidl_fuchsia_io as fio,
         moniker::AbsoluteMoniker,
         routing_test_helpers::component_id_index::make_index_file,
         std::{convert::TryFrom, path::Path},
@@ -789,8 +786,8 @@ mod tests {
     };
 
     /// Hosts an out directory with a 'foo' file.
-    fn foo_out_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
-        Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+    fn foo_out_dir_fn() -> Box<dyn Fn(ServerEnd<fio::DirectoryMarker>) + Send + Sync> {
+        Box::new(move |server_end: ServerEnd<fio::DirectoryMarker>| {
             let out_dir = pseudo_directory!(
                 "foo" => read_only_static(b"bar"),
                 "test" => pseudo_directory!(
@@ -800,8 +797,8 @@ mod tests {
 
             out_dir.clone().open(
                 ExecutionScope::new(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
             );
@@ -809,23 +806,23 @@ mod tests {
     }
 
     /// Hosts a runtime directory with a 'bleep' file.
-    fn bleep_runtime_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
-        Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+    fn bleep_runtime_dir_fn() -> Box<dyn Fn(ServerEnd<fio::DirectoryMarker>) + Send + Sync> {
+        Box::new(move |server_end: ServerEnd<fio::DirectoryMarker>| {
             let pseudo_dir = pseudo_directory!(
                 "bleep" => read_only_static(b"blah"),
             );
 
             pseudo_dir.clone().open(
                 ExecutionScope::new(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
             );
         })
     }
 
-    type DirectoryCallback = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
+    type DirectoryCallback = Box<dyn Fn(ServerEnd<fio::DirectoryMarker>) + Send + Sync>;
 
     struct ComponentDescriptor {
         pub name: &'static str,
@@ -838,7 +835,7 @@ mod tests {
     async fn start_component_manager_with_hub(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, fio::DirectoryProxy) {
         start_component_manager_with_options(root_component_url, components, vec![], None).await
     }
 
@@ -847,7 +844,7 @@ mod tests {
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HooksRegistration>,
         index_file_path: Option<String>,
-    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, fio::DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
         let configs = components.iter().filter_map(|c| c.config.clone()).collect();
@@ -1074,7 +1071,7 @@ mod tests {
         let config_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/config"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
@@ -1111,7 +1108,7 @@ mod tests {
         let resolved_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
@@ -1149,7 +1146,7 @@ mod tests {
         let use_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/use"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 
@@ -1219,7 +1216,7 @@ mod tests {
         let resolved_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("children/a/resolved"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 
@@ -1272,7 +1269,7 @@ mod tests {
         let expose_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("resolved/expose"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
@@ -1365,7 +1362,7 @@ mod tests {
         let in_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("exec/in"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["pkg"], list_directory(&in_dir).await);
@@ -1416,7 +1413,7 @@ mod tests {
         let expose_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("exec/expose"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
@@ -1440,7 +1437,7 @@ mod tests {
         let debug_svc_dir = io_util::open_directory(
             &hub_proxy,
             &Path::new("debug"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
 

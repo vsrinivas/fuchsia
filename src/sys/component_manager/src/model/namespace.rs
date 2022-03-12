@@ -24,8 +24,7 @@ use {
     },
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, NodeMarker},
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
@@ -41,7 +40,7 @@ use {
 type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
-    pub package_dir: Option<DirectoryProxy>,
+    pub package_dir: Option<fio::DirectoryProxy>,
     dir_abort_handles: Vec<AbortHandle>,
     logger: Option<ScopedLogger>,
 }
@@ -209,7 +208,7 @@ impl IncomingNamespace {
     /// add_pkg_directory will add a handle to the component's package under /pkg in the namespace.
     fn add_pkg_directory(
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
-        package_dir: &DirectoryProxy,
+        package_dir: &fio::DirectoryProxy,
     ) -> Result<(), ModelError> {
         let clone_dir_proxy = io_util::clone_directory(package_dir, fio::CLONE_FLAG_SAME_RIGHTS)
             .map_err(|e| ModelError::namespace_creation_failed(e))?;
@@ -382,14 +381,15 @@ impl IncomingNamespace {
         component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let not_found_component_copy = component.clone();
-        let route_open_fn = move |scope: ExecutionScope,
-                                  flags: u32,
-                                  mode: u32,
-                                  relative_path: Path,
-                                  server_end: ServerEnd<NodeMarker>| {
-            let use_ = use_.clone();
-            let component = component.clone();
-            scope.spawn(async move {
+        let route_open_fn =
+            move |scope: ExecutionScope,
+                  flags: u32,
+                  mode: u32,
+                  relative_path: Path,
+                  server_end: ServerEnd<fio::NodeMarker>| {
+                let use_ = use_.clone();
+                let component = component.clone();
+                scope.spawn(async move {
                     let target = match component.upgrade() {
                         Ok(component) => component,
                         Err(e) => {
@@ -441,7 +441,7 @@ impl IncomingNamespace {
                         .await;
                     }
                 });
-        };
+            };
 
         let service_dir = svc_dirs.entry(capability_path.dirname.clone()).or_insert_with(|| {
             make_dir_with_not_found_logging(
@@ -466,8 +466,8 @@ impl IncomingNamespace {
         svc_dirs: HashMap<String, Directory>,
     ) -> Result<(), ModelError> {
         for (target_dir_path, pseudo_dir) in svc_dirs {
-            let (client_end, server_end) =
-                create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
+            let (client_end, server_end) = create_endpoints::<fio::NodeMarker>()
+                .expect("could not create node proxy endpoints");
             pseudo_dir.clone().open(
                 ExecutionScope::new(),
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
@@ -511,9 +511,9 @@ impl IncomingNamespace {
 /// Given a Directory, connect to the LogSink protocol at the default
 /// location.
 pub async fn get_logger_from_dir(
-    dir: ClientEnd<DirectoryMarker>,
+    dir: ClientEnd<fio::DirectoryMarker>,
     at_path: String,
-) -> (Option<ClientEnd<DirectoryMarker>>, Option<ScopedLogger>) {
+) -> (Option<ClientEnd<fio::DirectoryMarker>>, Option<ScopedLogger>) {
     let mut logger = Option::<ScopedLogger>::None;
     match dir.into_proxy() {
         Ok(dir_proxy) => {
@@ -537,7 +537,7 @@ pub async fn get_logger_from_dir(
                         );
                         None
                     },
-                    |chan| Some(ClientEnd::<fidl_fuchsia_io::DirectoryMarker>::new(chan.into())),
+                    |chan| Some(ClientEnd::<fio::DirectoryMarker>::new(chan.into())),
                 ),
                 logger,
             )
@@ -646,9 +646,8 @@ pub mod test {
             dependency_type: DependencyType::Strong,
         };
 
-        let (dir_client, dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("failed to create VFS endpoints");
+        let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
+            .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
@@ -684,9 +683,8 @@ pub mod test {
             dependency_type: DependencyType::Strong,
         };
 
-        let (dir_client, dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("failed to create VFS endpoints");
+        let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
+            .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         let mut svc_dir = root_dir.dir("arbitrary-dir");
         svc_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
@@ -721,9 +719,8 @@ pub mod test {
             dependency_type: DependencyType::Strong,
         };
 
-        let (dir_client, dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("failed to create VFS endpoints");
+        let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
+            .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
@@ -734,7 +731,7 @@ pub mod test {
         // Create a directory for another namespace entry which we don't
         // actually expect to be accessed.
         let (extra_dir_client, extra_dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
+            endpoints::create_endpoints::<fio::DirectoryMarker>()
                 .expect("Failed creating directory endpoints");
         let mut extra_dir = ServiceFs::new_local();
         extra_dir.add_fidl_service(MockServiceRequest::LogSink);
@@ -797,9 +794,8 @@ pub mod test {
             dependency_type: DependencyType::Strong,
         };
 
-        let (dir_client, dir_server) =
-            endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("failed to create VFS endpoints");
+        let (dir_client, dir_server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
+            .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);
         root_dir

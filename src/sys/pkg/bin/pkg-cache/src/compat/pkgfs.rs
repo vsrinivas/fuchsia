@@ -4,8 +4,7 @@
 
 use {
     anyhow::Context as _,
-    fidl_fuchsia_io::{DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{collections::BTreeMap, sync::Arc},
     vfs::directory::{
         dirents_sink,
@@ -28,8 +27,8 @@ enum DirentType {
 impl From<DirentType> for u8 {
     fn from(type_: DirentType) -> Self {
         match type_ {
-            DirentType::Directory => DIRENT_TYPE_DIRECTORY,
-            DirentType::File => DIRENT_TYPE_FILE,
+            DirentType::Directory => fio::DIRENT_TYPE_DIRECTORY,
+            DirentType::File => fio::DIRENT_TYPE_FILE,
         }
     }
 }
@@ -56,7 +55,7 @@ async fn read_dirents<'a>(
             // Yield "." first. If even that can't fit in the response, return the same
             // traversal position so we try again next time (where the client hopefully
             // provides a bigger buffer).
-            match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
+            match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".") {
                 AppendResult::Ok(new_sink) => sink = new_sink,
                 AppendResult::Sealed(sealed) => return Ok((TraversalPosition::Start, sealed)),
             }
@@ -79,7 +78,7 @@ async fn read_dirents<'a>(
     };
 
     while let Some((next, dirent_type)) = remaining.next() {
-        match sink.append(&EntryInfo::new(INO_UNKNOWN, (*dirent_type).into()), next) {
+        match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, (*dirent_type).into()), next) {
             AppendResult::Ok(new_sink) => sink = new_sink,
             AppendResult::Sealed(sealed) => {
                 // Ran out of response buffer space. Pick up on this item next time.
@@ -250,7 +249,7 @@ mod testing {
 
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
         );
         assert_eq!(pos, TraversalPosition::End);
     }
@@ -266,22 +265,22 @@ mod testing {
         let expected_entries = vec![
             (
                 ".".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("dir0".to_owned()),
             ),
             (
                 "dir0".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("dir1".to_owned()),
             ),
             (
                 "dir1".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("file".to_owned()),
             ),
             (
                 "file".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE),
                 TraversalPosition::End,
             ),
         ];
@@ -330,10 +329,10 @@ mod testing {
         assert_eq!(
             results,
             vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("a".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                ("c".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                ("d".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("a".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                ("c".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                ("d".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);

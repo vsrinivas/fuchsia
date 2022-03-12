@@ -10,10 +10,7 @@ use crate::{common::IntoAny, execution_scope::ExecutionScope, path::Path};
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeMarker, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-        DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET, DIRENT_TYPE_UNKNOWN, INO_UNKNOWN,
-    },
+    fidl_fuchsia_io as fio,
     std::{fmt, sync::Arc},
 };
 
@@ -27,12 +24,12 @@ impl EntryInfo {
     /// Constructs a new directory entry information object.
     pub fn new(inode: u64, type_: u8) -> EntryInfo {
         match type_ {
-            DIRENT_TYPE_UNKNOWN
-            | DIRENT_TYPE_DIRECTORY
-            | DIRENT_TYPE_BLOCK_DEVICE
-            | DIRENT_TYPE_FILE
-            | DIRENT_TYPE_SOCKET
-            | DIRENT_TYPE_SERVICE => EntryInfo(inode, type_),
+            fio::DIRENT_TYPE_UNKNOWN
+            | fio::DIRENT_TYPE_DIRECTORY
+            | fio::DIRENT_TYPE_BLOCK_DEVICE
+            | fio::DIRENT_TYPE_FILE
+            | fio::DIRENT_TYPE_SOCKET
+            | fio::DIRENT_TYPE_SERVICE => EntryInfo(inode, type_),
             _ => panic!("Unexpected directory entry type: {}", type_),
         }
     }
@@ -52,19 +49,19 @@ impl fmt::Debug for EntryInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let new_type_str;
         let type_str = match self.type_() {
-            DIRENT_TYPE_UNKNOWN => "Unknown",
-            DIRENT_TYPE_DIRECTORY => "Directory",
-            DIRENT_TYPE_BLOCK_DEVICE => "BlockDevice",
-            DIRENT_TYPE_FILE => "File",
-            DIRENT_TYPE_SOCKET => "Socket",
-            DIRENT_TYPE_SERVICE => "Service",
+            fio::DIRENT_TYPE_UNKNOWN => "Unknown",
+            fio::DIRENT_TYPE_DIRECTORY => "Directory",
+            fio::DIRENT_TYPE_BLOCK_DEVICE => "BlockDevice",
+            fio::DIRENT_TYPE_FILE => "File",
+            fio::DIRENT_TYPE_SOCKET => "Socket",
+            fio::DIRENT_TYPE_SERVICE => "Service",
             new_type => {
                 new_type_str = format!("Unexpected EntryInfo type ({})", new_type);
                 &new_type_str
             }
         };
-        if self.inode() == INO_UNKNOWN {
-            write!(f, "{}(INO_UNKNOWN)", type_str)
+        if self.inode() == fio::INO_UNKNOWN {
+            write!(f, "{}(fio::INO_UNKNOWN)", type_str)
         } else {
             write!(f, "{}({})", type_str, self.inode())
         }
@@ -102,7 +99,7 @@ pub trait DirectoryEntry: IntoAny + Sync + Send {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     );
 
     /// This method is used to populate ReadDirents() output.

@@ -6,6 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{create_endpoints, ClientEnd},
     fidl_fuchsia_device::ControllerSynchronousProxy,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_lowpan_spinel::{DeviceMarker, DeviceProxy, DeviceSetupProxy},
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
@@ -28,9 +29,9 @@ pub async fn ot_radio_set_channel(device: &File) -> Result<ClientEnd<DeviceMarke
 /// Get the ot radio device
 pub async fn get_ot_device_in_devmgr(dir_path_str: &str) -> Result<File, Error> {
     let ot_radio_dir = File::open(dir_path_str).context("opening dir in devmgr")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&ot_radio_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&ot_radio_dir)?,
+    )?);
     let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
     // Should have 1 device that implements OT_RADIO
     if ot_radio_devices.len() != 1 {
@@ -63,9 +64,9 @@ pub fn unbind_device(device: &File) -> Result<(), Error> {
 /// Validate 0 device is presented in path `dir_path_str` in devmgr
 pub async fn validate_removal_of_device(dir_path_str: &str) -> Result<(), Error> {
     let protocol_dir = File::open(dir_path_str).context("opening dir in devmgr")?;
-    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(fdio::clone_channel(&protocol_dir)?)?,
-    );
+    let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+        fdio::clone_channel(&protocol_dir)?,
+    )?);
     loop {
         let ot_devices = files_async::readdir(&directory_proxy).await?;
         if ot_devices.is_empty() {

@@ -5,9 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{FontResolverRequest, FontResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -50,7 +48,7 @@ async fn run_resolver_service(mut stream: FontResolverRequestStream) -> Result<(
 
 async fn resolve(
     package_url: String,
-    directory_request: ServerEnd<DirectoryMarker>,
+    directory_request: ServerEnd<fio::DirectoryMarker>,
 ) -> Result<(), Status> {
     PkgUrl::parse(&package_url).map_err(|_| Err(Status::INVALID_ARGS))?;
 
@@ -77,8 +75,8 @@ async fn resolve(
         }
     };
 
-    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY;
-    let mode = MODE_TYPE_DIRECTORY;
+    let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY;
+    let mode = fio::MODE_TYPE_DIRECTORY;
     let node = ServerEnd::from(directory_request.into_channel());
 
     root.open(ExecutionScope::new(), flags, mode, vfs::path::Path::dot(), node);

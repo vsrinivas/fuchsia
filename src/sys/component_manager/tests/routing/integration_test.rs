@@ -4,8 +4,8 @@
 
 use {
     fidl::endpoints, fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_async as fasync, fuchsia_component::client,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_component::client,
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -15,7 +15,7 @@ async fn routing() {
 
     // Bind to `echo_client`, causing it to execute.
     let mut child_ref = fdecl::ChildRef { name: "echo_client".to_string(), collection: None };
-    let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     realm
         .open_exposed_dir(&mut child_ref, server_end)
         .await

@@ -13,8 +13,7 @@ use {
         WeaveFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
         WidevineFactoryStoreProviderRequestStream,
     },
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, macros::*},
     futures::{lock::Mutex, prelude::*},
@@ -27,7 +26,7 @@ use {
     },
 };
 
-type LockedDirectoryProxy = Arc<Mutex<DirectoryProxy>>;
+type LockedDirectoryProxy = Arc<Mutex<fio::DirectoryProxy>>;
 
 enum IncomingServices {
     AlphaFactoryStoreProvider(AlphaFactoryStoreProviderRequestStream),
@@ -38,7 +37,7 @@ enum IncomingServices {
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
 }
 
-fn start_test_dir(config_path: &str) -> Result<DirectoryProxy, Error> {
+fn start_test_dir(config_path: &str) -> Result<fio::DirectoryProxy, Error> {
     let files: HashMap<String, String> = match File::open(&config_path) {
         Ok(file) => from_reader(file)?,
         Err(err) => {
@@ -61,11 +60,12 @@ fn start_test_dir(config_path: &str) -> Result<DirectoryProxy, Error> {
 
     let test_dir = tree.build();
 
-    let (test_dir_proxy, test_dir_service) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    let (test_dir_proxy, test_dir_service) =
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
     test_dir.open(
         ExecutionScope::new(),
-        OPEN_RIGHT_READABLE,
-        MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::MODE_TYPE_DIRECTORY,
         vfs::path::Path::dot(),
         test_dir_service.into_channel().into(),
     );
@@ -79,7 +79,7 @@ async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Res
             while let Some(request) = stream.try_next().await? {
                 let AlphaFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
                     request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
         IncomingServices::CastCredentialsFactoryStoreProvider(mut stream) => {
@@ -88,14 +88,14 @@ async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Res
                     dir,
                     control_handle: _,
                 } = request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
         IncomingServices::MiscFactoryStoreProvider(mut stream) => {
             while let Some(request) = stream.try_next().await? {
                 let MiscFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
                     request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
         IncomingServices::PlayReadyFactoryStoreProvider(mut stream) => {
@@ -104,21 +104,21 @@ async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Res
                     dir,
                     control_handle: _,
                 } = request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
         IncomingServices::WeaveFactoryStoreProvider(mut stream) => {
             while let Some(request) = stream.try_next().await? {
                 let WeaveFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
                     request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
         IncomingServices::WidevineFactoryStoreProvider(mut stream) => {
             while let Some(request) = stream.try_next().await? {
                 let WidevineFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
                     request;
-                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                dir_mtx.lock().await.clone(fio::OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
     }

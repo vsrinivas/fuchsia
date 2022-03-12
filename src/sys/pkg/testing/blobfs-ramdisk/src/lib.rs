@@ -11,7 +11,7 @@ use {
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_fs::AdminMarker,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_component::server::ServiceFs,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
@@ -86,7 +86,7 @@ impl BlobfsRamdiskBuilder {
         let block_handle = ramdisk.clone_channel().context("cloning ramdisk channel")?;
 
         let (export_root_proxy, blobfs_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         let process = scoped_task::spawn_etc(
             scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
@@ -101,11 +101,9 @@ impl BlobfsRamdiskBuilder {
         .map_err(|(status, _)| status)
         .context("spawning 'blobfs mount'")?;
 
-        let (root_proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (root_proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         export_root_proxy.open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
             0,
             "root",
             server.into_channel().into(),
@@ -136,8 +134,8 @@ impl BlobfsRamdiskBuilder {
 pub struct BlobfsRamdisk {
     backing_ramdisk: FormattedRamdisk,
     process: Scoped<fuchsia_zircon::Process>,
-    export_root_proxy: DirectoryProxy,
-    root_proxy: DirectoryProxy,
+    export_root_proxy: fio::DirectoryProxy,
+    root_proxy: fio::DirectoryProxy,
 }
 
 impl BlobfsRamdisk {
@@ -161,14 +159,14 @@ impl BlobfsRamdisk {
     }
 
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
-    pub fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    pub fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
-        self.root_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.root_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 
     /// Returns a new connection to blobfs's root directory as a DirectoryProxy.
-    pub fn root_dir_proxy(&self) -> Result<DirectoryProxy, Error> {
+    pub fn root_dir_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
         Ok(self.root_dir_handle()?.into_proxy()?)
     }
 
@@ -280,7 +278,7 @@ impl RamdiskBuilder {
             .context("/dev/sys/platform/00:00:2d/ramctl did not appear")?;
         }
         let client = client.build()?;
-        let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
+        let proxy = fio::NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
         Ok(Ramdisk { proxy, client })
     }
 
@@ -292,7 +290,7 @@ impl RamdiskBuilder {
 
 /// A virtual memory-backed block device.
 pub struct Ramdisk {
-    proxy: NodeProxy,
+    proxy: fio::NodeProxy,
     client: RamdiskClient,
 }
 
@@ -312,7 +310,7 @@ impl Ramdisk {
 
     fn clone_channel(&self) -> Result<zx::Channel, Error> {
         let (result, server_end) = zx::Channel::create()?;
-        self.proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end))?;
         Ok(result)
     }
 
@@ -355,14 +353,11 @@ impl FormattedRamdisk {
     }
 }
 
-async fn blobfs_corrupt_blob(ramdisk: NodeProxy, merkle: &Hash) -> Result<(), Error> {
+async fn blobfs_corrupt_blob(ramdisk: fio::NodeProxy, merkle: &Hash) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.root_dir().add_service_at("block", |chan| {
         ramdisk
-            .clone(
-                fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
-                ServerEnd::new(chan),
-            )
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE, ServerEnd::new(chan))
             .unwrap();
         None
     });

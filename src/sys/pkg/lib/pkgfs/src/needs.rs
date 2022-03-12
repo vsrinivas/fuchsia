@@ -6,9 +6,7 @@
 
 use {
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, NodeInfo,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -35,26 +33,26 @@ pub enum ListNeedsError {
 /// An open handle to /pkgfs/needs
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
-        let proxy = io_util::directory::open_in_namespace(
-            "/pkgfs/needs",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )?;
+        let proxy =
+            io_util::directory::open_in_namespace("/pkgfs/needs", fio::OPEN_RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_pkgfs_root(
+        pkgfs: &fio::DirectoryProxy,
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "needs",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -65,9 +63,9 @@ impl Client {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, DirectoryRequestStream) {
+    pub fn new_test() -> (Self, fio::DirectoryRequestStream) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
     }
@@ -80,7 +78,7 @@ impl Client {
     /// Panics on error
     pub fn new_mock() -> (Self, Mock) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, Mock { stream })
     }
@@ -96,7 +94,7 @@ impl Client {
         // None if stream is terminated and should not continue to enumerate needs.
         let state = Some(&self.proxy);
 
-        futures::stream::unfold(state, move |state: Option<&DirectoryProxy>| {
+        futures::stream::unfold(state, move |state: Option<&fio::DirectoryProxy>| {
             async move {
                 if let Some(proxy) = state {
                     match enumerate_needs_dir(proxy, pkg_merkle).await {
@@ -120,11 +118,11 @@ impl Client {
 
 /// Lists all blobs currently in the `pkg_merkle`'s needs directory.
 async fn enumerate_needs_dir(
-    pkgfs_needs: &DirectoryProxy,
+    pkgfs_needs: &fio::DirectoryProxy,
     pkg_merkle: Hash,
 ) -> Result<HashSet<Hash>, ListNeedsError> {
     let path = format!("packages/{}", pkg_merkle);
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let flags = fio::OPEN_RIGHT_READABLE;
 
     let needs_dir = match io_util::directory::open_directory(pkgfs_needs, &path, flags).await {
         Ok(dir) => dir,
@@ -151,7 +149,7 @@ async fn enumerate_needs_dir(
 ///
 /// Mock does not handle requests until instructed to do so.
 pub struct Mock {
-    stream: DirectoryRequestStream,
+    stream: fio::DirectoryRequestStream,
 }
 
 impl Mock {
@@ -164,7 +162,7 @@ impl Mock {
     /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
     pub async fn expect_enumerate_needs(&mut self, merkle: Hash) -> MockNeeds {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Open {
+            Some(Ok(fio::DirectoryRequest::Open {
                 flags: _,
                 mode: _,
                 path,
@@ -197,19 +195,19 @@ impl Mock {
 ///
 /// MockNeeds does not send the OnOpen event or handle requests until instructed to do so.
 pub struct MockNeeds {
-    stream: DirectoryRequestStream,
+    stream: fio::DirectoryRequestStream,
 }
 
 impl MockNeeds {
     fn send_on_open(&mut self, status: Status) {
-        let mut info = NodeInfo::Directory(fidl_fuchsia_io::DirectoryObject);
+        let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
         let () =
             self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
     }
 
     async fn handle_rewind(&mut self) {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Rewind { responder })) => {
+            Some(Ok(fio::DirectoryRequest::Rewind { responder })) => {
                 responder.send(Status::OK.into_raw()).unwrap();
             }
             other => panic!("unexpected request: {:?}", other),
@@ -266,13 +264,13 @@ impl MockNeeds {
         let mut needs_iter = needs.iter().enumerate().map(|(i, hash)| Dirent {
             ino: i as u64 + 1,
             size: 64,
-            kind: fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            kind: fio::DIRENT_TYPE_FILE,
             name: hash.to_string().as_bytes().try_into().unwrap(),
         });
 
         while let Some(request) = self.stream.try_next().await.unwrap() {
             match request {
-                DirectoryRequest::ReadDirents { max_bytes, responder } => {
+                fio::DirectoryRequest::ReadDirents { max_bytes, responder } => {
                     let max_bytes = max_bytes as usize;
                     assert!(max_bytes >= std::mem::size_of::<Dirent>());
 

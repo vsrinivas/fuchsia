@@ -126,7 +126,7 @@ pub mod for_tests {
         super::*,
         crate::cache::for_tests::CacheForTest,
         anyhow::anyhow,
-        fidl_fuchsia_io::DirectoryProxy,
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_pkg::PackageResolverMarker,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
         fuchsia_pkg_testing::{serve::ServedRepository, Repository},
@@ -215,7 +215,7 @@ pub mod for_tests {
         }
 
         /// Resolve a package using the resolver, returning the root directory of the package.
-        pub async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Error> {
+        pub async fn resolve_package(&self, url: &str) -> Result<fio::DirectoryProxy, Error> {
             let resolver = self
                 .resolver
                 ._pkg_resolver

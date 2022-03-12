@@ -6,13 +6,7 @@ use {
     super::BitFlags as _,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{
         collections::{BTreeMap, HashSet},
         sync::Arc,
@@ -61,19 +55,21 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
         flags: u32,
         mode: u32,
         path: VfsPath,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags.unset(
-            OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_DEPRECATED,
+            fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED,
         );
         if path.is_empty() {
             if flags
-                & (OPEN_RIGHT_WRITABLE
-                    | OPEN_RIGHT_EXECUTABLE
-                    | OPEN_FLAG_CREATE
-                    | OPEN_FLAG_CREATE_IF_ABSENT
-                    | OPEN_FLAG_TRUNCATE
-                    | OPEN_FLAG_APPEND)
+                & (fio::OPEN_RIGHT_WRITABLE
+                    | fio::OPEN_RIGHT_EXECUTABLE
+                    | fio::OPEN_FLAG_CREATE
+                    | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                    | fio::OPEN_FLAG_TRUNCATE
+                    | fio::OPEN_FLAG_APPEND)
                 != 0
             {
                 let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
@@ -98,7 +94,7 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -123,7 +119,7 @@ impl vfs::directory::entry_container::Directory for Validation {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: WatchMask,
+        _: fio::WatchMask,
         _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
@@ -132,9 +128,9 @@ impl vfs::directory::entry_container::Directory for Validation {
     // `register_watcher` is unsupported so no need to do anything here.
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY,
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 1,
             storage_size: 1,
@@ -155,9 +151,6 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         blobfs_ramdisk::BlobfsRamdisk,
-        fidl_fuchsia_io::{
-            DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-        },
         futures::stream::StreamExt as _,
         std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
@@ -188,14 +181,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_unsets_posix_flags() {
         let (_env, validation) = TestEnv::new().await;
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
         Arc::new(validation).open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE
-                | OPEN_FLAG_POSIX_DEPRECATED,
+            fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),
@@ -203,7 +196,7 @@ mod tests {
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, OPEN_RIGHT_READABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -212,18 +205,19 @@ mod tests {
         let validation = Arc::new(validation);
 
         for forbidden_flag in [
-            OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_EXECUTABLE,
-            OPEN_FLAG_CREATE,
-            OPEN_FLAG_CREATE_IF_ABSENT,
-            OPEN_FLAG_TRUNCATE,
-            OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_TRUNCATE,
+            fio::OPEN_FLAG_APPEND,
         ] {
-            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&validation),
                 ExecutionScope::new(),
-                OPEN_FLAG_DESCRIBE | forbidden_flag,
+                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end.into_channel().into(),
@@ -231,7 +225,7 @@ mod tests {
 
             assert_matches!(
                 proxy.take_event_stream().next().await,
-                Some(Ok(fidl_fuchsia_io::DirectoryEvent::OnOpen_{ s, info: None}))
+                Some(Ok(fio::DirectoryEvent::OnOpen_{ s, info: None}))
                     if s == zx::Status::NOT_SUPPORTED.into_raw()
             );
         }
@@ -240,11 +234,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_self() {
         let (_env, validation) = TestEnv::new().await;
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
         Arc::new(validation).open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),
@@ -268,10 +262,10 @@ mod tests {
         .await;
         let validation = Arc::new(validation);
 
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         Arc::clone(&validation).open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             VfsPath::validate_and_split("missing").unwrap(),
             server_end.into_channel().into(),
@@ -289,7 +283,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&validation),
-            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
         );
     }
 
@@ -307,8 +301,8 @@ mod tests {
         assert_eq!(
             crate::compat::pkgfs::testing::FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("missing".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("missing".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
@@ -324,7 +318,7 @@ mod tests {
             Directory::register_watcher(
                 Arc::new(validation),
                 ExecutionScope::new(),
-                WatchMask::empty(),
+                fio::WatchMask::empty(),
                 server.try_into().unwrap(),
             ),
             Err(zx::Status::NOT_SUPPORTED)
@@ -337,8 +331,8 @@ mod tests {
 
         assert_eq!(
             Directory::get_attrs(&validation).await.unwrap(),
-            NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY,
+            fio::NodeAttributes {
+                mode: fio::MODE_TYPE_DIRECTORY,
                 id: 1,
                 content_size: 1,
                 storage_size: 1,

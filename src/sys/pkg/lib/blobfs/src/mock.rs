@@ -6,10 +6,7 @@
 
 use {
     fidl::{encoding::Decodable as _, endpoints::RequestStream as _},
-    fidl_fuchsia_io::{
-        DirectoryRequest, DirectoryRequestStream, FileObject, FileRequest, FileRequestStream,
-        NodeInfo,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
     futures::{Future, StreamExt as _, TryStreamExt as _},
@@ -20,7 +17,7 @@ use {
 ///
 /// Mock does not handle requests until instructed to do so.
 pub struct Mock {
-    pub(super) stream: DirectoryRequestStream,
+    pub(super) stream: fio::DirectoryRequestStream,
 }
 
 impl Mock {
@@ -32,7 +29,7 @@ impl Mock {
     /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
     pub async fn expect_open_blob(&mut self, merkle: Hash) -> Blob {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Open {
+            Some(Ok(fio::DirectoryRequest::Open {
                 flags,
                 mode: _,
                 path,
@@ -57,7 +54,7 @@ impl Mock {
     /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
     pub async fn expect_create_blob(&mut self, merkle: Hash) -> Blob {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Open {
+            Some(Ok(fio::DirectoryRequest::Open {
                 flags,
                 mode: _,
                 path,
@@ -76,7 +73,7 @@ impl Mock {
 
     async fn handle_rewind(&mut self) {
         match self.stream.next().await {
-            Some(Ok(DirectoryRequest::Rewind { responder })) => {
+            Some(Ok(fio::DirectoryRequest::Rewind { responder })) => {
                 responder.send(Status::OK.into_raw()).unwrap();
             }
             other => panic!("unexpected request: {:?}", other),
@@ -112,15 +109,15 @@ impl Mock {
         }
 
         let mut entries_iter = entries.map(|hash| Dirent {
-            ino: fidl_fuchsia_io::INO_UNKNOWN,
+            ino: fio::INO_UNKNOWN,
             size: NAME_LEN as u8,
-            kind: fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            kind: fio::DIRENT_TYPE_FILE,
             name: hash.to_string().as_bytes().try_into().unwrap(),
         });
 
         loop {
             match self.stream.try_next().await.unwrap() {
-                Some(DirectoryRequest::ReadDirents { max_bytes, responder }) => {
+                Some(fio::DirectoryRequest::ReadDirents { max_bytes, responder }) => {
                     let max_bytes = max_bytes as usize;
                     assert!(max_bytes >= std::mem::size_of::<Dirent>());
 
@@ -160,7 +157,7 @@ impl Mock {
 
         while !(readable.is_empty() && missing.is_empty()) {
             match self.stream.next().await {
-                Some(Ok(DirectoryRequest::Open {
+                Some(Ok(fio::DirectoryRequest::Open {
                     flags,
                     mode: _,
                     path,
@@ -227,7 +224,7 @@ impl Mock {
 ///
 /// Blob does not send the OnOpen event or handle requests until instructed to do so.
 pub struct Blob {
-    stream: FileRequestStream,
+    stream: fio::FileRequestStream,
 }
 
 impl Blob {
@@ -235,7 +232,7 @@ impl Blob {
         let event = fidl::Event::create().unwrap();
         event.signal_handle(zx::Signals::NONE, signals).unwrap();
 
-        let mut info = NodeInfo::File(FileObject { event: Some(event), stream: None });
+        let mut info = fio::NodeInfo::File(fio::FileObject { event: Some(event), stream: None });
         let () =
             self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
     }
@@ -315,7 +312,7 @@ impl Blob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::Close { responder })) => {
+            Some(Ok(fio::FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
                 self.expect_done().await;
             }
@@ -337,7 +334,7 @@ impl Blob {
 
     async fn handle_read(&mut self, data: &[u8]) -> usize {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Read { count, responder })) => {
+            Some(Ok(fio::FileRequest::Read { count, responder })) => {
                 let count = min(count.try_into().unwrap(), data.len());
                 responder.send(&mut Ok(data[..count].to_vec())).unwrap();
                 return count;
@@ -365,7 +362,7 @@ impl Blob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::Close { responder })) => {
+            Some(Ok(fio::FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
             }
             Some(other) => panic!("unexpected request: {:?}", other),
@@ -385,24 +382,24 @@ impl Blob {
 
         loop {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Read { count, responder })) => {
+                Some(Ok(fio::FileRequest::Read { count, responder })) => {
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
                     pos += count;
                 }
-                Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
+                Some(Ok(fio::FileRequest::ReadAt { count, offset, responder })) => {
                     let pos: usize = offset.try_into().unwrap();
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
                 }
-                Some(Ok(FileRequest::GetAttr { responder })) => {
-                    let mut attr = fidl_fuchsia_io::NodeAttributes::new_empty();
+                Some(Ok(fio::FileRequest::GetAttr { responder })) => {
+                    let mut attr = fio::NodeAttributes::new_empty();
                     attr.content_size = data.len().try_into().unwrap();
                     responder.send(Status::OK.into_raw(), &mut attr).unwrap();
                 }
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(fio::FileRequest::Close { responder })) => {
                     let _ = responder.send(&mut Ok(()));
                     return;
                 }
@@ -416,7 +413,7 @@ impl Blob {
 
     async fn handle_truncate(&mut self, status: Status) -> u64 {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Resize { length, responder })) => {
+            Some(Ok(fio::FileRequest::Resize { length, responder })) => {
                 responder
                     .send(&mut if status == Status::OK { Ok(()) } else { Err(status.into_raw()) })
                     .unwrap();
@@ -433,7 +430,7 @@ impl Blob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Write { data, responder })) => {
+            Some(Ok(fio::FileRequest::Write { data, responder })) => {
                 responder
                     .send(&mut if status == Status::OK {
                         Ok(data.len() as u64)
@@ -453,8 +450,7 @@ impl Blob {
 
         let length = self.expect_truncate().await;
         // divide rounding up
-        let expected_write_calls =
-            (length + (fidl_fuchsia_io::MAX_BUF - 1)) / fidl_fuchsia_io::MAX_BUF;
+        let expected_write_calls = (length + (fio::MAX_BUF - 1)) / fio::MAX_BUF;
         for _ in 0..(expected_write_calls - 1) {
             self.handle_write(Status::OK).await;
         }
@@ -485,8 +481,8 @@ impl Blob {
 
             let mut rest = expected;
             while !rest.is_empty() {
-                let expected_chunk = if rest.len() > fidl_fuchsia_io::MAX_BUF as usize {
-                    &rest[..fidl_fuchsia_io::MAX_BUF as usize]
+                let expected_chunk = if rest.len() > fio::MAX_BUF as usize {
+                    &rest[..fio::MAX_BUF as usize]
                 } else {
                     rest
                 };
@@ -495,7 +491,7 @@ impl Blob {
             }
 
             match self.stream.next().await {
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(fio::FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
@@ -514,13 +510,13 @@ struct FlagSet {
 
 impl FlagSet {
     const OPEN_FOR_READ: FlagSet = FlagSet::new()
-        .require_present(fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-        .require_absent(fidl_fuchsia_io::OPEN_FLAG_CREATE)
-        .require_absent(fidl_fuchsia_io::OPEN_RIGHT_WRITABLE);
+        .require_present(fio::OPEN_RIGHT_READABLE)
+        .require_absent(fio::OPEN_FLAG_CREATE)
+        .require_absent(fio::OPEN_RIGHT_WRITABLE);
 
     const OPEN_FOR_WRITE: FlagSet = FlagSet::new()
-        .require_present(fidl_fuchsia_io::OPEN_FLAG_CREATE)
-        .require_present(fidl_fuchsia_io::OPEN_RIGHT_WRITABLE);
+        .require_present(fio::OPEN_FLAG_CREATE)
+        .require_present(fio::OPEN_RIGHT_WRITABLE);
 
     const fn new() -> Self {
         Self { required: 0, anti_required: 0 }

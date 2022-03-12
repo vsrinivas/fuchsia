@@ -8,10 +8,7 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileObject, FileProxy, NodeInfo,
-        NodeMarker, UnlinkOptions,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
@@ -50,7 +47,7 @@ pub enum BlobfsError {
 /// Blobfs client
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
@@ -58,7 +55,7 @@ impl Client {
     pub fn open_from_namespace() -> Result<Self, BlobfsError> {
         let proxy = io_util::directory::open_in_namespace(
             "/blob",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
     }
@@ -68,13 +65,13 @@ impl Client {
     pub fn open_from_namespace_executable() -> Result<Self, BlobfsError> {
         let proxy = io_util::directory::open_in_namespace(
             "/blob",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to blobfs from the given blobfs root dir.
-    pub fn new(proxy: DirectoryProxy) -> Self {
+    pub fn new(proxy: fio::DirectoryProxy) -> Self {
         Client { proxy }
     }
 
@@ -84,9 +81,9 @@ impl Client {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, DirectoryRequestStream) {
+    pub fn new_test() -> (Self, fio::DirectoryRequestStream) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
     }
@@ -99,7 +96,7 @@ impl Client {
     /// Panics on error
     pub fn new_mock() -> (Self, mock::Mock) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, mock::Mock { stream })
     }
@@ -129,7 +126,7 @@ impl Client {
         let blobfs = Client::new(
             io_util::directory::open_in_namespace(
                 blobfs_dir.path().to_str().unwrap(),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )
             .unwrap(),
         );
@@ -142,7 +139,7 @@ impl Client {
         blob: &Hash,
         flags: u32,
         mode: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) -> Result<(), fidl::Error> {
         self.proxy.open(flags, mode, &blob.to_string(), server_end)
     }
@@ -161,7 +158,7 @@ impl Client {
     /// Delete the blob with the given merkle hash.
     pub async fn delete_blob(&self, blob: &Hash) -> Result<(), BlobfsError> {
         self.proxy
-            .unlink(&blob.to_string(), UnlinkOptions::EMPTY)
+            .unlink(&blob.to_string(), fio::UnlinkOptions::EMPTY)
             .await?
             .map_err(|s| BlobfsError::Unlink(Status::from_raw(s)))
     }
@@ -170,13 +167,9 @@ impl Client {
     pub async fn open_blob_for_read(
         &self,
         blob: &Hash,
-    ) -> Result<FileProxy, io_util::node::OpenError> {
-        io_util::directory::open_file(
-            &self.proxy,
-            &blob.to_string(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )
-        .await
+    ) -> Result<fio::FileProxy, io_util::node::OpenError> {
+        io_util::directory::open_file(&self.proxy, &blob.to_string(), fio::OPEN_RIGHT_READABLE)
+            .await
     }
 
     /// Open the blob for reading. The target is not verified to be any
@@ -184,11 +177,11 @@ impl Client {
     pub fn open_blob_for_read_no_describe(
         &self,
         blob: &Hash,
-    ) -> Result<FileProxy, io_util::node::OpenError> {
+    ) -> Result<fio::FileProxy, io_util::node::OpenError> {
         io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
     }
 
@@ -205,7 +198,7 @@ impl Client {
         let file = match io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
-            fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE,
         ) {
             Ok(file) => file,
             Err(_) => return false,
@@ -214,28 +207,28 @@ impl Client {
         let mut events = file.take_event_stream();
 
         let event = match events.next().await {
-            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_ { s, info })) => {
+            Some(Ok(fio::FileEvent::OnOpen_ { s, info })) => {
                 if Status::from_raw(s) != Status::OK {
                     return false;
                 }
 
                 match info {
                     Some(info) => match *info {
-                        NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
+                        fio::NodeInfo::File(fio::FileObject {
+                            event: Some(event),
+                            stream: None,
+                        }) => event,
                         _ => return false,
                     },
                     _ => return false,
                 }
             }
-            Some(Ok(fidl_fuchsia_io::FileEvent::OnConnectionInfo { info })) => {
-                match info.representation {
-                    Some(fidl_fuchsia_io::Representation::File(fidl_fuchsia_io::FileInfo {
-                        observer: Some(event),
-                        ..
-                    })) => event,
-                    _ => return false,
-                }
-            }
+            Some(Ok(fio::FileEvent::OnConnectionInfo { info })) => match info.representation {
+                Some(fio::Representation::File(fio::FileInfo {
+                    observer: Some(event), ..
+                })) => event,
+                _ => return false,
+            },
             _ => return false,
         };
 
@@ -352,8 +345,8 @@ impl Client {
 mod tests {
     use {
         super::*, assert_matches::assert_matches, blobfs_ramdisk::BlobfsRamdisk,
-        fidl_fuchsia_io::DirectoryRequest, fuchsia_async as fasync, fuchsia_merkle::MerkleTree,
-        futures::stream::TryStreamExt, maplit::hashset, std::io::Write as _,
+        fuchsia_async as fasync, fuchsia_merkle::MerkleTree, futures::stream::TryStreamExt,
+        maplit::hashset, std::io::Write as _,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -415,7 +408,7 @@ mod tests {
         let blob_merkle = Hash::from([1; 32]);
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
-                DirectoryRequest::Unlink { name, responder, .. } => {
+                fio::DirectoryRequest::Unlink { name, responder, .. } => {
                     assert_eq!(name, blob_merkle.to_string());
                     responder.send(&mut Ok(())).unwrap();
                 }
@@ -701,7 +694,7 @@ mod tests {
         let (client, mut stream) = Client::new_test();
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
-                DirectoryRequest::Sync { responder } => {
+                fio::DirectoryRequest::Sync { responder } => {
                     counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     responder.send(&mut Ok(())).unwrap();
                 }

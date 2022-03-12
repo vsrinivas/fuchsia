@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::Repository, anyhow::Error, fidl_fuchsia_pkg::LocalMirrorRequestStream,
-    fuchsia_url::pkg_url::RepoUrl, pkg_local_mirror::PkgLocalMirror, tempfile::TempDir,
+    crate::Repository, anyhow::Error, fidl_fuchsia_io as fio,
+    fidl_fuchsia_pkg::LocalMirrorRequestStream, fuchsia_url::pkg_url::RepoUrl,
+    pkg_local_mirror::PkgLocalMirror, tempfile::TempDir,
 };
 
 /// An implementation of fuchsia.pkg/LocalMirror useful for tests.
@@ -22,7 +23,7 @@ impl FakePkgLocalMirror {
             .copy_local_repository_to_dir(
                 &io_util::directory::open_in_namespace(
                     dir.path().to_str().unwrap(),
-                    fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+                    fio::OPEN_RIGHT_WRITABLE,
                 )
                 .unwrap(),
                 url,
@@ -31,7 +32,7 @@ impl FakePkgLocalMirror {
         let pkg_local_mirror = PkgLocalMirror::new(
             &io_util::directory::open_in_namespace(
                 dir.path().to_str().unwrap(),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )
             .unwrap(),
         )

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_io as fio,
     fuchsia_pkg_testing::{Package, PackageBuilder, VerificationError},
     pkgfs_ramdisk::PkgfsRamdisk,
     std::{
@@ -104,19 +105,17 @@ fn sorted<T: Ord>(mut vec: Vec<T>) -> Vec<T> {
     vec
 }
 
-fn subdir_proxy(d: &openat::Dir, path: &str) -> fidl_fuchsia_io::DirectoryProxy {
+fn subdir_proxy(d: &openat::Dir, path: &str) -> fio::DirectoryProxy {
     let handle = fdio::transfer_fd(
         d.open_file(path).unwrap_or_else(|e| panic!("opening {}: {:?}", path, e)),
     )
     .unwrap();
-    fidl_fuchsia_io::DirectoryProxy::new(
-        fuchsia_async::Channel::from_channel(handle.into()).unwrap(),
-    )
+    fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(handle.into()).unwrap())
 }
 
 fn verify_contents<'a>(
     pkg: &'a Package,
-    dir: fidl_fuchsia_io::DirectoryProxy,
+    dir: fio::DirectoryProxy,
 ) -> impl Future<Output = Result<(), VerificationError>> + 'a {
     async move { pkg.verify_contents(&dir).await }
 }

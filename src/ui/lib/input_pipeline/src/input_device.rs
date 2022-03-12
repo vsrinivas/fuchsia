@@ -11,7 +11,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
     std::path::PathBuf,
 };
@@ -258,7 +258,7 @@ pub async fn get_device_binding(
 /// # Errors
 /// If there is an error connecting to the InputDevice in `entry_path`.
 pub fn get_device_from_dir_entry_path(
-    dir_proxy: &fidl_fuchsia_io::DirectoryProxy,
+    dir_proxy: &fio::DirectoryProxy,
     entry_path: &PathBuf,
 ) -> Result<fidl_input_report::InputDeviceProxy, Error> {
     let input_device_path = entry_path.to_str();

@@ -10,7 +10,7 @@ pub use volume::EncryptedVolumeStorageManager;
 
 use account_common::AccountManagerError;
 use async_trait::async_trait;
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 use serde::{Deserialize, Serialize};
 
 /// An enumeration of the possible key configurations for securing the
@@ -57,5 +57,5 @@ pub trait StorageManager: Sized {
 
     /// Returns a proxy to the root directory managed by the `StorageManager`.
     /// The `StorageManager` must be in the available state.
-    async fn get_root_dir(&self) -> Result<DirectoryProxy, AccountManagerError>;
+    async fn get_root_dir(&self) -> Result<fio::DirectoryProxy, AccountManagerError>;
 }

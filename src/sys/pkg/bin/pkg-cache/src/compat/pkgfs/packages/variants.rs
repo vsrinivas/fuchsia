@@ -7,12 +7,7 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_pkg::PackageVariant,
     fuchsia_syslog::fx_log_err,
@@ -63,22 +58,22 @@ impl DirectoryEntry for PkgfsPackagesVariants {
         flags: u32,
         mode: u32,
         mut path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.unset(OPEN_FLAG_POSIX_WRITABLE);
-        let flags = if flags.is_any_set(OPEN_FLAG_POSIX_DEPRECATED) {
-            flags.unset(OPEN_FLAG_POSIX_DEPRECATED).set(OPEN_FLAG_POSIX_EXECUTABLE)
+        let flags = flags.unset(fio::OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.is_any_set(fio::OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.unset(fio::OPEN_FLAG_POSIX_DEPRECATED).set(fio::OPEN_FLAG_POSIX_EXECUTABLE)
         } else {
             flags
         };
 
         // This directory and all child nodes are read-only
         if flags.is_any_set(
-            OPEN_RIGHT_WRITABLE
-                | OPEN_FLAG_CREATE
-                | OPEN_FLAG_CREATE_IF_ABSENT
-                | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_CREATE
+                | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                | fio::OPEN_FLAG_TRUNCATE
+                | fio::OPEN_FLAG_APPEND,
         ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
@@ -106,7 +101,7 @@ impl DirectoryEntry for PkgfsPackagesVariants {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -126,7 +121,9 @@ impl Directory for PkgfsPackagesVariants {
                 // Yield "." first. If even that can't fit in the response, return the same
                 // traversal position so we try again next time (where the client hopefully
                 // provides a bigger buffer).
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
+                match sink
+                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".")
+                {
                     AppendResult::Ok(new_sink) => sink = new_sink,
                     AppendResult::Sealed(sealed) => return Ok((TraversalPosition::Start, sealed)),
                 }
@@ -153,7 +150,9 @@ impl Directory for PkgfsPackagesVariants {
 
         while let Some(variant) = remaining.next() {
             let variant = variant.to_string();
-            match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), &variant) {
+            match sink
+                .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), &variant)
+            {
                 AppendResult::Ok(new_sink) => sink = new_sink,
                 AppendResult::Sealed(sealed) => {
                     // Ran out of response buffer space. Pick up on this item next time.
@@ -168,7 +167,7 @@ impl Directory for PkgfsPackagesVariants {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: WatchMask,
+        _: fio::WatchMask,
         _: DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
@@ -177,9 +176,9 @@ impl Directory for PkgfsPackagesVariants {
     // `register_watcher` is unsupported so this is a no-op.
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY,
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -200,7 +199,6 @@ mod tests {
         super::*,
         crate::compat::pkgfs::testing::FakeSink,
         assert_matches::assert_matches,
-        fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{btreeset, convert_args, hashmap},
         std::str::FromStr,
@@ -213,9 +211,9 @@ mod tests {
             Arc::new(PkgfsPackagesVariants::new(contents, blobfs))
         }
 
-        fn proxy(self: &Arc<Self>, flags: u32) -> fidl_fuchsia_io::DirectoryProxy {
+        fn proxy(self: &Arc<Self>, flags: u32) -> fio::DirectoryProxy {
             let (proxy, server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
             vfs::directory::entry::DirectoryEntry::open(
                 Arc::clone(&self),
@@ -312,7 +310,7 @@ mod tests {
 
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
         );
         assert_eq!(pos, TraversalPosition::End);
     }
@@ -336,10 +334,10 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("0".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("1".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("two".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("0".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("1".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("two".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
@@ -356,22 +354,22 @@ mod tests {
         let expected_entries = vec![
             (
                 ".".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("0".to_owned()),
             ),
             (
                 "0".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("1".to_owned()),
             ),
             (
                 "1".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::Name("two".to_owned()),
             ),
             (
                 "two".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                 TraversalPosition::End,
             ),
         ];
@@ -398,13 +396,13 @@ mod tests {
     async fn open_rejects_invalid_name() {
         let pkgfs_packages_variants = PkgfsPackagesVariants::new_test(package_variant_hashmap! {});
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
+        let proxy = pkgfs_packages_variants.proxy(fio::OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
                 &proxy,
                 "invalidname-!@#$%^&*()+=",
-                OPEN_RIGHT_READABLE
+                fio::OPEN_RIGHT_READABLE
             )
             .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
@@ -415,10 +413,10 @@ mod tests {
     async fn open_rejects_missing_package() {
         let pkgfs_packages_variants = PkgfsPackagesVariants::new_test(package_variant_hashmap! {});
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
+        let proxy = pkgfs_packages_variants.proxy(fio::OPEN_RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "missing", OPEN_RIGHT_READABLE).await,
+            io_util::directory::open_directory(&proxy, "missing", fio::OPEN_RIGHT_READABLE).await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
@@ -437,11 +435,12 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
+        let proxy =
+            pkgfs_packages_variants.proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_WRITABLE);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, OPEN_RIGHT_READABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -458,11 +457,12 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
+        let proxy = pkgfs_packages_variants
+            .proxy(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_DEPRECATED);
 
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -479,10 +479,11 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
+        let proxy = pkgfs_packages_variants.proxy(fio::OPEN_RIGHT_READABLE);
 
-        let dir =
-            io_util::directory::open_directory(&proxy, "0", OPEN_RIGHT_READABLE).await.unwrap();
+        let dir = io_util::directory::open_directory(&proxy, "0", fio::OPEN_RIGHT_READABLE)
+            .await
+            .unwrap();
         let () = package.verify_contents(&dir).await.unwrap();
     }
 
@@ -504,11 +505,12 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
+        let proxy = pkgfs_packages_variants.proxy(fio::OPEN_RIGHT_READABLE);
 
-        let file = io_util::directory::open_file(&proxy, "0/meta/message", OPEN_RIGHT_READABLE)
-            .await
-            .unwrap();
+        let file =
+            io_util::directory::open_file(&proxy, "0/meta/message", fio::OPEN_RIGHT_READABLE)
+                .await
+                .unwrap();
         let message = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "Hello World!");
     }

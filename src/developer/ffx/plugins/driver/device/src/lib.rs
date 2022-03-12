@@ -8,8 +8,7 @@ use {
     ffx_driver_device_args::*,
     fidl::endpoints::Proxy,
     fidl_fuchsia_device::ControllerProxy,
-    fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_zircon_status as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx,
     std::convert::TryFrom,
 };
 
@@ -46,15 +45,10 @@ pub async fn device(
     Ok(())
 }
 
-fn connect_to_device(dev: DirectoryProxy, device_path: &str) -> Result<ControllerProxy> {
-    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>()?;
+fn connect_to_device(dev: fio::DirectoryProxy, device_path: &str) -> Result<ControllerProxy> {
+    let (client, server) = fidl::endpoints::create_proxy::<fio::NodeMarker>()?;
 
-    dev.open(
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        0,
-        device_path,
-        server,
-    )?;
+    dev.open(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0, device_path, server)?;
 
     Ok(ControllerProxy::new(client.into_channel().unwrap()))
 }

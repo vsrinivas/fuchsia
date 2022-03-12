@@ -59,15 +59,15 @@ pub use connect_to_driver::connect_to_driver;
 mod connect_to_driver {
     use anyhow::{format_err, Error};
     use fidl::endpoints::Proxy as _;
-    use fidl_fuchsia_io::{NodeProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+    use fidl_fuchsia_io as fio;
 
     /// Returns a NodeProxy opened at `path`. The path is guaranteed to exist before the connection
     /// is opened.
-    async fn connect_channel(path: &str) -> Result<NodeProxy, Error> {
+    async fn connect_channel(path: &str) -> Result<fio::NodeProxy, Error> {
         device_watcher::recursive_wait_and_open_node(
             &io_util::open_directory_in_namespace(
                 "/dev",
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )?,
             path,
         )
@@ -100,10 +100,7 @@ mod connect_to_driver {
         use super::*;
         use async_utils::PollExt as _;
         use fidl::endpoints::{create_proxy, Proxy, ServerEnd};
-        use fidl_fuchsia_io::{
-            DirectoryMarker, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
-        };
+        use fidl_fuchsia_io as fio;
         use fuchsia_async as fasync;
         use futures::TryStreamExt as _;
         use std::sync::Arc;
@@ -113,12 +110,12 @@ mod connect_to_driver {
         };
 
         fn bind_to_dev(dir: Arc<dyn DirectoryEntry>) {
-            let (dir_proxy, dir_server) = create_proxy::<DirectoryMarker>().unwrap();
+            let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
             let scope = ExecutionScope::new();
             dir.open(
                 scope,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
                 ServerEnd::new(dir_server.into_channel()),
             );
@@ -137,7 +134,7 @@ mod connect_to_driver {
                 }
             });
 
-            connect_to_driver::<NodeMarker>("/dev/class/thermal/000").await.unwrap();
+            connect_to_driver::<fio::NodeMarker>("/dev/class/thermal/000").await.unwrap();
         }
 
         /// Tests that `connect_to_driver` doesn't return until the required path is added.
@@ -155,7 +152,7 @@ mod connect_to_driver {
             });
 
             let connect_future =
-                &mut Box::pin(connect_to_driver::<NodeMarker>("/dev/class/thermal/001"));
+                &mut Box::pin(connect_to_driver::<fio::NodeMarker>("/dev/class/thermal/001"));
 
             // The required path is initially not present
             assert!(executor.run_until_stalled(connect_future).is_pending());
@@ -182,7 +179,7 @@ mod connect_to_driver {
             });
 
             assert!(executor
-                .run_until_stalled(&mut Box::pin(connect_to_driver::<NodeMarker>(
+                .run_until_stalled(&mut Box::pin(connect_to_driver::<fio::NodeMarker>(
                     "/dev/class/thermal/000"
                 )))
                 .is_pending());
@@ -240,8 +237,8 @@ mod connect_to_driver {
                 }
             });
 
-            connect_to_driver::<NodeMarker>("/svc/fake_service").await.unwrap_err();
-            connect_to_driver::<NodeMarker>("/dev/class/cpu/000").await.unwrap();
+            connect_to_driver::<fio::NodeMarker>("/svc/fake_service").await.unwrap_err();
+            connect_to_driver::<fio::NodeMarker>("/dev/class/cpu/000").await.unwrap();
         }
     }
 }

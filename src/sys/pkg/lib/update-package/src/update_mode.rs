@@ -5,7 +5,7 @@
 //! Typesafe wrappers around parsing the update-mode file.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
@@ -72,12 +72,11 @@ impl FromStr for UpdateMode {
 }
 
 pub(crate) async fn update_mode(
-    proxy: &DirectoryProxy,
+    proxy: &fio::DirectoryProxy,
 ) -> Result<Option<UpdateMode>, ParseUpdateModeError> {
     // Open the update-mode file.
     let fopen_res =
-        io_util::directory::open_file(proxy, "update-mode", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await;
+        io_util::directory::open_file(proxy, "update-mode", fio::OPEN_RIGHT_READABLE).await;
     if let Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
         return Ok(None);
     }

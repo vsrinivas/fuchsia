@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_io::{INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE},
+    fidl_fuchsia_io as fio,
     futures::StreamExt,
     io_util::{directory, file, node, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
     libc::{S_IRUSR, S_IXUSR},
@@ -33,8 +33,8 @@ async fn basic_filenode_test() -> Result<(), Error> {
     // This node should be a readonly file, the inode should not be unknown,
     // and creation and modification times should be 0 since system UTC
     // isn't available or reliable in early boot.
-    assert_eq!(node.get_attr().await?.1.mode, MODE_TYPE_FILE | S_IRUSR);
-    assert_ne!(node.get_attr().await?.1.id, INO_UNKNOWN);
+    assert_eq!(node.get_attr().await?.1.mode, fio::MODE_TYPE_FILE | S_IRUSR);
+    assert_ne!(node.get_attr().await?.1.id, fio::INO_UNKNOWN);
     assert_eq!(node.get_attr().await?.1.creation_time, 0);
     assert_eq!(node.get_attr().await?.1.modification_time, 0);
 
@@ -71,13 +71,13 @@ async fn basic_directory_test() -> Result<(), Error> {
     // This node should be an immutable directory, the inode should not be unknown,
     // and creation and modification times should be 0 since system UTC isn't
     // available or reliable in early boot.
-    assert_ne!(node.get_attr().await?.1.id, INO_UNKNOWN);
+    assert_ne!(node.get_attr().await?.1.id, fio::INO_UNKNOWN);
     assert_eq!(node.get_attr().await?.1.creation_time, 0);
     assert_eq!(node.get_attr().await?.1.modification_time, 0);
 
     // TODO(fxb/91610): The C++ bootfs VFS uses the wrong POSIX bits (needs S_IXUSR).
-    let cpp_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR;
-    let rust_bootfs = MODE_TYPE_DIRECTORY | S_IRUSR | S_IXUSR;
+    let cpp_bootfs = fio::MODE_TYPE_DIRECTORY | S_IRUSR;
+    let rust_bootfs = fio::MODE_TYPE_DIRECTORY | S_IRUSR | S_IXUSR;
     let actual_value = node.get_attr().await?.1.mode;
     assert!(actual_value == cpp_bootfs || actual_value == rust_bootfs);
 

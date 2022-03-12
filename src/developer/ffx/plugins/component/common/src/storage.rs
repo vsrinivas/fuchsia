@@ -64,7 +64,7 @@ pub mod test {
     use {
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
-        fidl_fuchsia_io::*,
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_sys2::StorageAdminProxy,
         fidl_fuchsia_sys2::StorageAdminRequest,
         futures::TryStreamExt,
@@ -87,19 +87,21 @@ pub mod test {
         proxy
     }
 
-    pub fn node_to_directory(object: ServerEnd<NodeMarker>) -> DirectoryRequestStream {
-        DirectoryRequestStream::from_channel(
+    pub fn node_to_directory(object: ServerEnd<fio::NodeMarker>) -> fio::DirectoryRequestStream {
+        fio::DirectoryRequestStream::from_channel(
             AsyncChannel::from_channel(object.into_channel()).unwrap(),
         )
     }
 
-    pub fn node_to_file(object: ServerEnd<NodeMarker>) -> FileRequestStream {
-        FileRequestStream::from_channel(AsyncChannel::from_channel(object.into_channel()).unwrap())
+    pub fn node_to_file(object: ServerEnd<fio::NodeMarker>) -> fio::FileRequestStream {
+        fio::FileRequestStream::from_channel(
+            AsyncChannel::from_channel(object.into_channel()).unwrap(),
+        )
     }
 
     pub fn setup_fake_storage_admin(
         expected_id: &'static str,
-        setup_fake_directory_fn: fn(DirectoryRequestStream),
+        setup_fake_directory_fn: fn(fio::DirectoryRequestStream),
     ) -> StorageAdminProxy {
         setup_oneshot_fake_storage_admin(move |req| match req {
             StorageAdminRequest::OpenComponentStorageById { id, object, responder, .. } => {

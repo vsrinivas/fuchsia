@@ -7,8 +7,7 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
-    fidl_fuchsia_io::NodeInfo,
-    files_async,
+    fidl_fuchsia_io as fio, files_async,
     fuchsia_inspect::reader::{self, DiagnosticsHierarchy, PartialNodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
@@ -186,11 +185,11 @@ impl InspectObject {
         // Obtain the vmo backing any VmoFiles.
         let node_info = proxy.describe().await?;
         match node_info {
-            NodeInfo::Vmofile(vmofile) => {
+            fio::NodeInfo::Vmofile(vmofile) => {
                 self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.into());
                 Ok(())
             }
-            NodeInfo::File(_) => {
+            fio::NodeInfo::File(_) => {
                 let bytes = io_util::read_file_bytes(&proxy).await?;
                 self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.into());
                 Ok(())

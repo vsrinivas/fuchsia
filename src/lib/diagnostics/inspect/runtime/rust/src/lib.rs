@@ -7,7 +7,7 @@
 
 use fidl::endpoints::DiscoverableProtocolMarker;
 use fidl_fuchsia_inspect::TreeMarker;
-use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_io as fio;
 use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
 use fuchsia_inspect::{Error, Inspector};
 use futures::prelude::*;
@@ -30,12 +30,18 @@ pub fn serve_with_options<'a, ServiceObjTy: ServiceObjTrait>(
     options: service::TreeServerSettings,
     service_fs: &mut ServiceFs<ServiceObjTy>,
 ) -> Result<(), Error> {
-    let (proxy, server) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|e| Error::fidl(e.into()))?;
+    let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+        .map_err(|e| Error::fidl(e.into()))?;
     let dir = create_diagnostics_dir_with_options(inspector.clone(), options);
     let server_end = server.into_channel().into();
     let scope = ExecutionScope::new();
-    dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::dot(), server_end);
+    dir.open(
+        scope,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        0,
+        Path::dot(),
+        server_end,
+    );
     service_fs.add_remote(DIAGNOSTICS_DIR, proxy);
 
     Ok(())

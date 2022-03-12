@@ -7,7 +7,7 @@ use {
     fdio,
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -84,8 +84,8 @@ where
 }
 
 /// Spawns a VFS handler for the provided `dir`.
-fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
-    let (client_end, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
+    let (client_end, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
     let scope = ExecutionScope::new();
     dir.open(
         scope,

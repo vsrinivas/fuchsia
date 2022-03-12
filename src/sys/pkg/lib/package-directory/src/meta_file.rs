@@ -7,11 +7,7 @@ use {
     anyhow::Context as _,
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
@@ -72,7 +68,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
         flags: u32,
         _mode: u32,
         path: VfsPath,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_DIR);
@@ -80,12 +76,12 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
         }
 
         if flags
-            & (OPEN_RIGHT_WRITABLE
-                | OPEN_RIGHT_EXECUTABLE
-                | OPEN_FLAG_CREATE
-                | OPEN_FLAG_CREATE_IF_ABSENT
-                | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND)
+            & (fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_RIGHT_EXECUTABLE
+                | fio::OPEN_FLAG_CREATE
+                | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                | fio::OPEN_FLAG_TRUNCATE
+                | fio::OPEN_FLAG_APPEND)
             != 0
         {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
@@ -106,7 +102,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
     }
 
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
     }
 }
 
@@ -153,8 +149,13 @@ impl vfs::file::File for MetaFile {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(&self, flags: VmoFlags) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
-        if flags.intersects(VmoFlags::WRITE | VmoFlags::EXECUTE | VmoFlags::SHARED_BUFFER) {
+    async fn get_buffer(
+        &self,
+        flags: fio::VmoFlags,
+    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+        if flags.intersects(
+            fio::VmoFlags::WRITE | fio::VmoFlags::EXECUTE | fio::VmoFlags::SHARED_BUFFER,
+        ) {
             return Err(zx::Status::NOT_SUPPORTED);
         }
 
@@ -163,7 +164,7 @@ impl vfs::file::File for MetaFile {
             zx::Status::INTERNAL
         })?;
 
-        if flags.contains(VmoFlags::PRIVATE_CLONE) {
+        if flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
             let vmo = vmo
                 .create_child(
                     zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | zx::VmoChildOptions::NO_WRITE,
@@ -179,7 +180,11 @@ impl vfs::file::File for MetaFile {
             let rights = zx::Rights::BASIC
                 | zx::Rights::MAP
                 | zx::Rights::PROPERTY
-                | if flags.contains(VmoFlags::READ) { zx::Rights::READ } else { zx::Rights::NONE };
+                | if flags.contains(fio::VmoFlags::READ) {
+                    zx::Rights::READ
+                } else {
+                    zx::Rights::NONE
+                };
             let vmo = vmo.duplicate_handle(rights).map_err(|e: zx::Status| {
                 fx_log_err!("Failed to clone VMO handle during get_buffer: {:#}", e);
                 e
@@ -192,9 +197,9 @@ impl vfs::file::File for MetaFile {
         Ok(self.location.length)
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_FILE
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_FILE
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
                     false, // write
@@ -209,7 +214,7 @@ impl vfs::file::File for MetaFile {
         })
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), zx::Status> {
+    async fn set_attrs(&self, _flags: u32, _attrs: fio::NodeAttributes) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -228,7 +233,6 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fidl::{endpoints::Proxy as _, AsHandleRef as _},
-        fidl_fuchsia_io::{FileProxy, NodeProxy, OPEN_FLAG_DESCRIBE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         std::convert::{TryFrom as _, TryInto as _},
@@ -257,8 +261,8 @@ mod tests {
         }
     }
 
-    fn node_to_file_proxy(proxy: NodeProxy) -> FileProxy {
-        FileProxy::from_channel(proxy.into_channel().unwrap())
+    fn node_to_file_proxy(proxy: fio::NodeProxy) -> fio::FileProxy {
+        fio::FileProxy::from_channel(proxy.into_channel().unwrap())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -301,7 +305,7 @@ mod tests {
         DirectoryEntry::open(
             Arc::new(meta_file),
             ExecutionScope::new(),
-            OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_DESCRIBE,
             0,
             VfsPath::validate_and_split("non-empty").unwrap(),
             server_end,
@@ -309,7 +313,7 @@ mod tests {
 
         assert_matches!(
             node_to_file_proxy(proxy).take_event_stream().next().await,
-            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_{ s, info: None}))
+            Some(Ok(fio::FileEvent::OnOpen_{ s, info: None}))
                 if s == zx::Status::NOT_DIR.into_raw()
         );
     }
@@ -320,18 +324,18 @@ mod tests {
         let meta_file = Arc::new(meta_file);
 
         for forbidden_flag in [
-            OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_EXECUTABLE,
-            OPEN_FLAG_CREATE,
-            OPEN_FLAG_CREATE_IF_ABSENT,
-            OPEN_FLAG_TRUNCATE,
-            OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_TRUNCATE,
+            fio::OPEN_FLAG_APPEND,
         ] {
             let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&meta_file),
                 ExecutionScope::new(),
-                OPEN_FLAG_DESCRIBE | forbidden_flag,
+                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end,
@@ -339,7 +343,7 @@ mod tests {
 
             assert_matches!(
                 node_to_file_proxy(proxy).take_event_stream().next().await,
-                Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_{ s, info: None}))
+                Some(Ok(fio::FileEvent::OnOpen_{ s, info: None}))
                     if s == zx::Status::NOT_SUPPORTED.into_raw()
             );
         }
@@ -353,7 +357,7 @@ mod tests {
         DirectoryEntry::open(
             Arc::new(meta_file),
             ExecutionScope::new(),
-            OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_DESCRIBE,
             0,
             VfsPath::dot(),
             server_end,
@@ -361,7 +365,7 @@ mod tests {
 
         assert_matches!(
             node_to_file_proxy(proxy).take_event_stream().next().await,
-            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_ { s, info: Some(_) }))
+            Some(Ok(fio::FileEvent::OnOpen_ { s, info: Some(_) }))
                 if s == zx::Status::OK.into_raw()
         );
     }
@@ -372,7 +376,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&meta_file),
-            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
         );
     }
 
@@ -447,7 +451,7 @@ mod tests {
     async fn file_get_buffer_rejects_unsupported_flags() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        for flag in [VmoFlags::WRITE, VmoFlags::EXECUTE, VmoFlags::SHARED_BUFFER] {
+        for flag in [fio::VmoFlags::WRITE, fio::VmoFlags::EXECUTE, fio::VmoFlags::SHARED_BUFFER] {
             assert_eq!(File::get_buffer(&meta_file, flag).await, Err(zx::Status::NOT_SUPPORTED));
         }
     }
@@ -457,7 +461,7 @@ mod tests {
         let (_env, meta_file) = TestEnv::new().await;
 
         let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, VmoFlags::PRIVATE_CLONE)
+            File::get_buffer(&meta_file, fio::VmoFlags::PRIVATE_CLONE)
                 .await
                 .expect("get_buffer should succeed");
 
@@ -483,7 +487,9 @@ mod tests {
         let (_env, meta_file) = TestEnv::new().await;
 
         let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, VmoFlags::READ).await.expect("get_buffer should succeed");
+            File::get_buffer(&meta_file, fio::VmoFlags::READ)
+                .await
+                .expect("get_buffer should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable
@@ -518,8 +524,8 @@ mod tests {
 
         assert_eq!(
             File::get_attrs(&meta_file).await,
-            Ok(NodeAttributes {
-                mode: MODE_TYPE_FILE | 0o400,
+            Ok(fio::NodeAttributes {
+                mode: fio::MODE_TYPE_FILE | 0o400,
                 id: 1,
                 content_size: meta_file.location.length,
                 storage_size: meta_file.location.length,
@@ -538,7 +544,7 @@ mod tests {
             File::set_attrs(
                 &meta_file,
                 0,
-                NodeAttributes {
+                fio::NodeAttributes {
                     mode: 0,
                     id: 0,
                     content_size: 0,

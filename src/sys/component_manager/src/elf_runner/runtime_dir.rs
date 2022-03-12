@@ -4,7 +4,7 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     std::sync::Arc,
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
@@ -22,13 +22,13 @@ pub struct RuntimeDirBuilder {
     process_id: Option<u64>,
     process_start_time: Option<i64>,
     process_start_time_utc_estimate: Option<String>,
-    server_end: ServerEnd<NodeMarker>,
+    server_end: ServerEnd<fio::NodeMarker>,
 }
 
 impl RuntimeDirBuilder {
-    pub fn new(server_end: ServerEnd<DirectoryMarker>) -> Self {
+    pub fn new(server_end: ServerEnd<fio::DirectoryMarker>) -> Self {
         // Transform the server end to speak Node protocol only
-        let server_end = ServerEnd::<NodeMarker>::new(server_end.into_channel());
+        let server_end = ServerEnd::<fio::NodeMarker>::new(server_end.into_channel());
         Self {
             args: vec![],
             job_id: None,
@@ -122,7 +122,7 @@ impl RuntimeDirBuilder {
         // Serve the runtime directory
         runtime_directory.clone().open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             fvfsPath::dot(),
             self.server_end,

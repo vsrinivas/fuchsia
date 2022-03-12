@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl::prelude::*,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
@@ -19,7 +19,7 @@ use {
 /// This function looks in the given directories, and returns the
 /// first VMO matching |object_name| that is found.
 pub async fn load_object(
-    search_dirs: &Vec<Arc<DirectoryProxy>>,
+    search_dirs: &Vec<Arc<fio::DirectoryProxy>>,
     object_name: &str,
 ) -> Result<zx::Vmo, Vec<Error>> {
     let mut errors = vec![];
@@ -39,7 +39,7 @@ pub async fn load_object(
 ///
 /// `lib_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
 /// rights.
-pub fn start(lib_proxy: Arc<DirectoryProxy>, chan: zx::Channel) {
+pub fn start(lib_proxy: Arc<fio::DirectoryProxy>, chan: zx::Channel) {
     fasync::Task::spawn(
         async move {
             let mut search_dirs = vec![lib_proxy.clone()];
@@ -91,7 +91,7 @@ pub fn start(lib_proxy: Arc<DirectoryProxy>, chan: zx::Channel) {
 /// `dir_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
 /// rights.
 pub async fn load_vmo<'a>(
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: &'a fio::DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
     // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
@@ -117,9 +117,9 @@ pub async fn load_vmo<'a>(
 /// `//docs/concepts/booting/program_loading.md` for a description of the format. Returns the set
 /// of directories which should be searched for objects.
 pub fn parse_config_string(
-    dir_proxy: &Arc<DirectoryProxy>,
+    dir_proxy: &Arc<fio::DirectoryProxy>,
     config: &str,
-) -> Result<Vec<Arc<DirectoryProxy>>, Error> {
+) -> Result<Vec<Arc<fio::DirectoryProxy>>, Error> {
     if config.contains("/") {
         return Err(format_err!("'/' character found in loader service config string"));
     }
@@ -144,7 +144,7 @@ pub fn parse_config_string(
 mod tests {
     use {super::*, fidl_fuchsia_ldsvc::LoaderMarker};
 
-    async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
+    async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
         let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("Failed to clone DirectoryProxy");
         let entries = files_async::readdir(&dir).await.expect("readdir failed");

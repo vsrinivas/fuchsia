@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(test)]
+use vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope};
 use {
     crate::keys::Key,
     async_trait::async_trait,
@@ -10,11 +12,7 @@ use {
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_hardware_block_encrypted::{DeviceManagerMarker, DeviceManagerProxy},
     fidl_fuchsia_hardware_block_partition::{PartitionMarker, PartitionProxyInterface},
-    fidl_fuchsia_identity_account as faccount,
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileMarker, NodeMarker, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio,
     fs_management::{
         self as fs,
         asynchronous::{Filesystem, ServingFilesystem},
@@ -25,11 +23,6 @@ use {
     log::{error, warn},
     std::path::Path,
     thiserror::Error,
-};
-#[cfg(test)]
-use {
-    fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_DIRECTORY},
-    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
 #[derive(Error, Debug)]
@@ -78,7 +71,7 @@ impl From<DiskError> for faccount::Error {
     }
 }
 
-const OPEN_RW: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+const OPEN_RW: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 // This is the 16-byte magic byte string found at the start of a valid zxcrypt partition.
 // It is also defined in `//src/security/zxcrypt/volume.h` and
@@ -135,7 +128,7 @@ where
 /// Given a directory handle representing the root of a device tree (i.e. open handle to "/dev"),
 /// open all block devices in `/dev/class/block/*` and return them as Partition instances.
 async fn all_partitions(
-    dev_root_dir: &DirectoryProxy,
+    dev_root_dir: &fio::DirectoryProxy,
 ) -> Result<Vec<DevBlockPartition>, DiskError> {
     let block_dir =
         io_util::directory::open_directory(dev_root_dir, "class/block", OPEN_RW).await?;
@@ -146,7 +139,7 @@ async fn all_partitions(
             &block_dir,
             &child.name,
             OPEN_RW,
-            MODE_TYPE_SERVICE,
+            fio::MODE_TYPE_SERVICE,
         ) {
             Ok(node_proxy) => partitions.push(DevBlockPartition(Node(node_proxy))),
             Err(err) => {
@@ -161,7 +154,10 @@ async fn all_partitions(
 
 /// Blocks until an entry with the name `filename` is present in `directory_proxy`.
 /// If a timeout is desired, use the [`fuchsia_async::TimeoutExt::on_timeout()`] method.
-async fn wait_for_node(directory_proxy: &DirectoryProxy, filename: &str) -> Result<(), DiskError> {
+async fn wait_for_node(
+    directory_proxy: &fio::DirectoryProxy,
+    filename: &str,
+) -> Result<(), DiskError> {
     let needle = Path::new(filename);
     let mut watcher =
         Watcher::new(Clone::clone(directory_proxy)).await.map_err(DiskError::WatcherError)?;
@@ -249,7 +245,7 @@ pub trait EncryptedBlockDevice: Send + 'static {
 #[async_trait]
 pub trait Minfs: Send + 'static {
     /// Returns the root directory of the minfs instance.
-    fn root_dir(&self) -> &DirectoryProxy;
+    fn root_dir(&self) -> &fio::DirectoryProxy;
 
     /// Shutdown the serving minfs instance.
     async fn shutdown(self) -> Result<(), DiskError>;
@@ -258,13 +254,13 @@ pub trait Minfs: Send + 'static {
 /// The production implementation of [`DiskManager`].
 pub struct DevDiskManager {
     /// The /dev directory to use as the root for all device paths.
-    dev_root: DirectoryProxy,
+    dev_root: fio::DirectoryProxy,
 }
 
 impl DevDiskManager {
     /// Creates a new [`DevDiskManager`] with `dev_root` as the root for
     /// all device paths. Typically this is the "/dev" directory.
-    pub fn new(dev_root: DirectoryProxy) -> Self {
+    pub fn new(dev_root: fio::DirectoryProxy) -> Self {
         Self { dev_root }
     }
 }
@@ -326,7 +322,7 @@ impl DiskManager for DevDiskManager {
     }
 
     async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
-        let node = block_dev.0.clone_as::<NodeMarker>()?;
+        let node = block_dev.0.clone_as::<fio::NodeMarker>()?;
         let minfs = Filesystem::from_node(node, fs::Minfs::default());
         minfs.format().await?;
         Ok(())
@@ -340,7 +336,7 @@ impl DiskManager for DevDiskManager {
 }
 
 /// A convenience wrapper around a NodeProxy.
-struct Node(NodeProxy);
+struct Node(fio::NodeProxy);
 
 impl Node {
     /// Clones the connection to the node and casts it as the protocol `T`.
@@ -357,7 +353,7 @@ pub struct DevBlockDevice(Node);
 impl DevBlockDevice {
     async fn read_first_block(&self) -> Result<Vec<u8>, DiskError> {
         let block_size = self.block_size().await?;
-        let file_proxy = self.0.clone_as::<FileMarker>()?;
+        let file_proxy = self.0.clone_as::<fio::FileMarker>()?;
         // Issue a read of block_size bytes, since block devices only like being read along block
         // boundaries.
         file_proxy
@@ -401,7 +397,7 @@ impl Partition for DevBlockPartition {
 }
 
 /// The production implementation of [`EncryptedBlockDevice`].
-pub struct EncryptedDevBlockDevice(DirectoryProxy);
+pub struct EncryptedDevBlockDevice(fio::DirectoryProxy);
 
 fn get_device_manager_proxy(
     dev_block_device: &EncryptedDevBlockDevice,
@@ -410,7 +406,7 @@ fn get_device_manager_proxy(
         fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
     dev_block_device.0.open(
         OPEN_RW,
-        MODE_TYPE_SERVICE,
+        fio::MODE_TYPE_SERVICE,
         "zxcrypt",
         ServerEnd::new(server_end.into_channel()),
     )?;
@@ -437,7 +433,7 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
             &unsealed_dir,
             "block",
             OPEN_RW,
-            MODE_TYPE_SERVICE,
+            fio::MODE_TYPE_SERVICE,
         )?;
         Ok(DevBlockDevice(Node(unsealed_block_node)))
     }
@@ -471,7 +467,7 @@ pub struct DevMinfs {
 
 #[async_trait]
 impl Minfs for DevMinfs {
-    fn root_dir(&self) -> &DirectoryProxy {
+    fn root_dir(&self) -> &fio::DirectoryProxy {
         self.serving_fs.root()
     }
 
@@ -492,16 +488,16 @@ impl Minfs for DevMinfs {
 
 #[cfg(test)]
 #[derive(Debug, Clone)]
-pub struct MockMinfs(DirectoryProxy);
+pub struct MockMinfs(fio::DirectoryProxy);
 
 #[cfg(test)]
 impl MockMinfs {
     pub fn simple(scope: ExecutionScope) -> Self {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         vfs::directory::mutable::simple().open(
             scope,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
@@ -512,7 +508,7 @@ impl MockMinfs {
 #[cfg(test)]
 #[async_trait]
 impl Minfs for MockMinfs {
-    fn root_dir(&self) -> &DirectoryProxy {
+    fn root_dir(&self) -> &fio::DirectoryProxy {
         &self.0
     }
 
@@ -550,9 +546,6 @@ pub mod test {
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
         fidl_fuchsia_hardware_block_partition::Guid,
-        fidl_fuchsia_io::{
-            DirectoryMarker, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        },
         fidl_test_identity::{
             MockPartitionMarker, MockPartitionRequest, MockPartitionRequestStream,
         },
@@ -872,9 +865,9 @@ pub mod test {
             flags: u32,
             mode: u32,
             path: VfsPath,
-            server_end: ServerEnd<NodeMarker>,
+            server_end: ServerEnd<fio::NodeMarker>,
         ) {
-            if mode & MODE_TYPE_DIRECTORY != 0 {
+            if mode & fio::MODE_TYPE_DIRECTORY != 0 {
                 self.directory.clone().open(scope, flags, mode, path, server_end);
             } else {
                 self.service.clone().open(scope, flags, mode, path, server_end);
@@ -882,7 +875,7 @@ pub mod test {
         }
 
         fn entry_info(&self) -> EntryInfo {
-            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
         }
     }
 
@@ -902,12 +895,13 @@ pub mod test {
     fn serve_mock_devfs(
         scope: &ExecutionScope,
         mock_devfs: Arc<dyn DirectoryEntry>,
-    ) -> DirectoryProxy {
-        let (dev_root, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    ) -> fio::DirectoryProxy {
+        let (dev_root, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         mock_devfs.open(
             scope.clone(),
             OPEN_RW,
-            MODE_TYPE_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             VfsPath::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
@@ -1066,7 +1060,7 @@ pub mod test {
         let mut partitions = disk_manager.partitions().await.expect("list partitions");
         let block_device = partitions.remove(0).into_block_device();
         let cloned_block =
-            DevBlockDevice(Node(block_device.0.clone_as::<NodeMarker>().expect("clone")));
+            DevBlockDevice(Node(block_device.0.clone_as::<fio::NodeMarker>().expect("clone")));
         let _ = disk_manager
             .bind_to_encrypted_block(block_device)
             .await

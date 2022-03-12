@@ -13,10 +13,7 @@ use {
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeEvent, NodeInfo, NodeMarker,
-        NodeProxy, SeekOrigin, Service, OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     files_async::readdir,
     fuchsia_async::{self as fasync, run_until_stalled},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
@@ -40,10 +37,10 @@ async fn complete_with_no_remaining_clients() {
     fs.collect().await
 }
 
-fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, DirectoryProxy) {
+fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, fio::DirectoryProxy) {
     let mut fs = ServiceFs::new();
     let (dir_proxy, dir_server_end) =
-        create_proxy::<DirectoryMarker>().expect("Unable to create directory proxy");
+        create_proxy::<fio::DirectoryMarker>().expect("Unable to create directory proxy");
     fs.serve_connection(dir_server_end.into_channel()).expect("unable to serve main dir proxy");
     (fs, dir_proxy)
 }
@@ -55,11 +52,9 @@ async fn check_bad_flags_root() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to open . with CREATE flags
-        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
-            | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-            | fidl_fuchsia_io::OPEN_FLAG_CREATE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
-        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
+        let mode = fio::MODE_TYPE_DIRECTORY;
+        let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, ".", server_end.into()).unwrap();
         assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
         Ok::<(), Error>(())
@@ -77,11 +72,9 @@ async fn check_bad_flags_folder() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a folder that already exists in ServiceFS
-        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
-            | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-            | fidl_fuchsia_io::OPEN_FLAG_CREATE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
-        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_CREATE;
+        let mode = fio::MODE_TYPE_DIRECTORY;
+        let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo", server_end.into()).unwrap();
         assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
         Ok::<(), Error>(())
@@ -99,12 +92,12 @@ async fn check_bad_flags_file() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a file that already exists in ServiceFS
-        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
-            | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY
-            | fidl_fuchsia_io::OPEN_FLAG_CREATE
-            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
-        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_DESCRIBE
+            | fio::OPEN_FLAG_NOT_DIRECTORY
+            | fio::OPEN_FLAG_CREATE
+            | fio::OPEN_FLAG_TRUNCATE;
+        let mode = fio::MODE_TYPE_FILE;
+        let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo/bar", server_end.into()).unwrap();
         assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
         Ok::<(), Error>(())
@@ -121,12 +114,12 @@ async fn check_bad_flags_new_file() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a new file in ServiceFS
-        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
-            | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY
-            | fidl_fuchsia_io::OPEN_FLAG_CREATE
-            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
-        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_DESCRIBE
+            | fio::OPEN_FLAG_NOT_DIRECTORY
+            | fio::OPEN_FLAG_CREATE
+            | fio::OPEN_FLAG_TRUNCATE;
+        let mode = fio::MODE_TYPE_FILE;
+        let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "qaz", server_end.into()).unwrap();
         assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
         Ok::<(), Error>(())
@@ -157,10 +150,10 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
 
     async fn assert_has_service_child(
         fs: &mut ServiceFs<ServiceObj<'_, ()>>,
-        dir_proxy: &DirectoryProxy,
+        dir_proxy: &fio::DirectoryProxy,
     ) {
         let flags = 0;
-        let mode = fidl_fuchsia_io::MODE_TYPE_SERVICE;
+        let mode = fio::MODE_TYPE_SERVICE;
         let (server_end, client_end) = zx::Channel::create().expect("create channel");
         dir_proxy.open(flags, mode, SERVICE_NAME, server_end.into()).expect("open");
         fs.next().await.expect("expected one service to have been started");
@@ -177,9 +170,9 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
     assert_has_service_child(&mut fs, &dir_proxy).await;
 
     // attempt to connect to the /fooey dir
-    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
-    let (subdir_proxy, server_end) = create_proxy::<DirectoryMarker>()?;
+    let flags = fio::OPEN_FLAG_DIRECTORY;
+    let mode = fio::MODE_TYPE_DIRECTORY;
+    let (subdir_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
     dir_proxy.open(flags, mode, "fooey", server_end.into_channel().into())?;
 
     // attempt to connect ot the service under /fooey
@@ -203,14 +196,14 @@ async fn open_service_node_reference() -> Result<(), Error> {
     let serve_fut = fs.collect().map(Ok);
 
     let open_reference_fut = async {
-        let flags = fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_SERVICE;
-        let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
+        let mode = fio::MODE_TYPE_SERVICE;
+        let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, PATH, node_server_end)?;
         drop(dir_proxy);
 
         let info = node_proxy.describe().await?;
-        if let NodeInfo::Service(Service {}) = info {
+        if let fio::NodeInfo::Service(fio::Service) = info {
             // ok
         } else {
             panic!("expected service node, found {:?}", info);
@@ -234,21 +227,21 @@ async fn clone_service_dir() -> Result<(), Error> {
     let serve_fut = fs.collect().map(Ok);
 
     let open_reference_fut = async {
-        let (dir_proxy_clone, dir_server_end_clone) = create_proxy::<DirectoryMarker>()?;
+        let (dir_proxy_clone, dir_server_end_clone) = create_proxy::<fio::DirectoryMarker>()?;
         dir_proxy.clone(
-            fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
+            fio::CLONE_FLAG_SAME_RIGHTS,
             ServerEnd::new(dir_server_end_clone.into_channel()),
         )?;
         drop(dir_proxy);
 
-        let flags = fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
-        let mode = fidl_fuchsia_io::MODE_TYPE_SERVICE;
-        let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
+        let flags = fio::OPEN_FLAG_NODE_REFERENCE;
+        let mode = fio::MODE_TYPE_SERVICE;
+        let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy_clone.open(flags, mode, PATH, node_server_end)?;
         drop(dir_proxy_clone);
 
         let info = node_proxy.describe().await?;
-        if let NodeInfo::Service(Service {}) = info {
+        if let fio::NodeInfo::Service(fio::Service) = info {
             // ok
         } else {
             panic!("expected service node, found {:?}", info);
@@ -269,7 +262,7 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
     fs.dir("dir").add_service_at("notdir", |chan| {
         service_open_count.fetch_add(1, atomic::Ordering::SeqCst);
         let (_request_stream, control_handle) =
-            ServerEnd::<NodeMarker>::new(chan).into_stream_and_control_handle().unwrap();
+            ServerEnd::<fio::NodeMarker>::new(chan).into_stream_and_control_handle().unwrap();
         control_handle.send_on_open_(zx::Status::OK.into_raw(), None).unwrap();
         None
     });
@@ -277,27 +270,26 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
 
     let service_open_count = &service_open_count;
     let test_fut = async move {
-        let dir_flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-        let not_dir_flags =
-            fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY;
+        let dir_flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY;
+        let not_dir_flags = fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY;
 
         // Verify flags when opening a directory.
-        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
         root_proxy.open(dir_flags, 0, "dir", node_end)?;
         assert_open_status(&node_proxy, zx::Status::OK).await;
 
-        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
         root_proxy.open(not_dir_flags, 0, "dir", node_end)?;
         assert_open_status(&node_proxy, zx::Status::NOT_FILE).await;
 
         // Verify flags when opening a file.
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
-        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
         root_proxy.open(dir_flags, 0, "dir/notdir", node_end)?;
         assert_open_status(&node_proxy, zx::Status::NOT_DIR).await;
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
 
-        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
         root_proxy.open(not_dir_flags, 0, "dir/notdir", node_end)?;
         assert_open_status(&node_proxy, zx::Status::OK).await;
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 1);
@@ -310,7 +302,7 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
 }
 
 /// Serves a dummy service `S` that immediately drops the request channel.
-fn serve_dummy_unified_service<S>() -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
+fn serve_dummy_unified_service<S>() -> (impl Future<Output = Result<(), Error>>, fio::DirectoryProxy)
 where
     S: ServiceMarker,
 {
@@ -322,7 +314,7 @@ where
 /// Serves an instance of a dummy service `S` named `instance` that immediately drops the request channel.
 fn serve_dummy_unified_service_instance<S>(
     instance: &str,
-) -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
+) -> (impl Future<Output = Result<(), Error>>, fio::DirectoryProxy)
 where
     S: ServiceMarker,
 {
@@ -333,12 +325,12 @@ where
 
 /// Returns the NodeInfo of a node reference located at `path` under the directory `dir_proxy`.
 async fn node_reference_type_at_path(
-    dir_proxy: &DirectoryProxy,
+    dir_proxy: &fio::DirectoryProxy,
     path: &str,
-) -> Result<NodeInfo, Error> {
-    let flags = fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
-    let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
+) -> Result<fio::NodeInfo, Error> {
+    let flags = fio::OPEN_FLAG_NODE_REFERENCE;
+    let mode = fio::MODE_TYPE_DIRECTORY;
+    let (node_proxy, node_server_end) = create_proxy::<fio::NodeMarker>()?;
     dir_proxy.open(flags, mode, path, node_server_end)?;
     Ok(node_proxy.describe().await?)
 }
@@ -350,8 +342,8 @@ async fn open_unified_service_node_reference() -> Result<(), Error> {
     let open_reference_fut = async {
         let info = node_reference_type_at_path(&dir_proxy, CounterServiceMarker::SERVICE_NAME)
             .await
-            .expect("failed to get NodeInfo");
-        assert_matches!(info, NodeInfo::Directory(_));
+            .expect("failed to get fio::NodeInfo");
+        assert_matches!(info, fio::NodeInfo::Directory(_));
         drop(dir_proxy);
         Ok::<(), Error>(())
     };
@@ -366,9 +358,10 @@ async fn open_unified_service_instance_node_reference() -> Result<(), Error> {
 
     let open_reference_fut = async {
         let path = format!("{}/default", CounterServiceMarker::SERVICE_NAME);
-        let info =
-            node_reference_type_at_path(&dir_proxy, &path).await.expect("failed to get NodeInfo");
-        assert_matches!(info, NodeInfo::Directory(_));
+        let info = node_reference_type_at_path(&dir_proxy, &path)
+            .await
+            .expect("failed to get fio::NodeInfo");
+        assert_matches!(info, fio::NodeInfo::Directory(_));
         drop(dir_proxy);
         Ok::<(), Error>(())
     };
@@ -378,12 +371,10 @@ async fn open_unified_service_instance_node_reference() -> Result<(), Error> {
 }
 
 async fn list_service_entries(
-    dir_proxy: &DirectoryProxy,
+    dir_proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<Vec<String>, Error> {
-    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-        | fidl_fuchsia_io::OPEN_RIGHT_READABLE
-        | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+    let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
     let instance_proxy = io_util::open_directory(dir_proxy, Path::new(&path), flags)?;
     let mut entries =
         files_async::readdir(&instance_proxy)
@@ -483,20 +474,20 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
     Ok(())
 }
 
-async fn assert_open_status(proxy: &NodeProxy, expected: zx::Status) {
+async fn assert_open_status(proxy: &fio::NodeProxy, expected: zx::Status) {
     let mut events = proxy.take_event_stream();
     match events.next().await.expect("event").expect("no error") {
-        NodeEvent::OnOpen_ { s: actual, info: _ } => {
+        fio::NodeEvent::OnOpen_ { s: actual, info: _ } => {
             assert_eq!(zx::Status::from_raw(actual), expected);
         }
-        NodeEvent::OnConnectionInfo { info: _ } => {
+        fio::NodeEvent::OnConnectionInfo { info: _ } => {
             assert_eq!(zx::Status::OK, expected);
         }
     }
 }
 
 async fn assert_read<'a>(
-    file_proxy: &'a FileProxy,
+    file_proxy: &'a fio::FileProxy,
     length: u64,
     expected: &'a [u8],
 ) -> Result<(), Error> {
@@ -506,7 +497,7 @@ async fn assert_read<'a>(
 }
 
 // close the file and check that further reads fail.
-async fn assert_close(file_proxy: &FileProxy) -> Result<(), Error> {
+async fn assert_close(file_proxy: &fio::FileProxy) -> Result<(), Error> {
     let () = file_proxy.close().await?.map_err(zx::Status::from_raw)?;
     assert_matches!(file_proxy.read(0).await, Err(e) if e.is_closed());
     Ok(())
@@ -516,7 +507,7 @@ async fn assert_close(file_proxy: &FileProxy) -> Result<(), Error> {
 async fn open_remote_directory_files() -> Result<(), Error> {
     let mut root = ServiceFs::new();
     let mut fs = ServiceFs::new();
-    let (remote_proxy, remote_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (remote_proxy, remote_server_end) = create_proxy::<fio::DirectoryMarker>()?;
 
     let data = b"test";
 
@@ -533,23 +524,23 @@ async fn open_remote_directory_files() -> Result<(), Error> {
 
     // Add the remote as "test"
     fs.add_remote("test", remote_proxy);
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
     fuchsia_async::Task::spawn(root.collect::<()>()).detach();
     fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open the test file
-    let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
+    let flags = fio::OPEN_RIGHT_READABLE;
+    let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, "test/files/test.txt", file_server_end.into_channel().into())?;
 
     // Open the top of the remote hierarchy.
-    let (top_proxy, top_end) = create_proxy::<DirectoryMarker>()?;
+    let (top_proxy, top_end) = create_proxy::<fio::DirectoryMarker>()?;
     dir_proxy.open(
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE,
+        fio::MODE_TYPE_DIRECTORY,
         "test",
         top_end.into_channel().into(),
     )?;
@@ -569,28 +560,28 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
         "test.txt" => read_only_static(data)
     };
     let mut fs = ServiceFs::new();
-    let (remote_proxy, remote_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (remote_proxy, remote_server_end) = create_proxy::<fio::DirectoryMarker>()?;
 
     let scope = ExecutionScope::new();
     root.open(
         scope.clone(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fio::OPEN_RIGHT_READABLE,
         0,
         vfs::path::Path::dot(),
-        fidl::endpoints::ServerEnd::<NodeMarker>::from(remote_server_end.into_channel()),
+        fidl::endpoints::ServerEnd::<fio::NodeMarker>::from(remote_server_end.into_channel()),
     );
 
     // Add the remote as "test"
     fs.add_remote("test", remote_proxy);
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
     fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open the test file
-    let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
+    let flags = fio::OPEN_RIGHT_READABLE;
+    let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, "test/test.txt", file_server_end.into_channel().into())?;
 
     // Check that we can read the contents of the file.
@@ -609,7 +600,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
 
     // Create a nested ServiceFs contains directories "temp/folder".
     let mut nested_fs = ServiceFs::new();
-    let (nested_proxy, nested_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (nested_proxy, nested_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     nested_fs.dir("temp").dir("folder");
     nested_fs.serve_connection(nested_server_end.into_channel())?;
     fuchsia_async::Task::spawn(nested_fs.collect::<()>()).detach();
@@ -618,15 +609,16 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     // "temp/folder" should appear in this directory as "test/folder".
     fs.add_remote(
         "test",
-        io_util::open_directory(&nested_proxy, Path::new("temp"), OPEN_RIGHT_READABLE)?,
+        io_util::open_directory(&nested_proxy, Path::new("temp"), fio::OPEN_RIGHT_READABLE)?,
     );
-    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
     fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open and read "test"
-    let temp_proxy = io_util::open_directory(&dir_proxy, Path::new("test"), OPEN_RIGHT_READABLE)?;
+    let temp_proxy =
+        io_util::open_directory(&dir_proxy, Path::new("test"), fio::OPEN_RIGHT_READABLE)?;
     let result = readdir(&temp_proxy).await;
     assert!(!result.is_err(), "got Err instead of Ok: {:?}", result.unwrap_err());
     let files = result.unwrap();
@@ -653,7 +645,7 @@ async fn create_nested_env_with_sub_dir() {
 /// Returns a future which runs the filesystem, a proxy connected to the vmofile, and the data
 /// expected to be in the file.
 fn set_up_and_connect_to_vmo_file(
-) -> Result<(impl Future<Output = Result<(), Error>>, FileProxy, Vec<u8>), Error> {
+) -> Result<(impl Future<Output = Result<(), Error>>, fio::FileProxy, Vec<u8>), Error> {
     const PATH: &str = "foo";
     const VMO_SIZE: u64 = 256;
     const VMO_FILE_OFFSET: usize = 5;
@@ -680,9 +672,9 @@ fn set_up_and_connect_to_vmo_file(
     );
 
     // Open a connection to the file within the directory
-    let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    let (file_proxy, file_server_end) = create_proxy::<fio::FileMarker>()?;
+    let flags = fio::OPEN_RIGHT_READABLE;
+    let mode = fio::MODE_TYPE_FILE;
     dir_proxy.open(flags, mode, PATH, file_server_end.into_channel().into())?;
 
     // truncate `data` to just the data that appears in the file
@@ -713,7 +705,7 @@ async_test_with_vmo_file![
         // Describe the file
         let (status, attrs) = file_proxy.get_attr().await?;
         zx::Status::ok(status)?;
-        assert!(attrs.mode & fidl_fuchsia_io::MODE_TYPE_FILE != 0);
+        assert!(attrs.mode & fio::MODE_TYPE_FILE != 0);
         assert_eq!(attrs.content_size, file_data.len() as u64);
         assert_eq!(attrs.storage_size, file_data.len() as u64);
         drop(file_proxy);
@@ -734,7 +726,7 @@ async_test_with_vmo_file![
         assert_read(&file_proxy, file_data.len() as u64, &[]).await?;
 
         // Seek back to 5 bytes from the end and read again.
-        let position = file_proxy.seek(SeekOrigin::End, -5).await?.map_err(zx::Status::from_raw)?;
+        let position = file_proxy.seek(fio::SeekOrigin::End, -5).await?.map_err(zx::Status::from_raw)?;
         assert_eq!(position, file_data.len() as u64 - 5);
 
         let read_at_count = 10usize;
@@ -748,8 +740,8 @@ async_test_with_vmo_file![
     },
     read_from_clone => async {
         // Create a clone of the file
-        let (file_proxy_clone, file_clone_server_end) = create_proxy::<FileMarker>()?;
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+        let (file_proxy_clone, file_clone_server_end) = create_proxy::<fio::FileMarker>()?;
+        let flags = fio::OPEN_RIGHT_READABLE;
         file_proxy.clone(flags, file_clone_server_end.into_channel().into())?;
         // Read the whole file
         assert_read(&file_proxy, file_data.len() as u64, file_data).await?;

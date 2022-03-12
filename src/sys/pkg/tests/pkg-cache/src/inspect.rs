@@ -9,7 +9,7 @@ use {
     },
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
@@ -311,7 +311,7 @@ async fn dynamic_index_needed_blobs() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache
@@ -320,7 +320,8 @@ async fn dynamic_index_needed_blobs() {
 
     let (meta_far, _) = pkg.contents();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -415,7 +416,8 @@ async fn dynamic_index_package_hash_update() {
 
     let (meta_far, _) = pkg.contents();
 
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
@@ -544,7 +546,7 @@ async fn package_cache_get() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache
@@ -581,7 +583,7 @@ async fn package_cache_get() {
 
     let buf = contents.remove(&blob.blob_id.into()).unwrap();
     let (content_blob, content_blob_server_end) =
-        fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
     assert_eq!(
         true,
@@ -604,7 +606,7 @@ async fn package_cache_get() {
 
     let buf = contents.remove(&blob.blob_id.into()).unwrap();
     let (content_blob, content_blob_server_end) =
-        fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
     assert_eq!(
         true,
@@ -649,7 +651,7 @@ async fn package_cache_concurrent_gets() {
 
     let (_needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let _get_fut = env
         .proxies
         .package_cache
@@ -668,7 +670,7 @@ async fn package_cache_concurrent_gets() {
     let mut meta_blob_info2 = BlobInfo { blob_id: blob_id2.into(), length: 7 };
     let (_needed_blobs2, needed_blobs_server_end2) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end2) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let _get_fut = package_cache_proxy2
         .get(&mut meta_blob_info2, needed_blobs_server_end2, Some(dir_server_end2))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
@@ -778,7 +780,7 @@ async fn retained_index_updated_and_persisted() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache
@@ -838,7 +840,7 @@ async fn retained_index_updated_and_persisted() {
 
     let (needed_blobs2, needed_blobs_server_end2) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (_dir2, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (_dir2, dir_server_end2) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut2 = env
         .proxies
         .package_cache
@@ -916,7 +918,7 @@ async fn index_updated_mid_package_write() {
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = env
         .proxies
         .package_cache

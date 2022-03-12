@@ -4,9 +4,7 @@
 
 use {
     crate::{pkgfs::PkgfsInstance, storage::BlobfsInstance},
-    fidl_fuchsia_io::{
-        MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::MerkleTree,
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_syslog::fx_log_info,
@@ -31,7 +29,7 @@ impl FSHost {
         blobfs.mount(blobfs_mountpoint);
         let blobfs_dir = open_in_namespace(
             blobfs_mountpoint,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .unwrap();
         let mut system_image_file = File::open(system_image_path).unwrap();
@@ -53,8 +51,8 @@ impl FSHost {
         let scope = ExecutionScope::new();
         out_dir.open(
             scope.clone(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
             take_startup_handle(HandleType::DirectoryRequest.into()).unwrap().into(),
         );

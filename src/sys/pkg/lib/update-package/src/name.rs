@@ -5,7 +5,7 @@
 //! Typesafe wrappers around verifying the name of the update package.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fuchsia_pkg::{MetaPackage, MetaPackageError},
     thiserror::Error,
 };
@@ -27,11 +27,10 @@ pub enum VerifyNameError {
     Invalid(MetaPackage),
 }
 
-pub(crate) async fn verify(proxy: &DirectoryProxy) -> Result<(), VerifyNameError> {
-    let file =
-        io_util::directory::open_file(proxy, "meta/package", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-            .map_err(VerifyNameError::OpenMetaPackage)?;
+pub(crate) async fn verify(proxy: &fio::DirectoryProxy) -> Result<(), VerifyNameError> {
+    let file = io_util::directory::open_file(proxy, "meta/package", fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(VerifyNameError::OpenMetaPackage)?;
     let contents = io_util::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;
 
     let expected = MetaPackage::from_name("update".parse().unwrap());

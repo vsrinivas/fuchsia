@@ -7,6 +7,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     fidl::endpoints::{Proxy, RequestStream, ServerEnd},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_telephony_snoop::{
         PublisherMarker as QmiSnoopMarker, PublisherRequest as QmiSnoopRequest,
         PublisherRequestStream as QmiSnoopRequestStream, SnooperControlHandle, SnooperRequest,
@@ -61,7 +62,7 @@ async fn watch_new_devices(
 
     let channel = fdio::clone_channel(&dir).unwrap();
     let async_channel = fasync::Channel::from_channel(channel).unwrap();
-    let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
+    let directory = fio::DirectoryProxy::from_channel(async_channel);
     let mut watcher =
         Watcher::new(directory).await.with_context(|| format!("could not watch {:?}", &dir))?;
     while let Some(msg) = watcher.try_next().await? {

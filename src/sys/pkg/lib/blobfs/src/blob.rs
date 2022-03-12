@@ -4,20 +4,13 @@
 
 //! Typesafe wrappers around writing blobs to blobfs.
 
-use {
-    fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileProxy, FileRequestStream},
-    fuchsia_hash::Hash,
-    fuchsia_zircon::Status,
-    thiserror::Error,
-};
+use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, fuchsia_zircon::Status, thiserror::Error};
 
 pub(crate) async fn create(
-    blobfs: &DirectoryProxy,
+    blobfs: &fio::DirectoryProxy,
     hash: &Hash,
 ) -> Result<Blob<NeedsTruncate>, CreateError> {
-    let flags = fidl_fuchsia_io::OPEN_FLAG_CREATE
-        | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-        | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let flags = fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE;
 
     let proxy = io_util::directory::open_file(&blobfs, &hash.to_string(), flags).await.map_err(
         |e| match e {
@@ -49,7 +42,7 @@ pub struct AtEof;
 /// A blob in the process of being written.
 #[derive(Debug)]
 pub struct Blob<S> {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     state: S,
 }
 
@@ -58,7 +51,7 @@ pub struct Blob<S> {
 #[derive(Debug)]
 #[must_use = "Subsequent opens of this blob may race with closing this one"]
 pub struct BlobCloser {
-    proxy: FileProxy,
+    proxy: fio::FileProxy,
     closed: bool,
 }
 
@@ -69,7 +62,7 @@ pub enum TruncateSuccess {
     NeedsData(Blob<NeedsData>),
 
     /// The blob is the empty blob and so does not need any data written.
-    Done(FileProxy),
+    Done(fio::FileProxy),
 }
 
 /// The successful result of writing some data to a blob.
@@ -200,8 +193,9 @@ impl Blob<NeedsTruncate> {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, FileRequestStream) {
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+    pub fn new_test() -> (Self, fio::FileRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fio::FileMarker>().unwrap();
 
         (Blob { proxy, state: NeedsTruncate }, stream)
     }
@@ -253,12 +247,9 @@ impl Blob<NeedsData> {
 impl Blob<AtEof> {
     /// Rewinds the file position to the start, returning the now read-only FileProxy representing
     /// the blob.
-    pub async fn reopen_for_read(self) -> Result<FileProxy, IntoReadError> {
-        let _pos: u64 = self
-            .proxy
-            .seek(fidl_fuchsia_io::SeekOrigin::Start, 0)
-            .await?
-            .map_err(Status::from_raw)?;
+    pub async fn reopen_for_read(self) -> Result<fio::FileProxy, IntoReadError> {
+        let _pos: u64 =
+            self.proxy.seek(fio::SeekOrigin::Start, 0).await?.map_err(Status::from_raw)?;
 
         Ok(self.proxy)
     }
@@ -306,7 +297,7 @@ impl TruncateSuccess {
     /// # Panics
     ///
     /// Panics if the value is a [`TruncateSuccess::NeedsData`].
-    pub fn unwrap_done(self) -> FileProxy {
+    pub fn unwrap_done(self) -> fio::FileProxy {
         match self {
             TruncateSuccess::Done(blob) => blob,
             _ => panic!("unwrap_done() called on {:?}", self),

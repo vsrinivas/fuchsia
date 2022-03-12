@@ -4,7 +4,7 @@
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fidl_test_fidl_pkg::{Backing, HarnessMarker},
     fuchsia_component::client::connect_to_protocol,
     std::fmt::Debug,
@@ -23,7 +23,7 @@ async fn dirs_to_test() -> impl Iterator<Item = PackageSource> {
     let connect = |backing| {
         let proxy = Clone::clone(&proxy);
         async move {
-            let (dir, server) = create_proxy::<DirectoryMarker>().unwrap();
+            let (dir, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
             let () = proxy.connect_package(backing, server).await.unwrap().unwrap();
             PackageSource { dir, backing }
         }
@@ -38,7 +38,7 @@ async fn just_pkgfs_for_now() -> impl Iterator<Item = PackageSource> {
 
 struct PackageSource {
     backing: Backing,
-    dir: DirectoryProxy,
+    dir: fio::DirectoryProxy,
 }
 impl PackageSource {
     #[allow(dead_code)]
@@ -55,7 +55,7 @@ impl PackageSource {
 macro_rules! flag_list {
     [$($flag:ident),* $(,)?] => {
         [
-            $((fidl_fuchsia_io::$flag, stringify!($flag))),*
+            $((fio::$flag, stringify!($flag))),*
         ]
     };
 }

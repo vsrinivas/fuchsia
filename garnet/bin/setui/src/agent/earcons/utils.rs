@@ -5,6 +5,7 @@ use crate::call_async;
 use crate::event::Publisher;
 use crate::service_context::{ExternalServiceProxy, ServiceContext};
 use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy};
 use fuchsia_async as fasync;
@@ -16,23 +17,19 @@ use std::fs::File;
 use std::sync::Arc;
 
 /// Creates a file-based sound from a resource file.
-fn resource_file(
-    name: &str,
-) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>, Error> {
+fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fio::FileMarker>, Error> {
     // We try two paths here, because normal components see their config package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/config-data/0/meta/data/<pkg>.
-    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
-        fdio::transfer_fd(
-            File::open(format!("/config/data/{}", name))
-                .or_else(|_| {
-                    File::open(format!(
-                        "/pkgfs/packages/config-data/0/meta/data/setui_service/{}",
-                        name
-                    ))
-                })
-                .context("Opening package data file")?,
-        )?,
-    )))
+    Ok(fidl::endpoints::ClientEnd::<fio::FileMarker>::new(zx::Channel::from(fdio::transfer_fd(
+        File::open(format!("/config/data/{}", name))
+            .or_else(|_| {
+                File::open(format!(
+                    "/pkgfs/packages/config-data/0/meta/data/setui_service/{}",
+                    name
+                ))
+            })
+            .context("Opening package data file")?,
+    )?)))
 }
 
 /// Establish a connection to the sound player and return the proxy representing the service.

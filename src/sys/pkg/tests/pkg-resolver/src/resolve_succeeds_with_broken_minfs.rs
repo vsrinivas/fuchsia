@@ -6,11 +6,7 @@
 /// MinFs is broken.
 use {
     fidl::endpoints::{Proxy, RequestStream, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryControlHandle, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
-        FileControlHandle, FileEvent, FileMarker, FileProxy, FileRequest, FileRequestStream,
-        FileWriteDeprecatedResponder, FileWriteResponder, NodeMarker,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
@@ -34,8 +30,8 @@ trait OpenRequestHandler: Sized {
         flags: u32,
         mode: u32,
         path: String,
-        object: ServerEnd<NodeMarker>,
-        control_handle: DirectoryControlHandle,
+        object: ServerEnd<fio::NodeMarker>,
+        control_handle: fio::DirectoryControlHandle,
         parent: Arc<DirectoryStreamHandler<Self>>,
     );
 }
@@ -54,17 +50,17 @@ where
 
     fn handle_stream(
         self: Arc<Self>,
-        mut stream: DirectoryRequestStream,
+        mut stream: fio::DirectoryRequestStream,
     ) -> BoxFuture<'static, ()> {
         async move {
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
-                    DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                    fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                         let stream = object.into_stream().unwrap().cast_stream();
                         mock_filesystem::describe_dir(flags, &stream);
                         fasync::Task::spawn(Arc::clone(&self).handle_stream(stream)).detach();
                     }
-                    DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
+                    fio::DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
                         self.open_handler.handle_open_request(
                             flags,
                             mode,
@@ -74,7 +70,7 @@ where
                             Arc::clone(&self),
                         )
                     }
-                    DirectoryRequest::Close { .. } => (),
+                    fio::DirectoryRequest::Close { .. } => (),
                     req => panic!("DirectoryStreamHandler unhandled request {:?}", req),
                 }
             }
@@ -117,8 +113,8 @@ impl OpenRequestHandler for OpenFailOrTempFs {
         flags: u32,
         mode: u32,
         path: String,
-        object: ServerEnd<NodeMarker>,
-        _control_handle: DirectoryControlHandle,
+        object: ServerEnd<fio::NodeMarker>,
+        _control_handle: fio::DirectoryControlHandle,
         parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
         if self.should_fail() {
@@ -131,7 +127,7 @@ impl OpenRequestHandler for OpenFailOrTempFs {
             }
         } else {
             let (tempdir_proxy, server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             fdio::service_connect(self.tempdir.path().to_str().unwrap(), server_end.into_channel())
                 .unwrap();
             tempdir_proxy.open(flags, mode, &path, object).unwrap();
@@ -145,7 +141,7 @@ struct WriteFailOrTempFs {
     files_to_fail_writes: Vec<String>,
     should_fail: Arc<AtomicBool>,
     fail_count: Arc<AtomicU64>,
-    tempdir_proxy: DirectoryProxy,
+    tempdir_proxy: fio::DirectoryProxy,
 
     // We don't read this, but need to keep it around otherwise the temp directory is torn down
     _tempdir: tempfile::TempDir,
@@ -156,13 +152,11 @@ impl WriteFailOrTempFs {
         let tempdir = tempfile::tempdir().expect("/tmp to exist");
 
         let (tempdir_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
         fdio::open(
             tempdir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-                | fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             server_end.into_channel(),
         )
         .expect("open temp directory");
@@ -194,8 +188,8 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         flags: u32,
         mode: u32,
         path: String,
-        object: ServerEnd<NodeMarker>,
-        _control_handle: DirectoryControlHandle,
+        object: ServerEnd<fio::NodeMarker>,
+        _control_handle: fio::DirectoryControlHandle,
         parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
         if path == "." && self.should_fail() {
@@ -216,13 +210,13 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         // to the backing file instead to our FailingWriteFileStreamHandler.
 
         let (file_requests, file_control_handle) =
-            ServerEnd::<FileMarker>::new(object.into_channel())
+            ServerEnd::<fio::FileMarker>::new(object.into_channel())
                 .into_stream_and_control_handle()
                 .expect("split file server end");
 
         // Create a proxy to the actual file we'll open to proxy to.
         let (backing_node_proxy, backing_node_server_end) =
-            fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
 
         self.tempdir_proxy
             .open(flags, mode, &path, backing_node_server_end)
@@ -231,8 +225,8 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         // All the things pkg-resolver attempts to open in these tests are files,
         // not directories, so cast the NodeProxy to a FileProxy. If the pkg-resolver assumption
         // changes, this code will have to support both.
-        let backing_file_proxy = FileProxy::new(backing_node_proxy.into_channel().unwrap());
-        let send_onopen = flags & fidl_fuchsia_io::OPEN_FLAG_DESCRIBE != 0;
+        let backing_file_proxy = fio::FileProxy::new(backing_node_proxy.into_channel().unwrap());
+        let send_onopen = flags & fio::OPEN_FLAG_DESCRIBE != 0;
 
         let file_handler = Arc::new(FailingWriteFileStreamHandler::new(
             backing_file_proxy,
@@ -252,7 +246,7 @@ impl OpenRequestHandler for WriteFailOrTempFs {
 /// Handles a stream of requests for a particular file, proxying to a backing file for all
 /// operations except writes, which it may decide to make fail.
 struct FailingWriteFileStreamHandler {
-    backing_file: FileProxy,
+    backing_file: fio::FileProxy,
     writes_should_fail: Arc<AtomicBool>,
     write_fail_count: Arc<AtomicU64>,
     path: String,
@@ -260,7 +254,7 @@ struct FailingWriteFileStreamHandler {
 
 impl FailingWriteFileStreamHandler {
     fn new(
-        backing_file: FileProxy,
+        backing_file: fio::FileProxy,
         path: String,
         writes_should_fail: Arc<AtomicBool>,
         write_fail_count: Arc<AtomicU64>,
@@ -275,7 +269,7 @@ impl FailingWriteFileStreamHandler {
     async fn handle_write_deprecated(
         self: &Arc<Self>,
         data: Vec<u8>,
-        responder: FileWriteDeprecatedResponder,
+        responder: fio::FileWriteDeprecatedResponder,
     ) {
         if self.writes_should_fail() {
             self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -288,7 +282,7 @@ impl FailingWriteFileStreamHandler {
         responder.send(status, bytes_written).unwrap();
     }
 
-    async fn handle_write(self: &Arc<Self>, data: Vec<u8>, responder: FileWriteResponder) {
+    async fn handle_write(self: &Arc<Self>, data: Vec<u8>, responder: fio::FileWriteResponder) {
         if self.writes_should_fail() {
             self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send on write");
@@ -302,8 +296,8 @@ impl FailingWriteFileStreamHandler {
 
     fn handle_stream(
         self: Arc<Self>,
-        mut stream: FileRequestStream,
-        control_handle: FileControlHandle,
+        mut stream: fio::FileRequestStream,
+        control_handle: fio::FileControlHandle,
         send_onopen: bool,
     ) -> BoxFuture<'static, ()> {
         async move {
@@ -313,7 +307,7 @@ impl FailingWriteFileStreamHandler {
                 let mut event_stream = self.backing_file.take_event_stream();
                 let event = event_stream.try_next().await.unwrap();
                 match event.expect("failed to received file event") {
-                    FileEvent::OnOpen_ { s, mut info } => {
+                    fio::FileEvent::OnOpen_ { s, mut info } => {
                         // info comes as an Option<Box<NodeInfo>>, but we need to return an
                         // Option<&mut NodeInfo>. Transform it.
                         let node_info = info.as_mut().map(|b| &mut **b);
@@ -321,7 +315,7 @@ impl FailingWriteFileStreamHandler {
                             .send_on_open_(s, node_info)
                             .expect("send on open to fake file");
                     }
-                    FileEvent::OnConnectionInfo { info } => {
+                    fio::FileEvent::OnConnectionInfo { info } => {
                         control_handle
                             .send_on_connection_info(info)
                             .expect("send on open to fake file");
@@ -331,31 +325,31 @@ impl FailingWriteFileStreamHandler {
 
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
-                    FileRequest::WriteDeprecated { data, responder } => {
+                    fio::FileRequest::WriteDeprecated { data, responder } => {
                         self.handle_write_deprecated(data, responder).await
                     }
-                    FileRequest::Write { data, responder } => {
+                    fio::FileRequest::Write { data, responder } => {
                         self.handle_write(data, responder).await
                     }
-                    FileRequest::GetAttr { responder } => {
+                    fio::FileRequest::GetAttr { responder } => {
                         let (status, mut attrs) = self.backing_file.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
                     }
-                    FileRequest::ReadDeprecated { count, responder } => {
+                    fio::FileRequest::ReadDeprecated { count, responder } => {
                         let (status, data) =
                             self.backing_file.read_deprecated(count).await.unwrap();
                         responder.send(status, &data).unwrap();
                     }
-                    FileRequest::Read { count, responder } => {
+                    fio::FileRequest::Read { count, responder } => {
                         let mut result = self.backing_file.read(count).await.unwrap();
                         responder.send(&mut result).unwrap();
                     }
-                    FileRequest::CloseDeprecated { responder } => {
+                    fio::FileRequest::CloseDeprecated { responder } => {
                         let backing_file_close_response =
                             self.backing_file.close_deprecated().await.unwrap();
                         responder.send(backing_file_close_response).unwrap();
                     }
-                    FileRequest::Close { responder } => {
+                    fio::FileRequest::Close { responder } => {
                         let mut backing_file_close_response =
                             self.backing_file.close().await.unwrap();
                         responder.send(&mut backing_file_close_response).unwrap();
@@ -408,13 +402,13 @@ impl OpenRequestHandler for RenameFailOrTempFs {
         flags: u32,
         mode: u32,
         path: String,
-        object: ServerEnd<NodeMarker>,
-        _control_handle: DirectoryControlHandle,
+        object: ServerEnd<fio::NodeMarker>,
+        _control_handle: fio::DirectoryControlHandle,
         parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
         // Set up proxy to tmpdir and delegate to it on success.
         let (tempdir_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         fdio::service_connect(self.tempdir.path().to_str().unwrap(), server_end.into_channel())
             .unwrap();
         if !self.should_fail() || path != "." {
@@ -434,30 +428,30 @@ impl OpenRequestHandler for RenameFailOrTempFs {
         fasync::Task::spawn(async move {
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
-                    DirectoryRequest::GetAttr { responder } => {
+                    fio::DirectoryRequest::GetAttr { responder } => {
                         let (status, mut attrs) = tempdir_proxy.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
                     }
-                    DirectoryRequest::CloseDeprecated { responder } => {
+                    fio::DirectoryRequest::CloseDeprecated { responder } => {
                         let status = tempdir_proxy.close_deprecated().await.unwrap();
                         responder.send(status).unwrap();
                     }
-                    DirectoryRequest::Close { responder } => {
+                    fio::DirectoryRequest::Close { responder } => {
                         let mut result = tempdir_proxy.close().await.unwrap();
                         responder.send(&mut result).unwrap();
                     }
-                    DirectoryRequest::GetToken { responder } => {
+                    fio::DirectoryRequest::GetToken { responder } => {
                         let (status, handle) = tempdir_proxy.get_token().await.unwrap();
                         responder.send(status, handle).unwrap();
                     }
-                    DirectoryRequest::Rename { src, dst, responder, .. } => {
+                    fio::DirectoryRequest::Rename { src, dst, responder, .. } => {
                         if !files_to_fail_renames.contains(&src) {
                             panic!("unsupported rename from {} to {}", src, dst);
                         }
                         fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                         responder.send(&mut Err(Status::NOT_FOUND.into_raw())).unwrap();
                     }
-                    DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
+                    fio::DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
                         parent.open_handler.handle_open_request(
                             flags,
                             mode,
@@ -483,7 +477,7 @@ async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'stati
     // Create testenv with failing isolated-persistent-storage
     let directory_handler = Arc::new(DirectoryStreamHandler::new(open_handler));
     let (proxy, stream) =
-        fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
     fasync::Task::spawn(directory_handler.handle_stream(stream)).detach();
     let env = TestEnvBuilder::new()
         .mounts(

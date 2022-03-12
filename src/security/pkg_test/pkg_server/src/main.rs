@@ -6,9 +6,7 @@ use {
     anyhow::{Error, Result},
     argh::{from_env, FromArgs},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_test_security_pkg::{PackageServer_Request, PackageServer_RequestStream},
     fuchsia_async::{net::TcpListener, Task},
     fuchsia_component::server::ServiceFs,
@@ -65,14 +63,14 @@ fn parse_private_key(mut bytes: &[u8]) -> rustls::PrivateKey {
 }
 
 struct RequestHandler {
-    repository_dir: DirectoryProxy,
+    repository_dir: fio::DirectoryProxy,
 }
 
 impl RequestHandler {
-    pub fn new(repository_dir_ref: &DirectoryProxy) -> Self {
-        let (repository_dir, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    pub fn new(repository_dir_ref: &fio::DirectoryProxy) -> Self {
+        let (repository_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end = server_end.into_channel().into();
-        repository_dir_ref.clone(CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
+        repository_dir_ref.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).unwrap();
         Self { repository_dir }
     }
 
@@ -106,7 +104,7 @@ impl RequestHandler {
         path_chars.next();
         let path = path_chars.as_str();
 
-        match open_file(&self.repository_dir, Path::new(path), OPEN_RIGHT_READABLE) {
+        match open_file(&self.repository_dir, Path::new(path), fio::OPEN_RIGHT_READABLE) {
             Ok(file) => match read_file_bytes(&file).await {
                 Ok(bytes) => Self::ok(path, bytes),
                 Err(err) => Self::not_found(path, Some(err)),
@@ -159,12 +157,12 @@ async fn main() {
     serve_package_server_protocol(url_recv);
 
     let root_ssl_certificates_file =
-        open_file_in_namespace(tls_certificate_chain_path, OPEN_RIGHT_READABLE).unwrap();
+        open_file_in_namespace(tls_certificate_chain_path, fio::OPEN_RIGHT_READABLE).unwrap();
     let root_ssl_certificates_contents =
         read_file_bytes(&root_ssl_certificates_file).await.unwrap();
 
     let tls_private_key_file =
-        open_file_in_namespace(tls_private_key_path, OPEN_RIGHT_READABLE).unwrap();
+        open_file_in_namespace(tls_private_key_path, fio::OPEN_RIGHT_READABLE).unwrap();
     let tls_private_key_contents = read_file_bytes(&tls_private_key_file).await.unwrap();
 
     let certs = parse_cert_chain(root_ssl_certificates_contents.as_slice());
@@ -201,7 +199,7 @@ async fn main() {
 
     let make_service = make_service_fn(|_| {
         let repository_dir =
-            open_directory_in_namespace(repository_path, OPEN_RIGHT_READABLE).unwrap();
+            open_directory_in_namespace(repository_path, fio::OPEN_RIGHT_READABLE).unwrap();
         async move {
             Ok::<_, Error>(service_fn(move |req: Request<Body>| {
                 let handler = RequestHandler::new(&repository_dir);

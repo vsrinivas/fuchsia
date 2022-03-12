@@ -17,9 +17,8 @@ use {
     cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, EventMode},
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
-    fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io::{self as fio, NodeProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         future::BoxFuture, lock::Mutex, select, stream::FuturesUnordered, FutureExt, StreamExt,
         TryStreamExt,
@@ -203,7 +202,7 @@ async fn maybe_create_event_result(
 
 fn create_directory_ready_payload(
     name: String,
-    node: &NodeProxy,
+    node: &fio::NodeProxy,
 ) -> Result<fsys::EventResult, fidl::Error> {
     let node = {
         let (node_clone, server_end) = fidl::endpoints::create_proxy()?;

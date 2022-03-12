@@ -5,7 +5,7 @@
 use {
     anyhow::format_err,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
@@ -61,7 +61,7 @@ fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     let raw_dir = E::open_dir(&path)?;
     let zircon_channel = fdio::clone_channel(&raw_dir)?;
     let async_channel = fasync::Channel::from_channel(zircon_channel)?;
-    let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
+    let directory = fio::DirectoryProxy::from_channel(async_channel);
     Ok(async move {
         let watcher = Watcher::new(directory).await?;
         Ok(watcher
@@ -133,7 +133,7 @@ mod tests {
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fasync::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
-        let dir = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
+        let dir = fio::DirectoryProxy::from_channel(async_channel);
         let monitor_fut = device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl");
         pin_mut!(monitor_fut);
 

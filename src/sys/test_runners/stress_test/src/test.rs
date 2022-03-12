@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode},
     fidl_fuchsia_component_runner::ComponentNamespaceEntry,
     fidl_fuchsia_data::{DictionaryEntry, DictionaryValue},
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_stresstest::{ActorMarker, ActorProxy, Error},
     fuchsia_async::{Task, TimeoutExt},
     fuchsia_component::client::connect_to_protocol_at_dir_root,
@@ -54,7 +54,7 @@ impl ActorInstance {
                 format_err!("Realm.CreateChild failed to create {} with error: {:?}", name, e)
             })?;
 
-        let (exposed_dir, server_end) = create_proxy::<DirectoryMarker>()
+        let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>()
             .context("Could not create endpoints for exposed dir")?;
         let mut child_ref =
             ChildRef { name: name.clone(), collection: Some(ACTOR_COLLECTION_NAME.to_string()) };

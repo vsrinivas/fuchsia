@@ -6,6 +6,7 @@
 //! created for unittests and integration tests.
 
 use {
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_wlan_devmgr::IsolatedDevmgrMarker,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
@@ -42,13 +43,13 @@ impl IsolatedDeviceEnv {
 
     /// Opens a path as a directory
     pub fn open_dir<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+        let flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE;
         Self::open(path.as_ref().to_str().unwrap(), flags)
     }
 
     /// Opens a path as a file
     pub fn open_file<P: AsRef<Path>>(path: P) -> Result<File, zx::Status> {
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         Self::open(path.as_ref().to_str().unwrap(), flags)
     }
 }

@@ -11,10 +11,7 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountRequest, AccountRequestStream, Lifetime,
 };
-use fidl_fuchsia_io::{
-    DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
-    OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-};
+use fidl_fuchsia_io as fio;
 use fuchsia_zircon::Status;
 use futures::{lock::Mutex, prelude::*, select};
 use identity_common::{TaskGroup, TaskGroupCancel, TaskGroupError};
@@ -252,7 +249,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
     /// Implements the GetDataDirectory method
     async fn get_data_directory(
         &self,
-        data_directory: ServerEnd<DirectoryMarker>,
+        data_directory: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<(), faccount::Error> {
         match &*self.state.lock().await {
             State::Locked => {
@@ -262,11 +259,11 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
             State::Unlocked { minfs, .. } => minfs
                 .root_dir()
                 .open(
-                    OPEN_RIGHT_READABLE
-                        | OPEN_RIGHT_WRITABLE
-                        | OPEN_FLAG_DIRECTORY
-                        | OPEN_FLAG_CREATE,
-                    MODE_TYPE_DIRECTORY,
+                    fio::OPEN_RIGHT_READABLE
+                        | fio::OPEN_RIGHT_WRITABLE
+                        | fio::OPEN_FLAG_DIRECTORY
+                        | fio::OPEN_FLAG_CREATE,
+                    fio::MODE_TYPE_DIRECTORY,
                     DEFAULT_DIR,
                     ServerEnd::new(data_directory.into_channel()),
                 )
@@ -285,7 +282,6 @@ mod test {
         crate::{disk_management::MockMinfs, keys::Key, testing::CallCounter},
         async_trait::async_trait,
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
-        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon::Status,
         io_util::{directory, file, node::OpenError},
         vfs::execution_scope::ExecutionScope,
@@ -396,16 +392,21 @@ mod test {
         assert!(!directory_exists(&account, DEFAULT_DIR).await);
 
         // Get a directory.
-        let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir, dir_server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(account.get_data_directory(dir_server_end).await, Ok(()));
 
         // The act of getting a data directory should have created the default client directory.
         assert!(directory_exists(&account, DEFAULT_DIR).await);
 
         // Verify the directory we got is usable.
-        let file = directory::open_file(&dir, "testfile", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-            .await
-            .expect("opening test file");
+        let file = directory::open_file(
+            &dir,
+            "testfile",
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("opening test file");
         file::write(&file, "test").await.expect("writing file");
     }
 

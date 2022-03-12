@@ -16,11 +16,7 @@ use {
     },
     anyhow::Error,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeMarker, SeekOrigin,
-        VmoFlags, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{
         self as zx,
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -40,7 +36,7 @@ pub struct FileConnection<T: 'static + File> {
     file: OpenFile<T>,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
-    requests: FileRequestStream,
+    requests: fio::FileRequestStream,
 
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
     /// received with [`value@FileRequest::Clone`].
@@ -83,7 +79,7 @@ impl<T: 'static + File> FileConnection<T> {
         scope: ExecutionScope,
         file: Arc<T>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
         readable: bool,
         writable: bool,
         executable: bool,
@@ -103,7 +99,7 @@ impl<T: 'static + File> FileConnection<T> {
         scope: ExecutionScope,
         file: Arc<T>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
         readable: bool,
         writable: bool,
         executable: bool,
@@ -130,14 +126,14 @@ impl<T: 'static + File> FileConnection<T> {
             }
         };
 
-        if flags & OPEN_FLAG_TRUNCATE != 0 {
+        if flags & fio::OPEN_FLAG_TRUNCATE != 0 {
             if let Err(status) = file.truncate(0).await {
                 send_on_open_with_error(flags, server_end, status);
                 return;
             }
         }
 
-        let info = if flags & OPEN_FLAG_DESCRIBE != 0 {
+        let info = if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
             match file.describe(flags) {
                 Ok(info) => Some(info),
                 Err(status) => {
@@ -150,7 +146,7 @@ impl<T: 'static + File> FileConnection<T> {
         };
 
         let (requests, control_handle) =
-            match ServerEnd::<FileMarker>::new(server_end.into_channel())
+            match ServerEnd::<fio::FileMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()
             {
                 Ok((requests, control_handle)) => (requests, control_handle),
@@ -215,18 +211,18 @@ impl<T: 'static + File> FileConnection<T> {
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
-    async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
+    async fn handle_request(&mut self, req: fio::FileRequest) -> Result<ConnectionState, Error> {
         match req {
-            FileRequest::Clone { flags, object, control_handle: _ } => {
+            fio::FileRequest::Clone { flags, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "File::Clone");
                 self.handle_clone(self.flags, flags, object);
             }
-            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::FileRequest::Reopen { options, object_request, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "File::Reopen");
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            FileRequest::CloseDeprecated { responder } => {
+            fio::FileRequest::CloseDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::CloseDeprecated");
                 let status = self.file.close().await.err().unwrap_or(zx::Status::OK);
                 // We are going to close the connection anyways, so there is no way to handle this
@@ -234,50 +230,50 @@ impl<T: 'static + File> FileConnection<T> {
                 let _ = responder.send(status.into_raw());
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close { responder } => {
+            fio::FileRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "File::Close");
                 responder.send(&mut self.file.close().await.map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Describe { responder } => {
+            fio::FileRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 responder.send(&mut self.file.describe(self.flags)?)?;
             }
-            FileRequest::Describe2 { query, responder } => {
+            fio::FileRequest::Describe2 { query, responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe2");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            FileRequest::SyncDeprecated { responder } => {
+            fio::FileRequest::SyncDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::SyncDeprecated");
                 let status = self.file.sync().await.err().unwrap_or(zx::Status::OK);
                 responder.send(status.into_raw())?;
             }
-            FileRequest::Sync { responder } => {
+            fio::FileRequest::Sync { responder } => {
                 fuchsia_trace::duration!("storage", "File::Sync");
                 responder.send(&mut self.file.sync().await.map_err(|status| status.into_raw()))?;
             }
-            FileRequest::GetAttr { responder } => {
+            fio::FileRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetAttr");
                 let (status, mut attrs) = self.handle_get_attr().await;
                 responder.send(status.into_raw(), &mut attrs)?;
             }
-            FileRequest::SetAttr { flags, attributes, responder } => {
+            fio::FileRequest::SetAttr { flags, attributes, responder } => {
                 fuchsia_trace::duration!("storage", "File::SetAttr");
                 let status = self.handle_set_attr(flags, attributes).await;
                 responder.send(status.into_raw())?;
             }
-            FileRequest::GetAttributes { query, responder } => {
+            fio::FileRequest::GetAttributes { query, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetAttributes");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            FileRequest::UpdateAttributes { attributes, responder } => {
+            fio::FileRequest::UpdateAttributes { attributes, responder } => {
                 fuchsia_trace::duration!("storage", "File::UpdateAttributes");
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            FileRequest::ReadDeprecated { count, responder } => {
+            fio::FileRequest::ReadDeprecated { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, bytes_read)) => {
@@ -292,7 +288,7 @@ impl<T: 'static + File> FileConnection<T> {
                 };
                 self.seek += advance;
             }
-            FileRequest::Read { count, responder } => {
+            fio::FileRequest::Read { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, bytes_read)) => {
@@ -306,7 +302,7 @@ impl<T: 'static + File> FileConnection<T> {
                 };
                 self.seek += advance;
             }
-            FileRequest::ReadAtDeprecated { offset, count, responder } => {
+            fio::FileRequest::ReadAtDeprecated { offset, count, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
                     "File::ReadAtDeprecated",
@@ -320,7 +316,7 @@ impl<T: 'static + File> FileConnection<T> {
                     Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
                 }
             }
-            FileRequest::ReadAt { offset, count, responder } => {
+            fio::FileRequest::ReadAt { offset, count, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
                     "File::ReadAt",
@@ -334,12 +330,12 @@ impl<T: 'static + File> FileConnection<T> {
                     Err(status) => responder.send(&mut Err(status.into_raw()))?,
                 }
             }
-            FileRequest::WriteDeprecated { data, responder } => {
+            fio::FileRequest::WriteDeprecated { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::WriteDeprecated", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 responder.send(status.into_raw(), actual)?;
             }
-            FileRequest::Write { data, responder } => {
+            fio::FileRequest::Write { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 if status == zx::Status::OK {
@@ -348,7 +344,7 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::WriteAtDeprecated { offset, data, responder } => {
+            fio::FileRequest::WriteAtDeprecated { offset, data, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
                     "File::WriteAtDeprecated",
@@ -358,7 +354,7 @@ impl<T: 'static + File> FileConnection<T> {
                 let (status, actual) = self.handle_write_at(offset, &data).await;
                 responder.send(status.into_raw(), actual)?;
             }
-            FileRequest::WriteAt { offset, data, responder } => {
+            fio::FileRequest::WriteAt { offset, data, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
                     "File::WriteAt",
@@ -372,12 +368,12 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::SeekDeprecated { offset, start, responder } => {
+            fio::FileRequest::SeekDeprecated { offset, start, responder } => {
                 fuchsia_trace::duration!("storage", "File::SeekDeprecated");
                 let (status, seek) = self.handle_seek(offset, start).await;
                 responder.send(status.into_raw(), seek)?;
             }
-            FileRequest::Seek { origin, offset, responder } => {
+            fio::FileRequest::Seek { origin, offset, responder } => {
                 fuchsia_trace::duration!("storage", "File::Seek");
                 let (status, seek) = self.handle_seek(offset, origin).await;
                 if status == zx::Status::OK {
@@ -386,12 +382,12 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::TruncateDeprecatedUseResize { length, responder } => {
+            fio::FileRequest::TruncateDeprecatedUseResize { length, responder } => {
                 fuchsia_trace::duration!("storage", "File::Truncate", "length" => length);
                 let status = self.handle_truncate(length).await;
                 responder.send(status.into_raw())?;
             }
-            FileRequest::Resize { length, responder } => {
+            fio::FileRequest::Resize { length, responder } => {
                 fuchsia_trace::duration!("storage", "File::Resize", "length" => length);
                 let status = self.handle_truncate(length).await;
                 if status == zx::Status::OK {
@@ -400,34 +396,36 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::GetFlags { responder } => {
+            fio::FileRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::GetFlagsDeprecatedUseNode { responder } => {
+            fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetFlagsDeprecatedUseNode");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::SetFlags { flags, responder } => {
+            fio::FileRequest::SetFlags { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::SetFlags");
-                self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
+                self.flags =
+                    (self.flags & !fio::OPEN_FLAG_APPEND) | (flags & fio::OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
-            FileRequest::SetFlagsDeprecatedUseNode { flags, responder } => {
+            fio::FileRequest::SetFlagsDeprecatedUseNode { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::SetFlagsDeprecatedUseNode");
-                self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
+                self.flags =
+                    (self.flags & !fio::OPEN_FLAG_APPEND) | (flags & fio::OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
-            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
+            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
                 let (status, mut buffer) =
-                    match self.handle_get_buffer(VmoFlags::from_bits_truncate(flags)).await {
+                    match self.handle_get_buffer(fio::VmoFlags::from_bits_truncate(flags)).await {
                         Ok(buffer) => (zx::Status::OK, Some(buffer)),
                         Err(status) => (status, None),
                     };
                 responder.send(status.into_raw(), buffer.as_mut())?;
             }
-            FileRequest::GetBackingMemory { flags, responder } => {
+            fio::FileRequest::GetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBackingMemory");
                 match self.handle_get_buffer(flags).await {
                     Ok(buffer) => {
@@ -438,11 +436,11 @@ impl<T: 'static + File> FileConnection<T> {
                     }
                 }
             }
-            FileRequest::AdvisoryLock { request: _, responder } => {
+            fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "File::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            FileRequest::QueryFilesystem { responder } => {
+            fio::FileRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
                 match self.file.query_filesystem() {
                     Err(status) => responder.send(status.into_raw(), None)?,
@@ -453,7 +451,12 @@ impl<T: 'static + File> FileConnection<T> {
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_clone(&mut self, parent_flags: u32, flags: u32, server_end: ServerEnd<NodeMarker>) {
+    fn handle_clone(
+        &mut self,
+        parent_flags: u32,
+        flags: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) {
         let flags = match inherit_rights_for_clone(parent_flags, flags) {
             Ok(updated) => updated,
             Err(status) => {
@@ -466,15 +469,15 @@ impl<T: 'static + File> FileConnection<T> {
         file.open(self.scope.clone(), flags, 0, Path::dot(), server_end);
     }
 
-    async fn handle_get_attr(&mut self) -> (zx::Status, NodeAttributes) {
+    async fn handle_get_attr(&mut self) -> (zx::Status, fio::NodeAttributes) {
         let attributes = match self.file.get_attrs().await {
             Ok(attr) => attr,
             Err(status) => {
                 return (
                     status,
-                    NodeAttributes {
+                    fio::NodeAttributes {
                         mode: 0,
-                        id: INO_UNKNOWN,
+                        id: fio::INO_UNKNOWN,
                         content_size: 0,
                         storage_size: 0,
                         link_count: 0,
@@ -492,11 +495,11 @@ impl<T: 'static + File> FileConnection<T> {
         offset: u64,
         count: u64,
     ) -> Result<(Vec<u8>, u64), zx::Status> {
-        if self.flags & OPEN_RIGHT_READABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_READABLE == 0 {
             return Err(zx::Status::BAD_HANDLE);
         }
 
-        if count > fidl_fuchsia_io::MAX_BUF {
+        if count > fio::MAX_BUF {
             return Err(zx::Status::OUT_OF_RANGE);
         }
 
@@ -505,11 +508,11 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_write(&mut self, content: &[u8]) -> (zx::Status, u64) {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
-        if self.flags & OPEN_FLAG_APPEND != 0 {
+        if self.flags & fio::OPEN_FLAG_APPEND != 0 {
             match self.file.append(content).await {
                 Ok((bytes, offset)) => {
                     self.seek = offset;
@@ -526,7 +529,7 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (zx::Status, u64) {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
@@ -537,20 +540,20 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     /// Move seek position to byte `offset` relative to the origin specified by `start`.
-    async fn handle_seek(&mut self, offset: i64, start: SeekOrigin) -> (zx::Status, u64) {
-        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+    async fn handle_seek(&mut self, offset: i64, start: fio::SeekOrigin) -> (zx::Status, u64) {
+        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
         let (status, new_seek) = match start {
-            SeekOrigin::Start => (zx::Status::OK, offset as i128),
+            fio::SeekOrigin::Start => (zx::Status::OK, offset as i128),
 
-            SeekOrigin::Current => {
+            fio::SeekOrigin::Current => {
                 assert_eq_size!(usize, i64);
                 (zx::Status::OK, self.seek as i128 + offset as i128)
             }
 
-            SeekOrigin::End => {
+            fio::SeekOrigin::End => {
                 let size = self.file.get_size().await;
                 assert_eq_size!(usize, i64, u64);
                 match size {
@@ -569,8 +572,8 @@ impl<T: 'static + File> FileConnection<T> {
         };
     }
 
-    async fn handle_set_attr(&mut self, flags: u32, attrs: NodeAttributes) -> zx::Status {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+    async fn handle_set_attr(&mut self, flags: u32, attrs: fio::NodeAttributes) -> zx::Status {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return zx::Status::BAD_HANDLE;
         }
 
@@ -581,7 +584,7 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_truncate(&mut self, length: u64) -> zx::Status {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return zx::Status::BAD_HANDLE;
         }
 
@@ -593,7 +596,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_get_buffer(
         &mut self,
-        flags: VmoFlags,
+        flags: fio::VmoFlags,
     ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         get_buffer_validate_flags(flags, self.flags)?;
         self.file.get_buffer(flags).await
@@ -603,18 +606,9 @@ impl<T: 'static + File> FileConnection<T> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        assert_matches::assert_matches,
-        async_trait::async_trait,
-        fidl_fuchsia_io::{
-            FileEvent, FileInfo, FileObject, FileProxy, NodeInfo, Representation, VmoFlags,
-            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE, NODE_ATTRIBUTE_FLAG_CREATION_TIME,
-            NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-        },
-        fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::prelude::*,
-        lazy_static::lazy_static,
-        std::sync::Mutex,
+        super::*, assert_matches::assert_matches, async_trait::async_trait,
+        fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
+        lazy_static::lazy_static, std::sync::Mutex,
     };
 
     #[derive(Debug, PartialEq)]
@@ -624,10 +618,10 @@ mod tests {
         WriteAt { offset: u64, content: Vec<u8> },
         Append { content: Vec<u8> },
         Truncate { length: u64 },
-        GetBuffer { flags: VmoFlags },
+        GetBuffer { flags: fio::VmoFlags },
         GetSize,
         GetAttrs,
-        SetAttrs { flags: u32, attrs: NodeAttributes },
+        SetAttrs { flags: u32, attrs: fio::NodeAttributes },
         Close,
         Sync,
     }
@@ -706,7 +700,7 @@ mod tests {
 
         async fn get_buffer(
             &self,
-            flags: VmoFlags,
+            flags: fio::VmoFlags,
         ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
             self.handle_operation(FileOperation::GetBuffer { flags })?;
             Err(zx::Status::NOT_SUPPORTED)
@@ -717,10 +711,10 @@ mod tests {
             Ok(self.file_size)
         }
 
-        async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
+        async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
             self.handle_operation(FileOperation::GetAttrs)?;
-            Ok(NodeAttributes {
-                mode: MODE_TYPE_FILE,
+            Ok(fio::NodeAttributes {
+                mode: fio::MODE_TYPE_FILE,
                 id: MOCK_FILE_ID,
                 content_size: self.file_size,
                 storage_size: 2 * self.file_size,
@@ -730,7 +724,11 @@ mod tests {
             })
         }
 
-        async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), zx::Status> {
+        async fn set_attrs(
+            &self,
+            flags: u32,
+            attrs: fio::NodeAttributes,
+        ) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::SetAttrs { flags, attrs })?;
             Ok(())
         }
@@ -752,7 +750,7 @@ mod tests {
             flags: u32,
             _mode: u32,
             path: Path,
-            server_end: ServerEnd<NodeMarker>,
+            server_end: ServerEnd<fio::NodeMarker>,
         ) {
             assert!(path.is_empty());
 
@@ -787,14 +785,14 @@ mod tests {
 
     struct TestEnv {
         pub file: Arc<MockFile>,
-        pub proxy: FileProxy,
+        pub proxy: fio::FileProxy,
         pub scope: ExecutionScope,
     }
 
     fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
         let file = MockFile::new(callback);
         let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().expect("Create proxy to succeed");
+            fidl::endpoints::create_proxy::<fio::FileMarker>().expect("Create proxy to succeed");
 
         let scope = ExecutionScope::new();
         FileConnection::create_connection(
@@ -814,7 +812,7 @@ mod tests {
     async fn test_open_flag_truncate() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE,
         );
         // Do a no-op sync() to make sure that the open has finished.
         let () = env.proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -822,7 +820,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE },
                 FileOperation::Truncate { length: 0 },
                 FileOperation::Sync,
             ]
@@ -833,15 +831,15 @@ mod tests {
     async fn test_clone_same_rights() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         );
         // Read from original proxy.
         let _: Vec<u8> = env.proxy.read(6).await.unwrap().map_err(zx::Status::from_raw).unwrap();
-        let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-        env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
+        let (clone_proxy, remote) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+        env.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
         // Seek and read from clone_proxy.
         let _: u64 = clone_proxy
-            .seek(SeekOrigin::Start, 100)
+            .seek(fio::SeekOrigin::Start, 100)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -856,9 +854,9 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::ReadAt { offset: 0, count: 6 },
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::ReadAt { offset: 100, count: 5 },
                 FileOperation::ReadAt { offset: 6, count: 5 },
             ]
@@ -867,32 +865,32 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_close_succeeds() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let () = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
-            vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE }, FileOperation::Close {},]
+            vec![FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE }, FileOperation::Close {},]
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_close_fails() {
-        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(only_allow_init), fio::OPEN_RIGHT_READABLE);
         let status = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(status, Err(zx::Status::IO));
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
-            vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE }, FileOperation::Close {},]
+            vec![FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE }, FileOperation::Close {},]
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_close_called_when_dropped() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let _ = env.proxy.sync().await;
         std::mem::drop(env.proxy);
         env.scope.shutdown();
@@ -901,7 +899,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::Sync,
                 FileOperation::Close,
             ]
@@ -910,11 +908,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_describe() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let info = env.proxy.describe().await.unwrap();
         match info {
-            NodeInfo::File { .. } => (),
-            _ => panic!("Expected NodeInfo::File, got {:?}", info),
+            fio::NodeInfo::File { .. } => (),
+            _ => panic!("Expected fio::NodeInfo::File, got {:?}", info),
         };
     }
 
@@ -925,8 +923,8 @@ mod tests {
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(
             attributes,
-            NodeAttributes {
-                mode: MODE_TYPE_FILE,
+            fio::NodeAttributes {
+                mode: fio::MODE_TYPE_FILE,
                 id: MOCK_FILE_ID,
                 content_size: *MOCK_FILE_SIZE,
                 storage_size: 2 * *MOCK_FILE_SIZE,
@@ -941,10 +939,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let result = env
             .proxy
-            .get_backing_memory(VmoFlags::READ)
+            .get_backing_memory(fio::VmoFlags::READ)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw);
@@ -953,8 +951,8 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::GetBuffer { flags: VmoFlags::READ },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
+                FileOperation::GetBuffer { flags: fio::VmoFlags::READ },
             ]
         );
     }
@@ -964,7 +962,7 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
         let result = env
             .proxy
-            .get_backing_memory(VmoFlags::READ)
+            .get_backing_memory(fio::VmoFlags::READ)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw);
@@ -975,34 +973,36 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer_vmo_exec_requires_right_executable() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let result = env
             .proxy
-            .get_backing_memory(VmoFlags::EXECUTE)
+            .get_backing_memory(fio::VmoFlags::EXECUTE)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
+        assert_eq!(*events, vec![FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_getflags() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE,
         );
         let (status, flags) = env.proxy.get_flags().await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         // OPEN_FLAG_TRUNCATE should get stripped because it only applies at open time.
-        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        assert_eq!(flags, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
             vec![
                 FileOperation::Init {
-                    flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE
+                    flags: fio::OPEN_RIGHT_READABLE
+                        | fio::OPEN_RIGHT_WRITABLE
+                        | fio::OPEN_FLAG_TRUNCATE
                 },
                 FileOperation::Truncate { length: 0 }
             ]
@@ -1013,31 +1013,39 @@ mod tests {
     async fn test_open_flag_describe() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
         );
         let event = env.proxy.take_event_stream().try_next().await.unwrap();
         match event {
-            Some(FileEvent::OnOpen_ { s, info: Some(boxed) }) => {
+            Some(fio::FileEvent::OnOpen_ { s, info: Some(boxed) }) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                assert_eq!(*boxed, NodeInfo::File(FileObject { event: None, stream: None }));
+                assert_eq!(
+                    *boxed,
+                    fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
+                );
             }
-            Some(FileEvent::OnConnectionInfo { info }) => {
-                assert_eq!(info.representation, Some(Representation::File(FileInfo::EMPTY)));
+            Some(fio::FileEvent::OnConnectionInfo { info }) => {
+                assert_eq!(
+                    info.representation,
+                    Some(fio::Representation::File(fio::FileInfo::EMPTY))
+                );
             }
-            e => panic!("Expected OnOpen event with NodeInfo::File, got {:?}", e),
+            e => panic!("Expected OnOpen event with fio::NodeInfo::File, got {:?}", e),
         }
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
             vec![FileOperation::Init {
-                flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE
+                flags: fio::OPEN_RIGHT_READABLE
+                    | fio::OPEN_RIGHT_WRITABLE
+                    | fio::OPEN_FLAG_DESCRIBE
             },]
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_succeeds() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let data = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -1045,7 +1053,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::ReadAt { offset: 0, count: 10 },
             ]
         );
@@ -1053,26 +1061,21 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_not_readable() {
-        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_WRITABLE);
+        let env = init_mock_file(Box::new(only_allow_init), fio::OPEN_RIGHT_WRITABLE);
         let result = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_validates_count() {
-        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
-        let result = env
-            .proxy
-            .read(fidl_fuchsia_io::MAX_BUF + 1)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
+        let env = init_mock_file(Box::new(only_allow_init), fio::OPEN_RIGHT_READABLE);
+        let result = env.proxy.read(fio::MAX_BUF + 1).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_succeeds() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let data = env.proxy.read_at(5, 10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![10, 11, 12, 13, 14]);
 
@@ -1080,7 +1083,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::ReadAt { offset: 10, count: 5 },
             ]
         );
@@ -1088,22 +1091,18 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_validates_count() {
-        let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
-        let result = env
-            .proxy
-            .read_at(fidl_fuchsia_io::MAX_BUF + 1, 0)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
+        let env = init_mock_file(Box::new(only_allow_init), fio::OPEN_RIGHT_READABLE);
+        let result =
+            env.proxy.read_at(fio::MAX_BUF + 1, 0).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_start() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let offset = env
             .proxy
-            .seek(SeekOrigin::Start, 10)
+            .seek(fio::SeekOrigin::Start, 10)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -1116,7 +1115,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::ReadAt { offset: 10, count: 1 },
             ]
         );
@@ -1124,10 +1123,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_cur() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let offset = env
             .proxy
-            .seek(SeekOrigin::Start, 10)
+            .seek(fio::SeekOrigin::Start, 10)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -1136,7 +1135,7 @@ mod tests {
 
         let offset = env
             .proxy
-            .seek(SeekOrigin::Current, -2)
+            .seek(fio::SeekOrigin::Current, -2)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -1149,7 +1148,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::ReadAt { offset: 8, count: 1 },
             ]
         );
@@ -1157,18 +1156,22 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_before_start() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let result =
-            env.proxy.seek(SeekOrigin::Current, -4).await.unwrap().map_err(zx::Status::from_raw);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
+        let result = env
+            .proxy
+            .seek(fio::SeekOrigin::Current, -4)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_end() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let offset = env
             .proxy
-            .seek(SeekOrigin::End, -4)
+            .seek(fio::SeekOrigin::End, -4)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -1181,7 +1184,7 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },
                 FileOperation::GetSize, // for the seek
                 FileOperation::ReadAt { offset, count: 1 },
             ]
@@ -1190,8 +1193,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_attrs() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
-        let mut set_attrs = NodeAttributes {
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_WRITABLE);
+        let mut set_attrs = fio::NodeAttributes {
             mode: 0,
             id: 0,
             content_size: 0,
@@ -1203,7 +1206,7 @@ mod tests {
         let status = env
             .proxy
             .set_attr(
-                NODE_ATTRIBUTE_FLAG_CREATION_TIME | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
                 &mut set_attrs,
             )
             .await
@@ -1213,10 +1216,10 @@ mod tests {
         assert_eq!(
             *events,
             vec![
-                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::SetAttrs {
-                    flags: NODE_ATTRIBUTE_FLAG_CREATION_TIME
-                        | NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                    flags: fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME
+                        | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
                     attrs: set_attrs
                 },
             ]
@@ -1225,12 +1228,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_flags() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
-        let status = env.proxy.set_flags(OPEN_FLAG_APPEND).await.unwrap();
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_WRITABLE);
+        let status = env.proxy.set_flags(fio::OPEN_FLAG_APPEND).await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let (status, flags) = env.proxy.get_flags().await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        assert_eq!(flags, OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND);
+        assert_eq!(flags, fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1243,13 +1246,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_resize() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_WRITABLE);
         let () = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
             &events[..],
             [
-                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::Truncate { length: 10 },
             ]
         );
@@ -1257,16 +1260,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_resize_no_perms() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let result = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
+        assert_eq!(*events, vec![FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
         let count = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(count, data.len() as u64);
@@ -1274,7 +1277,7 @@ mod tests {
         assert_matches!(
             &events[..],
             [
-                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::WriteAt { offset: 0, .. },
             ]
         );
@@ -1287,17 +1290,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_no_perms() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_READABLE);
         let data = "Hello, world!".as_bytes();
         let result = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
+        assert_eq!(*events, vec![FileOperation::Init { flags: fio::OPEN_RIGHT_READABLE },]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_at() {
-        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
         let count =
             env.proxy.write_at(data, 10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1306,7 +1309,7 @@ mod tests {
         assert_matches!(
             &events[..],
             [
-                FileOperation::Init { flags: OPEN_RIGHT_WRITABLE },
+                FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::WriteAt { offset: 10, .. },
             ]
         );
@@ -1321,21 +1324,21 @@ mod tests {
     async fn test_append() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
-            OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND,
         );
         let data = "Hello, world!".as_bytes();
         let count = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(count, data.len() as u64);
         let offset = env
             .proxy
-            .seek(SeekOrigin::Current, 0)
+            .seek(fio::SeekOrigin::Current, 0)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
             .unwrap();
         assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
-        const INIT_FLAGS: u32 = OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND;
+        const INIT_FLAGS: u32 = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND;
         assert_matches!(
             &events[..],
             [FileOperation::Init { flags: INIT_FLAGS }, FileOperation::Append { .. },]

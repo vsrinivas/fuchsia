@@ -11,9 +11,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
     futures::TryStreamExt,
     routing::capability_source::InternalCapability,
@@ -35,7 +33,7 @@ pub static SCHEME: &str = "fuchsia-boot";
 /// URL syntax:
 /// - fuchsia-boot:///path/within/bootfs#meta/component.cm
 pub struct FuchsiaBootResolver {
-    boot_proxy: DirectoryProxy,
+    boot_proxy: fio::DirectoryProxy,
 }
 
 impl FuchsiaBootResolver {
@@ -59,7 +57,7 @@ impl FuchsiaBootResolver {
 
     /// Create a new FuchsiaBootResolver that resolves URLs within the given directory. Used for
     /// injection in unit tests.
-    fn new_from_directory(proxy: DirectoryProxy) -> FuchsiaBootResolver {
+    fn new_from_directory(proxy: fio::DirectoryProxy) -> FuchsiaBootResolver {
         FuchsiaBootResolver { boot_proxy: proxy }
     }
 
@@ -192,7 +190,6 @@ mod tests {
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_data as fdata,
-        fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_async::Task,
         io_util::directory::open_in_namespace,
         std::sync::Weak,
@@ -202,12 +199,12 @@ mod tests {
         },
     };
 
-    fn serve_vfs_dir(root: Arc<impl DirectoryEntry>) -> (Task<()>, DirectoryProxy) {
+    fn serve_vfs_dir(root: Arc<impl DirectoryEntry>) -> (Task<()>, fio::DirectoryProxy) {
         let fs_scope = ExecutionScope::new();
-        let (client, server) = create_proxy::<DirectoryMarker>().unwrap();
+        let (client, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         root.open(
             fs_scope.clone(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             0,
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),
@@ -223,7 +220,7 @@ mod tests {
         let root = pseudo_directory! {
             "packages" => pseudo_directory! {
                 "hello-world" => remote_dir(
-                    open_in_namespace("/pkg", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE).unwrap(),
+                    open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE).unwrap(),
                 ),
             },
         };

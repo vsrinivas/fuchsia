@@ -11,8 +11,7 @@ use {
         MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
         WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     std::path::PathBuf,
 };
 
@@ -21,14 +20,14 @@ macro_rules! connect_to_factory_store_provider {
         let provider = fuchsia_component::client::connect_to_protocol::<$t>()
             .expect("Failed to connect to protocol");
 
-        let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
         provider.get_factory_store(dir_server).expect("Failed to get factory store");
         dir_proxy
     }};
 }
 
 async fn read_file_from_proxy<'a>(
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
     let file =
@@ -37,7 +36,7 @@ async fn read_file_from_proxy<'a>(
 }
 
 async fn assert_file<'a>(
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: &'a fio::DirectoryProxy,
     filename: &'a str,
     expected_contents: &'a [u8],
 ) -> Result<(), Error> {

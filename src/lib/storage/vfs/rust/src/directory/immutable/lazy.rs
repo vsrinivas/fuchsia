@@ -26,10 +26,7 @@ use crate::{
 use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     futures::{
         channel::mpsc::{self, UnboundedSender},
@@ -128,7 +125,7 @@ pub struct Lazy<T: LazyDirectory> {
 }
 
 enum WatcherCommand {
-    RegisterWatcher { scope: ExecutionScope, mask: WatchMask, watcher: DirectoryWatcher },
+    RegisterWatcher { scope: ExecutionScope, mask: fio::WatchMask, watcher: DirectoryWatcher },
     UnregisterWatcher { key: usize },
 }
 
@@ -187,7 +184,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
         flags: u32,
         mode: u32,
         mut path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let name = match path.next() {
             Some(name) => name.to_string(),
@@ -212,7 +209,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -229,7 +226,7 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         // Failure to send a command may indicate that the directory does not support watchers, or
@@ -245,11 +242,11 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
         let _ = self.watchers.unbounded_send(WatcherCommand::UnregisterWatcher { key });
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ true),
-            id: INO_UNKNOWN,
+            id: fio::INO_UNKNOWN,
             content_size: 0,
             storage_size: 0,
             link_count: 1,

@@ -66,10 +66,7 @@ mod tests {
 
     use {
         ext4_read_only::structs::MIN_EXT4_SIZE,
-        fidl_fuchsia_io::{
-            DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
-            OPEN_RIGHT_READABLE,
-        },
+        fidl_fuchsia_io as fio,
         fuchsia_zircon::Vmo,
         std::fs,
         vfs::directory::test_utils::{run_server_client, DirentsSameInodeBuilder},
@@ -104,18 +101,18 @@ mod tests {
 
         let tree = construct_fs(buffer).expect("construct_fs parses the vmo");
 
-        run_server_client(OPEN_RIGHT_READABLE, tree, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, tree, |root| async move {
             {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".");
-                expected.add(DIRENT_TYPE_FILE, b"file1");
-                expected.add(DIRENT_TYPE_DIRECTORY, b"inner");
-                expected.add(DIRENT_TYPE_DIRECTORY, b"lost+found");
+                let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
+                expected.add(fio::DIRENT_TYPE_FILE, b"file1");
+                expected.add(fio::DIRENT_TYPE_DIRECTORY, b"inner");
+                expected.add(fio::DIRENT_TYPE_DIRECTORY, b"lost+found");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
 
-            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE;
             let compare = "file1 contents.\n";
             open_as_vmo_file_assert_content!(&root, flags, "file1", compare);
 

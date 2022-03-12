@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::warn,
     rand::{thread_rng, Rng},
 };
@@ -70,9 +66,9 @@ pub enum StagedFileError {
 /// as such, StagedFile should only be used in cases where we must supply our
 /// own |DirectoryProxy|.
 pub struct StagedFile<'a> {
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: &'a fio::DirectoryProxy,
     temp_filename: String,
-    file_proxy: FileProxy,
+    file_proxy: fio::FileProxy,
 }
 
 impl<'a> StagedFile<'a> {
@@ -80,7 +76,7 @@ impl<'a> StagedFile<'a> {
     /// |dir_proxy| that respects |filename_prefix|.
     /// |filename_prefix| must have a length > 0.
     pub async fn new(
-        dir_proxy: &'a DirectoryProxy,
+        dir_proxy: &'a fio::DirectoryProxy,
         tempfile_prefix: &str,
     ) -> Result<StagedFile<'a>, StagedFileError> {
         if tempfile_prefix.len() == 0 {
@@ -92,7 +88,7 @@ impl<'a> StagedFile<'a> {
         let file_proxy = io_util::directory::open_file(
             &dir_proxy,
             &temp_filename,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )
         .await?;
 
@@ -138,7 +134,7 @@ impl<'a> StagedFile<'a> {
     /// Helper function to unlink files in a directory given a function that
     /// takes a filename and returns whether or not to unlink it.
     pub async fn cleanup_stale_files(
-        dir_proxy: &DirectoryProxy,
+        dir_proxy: &fio::DirectoryProxy,
         tempfile_prefix: &str,
     ) -> Result<(), Vec<StagedFileError>> {
         let dirents_res = files_async::readdir(dir_proxy).await;
@@ -150,7 +146,7 @@ impl<'a> StagedFile<'a> {
             // For filenames that are known to be temporary, try to remove them.
             if name.starts_with(tempfile_prefix) {
                 warn!("Removing unexpected file '{}' from directory", &name);
-                let fidl_res = dir_proxy.unlink(&name, UnlinkOptions::EMPTY).await;
+                let fidl_res = dir_proxy.unlink(&name, fio::UnlinkOptions::EMPTY).await;
                 match fidl_res {
                     Err(x) => failures.push(StagedFileError::FidlError(x.into())),
                     Ok(unlink_res) => {
@@ -190,7 +186,6 @@ fn generate_tempfile_name(prefix: &str) -> String {
 
 #[cfg(test)]
 mod test {
-
     use {super::*, tempfile::TempDir};
 
     #[fuchsia::test]
@@ -198,7 +193,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut staged_file = StagedFile::new(&dir, "prefix-").await.unwrap();
@@ -207,7 +202,7 @@ mod test {
 
         // Check that target_file_01 has been created.
         let open_res =
-            io_util::directory::open_file(&dir, "target_file_01", OPEN_RIGHT_READABLE).await;
+            io_util::directory::open_file(&dir, "target_file_01", fio::OPEN_RIGHT_READABLE).await;
         assert!(open_res.is_ok());
         let file_bytes = io_util::file::read(&open_res.unwrap()).await.unwrap();
         assert_eq!(file_bytes, b"this is some file content");
@@ -218,17 +213,17 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         assert!(StagedFile::new(&dir, "").await.is_err());
     }
 
-    async fn write_test_file_content(dir_proxy: &DirectoryProxy, filename: &str, data: &[u8]) {
+    async fn write_test_file_content(dir_proxy: &fio::DirectoryProxy, filename: &str, data: &[u8]) {
         let file_proxy = io_util::directory::open_file(
             &dir_proxy,
             &filename,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )
         .await
         .expect("could not open test file");
@@ -236,11 +231,11 @@ mod test {
     }
 
     async fn file_exists_with_data(
-        dir_proxy: &DirectoryProxy,
+        dir_proxy: &fio::DirectoryProxy,
         filename: &str,
         expected_data: &[u8],
     ) -> bool {
-        let file = io_util::directory::open_file(&dir_proxy, &filename, OPEN_RIGHT_READABLE)
+        let file = io_util::directory::open_file(&dir_proxy, &filename, fio::OPEN_RIGHT_READABLE)
             .await
             .expect("could not open file");
         let bytes = io_util::file::read(&file).await.expect("could not read file data");
@@ -252,7 +247,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 

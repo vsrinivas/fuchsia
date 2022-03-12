@@ -5,17 +5,12 @@
 //! Utility functions for fuchsia.io nodes.
 
 use {
-    fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileInfo, FileObject,
-        FileProxy, NodeEvent, NodeInfo, NodeProxy, Representation, Vmofile,
-    },
-    fuchsia_zircon_status as zx_status,
-    futures::prelude::*,
+    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx_status, futures::prelude::*,
     thiserror::Error,
 };
 
 #[cfg(target_os = "fuchsia")]
-use {fidl_fuchsia_io::NodeMarker, fuchsia_zircon as zx};
+use fuchsia_zircon as zx;
 
 /// An error encountered while opening a node
 #[derive(Debug, Error)]
@@ -110,65 +105,64 @@ pub enum Kind {
 }
 
 impl Kind {
-    fn kind_of(info: &NodeInfo) -> Kind {
+    fn kind_of(info: &fio::NodeInfo) -> Kind {
         match info {
-            NodeInfo::Service(_) => Kind::Service,
-            NodeInfo::File(_) => Kind::File,
-            NodeInfo::Directory(_) => Kind::Directory,
-            NodeInfo::Pipe(_) => Kind::Pipe,
-            NodeInfo::Vmofile(_) => Kind::Vmofile,
-            NodeInfo::Device(_) => Kind::Device,
-            NodeInfo::Tty(_) => Kind::Tty,
-            NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
-            NodeInfo::StreamSocket(_) => Kind::StreamSocket,
-            NodeInfo::RawSocket(_) => Kind::RawSocket,
-            NodeInfo::PacketSocket(_) => Kind::PacketSocket,
+            fio::NodeInfo::Service(_) => Kind::Service,
+            fio::NodeInfo::File(_) => Kind::File,
+            fio::NodeInfo::Directory(_) => Kind::Directory,
+            fio::NodeInfo::Pipe(_) => Kind::Pipe,
+            fio::NodeInfo::Vmofile(_) => Kind::Vmofile,
+            fio::NodeInfo::Device(_) => Kind::Device,
+            fio::NodeInfo::Tty(_) => Kind::Tty,
+            fio::NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
+            fio::NodeInfo::StreamSocket(_) => Kind::StreamSocket,
+            fio::NodeInfo::RawSocket(_) => Kind::RawSocket,
+            fio::NodeInfo::PacketSocket(_) => Kind::PacketSocket,
         }
     }
 
-    fn expect_file(info: NodeInfo) -> Result<(), Kind> {
+    fn expect_file(info: fio::NodeInfo) -> Result<(), Kind> {
         match info {
-            NodeInfo::File(FileObject { event: _, stream: None })
-            | NodeInfo::Vmofile(Vmofile { .. }) => Ok(()),
+            fio::NodeInfo::File(fio::FileObject { event: _, stream: None })
+            | fio::NodeInfo::Vmofile(fio::Vmofile { .. }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
 
-    fn expect_directory(info: NodeInfo) -> Result<(), Kind> {
+    fn expect_directory(info: fio::NodeInfo) -> Result<(), Kind> {
         match info {
-            NodeInfo::Directory(DirectoryObject) => Ok(()),
+            fio::NodeInfo::Directory(fio::DirectoryObject) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
 
-    fn kind_of2(representation: &Representation) -> Kind {
+    fn kind_of2(representation: &fio::Representation) -> Kind {
         match representation {
-            Representation::Connector(_) => Kind::Service,
-            Representation::Directory(_) => Kind::Directory,
-            Representation::File(_) => Kind::File,
-            Representation::Memory(_) => Kind::Vmofile,
-            Representation::Pipe(_) => Kind::Pipe,
-            Representation::Device(_) => Kind::Device,
-            Representation::Tty(_) => Kind::Tty,
-            Representation::DatagramSocket(_) => Kind::DatagramSocket,
-            Representation::StreamSocket(_) => Kind::StreamSocket,
-            Representation::RawSocket(_) => Kind::RawSocket,
+            fio::Representation::Connector(_) => Kind::Service,
+            fio::Representation::Directory(_) => Kind::Directory,
+            fio::Representation::File(_) => Kind::File,
+            fio::Representation::Memory(_) => Kind::Vmofile,
+            fio::Representation::Pipe(_) => Kind::Pipe,
+            fio::Representation::Device(_) => Kind::Device,
+            fio::Representation::Tty(_) => Kind::Tty,
+            fio::Representation::DatagramSocket(_) => Kind::DatagramSocket,
+            fio::Representation::StreamSocket(_) => Kind::StreamSocket,
+            fio::Representation::RawSocket(_) => Kind::RawSocket,
             _ => Kind::Unknown,
         }
     }
 
-    fn expect_file2(representation: &Representation) -> Result<(), Kind> {
+    fn expect_file2(representation: &fio::Representation) -> Result<(), Kind> {
         match representation {
-            Representation::File(FileInfo { stream: None, .. }) | Representation::Memory(_) => {
-                Ok(())
-            }
+            fio::Representation::File(fio::FileInfo { stream: None, .. })
+            | fio::Representation::Memory(_) => Ok(()),
             other => Err(Kind::kind_of2(other)),
         }
     }
 
-    fn expect_directory2(representation: &Representation) -> Result<(), Kind> {
+    fn expect_directory2(representation: &fio::Representation) -> Result<(), Kind> {
         match representation {
-            Representation::Directory(_) => Ok(()),
+            fio::Representation::Directory(_) => Ok(()),
             other => Err(Kind::kind_of2(other)),
         }
     }
@@ -192,9 +186,9 @@ pub fn connect_in_namespace(
 /// Opens the given `path` from the current namespace as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
 #[cfg(target_os = "fuchsia")]
-pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError> {
+pub fn open_in_namespace(path: &str, flags: u32) -> Result<fio::NodeProxy, OpenError> {
     let (node, server_end) =
-        fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::NodeMarker>().map_err(OpenError::CreateProxy)?;
 
     connect_in_namespace(path, flags, server_end.into_channel()).map_err(OpenError::Namespace)?;
 
@@ -202,14 +196,16 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError>
 }
 
 /// Gracefully closes the node proxy from the remote end.
-pub async fn close(node: NodeProxy) -> Result<(), CloseError> {
+pub async fn close(node: fio::NodeProxy) -> Result<(), CloseError> {
     let result = node.close().await.map_err(CloseError::SendCloseRequest)?;
     result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
 
 /// Consume the first event from this NodeProxy's event stream, returning the proxy if it is
 /// the expected type or an error otherwise.
-pub(crate) async fn verify_node_describe_event(node: NodeProxy) -> Result<NodeProxy, OpenError> {
+pub(crate) async fn verify_node_describe_event(
+    node: fio::NodeProxy,
+) -> Result<fio::NodeProxy, OpenError> {
     let mut events = node.take_event_stream();
     match events
         .next()
@@ -217,11 +213,11 @@ pub(crate) async fn verify_node_describe_event(node: NodeProxy) -> Result<NodePr
         .ok_or(OpenError::OnOpenEventStreamClosed)?
         .map_err(OpenError::OnOpenDecode)?
     {
-        NodeEvent::OnOpen_ { s: status, info } => {
+        fio::NodeEvent::OnOpen_ { s: status, info } => {
             let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
             info.ok_or(OpenError::MissingOnOpenInfo)?;
         }
-        NodeEvent::OnConnectionInfo { .. } => (),
+        fio::NodeEvent::OnConnectionInfo { .. } => (),
     }
 
     Ok(node)
@@ -230,8 +226,8 @@ pub(crate) async fn verify_node_describe_event(node: NodeProxy) -> Result<NodePr
 /// Consume the first event from this DirectoryProxy's event stream, returning the proxy if it is
 /// the expected type or an error otherwise.
 pub(crate) async fn verify_directory_describe_event(
-    node: DirectoryProxy,
-) -> Result<DirectoryProxy, OpenError> {
+    node: fio::DirectoryProxy,
+) -> Result<fio::DirectoryProxy, OpenError> {
     let mut events = node.take_event_stream();
     match events
         .next()
@@ -239,14 +235,14 @@ pub(crate) async fn verify_directory_describe_event(
         .ok_or(OpenError::OnOpenEventStreamClosed)?
         .map_err(OpenError::OnOpenDecode)?
     {
-        DirectoryEvent::OnOpen_ { s: status, info } => {
+        fio::DirectoryEvent::OnOpen_ { s: status, info } => {
             let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
             let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_directory(*info).map_err(|actual| {
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
             })?;
         }
-        DirectoryEvent::OnConnectionInfo { info } => {
+        fio::DirectoryEvent::OnConnectionInfo { info } => {
             let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_directory2(&representation).map_err(|actual| {
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
@@ -259,7 +255,9 @@ pub(crate) async fn verify_directory_describe_event(
 
 /// Consume the first event from this FileProxy's event stream, returning the proxy if it is the
 /// expected type or an error otherwise.
-pub(crate) async fn verify_file_describe_event(node: FileProxy) -> Result<FileProxy, OpenError> {
+pub(crate) async fn verify_file_describe_event(
+    node: fio::FileProxy,
+) -> Result<fio::FileProxy, OpenError> {
     let mut events = node.take_event_stream();
 
     match events
@@ -268,13 +266,13 @@ pub(crate) async fn verify_file_describe_event(node: FileProxy) -> Result<FilePr
         .ok_or(OpenError::OnOpenEventStreamClosed)?
         .map_err(OpenError::OnOpenDecode)?
     {
-        FileEvent::OnOpen_ { s: status, info } => {
+        fio::FileEvent::OnOpen_ { s: status, info } => {
             let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
             let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_file(*info)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
         }
-        FileEvent::OnConnectionInfo { info } => {
+        fio::FileEvent::OnConnectionInfo { info } => {
             let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
             let () = Kind::expect_file2(&representation)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;

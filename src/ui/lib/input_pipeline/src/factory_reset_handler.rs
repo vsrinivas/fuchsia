@@ -9,7 +9,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     async_trait::async_trait,
     async_utils::hanging_get::server::HangingGet,
-    fidl_fuchsia_input_report as fidl_input_report,
+    fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_io as fio,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::PlayerMarker,
     fidl_fuchsia_recovery::FactoryResetMarker,
@@ -308,8 +308,7 @@ impl FactoryResetHandler {
         let sound_file = File::open(FACTORY_RESET_SOUND_PATH)
             .context("Failed to open factory reset sound file")?;
         let sound_channel = Channel::from(fdio::transfer_fd(sound_file)?);
-        let sound_endpoint =
-            fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(sound_channel);
+        let sound_endpoint = fidl::endpoints::ClientEnd::<fio::FileMarker>::new(sound_channel);
 
         // Play sound
         let sound_player = fuchsia_component::client::connect_to_protocol::<PlayerMarker>()?;

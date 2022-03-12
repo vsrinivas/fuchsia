@@ -8,7 +8,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::AsHandleRef,
@@ -104,7 +104,8 @@ impl PkgfsRamdiskBuilder {
         let argv = args.iter().map(AsRef::as_ref).collect::<Vec<&CStr>>();
 
         let pkgfs_root_handle_info = HandleInfo::new(HandleType::User0, 0);
-        let (proxy, pkgfs_root_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (proxy, pkgfs_root_server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
         let process = scoped_task::spawn_etc(
             scoped_task::job_default(),
@@ -137,7 +138,7 @@ impl PkgfsRamdiskBuilder {
 /// If dropped, only the ramdisk and dynamic index are deleted.
 pub struct PkgfsRamdisk {
     blobfs: BlobfsRamdisk,
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
     process: Scoped<fuchsia_zircon::Process>,
     args: PkgfsArgs,
 }
@@ -160,14 +161,14 @@ impl PkgfsRamdisk {
     }
 
     /// Returns a new connection to pkgfs's root directory as a raw zircon channel.
-    pub fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    pub fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
         let (root_clone, server_end) = fuchsia_zircon::Channel::create()?;
-        self.proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 
     /// Returns a new connection to pkgfs's root directory as a DirectoryProxy.
-    pub fn root_dir_proxy(&self) -> Result<DirectoryProxy, Error> {
+    pub fn root_dir_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
         Ok(self.root_dir_handle()?.into_proxy()?)
     }
 

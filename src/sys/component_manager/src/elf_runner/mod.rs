@@ -690,9 +690,6 @@ mod tests {
         fidl_fuchsia_diagnostics_types::{
             ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
         },
-        fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        },
         fidl_fuchsia_logger::LogSinkRequest,
         fidl_fuchsia_process_lifecycle::LifecycleMarker,
         fidl_fuchsia_process_lifecycle::LifecycleProxy,
@@ -733,13 +730,13 @@ mod tests {
     }
 
     fn hello_world_startinfo(
-        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        runtime_dir: Option<ServerEnd<fio::DirectoryMarker>>,
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()
@@ -786,13 +783,13 @@ mod tests {
     /// ComponentController protocol can be used to stop the component when the
     /// test is done inspecting the launched component.
     fn lifecycle_startinfo(
-        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        runtime_dir: Option<ServerEnd<fio::DirectoryMarker>>,
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()
@@ -886,7 +883,7 @@ mod tests {
 
     // TODO(fsamuel): A variation of this is used in a couple of places. We should consider
     // refactoring this into a test util file.
-    async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
+    async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
         let file_proxy =
             io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
                 .expect("Failed to open file.");
@@ -999,7 +996,7 @@ mod tests {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
 
-        let runtime_dir_proxy = DirectoryProxy::from_channel(
+        let runtime_dir_proxy = fio::DirectoryProxy::from_channel(
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
 
@@ -1287,7 +1284,7 @@ mod tests {
 
     /// Modify the standard test StartInfo to request ambient_mark_vmo_exec job policy
     fn lifecycle_startinfo_mark_vmo_exec(
-        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        runtime_dir: Option<ServerEnd<fio::DirectoryMarker>>,
     ) -> fcrunner::ComponentStartInfo {
         let mut start_info = lifecycle_startinfo(runtime_dir);
         start_info.program.as_mut().map(|dict| {
@@ -1304,7 +1301,7 @@ mod tests {
 
     // Modify the standard test StartInfo to add a main_process_critical request
     fn hello_world_startinfo_main_process_critical(
-        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        runtime_dir: Option<ServerEnd<fio::DirectoryMarker>>,
     ) -> fcrunner::ComponentStartInfo {
         let mut start_info = hello_world_startinfo(runtime_dir);
         start_info.program.as_mut().map(|dict| {
@@ -1352,7 +1349,7 @@ mod tests {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info =
             lifecycle_startinfo_mark_vmo_exec(Some(ServerEnd::new(runtime_dir_server)));
-        let runtime_dir_proxy = DirectoryProxy::from_channel(
+        let runtime_dir_proxy = fio::DirectoryProxy::from_channel(
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
 
@@ -1473,13 +1470,13 @@ mod tests {
     }
 
     fn hello_world_startinfo_forward_stdout_to_log(
-        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+        runtime_dir: Option<ServerEnd<fio::DirectoryMarker>>,
         mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
     ) -> fcrunner::ComponentStartInfo {
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace(
             "/pkg",
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .unwrap()
         .into_channel()
@@ -1599,7 +1596,7 @@ mod tests {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create().unwrap();
         let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
 
-        let runtime_dir_proxy = DirectoryProxy::from_channel(
+        let runtime_dir_proxy = fio::DirectoryProxy::from_channel(
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
 

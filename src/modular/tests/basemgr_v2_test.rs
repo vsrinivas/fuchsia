@@ -6,8 +6,8 @@ use {
     anyhow::{anyhow, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_hardware_power_statecontrol as fhpower,
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
-    fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
@@ -445,8 +445,9 @@ async fn local_admin_impl(
 }
 
 // Returns a `DirectoryProxy` that serves the directory entry `dir`.
-fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
-    let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
+    let (client_end, server_end) =
+        fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
     let scope = vfs::execution_scope::ExecutionScope::new();
     dir.open(
         scope,
@@ -470,7 +471,9 @@ async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> 
                         control_handle: _,
                     } => {
                         let () = serve_sessionmgr(
-                            launch_info.directory_request.expect("no DirectoryRequest received"),
+                            launch_info
+                                .directory_request
+                                .expect("no fio::DirectoryRequest received"),
                             controller.unwrap(),
                         )
                         .await

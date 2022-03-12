@@ -52,9 +52,7 @@ use {
     fdio::{service_connect_at, spawn_etc, Namespace, SpawnAction, SpawnOptions},
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_fs::AdminSynchronousProxy,
-    fidl_fuchsia_io::{
-        DirectorySynchronousProxy, FilesystemInfo, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,
@@ -95,9 +93,8 @@ impl FSInstance {
         args: Vec<&CStr>,
         mount_point: &str,
     ) -> Result<Self, Error> {
-        let (export_root, server_end) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
-        let export_root = DirectorySynchronousProxy::new(export_root.into_channel());
+        let (export_root, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+        let export_root = fio::DirectorySynchronousProxy::new(export_root.into_channel());
 
         let actions = vec![
             // export root handle is passed in as a PA_DIRECTORY_REQUEST handle at argument 0
@@ -113,19 +110,17 @@ impl FSInstance {
 
         // Wait until the filesystem is ready to take incoming requests. We want
         // mount errors to show before we bind to the namespace.
-        let (root_dir, server_end) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
+        let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
         export_root.open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
-                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE,
+            fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_POSIX_WRITABLE,
             0,
             "root",
             server_end.into(),
         )?;
-        let root_dir = DirectorySynchronousProxy::new(root_dir.into_channel());
-        let _: fidl_fuchsia_io::NodeInfo =
-            root_dir.describe(zx::Time::INFINITE).context("failed to mount")?;
+        let root_dir = fio::DirectorySynchronousProxy::new(root_dir.into_channel());
+        let _: fio::NodeInfo = root_dir.describe(zx::Time::INFINITE).context("failed to mount")?;
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
@@ -159,15 +154,15 @@ impl FSInstance {
 
     /// Get `FileSystemInfo` struct from which one can find out things like
     /// free space, used space, block size, etc.
-    fn query_filesystem(&self) -> Result<Box<FilesystemInfo>, Error> {
+    fn query_filesystem(&self) -> Result<Box<fio::FilesystemInfo>, Error> {
         let (client_chan, server_chan) = zx::Channel::create()?;
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
-            .connect(&self.mount_point, fidl_fuchsia_io::OPEN_RIGHT_READABLE, server_chan)
+            .connect(&self.mount_point, fio::OPEN_RIGHT_READABLE, server_chan)
             .context("failed to connect to filesystem")?;
 
-        let proxy = DirectorySynchronousProxy::new(client_chan);
+        let proxy = fio::DirectorySynchronousProxy::new(client_chan);
 
         let (status, result) = proxy
             .query_filesystem(zx::Time::INFINITE)
@@ -250,7 +245,7 @@ pub trait FSConfig {
 
 /// Manages a block device for filesystem operations
 pub struct Filesystem<FSC: FSConfig> {
-    device: NodeSynchronousProxy,
+    device: fio::NodeSynchronousProxy,
     config: FSC,
     instance: Option<FSInstance>,
 }
@@ -268,15 +263,16 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// Manage a filesystem on a device at the given channel. The device is not formatted, mounted,
     /// or modified at this point.
     pub fn from_channel(client_end: zx::Channel, config: FSC) -> Result<Self, Error> {
-        let device = NodeSynchronousProxy::new(client_end);
+        let device = fio::NodeSynchronousProxy::new(client_end);
         Ok(Self { device, config, instance: None })
     }
 
     /// Returns a channel to the block device.
     fn get_channel(&mut self) -> Result<zx::Channel, Error> {
         let (channel, server) = zx::Channel::create()?;
-        let () =
-            self.device.clone(CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(server))?;
+        let () = self
+            .device
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(server))?;
         Ok(channel)
     }
 
@@ -344,7 +340,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
     /// Get `FileSystemInfo` struct from which one can find out things like
     /// free space, used space, block size, etc.
-    pub fn query_filesystem(&self) -> Result<Box<FilesystemInfo>, Error> {
+    pub fn query_filesystem(&self) -> Result<Box<fio::FilesystemInfo>, Error> {
         if let Some(instance) = &self.instance {
             instance.query_filesystem()
         } else {

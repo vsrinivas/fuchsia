@@ -25,11 +25,7 @@ use {
     either::{Left, Right},
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, WatchMask, MODE_TYPE_BLOCK_DEVICE,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     std::{
         any::Any,
@@ -169,7 +165,7 @@ impl FxDirectory {
             // lock in place.
             let keys =
                 [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
-            let transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
+            let transaction_or_guard = if last_segment && flags & fio::OPEN_FLAG_CREATE != 0 {
                 Left(fs.clone().new_transaction(&keys, Options::default()).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
@@ -180,18 +176,20 @@ impl FxDirectory {
 
             match current_dir.directory.lookup(name).await? {
                 Some((object_id, object_descriptor)) => {
-                    if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+                    if transaction_or_guard.is_left()
+                        && flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0
+                    {
                         bail!(FxfsError::AlreadyExists);
                     }
                     if last_segment {
                         match object_descriptor {
                             ObjectDescriptor::File => {
-                                if flags & OPEN_FLAG_DIRECTORY > 0 {
+                                if flags & fio::OPEN_FLAG_DIRECTORY > 0 {
                                     bail!(FxfsError::NotDir)
                                 }
                             }
                             ObjectDescriptor::Directory => {
-                                if flags & OPEN_FLAG_NOT_DIRECTORY > 0 {
+                                if flags & fio::OPEN_FLAG_NOT_DIRECTORY > 0 {
                                     bail!(FxfsError::NotFile)
                                 }
                             }
@@ -243,16 +241,16 @@ impl FxDirectory {
         name: &str,
         mode: u32,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        match mode & MODE_TYPE_MASK {
-            MODE_TYPE_DIRECTORY => Ok(Arc::new(FxDirectory::new(
+        match mode & fio::MODE_TYPE_MASK {
+            fio::MODE_TYPE_DIRECTORY => Ok(Arc::new(FxDirectory::new(
                 Some(self.clone()),
                 self.directory.create_child_dir(transaction, name).await?,
             )) as Arc<dyn FxNode>),
-            0 | MODE_TYPE_FILE | MODE_TYPE_BLOCK_DEVICE => {
+            0 | fio::MODE_TYPE_FILE | fio::MODE_TYPE_BLOCK_DEVICE => {
                 Ok(FxFile::new(self.directory.create_child_file(transaction, name).await?)
                     as Arc<dyn FxNode>)
             }
-            MODE_TYPE_SOCKET | MODE_TYPE_SERVICE => {
+            fio::MODE_TYPE_SOCKET | fio::MODE_TYPE_SERVICE => {
                 bail!(FxfsError::NotSupported)
             }
             _ => bail!(FxfsError::InvalidArgs),
@@ -387,13 +385,13 @@ impl MutableDirectory for FxDirectory {
         Ok(())
     }
 
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
-        let crtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
+    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
+        let crtime = if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
             Some(Timestamp::from_nanos(attrs.creation_time))
         } else {
             None
         };
-        let mtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
+        let mtime = if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
             Some(Timestamp::from_nanos(attrs.modification_time))
         } else {
             None
@@ -436,7 +434,7 @@ impl DirectoryEntry for FxDirectory {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         scope.clone().spawn_with_shutdown(move |shutdown| async move {
             match self.lookup(flags, mode, path).await {
@@ -455,7 +453,7 @@ impl DirectoryEntry for FxDirectory {
                         .await;
                     } else if node.is::<FxFile>() {
                         let node = node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!());
-                        if mode == MODE_TYPE_BLOCK_DEVICE {
+                        if mode == fio::MODE_TYPE_BLOCK_DEVICE {
                             let mut server =
                                 BlockServer::new(node, scope, server_end.into_channel());
                             let _ = server.run().await;
@@ -549,12 +547,12 @@ impl Directory for FxDirectory {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let controller =
             self.watchers.lock().unwrap().add(scope.clone(), self.clone(), mask, watcher);
-        if mask.contains(WatchMask::EXISTING) && !self.is_deleted() {
+        if mask.contains(fio::WatchMask::EXISTING) && !self.is_deleted() {
             scope.spawn(async move {
                 let layer_set = self.store().tree().layer_set();
                 let mut merger = layer_set.merger();
@@ -593,9 +591,9 @@ impl Directory for FxDirectory {
         self.watchers.lock().unwrap().remove(key);
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let props = self.directory.get_properties().await.map_err(map_to_status)?;
-        Ok(NodeAttributes {
+        Ok(fio::NodeAttributes {
             mode: V_TYPE_DIR | V_IRWXU | V_IRGRP | V_IXGRP | V_IROTH | V_IXOTH,
             id: self.directory.object_id(),
             content_size: props.data_attribute_size,
@@ -611,7 +609,7 @@ impl Directory for FxDirectory {
         Ok(())
     }
 
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         let store = self.directory.store();
         Ok(store
             .filesystem()
@@ -627,11 +625,7 @@ mod tests {
             close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
             open_file_checked, TestFixture,
         },
-        fidl_fuchsia_io::UnlinkOptions,
-        fidl_fuchsia_io::{
-            DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
+        fidl_fuchsia_io as fio,
         files_async::{DirEntry, DirentKind},
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
@@ -656,9 +650,12 @@ mod tests {
             let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
             let root = fixture.root();
 
-            let flags =
-                if i == 0 { OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE } else { OPEN_RIGHT_READABLE };
-            let dir = open_dir_checked(&root, flags, MODE_TYPE_DIRECTORY, "foo").await;
+            let flags = if i == 0 {
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE
+            } else {
+                fio::OPEN_RIGHT_READABLE
+            };
+            let dir = open_dir_checked(&root, flags, fio::MODE_TYPE_DIRECTORY, "foo").await;
             close_dir_checked(dir).await;
 
             device = fixture.close().await;
@@ -671,7 +668,7 @@ mod tests {
         let root = fixture.root();
 
         assert_eq!(
-            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -688,12 +685,17 @@ mod tests {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
-        let f =
-            open_file_checked(&root, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
-                .await;
+        let f = open_file_checked(
+            &root,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
+            "foo",
+        )
+        .await;
         close_file_checked(f).await;
 
-        let f = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
+        let f =
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
         close_file_checked(f).await;
 
         fixture.close().await;
@@ -706,8 +708,8 @@ mod tests {
 
         let d = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
@@ -715,14 +717,16 @@ mod tests {
 
         let d = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo/bar",
         )
         .await;
         close_dir_checked(d).await;
 
-        let d = open_dir_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, "foo/bar").await;
+        let d =
+            open_dir_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_DIRECTORY, "foo/bar")
+                .await;
         close_dir_checked(d).await;
 
         fixture.close().await;
@@ -735,8 +739,8 @@ mod tests {
 
         let f = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -745,8 +749,8 @@ mod tests {
         assert_eq!(
             open_file(
                 &root,
-                OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
-                MODE_TYPE_FILE,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_FILE,
                 "foo",
             )
             .await
@@ -767,8 +771,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -791,13 +795,13 @@ mod tests {
 
         close_file_checked(file).await;
 
-        root.unlink("foo", UnlinkOptions::EMPTY)
+        root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
 
         assert_eq!(
-            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -809,8 +813,8 @@ mod tests {
         // Create another file so we can verify that the extents were actually freed.
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "bar",
         )
         .await;
@@ -828,20 +832,20 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
         close_file_checked(file).await;
 
-        root.unlink("foo", UnlinkOptions::EMPTY)
+        root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
 
         assert_eq!(
-            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -860,8 +864,8 @@ mod tests {
 
         let file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo",
         )
         .await;
@@ -869,14 +873,14 @@ mod tests {
         let buf = vec![0xaa as u8; 512];
         write_file_bytes(&file, buf.as_slice()).await.expect("write failed");
 
-        root.unlink("foo", UnlinkOptions::EMPTY)
+        root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
 
         // The child should immediately appear unlinked...
         assert_eq!(
-            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -886,7 +890,7 @@ mod tests {
         );
 
         // But its contents should still be readable from the other handle.
-        file.seek(SeekOrigin::Start, 0)
+        file.seek(fio::SeekOrigin::Start, 0)
             .await
             .expect("seek failed")
             .map_err(Status::from_raw)
@@ -905,19 +909,23 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
-        let f =
-            open_file_checked(&dir, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "bar")
-                .await;
+        let f = open_file_checked(
+            &dir,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
+            "bar",
+        )
+        .await;
         close_file_checked(f).await;
 
         assert_eq!(
             Status::from_raw(
-                root.unlink("foo", UnlinkOptions::EMPTY)
+                root.unlink("foo", fio::UnlinkOptions::EMPTY)
                     .await
                     .expect("FIDL call failed")
                     .expect_err("unlink succeeded")
@@ -925,11 +933,11 @@ mod tests {
             Status::NOT_EMPTY
         );
 
-        dir.unlink("bar", UnlinkOptions::EMPTY)
+        dir.unlink("bar", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
-        root.unlink("foo", UnlinkOptions::EMPTY)
+        root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
@@ -946,24 +954,29 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
-        root.unlink("foo", UnlinkOptions::EMPTY)
+        root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
 
         assert_eq!(
-            open_file(&dir, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar")
-                .await
-                .expect_err("Create file succeeded")
-                .root_cause()
-                .downcast_ref::<Status>()
-                .expect("No status"),
+            open_file(
+                &dir,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_CREATE,
+                fio::MODE_TYPE_FILE,
+                "bar"
+            )
+            .await
+            .expect_err("Create file succeeded")
+            .root_cause()
+            .downcast_ref::<Status>()
+            .expect("No status"),
             &Status::ACCESS_DENIED,
         );
 
@@ -982,8 +995,8 @@ mod tests {
         const GRANDCHILD: &str = "baz";
         open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             PARENT,
         )
         .await;
@@ -991,8 +1004,8 @@ mod tests {
         let open_parent = || async {
             open_dir_checked(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 PARENT,
             )
             .await
@@ -1007,8 +1020,8 @@ mod tests {
         for _ in 0..100 {
             let d = open_dir_checked(
                 &parent,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 CHILD,
             )
             .await;
@@ -1019,7 +1032,7 @@ mod tests {
                 let wait_time = rand::thread_rng().gen_range(0..5);
                 fasync::Timer::new(Duration::from_millis(wait_time)).await;
                 match parent
-                    .unlink(CHILD, UnlinkOptions::EMPTY)
+                    .unlink(CHILD, fio::UnlinkOptions::EMPTY)
                     .await
                     .expect("FIDL call failed")
                     .map_err(Status::from_raw)
@@ -1035,8 +1048,8 @@ mod tests {
             let writer = fasync::Task::spawn(async move {
                 let child_or = open_dir(
                     &parent,
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                    MODE_TYPE_DIRECTORY,
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    fio::MODE_TYPE_DIRECTORY,
                     CHILD,
                 )
                 .await;
@@ -1053,8 +1066,8 @@ mod tests {
                 child.describe().await.expect("describe failed");
                 match open_file(
                     &child,
-                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-                    MODE_TYPE_FILE,
+                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE,
+                    fio::MODE_TYPE_FILE,
                     GRANDCHILD,
                 )
                 .await
@@ -1065,7 +1078,7 @@ mod tests {
                         // We added the child before the directory was deleted; go ahead and
                         // clean up.
                         child
-                            .unlink(GRANDCHILD, UnlinkOptions::EMPTY)
+                            .unlink(GRANDCHILD, fio::UnlinkOptions::EMPTY)
                             .await
                             .expect("FIDL call failed")
                             .expect("unlink failed");
@@ -1098,8 +1111,8 @@ mod tests {
         let open_dir = || {
             open_dir_checked(
                 &root,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 "foo",
             )
         };
@@ -1107,21 +1120,31 @@ mod tests {
 
         let files = ["eenie", "meenie", "minie", "moe"];
         for file in &files {
-            let file =
-                open_file_checked(parent.as_ref(), OPEN_FLAG_CREATE, MODE_TYPE_FILE, file).await;
+            let file = open_file_checked(
+                parent.as_ref(),
+                fio::OPEN_FLAG_CREATE,
+                fio::MODE_TYPE_FILE,
+                file,
+            )
+            .await;
             close_file_checked(file).await;
         }
         let dirs = ["fee", "fi", "fo", "fum"];
         for dir in &dirs {
-            let dir =
-                open_dir_checked(parent.as_ref(), OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, dir).await;
+            let dir = open_dir_checked(
+                parent.as_ref(),
+                fio::OPEN_FLAG_CREATE,
+                fio::MODE_TYPE_DIRECTORY,
+                dir,
+            )
+            .await;
             close_dir_checked(dir).await;
         }
 
-        let readdir = |dir: Arc<DirectoryProxy>| async move {
+        let readdir = |dir: Arc<fio::DirectoryProxy>| async move {
             let status = dir.rewind().await.expect("FIDL call failed");
             Status::ok(status).expect("rewind failed");
-            let (status, buf) = dir.read_dirents(MAX_BUF).await.expect("FIDL call failed");
+            let (status, buf) = dir.read_dirents(fio::MAX_BUF).await.expect("FIDL call failed");
             Status::ok(status).expect("read_dirents failed");
             let mut entries = vec![];
             for res in files_async::parse_dir_entries(&buf) {
@@ -1144,7 +1167,7 @@ mod tests {
 
         // Remove an entry.
         parent
-            .unlink(&expected_entries.pop().unwrap().name, UnlinkOptions::EMPTY)
+            .unlink(&expected_entries.pop().unwrap().name, fio::UnlinkOptions::EMPTY)
             .await
             .expect("FIDL call failed")
             .expect("unlink failed");
@@ -1162,15 +1185,16 @@ mod tests {
 
         let parent = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
         let files = ["a", "b"];
         for file in &files {
-            let file = open_file_checked(&parent, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file).await;
+            let file =
+                open_file_checked(&parent, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, file).await;
             close_file_checked(file).await;
         }
 
@@ -1216,8 +1240,8 @@ mod tests {
 
         let dir = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
@@ -1232,7 +1256,7 @@ mod tests {
         attrs.creation_time = crtime;
         attrs.modification_time = mtime;
         let status = dir
-            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
+            .set_attr(fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");
@@ -1247,7 +1271,7 @@ mod tests {
         attrs.creation_time = 0u64; // This should be ignored since we don't set the flag.
         attrs.modification_time = mtime;
         let status = dir
-            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
+            .set_attr(fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");

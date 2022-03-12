@@ -5,9 +5,8 @@
 /// This module tests calls to the get_blob API.
 use {
     super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy,
-    fidl_fuchsia_io::FileEvent::OnOpen_, fidl_fuchsia_pkg::GetBlobError,
-    fidl_fuchsia_pkg_ext::BlobId, fuchsia_zircon::Status, futures::channel::oneshot,
-    vfs::file::vmo::read_only_static,
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg::GetBlobError, fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_zircon::Status, futures::channel::oneshot, vfs::file::vmo::read_only_static,
 };
 
 async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_contents: &str) {
@@ -21,7 +20,7 @@ async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_conte
     assert_eq!(res.unwrap(), Ok(()));
     assert_matches!(
         file_proxy.take_event_stream().next().await,
-        Some(Ok(OnOpen_{s, info: Some(_)})) if Status::ok(s) == Ok(())
+        Some(Ok(fio::FileEvent::OnOpen_{s, info: Some(_)})) if Status::ok(s) == Ok(())
     );
     assert_eq!(io_util::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
 }
@@ -89,7 +88,7 @@ async fn missing_blob() {
     assert_eq!(res.unwrap(), Ok(()));
     assert_matches!(
         file_proxy.take_event_stream().next().await,
-        Some(Ok(OnOpen_{s, info: None})) if  Status::from_raw(s) == Status::NOT_FOUND
+        Some(Ok(fio::FileEvent::OnOpen_{s, info: None})) if  Status::from_raw(s) == Status::NOT_FOUND
     );
     assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }

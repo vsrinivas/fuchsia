@@ -7,9 +7,8 @@ use {
     fidl::endpoints::{self, Proxy},
     fidl::HandleBased,
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
-    fidl_fuchsia_process as fprocess, fuchsia_async as fasync,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
+    fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
@@ -47,7 +46,7 @@ async fn collections() {
     // Start the children.
     for name in vec!["a", "b"] {
         let mut child_ref = new_child_ref(name, "coll");
-        let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         realm
             .open_exposed_dir(&mut child_ref, server_end)
             .await
@@ -70,7 +69,7 @@ async fn collections() {
 
     // Binding to destroyed child should fail.
     {
-        let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
         let res = realm
             .open_exposed_dir(&mut child_ref, server_end)
@@ -103,7 +102,7 @@ async fn collections() {
             .expect("failed to create second child a");
     }
     {
-        let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
         realm
             .open_exposed_dir(&mut child_ref, server_end)
@@ -202,12 +201,12 @@ async fn list_children(realm: &fcomponent::RealmProxy) -> Result<String, Error> 
     Ok(children.join(","))
 }
 
-fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
+fn open_trigger_svc(dir: &fio::DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
     let node_proxy = io_util::open_node(
         dir,
         &PathBuf::from("fidl.test.components.Trigger"),
         OPEN_RIGHT_READABLE,
-        MODE_TYPE_SERVICE,
+        fio::MODE_TYPE_SERVICE,
     )
     .context("failed to open trigger service")?;
     Ok(ftest::TriggerProxy::new(node_proxy.into_channel().unwrap()))

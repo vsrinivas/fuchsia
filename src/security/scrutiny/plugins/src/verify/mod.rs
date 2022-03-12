@@ -123,8 +123,7 @@ mod tests {
         },
         fidl::encoding::encode_persistent_with_context,
         fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_component_internal as component_internal,
-        fidl_fuchsia_io::Operations,
+        fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_io as fio,
         maplit::hashset,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         routing::{
@@ -192,7 +191,7 @@ mod tests {
     fn new_use_directory_decl(
         source: UseSource,
         source_name: CapabilityName,
-        rights: Operations,
+        rights: fio::Operations,
     ) -> UseDirectoryDecl {
         UseDirectoryDecl {
             source,
@@ -209,7 +208,7 @@ mod tests {
         source_name: CapabilityName,
         target: OfferTarget,
         target_name: CapabilityName,
-        rights: Option<Operations>,
+        rights: Option<fio::Operations>,
     ) -> OfferDirectoryDecl {
         OfferDirectoryDecl {
             source,
@@ -222,7 +221,7 @@ mod tests {
         }
     }
 
-    fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
+    fn new_directory_decl(name: CapabilityName, rights: fio::Operations) -> DirectoryDecl {
         DirectoryDecl { name, source_path: None, rights }
     }
 
@@ -381,7 +380,7 @@ mod tests {
 
         let good_dir_name = CapabilityName("good_dir".to_string());
         let bad_dir_name = CapabilityName("bad_dir".to_string());
-        let offer_rights = Operations::CONNECT;
+        let offer_rights = fio::Operations::CONNECT;
 
         let protocol_name = CapabilityName("protocol".to_string());
 

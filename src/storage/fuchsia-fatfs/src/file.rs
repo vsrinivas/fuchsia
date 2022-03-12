@@ -13,10 +13,7 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, VmoFlags, INO_UNKNOWN,
-        MODE_TYPE_FILE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
@@ -260,11 +257,11 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _flags: VmoFlags) -> Result<Buffer, Status> {
+    async fn get_buffer(&self, _flags: fio::VmoFlags) -> Result<Buffer, Status> {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file(&fs_lock)?;
         let content_size = file.len() as u64;
@@ -276,9 +273,9 @@ impl VfsFile for FatFile {
         let cluster_size = fs_lock.cluster_size() as u64;
         let storage_size = ((content_size + cluster_size - 1) / cluster_size) * cluster_size;
 
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_FILE | S_IRUSR | S_IWUSR,
-            id: INO_UNKNOWN,
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_FILE | S_IRUSR | S_IWUSR,
+            id: fio::INO_UNKNOWN,
             content_size,
             storage_size,
             link_count: 1,
@@ -292,7 +289,7 @@ impl VfsFile for FatFile {
     // use a TimeProvider to change the creation/modification time of a file after the fact,
     // so we need to use the deprecated methods.
     #[allow(deprecated)]
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
@@ -332,7 +329,7 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         self.filesystem.query_filesystem()
     }
 }
@@ -344,7 +341,7 @@ impl DirectoryEntry for FatFile {
         flags: u32,
         _mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let status = if !path.is_empty() {
             Err(Status::NOT_DIR)
@@ -448,8 +445,8 @@ mod tests {
     async fn test_get_attrs() {
         let file = TestFile::new();
         let attrs = file.get_attrs().await.expect("get_attrs succeeds");
-        assert_eq!(attrs.mode, MODE_TYPE_FILE | S_IRUSR | S_IWUSR);
-        assert_eq!(attrs.id, INO_UNKNOWN);
+        assert_eq!(attrs.mode, fio::MODE_TYPE_FILE | S_IRUSR | S_IWUSR);
+        assert_eq!(attrs.id, fio::INO_UNKNOWN);
         assert_eq!(attrs.content_size, TEST_FILE_CONTENT.len() as u64);
         assert!(attrs.storage_size > TEST_FILE_CONTENT.len() as u64);
         assert_eq!(attrs.link_count, 1);

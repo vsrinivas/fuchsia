@@ -6,7 +6,7 @@
 
 use {
     fidl::prelude::*,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::stream::StreamExt as _,
     tcp_stream_ext::TcpStreamExt as _,
@@ -39,9 +39,9 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
                         let (s0, _s1) =
                             zx::Socket::create(zx::SocketOpts::STREAM).expect("create zx socket");
                         let () = responder
-                            .send(&mut fidl_fuchsia_io::NodeInfo::StreamSocket(
-                                fidl_fuchsia_io::StreamSocket { socket: s0 },
-                            ))
+                            .send(&mut fio::NodeInfo::StreamSocket(fio::StreamSocket {
+                                socket: s0,
+                            }))
                             .expect("send Describe response");
                     }
                     fidl_fuchsia_posix_socket::StreamSocketRequest::GetTcpUserTimeout {

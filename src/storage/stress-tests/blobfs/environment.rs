@@ -9,7 +9,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_hardware_block_partition::Guid,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fs_management::Blobfs,
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
@@ -48,7 +48,11 @@ pub struct BlobfsEnvironment {
 }
 
 pub fn open_blobfs_root() -> Directory {
-    Directory::from_namespace(BLOBFS_MOUNT_PATH, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE).unwrap()
+    Directory::from_namespace(
+        BLOBFS_MOUNT_PATH,
+        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+    )
+    .unwrap()
 }
 
 impl BlobfsEnvironment {

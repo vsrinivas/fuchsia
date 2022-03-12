@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     fuchsia_url::pkg_url::PkgUrl,
     serde::{Deserialize, Serialize},
     thiserror::Error,
@@ -117,14 +117,12 @@ pub fn serialize_packages_json(pkg_urls: &[PkgUrl]) -> Result<Vec<u8>, Serialize
 }
 
 /// Returns the list of package urls that go in the universe of this update package.
-pub(crate) async fn packages(proxy: &DirectoryProxy) -> Result<Vec<PkgUrl>, ParsePackageError> {
-    let file = io_util::directory::open_file(
-        &proxy,
-        "packages.json",
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    )
-    .await
-    .map_err(ParsePackageError::FailedToOpen)?;
+pub(crate) async fn packages(
+    proxy: &fio::DirectoryProxy,
+) -> Result<Vec<PkgUrl>, ParsePackageError> {
+    let file = io_util::directory::open_file(&proxy, "packages.json", fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(ParsePackageError::FailedToOpen)?;
 
     let contents = io_util::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
     parse_packages_json(&contents)

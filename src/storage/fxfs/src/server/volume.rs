@@ -414,11 +414,7 @@ mod tests {
                 volume::FxVolumeAndRoot,
             },
         },
-        fidl_fuchsia_io::{
-            MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
-        fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
         std::sync::Arc,
@@ -435,21 +431,24 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
         let dst = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE
+                | fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
         .await;
 
-        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a").await;
+        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
         close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
@@ -460,7 +459,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -468,7 +467,7 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "bar/b").await;
+        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "bar/b").await;
         close_file_checked(f).await;
 
         close_dir_checked(dst).await;
@@ -484,13 +483,13 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
-        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a").await;
+        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a").await;
         close_file_checked(f).await;
 
         let (status, src_token) = src.get_token().await.expect("FIDL call failed");
@@ -501,7 +500,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -509,7 +508,7 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "foo/b").await;
+        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "foo/b").await;
         close_file_checked(f).await;
 
         close_dir_checked(src).await;
@@ -524,16 +523,19 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
         let dst = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE
+                | fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
         .await;
@@ -541,8 +543,8 @@ mod tests {
         // The src file is non-empty.
         let src_file = open_file_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_FILE,
             "foo/a",
         )
         .await;
@@ -551,7 +553,7 @@ mod tests {
         close_file_checked(src_file).await;
 
         // The dst file is empty (so we can distinguish it).
-        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar/b").await;
+        let f = open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "bar/b").await;
         close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
@@ -562,7 +564,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -570,7 +572,8 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "bar/b").await;
+        let file =
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "bar/b").await;
         let buf = read_file_bytes(&file).await.expect("read file failed");
         assert_eq!(buf, vec![0xaa as u8; 8192]);
         close_file_checked(file).await;
@@ -588,16 +591,19 @@ mod tests {
 
         let src = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo",
         )
         .await;
 
         let dst = open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE
+                | fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_DIRECTORY,
+            fio::MODE_TYPE_DIRECTORY,
             "bar",
         )
         .await;
@@ -605,13 +611,13 @@ mod tests {
         // The src dir is non-empty.
         open_dir_checked(
             &root,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             "foo/a",
         )
         .await;
-        open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a/file").await;
-        open_dir_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, "bar/b").await;
+        open_file_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_FILE, "foo/a/file").await;
+        open_dir_checked(&root, fio::OPEN_FLAG_CREATE, fio::MODE_TYPE_DIRECTORY, "bar/b").await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
@@ -621,7 +627,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_dir(&root, 0, MODE_TYPE_DIRECTORY, "foo/a")
+            open_dir(&root, 0, fio::MODE_TYPE_DIRECTORY, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -629,7 +635,7 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "bar/b/file").await;
+        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "bar/b/file").await;
         close_file_checked(f).await;
 
         close_dir_checked(dst).await;

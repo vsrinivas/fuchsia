@@ -33,10 +33,7 @@ use {
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_io::{
-        DirectoryMarker, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Koid},
     futures::{
         channel::oneshot,
@@ -120,7 +117,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
               flags: u32,
               mode: u32,
               path: Path,
-              server_end: ServerEnd<NodeMarker>| {
+              server_end: ServerEnd<fio::NodeMarker>| {
             match ty {
                 CapabilityType::Protocol => {
                     scope.spawn(async move {
@@ -190,7 +187,7 @@ impl MockResolver {
         } else {
             None
         };
-        let (client, server): (ClientEnd<DirectoryMarker>, ServerEnd<DirectoryMarker>) =
+        let (client, server): (ClientEnd<fio::DirectoryMarker>, ServerEnd<fio::DirectoryMarker>) =
             create_endpoints().unwrap();
 
         let sub_dir = pseudo_directory!(
@@ -198,8 +195,8 @@ impl MockResolver {
         );
         sub_dir.open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),
         );
@@ -240,7 +237,7 @@ impl Resolver for MockResolver {
     }
 }
 
-pub type HostFn = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
+pub type HostFn = Box<dyn Fn(ServerEnd<fio::DirectoryMarker>) + Send + Sync>;
 
 pub type ManagedNamespace = Mutex<Vec<fcrunner::ComponentNamespaceEntry>>;
 

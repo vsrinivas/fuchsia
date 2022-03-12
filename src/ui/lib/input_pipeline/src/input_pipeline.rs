@@ -8,9 +8,7 @@ use {
         input_handler,
     },
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_input_injection,
-    fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    fuchsia_async as fasync,
+    fidl_fuchsia_input_injection, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
@@ -264,7 +262,7 @@ impl InputPipeline {
                 return;
             }
             let dir_proxy =
-                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)
+                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, fio::OPEN_RIGHT_READABLE)
                     .expect("Unable to open input report directory.");
             let _ = Self::watch_for_devices(
                 device_watcher.unwrap(),
@@ -335,7 +333,7 @@ impl InputPipeline {
     /// If the input report directory or a file within it cannot be read.
     async fn watch_for_devices(
         mut device_watcher: Watcher,
-        dir_proxy: fidl_fuchsia_io::DirectoryProxy,
+        dir_proxy: fio::DirectoryProxy,
         device_types: Vec<input_device::InputDeviceType>,
         input_event_sender: Sender<input_device::InputEvent>,
         bindings: InputDeviceBindingHashMap,
@@ -493,7 +491,6 @@ mod tests {
         crate::mouse_binding,
         crate::utils::Position,
         fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
-        fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
         futures::FutureExt,
@@ -702,12 +699,12 @@ mod tests {
         // Create a Watcher on the pseudo directory.
         let pseudo_dir_clone = dir.clone();
         let (dir_proxy_for_watcher, dir_server_for_watcher) =
-            create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end_for_watcher = dir_server_for_watcher.into_channel().into();
         let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_watcher,
@@ -717,12 +714,12 @@ mod tests {
         // Get a proxy to the pseudo directory for the input pipeline. The input pipeline uses this
         // proxy to get connections to input devices.
         let (dir_proxy_for_pipeline, dir_server_for_pipeline) =
-            create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end_for_pipeline = dir_server_for_pipeline.into_channel().into();
         let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_pipeline,
@@ -790,12 +787,12 @@ mod tests {
         // Create a Watcher on the pseudo directory.
         let pseudo_dir_clone = dir.clone();
         let (dir_proxy_for_watcher, dir_server_for_watcher) =
-            create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end_for_watcher = dir_server_for_watcher.into_channel().into();
         let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_watcher,
@@ -805,12 +802,12 @@ mod tests {
         // Get a proxy to the pseudo directory for the input pipeline. The input pipeline uses this
         // proxy to get connections to input devices.
         let (dir_proxy_for_pipeline, dir_server_for_pipeline) =
-            create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         let server_end_for_pipeline = dir_server_for_pipeline.into_channel().into();
         let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             0,
             Path::dot(),
             server_end_for_pipeline,

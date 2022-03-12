@@ -7,20 +7,17 @@
 use {
     crate::node::{self, CloneError, CloseError, OpenError, RenameError},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeMarker, NodeProxy,
-    },
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx_status,
 };
 
 /// Opens the given `path` from the current namespace as a [`DirectoryProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Directory protocol.
 #[cfg(target_os = "fuchsia")]
-pub fn open_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, OpenError> {
+pub fn open_in_namespace(path: &str, flags: u32) -> Result<fio::DirectoryProxy, OpenError> {
     let (dir, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(OpenError::CreateProxy)?;
 
-    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
+    let flags = flags | fio::OPEN_FLAG_DIRECTORY;
     node::connect_in_namespace(path, flags, server_end.into_channel())
         .map_err(OpenError::Namespace)?;
 
@@ -30,15 +27,15 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, OpenE
 /// Opens the given `path` from the given `parent` directory as a [`DirectoryProxy`]. The target is
 /// not verified to be any particular type and may not implement the fuchsia.io.Directory protocol.
 pub fn open_directory_no_describe(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<DirectoryProxy, OpenError> {
+) -> Result<fio::DirectoryProxy, OpenError> {
     let (dir, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(OpenError::CreateProxy)?;
 
-    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+    let flags = flags | fio::OPEN_FLAG_DIRECTORY;
+    let mode = fio::MODE_TYPE_DIRECTORY;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -50,15 +47,15 @@ pub fn open_directory_no_describe(
 /// Opens the given `path` from given `parent` directory as a [`DirectoryProxy`], verifying that
 /// the target implements the fuchsia.io.Directory protocol.
 pub async fn open_directory(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<DirectoryProxy, OpenError> {
+) -> Result<fio::DirectoryProxy, OpenError> {
     let (dir, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(OpenError::CreateProxy)?;
 
-    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+    let flags = flags | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_DESCRIBE;
+    let mode = fio::MODE_TYPE_DIRECTORY;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -70,12 +67,12 @@ pub async fn open_directory(
 
 /// Creates a directory named `path` within the `parent` directory.
 pub async fn create_directory(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<DirectoryProxy, OpenError> {
+) -> Result<fio::DirectoryProxy, OpenError> {
     let (dir, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(OpenError::CreateProxy)?;
 
     // NB: POSIX does not allow open(2) to create dirs, but fuchsia.io does not have an equivalent
     // of mkdir(2), so on Fuchsia we're expected to call open on a DirectoryMarker with (flags &
@@ -83,11 +80,8 @@ pub async fn create_directory(
     // (mode & MODE_TYPE_DIRECTORY) is also required, although it is redundant (the fact that we
     // opened a DirectoryMarker is the main way that the underlying filesystem understands our
     // intention.)
-    let flags = flags
-        | fidl_fuchsia_io::OPEN_FLAG_CREATE
-        | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-        | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+    let flags = flags | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_DESCRIBE;
+    let mode = fio::MODE_TYPE_DIRECTORY;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -100,14 +94,14 @@ pub async fn create_directory(
 /// Opens the given `path` from the given `parent` directory as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
 pub fn open_file_no_describe(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<FileProxy, OpenError> {
+) -> Result<fio::FileProxy, OpenError> {
     let (file, server_end) =
-        fidl::endpoints::create_proxy::<FileMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(OpenError::CreateProxy)?;
 
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    let mode = fio::MODE_TYPE_FILE;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -119,15 +113,15 @@ pub fn open_file_no_describe(
 /// Opens the given `path` from given `parent` directory as a [`FileProxy`], verifying that the
 /// target implements the fuchsia.io.File protocol.
 pub async fn open_file(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<FileProxy, OpenError> {
+) -> Result<fio::FileProxy, OpenError> {
     let (file, server_end) =
-        fidl::endpoints::create_proxy::<FileMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(OpenError::CreateProxy)?;
 
-    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    let flags = flags | fio::OPEN_FLAG_DESCRIBE;
+    let mode = fio::MODE_TYPE_FILE;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -140,15 +134,15 @@ pub async fn open_file(
 /// Opens the given `path` from the given `parent` directory as a [`NodeProxy`], verifying that the
 /// target implements the fuchsia.io.Node protocol.
 pub async fn open_node(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
     mode: u32,
-) -> Result<NodeProxy, OpenError> {
+) -> Result<fio::NodeProxy, OpenError> {
     let (file, server_end) =
-        fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::NodeMarker>().map_err(OpenError::CreateProxy)?;
 
-    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+    let flags = flags | fio::OPEN_FLAG_DESCRIBE;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -161,13 +155,13 @@ pub async fn open_node(
 /// Opens the given `path` from the given `parent` directory as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
 pub fn open_node_no_describe(
-    parent: &DirectoryProxy,
+    parent: &fio::DirectoryProxy,
     path: &str,
     flags: u32,
     mode: u32,
-) -> Result<NodeProxy, OpenError> {
+) -> Result<fio::NodeProxy, OpenError> {
     let (file, server_end) =
-        fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
+        fidl::endpoints::create_proxy::<fio::NodeMarker>().map_err(OpenError::CreateProxy)?;
 
     parent
         .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
@@ -179,9 +173,9 @@ pub fn open_node_no_describe(
 /// Opens a new connection to the given directory using `flags` if provided, or
 /// `fidl_fuchsia_io::OPEN_FLAG_SAME_RIGHTS` otherwise.
 pub fn clone_no_describe(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: Option<u32>,
-) -> Result<DirectoryProxy, CloneError> {
+) -> Result<fio::DirectoryProxy, CloneError> {
     let (clone, server_end) = fidl::endpoints::create_proxy().map_err(CloneError::CreateProxy)?;
     clone_onto_no_describe(dir, flags, server_end)?;
     Ok(clone)
@@ -190,19 +184,19 @@ pub fn clone_no_describe(
 /// Opens a new connection to the given directory onto the given server end using `flags` if
 /// provided, or `fidl_fuchsia_io::OPEN_FLAG_SAME_RIGHTS` otherwise.
 pub fn clone_onto_no_describe(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     flags: Option<u32>,
-    request: ServerEnd<DirectoryMarker>,
+    request: ServerEnd<fio::DirectoryMarker>,
 ) -> Result<(), CloneError> {
     let node_request = ServerEnd::new(request.into_channel());
-    let flags = flags.unwrap_or(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS);
+    let flags = flags.unwrap_or(fio::CLONE_FLAG_SAME_RIGHTS);
 
     dir.clone(flags, node_request).map_err(CloneError::SendCloneRequest)?;
     Ok(())
 }
 
 /// Gracefully closes the directory proxy from the remote end.
-pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
+pub async fn close(dir: fio::DirectoryProxy) -> Result<(), CloseError> {
     let result = dir.close().await.map_err(CloseError::SendCloseRequest)?;
     result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
@@ -210,18 +204,17 @@ pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
 /// Create a randomly named file in the given directory with the given prefix, and return its path
 /// and `FileProxy`. `prefix` may contain "/".
 pub async fn create_randomly_named_file(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     prefix: &str,
     flags: u32,
-) -> Result<(String, FileProxy), OpenError> {
+) -> Result<(String, fio::FileProxy), OpenError> {
     use rand::{
         distributions::{Alphanumeric, DistString as _},
         SeedableRng as _,
     };
     let mut rng = rand::rngs::SmallRng::from_entropy();
 
-    let flags =
-        flags | fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_FLAG_CREATE_IF_ABSENT;
+    let flags = flags | fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT;
 
     loop {
         let random_string = Alphanumeric.sample_string(&mut rng, 6);
@@ -238,12 +231,12 @@ pub async fn create_randomly_named_file(
 // Split the given path under the directory into parent and file name, and open the parent directory
 // if the path contains "/".
 async fn split_path<'a>(
-    dir: &DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     path: &'a str,
-) -> Result<(Option<DirectoryProxy>, &'a str), OpenError> {
+) -> Result<(Option<fio::DirectoryProxy>, &'a str), OpenError> {
     match path.rsplit_once('/') {
         Some((parent, name)) => {
-            let proxy = open_directory(dir, parent, fidl_fuchsia_io::OPEN_RIGHT_WRITABLE).await?;
+            let proxy = open_directory(dir, parent, fio::OPEN_RIGHT_WRITABLE).await?;
             Ok((Some(proxy), name))
         }
         None => Ok((None, path)),
@@ -251,7 +244,7 @@ async fn split_path<'a>(
 }
 
 /// Rename `src` to `dst` under the given directory, `src` and `dst` may contain "/".
-pub async fn rename(dir: &DirectoryProxy, src: &str, dst: &str) -> Result<(), RenameError> {
+pub async fn rename(dir: &fio::DirectoryProxy, src: &str, dst: &str) -> Result<(), RenameError> {
     let (src_parent, src_filename) = split_path(dir, src).await?;
     let src_parent = src_parent.as_ref().unwrap_or(dir);
     let (dst_parent, dst_filename) = split_path(dir, dst).await?;
@@ -272,10 +265,6 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_io as fio,
-        fidl_fuchsia_io::{
-            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
         fuchsia_async as fasync,
         futures::prelude::*,
         tempfile::TempDir,
@@ -289,15 +278,15 @@ mod tests {
 
     const DATA_FILE_CONTENTS: &str = "Hello World!\n";
 
-    fn open_pkg() -> DirectoryProxy {
-        open_in_namespace("/pkg", OPEN_RIGHT_READABLE).unwrap()
+    fn open_pkg() -> fio::DirectoryProxy {
+        open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE).unwrap()
     }
 
-    fn open_tmp() -> (TempDir, DirectoryProxy) {
+    fn open_tmp() -> (TempDir, fio::DirectoryProxy) {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         let proxy = open_in_namespace(
             tempdir.path().to_str().unwrap(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
         (tempdir, proxy)
@@ -307,13 +296,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_real_dir() {
-        let exists = open_in_namespace("/pkg", OPEN_RIGHT_READABLE).unwrap();
+        let exists = open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE).unwrap();
         assert_matches!(close(exists).await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_fake_subdir_of_root_namespace_entry() {
-        let notfound = open_in_namespace("/pkg/fake", OPEN_RIGHT_READABLE).unwrap();
+        let notfound = open_in_namespace("/pkg/fake", fio::OPEN_RIGHT_READABLE).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(close(notfound).await, Err(_));
     }
@@ -321,7 +310,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
-            open_in_namespace("/fake", OPEN_RIGHT_READABLE),
+            open_in_namespace("/fake", fio::OPEN_RIGHT_READABLE),
             Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }
@@ -331,14 +320,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_directory_no_describe_opens_real_dir() {
         let pkg = open_pkg();
-        let data = open_directory_no_describe(&pkg, "data", OPEN_RIGHT_READABLE).unwrap();
+        let data = open_directory_no_describe(&pkg, "data", fio::OPEN_RIGHT_READABLE).unwrap();
         close(data).await.unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_directory_no_describe_opens_fake_dir() {
         let pkg = open_pkg();
-        let fake = open_directory_no_describe(&pkg, "fake", OPEN_RIGHT_READABLE).unwrap();
+        let fake = open_directory_no_describe(&pkg, "fake", fio::OPEN_RIGHT_READABLE).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(close(fake).await, Err(_));
     }
@@ -348,7 +337,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_directory_opens_real_dir() {
         let pkg = open_pkg();
-        let data = open_directory(&pkg, "data", OPEN_RIGHT_READABLE).await.unwrap();
+        let data = open_directory(&pkg, "data", fio::OPEN_RIGHT_READABLE).await.unwrap();
         close(data).await.unwrap();
     }
 
@@ -357,7 +346,7 @@ mod tests {
         let pkg = open_pkg();
 
         assert_matches!(
-            open_directory(&pkg, "fake", OPEN_RIGHT_READABLE).await,
+            open_directory(&pkg, "fake", fio::OPEN_RIGHT_READABLE).await,
             Err(OpenError::OpenError(zx_status::Status::NOT_FOUND))
         );
     }
@@ -367,7 +356,7 @@ mod tests {
         let pkg = open_pkg();
 
         assert_matches!(
-            open_directory(&pkg, "data/file", OPEN_RIGHT_READABLE).await,
+            open_directory(&pkg, "data/file", fio::OPEN_RIGHT_READABLE).await,
             Err(OpenError::OpenError(zx_status::Status::NOT_DIR))
         );
     }
@@ -377,20 +366,21 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn create_directory_simple() {
         let (_tmp, proxy) = open_tmp();
-        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+        let dir = create_directory(&proxy, "dir", fio::OPEN_RIGHT_READABLE).await.unwrap();
         crate::directory::close(dir).await.unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn create_directory_add_file() {
         let (_tmp, proxy) = open_tmp();
-        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-            .await
-            .unwrap();
+        let dir =
+            create_directory(&proxy, "dir", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
         let file = open_file(
             &dir,
             "data",
-            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
         )
         .await
         .unwrap();
@@ -400,20 +390,29 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn create_directory_existing_dir_opens() {
         let (_tmp, proxy) = open_tmp();
-        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+        let dir = create_directory(&proxy, "dir", fio::OPEN_RIGHT_READABLE).await.unwrap();
         crate::directory::close(dir).await.unwrap();
-        create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+        create_directory(&proxy, "dir", fio::OPEN_RIGHT_READABLE).await.unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn create_directory_existing_dir_fails_if_flag_set() {
         let (_tmp, proxy) = open_tmp();
-        let dir = create_directory(&proxy, "dir", OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE)
-            .await
-            .unwrap();
+        let dir = create_directory(
+            &proxy,
+            "dir",
+            fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE,
+        )
+        .await
+        .unwrap();
         crate::directory::close(dir).await.unwrap();
         assert_matches!(
-            create_directory(&proxy, "dir", OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE).await,
+            create_directory(
+                &proxy,
+                "dir",
+                fio::OPEN_FLAG_CREATE_IF_ABSENT | fio::OPEN_RIGHT_READABLE
+            )
+            .await,
             Err(_)
         );
     }
@@ -423,14 +422,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_file_no_describe_opens_real_file() {
         let pkg = open_pkg();
-        let file = open_file_no_describe(&pkg, "data/file", OPEN_RIGHT_READABLE).unwrap();
+        let file = open_file_no_describe(&pkg, "data/file", fio::OPEN_RIGHT_READABLE).unwrap();
         crate::file::close(file).await.unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_file_no_describe_opens_fake_file() {
         let pkg = open_pkg();
-        let fake = open_file_no_describe(&pkg, "data/fake", OPEN_RIGHT_READABLE).unwrap();
+        let fake = open_file_no_describe(&pkg, "data/fake", fio::OPEN_RIGHT_READABLE).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(crate::file::close(fake).await, Err(_));
     }
@@ -440,9 +439,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_file_opens_real_file() {
         let pkg = open_pkg();
-        let file = open_file(&pkg, "data/file", OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(&pkg, "data/file", fio::OPEN_RIGHT_READABLE).await.unwrap();
         assert_eq!(
-            file.seek(fidl_fuchsia_io::SeekOrigin::End, 0).await.unwrap(),
+            file.seek(fio::SeekOrigin::End, 0).await.unwrap(),
             Ok(DATA_FILE_CONTENTS.len() as u64),
         );
         crate::file::close(file).await.unwrap();
@@ -453,7 +452,7 @@ mod tests {
         let pkg = open_pkg();
 
         assert_matches!(
-            open_file(&pkg, "data/fake", OPEN_RIGHT_READABLE).await,
+            open_file(&pkg, "data/fake", fio::OPEN_RIGHT_READABLE).await,
             Err(OpenError::OpenError(zx_status::Status::NOT_FOUND))
         );
     }
@@ -463,7 +462,7 @@ mod tests {
         let pkg = open_pkg();
 
         assert_matches!(
-            open_file(&pkg, "data", OPEN_RIGHT_READABLE).await,
+            open_file(&pkg, "data", fio::OPEN_RIGHT_READABLE).await,
             Err(OpenError::UnexpectedNodeKind {
                 expected: node::Kind::File,
                 actual: node::Kind::Directory,
@@ -482,26 +481,26 @@ mod tests {
             "write_only" => write_only(simple_init_vmo_with_capacity(&[], 100), |_| future::ready(())),
         };
         let (example_dir_proxy, example_dir_service) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let scope = ExecutionScope::new();
         example_dir.open(
             scope,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(example_dir_service.into_channel()),
         );
 
         for (file_name, flags, should_succeed) in vec![
-            ("read_only", OPEN_RIGHT_READABLE, true),
-            ("read_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
-            ("read_only", OPEN_RIGHT_WRITABLE, false),
-            ("read_write", OPEN_RIGHT_READABLE, true),
-            ("read_write", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, true),
-            ("read_write", OPEN_RIGHT_WRITABLE, true),
-            ("write_only", OPEN_RIGHT_READABLE, false),
-            ("write_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
-            ("write_only", OPEN_RIGHT_WRITABLE, true),
+            ("read_only", fio::OPEN_RIGHT_READABLE, true),
+            ("read_only", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, false),
+            ("read_only", fio::OPEN_RIGHT_WRITABLE, false),
+            ("read_write", fio::OPEN_RIGHT_READABLE, true),
+            ("read_write", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, true),
+            ("read_write", fio::OPEN_RIGHT_WRITABLE, true),
+            ("write_only", fio::OPEN_RIGHT_READABLE, false),
+            ("write_only", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, false),
+            ("write_only", fio::OPEN_RIGHT_WRITABLE, true),
         ] {
             // open_file_no_describe
 
@@ -516,10 +515,10 @@ mod tests {
                     panic!("successfully opened when expected failure, could describe: {:?}", d)
                 }
             }
-            if flags & OPEN_RIGHT_READABLE != 0 {
+            if flags & fio::OPEN_RIGHT_READABLE != 0 {
                 assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
             }
-            if flags & OPEN_RIGHT_WRITABLE != 0 {
+            if flags & fio::OPEN_RIGHT_WRITABLE != 0 {
                 let _: u64 = file
                     .write(b"write_only")
                     .await
@@ -533,10 +532,10 @@ mod tests {
 
             match open_file(&example_dir_proxy, file_name, flags).await {
                 Ok(file) if should_succeed => {
-                    if flags & OPEN_RIGHT_READABLE != 0 {
+                    if flags & fio::OPEN_RIGHT_READABLE != 0 {
                         assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
                     }
-                    if flags & OPEN_RIGHT_WRITABLE != 0 {
+                    if flags & fio::OPEN_RIGHT_WRITABLE != 0 {
                         let _: u64 = file
                             .write(b"write_only")
                             .await
@@ -562,14 +561,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_node_no_describe_opens_real_node() {
         let pkg = open_pkg();
-        let node = open_node_no_describe(&pkg, "data", OPEN_RIGHT_READABLE, 0).unwrap();
+        let node = open_node_no_describe(&pkg, "data", fio::OPEN_RIGHT_READABLE, 0).unwrap();
         crate::node::close(node).await.unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_node_no_describe_opens_fake_node() {
         let pkg = open_pkg();
-        let fake = open_node_no_describe(&pkg, "fake", OPEN_RIGHT_READABLE, 0).unwrap();
+        let fake = open_node_no_describe(&pkg, "fake", fio::OPEN_RIGHT_READABLE, 0).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(crate::node::close(fake).await, Err(_));
     }
@@ -579,7 +578,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_node_opens_real_node() {
         let pkg = open_pkg();
-        let node = open_node(&pkg, "data", OPEN_RIGHT_READABLE, 0).await.unwrap();
+        let node = open_node(&pkg, "data", fio::OPEN_RIGHT_READABLE, 0).await.unwrap();
         crate::node::close(node).await.unwrap();
     }
 
@@ -587,14 +586,14 @@ mod tests {
     async fn open_node_opens_fake_node() {
         let pkg = open_pkg();
         // The open error should be detected immediately.
-        assert_matches!(open_node(&pkg, "fake", OPEN_RIGHT_READABLE, 0).await, Err(_));
+        assert_matches!(open_node(&pkg, "fake", fio::OPEN_RIGHT_READABLE, 0).await, Err(_));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_node_opens_service_node() {
-        let svc = open_in_namespace("/svc", OPEN_RIGHT_READABLE).unwrap();
+        let svc = open_in_namespace("/svc", fio::OPEN_RIGHT_READABLE).unwrap();
         let _node =
-            open_node(&svc, "fuchsia.logger.LogSink", OPEN_RIGHT_READABLE, 0).await.unwrap();
+            open_node(&svc, "fuchsia.logger.LogSink", fio::OPEN_RIGHT_READABLE, 0).await.unwrap();
         // Closing the node will hang forever, so don't bother.
     }
 
@@ -603,23 +602,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn clone_no_describe_no_flags_same_rights() {
         let (dir, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         clone_no_describe(&dir, None).unwrap();
 
         assert_matches!(
             stream.next().await,
-            Some(Ok(fio::DirectoryRequest::Clone {
-                flags: fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
-                ..
-            }))
+            Some(Ok(fio::DirectoryRequest::Clone { flags: fio::CLONE_FLAG_SAME_RIGHTS, .. }))
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn clone_no_describe_flags_passed_through() {
         let (dir, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         clone_no_describe(&dir, Some(42)).unwrap();
 
@@ -633,7 +629,7 @@ mod tests {
     async fn create_randomly_named_file_simple() {
         let (_tmp, proxy) = open_tmp();
         let (path, file) =
-            create_randomly_named_file(&proxy, "prefix", OPEN_RIGHT_WRITABLE).await.unwrap();
+            create_randomly_named_file(&proxy, "prefix", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
         assert!(path.starts_with("prefix"));
         crate::file::close(file).await.unwrap();
     }
@@ -641,9 +637,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn create_randomly_named_file_subdir() {
         let (_tmp, proxy) = open_tmp();
-        let _subdir = create_directory(&proxy, "subdir", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let _subdir = create_directory(&proxy, "subdir", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
         let (path, file) =
-            create_randomly_named_file(&proxy, "subdir/file", OPEN_RIGHT_WRITABLE).await.unwrap();
+            create_randomly_named_file(&proxy, "subdir/file", fio::OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
         assert!(path.starts_with("subdir/file"));
         crate::file::close(file).await.unwrap();
     }
@@ -651,10 +649,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn create_randomly_named_file_no_prefix() {
         let (_tmp, proxy) = open_tmp();
-        let (_path, file) =
-            create_randomly_named_file(&proxy, "", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-                .await
-                .unwrap();
+        let (_path, file) = create_randomly_named_file(
+            &proxy,
+            "",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .unwrap();
         crate::file::close(file).await.unwrap();
     }
 
@@ -668,7 +669,7 @@ mod tests {
     async fn rename_simple() {
         let (tmp, proxy) = open_tmp();
         let (path, file) =
-            create_randomly_named_file(&proxy, "", OPEN_RIGHT_WRITABLE).await.unwrap();
+            create_randomly_named_file(&proxy, "", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
         crate::file::close(file).await.unwrap();
         rename(&proxy, &path, "new_path").await.unwrap();
         assert!(!tmp.path().join(path).exists());
@@ -678,10 +679,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn rename_with_subdir() {
         let (tmp, proxy) = open_tmp();
-        let _subdir1 = create_directory(&proxy, "subdir1", OPEN_RIGHT_WRITABLE).await.unwrap();
-        let _subdir2 = create_directory(&proxy, "subdir2", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let _subdir1 = create_directory(&proxy, "subdir1", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
+        let _subdir2 = create_directory(&proxy, "subdir2", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
         let (path, file) =
-            create_randomly_named_file(&proxy, "subdir1/file", OPEN_RIGHT_WRITABLE).await.unwrap();
+            create_randomly_named_file(&proxy, "subdir1/file", fio::OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
         crate::file::close(file).await.unwrap();
         rename(&proxy, &path, "subdir2/file").await.unwrap();
         assert!(!tmp.path().join(path).exists());
@@ -691,7 +694,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn rename_directory() {
         let (tmp, proxy) = open_tmp();
-        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let dir = create_directory(&proxy, "dir", fio::OPEN_RIGHT_WRITABLE).await.unwrap();
         close(dir).await.unwrap();
         rename(&proxy, "dir", "dir2").await.unwrap();
         assert!(!tmp.path().join("dir").exists());

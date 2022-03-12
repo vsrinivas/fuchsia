@@ -73,10 +73,7 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
     fidl_fuchsia_component_internal::{BuiltinBootResolver, BuiltinPkgResolver, OutDirContents},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
@@ -887,11 +884,14 @@ impl BuiltinEnvironment {
         let mut service_fs = ServiceFs::new();
 
         // Setup the hub
-        let (hub_proxy, hub_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        let (hub_proxy, hub_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         self.hub
             .as_ref()
             .unwrap()
-            .open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
+            .open_root(
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                hub_server_end.into_channel(),
+            )
             .await?;
         service_fs.add_remote("hub", hub_proxy);
 
@@ -969,19 +969,20 @@ impl BuiltinEnvironment {
 
     /// Bind ServiceFs to a new channel and return the Hub directory.
     /// Used mainly by integration tests.
-    pub async fn bind_service_fs_for_hub(&mut self) -> Result<DirectoryProxy, Error> {
+    pub async fn bind_service_fs_for_hub(&mut self) -> Result<fio::DirectoryProxy, Error> {
         // Create a channel that ServiceFs will operate on
-        let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        let (service_fs_proxy, service_fs_server_end) =
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         let tasks = Arc::new(Mutex::new(vec![]));
 
         self.bind_service_fs(service_fs_server_end.into_channel(), tasks).await?;
 
         // Open the Hub from within ServiceFs
-        let (hub_client_end, hub_server_end) = create_endpoints::<DirectoryMarker>().unwrap();
+        let (hub_client_end, hub_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         service_fs_proxy
             .open(
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 "hub",
                 ServerEnd::new(hub_server_end.into_channel()),
             )
@@ -995,16 +996,17 @@ impl BuiltinEnvironment {
         &self,
         service_fs: &mut ServiceFs<ServiceObj<'a, ()>>,
     ) -> Result<(), ModelError> {
-        let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        let (service_fs_proxy, service_fs_server_end) =
+            create_proxy::<fio::DirectoryMarker>().unwrap();
         service_fs
             .serve_connection(service_fs_server_end.into_channel())
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
 
-        let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         service_fs_proxy
             .open(
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 "diagnostics",
                 ServerEnd::new(server_end.into_channel()),
             )
@@ -1069,7 +1071,7 @@ impl BuiltinEnvironment {
                 let expose_dir_proxy = io_util::open_directory(
                     &hub_proxy,
                     &PathBuf::from("exec/expose"),
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 )
                 .expect("Failed to open directory");
 

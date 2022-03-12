@@ -6,6 +6,7 @@
 
 use {
     assert_matches::assert_matches,
+    fidl_fuchsia_io as fio,
     fuchsia_archive::{ChunkType, Error, Reader, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE},
     std::{fs::File, path::Path},
 };
@@ -45,7 +46,7 @@ macro_rules! tests {
                     let path = Path::new("/pkg/data/invalid-fars").join(filename);
                     let file = io_util::file::open_in_namespace(
                         path.to_str().unwrap(),
-                        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                        fio::OPEN_RIGHT_READABLE,
                     )
                     .unwrap();
                     let reader = io_util::file::AsyncFile::from_proxy(file);

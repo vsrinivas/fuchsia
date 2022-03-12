@@ -30,17 +30,17 @@ pub use crate::{
     version::{ReadVersionError, SystemVersion},
 };
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
+use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
 
 /// An open handle to an "update" package.
 #[derive(Debug)]
 pub struct UpdatePackage {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl UpdatePackage {
     /// Creates a new [`UpdatePackage`] with the given proxy.
-    pub fn new(proxy: DirectoryProxy) -> Self {
+    pub fn new(proxy: fio::DirectoryProxy) -> Self {
         Self { proxy }
     }
 
@@ -124,7 +124,7 @@ impl TestUpdatePackage {
         Self { temp_dir, update_pkg: UpdatePackage::new(update_pkg_proxy) }
     }
 
-    fn proxy(&self) -> &DirectoryProxy {
+    fn proxy(&self) -> &fio::DirectoryProxy {
         &self.update_pkg.proxy
     }
 
@@ -156,11 +156,11 @@ impl std::ops::Deref for TestUpdatePackage {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_io::DirectoryMarker};
+    use super::*;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn lifecycle() {
-        let (proxy, _server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, _server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         UpdatePackage::new(proxy);
     }
 }

@@ -6,12 +6,7 @@ use {
     crate::{dirs_to_test, Mode, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileObject, NodeAttributes, NodeInfo, NodeProxy, Service,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
 };
 
 #[fuchsia::test]
@@ -71,7 +66,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         }
     }
 
-    async fn verify_get_attrs(root_dir: &DirectoryProxy, path: &str, args: Args) {
+    async fn verify_get_attrs(root_dir: &fio::DirectoryProxy, path: &str, args: Args) {
         let node = io_util::directory::open_node(root_dir, path, args.open_flags, args.open_mode)
             .await
             .unwrap();
@@ -90,8 +85,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         ".",
         Args {
-            open_flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
-            expected_mode: MODE_TYPE_DIRECTORY
+            open_flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+            expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o500
@@ -112,7 +107,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "dir",
         Args {
-            expected_mode: MODE_TYPE_DIRECTORY
+            expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o500
@@ -133,8 +128,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "file",
         Args {
-            open_flags: OPEN_RIGHT_READABLE,
-            expected_mode: MODE_TYPE_FILE | 0o500,
+            open_flags: fio::OPEN_RIGHT_READABLE,
+            expected_mode: fio::MODE_TYPE_FILE | 0o500,
             id_verifier: Box::new(AnyU64),
             expected_content_size: 4,
             expected_storage_size: 8192,
@@ -147,8 +142,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta",
         Args {
-            open_mode: MODE_TYPE_FILE,
-            expected_mode: MODE_TYPE_FILE
+            open_mode: fio::MODE_TYPE_FILE,
+            expected_mode: fio::MODE_TYPE_FILE
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o400
@@ -171,8 +166,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta",
         Args {
-            open_mode: MODE_TYPE_DIRECTORY,
-            expected_mode: MODE_TYPE_DIRECTORY
+            open_mode: fio::MODE_TYPE_DIRECTORY,
+            expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o500
@@ -195,7 +190,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta/dir",
         Args {
-            expected_mode: MODE_TYPE_DIRECTORY
+            expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o500
@@ -218,7 +213,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta/file",
         Args {
-            expected_mode: MODE_TYPE_FILE
+            expected_mode: fio::MODE_TYPE_FILE
                 | if source.is_pkgdir() {
                     // "mode protection write bit and group and other bytes not set"
                     0o400
@@ -248,9 +243,10 @@ async fn close() {
 
 async fn close_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
-    async fn verify_close(root_dir: &DirectoryProxy, path: &str, mode: u32) {
-        let node =
-            io_util::directory::open_node(root_dir, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
+    async fn verify_close(root_dir: &fio::DirectoryProxy, path: &str, mode: u32) {
+        let node = io_util::directory::open_node(root_dir, path, fio::OPEN_RIGHT_READABLE, mode)
+            .await
+            .unwrap();
 
         let () = node.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
@@ -260,14 +256,14 @@ async fn close_per_package_source(source: PackageSource) {
         );
     }
 
-    verify_close(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
-    verify_close(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
-    verify_close(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
-    verify_close(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, ".", fio::MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "dir", fio::MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "meta", fio::MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "meta/dir", fio::MODE_TYPE_DIRECTORY).await;
 
-    verify_close(&root_dir, "file", MODE_TYPE_FILE).await;
-    verify_close(&root_dir, "meta/file", MODE_TYPE_FILE).await;
-    verify_close(&root_dir, "meta", MODE_TYPE_FILE).await;
+    verify_close(&root_dir, "file", fio::MODE_TYPE_FILE).await;
+    verify_close(&root_dir, "meta/file", fio::MODE_TYPE_FILE).await;
+    verify_close(&root_dir, "meta", fio::MODE_TYPE_FILE).await;
 }
 
 #[fuchsia::test]
@@ -291,11 +287,12 @@ async fn describe_per_package_source(source: PackageSource) {
     assert_describe_meta_file(&root_dir, "meta/file").await;
 }
 
-async fn assert_describe_directory(package_root: &DirectoryProxy, path: &str) {
-    for flag in [0, OPEN_FLAG_NODE_REFERENCE] {
-        let node = io_util::directory::open_node(package_root, path, flag, MODE_TYPE_DIRECTORY)
-            .await
-            .unwrap();
+async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &str) {
+    for flag in [0, fio::OPEN_FLAG_NODE_REFERENCE] {
+        let node =
+            io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_DIRECTORY)
+                .await
+                .unwrap();
 
         if let Err(e) = verify_describe_directory_success(node).await {
             panic!("failed to verify describe. path: {:?}, error: {:#}", path, e);
@@ -303,10 +300,10 @@ async fn assert_describe_directory(package_root: &DirectoryProxy, path: &str) {
     }
 }
 
-async fn verify_describe_directory_success(node: NodeProxy) -> Result<(), Error> {
+async fn verify_describe_directory_success(node: fio::NodeProxy) -> Result<(), Error> {
     match node.describe().await {
-        Ok(NodeInfo::Directory(directory_object)) => {
-            assert_eq!(directory_object, fidl_fuchsia_io::DirectoryObject);
+        Ok(fio::NodeInfo::Directory(directory_object)) => {
+            assert_eq!(directory_object, fio::DirectoryObject);
             Ok(())
         }
         Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -314,8 +311,8 @@ async fn verify_describe_directory_success(node: NodeProxy) -> Result<(), Error>
     }
 }
 
-async fn assert_describe_file(package_root: &DirectoryProxy, path: &str) {
-    for flag in [OPEN_RIGHT_READABLE, OPEN_FLAG_NODE_REFERENCE] {
+async fn assert_describe_file(package_root: &fio::DirectoryProxy, path: &str) {
+    for flag in [fio::OPEN_RIGHT_READABLE, fio::OPEN_FLAG_NODE_REFERENCE] {
         let node = io_util::directory::open_node(package_root, path, flag, 0).await.unwrap();
         if let Err(e) = verify_describe_content_file(node, flag).await {
             panic!(
@@ -327,16 +324,16 @@ async fn assert_describe_file(package_root: &DirectoryProxy, path: &str) {
     }
 }
 
-async fn verify_describe_content_file(node: NodeProxy, flag: u32) -> Result<(), Error> {
-    if flag & OPEN_FLAG_NODE_REFERENCE != 0 {
+async fn verify_describe_content_file(node: fio::NodeProxy, flag: u32) -> Result<(), Error> {
+    if flag & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
         match node.describe().await {
-            Ok(NodeInfo::Service(Service {})) => Ok(()),
+            Ok(fio::NodeInfo::Service(fio::Service)) => Ok(()),
             Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
             Err(e) => Err(e).context("failed to call describe"),
         }
     } else {
         match node.describe().await {
-            Ok(NodeInfo::File(FileObject { event: Some(event), stream: None })) => {
+            Ok(fio::NodeInfo::File(fio::FileObject { event: Some(event), stream: None })) => {
                 match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
                     Ok(_) => Ok(()),
                     Err(_) => Err(anyhow!("FILE_SIGNAL_READABLE not set")),
@@ -348,23 +345,24 @@ async fn verify_describe_content_file(node: NodeProxy, flag: u32) -> Result<(), 
     }
 }
 
-async fn assert_describe_meta_file(package_root: &DirectoryProxy, path: &str) {
-    for flag in [0, OPEN_FLAG_NODE_REFERENCE] {
-        let node =
-            io_util::directory::open_node(package_root, path, flag, MODE_TYPE_FILE).await.unwrap();
+async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &str) {
+    for flag in [0, fio::OPEN_FLAG_NODE_REFERENCE] {
+        let node = io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_FILE)
+            .await
+            .unwrap();
         if let Err(e) = verify_describe_meta_file_success(node).await {
             panic!(
                 "failed to verify describe. path: {:?}, flag: {:#x}, \
-                    mode: MODE_TYPE_FILE, error: {:#}",
+                    mode: fio::MODE_TYPE_FILE, error: {:#}",
                 path, flag, e
             );
         }
     }
 }
 
-async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error> {
+async fn verify_describe_meta_file_success(node: fio::NodeProxy) -> Result<(), Error> {
     match node.describe().await {
-        Ok(NodeInfo::File(_)) => Ok(()),
+        Ok(fio::NodeInfo::File(_)) => Ok(()),
         Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => Err(e).context("failed to call describe"),
     }
@@ -379,31 +377,15 @@ async fn set_flags() {
 
 async fn set_flags_per_package_source(source: PackageSource) {
     let package_root = &source.dir;
-    do_set_flags(package_root, ".", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "meta", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "meta/dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "file", MODE_TYPE_FILE, 0).await.assert_ok();
+    do_set_flags(package_root, ".", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "meta", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "meta/dir", fio::MODE_TYPE_DIRECTORY, 0)
+        .await
+        .assert_not_supported();
+    do_set_flags(package_root, "dir", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "file", fio::MODE_TYPE_FILE, 0).await.assert_ok();
     {
-        let outcome = do_set_flags(package_root, "meta", MODE_TYPE_FILE, 0).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome = do_set_flags(package_root, "meta", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome = do_set_flags(package_root, "meta/file", MODE_TYPE_FILE, 0).await;
+        let outcome = do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, 0).await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -413,7 +395,27 @@ async fn set_flags_per_package_source(source: PackageSource) {
     };
     {
         let outcome =
-            do_set_flags(package_root, "meta/file", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
+            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OPEN_FLAG_APPEND).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome = do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, 0).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome =
+            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OPEN_FLAG_APPEND)
+                .await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -430,13 +432,14 @@ struct SetFlagsOutcome<'a> {
     result: Result<Result<(), zx::Status>, fidl::Error>,
 }
 async fn do_set_flags<'a>(
-    package_root: &DirectoryProxy,
+    package_root: &fio::DirectoryProxy,
     path: &'a str,
     mode: u32,
     argument: u32,
 ) -> SetFlagsOutcome<'a> {
-    let node =
-        io_util::directory::open_node(package_root, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
+    let node = io_util::directory::open_node(package_root, path, fio::OPEN_RIGHT_READABLE, mode)
+        .await
+        .unwrap();
 
     let result = node.set_flags(argument).await.map(zx::Status::ok);
     SetFlagsOutcome { path, mode: Mode(mode), result, argument: crate::OpenFlags(argument) }
@@ -491,15 +494,15 @@ async fn set_attr() {
 
 async fn set_attr_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
-    assert_set_attr(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
-    assert_set_attr(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
-    assert_set_attr(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
-    assert_set_attr(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
-    assert_set_attr(&root_dir, "meta", MODE_TYPE_FILE).await;
-    assert_set_attr(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+    assert_set_attr(&root_dir, ".", fio::MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta", fio::MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta/dir", fio::MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "dir", fio::MODE_TYPE_DIRECTORY).await;
+    assert_set_attr(&root_dir, "meta", fio::MODE_TYPE_FILE).await;
+    assert_set_attr(&root_dir, "meta/file", fio::MODE_TYPE_FILE).await;
 }
 
-async fn assert_set_attr(package_root: &DirectoryProxy, path: &str, mode: u32) {
+async fn assert_set_attr(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
     let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
 
     if let Err(e) = verify_set_attr(node).await {
@@ -507,8 +510,8 @@ async fn assert_set_attr(package_root: &DirectoryProxy, path: &str, mode: u32) {
     }
 }
 
-async fn verify_set_attr(node: NodeProxy) -> Result<(), Error> {
-    let mut node_attr = NodeAttributes {
+async fn verify_set_attr(node: fio::NodeProxy) -> Result<(), Error> {
+    let mut node_attr = fio::NodeAttributes {
         mode: 0,
         id: 0,
         content_size: 0,
@@ -541,15 +544,15 @@ async fn sync() {
 
 async fn sync_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
-    assert_sync(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
-    assert_sync(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
-    assert_sync(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
-    assert_sync(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
-    assert_sync(&root_dir, "meta", MODE_TYPE_FILE).await;
-    assert_sync(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+    assert_sync(&root_dir, ".", fio::MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta", fio::MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta/dir", fio::MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "dir", fio::MODE_TYPE_DIRECTORY).await;
+    assert_sync(&root_dir, "meta", fio::MODE_TYPE_FILE).await;
+    assert_sync(&root_dir, "meta/file", fio::MODE_TYPE_FILE).await;
 }
 
-async fn assert_sync(package_root: &DirectoryProxy, path: &str, mode: u32) {
+async fn assert_sync(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
     let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
 
     if let Err(e) = verify_sync(node).await {
@@ -557,7 +560,7 @@ async fn assert_sync(package_root: &DirectoryProxy, path: &str, mode: u32) {
     }
 }
 
-async fn verify_sync(node: NodeProxy) -> Result<(), Error> {
+async fn verify_sync(node: fio::NodeProxy) -> Result<(), Error> {
     let result = node.sync().await.context("failed to call sync")?;
     let result = result.map_err(zx::Status::from_raw);
     if result == Err(zx::Status::NOT_SUPPORTED) {

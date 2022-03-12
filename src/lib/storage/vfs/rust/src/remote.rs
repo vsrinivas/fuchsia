@@ -16,17 +16,14 @@ use crate::{
 
 use {
     fidl::{self, endpoints::ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryProxy, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_UNKNOWN, INO_UNKNOWN,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NO_REMOTE,
-    },
+    fidl_fuchsia_io as fio,
     std::sync::Arc,
 };
 
 /// The type for the callback function used to create new connections to the remote object. The
 /// arguments mirror DirectoryEntry::open.
 pub type RoutingFn =
-    Box<dyn Fn(ExecutionScope, u32, u32, Path, ServerEnd<NodeMarker>) + Send + Sync>;
+    Box<dyn Fn(ExecutionScope, u32, u32, Path, ServerEnd<fio::NodeMarker>) + Send + Sync>;
 
 /// Create a new [`Remote`] node that forwards requests to the provided [`RoutingFn`]. This routing
 /// function is called once per open request. The dirent type is set to the provided
@@ -40,7 +37,7 @@ pub fn remote_boxed_with_type(open: RoutingFn, dirent_type: u8) -> Arc<Remote> {
 /// `DIRENT_TYPE_UNKNOWN`. If the remote node is a known `DIRENT_TYPE_*` type, you may wish to use
 /// [`remote_boxed_with_type`] instead.
 pub fn remote_boxed(open: RoutingFn) -> Arc<Remote> {
-    remote_boxed_with_type(open, DIRENT_TYPE_UNKNOWN)
+    remote_boxed_with_type(open, fio::DIRENT_TYPE_UNKNOWN)
 }
 
 /// Create a new [`Remote`] node that forwards open requests to the provided callback. This routing
@@ -49,19 +46,19 @@ pub fn remote_boxed(open: RoutingFn) -> Arc<Remote> {
 /// instead.
 pub fn remote<Open>(open: Open) -> Arc<Remote>
 where
-    Open: Fn(ExecutionScope, u32, u32, Path, ServerEnd<NodeMarker>) + Send + Sync + 'static,
+    Open: Fn(ExecutionScope, u32, u32, Path, ServerEnd<fio::NodeMarker>) + Send + Sync + 'static,
 {
     remote_boxed(Box::new(open))
 }
 
 /// Create a new [`Remote`] node that forwards open requests to the provided [`DirectoryProxy`],
 /// effectively handing off the handling of any further requests to the remote fidl server.
-pub fn remote_dir(dir: DirectoryProxy) -> Arc<Remote> {
+pub fn remote_dir(dir: fio::DirectoryProxy) -> Arc<Remote> {
     remote_boxed_with_type(
         Box::new(move |_scope, flags, mode, path, server_end| {
             let _ = dir.open(flags, mode, path.as_ref(), server_end);
         }),
-        DIRENT_TYPE_DIRECTORY,
+        fio::DIRENT_TYPE_DIRECTORY,
     )
 }
 
@@ -84,16 +81,16 @@ impl Remote {
         scope: ExecutionScope,
         mut flags: u32,
         mode: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // We are reusing the service connection implementation, but to get it to work, we must
         // strip the OPEN_FLAG_NO_REMOTE flag (since that isn't permitted for services).  Our
         // implementation also only allows access if both OPEN_RIGHT_READABLE and
         // OPEN_WRITE_WRITABLE is set, or it's OPEN_FLAG_NODE_REFERENCE, so, for now, we hack the
         // flags to be OPEN_FLAG_NODE_REFERENCE which will cause the rights to be ignored.
-        if flags & OPEN_FLAG_NO_REMOTE != 0 {
-            flags &= !OPEN_FLAG_NO_REMOTE;
-            flags |= OPEN_FLAG_NODE_REFERENCE;
+        if flags & fio::OPEN_FLAG_NO_REMOTE != 0 {
+            flags &= !fio::OPEN_FLAG_NO_REMOTE;
+            flags |= fio::OPEN_FLAG_NODE_REFERENCE;
         }
         Connection::create_connection(scope, flags, mode, server_end);
     }
@@ -104,7 +101,7 @@ impl Remote {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // There is no flag validation to do here. All flags are either handled by the initial
         // connection that forwarded this open request (if it exists) or the remote node.
@@ -119,9 +116,9 @@ impl DirectoryEntry for Remote {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if flags & OPEN_FLAG_NO_REMOTE != 0 && path.is_empty() {
+        if flags & fio::OPEN_FLAG_NO_REMOTE != 0 && path.is_empty() {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_remote(scope, flags, mode, path, server_end);
@@ -129,6 +126,6 @@ impl DirectoryEntry for Remote {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, self.dirent_type)
+        EntryInfo::new(fio::INO_UNKNOWN, self.dirent_type)
     }
 }

@@ -21,12 +21,7 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
-    fidl_fuchsia_io::{
-        FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        SeekOrigin, VmoFlags, Vmofile, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
         self as zx,
@@ -63,7 +58,7 @@ pub struct VmoFileConnection {
     file: Arc<dyn VmoFileInterface>,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
-    requests: FileRequestStream,
+    requests: fio::FileRequestStream,
 
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
     /// received with [`FileRequest::Clone()`].
@@ -106,7 +101,7 @@ impl VmoFileConnection {
         scope: ExecutionScope,
         file: Arc<dyn VmoFileInterface>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let task = Self::create_connection_task(scope.clone(), file, flags, server_end);
         // If we failed to send the task to the executor, it is probably shut down or is in the
@@ -120,7 +115,7 @@ impl VmoFileConnection {
         scope: ExecutionScope,
         file: Arc<dyn VmoFileInterface>,
         flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = match new_connection_validate_flags(
             flags,
@@ -146,7 +141,7 @@ impl VmoFileConnection {
                     }
                 };
 
-            if flags & OPEN_FLAG_TRUNCATE != 0 {
+            if flags & fio::OPEN_FLAG_TRUNCATE != 0 {
                 let mut seek = 0;
                 if let Err(status) = Self::truncate_vmo(&mut *state, 0, &mut seek) {
                     send_on_open_with_error(flags, server_end, status);
@@ -181,7 +176,7 @@ impl VmoFileConnection {
         let mut connection =
             VmoFileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
 
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
+        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
             match connection.get_node_info().await {
                 Ok(mut info) => {
                     let send_result =
@@ -204,10 +199,10 @@ impl VmoFileConnection {
     async fn ensure_vmo<'state_guard>(
         file: Arc<dyn VmoFileInterface>,
         mut state: MutexGuard<'state_guard, VmoFileState>,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) -> Result<
-        (MutexGuard<'state_guard, VmoFileState>, ServerEnd<NodeMarker>),
-        (zx::Status, ServerEnd<NodeMarker>),
+        (MutexGuard<'state_guard, VmoFileState>, ServerEnd<fio::NodeMarker>),
+        (zx::Status, ServerEnd<fio::NodeMarker>),
     > {
         if let VmoFileState::Initialized { .. } = *state {
             return Ok((state, server_end));
@@ -341,12 +336,14 @@ impl VmoFileConnection {
     }
 
     /// Returns `NodeInfo` for the VMO file.
-    async fn get_node_info(&mut self) -> Result<NodeInfo, zx::Status> {
+    async fn get_node_info(&mut self) -> Result<fio::NodeInfo, zx::Status> {
         // The current fuchsia.io specification for Vmofile node types specify that the node is
         // immutable, thus if the file is writable, we report it as a regular file instead.
         // If this changes in the future, we need to handle size changes in the backing VMO.
-        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
-            Ok(NodeInfo::File(FileObject { event: None, stream: None }))
+        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0
+            || self.flags & fio::OPEN_RIGHT_WRITABLE != 0
+        {
+            Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
         } else {
             let vmofile = update_initialized_state! {
                 match &*self.file.state().await;
@@ -358,36 +355,36 @@ impl VmoFileConnection {
                     // We already checked above that the connection is not writable. We also remove
                     // SET_PROPERTY as this would also allow size changes.
                     new_rights.remove(zx::Rights::WRITE | zx::Rights::SET_PROPERTY);
-                    if (self.flags & OPEN_RIGHT_EXECUTABLE) == 0 {
+                    if (self.flags & fio::OPEN_RIGHT_EXECUTABLE) == 0 {
                         new_rights.remove(zx::Rights::EXECUTE);
                     }
                     let vmo = vmo.duplicate_handle(new_rights).unwrap();
 
-                    Ok(Vmofile {vmo, offset: 0, length: *size})
+                    Ok(fio::Vmofile {vmo, offset: 0, length: *size})
                 }
             }?;
-            Ok(NodeInfo::Vmofile(vmofile))
+            Ok(fio::NodeInfo::Vmofile(vmofile))
         }
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
-    async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
+    async fn handle_request(&mut self, req: fio::FileRequest) -> Result<ConnectionState, Error> {
         match req {
-            FileRequest::Clone { flags, object, control_handle: _ } => {
+            fio::FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(self.flags, flags, object);
             }
-            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::FileRequest::Reopen { options, object_request, control_handle: _ } => {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            FileRequest::CloseDeprecated { responder } => {
+            fio::FileRequest::CloseDeprecated { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
                 let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close { responder } => {
+            fio::FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.
                 let _ = self
@@ -398,52 +395,52 @@ impl VmoFileConnection {
                     .await;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Describe { responder } => match self.get_node_info().await {
+            fio::FileRequest::Describe { responder } => match self.get_node_info().await {
                 Ok(mut info) => responder.send(&mut info)?,
                 Err(status) => {
                     debug_assert!(status != zx::Status::OK);
                     responder.control_handle().shutdown_with_epitaph(status);
                 }
             },
-            FileRequest::Describe2 { query, responder } => {
+            fio::FileRequest::Describe2 { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            FileRequest::SyncDeprecated { responder } => {
+            fio::FileRequest::SyncDeprecated { responder } => {
                 // VMOs are always in sync.
                 responder.send(ZX_OK)?;
             }
-            FileRequest::Sync { responder } => {
+            fio::FileRequest::Sync { responder } => {
                 // VMOs are always in sync.
                 responder.send(&mut Ok(()))?;
             }
-            FileRequest::GetAttr { responder } => {
+            fio::FileRequest::GetAttr { responder } => {
                 self.handle_get_attr(|status, mut attrs| {
                     responder.send(status.into_raw(), &mut attrs)
                 })
                 .await?;
             }
-            FileRequest::SetAttr { flags: _, attributes: _, responder } => {
+            fio::FileRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
                 // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
                 // it is not supported at the moment.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetAttributes { query, responder } => {
+            fio::FileRequest::GetAttributes { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            FileRequest::UpdateAttributes { attributes, responder } => {
+            fio::FileRequest::UpdateAttributes { attributes, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            FileRequest::ReadDeprecated { count, responder } => {
+            fio::FileRequest::ReadDeprecated { count, responder } => {
                 self.handle_read(count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })
                 .await?;
             }
-            FileRequest::Read { count, responder } => {
+            fio::FileRequest::Read { count, responder } => {
                 self.handle_read(count, |status, content| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(content.to_vec()))
@@ -453,13 +450,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::ReadAtDeprecated { count, offset, responder } => {
+            fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
                 self.handle_read_at(offset, count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })
                 .await?;
             }
-            FileRequest::ReadAt { count, offset, responder } => {
+            fio::FileRequest::ReadAt { count, offset, responder } => {
                 self.handle_read_at(offset, count, |status, content| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(content.to_vec()))
@@ -469,13 +466,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::WriteDeprecated { data, responder } => {
+            fio::FileRequest::WriteDeprecated { data, responder } => {
                 self.handle_write(&data, |status, actual| {
                     responder.send(status.into_raw(), actual)
                 })
                 .await?;
             }
-            FileRequest::Write { data, responder } => {
+            fio::FileRequest::Write { data, responder } => {
                 self.handle_write(&data, |status, actual| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(actual))
@@ -485,7 +482,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::WriteAtDeprecated { offset, data, responder } => {
+            fio::FileRequest::WriteAtDeprecated { offset, data, responder } => {
                 self.handle_write_at(offset, &data, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.
@@ -493,7 +490,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::WriteAt { offset, data, responder } => {
+            fio::FileRequest::WriteAt { offset, data, responder } => {
                 self.handle_write_at(offset, &data, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.
@@ -505,13 +502,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::SeekDeprecated { offset, start, responder } => {
+            fio::FileRequest::SeekDeprecated { offset, start, responder } => {
                 self.handle_seek(offset, start, |status, offset| {
                     responder.send(status.into_raw(), offset)
                 })
                 .await?;
             }
-            FileRequest::Seek { origin, offset, responder } => {
+            fio::FileRequest::Seek { origin, offset, responder } => {
                 self.handle_seek(offset, origin, |status, offset| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(offset))
@@ -521,10 +518,10 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::TruncateDeprecatedUseResize { length, responder } => {
+            fio::FileRequest::TruncateDeprecatedUseResize { length, responder } => {
                 self.handle_truncate(length, |status| responder.send(status.into_raw())).await?;
             }
-            FileRequest::Resize { length, responder } => {
+            fio::FileRequest::Resize { length, responder } => {
                 self.handle_truncate(length, |status| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(()))
@@ -534,26 +531,25 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::GetFlags { responder } => {
+            fio::FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::SetFlags { flags: _, responder } => {
+            fio::FileRequest::SetFlags { flags: _, responder } => {
                 // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
                 // via this call according to fuchsia.io. It would be nice to have that explicitly
                 // encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
-                self.handle_get_buffer(
-                    VmoFlags::from_bits_truncate(flags),
-                    |buffer| match buffer {
+            fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
+                self.handle_get_buffer(fio::VmoFlags::from_bits_truncate(flags), |buffer| {
+                    match buffer {
                         Err(status) => responder.send(status.into_raw(), None),
                         Ok(mut buffer) => responder.send(ZX_OK, Some(&mut buffer)),
-                    },
-                )
+                    }
+                })
                 .await?;
             }
-            FileRequest::GetBackingMemory { flags, responder } => {
+            fio::FileRequest::GetBackingMemory { flags, responder } => {
                 self.handle_get_buffer(flags, |buffer| {
                     responder.send(
                         &mut buffer
@@ -563,16 +559,16 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::GetFlagsDeprecatedUseNode { responder } => {
+            fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
+            fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::AdvisoryLock { request: _, responder } => {
+            fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            FileRequest::QueryFilesystem { responder } => {
+            fio::FileRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
         }
@@ -583,7 +579,7 @@ impl VmoFileConnection {
         &mut self,
         parent_flags: u32,
         current_flags: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = match inherit_rights_for_clone(parent_flags, current_flags) {
             Ok(updated) => updated,
@@ -647,7 +643,7 @@ impl VmoFileConnection {
 
     async fn handle_get_attr<R>(&mut self, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(zx::Status, NodeAttributes) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, fio::NodeAttributes) -> Result<(), fidl::Error>,
     {
         let (status, size, capacity) = update_initialized_state! {
             match *self.file.state().await;
@@ -657,8 +653,8 @@ impl VmoFileConnection {
 
         responder(
             status,
-            NodeAttributes {
-                mode: MODE_TYPE_FILE
+            fio::NodeAttributes {
+                mode: fio::MODE_TYPE_FILE
                     | rights_to_posix_mode_bits(
                         self.file.is_readable(),
                         self.file.is_writable(),
@@ -702,7 +698,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_RIGHT_READABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_READABLE == 0 {
             responder(zx::Status::BAD_HANDLE, &[])?;
             return Ok(0);
         }
@@ -771,7 +767,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(0);
         }
@@ -834,13 +830,13 @@ impl VmoFileConnection {
     async fn handle_seek<R>(
         &mut self,
         offset: i64,
-        start: SeekOrigin,
+        start: fio::SeekOrigin,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
             responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(());
         }
@@ -860,9 +856,9 @@ impl VmoFileConnection {
                 };
 
                 match match start {
-                    SeekOrigin::Start => new_offset(0, offset),
-                    SeekOrigin::Current => new_offset(self.seek, offset),
-                    SeekOrigin::End => new_offset(size, offset)
+                    fio::SeekOrigin::Start => new_offset(0, offset),
+                    fio::SeekOrigin::Current => new_offset(self.seek, offset),
+                    fio::SeekOrigin::End => new_offset(size, offset)
                 } {
                     Ok(val) => {
                         self.seek = val;
@@ -889,7 +885,7 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return responder(zx::Status::BAD_HANDLE);
         }
 
@@ -901,7 +897,7 @@ impl VmoFileConnection {
 
     async fn handle_get_buffer<R>(
         &mut self,
-        flags: VmoFlags,
+        flags: fio::VmoFlags,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
@@ -913,14 +909,16 @@ impl VmoFileConnection {
 
                 // The only sharing mode we support that disallows the VMO size to change currently
                 // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
-                if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
+                if flags.contains(fio::VmoFlags::WRITE)
+                    && !flags.contains(fio::VmoFlags::PRIVATE_CLONE)
+                {
                     return Err(zx::Status::NOT_SUPPORTED);
                 }
 
                 // Disallow opening as both writable and executable. In addition to improving W^X
                 // enforcement, this also eliminates any inconstiencies related to clones that use
                 // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
-                if flags.contains(VmoFlags::EXECUTE) && flags.contains(VmoFlags::WRITE) {
+                if flags.contains(fio::VmoFlags::EXECUTE) && flags.contains(fio::VmoFlags::WRITE) {
                     return Err(zx::Status::NOT_SUPPORTED);
                 }
 
@@ -941,7 +939,7 @@ impl VmoFileConnection {
                         // callback here will make the implementation of those files systems easier.
                         let vmo_rights = vmo_flags_to_rights(flags);
                         // Unless private sharing mode is specified, we always default to shared.
-                        let vmo = if flags.contains(VmoFlags::PRIVATE_CLONE) {
+                        let vmo = if flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
                             Self::get_as_private(&vmo, vmo_rights, *size)
                         }
                         else {

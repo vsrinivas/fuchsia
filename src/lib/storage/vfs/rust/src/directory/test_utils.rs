@@ -11,8 +11,7 @@
 #[doc(hidden)]
 pub mod reexport {
     pub use {
-        fidl,
-        fidl_fuchsia_io::{WatchEvent, WatchMask},
+        fidl, fidl_fuchsia_io as fio,
         fuchsia_async::Channel,
         fuchsia_zircon::{MessageBuf, Status},
     };
@@ -25,7 +24,7 @@ use crate::{
 
 use {
     byteorder::{LittleEndian, WriteBytesExt},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
+    fidl_fuchsia_io as fio,
     futures::Future,
     std::{convert::TryInto as _, io::Write, sync::Arc},
 };
@@ -38,11 +37,11 @@ pub use run::{run_client, test_client};
 pub fn run_server_client<GetClientRes>(
     flags: u32,
     server: Arc<dyn DirectoryEntry>,
-    get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
+    get_client: impl FnOnce(fio::DirectoryProxy) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    run::run_server_client::<DirectoryMarker, _, _>(flags, server, get_client)
+    run::run_server_client::<fio::DirectoryMarker, _, _>(flags, server, get_client)
 }
 
 /// A thin wrapper around [`run::test_server_client()`] that sets the `Marker` to be
@@ -51,12 +50,12 @@ pub fn run_server_client<GetClientRes>(
 pub fn test_server_client<'test_refs, GetClientRes>(
     flags: u32,
     server: Arc<dyn DirectoryEntry>,
-    get_client: impl FnOnce(DirectoryProxy) -> GetClientRes + 'test_refs,
-) -> AsyncServerClientTestParams<'test_refs, DirectoryMarker>
+    get_client: impl FnOnce(fio::DirectoryProxy) -> GetClientRes + 'test_refs,
+) -> AsyncServerClientTestParams<'test_refs, fio::DirectoryMarker>
 where
     GetClientRes: Future<Output = ()> + 'test_refs,
 {
-    run::test_server_client::<DirectoryMarker, _, _>(flags, server, get_client)
+    run::test_server_client::<fio::DirectoryMarker, _, _>(flags, server, get_client)
 }
 
 /// A helper to build the "expected" output for a `ReadDirents` call from the Directory protocol in
@@ -74,11 +73,11 @@ impl DirentsSameInodeBuilder {
     #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     pub fn add(&mut self, type_: u8, name: &[u8]) -> &mut Self {
         assert!(
-            name.len() <= MAX_FILENAME as usize,
+            name.len() <= fio::MAX_FILENAME as usize,
             "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
              Got: {:?}\n\
              Length: {} bytes",
-            MAX_FILENAME,
+            fio::MAX_FILENAME,
             name,
             name.len()
         );
@@ -159,7 +158,7 @@ macro_rules! assert_watch_err {
 macro_rules! assert_watcher_one_message_watched_events {
     ($watcher:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
         #[allow(unused)]
-        use $crate::directory::test_utils::reexport::{MessageBuf, WatchEvent};
+        use $crate::directory::test_utils::reexport::{MessageBuf, fio::WatchEvent};
         use std::convert::TryInto as _;
 
         let mut buf = MessageBuf::new();
@@ -197,8 +196,8 @@ macro_rules! assert_watcher_one_message_watched_events {
                 String::from_utf8_lossy(expected), String::from_utf8_lossy(&bytes));
     }};
 
-    (@expand_event_type EXISTING) => { WatchEvent::Existing };
-    (@expand_event_type IDLE) => { WatchEvent::Idle };
-    (@expand_event_type ADDED) => { WatchEvent::Added };
-    (@expand_event_type REMOVED) => { WatchEvent::Removed };
+    (@expand_event_type EXISTING) => { fio::WatchEvent::Existing };
+    (@expand_event_type IDLE) => { fio::WatchEvent::Idle };
+    (@expand_event_type ADDED) => { fio::WatchEvent::Added };
+    (@expand_event_type REMOVED) => { fio::WatchEvent::Removed };
 }

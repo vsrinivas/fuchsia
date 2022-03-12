@@ -13,9 +13,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{create_request_stream, DiscoverableProtocolMarker},
     fidl_fuchsia_inspect::TreeMarker,
-    fidl_fuchsia_io::{
-        DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_test_inspect_validate::*,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::hierarchy::*,
@@ -601,14 +599,14 @@ enum IncomingService {
 
 fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple> {
     let (proxy, server) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory marker");
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().expect("create directory marker");
     let dir = simple();
     let server_end = server.into_channel().into();
     let scope = ExecutionScope::new();
     dir.clone().open(
         scope,
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        MODE_TYPE_DIRECTORY,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_DIRECTORY,
         Path::dot(),
         server_end,
     );

@@ -6,12 +6,7 @@ use {
     crate::{root_dir::RootDir, u64_to_usize_safe, usize_to_u64_safe},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::sync::Arc,
     vfs::{
         common::send_on_open_with_error, directory::entry::EntryInfo,
@@ -40,7 +35,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
         flags: u32,
         _mode: u32,
         path: VfsPath,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_DIR);
@@ -48,12 +43,12 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
         }
 
         if flags
-            & (OPEN_RIGHT_WRITABLE
-                | OPEN_RIGHT_EXECUTABLE
-                | OPEN_FLAG_CREATE
-                | OPEN_FLAG_CREATE_IF_ABSENT
-                | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND)
+            & (fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_RIGHT_EXECUTABLE
+                | fio::OPEN_FLAG_CREATE
+                | fio::OPEN_FLAG_CREATE_IF_ABSENT
+                | fio::OPEN_FLAG_TRUNCATE
+                | fio::OPEN_FLAG_APPEND)
             != 0
         {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
@@ -74,7 +69,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
     }
 }
 
@@ -104,7 +99,10 @@ impl vfs::file::File for MetaAsFile {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(&self, _flags: VmoFlags) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+    async fn get_buffer(
+        &self,
+        _flags: fio::VmoFlags,
+    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -112,9 +110,9 @@ impl vfs::file::File for MetaAsFile {
         Ok(self.file_size())
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_FILE
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_FILE
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
                     false, // write
@@ -129,7 +127,7 @@ impl vfs::file::File for MetaAsFile {
         })
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), zx::Status> {
+    async fn set_attrs(&self, _flags: u32, _attrs: fio::NodeAttributes) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -147,9 +145,6 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_io::{
-            DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-        },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         std::convert::TryInto as _,
@@ -181,12 +176,12 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_rejects_non_empty_path() {
         let (_env, meta_as_file) = TestEnv::new().await;
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
         DirectoryEntry::open(
             Arc::new(meta_as_file),
             ExecutionScope::new(),
-            OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_DESCRIBE,
             0,
             VfsPath::validate_and_split("non-empty").unwrap(),
             server_end.into_channel().into(),
@@ -194,7 +189,7 @@ mod tests {
 
         assert_matches!(
             proxy.take_event_stream().next().await,
-            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_{ s, info: None}))
+            Some(Ok(fio::FileEvent::OnOpen_{ s, info: None}))
                 if s == zx::Status::NOT_DIR.into_raw()
         );
     }
@@ -205,18 +200,19 @@ mod tests {
         let meta_as_file = Arc::new(meta_as_file);
 
         for forbidden_flag in [
-            OPEN_RIGHT_WRITABLE,
-            OPEN_RIGHT_EXECUTABLE,
-            OPEN_FLAG_CREATE,
-            OPEN_FLAG_CREATE_IF_ABSENT,
-            OPEN_FLAG_TRUNCATE,
-            OPEN_FLAG_APPEND,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_EXECUTABLE,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_TRUNCATE,
+            fio::OPEN_FLAG_APPEND,
         ] {
-            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             DirectoryEntry::open(
                 Arc::clone(&meta_as_file),
                 ExecutionScope::new(),
-                OPEN_FLAG_DESCRIBE | forbidden_flag,
+                fio::OPEN_FLAG_DESCRIBE | forbidden_flag,
                 0,
                 VfsPath::dot(),
                 server_end.into_channel().into(),
@@ -224,7 +220,7 @@ mod tests {
 
             assert_matches!(
                 proxy.take_event_stream().next().await,
-                Some(Ok(fidl_fuchsia_io::DirectoryEvent::OnOpen_{ s, info: None}))
+                Some(Ok(fio::DirectoryEvent::OnOpen_{ s, info: None}))
                     if s == zx::Status::NOT_SUPPORTED.into_raw()
             );
         }
@@ -233,13 +229,13 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_succeeds() {
         let (_env, meta_as_file) = TestEnv::new().await;
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         let hash = meta_as_file.root_dir.hash.to_string();
 
         Arc::new(meta_as_file).open(
             ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
             VfsPath::dot(),
             server_end.into_channel().into(),
         );
@@ -253,7 +249,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&meta_as_file),
-            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
         );
     }
 
@@ -334,8 +330,10 @@ mod tests {
     async fn file_get_buffer() {
         let (_env, meta_as_file) = TestEnv::new().await;
 
-        for sharing_mode in [VmoFlags::empty(), VmoFlags::SHARED_BUFFER, VmoFlags::PRIVATE_CLONE] {
-            for flag in [VmoFlags::empty(), VmoFlags::READ] {
+        for sharing_mode in
+            [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
+        {
+            for flag in [fio::VmoFlags::empty(), fio::VmoFlags::READ] {
                 assert_eq!(
                     File::get_buffer(&meta_as_file, sharing_mode | flag).await.err().unwrap(),
                     zx::Status::NOT_SUPPORTED
@@ -357,8 +355,8 @@ mod tests {
 
         assert_eq!(
             File::get_attrs(&meta_as_file).await,
-            Ok(NodeAttributes {
-                mode: MODE_TYPE_FILE | 0o400,
+            Ok(fio::NodeAttributes {
+                mode: fio::MODE_TYPE_FILE | 0o400,
                 id: 1,
                 content_size: 64,
                 storage_size: 64,
@@ -377,7 +375,7 @@ mod tests {
             File::set_attrs(
                 &meta_as_file,
                 0,
-                NodeAttributes {
+                fio::NodeAttributes {
                     mode: 0,
                     id: 0,
                     content_size: 0,

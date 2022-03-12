@@ -14,7 +14,7 @@ use {
     },
     anyhow::{Context, Error},
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, FilesystemInfo, MAX_FILENAME},
+    fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::stream::{StreamExt, TryStreamExt},
@@ -108,7 +108,7 @@ impl FxfsServer {
         // VFS initialization.
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
-        let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
         self.volume.volume().start_flush_task(volume::DEFAULT_FLUSH_PERIOD);
 
@@ -218,8 +218,8 @@ impl FxfsServer {
 }
 
 impl Info {
-    fn to_filesystem_info(self, object_count: u64, fs_id: u64) -> FilesystemInfo {
-        FilesystemInfo {
+    fn to_filesystem_info(self, object_count: u64, fs_id: u64) -> fio::FilesystemInfo {
+        fio::FilesystemInfo {
             total_bytes: self.total_bytes,
             used_bytes: self.used_bytes,
             total_nodes: TOTAL_NODES,
@@ -228,7 +228,7 @@ impl Info {
             free_shared_pool_bytes: 0,
             fs_id,
             block_size: self.block_size.try_into().unwrap(),
-            max_filename_size: MAX_FILENAME as u32,
+            max_filename_size: fio::MAX_FILENAME as u32,
             fs_type: VFS_TYPE_FXFS,
             padding: 0,
             name: FXFS_INFO_NAME_FIDL,
@@ -246,7 +246,7 @@ impl FsInspect for FxfsServer {
             version_minor: LATEST_VERSION.minor.into(),
             oldest_minor_version: 0, // TODO(fxbug.dev/93770)
             block_size: self.fs.get_info().block_size.into(),
-            max_filename_length: MAX_FILENAME,
+            max_filename_length: fio::MAX_FILENAME,
         }
     }
 
@@ -279,8 +279,7 @@ mod tests {
         crate::{crypt::InsecureCrypt, object_store::FxFilesystem, server::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
-        fidl_fuchsia_io::DirectoryMarker,
-        fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
@@ -293,7 +292,7 @@ mod tests {
             .await
             .expect("Create server failed");
 
-        let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
+        let (client_end, server_end) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
         let client_proxy = client_end.into_proxy().expect("Create DirectoryProxy failed");
         fasync::Task::spawn(async move {
             let admin_proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<

@@ -4,7 +4,7 @@
 
 use {
     crate::{error::RightsRoutingError, walk_state::WalkStateUnit},
-    fidl_fuchsia_io::{self as fio},
+    fidl_fuchsia_io as fio,
     lazy_static::lazy_static,
     std::convert::From,
 };

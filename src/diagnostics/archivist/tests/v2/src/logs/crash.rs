@@ -9,7 +9,7 @@ use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
-use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_io as fio;
 use fuchsia_async::Task;
 use futures::prelude::*;
 
@@ -38,7 +38,8 @@ async fn logs_from_crashing_component() {
 
     let mut child_ref = ChildRef { name: "log_and_crash".to_string(), collection: None };
     // launch our child and wait for it to exit before asserting on its logs
-    let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let (exposed_dir, server_end) =
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
     realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
     let _ = fuchsia_component::client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(

@@ -8,7 +8,7 @@ use {
         FatFs,
     },
     anyhow::Error,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
     scopeguard::defer,
@@ -68,7 +68,7 @@ impl FuzzSink {
             let mut closer = Closer::new(fs.filesystem());
             let entry = match self.dir.open_child(
                 name,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 0,
                 &mut closer,
             ) {

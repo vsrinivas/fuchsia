@@ -8,6 +8,7 @@ use {
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::DiscoverableProtocolMarker as _,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_update::CommitStatusProviderMarker,
     fuchsia_async::{futures::join, Task},
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
@@ -269,9 +270,7 @@ async fn main_inner() -> Result<(), Error> {
     let scope = vfs::execution_scope::ExecutionScope::new();
     let () = out_dir.open(
         scope.clone(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE
-            | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-            | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
         0,
         vfs::path::Path::dot(),
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())

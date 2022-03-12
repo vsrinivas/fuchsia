@@ -9,8 +9,7 @@ use {
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
-    fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::{client, server},
     futures::{future, StreamExt},
     tracing::{error, info, warn},
@@ -26,7 +25,7 @@ trait ComponentClientAdapter {
     async fn open_childs_exposed_directory(
         &mut self,
         child_name: String,
-    ) -> Result<DirectoryProxy, Error>;
+    ) -> Result<fio::DirectoryProxy, Error>;
 }
 
 struct ComponentClient;
@@ -36,7 +35,7 @@ impl ComponentClientAdapter for ComponentClient {
     async fn open_childs_exposed_directory(
         &mut self,
         child_name: String,
-    ) -> Result<DirectoryProxy, Error> {
+    ) -> Result<fio::DirectoryProxy, Error> {
         client::open_childs_exposed_directory(child_name, None).await
     }
 }
@@ -50,7 +49,7 @@ impl ComponentClientAdapter for ComponentClient {
 // modify bt-rfcomm to accommodate this issue.
 async fn open_childs_service_directory<C: ComponentClientAdapter>(
     component_client: &mut C,
-) -> Result<DirectoryProxy, Error> {
+) -> Result<fio::DirectoryProxy, Error> {
     let underlying_profile_svc =
         component_client.open_childs_exposed_directory(BT_RFCOMM_CHILD_NAME.to_owned()).await;
     match underlying_profile_svc {
@@ -146,7 +145,7 @@ mod tests {
         async fn open_childs_exposed_directory(
             &mut self,
             child_name: String,
-        ) -> Result<DirectoryProxy, Error> {
+        ) -> Result<fio::DirectoryProxy, Error> {
             if self.children_to_fail_for.contains(&child_name) {
                 return Err(format_err!("couldn't open {}'s directory :/", &child_name));
             }
@@ -156,7 +155,7 @@ mod tests {
                 BT_GAP_CHILD_NAME => self.bt_gap_channel = Some(local),
                 _ => panic!("MockComponentClient received unexpected child name: {}", child_name),
             }
-            Ok(DirectoryProxy::from_channel(AsyncChannel::from_channel(client).unwrap()))
+            Ok(fio::DirectoryProxy::from_channel(AsyncChannel::from_channel(client).unwrap()))
         }
     }
 

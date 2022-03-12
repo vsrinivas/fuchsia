@@ -8,7 +8,7 @@ use {
     crate::{cache::Cache, resolver::Resolver, updater::Updater},
     anyhow::anyhow,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fuchsia_url::pkg_url::PkgUrl,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
@@ -27,8 +27,8 @@ use {
 /// This Installer implementation does not reboot when `perform_reboot` is called, as the caller of
 /// `isolated-swd` is expected to do that.
 pub struct IsolatedInstaller {
-    blobfs: Option<ClientEnd<DirectoryMarker>>,
-    paver_connector: Option<ClientEnd<DirectoryMarker>>,
+    blobfs: Option<ClientEnd<fio::DirectoryMarker>>,
+    paver_connector: Option<ClientEnd<fio::DirectoryMarker>>,
     cache: Arc<Cache>,
     resolver: Arc<Resolver>,
     board_name: String,
@@ -37,8 +37,8 @@ pub struct IsolatedInstaller {
 
 impl IsolatedInstaller {
     pub fn new(
-        blobfs: ClientEnd<DirectoryMarker>,
-        paver_connector: ClientEnd<DirectoryMarker>,
+        blobfs: ClientEnd<fio::DirectoryMarker>,
+        paver_connector: ClientEnd<fio::DirectoryMarker>,
         cache: Arc<Cache>,
         resolver: Arc<Resolver>,
         board_name: String,

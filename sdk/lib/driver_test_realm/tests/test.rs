@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_test as fdt,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component_test::new::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
@@ -78,11 +78,9 @@ async fn test_pkg_dir() -> Result<()> {
 
     let instance = realm.build().await?;
 
-    let (pkg, pkg_server) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
-    let pkg_flags = io_util::OPEN_RIGHT_READABLE
-        | io_util::OPEN_RIGHT_EXECUTABLE
-        | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
+    let (pkg, pkg_server) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
+    let pkg_flags =
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_DIRECTORY;
     io_util::connect_in_namespace("/pkg", pkg_server.into_channel(), pkg_flags).unwrap();
     let args = fdt::RealmArgs { boot: Some(pkg), ..fdt::RealmArgs::EMPTY };
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_test_manager::{DebugData, DebugDataIteratorMarker, DebugDataIteratorRequest};
 use fuchsia_async as fasync;
 use futures::TryStreamExt;
@@ -40,14 +41,14 @@ pub fn serve_debug_data(
                     };
 
                     let (file_client, file_server) =
-                        fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>().unwrap();
+                        fidl::endpoints::create_endpoints::<fio::NodeMarker>().unwrap();
 
                     let file_impl = read_only_const(&contents);
                     std::mem::drop(contents); // contents are copied; release unneeded memory
 
                     file_impl.open(
                         scope.clone(),
-                        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                        fio::OPEN_RIGHT_READABLE,
                         0,
                         vfs::path::Path::dot(),
                         file_server,
@@ -55,7 +56,7 @@ pub fn serve_debug_data(
 
                     let mut data_iter = vec![DebugData {
                         name: Some(name),
-                        file: Some(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(
+                        file: Some(fidl::endpoints::ClientEnd::<fio::FileMarker>::new(
                             file_client.into_channel(),
                         )),
                         ..DebugData::EMPTY

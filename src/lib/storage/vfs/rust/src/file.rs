@@ -4,11 +4,8 @@
 
 //! Module holding different kinds of files and their building blocks.
 use {
-    crate::directory::entry::DirectoryEntry,
-    async_trait::async_trait,
-    fidl_fuchsia_io::{FileObject, FilesystemInfo, NodeAttributes, NodeInfo, VmoFlags},
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::Status,
+    crate::directory::entry::DirectoryEntry, async_trait::async_trait, fidl_fuchsia_io as fio,
+    fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
 };
 
 /// File nodes backed by VMOs.
@@ -58,18 +55,18 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Get a VMO representing this file.
     /// If not supported by the underlying filesystem, should return Error(NOT_SUPPORTED).
-    async fn get_buffer(&self, flags: VmoFlags) -> Result<Buffer, Status>;
+    async fn get_buffer(&self, flags: fio::VmoFlags) -> Result<Buffer, Status>;
 
     /// Get the size of this file.
     /// This is used to calculate seek offset relative to the end.
     async fn get_size(&self) -> Result<u64, Status>;
 
     /// Get this file's attributes.
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status>;
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status>;
 
     /// Set the attributes of this file based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status>;
+    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status>;
 
     /// Called when the file is closed.
     /// This function will also do the equivalent of sync() before the returning.
@@ -82,12 +79,12 @@ pub trait File: Sync + Send + DirectoryEntry {
     async fn sync(&self) -> Result<(), Status>;
 
     /// Returns information about the filesystem.
-    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+    fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         Err(Status::NOT_SUPPORTED)
     }
 
     /// Describes the underlying object.  Defaults to a simple file.
-    fn describe(&self, _connection_flags: u32) -> Result<NodeInfo, Status> {
-        Ok(NodeInfo::File(FileObject { event: None, stream: None }))
+    fn describe(&self, _connection_flags: u32) -> Result<fio::NodeInfo, Status> {
+        Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
     }
 }

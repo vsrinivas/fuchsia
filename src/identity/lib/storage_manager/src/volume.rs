@@ -6,7 +6,7 @@ use crate::{Key, StorageManager};
 use account_common::{AccountId, AccountManagerError};
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 
 /// A `StorageManager` that manages access to a minfs filesystem backed by an
 /// FVM partition encrypted with zxcrypt.
@@ -30,7 +30,7 @@ impl StorageManager for EncryptedVolumeStorageManager {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 
-    async fn get_root_dir(&self) -> Result<DirectoryProxy, AccountManagerError> {
+    async fn get_root_dir(&self) -> Result<fio::DirectoryProxy, AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 }

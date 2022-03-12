@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    fidl_fuchsia_driver_test as fdt,
+    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io as fio,
     fuchsia_component_test::new::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
@@ -64,7 +64,7 @@ pub trait DriverTestRealmInstance {
     async fn driver_test_realm_start(&self, args: fdt::RealmArgs) -> Result<()>;
 
     /// Connect to the /dev/ directory hosted by  DriverTestRealm in this Instance.
-    fn driver_test_realm_connect_to_dev(&self) -> Result<fidl_fuchsia_io::DirectoryProxy>;
+    fn driver_test_realm_connect_to_dev(&self) -> Result<fio::DirectoryProxy>;
 }
 
 #[async_trait::async_trait]
@@ -78,13 +78,10 @@ impl DriverTestRealmInstance for RealmInstance {
         Ok(())
     }
 
-    fn driver_test_realm_connect_to_dev(&self) -> Result<fidl_fuchsia_io::DirectoryProxy> {
-        let (dev, dev_server) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
+    fn driver_test_realm_connect_to_dev(&self) -> Result<fio::DirectoryProxy> {
+        let (dev, dev_server) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
         self.root
             .connect_request_to_named_protocol_at_exposed_dir("dev", dev_server.into_channel())?;
-        Ok(fidl_fuchsia_io::DirectoryProxy::new(fidl::handle::AsyncChannel::from_channel(
-            dev.into_channel(),
-        )?))
+        Ok(fio::DirectoryProxy::new(fidl::handle::AsyncChannel::from_channel(dev.into_channel())?))
     }
 }

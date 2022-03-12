@@ -6,6 +6,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         PackageCacheRequest, PackageCacheRequestStream, PackageResolverRequest,
         PackageResolverRequestStream, RepositoryIteratorRequest, RepositoryManagerRequest,
@@ -389,7 +390,7 @@ impl MockPackageResolverService {
                     let (dir_server, mut res) = self.resolve_response.lock().take().unwrap();
                     let () = dir_server.open(
                         vfs::execution_scope::ExecutionScope::new(),
-                        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                        fio::OPEN_RIGHT_READABLE,
                         0,
                         vfs::path::Path::dot(),
                         dir.into_channel().into(),

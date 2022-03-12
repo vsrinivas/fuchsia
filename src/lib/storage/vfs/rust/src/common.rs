@@ -7,26 +7,23 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE,
-        OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     libc,
     std::{convert::TryFrom, sync::Arc},
 };
 
 /// Set of known rights.
-const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
+const FS_RIGHTS: u32 =
+    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE;
 
 /// Flags visible to GetFlags. These are flags that have meaning after the open call; all other
 /// flags are only significant at open time.
-pub const GET_FLAGS_VISIBLE: u32 = OPEN_RIGHT_READABLE
-    | OPEN_RIGHT_WRITABLE
-    | OPEN_RIGHT_EXECUTABLE
-    | OPEN_FLAG_APPEND
-    | OPEN_FLAG_NODE_REFERENCE;
+pub const GET_FLAGS_VISIBLE: u32 = fio::OPEN_RIGHT_READABLE
+    | fio::OPEN_RIGHT_WRITABLE
+    | fio::OPEN_RIGHT_EXECUTABLE
+    | fio::OPEN_FLAG_APPEND
+    | fio::OPEN_FLAG_NODE_REFERENCE;
 
 /// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
 pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {
@@ -38,20 +35,20 @@ pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {
 /// Common logic for rights processing during cloning a node, shared by both file and directory
 /// implementations.
 pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
-    if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
+    if (flags & fio::CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
         return Err(Status::INVALID_ARGS);
     }
 
     // We preserve OPEN_FLAG_APPEND as this is what is the most convenient for the POSIX emulation.
     //
     // OPEN_FLAG_NODE_REFERENCE is enforced, according to our current FS permissions design.
-    flags |= parent_flags & (OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE);
+    flags |= parent_flags & (fio::OPEN_FLAG_APPEND | fio::OPEN_FLAG_NODE_REFERENCE);
 
     // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
     // as those from the originating connection.  We have ensured that no FS_RIGHTS flags are set
     // above.
-    if flags & CLONE_FLAG_SAME_RIGHTS != 0 {
-        flags &= !CLONE_FLAG_SAME_RIGHTS;
+    if flags & fio::CLONE_FLAG_SAME_RIGHTS != 0 {
+        flags &= !fio::CLONE_FLAG_SAME_RIGHTS;
         flags |= parent_flags & FS_RIGHTS;
     }
 
@@ -62,7 +59,9 @@ pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32
     // Ignore the POSIX flags for clone.
     // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED once out-of-tree clients have been
     // updated to the latest SDK version.
-    flags &= !(OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+    flags &= !(fio::OPEN_FLAG_POSIX_DEPRECATED
+        | fio::OPEN_FLAG_POSIX_WRITABLE
+        | fio::OPEN_FLAG_POSIX_EXECUTABLE);
 
     Ok(flags)
 }
@@ -77,8 +76,8 @@ pub fn current_time() -> u64 {
 
 /// Creates a default-initialized NodeAttributes. Exists because NodeAttributes does not implement
 /// Default.
-pub fn node_attributes() -> NodeAttributes {
-    NodeAttributes {
+pub fn node_attributes() -> fio::NodeAttributes {
+    fio::NodeAttributes {
         id: 0,
         mode: 0,
         content_size: 0,
@@ -100,13 +99,13 @@ pub fn node_attributes() -> NodeAttributes {
 ///
 /// # Panics
 /// If `status` is `Status::OK`.  In this case `OnOpen` may need to contain a description of the
-/// object, and server_end should not be droppped.
-pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, status: Status) {
+/// object, and server_end should not be dropped.
+pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<fio::NodeMarker>, status: Status) {
     if status == Status::OK {
         panic!("send_on_open_with_error() should not be used to respond with Status::OK");
     }
 
-    if flags & OPEN_FLAG_DESCRIBE == 0 {
+    if flags & fio::OPEN_FLAG_DESCRIBE == 0 {
         // There is no reasonable way to report this error.  Assuming the `server_end` has just
         // disconnected or failed in some other way why we are trying to send OnOpen.
         let _ = server_end.close_with_epitaph(status);
@@ -154,7 +153,7 @@ pub fn rights_to_posix_mode_bits(readable: bool, writable: bool, executable: boo
 mod tests {
     use super::inherit_rights_for_clone;
 
-    use fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
+    use fidl_fuchsia_io as fio;
 
     // TODO This should be converted into a function as soon as backtrace support is in place.
     // The only reason this is a macro is to generate error messages that point to the test
@@ -177,6 +176,6 @@ mod tests {
 
     #[test]
     fn node_reference_is_inherited() {
-        irfc_ok!(OPEN_FLAG_NODE_REFERENCE, 0, OPEN_FLAG_NODE_REFERENCE);
+        irfc_ok!(fio::OPEN_FLAG_NODE_REFERENCE, 0, fio::OPEN_FLAG_NODE_REFERENCE);
     }
 }

@@ -5,10 +5,7 @@
 use {
     super::*,
     assert_matches::assert_matches,
-    fidl_fuchsia_io::{
-        DirectoryProxy, FileEvent, FileInfo, FileMarker, FileObject, FileProxy, NodeInfo,
-        Representation,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
     futures::StreamExt,
@@ -67,37 +64,37 @@ async fn blobfs() -> Result<(), Error> {
 }
 
 async fn open_blob(
-    blobfs: &DirectoryProxy,
+    blobfs: &fio::DirectoryProxy,
     merkle: &str,
     mut flags: u32,
-) -> Result<(FileProxy, zx::Event), zx::Status> {
-    let (file, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+) -> Result<(fio::FileProxy, zx::Event), zx::Status> {
+    let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let server_end = ServerEnd::new(server_end.into_channel());
 
-    flags = flags | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+    flags = flags | fio::OPEN_FLAG_DESCRIBE;
     blobfs.open(flags, 0, merkle, server_end).expect("open blob");
 
     let mut events = file.take_event_stream();
     let event = match events
         .next()
         .await
-        .expect("FileEvent stream to be non-empty")
-        .expect("FileEvent stream not to FIDL error")
+        .expect("fio::FileEvent stream to be non-empty")
+        .expect("fio::FileEvent stream not to FIDL error")
     {
-        FileEvent::OnOpen_ { s: status, info } => {
+        fio::FileEvent::OnOpen_ { s: status, info } => {
             Status::ok(status)?;
-            match *info.expect("FileEvent to have NodeInfo") {
-                NodeInfo::File(FileObject { event: Some(event), .. }) => event,
+            match *info.expect("fio::FileEvent to have fio::NodeInfo") {
+                fio::NodeInfo::File(fio::FileObject { event: Some(event), .. }) => event,
                 other => panic!(
-                    "NodeInfo from FileEventStream to be File variant with event: {:?}",
+                    "fio::NodeInfo from fio::FileEventStream to be File variant with event: {:?}",
                     other
                 ),
             }
         }
-        FileEvent::OnConnectionInfo { info } => match info.representation {
-            Some(Representation::File(FileInfo { observer: Some(event), .. })) => event,
+        fio::FileEvent::OnConnectionInfo { info } => match info.representation {
+            Some(fio::Representation::File(fio::FileInfo { observer: Some(event), .. })) => event,
             other => panic!(
-                "ConnectionInfo from FileEventStream to be File variant with event: {:?}",
+                "ConnectionInfo from fio::FileEventStream to be File variant with event: {:?}",
                 other
             ),
         },
@@ -105,14 +102,14 @@ async fn open_blob(
     Ok((file, event))
 }
 
-async fn write_blob(blob: &FileProxy, bytes: &[u8]) -> Result<(), Error> {
+async fn write_blob(blob: &fio::FileProxy, bytes: &[u8]) -> Result<(), Error> {
     let n = blob.write(bytes).await?.map_err(zx::Status::from_raw)?;
     assert_eq!(n, bytes.len() as u64);
     Ok(())
 }
 
 /// Verify the contents of a blob, or return any non-ok zx status encountered along the way.
-async fn verify_blob(blob: &FileProxy, expected_bytes: &[u8]) -> Result<(), Status> {
+async fn verify_blob(blob: &fio::FileProxy, expected_bytes: &[u8]) -> Result<(), Status> {
     let actual_bytes = blob
         .read_at(expected_bytes.len() as u64 + 1, 0)
         .await
@@ -122,18 +119,18 @@ async fn verify_blob(blob: &FileProxy, expected_bytes: &[u8]) -> Result<(), Stat
     Ok(())
 }
 
-async fn create_blob(blobfs: &DirectoryProxy, merkle: &str, contents: &[u8]) -> Result<(), Error> {
-    let (blob, _) = open_blob(
-        &blobfs,
-        merkle,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+async fn create_blob(
+    blobfs: &fio::DirectoryProxy,
+    merkle: &str,
+    contents: &[u8],
+) -> Result<(), Error> {
+    let (blob, _) =
+        open_blob(&blobfs, merkle, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(contents.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, contents).await?;
     blob.close().await?.map_err(Status::from_raw)?;
 
-    let (blob, _) = open_blob(&blobfs, merkle, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
+    let (blob, _) = open_blob(&blobfs, merkle, fio::OPEN_RIGHT_READABLE).await?;
     verify_blob(&blob, contents).await?;
     Ok(())
 }
@@ -145,14 +142,10 @@ async fn create_blob(blobfs: &DirectoryProxy, merkle: &str, contents: &[u8]) -> 
 // 2. drops channel 0
 // 3. opens writable on channel 1
 // can fail with ACCESS_DENIED in step 3, unless we wait.
-async fn wait_for_blob_to_be_creatable(blobfs: &DirectoryProxy, merkle: &str) {
+async fn wait_for_blob_to_be_creatable(blobfs: &fio::DirectoryProxy, merkle: &str) {
     for _ in 0..50 {
-        let res = open_blob(
-            &blobfs,
-            merkle,
-            fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        )
-        .await;
+        let res =
+            open_blob(&blobfs, merkle, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await;
         match res {
             Err(zx::Status::ACCESS_DENIED) => {
                 fuchsia_async::Timer::new(Duration::from_millis(10)).await;
@@ -179,12 +172,8 @@ async fn open_for_create_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (_blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (_blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
 
     create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
 
@@ -196,12 +185,8 @@ async fn open_resize_drop_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     drop(blob);
     wait_for_blob_to_be_creatable(&root_dir, BLOB_MERKLE).await;
@@ -216,12 +201,8 @@ async fn open_partial_write_drop_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
     drop(blob);
@@ -237,12 +218,8 @@ async fn open_partial_write_close_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
     blob.close().await?.map_err(Status::from_raw)?;
@@ -257,20 +234,12 @@ async fn open_resize_open_for_create_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
 
-    let res = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await;
+    let res =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await;
 
     assert_matches!(res, Err(zx::Status::ACCESS_DENIED));
 
@@ -282,18 +251,10 @@ async fn open_open_resize_resize_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob0, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
-    let (blob1, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
+    let (blob1, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     let result = blob1.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw);
     assert_matches!(result, Err(zx::Status::BAD_STATE));
@@ -306,15 +267,10 @@ async fn open_resize_open_read_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob0, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
-    let (blob1, _) =
-        open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
+    let (blob1, _) = open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_RIGHT_READABLE).await?;
 
     let result = blob1.read_at(1, 0).await?.map_err(zx::Status::from_raw);
 
@@ -328,14 +284,9 @@ async fn open_for_create_wait_for_signal() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob0, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
-    let (blob1, event) =
-        open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
+    let (blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
+    let (blob1, event) = open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_RIGHT_READABLE).await?;
     let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     assert_matches!(
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0))),
@@ -357,15 +308,10 @@ async fn open_resize_wait_for_signal() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob0, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
-    let (blob1, event) =
-        open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
+    let (blob1, event) = open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_RIGHT_READABLE).await?;
     assert_matches!(
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0))),
         Err(zx::Status::TIMED_OUT)
@@ -386,7 +332,7 @@ async fn open_missing_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let res = open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await;
+    let res = open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_RIGHT_READABLE).await;
 
     assert_matches!(res, Err(zx::Status::NOT_FOUND));
 
@@ -413,8 +359,7 @@ impl BlobfsRamdisk {
     async fn verify_blob(&self, blob: &TestBlob) -> Result<(), Status> {
         let proxy = self.root_dir_proxy().unwrap();
         let (file, _) =
-            open_blob(&proxy, &blob.merkle.to_string(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-                .await?;
+            open_blob(&proxy, &blob.merkle.to_string(), fio::OPEN_RIGHT_READABLE).await?;
         verify_blob(&file, blob.contents).await?;
         file.close().await.unwrap().map_err(Status::from_raw).unwrap();
         Ok(())
@@ -500,12 +445,8 @@ async fn corrupt_create_fails_on_last_byte_write() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
-    let (blob, _) = open_blob(
-        &root_dir,
-        BLOB_MERKLE,
-        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-    )
-    .await?;
+    let (blob, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE).await?;
     let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
 
     write_blob(&blob, &BLOB_CONTENTS[..BLOB_CONTENTS.len() - 1]).await?;

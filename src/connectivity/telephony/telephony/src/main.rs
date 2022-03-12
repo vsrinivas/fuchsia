@@ -6,6 +6,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_telephony_ril::{
         RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, SetupMarker,
@@ -178,7 +179,7 @@ impl Manager {
     async fn watch_new_devices(
         &self,
         dir_path: &str,
-        fn_open_dir: fn(&PathBuf) -> fidl_fuchsia_io::DirectoryProxy,
+        fn_open_dir: fn(&PathBuf) -> fio::DirectoryProxy,
         fn_open_file: fn(&PathBuf) -> File,
     ) -> Result<(), Error> {
         // TODO(bwb): make more generic to support non-qmi devices
@@ -197,7 +198,7 @@ impl Manager {
         Ok(())
     }
 
-    fn open_dir(path: &PathBuf) -> fidl_fuchsia_io::DirectoryProxy {
+    fn open_dir(path: &PathBuf) -> fio::DirectoryProxy {
         open_directory_in_namespace(path.to_str().unwrap(), OPEN_RIGHT_READABLE).unwrap()
     }
     fn open_file(path: &PathBuf) -> File {

@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_data as fdata;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netemul_network as fnetemul_network;
@@ -213,7 +214,7 @@ impl Config {
     /// at `pkg_dir`, and the filepath is specified in `program`.
     pub(crate) async fn load_from_program(
         program: fdata::Dictionary,
-        pkg_dir: &fidl_fuchsia_io::DirectoryProxy,
+        pkg_dir: &fio::DirectoryProxy,
     ) -> Result<Self, anyhow::Error> {
         let fdata::Dictionary { entries, .. } = program;
 
@@ -244,7 +245,7 @@ impl Config {
         let file = io_util::open_file(
             pkg_dir,
             std::path::Path::new(&network_config_path),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
         )
         .with_context(|| format!("opening network config file at {}", network_config_path))?;
         let contents =

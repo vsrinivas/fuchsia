@@ -5,8 +5,7 @@
 use crate::file::vmo::asynchronous::{ConsumeVmoResult, InitVmoResult, VmoFileState};
 
 use {
-    fidl_fuchsia_io::INO_UNKNOWN,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::MutexLockFuture},
     std::sync::Arc,
 };
@@ -47,6 +46,6 @@ pub(in crate::file::vmo) trait VmoFileInterface: Send + Sync {
     }
 
     fn get_inode(&self) -> u64 {
-        INO_UNKNOWN
+        fio::INO_UNKNOWN
     }
 }

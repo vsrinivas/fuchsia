@@ -137,8 +137,7 @@ mod tests {
         anyhow::{anyhow, Context, Error},
         fatfs::{format_volume, FormatVolumeOptions, FsOptions},
         fidl::endpoints::Proxy,
-        fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy, OPEN_RIGHT_READABLE},
-        fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::Status,
         futures::{future::BoxFuture, prelude::*},
         std::{collections::HashMap, io::Write, ops::Deref},
@@ -204,12 +203,12 @@ mod tests {
             };
         }
 
-        pub fn verify(&self, remote: NodeProxy) -> BoxFuture<'_, Result<(), Error>> {
+        pub fn verify(&self, remote: fio::NodeProxy) -> BoxFuture<'_, Result<(), Error>> {
             // Unfortunately, there is no way to verify from the server side, so we use
             // the fuchsia.io protocol to check everything is as expected.
             match self {
                 TestDiskContents::File(content) => {
-                    let remote = FileProxy::new(remote.into_channel().unwrap());
+                    let remote = fio::FileProxy::new(remote.into_channel().unwrap());
                     let mut file_contents: Vec<u8> = Vec::with_capacity(content.len());
 
                     return async move {
@@ -238,16 +237,16 @@ mod tests {
                     .boxed();
                 }
                 TestDiskContents::Dir(map) => {
-                    let remote = DirectoryProxy::new(remote.into_channel().unwrap());
+                    let remote = fio::DirectoryProxy::new(remote.into_channel().unwrap());
                     // TODO(simonshields): we should check that no other files exist, but
                     // GetDirents() is going to be a pain to deal with.
 
                     return async move {
                         for (name, value) in map.iter() {
                             let (proxy, server_end) =
-                                fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+                                fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
                             remote
-                                .open(OPEN_RIGHT_READABLE, 0, name, server_end)
+                                .open(fio::OPEN_RIGHT_READABLE, 0, name, server_end)
                                 .context("Sending open failed")?;
                             value.verify(proxy).await.context(format!("Verifying {}", name))?;
                         }
@@ -315,9 +314,9 @@ mod tests {
 
         let fatfs = disk.into_fatfs();
         let scope = ExecutionScope::new();
-        let (proxy, remote) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         let root = fatfs.get_root().expect("get_root OK");
-        root.clone().open(scope, OPEN_RIGHT_READABLE, 0, Path::dot(), remote);
+        root.clone().open(scope, fio::OPEN_RIGHT_READABLE, 0, Path::dot(), remote);
         root.close().expect("Close OK");
 
         structure.verify(proxy).await.expect("Verify succeeds");

@@ -637,9 +637,7 @@ mod test {
             prototype::INSECURE_EMPTY_KEY,
         },
         async_trait::async_trait,
-        fidl_fuchsia_io::{
-            DirectoryMarker, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
+        fidl_fuchsia_io as fio,
         fs_management::ServeError,
         fuchsia_zircon::Status,
         lazy_static::lazy_static,
@@ -1139,7 +1137,7 @@ mod test {
             .get_account(GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD, server)
             .await
             .expect("get account");
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
             Ok(())
@@ -1174,7 +1172,7 @@ mod test {
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
             .await
             .expect("get account");
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
             Ok(())
@@ -1214,12 +1212,12 @@ mod test {
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
             .await
             .expect("get account 2");
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client1.get_data_directory(server).await.expect("get_data_directory 1 FIDL"),
             Ok(())
         );
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client2.get_data_directory(server).await.expect("get_data_directory 2 FIDL"),
             Ok(())
@@ -1240,7 +1238,7 @@ mod test {
             .await
             .expect("get account 1");
 
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory 1 FIDL"),
             Ok(())
@@ -1251,7 +1249,7 @@ mod test {
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
             .await
             .expect("get account 2");
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory 2 FIDL"),
             Ok(())
@@ -1271,13 +1269,13 @@ mod test {
             .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
             .await
             .expect("get account");
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
             Ok(())
         );
         account_manager.lock_account(GLOBAL_ACCOUNT_ID).await;
-        let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let err =
             client.get_data_directory(server).await.expect_err("get_data_directory should fail");
         assert!(err.is_closed());
@@ -1511,7 +1509,7 @@ mod test {
         let file = io_util::directory::open_file(
             &root_dir,
             "test",
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("create file");
@@ -1553,7 +1551,7 @@ mod test {
         let file = io_util::directory::open_file(
             &root_dir,
             "test",
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("create file");

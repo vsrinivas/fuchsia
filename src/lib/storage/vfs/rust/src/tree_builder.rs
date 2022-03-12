@@ -11,7 +11,7 @@
 use crate::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable};
 
 use {
-    fidl_fuchsia_io::{INO_UNKNOWN, MAX_FILENAME},
+    fidl_fuchsia_io as fio,
     itertools::Itertools,
     std::{collections::HashMap, fmt, marker::PhantomData, slice::Iter, sync::Arc},
     thiserror::Error,
@@ -214,12 +214,12 @@ impl TreeBuilder {
             Vec<&'components str>,
         ) -> Result<(), Error>,
     {
-        if name.len() as u64 >= MAX_FILENAME {
+        if name.len() as u64 >= fio::MAX_FILENAME {
             return Err(Error::ComponentNameTooLong {
                 path: full_path.to_string(),
                 component: name.to_string(),
                 component_len: name.len(),
-                max_len: (MAX_FILENAME - 1) as usize,
+                max_len: (fio::MAX_FILENAME - 1) as usize,
             });
         }
 
@@ -259,7 +259,7 @@ impl TreeBuilder {
     // Helper function for building a tree with a default inode generator. Use if you don't
     // care about directory inode values.
     pub fn build(self) -> Arc<immutable::Simple> {
-        let mut generator = |_| -> u64 { INO_UNKNOWN };
+        let mut generator = |_| -> u64 { fio::INO_UNKNOWN };
         self.build_with_inode_generator(&mut generator)
     }
 
@@ -381,10 +381,7 @@ mod tests {
         file::vmo::asynchronous::read_only_static,
     };
 
-    use {
-        fidl_fuchsia_io::{INO_UNKNOWN, MAX_FILENAME, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
-        vfs_macros::pseudo_directory,
-    };
+    use {fidl_fuchsia_io as fio, vfs_macros::pseudo_directory};
 
     #[test]
     fn vfs_with_custom_inodes() {
@@ -397,18 +394,18 @@ mod tests {
                 "a" => 1,
                 "b" => 2,
                 "c" => 3,
-                _ => INO_UNKNOWN,
+                _ => fio::INO_UNKNOWN,
             }
         };
         let root = tree.build_with_inode_generator(&mut get_inode);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_get_attr_path!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "a",
-                fidl_fuchsia_io::NodeAttributes {
-                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
                             /*r*/ true, /*w*/ false, /*x*/ true
                         ),
@@ -422,10 +419,10 @@ mod tests {
             );
             assert_get_attr_path!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "a/b",
-                fidl_fuchsia_io::NodeAttributes {
-                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
                             /*r*/ true, /*w*/ false, /*x*/ true
                         ),
@@ -439,10 +436,10 @@ mod tests {
             );
             assert_get_attr_path!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "a/c",
-                fidl_fuchsia_io::NodeAttributes {
-                    mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_DIRECTORY
                         | crate::common::rights_to_posix_mode_bits(
                             /*r*/ true, /*w*/ false, /*x*/ true
                         ),
@@ -465,7 +462,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -474,13 +471,13 @@ mod tests {
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "a",
                 "A content"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "b",
                 "B content"
             );
@@ -498,7 +495,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -514,19 +511,19 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "one/two",
                 "A"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "one/three",
                 "B"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "four",
                 "C"
             );
@@ -550,7 +547,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -571,19 +568,19 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "etc/fstab",
                 "/dev/fs /"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "etc/ssh/sshd_config",
                 "# Empty"
             );
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "uname",
                 "Fuchsia"
             );
@@ -600,7 +597,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -619,7 +616,7 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "one/two/three",
                 "B"
             );
@@ -636,7 +633,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -655,7 +652,7 @@ mod tests {
 
             open_as_vmo_file_assert_content!(
                 &root,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 "one/two/three",
                 "B"
             );
@@ -671,7 +668,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -693,7 +690,7 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
             assert_read_dirents_one_listing!(
                 root, 1000,
                 { DIRECTORY, b"." },
@@ -749,7 +746,7 @@ mod tests {
     fn error_component_name_too_long() {
         let mut tree = TreeBuilder::empty_dir();
 
-        let long_component = "abcdefghij".repeat(MAX_FILENAME as usize / 10 + 1);
+        let long_component = "abcdefghij".repeat(fio::MAX_FILENAME as usize / 10 + 1);
 
         let path: &[&str] = &["a", &long_component, "b"];
         let err = tree
@@ -761,7 +758,7 @@ mod tests {
                 path: format!("a/{}/b", long_component),
                 component: long_component.clone(),
                 component_len: long_component.len(),
-                max_len: (MAX_FILENAME - 1) as usize,
+                max_len: (fio::MAX_FILENAME - 1) as usize,
             }
         );
     }

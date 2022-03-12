@@ -10,7 +10,7 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     fdio::SpawnBuilder,
-    fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg_ext::{
         MirrorConfig, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
@@ -296,22 +296,26 @@ impl Repository {
     ///       ${url.host()}/
     ///           root.json
     ///           ...
-    pub async fn copy_local_repository_to_dir(&self, dst: &DirectoryProxy, url: &RepoUrl) {
-        let src =
-            directory::open_in_namespace(self.dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
-                .unwrap();
+    pub async fn copy_local_repository_to_dir(&self, dst: &fio::DirectoryProxy, url: &RepoUrl) {
+        let src = directory::open_in_namespace(
+            self.dir.path().to_str().unwrap(),
+            fio::OPEN_RIGHT_READABLE,
+        )
+        .unwrap();
 
-        let version = open_file(&dst, "FORMAT_VERSION", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-            .await
-            .unwrap();
+        let version =
+            open_file(&dst, "FORMAT_VERSION", fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
         write(&version, "loose").await.unwrap();
 
         // Copy the blobs. Blobs are named after their hashes and (in the target layout) partitioned
         // into subdirectories named after the first two hex characters of their hashes.
-        let blobs =
-            open_directory(&dst, "blobs", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE).await.unwrap();
+        let blobs = open_directory(&dst, "blobs", fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE)
+            .await
+            .unwrap();
         let src_blobs =
-            open_directory(&src, "repository/blobs", OPEN_RIGHT_READABLE).await.unwrap();
+            open_directory(&src, "repository/blobs", fio::OPEN_RIGHT_READABLE).await.unwrap();
         let mut blob_sub_dirs = HashMap::new();
         for dirent in readdir(&src_blobs).await.unwrap() {
             let sub_dir_name = &dirent.name[..2];
@@ -319,30 +323,38 @@ impl Repository {
                 io_util::directory::open_directory_no_describe(
                     &blobs,
                     sub_dir_name,
-                    OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
+                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
                 )
                 .unwrap()
             });
 
-            let src_blob = open_file(&src_blobs, &dirent.name, OPEN_RIGHT_READABLE).await.unwrap();
+            let src_blob =
+                open_file(&src_blobs, &dirent.name, fio::OPEN_RIGHT_READABLE).await.unwrap();
             let contents = read(&src_blob).await.unwrap();
-            let blob =
-                open_file(&sub_dir, &dirent.name[2..], OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                    .await
-                    .unwrap();
+            let blob = open_file(
+                &sub_dir,
+                &dirent.name[2..],
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+            )
+            .await
+            .unwrap();
             write(&blob, contents).await.unwrap();
         }
 
         // Copy the metadata.
-        let src_metadata = open_directory(&src, "repository", OPEN_RIGHT_READABLE).await.unwrap();
-        let repository_metadata =
-            open_directory(&dst, "repository_metadata", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                .await
-                .unwrap();
+        let src_metadata =
+            open_directory(&src, "repository", fio::OPEN_RIGHT_READABLE).await.unwrap();
+        let repository_metadata = open_directory(
+            &dst,
+            "repository_metadata",
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .unwrap();
         let hostname_dir = open_directory(
             &repository_metadata,
             url.host(),
-            OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .unwrap();
@@ -350,12 +362,15 @@ impl Repository {
         for dirent in readdir(&src_metadata).await.unwrap() {
             if dirent.kind == files_async::DirentKind::File {
                 let src_metadata =
-                    open_file(&src_metadata, &dirent.name, OPEN_RIGHT_READABLE).await.unwrap();
+                    open_file(&src_metadata, &dirent.name, fio::OPEN_RIGHT_READABLE).await.unwrap();
                 let contents = read(&src_metadata).await.unwrap();
-                let metadata =
-                    open_file(&hostname_dir, &dirent.name, OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
-                        .await
-                        .unwrap();
+                let metadata = open_file(
+                    &hostname_dir,
+                    &dirent.name,
+                    fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_WRITABLE,
+                )
+                .await
+                .unwrap();
                 write(&metadata, contents).await.unwrap();
             }
         }
@@ -464,7 +479,7 @@ mod tests {
         repo.copy_local_repository_to_dir(
             &directory::open_in_namespace(
                 local_repodir.path().to_str().unwrap(),
-                OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap(),
             &"fuchsia-pkg://repo.example.org".parse().unwrap(),

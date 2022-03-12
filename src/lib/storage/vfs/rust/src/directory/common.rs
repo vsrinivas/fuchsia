@@ -8,15 +8,7 @@ use crate::{common::stricter_or_same_rights, directory::entry::EntryInfo};
 
 use {
     byteorder::{LittleEndian, WriteBytesExt},
-    fidl_fuchsia_io::{
-        CLONE_FLAG_SAME_RIGHTS, MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK,
-        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     static_assertions::assert_eq_size,
     std::{io::Write, mem::size_of},
 };
@@ -29,44 +21,46 @@ use {
 ///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
 pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> {
-    if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-        flags &= OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
+    if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        flags &= fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
     }
 
-    if flags & OPEN_FLAG_DIRECTORY != 0 {
-        flags &= !OPEN_FLAG_DIRECTORY;
+    if flags & fio::OPEN_FLAG_DIRECTORY != 0 {
+        flags &= !fio::OPEN_FLAG_DIRECTORY;
     }
 
-    if flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
+    if flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0 {
         return Err(zx::Status::NOT_FILE);
     }
 
     // Explicitly expand OPEN_FLAG_POSIX_DEPRECATED to prevent right escalation issues.
     // TODO(fxbug.dev/81185): Remove this branch and usesof OPEN_FLAG_POSIX_DEPRECATED below when
     // out-of-tree clients have been updated.
-    if (flags & OPEN_FLAG_POSIX_DEPRECATED) != 0 {
-        flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
+    if (flags & fio::OPEN_FLAG_POSIX_DEPRECATED) != 0 {
+        flags |= fio::OPEN_FLAG_POSIX_WRITABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE;
     }
     // Parent connection must check the POSIX flags in `check_child_connection_flags`, so if any
     // are still present, we expand their respective rights and remove any remaining flags.
-    if flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
-        flags |= OPEN_RIGHT_EXECUTABLE;
+    if flags & (fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+        flags |= fio::OPEN_RIGHT_EXECUTABLE;
     }
-    if flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE) != 0 {
-        flags |= OPEN_RIGHT_WRITABLE;
+    if flags & (fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_WRITABLE) != 0 {
+        flags |= fio::OPEN_RIGHT_WRITABLE;
     }
-    flags &= !(OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+    flags &= !(fio::OPEN_FLAG_POSIX_DEPRECATED
+        | fio::OPEN_FLAG_POSIX_WRITABLE
+        | fio::OPEN_FLAG_POSIX_EXECUTABLE);
 
-    let allowed_flags = OPEN_FLAG_NODE_REFERENCE
-        | OPEN_FLAG_DESCRIBE
-        | OPEN_FLAG_CREATE
-        | OPEN_FLAG_CREATE_IF_ABSENT
-        | OPEN_FLAG_DIRECTORY
-        | OPEN_RIGHT_READABLE
-        | OPEN_RIGHT_WRITABLE
-        | OPEN_RIGHT_EXECUTABLE;
+    let allowed_flags = fio::OPEN_FLAG_NODE_REFERENCE
+        | fio::OPEN_FLAG_DESCRIBE
+        | fio::OPEN_FLAG_CREATE
+        | fio::OPEN_FLAG_CREATE_IF_ABSENT
+        | fio::OPEN_FLAG_DIRECTORY
+        | fio::OPEN_RIGHT_READABLE
+        | fio::OPEN_RIGHT_WRITABLE
+        | fio::OPEN_RIGHT_EXECUTABLE;
 
-    let prohibited_flags = OPEN_FLAG_APPEND | OPEN_FLAG_TRUNCATE;
+    let prohibited_flags = fio::OPEN_FLAG_APPEND | fio::OPEN_FLAG_TRUNCATE;
 
     if flags & prohibited_flags != 0 {
         return Err(zx::Status::INVALID_ARGS);
@@ -88,54 +82,54 @@ pub fn check_child_connection_flags(
     mut flags: u32,
     mut mode: u32,
 ) -> Result<(u32, u32), zx::Status> {
-    let mode_type = mode & MODE_TYPE_MASK;
+    let mode_type = mode & fio::MODE_TYPE_MASK;
 
     if mode_type == 0 {
-        if flags & OPEN_FLAG_DIRECTORY != 0 {
-            mode |= MODE_TYPE_DIRECTORY;
+        if flags & fio::OPEN_FLAG_DIRECTORY != 0 {
+            mode |= fio::MODE_TYPE_DIRECTORY;
         }
     } else {
-        if flags & OPEN_FLAG_DIRECTORY != 0 && mode_type != MODE_TYPE_DIRECTORY {
+        if flags & fio::OPEN_FLAG_DIRECTORY != 0 && mode_type != fio::MODE_TYPE_DIRECTORY {
             return Err(zx::Status::INVALID_ARGS);
         }
 
-        if flags & OPEN_FLAG_NOT_DIRECTORY != 0 && mode_type == MODE_TYPE_DIRECTORY {
+        if flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0 && mode_type == fio::MODE_TYPE_DIRECTORY {
             return Err(zx::Status::INVALID_ARGS);
         }
     }
 
-    if flags & (OPEN_FLAG_NOT_DIRECTORY | OPEN_FLAG_DIRECTORY)
-        == OPEN_FLAG_NOT_DIRECTORY | OPEN_FLAG_DIRECTORY
+    if flags & (fio::OPEN_FLAG_NOT_DIRECTORY | fio::OPEN_FLAG_DIRECTORY)
+        == fio::OPEN_FLAG_NOT_DIRECTORY | fio::OPEN_FLAG_DIRECTORY
     {
         return Err(zx::Status::INVALID_ARGS);
     }
 
     // Can only specify OPEN_FLAG_CREATE_IF_ABSENT if OPEN_FLAG_CREATE is also specified.
-    if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 && flags & OPEN_FLAG_CREATE == 0 {
+    if flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0 && flags & fio::OPEN_FLAG_CREATE == 0 {
         return Err(zx::Status::INVALID_ARGS);
     }
 
     // Can only use CLONE_FLAG_SAME_RIGHTS when calling Clone.
-    if flags & CLONE_FLAG_SAME_RIGHTS != 0 {
+    if flags & fio::CLONE_FLAG_SAME_RIGHTS != 0 {
         return Err(zx::Status::INVALID_ARGS);
     }
 
     // Expand POSIX flag into new equivalents.
     // TODO(fxbug.dev/81185): Remove branch once all out-of-tree clients have been updated.
-    if flags & OPEN_FLAG_POSIX_DEPRECATED != 0 {
-        flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
-        flags &= !OPEN_FLAG_POSIX_DEPRECATED;
+    if flags & fio::OPEN_FLAG_POSIX_DEPRECATED != 0 {
+        flags |= fio::OPEN_FLAG_POSIX_WRITABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE;
+        flags &= !fio::OPEN_FLAG_POSIX_DEPRECATED;
     }
     // Remove POSIX flags when the respective rights are not available ("soft fail").
-    if parent_flags & OPEN_RIGHT_EXECUTABLE == 0 {
-        flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
+    if parent_flags & fio::OPEN_RIGHT_EXECUTABLE == 0 {
+        flags &= !fio::OPEN_FLAG_POSIX_EXECUTABLE;
     }
-    if parent_flags & OPEN_RIGHT_WRITABLE == 0 {
-        flags &= !OPEN_FLAG_POSIX_WRITABLE;
+    if parent_flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        flags &= !fio::OPEN_FLAG_POSIX_WRITABLE;
     }
 
     // Can only use CREATE flags if the parent connection is writable.
-    if flags & OPEN_FLAG_CREATE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
+    if flags & fio::OPEN_FLAG_CREATE != 0 && parent_flags & fio::OPEN_RIGHT_WRITABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
@@ -161,19 +155,19 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
     }
 
     assert!(
-        name.len() <= MAX_FILENAME as usize,
+        name.len() <= fio::MAX_FILENAME as usize,
         "Entry names are expected to be no longer than MAX_FILENAME ({}) bytes.\n\
          Got entry: '{}'\n\
          Length: {} bytes",
-        MAX_FILENAME,
+        fio::MAX_FILENAME,
         name,
         name.len()
     );
 
     assert!(
-        MAX_FILENAME <= u8::max_value() as u64,
+        fio::MAX_FILENAME <= u8::max_value() as u64,
         "Expecting to be able to store MAX_FILENAME ({}) in one byte.",
-        MAX_FILENAME
+        fio::MAX_FILENAME
     );
 
     buf.write_u64::<LittleEndian>(entry.inode())
@@ -190,16 +184,7 @@ mod tests {
     use super::{check_child_connection_flags, new_connection_validate_flags};
     use crate::test_utils::build_flag_combinations;
 
-    use {
-        fidl_fuchsia_io::{
-            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
-            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
-            OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-            OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
-        fuchsia_zircon as zx,
-    };
+    use {fidl_fuchsia_io as fio, fuchsia_zircon as zx};
 
     #[track_caller]
     fn ncvf_ok(flags: u32, expected_new_flags: u32) {
@@ -232,15 +217,21 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_node_reference() {
         // OPEN_FLAG_NODE_REFERENCE and OPEN_FLAG_DESCRIBE should be preserved.
-        const PRESERVED_FLAGS: u32 = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
+        const PRESERVED_FLAGS: u32 = fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
         for open_flags in build_flag_combinations(
-            OPEN_FLAG_NODE_REFERENCE,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_DIRECTORY,
+            fio::OPEN_FLAG_NODE_REFERENCE,
+            fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_RIGHT_WRITABLE
+                | fio::OPEN_FLAG_DESCRIBE
+                | fio::OPEN_FLAG_DIRECTORY,
         ) {
             ncvf_ok(open_flags, open_flags & PRESERVED_FLAGS);
         }
 
-        ncvf_err(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY, zx::Status::NOT_FILE);
+        ncvf_err(
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_NOT_DIRECTORY,
+            zx::Status::NOT_FILE,
+        );
     }
 
     #[test]
@@ -248,20 +239,20 @@ mod tests {
         // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         for open_flags in build_flag_combinations(
             0,
-            OPEN_RIGHT_READABLE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_EXECUTABLE
-                | OPEN_FLAG_POSIX_WRITABLE,
+            fio::OPEN_RIGHT_READABLE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_POSIX_WRITABLE,
         ) {
-            let mut expected_rights = open_flags & OPEN_RIGHT_READABLE;
-            if (open_flags & OPEN_FLAG_POSIX_DEPRECATED) != 0 {
-                expected_rights |= OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
+            let mut expected_rights = open_flags & fio::OPEN_RIGHT_READABLE;
+            if (open_flags & fio::OPEN_FLAG_POSIX_DEPRECATED) != 0 {
+                expected_rights |= fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE;
             }
-            if (open_flags & OPEN_FLAG_POSIX_WRITABLE) != 0 {
-                expected_rights |= OPEN_RIGHT_WRITABLE
+            if (open_flags & fio::OPEN_FLAG_POSIX_WRITABLE) != 0 {
+                expected_rights |= fio::OPEN_RIGHT_WRITABLE
             }
-            if (open_flags & OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
-                expected_rights |= OPEN_RIGHT_EXECUTABLE
+            if (open_flags & fio::OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+                expected_rights |= fio::OPEN_RIGHT_EXECUTABLE
             }
             ncvf_ok(open_flags, expected_rights);
         }
@@ -270,8 +261,8 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_create() {
         for open_flags in build_flag_combinations(
-            OPEN_FLAG_CREATE,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_FLAG_CREATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
         ) {
             ncvf_ok(open_flags, open_flags);
         }
@@ -279,36 +270,45 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_append() {
-        ncvf_err(OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND, zx::Status::INVALID_ARGS);
+        ncvf_err(fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND, zx::Status::INVALID_ARGS);
     }
 
     #[test]
     fn new_connection_validate_flags_truncate() {
-        ncvf_err(OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE, zx::Status::INVALID_ARGS);
+        ncvf_err(fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_TRUNCATE, zx::Status::INVALID_ARGS);
     }
 
     #[test]
     fn check_child_connection_flags_create_flags() {
-        assert!(check_child_connection_flags(OPEN_RIGHT_WRITABLE, OPEN_FLAG_CREATE, 0).is_ok());
+        assert!(check_child_connection_flags(fio::OPEN_RIGHT_WRITABLE, fio::OPEN_FLAG_CREATE, 0)
+            .is_ok());
         assert!(check_child_connection_flags(
-            OPEN_RIGHT_WRITABLE,
-            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+            fio::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
             0
         )
         .is_ok());
 
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_CREATE, 0),
+            check_child_connection_flags(0, fio::OPEN_FLAG_CREATE, 0),
             Err(zx::Status::ACCESS_DENIED),
         );
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT, 0),
+            check_child_connection_flags(
+                0,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
+                0
+            ),
             Err(zx::Status::ACCESS_DENIED),
         );
 
         // Need to specify OPEN_FLAG_CREATE if passing OPEN_FLAG_CREATE_IF_ABSENT.
         assert_eq!(
-            check_child_connection_flags(OPEN_RIGHT_WRITABLE, OPEN_FLAG_CREATE_IF_ABSENT, 0),
+            check_child_connection_flags(
+                fio::OPEN_RIGHT_WRITABLE,
+                fio::OPEN_FLAG_CREATE_IF_ABSENT,
+                0
+            ),
             Err(zx::Status::INVALID_ARGS),
         );
     }
@@ -317,19 +317,19 @@ mod tests {
     fn check_child_connection_flags_mode() {
         // If mode is 0 but we specify OPEN_FLAG_DIRECTORY, ensure the resulting mode is correct.
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY, 0)
+            check_child_connection_flags(0, fio::OPEN_FLAG_DIRECTORY, 0)
                 .expect("check_child_connection_flags failed")
                 .1,
-            MODE_TYPE_DIRECTORY
+            fio::MODE_TYPE_DIRECTORY
         );
 
         // Ensure that ambiguous flags/mode types are handled correctly.
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_NOT_DIRECTORY, MODE_TYPE_DIRECTORY),
+            check_child_connection_flags(0, fio::OPEN_FLAG_NOT_DIRECTORY, fio::MODE_TYPE_DIRECTORY),
             Err(zx::Status::INVALID_ARGS),
         );
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY, MODE_TYPE_FILE),
+            check_child_connection_flags(0, fio::OPEN_FLAG_DIRECTORY, fio::MODE_TYPE_FILE),
             Err(zx::Status::INVALID_ARGS),
         );
     }
@@ -338,13 +338,17 @@ mod tests {
     fn check_child_connection_flags_invalid() {
         // Cannot specify both OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY.
         assert_eq!(
-            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY | OPEN_FLAG_NOT_DIRECTORY, 0),
+            check_child_connection_flags(
+                0,
+                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NOT_DIRECTORY,
+                0
+            ),
             Err(zx::Status::INVALID_ARGS),
         );
 
         // Cannot specify CLONE_FLAG_SAME_RIGHTS when opening a resource (only permitted via clone).
         assert_eq!(
-            check_child_connection_flags(0, CLONE_FLAG_SAME_RIGHTS, 0),
+            check_child_connection_flags(0, fio::CLONE_FLAG_SAME_RIGHTS, 0),
             Err(zx::Status::INVALID_ARGS),
         );
     }

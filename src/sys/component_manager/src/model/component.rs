@@ -45,10 +45,7 @@ use {
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
-    fidl_fuchsia_io::{
-        self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
@@ -138,7 +135,7 @@ pub struct Package {
     /// The URL of the package itself.
     pub package_url: String,
     /// The package that this resolved component belongs to
-    pub package_dir: DirectoryProxy,
+    pub package_dir: fio::DirectoryProxy,
 }
 
 impl TryFrom<ResolvedComponent> for Component {
@@ -507,8 +504,8 @@ impl ComponentInstance {
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
                 let options = OpenRunnerOptions {
-                    flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                    open_mode: MODE_TYPE_SERVICE,
+                    flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    open_mode: fio::MODE_TYPE_SERVICE,
                     server_chan: &mut server_channel,
                 };
                 route_and_open_capability(
@@ -1647,10 +1644,10 @@ pub struct Runtime {
     pub namespace: Option<IncomingNamespace>,
 
     /// A client handle to the component instance's outgoing directory.
-    pub outgoing_dir: Option<DirectoryProxy>,
+    pub outgoing_dir: Option<fio::DirectoryProxy>,
 
     /// A client handle to the component instance's runtime directory hosted by the runner.
-    pub runtime_dir: Option<DirectoryProxy>,
+    pub runtime_dir: Option<fio::DirectoryProxy>,
 
     /// Used to interact with the Runner to influence the component's execution.
     pub controller: Option<ComponentController>,
@@ -1736,8 +1733,8 @@ impl std::error::Error for StopComponentError {
 impl Runtime {
     pub fn start_from(
         namespace: Option<IncomingNamespace>,
-        outgoing_dir: Option<DirectoryProxy>,
-        runtime_dir: Option<DirectoryProxy>,
+        outgoing_dir: Option<fio::DirectoryProxy>,
+        runtime_dir: Option<fio::DirectoryProxy>,
         controller: Option<fcrunner::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
         let timestamp = zx::Time::get_monotonic();

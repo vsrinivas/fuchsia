@@ -8,7 +8,7 @@ use {
     anyhow::Error,
     assert_matches::assert_matches,
     fdio::{SpawnAction, SpawnOptions},
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker, ServiceMarker, Success},
     fuchsia_async as fasync,
@@ -89,7 +89,7 @@ async fn ext4_server_mounts_block_device(
     remote_block_device.close().await.unwrap();
 
     let ext4_binary_path = CString::new("/pkg/bin/ext4_readonly").unwrap();
-    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
     let _process = scoped_task::spawn_etc(
         &scoped_task::job_default(),
@@ -137,7 +137,7 @@ async fn ext4_server_mounts_block_device_and_dies_on_close() -> Result<(), Error
     remote_block_device.close().await.unwrap();
 
     let ext4_binary_path = CString::new("/pkg/bin/ext4_readonly").unwrap();
-    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
     let process = scoped_task::spawn_etc(
         &scoped_task::job_default(),
@@ -177,8 +177,8 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     vmo.write(&temp_buf, 0)?;
     let mut buf = Buffer { vmo, size };
 
-    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, dir_server).await;
+    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
     let file =
@@ -204,8 +204,8 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     vmo.write(&temp_buf, 0)?;
     let mut buf = Buffer { vmo, size };
 
-    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, dir_server).await;
+    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
     let file1 =
@@ -239,8 +239,8 @@ async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     vmo.write(&temp_buf, 0)?;
     let mut buf = Buffer { vmo, size };
 
-    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
-    let result = ext4.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, dir_server).await;
+    let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    let result = ext4.mount_vmo(&mut buf, fio::OPEN_RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
     let file1 =

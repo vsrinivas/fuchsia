@@ -4,10 +4,7 @@
 
 //! Typesafe wrappers around parsing the epoch.json file.
 
-use {
-    epoch::EpochFile, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon_status::Status,
-    thiserror::Error,
-};
+use {epoch::EpochFile, fidl_fuchsia_io as fio, fuchsia_zircon_status::Status, thiserror::Error};
 
 /// An error encountered while parsing the epoch.json file.
 #[derive(Debug, Error)]
@@ -23,11 +20,10 @@ pub enum ParseEpochError {
     Deserialize(String, #[source] serde_json::Error),
 }
 
-pub(crate) async fn epoch(proxy: &DirectoryProxy) -> Result<Option<u64>, ParseEpochError> {
+pub(crate) async fn epoch(proxy: &fio::DirectoryProxy) -> Result<Option<u64>, ParseEpochError> {
     // Open the epoch.json file.
     let fopen_res =
-        io_util::directory::open_file(proxy, "epoch.json", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await;
+        io_util::directory::open_file(proxy, "epoch.json", fio::OPEN_RIGHT_READABLE).await;
     if let Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
         return Ok(None);
     }

@@ -57,24 +57,25 @@ mod test {
     use {
         super::*,
         crate::storage::test::{node_to_directory, setup_fake_storage_admin},
-        fidl_fuchsia_io::*,
+        fidl_fuchsia_io as fio,
         futures::TryStreamExt,
     };
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
     // Currently VFS is not cross-platform.
-    fn setup_fake_directory(mut root_dir: DirectoryRequestStream) {
+    fn setup_fake_directory(mut root_dir: fio::DirectoryRequestStream) {
         fuchsia_async::Task::local(async move {
             // Serve the root directory
             // Root directory should get Open call with CREATE flag
             let request = root_dir.try_next().await;
             let object =
-                if let Ok(Some(DirectoryRequest::Open { flags, mode, path, object, .. })) = request
+                if let Ok(Some(fio::DirectoryRequest::Open { flags, mode, path, object, .. })) =
+                    request
                 {
                     assert_eq!(path, "test");
-                    assert!(flags & OPEN_FLAG_CREATE != 0);
-                    assert!(flags & OPEN_FLAG_DIRECTORY != 0);
-                    assert!(mode & MODE_TYPE_DIRECTORY != 0);
+                    assert!(flags & fio::OPEN_FLAG_CREATE != 0);
+                    assert!(flags & fio::OPEN_FLAG_DIRECTORY != 0);
+                    assert!(mode & fio::MODE_TYPE_DIRECTORY != 0);
                     object
                 } else {
                     panic!("did not get open request: {:?}", request);
@@ -85,7 +86,7 @@ mod test {
 
             // Rewind on new directory should succeed
             let request = test_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::Rewind { responder, .. })) = request {
+            if let Ok(Some(fio::DirectoryRequest::Rewind { responder, .. })) = request {
                 responder.send(0).unwrap();
             } else {
                 panic!("did not get rewind request: {:?}", request)
@@ -93,7 +94,7 @@ mod test {
 
             // ReadDirents should report no contents in the new directory
             let request = test_dir.try_next().await;
-            if let Ok(Some(DirectoryRequest::ReadDirents { responder, .. })) = request {
+            if let Ok(Some(fio::DirectoryRequest::ReadDirents { responder, .. })) = request {
                 responder.send(0, &[]).unwrap();
             } else {
                 panic!("did not get readdirents request: {:?}", request)

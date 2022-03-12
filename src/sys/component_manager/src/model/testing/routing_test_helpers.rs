@@ -35,14 +35,8 @@ use {
     },
     fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, MemoryInfo, NodeInfo,
-        NodeMarker, Representation, Vmofile, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
@@ -243,7 +237,7 @@ pub struct RoutingTest {
     _echo_service: Arc<EchoService>,
     pub mock_runner: Arc<MockRunner>,
     test_dir: TempDir,
-    pub test_dir_proxy: DirectoryProxy,
+    pub test_dir_proxy: fio::DirectoryProxy,
     root_component_name: String,
 }
 
@@ -536,7 +530,7 @@ impl RoutingTest {
     /// Build an outgoing directory for the given component.
     fn build_outgoing_dir(
         decl: &ComponentDecl,
-        test_dir_proxy: &DirectoryProxy,
+        test_dir_proxy: &fio::DirectoryProxy,
         mut outgoing_paths: HashMap<CapabilityPath, Arc<dyn DirectoryEntry>>,
     ) -> OutDir {
         // if this decl is offering/exposing something from `Self`, let's host it
@@ -648,7 +642,7 @@ impl RoutingTest {
     pub async fn wait_for_component_start(&self, moniker: &AbsoluteMoniker) {
         // Lookup, start, and open a connection to the component's outgoing directory.
         let (dir_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         self.model.look_up(moniker).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
@@ -656,8 +650,8 @@ impl RoutingTest {
             .await
             .expect("failed to start component")
             .open_outgoing(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-                fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 PathBuf::from("/."),
                 &mut server_end,
             )
@@ -781,7 +775,7 @@ impl RoutingTestModel for RoutingTest {
                     )
                     .await;
                 let (storage_proxy, server_end) = create_proxy().unwrap();
-                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
+                let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
                 let relative_moniker_string = format!("{}", storage_relation);
                 let component_abs_moniker = AbsoluteMoniker::from_relative(
                     &moniker,
@@ -799,13 +793,13 @@ impl RoutingTestModel for RoutingTest {
                     .open_component_storage(
                         relative_moniker_string.as_str(),
                         flags,
-                        MODE_TYPE_DIRECTORY,
+                        fio::MODE_TYPE_DIRECTORY,
                         server_end,
                     )
                     .expect("failed to open component storage");
 
                 let storage_proxy =
-                    DirectoryProxy::from_channel(storage_proxy.into_channel().unwrap());
+                    fio::DirectoryProxy::from_channel(storage_proxy.into_channel().unwrap());
 
                 capability_util::write_hippo_file_to_directory(
                     &storage_proxy,
@@ -817,7 +811,7 @@ impl RoutingTestModel for RoutingTest {
                         io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
                             .expect("failed to open /tmp")
                     } else {
-                        io_util::clone_directory(&self.test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                        io_util::clone_directory(&self.test_dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
                             .expect("failed to clone test_dir_proxy")
                     };
                     capability_util::check_file_in_storage(
@@ -988,8 +982,8 @@ pub mod capability_util {
     ) {
         let path = path.to_string();
         let dir_proxy = take_dir_from_namespace(namespace, &path).await;
-        let file_proxy =
-            io_util::open_file(&dir_proxy, file, OPEN_RIGHT_READABLE).expect("failed to open file");
+        let file_proxy = io_util::open_file(&dir_proxy, file, fio::OPEN_RIGHT_READABLE)
+            .expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
         match expected_res {
             ExpectedResult::Ok => assert_eq!(
@@ -1027,15 +1021,15 @@ pub mod capability_util {
     }
 
     pub async fn write_hippo_file_to_directory(
-        dir_proxy: &DirectoryProxy,
+        dir_proxy: &fio::DirectoryProxy,
         expected_res: ExpectedResult,
     ) {
-        let (file_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
-        let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
+        let (file_proxy, server_end) = create_proxy::<fio::FileMarker>().unwrap();
+        let flags = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE;
         let res = async {
             dir_proxy.open(
                 flags,
-                MODE_TYPE_FILE,
+                fio::MODE_TYPE_FILE,
                 "hippos",
                 ServerEnd::new(server_end.into_channel()),
             )?;
@@ -1069,7 +1063,7 @@ pub mod capability_util {
     /// Create a file with the given contents in the test dir, along with any subdirectories
     /// required.
     pub(super) async fn create_static_file(
-        root: &DirectoryProxy,
+        root: &fio::DirectoryProxy,
         path: &Path,
         contents: &str,
     ) -> Result<(), anyhow::Error> {
@@ -1080,10 +1074,10 @@ pub mod capability_util {
             io_util::open_file(
                 &subdir,
                 &PathBuf::from(path.file_name().unwrap()),
-                OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+                fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )?
         } else {
-            io_util::open_file(root, path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?
+            io_util::open_file(root, path, fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE)?
         };
 
         // Write contents.
@@ -1094,7 +1088,7 @@ pub mod capability_util {
         storage_subdir: Option<String>,
         relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
-        test_dir_proxy: &DirectoryProxy,
+        test_dir_proxy: &fio::DirectoryProxy,
     ) -> Result<(), anyhow::Error> {
         let mut dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         dir_path.push("hippos");
@@ -1114,7 +1108,7 @@ pub mod capability_util {
         storage_subdir: Option<String>,
         relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
-        test_dir_proxy: &DirectoryProxy,
+        test_dir_proxy: &fio::DirectoryProxy,
     ) {
         let dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         let res = io_util::directory::open_directory(
@@ -1138,8 +1132,8 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
@@ -1157,22 +1151,22 @@ pub mod capability_util {
         let service_dir = io_util::directory::open_directory(
             &dir_proxy,
             &path.basename,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open service dir");
         let instance_dir = io_util::directory::open_directory(
             &service_dir,
             instance,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open instance dir");
         let member_proxy = io_util::directory::open_node_no_describe(
             &instance_dir,
             member,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open member node");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
@@ -1293,29 +1287,29 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
             // This should be MODE_TYPE_SERVICE, but we implement the underlying
             // service as a file for convenience in testing.
-            MODE_TYPE_FILE,
+            fio::MODE_TYPE_FILE,
         )
         .expect("failed to open file service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
 
-        let file_proxy = FileProxy::new(node_proxy.into_channel().unwrap());
+        let file_proxy = fio::FileProxy::new(node_proxy.into_channel().unwrap());
         let mut event_stream = file_proxy.take_event_stream();
         let event = event_stream.try_next().await.unwrap();
         match event.expect("failed to received file event") {
-            FileEvent::OnOpen_ { s, info } => {
+            fio::FileEvent::OnOpen_ { s, info } => {
                 assert_eq!(s, zx::sys::ZX_OK);
                 assert!(matches!(
                     *info.expect("failed to receive node info"),
-                    NodeInfo::Vmofile(Vmofile { .. })
+                    fio::NodeInfo::Vmofile(fio::Vmofile { .. })
                 ));
             }
-            FileEvent::OnConnectionInfo { info } => {
+            fio::FileEvent::OnConnectionInfo { info } => {
                 assert!(matches!(
                     info.representation.expect("failed to receive node info"),
-                    Representation::Memory(MemoryInfo { .. })
+                    fio::Representation::Memory(fio::MemoryInfo { .. })
                 ));
             }
         }
@@ -1330,18 +1324,18 @@ pub mod capability_util {
         model: &'a Arc<Model>,
         expected_res: ExpectedResult,
     ) {
-        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
-        open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end).await;
-        let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
+        let (node_proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>().unwrap();
+        open_exposed_dir(&path, abs_moniker, model, fio::MODE_TYPE_DIRECTORY, server_end).await;
+        let dir_proxy = fio::DirectoryProxy::new(node_proxy.into_channel().unwrap());
         match expected_res {
             ExpectedResult::Ok => {
-                let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                let file_proxy = io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
                     .expect("failed to open file");
                 let res = io_util::read_file(&file_proxy).await;
                 assert_eq!("hello", res.expect("failed to read file"));
             }
             ExpectedResult::Err(s) => {
-                io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
@@ -1352,7 +1346,7 @@ pub mod capability_util {
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
-                io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                io_util::open_file(&dir_proxy, &file, fio::OPEN_RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
@@ -1367,8 +1361,8 @@ pub mod capability_util {
         model: &'a Arc<Model>,
         expected_res: ExpectedResult,
     ) {
-        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
-        open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end).await;
+        let (node_proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>().unwrap();
+        open_exposed_dir(&path, abs_moniker, model, fio::MODE_TYPE_SERVICE, server_end).await;
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         call_echo_and_validate_result(echo_proxy, expected_res).await;
     }
@@ -1381,9 +1375,9 @@ pub mod capability_util {
         model: &Arc<Model>,
         expected_res: ExpectedResult,
     ) {
-        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
-        open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end).await;
-        let service_dir = DirectoryProxy::from_channel(node_proxy.into_channel().unwrap());
+        let (node_proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>().unwrap();
+        open_exposed_dir(&path, abs_moniker, model, fio::MODE_TYPE_SERVICE, server_end).await;
+        let service_dir = fio::DirectoryProxy::from_channel(node_proxy.into_channel().unwrap());
         let instance_dir = io_util::directory::open_directory(
             &service_dir,
             &instance,
@@ -1395,7 +1389,7 @@ pub mod capability_util {
             &instance_dir,
             &member,
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open member node");
         let echo_proxy = echo::EchoProxy::new(member_node.into_channel().unwrap());
@@ -1414,13 +1408,13 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
         let realm_proxy = fcomponent::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut child_ref = fdecl::ChildRef { name: "my_child".to_string(), collection: None };
-        let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let res = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
         // Check for side effects: realm service should have received the `open_exposed_dir` call.
         res.expect("failed to send fidl message").expect("failed to use realm service");
@@ -1443,8 +1437,8 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
@@ -1468,8 +1462,8 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
@@ -1483,7 +1477,7 @@ pub mod capability_util {
     pub async fn take_dir_from_namespace(
         namespace: &ManagedNamespace,
         dir_path: &str,
-    ) -> DirectoryProxy {
+    ) -> fio::DirectoryProxy {
         let mut ns = namespace.lock().await;
 
         // Find the index of our directory in the namespace, and remove the directory and path. The
@@ -1502,7 +1496,7 @@ pub mod capability_util {
     pub async fn add_dir_to_namespace(
         namespace: &ManagedNamespace,
         dir_path: &str,
-        dir_proxy: DirectoryProxy,
+        dir_proxy: fio::DirectoryProxy,
     ) {
         let mut ns = namespace.lock().await;
         ns.push(fcrunner::ComponentNamespaceEntry {
@@ -1518,7 +1512,7 @@ pub mod capability_util {
         abs_moniker: &'a AbsoluteMoniker,
         model: &'a Arc<Model>,
         open_mode: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let component = model
             .look_up(abs_moniker)
@@ -1531,7 +1525,7 @@ pub mod capability_util {
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {
-                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+                let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
                 let vns_path = to_fvfs_path(path);
                 resolved_instance_state
                     .get_exposed_dir()

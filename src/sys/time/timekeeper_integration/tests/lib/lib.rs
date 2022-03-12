@@ -7,7 +7,7 @@ use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker};
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy};
 use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
-use fidl_fuchsia_io::{NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_testing::{
     FakeClockControlMarker, FakeClockControlProxy, FakeClockMarker, FakeClockProxy,
@@ -244,7 +244,7 @@ impl NestedTimekeeper {
         // Inject fake devfs.
         let rtc_updates = RtcUpdates(Arc::new(Mutex::new(vec![])));
         let rtc_update_clone = rtc_updates.clone();
-        let (devmgr_client, devmgr_server) = create_endpoints::<NodeMarker>().unwrap();
+        let (devmgr_client, devmgr_server) = create_endpoints::<fio::NodeMarker>().unwrap();
         let fake_devfs = match initial_rtc_time {
             Some(initial_time) => pseudo_directory! {
                 "class" => pseudo_directory! {
@@ -265,8 +265,8 @@ impl NestedTimekeeper {
         };
         fake_devfs.open(
             vfs::execution_scope::ExecutionScope::new(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             devmgr_server,
         );

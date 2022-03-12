@@ -33,9 +33,8 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io::{CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
     log::*,
@@ -80,8 +79,8 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
-        if (flags & (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE))
-            != (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+        if (flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE))
+            != (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE)
         {
             warn!("open request for the storage admin protocol rejected: access denied");
             return Ok(());
@@ -281,7 +280,7 @@ impl StorageAdmin {
                     {
                         Ok(dir) => responder.send(
                             &mut dir
-                                .clone(CLONE_FLAG_SAME_RIGHTS, object)
+                                .clone(fio::CLONE_FLAG_SAME_RIGHTS, object)
                                 .map_err(|_| fcomponent::Error::Internal),
                         )?,
                         Err(_) => responder.send(&mut Err(fcomponent::Error::Internal))?,

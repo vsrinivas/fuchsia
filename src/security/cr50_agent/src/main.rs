@@ -9,7 +9,7 @@ mod util;
 use crate::{cr50::Cr50, power_button::PowerButton};
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::Proxy;
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{Cr50RequestStream, PinWeaverRequestStream};
 use fuchsia_component::server::ServiceFs;
@@ -31,7 +31,7 @@ enum IncomingRequest {
 const CR50_VENDOR_ID: u16 = 0x1ae0;
 const CR50_DEVICE_ID: u16 = 0x0028;
 
-async fn is_cr50(dir: &DirectoryProxy, name: &str) -> Result<Option<TpmDeviceProxy>, Error> {
+async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDeviceProxy>, Error> {
     let node =
         io_util::open_node(dir, Path::new(name), OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0)
             .context("Sending open")?;

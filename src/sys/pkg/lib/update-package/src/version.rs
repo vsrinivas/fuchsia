@@ -6,7 +6,7 @@
 
 use {
     ::version::Version as SemanticVersion,
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io as fio,
     serde::{
         de::{self, Visitor},
         Deserialize, Deserializer, Serialize, Serializer,
@@ -124,12 +124,11 @@ impl fmt::Display for SystemVersion {
 }
 
 pub(crate) async fn read_version(
-    proxy: &DirectoryProxy,
+    proxy: &fio::DirectoryProxy,
 ) -> Result<SystemVersion, ReadVersionError> {
-    let file =
-        io_util::directory::open_file(proxy, "version", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-            .map_err(ReadVersionError::OpenFile)?;
+    let file = io_util::directory::open_file(proxy, "version", fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(ReadVersionError::OpenFile)?;
     let version_str =
         io_util::file::read_to_string(&file).await.map_err(ReadVersionError::ReadFile)?;
 

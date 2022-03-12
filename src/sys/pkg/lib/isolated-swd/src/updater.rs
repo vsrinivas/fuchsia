@@ -5,7 +5,7 @@ use {
     crate::{cache::Cache, resolver::Resolver},
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker},
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{BootManagerMarker, Configuration, PaverMarker, PaverProxy},
     fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy, RebootControllerMarker},
@@ -42,8 +42,8 @@ pub struct Updater {
 impl Updater {
     /// Launch the system updater using the given components and board name.
     pub async fn launch(
-        blobfs: ClientEnd<DirectoryMarker>,
-        paver: ClientEnd<DirectoryMarker>,
+        blobfs: ClientEnd<fio::DirectoryMarker>,
+        paver: ClientEnd<fio::DirectoryMarker>,
         cache: Arc<Cache>,
         resolver: Arc<Resolver>,
         board_name: &str,
@@ -55,8 +55,8 @@ impl Updater {
     /// Launch the system updater. This is the same as `launch`, except that it expects the path
     /// to the `system-updater` component to be provided.
     pub async fn launch_with_components(
-        blobfs: ClientEnd<DirectoryMarker>,
-        paver: ClientEnd<DirectoryMarker>,
+        blobfs: ClientEnd<fio::DirectoryMarker>,
+        paver: ClientEnd<fio::DirectoryMarker>,
         cache: Arc<Cache>,
         resolver: Arc<Resolver>,
         board_name: &str,

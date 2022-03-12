@@ -6,8 +6,7 @@ use {
     anyhow::{format_err, Error},
     fdio, fidl,
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
-    fidl_fuchsia_io::NodeInfo,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_inspect::reader::{DiagnosticsHierarchy, Property},
     fuchsia_zircon as zx, io_util,
 };
@@ -21,7 +20,7 @@ pub async fn is_valid_file(filename: &str) -> bool {
         // Obtain the vmo backing any VmoFiles.
         if let Ok(node_info) = proxy.describe().await {
             match node_info {
-                NodeInfo::Service(_) => return true,
+                fio::NodeInfo::Service(_) => return true,
                 _ => return false,
             }
         }

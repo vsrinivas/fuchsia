@@ -4,10 +4,7 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        DirectoryMarker, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
-    },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{collections::HashSet, convert::TryInto as _, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
@@ -73,7 +70,7 @@ pub fn serve(
     blobfs: blobfs::Client,
     meta_far: fuchsia_hash::Hash,
     flags: u32,
-    server_end: ServerEnd<DirectoryMarker>,
+    server_end: ServerEnd<fio::DirectoryMarker>,
 ) -> impl futures::Future<Output = Result<(), Error>> {
     serve_path(scope, blobfs, meta_far, flags, 0, VfsPath::dot(), server_end.into_channel().into())
 }
@@ -90,7 +87,7 @@ pub async fn serve_path(
     flags: u32,
     mode: u32,
     path: VfsPath,
-    server_end: ServerEnd<NodeMarker>,
+    server_end: ServerEnd<fio::NodeMarker>,
 ) -> Result<(), Error> {
     let root_dir = match RootDir::new(blobfs, meta_far).await {
         Ok(d) => d,
@@ -134,14 +131,17 @@ fn get_dir_children<'a>(
                 None => {
                     // TODO(fxbug.dev/81370) Replace .contains/.insert with .get_or_insert_owned when non-experimental.
                     if !added_entries.contains(path) {
-                        res.push((EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE), path.to_string()));
+                        res.push((
+                            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE),
+                            path.to_string(),
+                        ));
                         added_entries.insert(path.to_string());
                     }
                 }
                 Some((first, _)) => {
                     if !added_entries.contains(first) {
                         res.push((
-                            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
+                            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
                             first.to_string(),
                         ));
                         added_entries.insert(first.to_string());
@@ -175,7 +175,7 @@ async fn read_dirents<'a>(
             unreachable!();
         }
         TraversalPosition::Start => {
-            match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
+            match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".") {
                 AppendResult::Ok(new_sink) => sink = new_sink,
                 AppendResult::Sealed(sealed) => {
                     return Ok((TraversalPosition::Start, sealed));
@@ -204,8 +204,7 @@ async fn verify_open_adjusts_flags(
     in_flags: u32,
     expected_flags: u32,
 ) {
-    let (proxy, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+    let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
 
     DirectoryEntry::open(
         Arc::clone(&entry),
@@ -226,7 +225,6 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_io::{FileMarker, NodeEvent, NodeProxy},
         fuchsia_hash::Hash,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::StreamExt,
@@ -246,7 +244,7 @@ mod tests {
             vfs::execution_scope::ExecutionScope::new(),
             blobfs_client,
             metafar_blob.merkle,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             server_end,
         )
         .await
@@ -263,7 +261,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn serve_path_open_root() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let (metafar_blob, _) = package.contents();
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
@@ -273,7 +271,7 @@ mod tests {
             vfs::execution_scope::ExecutionScope::new(),
             blobfs_client,
             metafar_blob.merkle,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE,
             0,
             VfsPath::validate_and_split(".").unwrap(),
             server_end.into_channel().into(),
@@ -292,7 +290,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn serve_path_open_meta() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let (metafar_blob, _) = package.contents();
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
@@ -302,7 +300,7 @@ mod tests {
             vfs::execution_scope::ExecutionScope::new(),
             blobfs_client,
             metafar_blob.merkle,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_NOT_DIRECTORY,
             0,
             VfsPath::validate_and_split("meta").unwrap(),
             server_end.into_channel().into(),
@@ -318,7 +316,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn serve_path_open_missing_path_in_package() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let (metafar_blob, _) = package.contents();
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
@@ -329,7 +327,7 @@ mod tests {
                 vfs::execution_scope::ExecutionScope::new(),
                 blobfs_client,
                 metafar_blob.merkle,
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 0,
                 VfsPath::validate_and_split("not-present").unwrap(),
                 server_end.into_channel().into(),
@@ -345,7 +343,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn serve_path_open_missing_package() {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         let (_blobfs_fake, blobfs_client) = FakeBlobfs::new();
 
         assert_matches!(
@@ -353,7 +351,7 @@ mod tests {
                 vfs::execution_scope::ExecutionScope::new(),
                 blobfs_client,
                 Hash::from([0u8; 32]),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
                 0,
                 VfsPath::validate_and_split(".").unwrap(),
                 server_end.into_channel().into(),
@@ -368,26 +366,26 @@ mod tests {
         assert_eq!(node_into_on_open_status(proxy).await, Some(zx::Status::NOT_FOUND));
     }
 
-    async fn node_into_on_open_status(node: NodeProxy) -> Option<zx::Status> {
+    async fn node_into_on_open_status(node: fio::NodeProxy) -> Option<zx::Status> {
         // Handle either an io1 OnOpen Status or an io2 epitaph status, though only one will be
         // sent, determined by the open() API used.
         let mut events = node.take_event_stream();
         match events.next().await? {
-            Ok(NodeEvent::OnOpen_ { s: status, .. }) => {
+            Ok(fio::NodeEvent::OnOpen_ { s: status, .. }) => {
                 return Some(zx::Status::from_raw(status));
             }
-            Ok(NodeEvent::OnConnectionInfo { .. }) => return Some(zx::Status::OK),
+            Ok(fio::NodeEvent::OnConnectionInfo { .. }) => return Some(zx::Status::OK),
             Err(fidl::Error::ClientChannelClosed { status, .. }) => return Some(status),
             other => panic!("unexpected stream event or error: {:?}", other),
         }
     }
 
     fn file() -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
     }
 
     fn dir() -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
 
     #[test]
@@ -500,9 +498,9 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("meta".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("resource".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))
             ]
         );
         assert_eq!(end_pos, TraversalPosition::End);
@@ -531,8 +529,8 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("meta".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
             ]
         );
         assert_eq!(pos, TraversalPosition::Index(1));
@@ -542,7 +540,7 @@ mod tests {
             .expect("read_dirents failed");
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![("resource".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))]
+            vec![("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))]
         );
         assert_eq!(end_pos, TraversalPosition::End);
     }

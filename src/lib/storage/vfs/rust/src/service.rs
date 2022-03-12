@@ -23,10 +23,7 @@ use {
         self,
         endpoints::{RequestStream, ServerEnd},
     },
-    fidl_fuchsia_io::{
-        NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::future::Future,
@@ -90,7 +87,7 @@ impl Service {
         scope: ExecutionScope,
         flags: u32,
         mode: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         Connection::create_connection(scope, flags, mode, server_end);
     }
@@ -100,7 +97,7 @@ impl Service {
         scope: ExecutionScope,
         flags: u32,
         mode: u32,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // There will be a few cases in this methods and one in `<Service as
         // DirectoryEntry>::open()` when we encounter an error while trying to process requests.
@@ -119,7 +116,7 @@ impl Service {
             }
         };
 
-        debug_assert!(flags == OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        debug_assert!(flags == fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
 
         match Channel::from_channel(server_end.into_channel()) {
             Ok(channel) => (self.open)(scope, channel),
@@ -138,17 +135,17 @@ impl DirectoryEntry for Service {
         flags: u32,
         mode: u32,
         path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             // See comment at the beginning of [`Service::open_as_service`].
-            if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
                 send_on_open_with_error(flags, server_end, Status::NOT_DIR);
             }
             return;
         }
 
-        if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+        if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_service(scope, flags, mode, server_end);
@@ -156,6 +153,6 @@ impl DirectoryEntry for Service {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_SERVICE)
     }
 }

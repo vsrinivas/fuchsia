@@ -5,8 +5,7 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_component::server::ServiceFs,
     fuchsia_url::{
@@ -85,7 +84,7 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()>
 
 async fn resolve_component(
     component_url: &str,
-    packages_dir: &DirectoryProxy,
+    packages_dir: &fio::DirectoryProxy,
 ) -> Result<fsys::Component, ResolverError> {
     let package_url = PkgUrl::parse(component_url)?;
     let cm_path = package_url.resource().ok_or_else(|| {
@@ -137,8 +136,8 @@ async fn resolve_component(
 
 async fn resolve_package(
     package_url: &PkgUrl,
-    packages_dir: &DirectoryProxy,
-) -> Result<DirectoryProxy, ResolverError> {
+    packages_dir: &fio::DirectoryProxy,
+) -> Result<fio::DirectoryProxy, ResolverError> {
     let root_url = package_url.root_url();
     if root_url.host() != "fuchsia.com" {
         return Err(ResolverError::UnsupportedRepo);
@@ -215,7 +214,6 @@ mod tests {
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_io::{DirectoryMarker, DirectoryObject, NodeInfo, NodeMarker},
         fidl_fuchsia_mem as fmem,
         fuchsia_zircon::Status,
         std::sync::Arc,
@@ -231,7 +229,7 @@ mod tests {
             flags: u32,
             _mode: u32,
             _path: &str,
-            server_end: ServerEnd<NodeMarker>,
+            server_end: ServerEnd<fio::NodeMarker>,
         ) {
             let status = if flags & self.0 != self.0 { Status::INVALID_ARGS } else { Status::OK };
             let stream = server_end.into_stream().expect("failed to create stream");
@@ -239,15 +237,15 @@ mod tests {
             control_handle
                 .send_on_open_(
                     status.into_raw(),
-                    Some(&mut NodeInfo::Directory(DirectoryObject {})),
+                    Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
                 )
                 .expect("failed to send OnOpen event");
             control_handle.shutdown_with_epitaph(status);
         }
     }
 
-    fn serve_pkgfs(pseudo_dir: Arc<dyn Entry>) -> Result<DirectoryProxy, anyhow::Error> {
-        let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+    fn serve_pkgfs(pseudo_dir: Arc<dyn Entry>) -> Result<fio::DirectoryProxy, anyhow::Error> {
+        let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>()
             .context("failed to create DirectoryProxy/Server pair")?;
         pseudo_dir.open(
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,

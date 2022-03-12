@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Context},
     diagnostics_data::Severity,
     fidl::Peered,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
@@ -855,7 +856,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 }
 
 async fn read_custom_artifact_directory(
-    directory: fidl_fuchsia_io::DirectoryProxy,
+    directory: fio::DirectoryProxy,
     out_dir: Box<output::DynDirectoryArtifact>,
 ) -> Result<(), anyhow::Error> {
     let mut paths = vec![];
@@ -890,10 +891,10 @@ async fn read_custom_artifact_directory(
 }
 
 async fn read_file_to_writer<T: Write>(
-    file: &fidl_fuchsia_io::FileProxy,
+    file: &fio::FileProxy,
     output: &mut T,
 ) -> Result<(), anyhow::Error> {
-    const READ_SIZE: u64 = fidl_fuchsia_io::MAX_BUF;
+    const READ_SIZE: u64 = fio::MAX_BUF;
 
     let mut vector = VecDeque::new();
     // Arbitrary number of reads to pipeline. Works for
@@ -1326,12 +1327,12 @@ mod test {
         };
 
         let (directory_client, directory_service) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(directory_service.into_channel()),
         );
@@ -1473,12 +1474,12 @@ mod test {
         };
 
         let (file_client, file_service) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::FileMarker>().unwrap();
+            fidl::endpoints::create_endpoints::<fio::FileMarker>().unwrap();
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            fidl_fuchsia_io::MODE_TYPE_FILE,
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
             vfs::path::Path::validate_and_split("test_file.profraw").unwrap(),
             ServerEnd::new(file_service.into_channel()),
         );

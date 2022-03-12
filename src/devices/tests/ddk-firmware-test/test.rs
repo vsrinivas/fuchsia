@@ -34,7 +34,7 @@ async fn serve_fake_filesystem(
     };
     root.open(
         fs_scope.clone(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         0,
         vfs::path::Path::dot(),
         ServerEnd::new(handles.outgoing_dir.into_channel()),

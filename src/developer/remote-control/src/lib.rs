@@ -475,8 +475,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
-        fidl_fuchsia_io::NodeMarker,
+        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io as fio,
         fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
         fuchsia_zircon as zx,
         selectors::{parse_selector, VerboseError},
@@ -784,7 +783,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_connect_single_match() -> Result<()> {
         let service = make_rcs();
-        let (client_end, server_end) = fidl::endpoints::create_endpoints::<NodeMarker>().unwrap();
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints::<fio::NodeMarker>().unwrap();
 
         service
             .connect_with_matcher(

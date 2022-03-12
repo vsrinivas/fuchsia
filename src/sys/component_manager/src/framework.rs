@@ -23,8 +23,7 @@ use {
     cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
@@ -237,7 +236,7 @@ impl RealmCapabilityHost {
     async fn open_exposed_dir(
         component: &WeakComponentInstance,
         child: fdecl::ChildRef,
-        exposed_dir: ServerEnd<DirectoryMarker>,
+        exposed_dir: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
@@ -433,9 +432,7 @@ mod tests {
         cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},
         fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
-        fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_io::MODE_TYPE_SERVICE,
-        fuchsia_async as fasync,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component::client,
         futures::{lock::Mutex, poll, task::Poll},
         io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -979,7 +976,8 @@ mod tests {
                 .unwrap_or_else(|_| panic!("failed to create child {}", name));
             let mut child_ref =
                 fdecl::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
-            let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (exposed_dir, server_end) =
+                endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let () = test
                 .realm_proxy
                 .open_exposed_dir(&mut child_ref, server_end)
@@ -1266,7 +1264,7 @@ mod tests {
 
         // Open exposed directory of child.
         let mut child_ref = fdecl::ChildRef { name: "system".to_string(), collection: None };
-        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir_proxy, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
         res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
@@ -1287,7 +1285,7 @@ mod tests {
             &dir_proxy,
             &PathBuf::from("hippo"),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
         let event = event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await;
@@ -1349,7 +1347,7 @@ mod tests {
         // Open exposed directory of child.
         let mut child_ref =
             fdecl::ChildRef { name: "system".to_string(), collection: Some("coll".to_owned()) };
-        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir_proxy, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
         res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
@@ -1372,7 +1370,7 @@ mod tests {
             &dir_proxy,
             &PathBuf::from("hippo"),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
+            fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
         let event = event_stream.wait_until(EventType::Started, vec!["coll:system:1"].into()).await;
@@ -1410,7 +1408,7 @@ mod tests {
         // Instance not found.
         {
             let mut child_ref = fdecl::ChildRef { name: "missing".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (_, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let err = test
                 .realm_proxy
                 .open_exposed_dir(&mut child_ref, server_end)
@@ -1424,7 +1422,7 @@ mod tests {
         {
             let mut child_ref =
                 fdecl::ChildRef { name: "unresolvable".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (_, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let err = test
                 .realm_proxy
                 .open_exposed_dir(&mut child_ref, server_end)
@@ -1438,14 +1436,15 @@ mod tests {
         {
             let mut child_ref =
                 fdecl::ChildRef { name: "unrunnable".to_string(), collection: None };
-            let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (dir_proxy, server_end) =
+                endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
             res.expect("fidl call failed").expect("open_exposed_dir() failed");
             let node_proxy = io_util::open_node(
                 &dir_proxy,
                 &PathBuf::from("hippo"),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_SERVICE,
+                fio::MODE_TYPE_SERVICE,
             )
             .expect("failed to open hippo service");
             let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
@@ -1457,7 +1456,7 @@ mod tests {
         {
             test.drop_component();
             let mut child_ref = fdecl::ChildRef { name: "system".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let (_, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let err = test
                 .realm_proxy
                 .open_exposed_dir(&mut child_ref, server_end)

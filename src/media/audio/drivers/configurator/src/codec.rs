@@ -4,13 +4,14 @@
 
 use anyhow::{format_err, Error};
 use fidl::endpoints::Proxy;
+use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
 use futures::TryFutureExt;
 use std::path::{Path, PathBuf};
 
 pub struct CodecInterface {
     /// The proxy to the devfs "/dev".
-    dev_proxy: fidl_fuchsia_io::DirectoryProxy,
+    dev_proxy: fio::DirectoryProxy,
     /// The path under "/dev" used to connect to the device.
     path: PathBuf,
     /// The proxy to the device if connected.
@@ -20,7 +21,7 @@ pub struct CodecInterface {
 impl CodecInterface {
     /// A new interface that will connect to the device at the `path` within the `dev_proxy`
     /// directory. The interface is unconnected when created.
-    pub fn new(dev_proxy: fidl_fuchsia_io::DirectoryProxy, path: &Path) -> Self {
+    pub fn new(dev_proxy: fio::DirectoryProxy, path: &Path) -> Self {
         Self { dev_proxy: dev_proxy, path: path.to_path_buf(), proxy: None }
     }
 

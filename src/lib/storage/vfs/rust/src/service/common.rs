@@ -5,13 +5,7 @@
 //! Code shared between several modules of the service implementation.
 
 use {
-    fidl_fuchsia_io::{
-        MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
-        MODE_TYPE_SERVICE, OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
 };
@@ -35,10 +29,10 @@ pub const POSIX_READ_WRITE_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR;
 pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_SOCKET when the
     // target is a service.
-    if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_SERVICE != 0 {
-        if mode & MODE_TYPE_MASK == MODE_TYPE_DIRECTORY {
+    if (mode & !fio::MODE_PROTECTION_MASK) & !fio::MODE_TYPE_SERVICE != 0 {
+        if mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_DIRECTORY {
             return Err(Status::NOT_DIR);
-        } else if mode & MODE_TYPE_MASK == MODE_TYPE_FILE {
+        } else if mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_FILE {
             return Err(Status::NOT_FILE);
         } else {
             return Err(Status::INVALID_ARGS);
@@ -46,45 +40,47 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
     }
 
     // A service is not a directory.
-    flags &= !OPEN_FLAG_NOT_DIRECTORY;
+    flags &= !fio::OPEN_FLAG_NOT_DIRECTORY;
 
     // For services any OPEN_FLAG_POSIX_* flags are ignored as they only apply to directories.
     // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED after all clients are updated.
-    flags &= !(OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+    flags &= !(fio::OPEN_FLAG_POSIX_DEPRECATED
+        | fio::OPEN_FLAG_POSIX_WRITABLE
+        | fio::OPEN_FLAG_POSIX_EXECUTABLE);
 
-    if flags & OPEN_FLAG_DIRECTORY != 0 {
+    if flags & fio::OPEN_FLAG_DIRECTORY != 0 {
         return Err(Status::NOT_DIR);
     }
 
-    if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-        flags &= !(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        if flags & !OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE != 0 {
+    if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        flags &= !(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+        if flags & !fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE != 0 {
             return Err(Status::INVALID_ARGS);
         }
-        flags &= OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
+        flags &= fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
         return Ok(flags);
     }
 
     // All the flags we have already checked above and removed.
     debug_assert!(
         flags
-            & (OPEN_FLAG_DIRECTORY
-                | OPEN_FLAG_NOT_DIRECTORY
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE
-                | OPEN_FLAG_NODE_REFERENCE)
+            & (fio::OPEN_FLAG_DIRECTORY
+                | fio::OPEN_FLAG_NOT_DIRECTORY
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE
+                | fio::OPEN_FLAG_NODE_REFERENCE)
             == 0
     );
 
     // A service might only be connected to when both read and write permissions are present.
-    if flags & OPEN_RIGHT_READABLE == 0 || flags & OPEN_RIGHT_WRITABLE == 0 {
+    if flags & fio::OPEN_RIGHT_READABLE == 0 || flags & fio::OPEN_RIGHT_WRITABLE == 0 {
         return Err(Status::ACCESS_DENIED);
     }
-    let allowed_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+    let allowed_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
     // OPEN_FLAG_DESCRIBE is not allowed when connecting directly to the service itself.
-    if flags & OPEN_FLAG_DESCRIBE != 0 {
+    if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
         return Err(Status::INVALID_ARGS);
     }
 
@@ -100,15 +96,7 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
 mod tests {
     use super::new_connection_validate_flags;
 
-    use {
-        fidl_fuchsia_io::{
-            MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
-            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE,
-            OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        },
-        fuchsia_zircon::Status,
-    };
+    use {fidl_fuchsia_io as fio, fuchsia_zircon::Status};
 
     /// Assertion for when `new_connection_validate_flags` should succeed => `ncvf_ok`.
     fn ncvf_ok(flags: u32, mode: u32, expected_new_flags: u32) {
@@ -137,45 +125,57 @@ mod tests {
     }
 
     /// Common combination for the service tests.
-    const READ_WRITE: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+    const READ_WRITE: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
     #[test]
     fn node_reference_basic() {
         // OPEN_FLAG_NODE_REFERENCE is preserved.
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE, 0, OPEN_FLAG_NODE_REFERENCE);
+        ncvf_ok(fio::OPEN_FLAG_NODE_REFERENCE, 0, fio::OPEN_FLAG_NODE_REFERENCE);
 
         // Access flags are dropped.
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, 0, OPEN_FLAG_NODE_REFERENCE);
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, 0, OPEN_FLAG_NODE_REFERENCE);
+        ncvf_ok(
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_RIGHT_READABLE,
+            0,
+            fio::OPEN_FLAG_NODE_REFERENCE,
+        );
+        ncvf_ok(
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_RIGHT_WRITABLE,
+            0,
+            fio::OPEN_FLAG_NODE_REFERENCE,
+        );
 
         // OPEN_FLAG_DESCRIBE is preserved.
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE,
             0,
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE,
         );
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE | READ_WRITE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_NODE_REFERENCE | READ_WRITE | fio::OPEN_FLAG_DESCRIBE,
             0,
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE,
         );
 
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY, 0, OPEN_FLAG_NODE_REFERENCE);
-        ncvf_err(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DIRECTORY, 0, Status::NOT_DIR);
+        ncvf_ok(
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            fio::OPEN_FLAG_NODE_REFERENCE,
+        );
+        ncvf_err(fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DIRECTORY, 0, Status::NOT_DIR);
     }
 
     #[test]
     fn service_basic() {
         // Access flags are required and preserved.
         ncvf_ok(READ_WRITE, 0, READ_WRITE);
-        ncvf_err(OPEN_RIGHT_READABLE, 0, Status::ACCESS_DENIED);
-        ncvf_err(OPEN_RIGHT_WRITABLE, 0, Status::ACCESS_DENIED);
+        ncvf_err(fio::OPEN_RIGHT_READABLE, 0, Status::ACCESS_DENIED);
+        ncvf_err(fio::OPEN_RIGHT_WRITABLE, 0, Status::ACCESS_DENIED);
 
         // OPEN_FLAG_DESCRIBE is not allowed.
-        ncvf_err(READ_WRITE | OPEN_FLAG_DESCRIBE, 0, Status::INVALID_ARGS);
+        ncvf_err(READ_WRITE | fio::OPEN_FLAG_DESCRIBE, 0, Status::INVALID_ARGS);
 
-        ncvf_ok(READ_WRITE | OPEN_FLAG_NOT_DIRECTORY, 0, READ_WRITE);
-        ncvf_err(READ_WRITE | OPEN_FLAG_DIRECTORY, 0, Status::NOT_DIR);
+        ncvf_ok(READ_WRITE | fio::OPEN_FLAG_NOT_DIRECTORY, 0, READ_WRITE);
+        ncvf_err(READ_WRITE | fio::OPEN_FLAG_DIRECTORY, 0, Status::NOT_DIR);
     }
 
     #[test]
@@ -183,30 +183,30 @@ mod tests {
         // OPEN_FLAG_POSIX_* is ignored for services.
         // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE,
+            fio::OPEN_FLAG_NODE_REFERENCE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE,
             0,
-            OPEN_FLAG_NODE_REFERENCE,
+            fio::OPEN_FLAG_NODE_REFERENCE,
         );
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE
-                | OPEN_FLAG_DESCRIBE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE,
+            fio::OPEN_FLAG_NODE_REFERENCE
+                | fio::OPEN_FLAG_DESCRIBE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE,
             0,
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
+            fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE,
         );
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE
+            fio::OPEN_FLAG_NODE_REFERENCE
                 | READ_WRITE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE,
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE,
             0,
-            OPEN_FLAG_NODE_REFERENCE,
+            fio::OPEN_FLAG_NODE_REFERENCE,
         );
     }
 
@@ -216,18 +216,18 @@ mod tests {
         // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         ncvf_ok(
             READ_WRITE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE,
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE,
             0,
             READ_WRITE,
         );
         ncvf_err(
             READ_WRITE
-                | OPEN_FLAG_DESCRIBE
-                | OPEN_FLAG_POSIX_DEPRECATED
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE,
+                | fio::OPEN_FLAG_DESCRIBE
+                | fio::OPEN_FLAG_POSIX_DEPRECATED
+                | fio::OPEN_FLAG_POSIX_WRITABLE
+                | fio::OPEN_FLAG_POSIX_EXECUTABLE,
             0,
             Status::INVALID_ARGS,
         );
@@ -235,25 +235,29 @@ mod tests {
 
     #[test]
     fn file() {
-        ncvf_err(OPEN_FLAG_NODE_REFERENCE, MODE_TYPE_FILE, Status::NOT_FILE);
-        ncvf_err(READ_WRITE, MODE_TYPE_FILE, Status::NOT_FILE);
+        ncvf_err(fio::OPEN_FLAG_NODE_REFERENCE, fio::MODE_TYPE_FILE, Status::NOT_FILE);
+        ncvf_err(READ_WRITE, fio::MODE_TYPE_FILE, Status::NOT_FILE);
     }
 
     #[test]
     fn mode_directory() {
-        ncvf_err(OPEN_FLAG_NODE_REFERENCE, MODE_TYPE_DIRECTORY, Status::NOT_DIR);
-        ncvf_err(READ_WRITE, MODE_TYPE_DIRECTORY, Status::NOT_DIR);
+        ncvf_err(fio::OPEN_FLAG_NODE_REFERENCE, fio::MODE_TYPE_DIRECTORY, Status::NOT_DIR);
+        ncvf_err(READ_WRITE, fio::MODE_TYPE_DIRECTORY, Status::NOT_DIR);
     }
 
     #[test]
     fn mode_socket() {
-        ncvf_err(OPEN_FLAG_NODE_REFERENCE, MODE_TYPE_SOCKET, Status::INVALID_ARGS);
-        ncvf_err(READ_WRITE, MODE_TYPE_SOCKET, Status::INVALID_ARGS);
+        ncvf_err(fio::OPEN_FLAG_NODE_REFERENCE, fio::MODE_TYPE_SOCKET, Status::INVALID_ARGS);
+        ncvf_err(READ_WRITE, fio::MODE_TYPE_SOCKET, Status::INVALID_ARGS);
     }
 
     #[test]
     fn mode_service() {
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE, MODE_TYPE_SERVICE, OPEN_FLAG_NODE_REFERENCE);
-        ncvf_ok(READ_WRITE, MODE_TYPE_SERVICE, READ_WRITE);
+        ncvf_ok(
+            fio::OPEN_FLAG_NODE_REFERENCE,
+            fio::MODE_TYPE_SERVICE,
+            fio::OPEN_FLAG_NODE_REFERENCE,
+        );
+        ncvf_ok(READ_WRITE, fio::MODE_TYPE_SERVICE, READ_WRITE);
     }
 }

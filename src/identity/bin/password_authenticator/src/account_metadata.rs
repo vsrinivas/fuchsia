@@ -10,9 +10,7 @@ use {
         prototype::NullKeyDerivation,
     },
     async_trait::async_trait,
-    fidl_fuchsia_identity_account as faccount,
-    fidl_fuchsia_io::{DirectoryProxy, UnlinkOptions, OPEN_RIGHT_READABLE},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
@@ -205,11 +203,11 @@ pub trait AccountMetadataStore {
 pub struct DataDirAccountMetadataStore {
     /// A read-write handle to the /data/accounts directory under which to store and retrieve
     /// serialized account metadata by ID.
-    accounts_dir: DirectoryProxy,
+    accounts_dir: fio::DirectoryProxy,
 }
 
 impl DataDirAccountMetadataStore {
-    pub fn new(accounts_dir: DirectoryProxy) -> DataDirAccountMetadataStore {
+    pub fn new(accounts_dir: fio::DirectoryProxy) -> DataDirAccountMetadataStore {
         DataDirAccountMetadataStore { accounts_dir }
     }
 
@@ -278,7 +276,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         account_id: &AccountId,
     ) -> Result<Option<AccountMetadata>, AccountMetadataStoreError> {
         let metadata_filename = format_account_id(&account_id);
-        let flags = OPEN_RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
 
         let maybe_file =
             io_util::directory::open_file(&self.accounts_dir, &metadata_filename, flags).await;
@@ -298,7 +296,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 
     async fn remove(&mut self, account_id: &AccountId) -> Result<(), AccountMetadataStoreError> {
         let metadata_filename = format_account_id(&account_id);
-        let res = self.accounts_dir.unlink(&metadata_filename, UnlinkOptions::EMPTY).await?;
+        let res = self.accounts_dir.unlink(&metadata_filename, fio::UnlinkOptions::EMPTY).await?;
         match res {
             Ok(_) => Ok(()),
             Err(err) => Err(AccountMetadataStoreError::UnlinkError(zx::Status::from_raw(err))),
@@ -308,10 +306,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 
 #[cfg(test)]
 pub mod test {
-    use {
-        super::*, assert_matches::assert_matches, fidl_fuchsia_io::DirectoryMarker,
-        lazy_static::lazy_static, tempfile::TempDir,
-    };
+    use {super::*, assert_matches::assert_matches, lazy_static::lazy_static, tempfile::TempDir};
 
     impl AccountMetadata {
         /// Create a new ScryptOnly AccountMetadata using standard scrypt parameters and the
@@ -366,13 +361,15 @@ pub mod test {
         129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
     ];
 
-    async fn write_test_file_in_dir(dir: &DirectoryProxy, path: &std::path::Path, data: &[u8]) {
+    async fn write_test_file_in_dir(
+        dir: &fio::DirectoryProxy,
+        path: &std::path::Path,
+        data: &[u8],
+    ) {
         let file = io_util::open_file(
             &dir,
             path,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
         )
         .expect(&format!("create file {}", path.display()));
         file.write(data)
@@ -521,11 +518,11 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
-        let (dir2, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
             .expect("open second connection to temp dir");
 
@@ -568,7 +565,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
@@ -614,11 +611,11 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
-        let (dir2, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
             .expect("open second connection to temp dir");
 
@@ -655,7 +652,7 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
@@ -681,11 +678,11 @@ pub mod test {
         let tmp_dir = TempDir::new().unwrap();
         let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
-        let (dir2, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
             .expect("open second connection to temp dir");
 

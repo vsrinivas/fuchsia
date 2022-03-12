@@ -5,7 +5,7 @@
 use {fuchsia_zircon_status::Status, thiserror::Error};
 
 #[cfg(target_os = "fuchsia")]
-use {fidl_fuchsia_io::DirectoryProxy, fidl_fuchsia_mem::Buffer, fuchsia_zircon::VmoChildOptions};
+use {fidl_fuchsia_io as fio, fidl_fuchsia_mem::Buffer, fuchsia_zircon::VmoChildOptions};
 
 /// An error encountered while opening an image.
 #[derive(Debug, Error)]
@@ -172,14 +172,16 @@ impl ImageClass {
 }
 
 #[cfg(target_os = "fuchsia")]
-pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer, OpenImageError> {
-    let file =
-        io_util::directory::open_file(proxy, &image.name(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-            .map_err(OpenImageError::OpenFile)?;
+pub(crate) async fn open(
+    proxy: &fio::DirectoryProxy,
+    image: &Image,
+) -> Result<Buffer, OpenImageError> {
+    let file = io_util::directory::open_file(proxy, &image.name(), fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(OpenImageError::OpenFile)?;
 
     let vmo = file
-        .get_backing_memory(fidl_fuchsia_io::VmoFlags::READ)
+        .get_backing_memory(fio::VmoFlags::READ)
         .await
         .map_err(OpenImageError::FidlGetBuffer)?
         .map_err(Status::from_raw)

@@ -8,8 +8,7 @@ use {
         metrics_util::tuf_error_as_create_tuf_client_event_code, TCP_KEEPALIVE_TIMEOUT,
     },
     anyhow::{anyhow, format_err, Context as _},
-    cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{
         BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
@@ -83,7 +82,7 @@ struct RepositoryInspectState {
 
 impl Repository {
     pub async fn new(
-        data_proxy: Option<DirectoryProxy>,
+        data_proxy: Option<fio::DirectoryProxy>,
         persisted_repos_dir: Option<&str>,
         config: &RepositoryConfig,
         mut cobalt_sender: CobaltSender,
@@ -203,7 +202,7 @@ impl Repository {
 }
 
 async fn get_local_repo(
-    data_proxy: Option<DirectoryProxy>,
+    data_proxy: Option<fio::DirectoryProxy>,
     persisted_repos_dir: Option<&str>,
     config: &RepositoryConfig,
 ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Sync + Send>, anyhow::Error> {
@@ -236,7 +235,7 @@ async fn get_local_repo(
             let repos_proxy = io_util::directory::open_directory(
                 &data_proxy,
                 persisted_repos_dir,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )
             .await
             .with_context(|| format!("opening {}", persisted_repos_dir))?;
@@ -244,7 +243,7 @@ async fn get_local_repo(
             let proxy = io_util::directory::open_directory(
                 &repos_proxy,
                 host,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
             )
             .await
             .with_context(|| format!("opening {}", host))?;
@@ -403,7 +402,7 @@ mod tests {
             let cobalt_sender = CobaltSender::new(sender);
             let proxy = io_util::directory::open_in_namespace(
                 self.data_dir.path().to_str().unwrap(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
             Repository::new(

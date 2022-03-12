@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
 use diagnostics_message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
 use fidl::endpoints::ProtocolMarker;
-use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,
 };
@@ -503,7 +503,7 @@ pub struct LogSinkHelper {
 }
 
 impl LogSinkHelper {
-    pub fn new(directory: &DirectoryProxy) -> Self {
+    pub fn new(directory: &fio::DirectoryProxy) -> Self {
         let log_sink = connect_to_protocol_at_dir_svc::<LogSinkMarker>(&directory)
             .expect("cannot connect to log sink");
         let mut s = Self { log_sink: Some(log_sink), sock: None };
@@ -563,7 +563,7 @@ impl LogProcessor for Listener {
     }
 }
 
-pub fn start_listener(directory: &DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
+pub fn start_listener(directory: &fio::DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
     let log_proxy = connect_to_protocol_at_dir_svc::<LogMarker>(&directory)
         .expect("cannot connect to log proxy");
     let (send_logs, recv_logs) = mpsc::unbounded();

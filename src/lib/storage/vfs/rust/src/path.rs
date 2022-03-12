@@ -7,10 +7,7 @@
 //! approach is used to allow passing the path string, from one `open()` method to the next,
 //! without the need to copy the path itself.
 
-use {
-    fidl_fuchsia_io::{MAX_FILENAME, MAX_PATH},
-    fuchsia_zircon::Status,
-};
+use {fidl_fuchsia_io as fio, fuchsia_zircon::Status};
 
 #[derive(Clone, Debug)]
 pub struct Path {
@@ -43,7 +40,7 @@ impl Path {
 
         // Make sure that we don't accept paths longer than POSIX's PATH_MAX, plus one character
         // which accounts for the null terminator.
-        if (path.len() as u64) > std::cmp::min(MAX_PATH, libc::PATH_MAX as u64 - 1) {
+        if (path.len() as u64) > std::cmp::min(fio::MAX_PATH, libc::PATH_MAX as u64 - 1) {
             return Err(Status::BAD_PATH);
         }
 
@@ -68,7 +65,7 @@ impl Path {
                     if c.is_empty() || c == ".." || c == "." {
                         return Err(Status::INVALID_ARGS);
                     }
-                    if c.len() as u64 > MAX_FILENAME {
+                    if c.len() as u64 > fio::MAX_FILENAME {
                         return Err(Status::BAD_PATH);
                     }
                 }
@@ -484,7 +481,7 @@ mod tests {
 
     #[test]
     fn too_long_filename() {
-        let string = "a".repeat(MAX_FILENAME as usize + 1);
+        let string = "a".repeat(fio::MAX_FILENAME as usize + 1);
         negative_construction_test! {
             path: &string,
             "filename too long",
@@ -494,13 +491,13 @@ mod tests {
 
     #[test]
     fn too_long_path() {
-        let filename = "a".repeat(MAX_FILENAME as usize);
+        let filename = "a".repeat(fio::MAX_FILENAME as usize);
         let mut path = String::new();
-        while path.len() < MAX_PATH as usize {
+        while path.len() < fio::MAX_PATH as usize {
             path.push('/');
             path.push_str(&filename);
         }
-        assert_eq!(path.len(), MAX_PATH as usize);
+        assert_eq!(path.len(), fio::MAX_PATH as usize);
         negative_construction_test! {
             path: &path,
             "path too long",
@@ -510,11 +507,11 @@ mod tests {
 
     #[test]
     fn long_path() {
-        let mut path = "a/".repeat((MAX_PATH as usize - 1) / 2);
-        if path.len() < MAX_PATH as usize - 1 {
+        let mut path = "a/".repeat((fio::MAX_PATH as usize - 1) / 2);
+        if path.len() < fio::MAX_PATH as usize - 1 {
             path.push('a');
         }
-        assert_eq!(path.len(), MAX_PATH as usize - 1);
+        assert_eq!(path.len(), fio::MAX_PATH as usize - 1);
         simple_construction_test! {
             path: &path,
             mut path => {
@@ -526,7 +523,7 @@ mod tests {
 
     #[test]
     fn long_filename() {
-        let string = "a".repeat(MAX_FILENAME as usize);
+        let string = "a".repeat(fio::MAX_FILENAME as usize);
         simple_construction_test! {
             path: &string,
             mut path => {

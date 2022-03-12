@@ -28,10 +28,7 @@ use {
     fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
-        OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
     files_async, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
@@ -198,36 +195,36 @@ pub fn offer_runner_cap_to_collection(runner_cap: &str, child: &str) -> cm_rust:
 }
 
 pub async fn dir_contains<'a>(
-    root_proxy: &'a DirectoryProxy,
+    root_proxy: &'a fio::DirectoryProxy,
     path: &'a str,
     entry_name: &'a str,
 ) -> bool {
-    let dir = io_util::open_directory(&root_proxy, &Path::new(path), OPEN_RIGHT_READABLE)
+    let dir = io_util::open_directory(&root_proxy, &Path::new(path), fio::OPEN_RIGHT_READABLE)
         .expect("Failed to open directory");
     let entries = files_async::readdir(&dir).await.expect("readdir failed");
     let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     listing.contains(&String::from(entry_name))
 }
 
-pub async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
+pub async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
     let entries = files_async::readdir(&root_proxy).await.expect("readdir failed");
     let mut items = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     items.sort();
     items
 }
 
-pub async fn list_sub_directory(parent: &DirectoryProxy, path: &str) -> Vec<String> {
+pub async fn list_sub_directory(parent: &fio::DirectoryProxy, path: &str) -> Vec<String> {
     let sub_dir = io_util::open_directory(
         &parent,
         &Path::new(path),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
     list_directory(&sub_dir).await
 }
 
-pub async fn list_directory_recursive<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
-    let dir = io_util::clone_directory(&root_proxy, CLONE_FLAG_SAME_RIGHTS)
+pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
+    let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");
     let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None);
     let mut items = entries
@@ -239,18 +236,18 @@ pub async fn list_directory_recursive<'a>(root_proxy: &'a DirectoryProxy) -> Vec
     items
 }
 
-pub async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
-    let file_proxy = io_util::open_file(&root_proxy, &Path::new(path), OPEN_RIGHT_READABLE)
+pub async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
+    let file_proxy = io_util::open_file(&root_proxy, &Path::new(path), fio::OPEN_RIGHT_READABLE)
         .expect("Failed to open file.");
     let res = io_util::read_file(&file_proxy).await;
     res.expect("Unable to read file.")
 }
 
-pub async fn write_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str, contents: &'a str) {
+pub async fn write_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str, contents: &'a str) {
     let file_proxy = io_util::open_file(
         &root_proxy,
         &Path::new(path),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
     )
     .expect("Failed to open file.");
     let _: u64 = file_proxy
@@ -261,12 +258,12 @@ pub async fn write_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str, conte
         .expect("Write failed");
 }
 
-pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
+pub async fn call_echo<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
     let node_proxy = io_util::open_node(
         &root_proxy,
         &Path::new(path),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        MODE_TYPE_SERVICE,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_SERVICE,
     )
     .expect("failed to open echo service");
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
@@ -530,7 +527,7 @@ impl ActionsTest {
 /// Returns the created directory and corresponding namespace entries.
 pub fn create_fs_with_mock_logsink(
 ) -> Result<(MockServiceFs<'static>, Vec<fcrunner::ComponentNamespaceEntry>), Error> {
-    let (client, server) = endpoints::create_endpoints::<DirectoryMarker>()
+    let (client, server) = endpoints::create_endpoints::<fio::DirectoryMarker>()
         .context("Failed to create VFS endpoints.")?;
     let mut dir = ServiceFs::new_local();
     dir.add_fidl_service_at(LogSinkMarker::NAME, MockServiceRequest::LogSink);

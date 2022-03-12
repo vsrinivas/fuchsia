@@ -31,10 +31,7 @@ use crate::{
 use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_CREATE_IF_ABSENT,
-    },
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
@@ -130,7 +127,7 @@ where
 
         match this.entries.get(name) {
             Some(entry) => {
-                if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+                if flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                     return Err(Status::ALREADY_EXISTS);
                 }
 
@@ -186,7 +183,7 @@ where
         flags: u32,
         mode: u32,
         mut path: Path,
-        server_end: ServerEnd<NodeMarker>,
+        server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // See if the path has a next segment, if so we want to traverse down
         // the directory. Otherwise we've arrived at the right directory.
@@ -233,7 +230,7 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(self.inode, DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.inode, fio::DIRENT_TYPE_DIRECTORY)
     }
 }
 
@@ -253,7 +250,7 @@ where
 
         let (mut sink, entries_iter) = match pos {
             TraversalPosition::Start => {
-                match sink.append(&EntryInfo::new(self.inode, DIRENT_TYPE_DIRECTORY), ".") {
+                match sink.append(&EntryInfo::new(self.inode, fio::DIRENT_TYPE_DIRECTORY), ".") {
                     AppendResult::Ok(sink) => {
                         // I wonder why, but rustc can not infer T in
                         //
@@ -305,7 +302,7 @@ where
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: WatchMask,
+        mask: fio::WatchMask,
         watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let mut this = self.inner.lock();
@@ -327,9 +324,9 @@ where
         this.watchers.remove(key);
     }
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
-        Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY
                 | rights_to_posix_mode_bits(
                     /*r*/ true,
                     /*w*/ self.mutable,
@@ -394,7 +391,8 @@ where
         match this.entries.entry(name) {
             Entry::Vacant(_) => Ok(None),
             Entry::Occupied(occupied) => {
-                if must_be_directory && occupied.get().entry_info().type_() != DIRENT_TYPE_DIRECTORY
+                if must_be_directory
+                    && occupied.get().entry_info().type_() != fio::DIRENT_TYPE_DIRECTORY
                 {
                     Err(Status::NOT_DIR)
                 } else {

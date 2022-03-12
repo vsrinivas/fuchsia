@@ -4,11 +4,7 @@
 
 //! Typesafe wrappers around the /pkgfs/packages filesystem.
 
-use {
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
-    fuchsia_zircon::Status,
-    thiserror::Error,
-};
+use {fidl_fuchsia_io as fio, fuchsia_zircon::Status, thiserror::Error};
 
 /// An error encountered while opening a package
 #[derive(Debug, Error)]
@@ -24,26 +20,26 @@ pub enum OpenError {
 /// An open handle to /pkgfs/packages
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
     pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
-        let proxy = io_util::directory::open_in_namespace(
-            "/pkgfs/packages",
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )?;
+        let proxy =
+            io_util::directory::open_in_namespace("/pkgfs/packages", fio::OPEN_RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_pkgfs_root(
+        pkgfs: &fio::DirectoryProxy,
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
             proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "packages",
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE,
             )?,
         })
     }
@@ -54,9 +50,9 @@ impl Client {
     /// # Panics
     ///
     /// Panics on error
-    pub fn new_test() -> (Self, DirectoryRequestStream) {
+    pub fn new_test() -> (Self, fio::DirectoryRequestStream) {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
     }
@@ -69,7 +65,7 @@ impl Client {
         variant: Option<&str>,
     ) -> Result<fuchsia_pkg::PackageDirectory, OpenError> {
         // TODO(fxbug.dev/37858) allow opening as executable too
-        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+        let flags = fio::OPEN_RIGHT_READABLE;
         let path = format!("{}/{}", name, variant.unwrap_or("0"));
         let dir = io_util::directory::open_directory(&self.proxy, &path, flags).await.map_err(
             |e| match e {

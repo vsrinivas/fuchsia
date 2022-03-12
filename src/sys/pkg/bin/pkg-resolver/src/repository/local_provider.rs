@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context, Error},
-    fidl_fuchsia_io::{FileEvent, FileMarker},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::RepositoryUrl,
     fuchsia_url::pkg_url::RepoUrl,
@@ -40,7 +40,7 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = meta_path.components::<Json>(version).join("/");
         async move {
-            let (local, remote) = fidl::endpoints::create_endpoints::<FileMarker>()
+            let (local, remote) = fidl::endpoints::create_endpoints::<fio::FileMarker>()
                 .context("creating file proxy")
                 .map_err(make_opaque_error)?;
             self.proxy
@@ -59,11 +59,11 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
             #[allow(clippy::never_loop)] // TODO(fxbug.dev/95063)
             while let Some(event) = stream.next().await {
                 match event {
-                    Ok(FileEvent::OnOpen_ { s, .. }) => {
+                    Ok(fio::FileEvent::OnOpen_ { s, .. }) => {
                         status = Some(Status::ok(s));
                         break;
                     }
-                    Ok(FileEvent::OnConnectionInfo { .. }) => {
+                    Ok(fio::FileEvent::OnConnectionInfo { .. }) => {
                         status = Some(Ok(()));
                         break;
                     }

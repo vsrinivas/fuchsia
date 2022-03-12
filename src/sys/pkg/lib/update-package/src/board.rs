@@ -4,7 +4,7 @@
 
 //! Typesafe wrappers around verifying the board file.
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon_status::Status, thiserror::Error};
+use {fidl_fuchsia_io as fio, fuchsia_zircon_status::Status, thiserror::Error};
 
 /// An error encountered while verifying the board.
 #[derive(Debug, Error)]
@@ -21,13 +21,11 @@ pub enum VerifyBoardError {
 }
 
 pub(crate) async fn verify_board(
-    proxy: &DirectoryProxy,
+    proxy: &fio::DirectoryProxy,
     expected_contents: &str,
 ) -> Result<(), VerifyBoardError> {
     let file =
-        match io_util::directory::open_file(proxy, "board", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-        {
+        match io_util::directory::open_file(proxy, "board", fio::OPEN_RIGHT_READABLE).await {
             Ok(file) => Ok(file),
             Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(()),
             Err(e) => Err(e),
