@@ -5,28 +5,11 @@
 use {
     anyhow::{format_err, Error},
     fdio, fidl,
-    fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_inspect_deprecated::{InspectProxy, MetricValue, PropertyValue},
+    fuchsia_async as fasync,
     fuchsia_inspect::reader::{DiagnosticsHierarchy, Property},
-    fuchsia_zircon as zx, io_util,
+    fuchsia_zircon as zx,
 };
-
-/// Checks if a file points to a deprecated Inspect FIDL service.
-pub async fn is_valid_file(filename: &str) -> bool {
-    if filename != <InspectMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME {
-        return false;
-    }
-    if let Ok(proxy) = io_util::open_file_in_namespace(&filename, io_util::OPEN_RIGHT_READABLE) {
-        // Obtain the vmo backing any VmoFiles.
-        if let Ok(node_info) = proxy.describe().await {
-            match node_info {
-                fio::NodeInfo::Service(_) => return true,
-                _ => return false,
-            }
-        }
-    }
-    false
-}
 
 /// Loads an inspect node hierarchy in the given path.
 pub async fn load_hierarchy_from_path(path: &str) -> Result<DiagnosticsHierarchy, Error> {
@@ -102,11 +85,10 @@ async fn read_node(proxy: InspectProxy) -> Result<PartialNodeHierarchy, Error> {
 
 #[cfg(test)]
 mod tests {
-
     use {
         super::*,
         fidl_fuchsia_inspect_deprecated::{
-            InspectRequest, InspectRequestStream, Metric, Object, Property,
+            InspectMarker, InspectRequest, InspectRequestStream, Metric, Object, Property,
         },
         fuchsia_inspect::assert_data_tree,
         futures::{TryFutureExt, TryStreamExt},
