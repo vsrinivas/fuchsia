@@ -20,6 +20,7 @@ sdk://fidl/fuchsia.bluetooth.hfp
 sdk://fidl/fuchsia.bluetooth.le
 sdk://fidl/fuchsia.bluetooth.sys
 sdk://fidl/fuchsia.buildinfo
+sdk://fidl/fuchsia.buildinfo.test
 sdk://fidl/fuchsia.camera
 sdk://fidl/fuchsia.camera2
 sdk://fidl/fuchsia.camera2.hal
@@ -73,8 +74,6 @@ sdk://fidl/fuchsia.location.position
 sdk://fidl/fuchsia.location.sensor
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.lowpan.bootstrap
-sdk://fidl/fuchsia.power.clientlevel
-sdk://fidl/fuchsia.power.systemmode
 sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio
@@ -95,7 +94,9 @@ sdk://fidl/fuchsia.net.http
 sdk://fidl/fuchsia.net.interfaces
 sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.routes
+sdk://fidl/fuchsia.power.clientlevel
 sdk://fidl/fuchsia.power.profile
+sdk://fidl/fuchsia.power.systemmode
 sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.process.lifecycle
 sdk://fidl/fuchsia.recovery
