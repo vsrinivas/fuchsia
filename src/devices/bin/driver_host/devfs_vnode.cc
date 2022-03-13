@@ -17,17 +17,6 @@ namespace {
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
-// The path might get truncated if too long, which isn't a problem because it should just result in
-// the driver not being found.
-fbl::StringBuffer<fuchsia_device::wire::kMaxDriverPathLen> GetFullDriverPath(
-    const fidl::StringView& driver_path) {
-  fbl::StringBuffer<fuchsia_device::wire::kMaxDriverPathLen> buffer;
-  if (!driver_path.empty() && driver_path[0] != '/') {
-    buffer.Append(std::string_view(internal::ContextForApi()->root_driver_path()));
-  }
-  return buffer.Append(driver_path.data(), driver_path.size());
-}
-
 }  // namespace
 
 zx_status_t DevfsVnode::OpenNode(fs::Vnode::ValidatedOptions options,
@@ -109,7 +98,8 @@ zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* 
 }
 
 void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
-  zx_status_t status = device_bind(dev_, GetFullDriverPath(request->driver).c_str());
+  zx_status_t status =
+      device_bind(dev_, std::string(request->driver.data(), request->driver.size()).c_str());
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -129,7 +119,7 @@ void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestVie
 }
 
 void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& completer) {
-  dev_->set_rebind_drv_name(GetFullDriverPath(request->driver).c_str());
+  dev_->set_rebind_drv_name(std::string(request->driver.data(), request->driver.size()).c_str());
   zx_status_t status = device_rebind(dev_.get());
 
   if (status != ZX_OK) {

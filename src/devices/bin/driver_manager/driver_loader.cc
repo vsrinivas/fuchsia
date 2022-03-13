@@ -190,7 +190,12 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
     return false;
   }
 
-  return result.value().compare(libname) == 0;
+  if (libname.find('/') == std::string_view::npos) {
+    std::string abs_libname = std::string("/boot/driver/") + std::string(libname);
+    return result.value() == abs_libname;
+  }
+
+  return result.value() == libname;
 }
 
 const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
