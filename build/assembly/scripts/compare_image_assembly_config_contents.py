@@ -70,7 +70,7 @@ def compare_packages(
     }
 
     for missing in set(first_by_name.keys()).difference(second_by_name.keys()):
-        errors.append(f"Missing package {setname}): {missing}")
+        errors.append(f"Missing package ({setname}): {missing}")
 
     for extra in set(second_by_name.keys()).difference(first_by_name.keys()):
         errors.append(f"Extra package ({setname}): {extra}")
