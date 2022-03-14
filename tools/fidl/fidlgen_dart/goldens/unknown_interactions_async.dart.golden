@@ -39,6 +39,161 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+enum ExampleFlexibleTwoWayResultTag {
+  response, // 0x1
+  transportErr, // 0x3
+}
+
+const Map<int, ExampleFlexibleTwoWayResultTag>
+    _ExampleFlexibleTwoWayResultTag_map = {
+  1: ExampleFlexibleTwoWayResultTag.response,
+  3: ExampleFlexibleTwoWayResultTag.transportErr,
+};
+
+class ExampleFlexibleTwoWayResult extends $fidl.Union {
+  const ExampleFlexibleTwoWayResult.withResponse(
+      ExampleFlexibleTwoWayResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const ExampleFlexibleTwoWayResult.withTransportErr(int value)
+      : _ordinal = 3,
+        _data = value;
+
+  ExampleFlexibleTwoWayResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  ExampleFlexibleTwoWayResultTag get $tag =>
+      _ExampleFlexibleTwoWayResultTag_map[_ordinal]!;
+
+  ExampleFlexibleTwoWayResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get transportErr {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static ExampleFlexibleTwoWayResult _ctor(int ordinal, Object data) {
+    return ExampleFlexibleTwoWayResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<ExampleFlexibleTwoWayResult>
+    kExample_FlexibleTwoWay_Result_Type =
+    $fidl.UnionType<ExampleFlexibleTwoWayResult>(
+  members: <int, $fidl.FidlType>{
+    1: kExample_FlexibleTwoWay_Response_Type,
+    3: $fidl.Int32Type(),
+  },
+  ctor: ExampleFlexibleTwoWayResult._ctor,
+  flexible: false,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<ExampleFlexibleTwoWayResult>
+    kExample_FlexibleTwoWay_Result_OptType =
+    $fidl.NullableUnionType<ExampleFlexibleTwoWayResult>(
+  members: <int, $fidl.FidlType>{
+    1: kExample_FlexibleTwoWay_Response_Type,
+    3: $fidl.Int32Type(),
+  },
+  ctor: ExampleFlexibleTwoWayResult._ctor,
+  flexible: false,
+  resource: false,
+);
+
+class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
+  const ExampleFlexibleTwoWayResponse({
+    this.reserved: 0x0,
+  });
+  ExampleFlexibleTwoWayResponse.clone(
+    ExampleFlexibleTwoWayResponse $orig, {
+    int? reserved,
+  }) : this(
+          reserved: reserved ?? $orig.reserved,
+        );
+
+  final int reserved;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      reserved,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint8Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  static ExampleFlexibleTwoWayResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 0, 1);
+        return ExampleFlexibleTwoWayResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
+        return ExampleFlexibleTwoWayResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<ExampleFlexibleTwoWayResponse>
+    kExample_FlexibleTwoWay_Response_Type =
+    $fidl.StructType<ExampleFlexibleTwoWayResponse>(
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: ExampleFlexibleTwoWayResponse._structDecode);
+
 // strictOneWay: ()
 const int _kExample_StrictOneWay_Ordinal = 0x1f9937f425c8491a;
 const $fidl.MethodType _kExample_StrictOneWay_Type = $fidl.MethodType(
@@ -72,16 +227,19 @@ const $fidl.MethodType _kExample_StrictTwoWay_Type = $fidl.MethodType(
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
-// flexibleTwoWay: () -> ()
+// flexibleTwoWay: () -> (ExampleFlexibleTwoWayResult result)
 const int _kExample_FlexibleTwoWay_Ordinal = 0x7ddf3a4404acfa2c;
 const $fidl.MethodType _kExample_FlexibleTwoWay_Type = $fidl.MethodType(
   request: [],
-  response: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<ExampleFlexibleTwoWayResult>(
+        type: kExample_FlexibleTwoWay_Result_Type, offsetV1: 0, offsetV2: 0),
+  ],
   name: r"Example.FlexibleTwoWay",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
-  responseInlineSizeV2: 0,
+  responseInlineSizeV1: 24,
+  responseInlineSizeV2: 16,
 );
 // strictEvent:  -> ()
 const int _kExample_StrictEvent_Ordinal = 0x28d6af569779dfe5;
@@ -111,7 +269,7 @@ abstract class Example {
   $async.Future<void> strictOneWay();
   $async.Future<void> flexibleOneWay();
   $async.Future<void> strictTwoWay();
-  $async.Future<void> flexibleTwoWay();
+  $async.Future<ExampleFlexibleTwoWayResult> flexibleTwoWay();
   $async.Stream<void>? get strictEvent;
   $async.Stream<void>? get flexibleEvent;
 }
@@ -197,7 +355,11 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
           final List<$fidl.MemberType> $types =
               _kExample_FlexibleTwoWay_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = null;
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kExample_FlexibleTwoWay_Type
+                  .responseInlineSize($message.wireFormat),
+              $types[0]);
 
           $completer.complete($response);
         }, 'method response');
@@ -255,7 +417,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
   }
 
   @override
-  $async.Future<void> flexibleTwoWay() {
+  $async.Future<ExampleFlexibleTwoWayResult> flexibleTwoWay() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -264,7 +426,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kExample_FlexibleTwoWay_Ordinal, 0);
-    final $completer = $async.Completer<void>();
+    final $completer = $async.Completer<ExampleFlexibleTwoWayResult>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
   }
@@ -392,8 +554,9 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
               _kExample_FlexibleTwoWay_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
-          final $async.Future<void> $future = $fidl
-              .decodeMessageWithCallback<$async.Future<void>>(
+          final $async.Future<ExampleFlexibleTwoWayResult> $future = $fidl
+              .decodeMessageWithCallback<
+                      $async.Future<ExampleFlexibleTwoWayResult>>(
                   $message,
                   _kExample_FlexibleTwoWay_Type.requestInlineSize(
                       $message.wireFormat), ($fidl.Decoder decoder) {
@@ -404,6 +567,14 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kExample_FlexibleTwoWay_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kExample_FlexibleTwoWay_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kExample_FlexibleTwoWay_Type
+                    .responseInlineSize($encoder.wireFormat),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             $fidl.handleException(_name, _e, close);

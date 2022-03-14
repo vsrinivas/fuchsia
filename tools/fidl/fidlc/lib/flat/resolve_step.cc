@@ -152,6 +152,7 @@ void ResolveStep::ResolveElement(Element* element) {
 }
 
 void ResolveStep::ResolveTypeConstructor(TypeConstructor* type_ctor) {
+  assert(type_ctor && "null type_ctor");
   ResolveReference(type_ctor->layout);
   for (auto& param : type_ctor->parameters->items) {
     switch (param->kind) {

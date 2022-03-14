@@ -413,7 +413,7 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
     GenerateObjectMember("has_error", value.has_error);
-    if (value.has_error) {
+    if (value.HasResultUnion()) {
       auto response_id = static_cast<const flat::IdentifierType*>(value.maybe_response->type);
       auto response_struct = static_cast<const flat::Struct*>(response_id->type_decl);
       const auto* result_union_type =
@@ -423,8 +423,9 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
           result_union->members[0].maybe_used->type_ctor->type);
       GenerateObjectMember("maybe_response_result_type", result_union_type);
       GenerateObjectMember("maybe_response_success_type", success_variant_type);
-      GenerateObjectMember("maybe_response_err_type",
-                           result_union->members[1].maybe_used->type_ctor->type);
+      if (value.has_error)
+        GenerateObjectMember("maybe_response_err_type",
+                             result_union->members[1].maybe_used->type_ctor->type);
     }
   });
 }

@@ -1006,40 +1006,48 @@ type Method struct {
 	Name Identifier `json:"name"`
 	// Whether the method is marked as strict (other wise flexible).
 	//
-	// While unknown interactions are experimental, a not-set strictness should be treated as
-	// strict. After unknown interactions are released this field will be made required. For now,
-	// use IsStrict() to access the value correctly.
+	// While unknown interactions are experimental, a not-set strictness should
+	// be treated as strict. After unknown interactions are released this field
+	// will be made required. For now, use IsStrict() to access the value
+	// correctly.
 	//
-	// TODO(fxbug.dev/88366): make "strict" required once fidlc always provides it.  It's currently
-	// gated by unknown_interactions and should not default to false when not provided.
+	// TODO(fxbug.dev/88366): make "strict" required once fidlc always provides
+	// it.  It's currently gated by unknown_interactions and should not default
+	// to false when not provided.
 	MaybeStrict *bool `json:"strict,omitempty"`
-	// True if the method was composed into this protocol from another protocol definition.
+	// True if the method was composed into this protocol from another protocol
+	// definition.
 	IsComposed bool `json:"is_composed"`
-	// True if this method has a request. This is true for all client-initiated methods, and false
-	// for server-initiated events. There may still be no request payload, for example "Foo()" has a
-	// request but no request payload.
+	// True if this method has a request. This is true for all client-initiated
+	// methods, and false for server-initiated events. There may still be no
+	// request payload, for example "Foo()" has a request but no request
+	// payload.
 	HasRequest bool `json:"has_request"`
 	// The request payload of the method, given in the method arguments.
 	RequestPayload *Type `json:"maybe_request_payload,omitempty"`
-	// True if this method has a response. This is true for two-way methods and for server-initiated
-	// events. There may still be no response payload, for example "Foo(...) -> ()" or "-> Bar()"
-	// have a response but no response payload.
+	// True if this method has a response. This is true for two-way methods and
+	// for server-initiated events. There may still be no response payload, for
+	// example "Foo(...) -> ()" or "-> Bar()" have a response but no response
+	// payload.
 	HasResponse bool `json:"has_response"`
-	// The full response payload, as it appears on the wire. If error syntax is used, this is a
-	// struct with a single field containing the ResultType. Otherwise, it is the same as the return
-	// value of the method.
+	// The full response payload, as it appears on the wire. If flexible or
+	// error syntax are used, this is a struct with a single field containing
+	// the ResultType. Otherwise, it is the same as the return value of the
+	// method.
 	ResponsePayload *Type `json:"maybe_response_payload,omitempty"`
-	// Whether the method uses the "error" syntax. If true, ResponsePayload will be a single-element
-	// struct wrapping the result union, and rssponse will be further broken down in the ResultType,
-	// ValueType, and ErrorType fields.
+	// Whether the method uses the "error" syntax. If true, ResponsePayload will
+	// be a single-element struct wrapping the result union, and response will
+	// be further broken down in the ResultType, ValueType, and ErrorType
+	// fields.
 	HasError bool `json:"has_error"`
-	// If error syntax is used, this is the type of the result union containing the ValueType and
-	// ErrorType.
+	// If flexible or error syntax are used, this is the type of the result
+	// union containing the ValueType and (if error syntax) ErrorType.
 	ResultType *Type `json:"maybe_response_result_type,omitempty"`
-	// If error syntax is used, this is the type of the success variant of the ResultType union,
-	// which is the same as the return value.
+	// If flexible or error syntax are used, this is the type of the success
+	// variant of the ResultType union, which is the same as the return value.
 	ValueType *Type `json:"maybe_response_success_type,omitempty"`
-	// If error syntax is used, this is the type of the error variant of the ResultType union.
+	// If error syntax is used, this is the type of the error variant of the
+	// ResultType union.
 	ErrorType *Type `json:"maybe_response_err_type,omitempty"`
 }
 

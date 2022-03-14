@@ -12,10 +12,13 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {
+namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {
+__LOCAL extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+}  // namespace test_unknowninteractions
 
 template <>
 class ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> final
@@ -37,7 +40,7 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 
 template <>
 class ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> final
@@ -59,7 +62,7 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 
 template <>
 class ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> final
@@ -81,7 +84,7 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_unknowninteractions::Example::StrictTwoWay>
@@ -105,8 +108,25 @@ class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
+  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse& operator*() {
+    return payload_;
+  }
+  const ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
+  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse payload_;
 };
 
 template <>
@@ -114,7 +134,8 @@ struct ::fidl::internal::MessageTraits<
     ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>
     final {
  public:
-  static constexpr bool kHasPayload = false;
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
 };
 template <>
 class ::fidl::internal::ClientCallbackTraits<
@@ -155,10 +176,10 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>
 
   ::fitx::result<::fidl::Error> FlexibleOneWay() const;
 };
-namespace fidl {
+namespace test_unknowninteractions {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
+}  // namespace test_unknowninteractions
 #ifdef __Fuchsia__
 
 template <>
@@ -347,7 +368,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
     : public ::fidl::CompleterBase {
  public:
-  void Reply();
+  void Reply(
+      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&& payload);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

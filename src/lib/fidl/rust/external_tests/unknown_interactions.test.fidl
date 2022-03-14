@@ -8,7 +8,7 @@ open protocol UnknownInteractionsProtocol {
     flexible FlexibleOneWay();
 
     strict StrictTwoWay() -> ();
-    flexible FlexibleTwoWay() -> ();
+    flexible FlexibleTwoWay() -> (struct {});
 
     strict -> StrictEvent();
     flexible -> FlexibleEvent();

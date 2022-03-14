@@ -16,11 +16,18 @@ ConsumeStep::ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
   // rather than a vector to avoid lookups like this.
   for (auto& builtin : all_libraries()->root_library()->builtin_declarations) {
     if (builtin->kind == Builtin::Kind::kUint32) {
-      default_underlying_type = builtin.get();
+      default_underlying_type_ = builtin.get();
       break;
     }
   }
-  assert(default_underlying_type && "root library must have uint32");
+  assert(default_underlying_type_ && "root library must have uint32");
+  for (auto& builtin : all_libraries()->root_library()->builtin_declarations) {
+    if (builtin->kind == Builtin::Kind::kInt32) {
+      transport_err_type_ = builtin.get();
+      break;
+    }
+  }
+  assert(transport_err_type_ && "root library must have int32");
 }
 
 void ConsumeStep::RunImpl() {
@@ -327,29 +334,57 @@ static std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(Decl* decl) {
                                            std::make_unique<TypeConstraints>());
 }
 
-bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& success_variant_context,
-                                     const std::shared_ptr<NamingContext>& err_variant_context,
-                                     SourceSpan response_span, raw::ProtocolMethod* method,
-                                     std::unique_ptr<TypeConstructor> success_variant,
-                                     std::unique_ptr<TypeConstructor>* out_payload) {
-  // Compile the error type.
-  std::unique_ptr<TypeConstructor> error_type_ctor;
-  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), err_variant_context,
-                              &error_type_ctor))
-    return false;
+bool ConsumeStep::CreateMethodResult(
+    const std::shared_ptr<NamingContext>& success_variant_context,
+    const std::shared_ptr<NamingContext>& err_variant_context,
+    const std::shared_ptr<NamingContext>& transport_err_variant_context, bool has_err,
+    bool has_transport_err, SourceSpan response_span, raw::ProtocolMethod* method,
+    std::unique_ptr<TypeConstructor> success_variant,
+    std::unique_ptr<TypeConstructor>* out_payload) {
+  assert((has_err || has_transport_err) &&
+         "Method should only use a result union if it has a result union and/or is flexible");
+  assert(err_variant_context != nullptr);
+  assert(transport_err_variant_context != nullptr);
 
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
-  Union::Member success_member{
+  std::vector<Union::Member> result_members;
+
+  result_members.emplace_back(
       std::make_unique<raw::Ordinal64>(sourceElement,
                                        1),  // success case explicitly has ordinal 1
       std::move(success_variant), success_variant_context->name(),
-      std::make_unique<AttributeList>()};
-  Union::Member error_member{
-      std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
-      std::move(error_type_ctor), err_variant_context->name(), std::make_unique<AttributeList>()};
-  std::vector<Union::Member> result_members;
-  result_members.push_back(std::move(success_member));
-  result_members.push_back(std::move(error_member));
+      std::make_unique<AttributeList>());
+
+  if (has_err) {
+    std::unique_ptr<TypeConstructor> error_type_ctor;
+    // Compile the error type.
+    if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), err_variant_context,
+                                &error_type_ctor))
+      return false;
+
+    assert(error_type_ctor != nullptr && "Missing err type ctor");
+
+    result_members.emplace_back(
+        std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
+        std::move(error_type_ctor), err_variant_context->name(), std::make_unique<AttributeList>());
+  } else {
+    // If there's no error, the error variant is reserved.
+    result_members.emplace_back(
+        std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
+        err_variant_context->name(), std::make_unique<AttributeList>());
+  }
+
+  if (has_transport_err) {
+    std::unique_ptr<TypeConstructor> error_type_ctor = IdentifierTypeForDecl(transport_err_type_);
+    assert(error_type_ctor != nullptr && "Missing transport_err type ctor");
+    result_members.emplace_back(
+        std::make_unique<raw::Ordinal64>(sourceElement,
+                                         3),  // transport error case explicitly has ordinal 3
+        std::move(error_type_ctor), transport_err_variant_context->name(),
+        std::make_unique<AttributeList>());
+  }
+  // transport_err is not defined if the method is not flexible.
+
   std::vector<std::unique_ptr<Attribute>> result_attributes;
   result_attributes.emplace_back(
       std::make_unique<Attribute>(generated_source_file()->AddLine("result")));
@@ -402,6 +437,13 @@ void ConsumeStep::ConsumeProtocolDeclaration(
     std::unique_ptr<AttributeList> attributes;
     ConsumeAttributeList(std::move(method->attributes), &attributes);
 
+    auto strictness = types::Strictness::kStrict;
+    if (experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions)) {
+      strictness = types::Strictness::kFlexible;
+      if (method->modifiers != nullptr && method->modifiers->maybe_strictness.has_value())
+        strictness = method->modifiers->maybe_strictness->value;
+    }
+
     SourceSpan method_name = method->identifier->span();
     bool has_request = method->maybe_request != nullptr;
     std::unique_ptr<TypeConstructor> maybe_request;
@@ -417,26 +459,37 @@ void ConsumeStep::ConsumeProtocolDeclaration(
     bool has_error = false;
     if (has_response) {
       has_error = method->maybe_error_ctor != nullptr;
-      if (has_error) {
+      // has_transport_error is true for flexible two-way methods. We already
+      // checked has_response in the outer if block, so to see whether this is a
+      // two-way method or an event, we check has_request here.
+      bool has_transport_error = has_request && strictness == types::Strictness::kFlexible;
+
+      if (has_error || has_transport_error) {
         SourceSpan response_span = method->maybe_response->span();
         const auto response_context = has_request ? protocol_context->EnterResult(method_name)
                                                   : protocol_context->EnterEvent(method_name);
-        std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
 
+        std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context,
+            transport_err_variant_context;
         // TODO(fxbug.dev/88343): update this comment once top-level union support is added, and
         //  the outer-most struct below is no longer used.
-        // The error syntax for protocol P and method M desugars to the following type:
+        // The error syntax and flexible methods for protocol P and method M
+        // desugars to the following type:
         //
         // // the "response"
         // struct {
         //   // the "result"
         //   result @generated_name("P_M_Result") union {
         //     // the "success variant"
-        //     response @generated_name("P_M_Response") [user specified response type];
+        //     1: response @generated_name("P_M_Response") [user specified response type];
         //     // the "error variant"
-        //     err @generated_name("P_M_Error") [user specified error type];
+        //     2: err @generated_name("P_M_Error") [user specified error type];
+        //     3: transport_err  zx.status;
         //   };
         // };
+        //
+        // If the method is strict, transport_err will not be provided. If the method is flexible
+        // but does not have an error, the err variant will be marked as reserved.
         //
         // Note that this can lead to ambiguity with the success variant, since its member
         // name within the union is "response". The naming convention within fidlc
@@ -456,19 +509,23 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         err_variant_context = result_context->EnterMember(generated_source_file()->AddLine("err"));
         err_variant_context->set_name_override(
             utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Error"}, "_"));
+        transport_err_variant_context =
+            result_context->EnterMember(generated_source_file()->AddLine("transport_err"));
 
         std::unique_ptr<TypeConstructor> result_payload;
+
         if (!ConsumeParameterList(method_name, success_variant_context,
                                   std::move(method->maybe_response), false, &result_payload)) {
           return;
         }
 
-        assert(err_variant_context != nullptr &&
+        assert(err_variant_context != nullptr && transport_err_variant_context != nullptr &&
                "compiler bug: error type contexts should have been computed");
-        if (!CreateMethodResult(success_variant_context, err_variant_context, response_span,
-                                method.get(), std::move(result_payload), &maybe_response)) {
+        if (!CreateMethodResult(success_variant_context, err_variant_context,
+                                transport_err_variant_context, has_error, has_transport_error,
+                                response_span, method.get(), std::move(result_payload),
+                                &maybe_response))
           return;
-        }
       } else {
         const auto response_context = has_request ? protocol_context->EnterResponse(method_name)
                                                   : protocol_context->EnterEvent(method_name);
@@ -481,11 +538,6 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         maybe_response = std::move(response_payload);
       }
     }
-
-    auto strictness = types::Strictness::kFlexible;
-    if (method->modifiers != nullptr && method->modifiers->maybe_strictness.has_value())
-      strictness = method->modifiers->maybe_strictness->value;
-
     assert(has_request || has_response);
     methods.emplace_back(std::move(attributes), strictness, std::move(method->identifier),
                          method_name, has_request, std::move(maybe_request), has_response,
@@ -556,7 +608,7 @@ void ConsumeStep::ConsumeResourceDeclaration(
                                 NamingContext::Create(name), &type_ctor))
       return;
   } else {
-    type_ctor = IdentifierTypeForDecl(default_underlying_type);
+    type_ctor = IdentifierTypeForDecl(default_underlying_type_);
   }
 
   RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
@@ -632,7 +684,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
     if (!ConsumeTypeConstructor(std::move(layout->subtype_ctor), context, &subtype_ctor))
       return false;
   } else {
-    subtype_ctor = IdentifierTypeForDecl(default_underlying_type);
+    subtype_ctor = IdentifierTypeForDecl(default_underlying_type_);
   }
 
   std::unique_ptr<AttributeList> attributes;

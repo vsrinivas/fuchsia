@@ -194,11 +194,14 @@ void fidl::internal::NaturalCompleterBase<
 }
 
 void fidl::internal::NaturalCompleterBase<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>::Reply() {
+    ::test_unknowninteractions::Example::FlexibleTwoWay>::
+    Reply(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&&
+              payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal};
-  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

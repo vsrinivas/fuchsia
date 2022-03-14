@@ -19,6 +19,9 @@
 namespace test_unknowninteractions {
 class Example;
 
+__LOCAL extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
 }  // namespace test_unknowninteractions
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -169,6 +172,8 @@ template <>
 struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>
     final {
   WireRequest() = default;
+  using ResponseType =
+      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>;
 };
 
 template <>
@@ -179,6 +184,8 @@ struct ::fidl::internal::TransactionalRequest<
   fidl_message_header_t header;
 
   TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>;
 
  private:
   void _InitHeader();
@@ -186,7 +193,14 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+    final : public ::test_unknowninteractions::wire::
+                ExampleFlexibleTwoWayTopResponse {
+  using Result = test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
+
+  explicit WireResponse(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
+      : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -197,6 +211,14 @@ struct ::fidl::internal::TransactionalResponse<
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
+      body;
+  explicit TransactionalResponse(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
+      : body(::fidl::WireResponse<
+             ::test_unknowninteractions::Example::FlexibleTwoWay>(result)) {
+    _InitHeader();
+  }
   TransactionalResponse() { _InitHeader(); }
 
  private:
@@ -575,16 +597,18 @@ struct IsFidlTransactionalMessage<
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::
+          test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasPointer = false;
+  static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
@@ -597,21 +621,34 @@ static_assert(
 static_assert(offsetof(::fidl::internal::TransactionalResponse<
                            ::test_unknowninteractions::Example::FlexibleTwoWay>,
                        header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
+                       body) == sizeof(fidl_message_header_t));
 
 template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>> {
-  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::
+          test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasPointer = false;
+  static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_unknowninteractions::Example::FlexibleTwoWay>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<
+                           ::test_unknowninteractions::Example::FlexibleTwoWay>,
+                       result) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<
@@ -882,9 +919,54 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  operator*() const {
+    return value();
+  }
 
  private:
-  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
 class ::fidl::WireUnownedResult<
@@ -919,6 +1001,51 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_unknowninteractions::Example::FlexibleTwoWay>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_unknowninteractions::Example::FlexibleTwoWay>*>(bytes_)
+                 ->body);
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value() {
+    return *Unwrap();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value() const {
+    return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  operator->() {
+    return &value();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  operator->() const {
+    return &value();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  operator*() {
+    return value();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  operator*() const {
+    return value();
+  }
 
  private:
   uint8_t* bytes_;
@@ -1026,7 +1153,7 @@ class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::Example>
                                                            &_request);
   }
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
   FlexibleTwoWay() {
@@ -1158,7 +1285,8 @@ class ::fidl::internal::WireCompleterImpl<
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply();
+  void Reply(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>
@@ -1168,7 +1296,8 @@ class ::fidl::internal::WireBufferCompleterImpl<
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply();
+  void Reply(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>
@@ -1283,7 +1412,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   void FlexibleTwoWay(::fidl::WireClientCallback<
                       ::test_unknowninteractions::Example::FlexibleTwoWay>
                           _cb);
-  void FlexibleTwoWay(::fit::callback<void()> _cb);
+  void FlexibleTwoWay(
+      ::fit::callback<
+          void(::fidl::WireResponse<
+               ::test_unknowninteractions::Example::FlexibleTwoWay>* response)>
+          _cb);
 };
 
 template <>
@@ -1331,7 +1464,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<
   ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
   StrictTwoWay();
 
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
   FlexibleTwoWay();

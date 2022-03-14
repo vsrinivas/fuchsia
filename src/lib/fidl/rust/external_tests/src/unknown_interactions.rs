@@ -8,8 +8,10 @@ use assert_matches::assert_matches;
 use {
     fidl::{endpoints::RequestStream, AsyncChannel, Channel},
     fidl_fidl_rust_test_external::{
-        UnknownInteractionsProtocolProxy, UnknownInteractionsProtocolRequest,
-        UnknownInteractionsProtocolRequestStream, UnknownInteractionsProtocolSynchronousProxy,
+        UnknownInteractionsProtocolFlexibleTwoWayResponse,
+        UnknownInteractionsProtocolFlexibleTwoWayResult, UnknownInteractionsProtocolProxy,
+        UnknownInteractionsProtocolRequest, UnknownInteractionsProtocolRequestStream,
+        UnknownInteractionsProtocolSynchronousProxy,
     },
     fuchsia_async as fasync,
     fuchsia_async::futures::stream::StreamExt,
@@ -152,8 +154,14 @@ fn two_way_flexible_sync_send() {
 
     // Send a reply so we can assert that the client doesn't fail.
     let mut reply = [
+        // txid set later ---|
         0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
         0x34, 0xa0, 0xd0, 0x6d, 0x01, 0xb8, 0x0a, 0x1a, //
+        // Result union with success envelope to satisfy client side:
+        // ordinal  ---------------------------------|
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+        // inline value -----|  nhandles |  flags ---|
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, //
     ];
     reply[..4].copy_from_slice(&buf.bytes()[..4]);
     server_end.write(&reply[..], &mut []).expect("failed to write reply");
@@ -275,6 +283,11 @@ async fn two_way_flexible_async_send() {
         let mut reply = [
             0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
             0x34, 0xa0, 0xd0, 0x6d, 0x01, 0xb8, 0x0a, 0x1a, //
+            // Result union with success envelope to satisfy client side:
+            // ordinal  ---------------------------------|
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+            // inline value -----|  nhandles |  flags ---|
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, //
         ];
         reply[..4].copy_from_slice(&buf.bytes()[..4]);
         server_end.write(&reply[..], &mut []).expect("failed to write reply");
@@ -429,6 +442,11 @@ async fn flexible_two_way_response() {
             &[
                 0xab, 0xcd, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
                 0x34, 0xa0, 0xd0, 0x6d, 0x01, 0xb8, 0x0a, 0x1a, //
+                // Result union with success envelope:
+                // ordinal  ---------------------------------|
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                // inline value -----|  nhandles |  flags ---|
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, //
             ],
         );
     });
@@ -436,7 +454,14 @@ async fn flexible_two_way_response() {
     let request = server.next().await.expect("stream ended").expect("failed to read request");
     let responder = assert_matches!(request, UnknownInteractionsProtocolRequest::FlexibleTwoWay { responder } => responder);
 
-    responder.send().expect("failed to send response");
+    // TODO(fxbug.dev/88366): code generation doesn't special-case flexible
+    // interactions yet, so we have to reply with the generated type
+    // representing the result union.
+    responder
+        .send(&mut UnknownInteractionsProtocolFlexibleTwoWayResult::Response(
+            UnknownInteractionsProtocolFlexibleTwoWayResponse {},
+        ))
+        .expect("failed to send response");
 
     t.join().unwrap_or_resume_unwind();
 }

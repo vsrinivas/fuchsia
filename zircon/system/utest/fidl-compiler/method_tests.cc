@@ -25,7 +25,7 @@ open protocol HasComposeMethod1 {
 };
 
 open protocol HasComposeMethod2 {
-    compose() -> ();
+    compose() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -83,7 +83,7 @@ open protocol HasComposeMethod1 {
 };
 
 open protocol HasComposeMethod2 {
-    flexible compose() -> ();
+    flexible compose() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -112,7 +112,7 @@ open protocol HasStrictMethod1 {
 };
 
 open protocol HasStrictMethod2 {
-    strict() -> ();
+    strict() -> (struct {});
 };
 
 open protocol HasStrictMethod3 {
@@ -128,7 +128,7 @@ open protocol HasStrictMethod5 {
 };
 
 open protocol HasStrictMethod6 {
-    flexible strict() -> ();
+    flexible strict() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -181,7 +181,7 @@ open protocol HasFlexibleTwoWayMethod1 {
 };
 
 open protocol HasFlexibleTwoWayMethod2 {
-    flexible() -> ();
+    flexible() -> (struct {});
 };
 
 open protocol HasFlexibleTwoWayMethod3 {
@@ -197,7 +197,7 @@ open protocol HasFlexibleTwoWayMethod5 {
 };
 
 open protocol HasFlexibleTwoWayMethod6 {
-    flexible flexible() -> ();
+    flexible flexible() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -250,7 +250,7 @@ open protocol HasNormalMethod1 {
 };
 
 open protocol HasNormalMethod2 {
-    MyMethod() -> ();
+    MyMethod() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -308,7 +308,7 @@ open protocol HasNormalMethod1 {
 };
 
 open protocol HasNormalMethod2 {
-    flexible MyMethod() -> ();
+    flexible MyMethod() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -375,6 +375,7 @@ protocol HasEvent {
 };
 )FIDL",
                       experiment_flags);
+
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("HasEvent");
@@ -410,7 +411,7 @@ open protocol Open {
   flexible FlexibleOneWay();
 
   strict StrictTwoWay() -> ();
-  flexible FlexibleTwoWay() -> ();
+  flexible FlexibleTwoWay() -> (struct {});
 
   strict -> StrictEvent();
   flexible -> FlexibleEvent();
@@ -464,7 +465,7 @@ TEST(MethodTests, BadInvalidStrictnessFlexibleTwoWayMethodInClosed) {
   TestLibrary library(R"FIDL(library example;
 
 closed protocol Closed {
-  flexible Method() -> ();
+  flexible Method() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -477,7 +478,7 @@ TEST(MethodTests, BadInvalidStrictnessFlexibleTwoWayMethodInAjar) {
   TestLibrary library(R"FIDL(library example;
 
 ajar protocol Ajar {
-  flexible Method() -> ();
+  flexible Method() -> (struct {});
 };
 )FIDL",
                       experiment_flags);
@@ -512,7 +513,7 @@ protocol HasMethod {
   auto protocol = library.LookupProtocol("HasMethod");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
-  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
@@ -551,7 +552,7 @@ protocol HasMethod {
   auto protocol = library.LookupProtocol("HasMethod");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
-  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
@@ -590,7 +591,7 @@ protocol HasMethod {
   auto protocol = library.LookupProtocol("HasMethod");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
-  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
@@ -629,7 +630,7 @@ protocol HasMethod {
   auto protocol = library.LookupProtocol("HasMethod");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
-  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
@@ -668,7 +669,7 @@ protocol HasEvent {
   auto protocol = library.LookupProtocol("HasEvent");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
-  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
@@ -694,4 +695,193 @@ protocol HasEvent {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
+TEST(MethodTests, GoodValidEmptyStructPayloadWhenErrorOrFlexible) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  strict MethodA() -> ();
+  flexible MethodB() -> (struct {});
+  strict MethodC() -> (struct {}) error int32;
+  flexible MethodD() -> (struct {}) error int32;
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto closed = library.LookupProtocol("Test");
+  ASSERT_NOT_NULL(closed);
+  ASSERT_EQ(closed->methods.size(), 4);
+}
+
+TEST(MethodTests, BadInvalidEmptyStructPayloadStrictNoError) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  strict Method() -> (struct {});
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(MethodTests, BadMissingStructPayloadFlexibleNoError) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> ();
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+}
+
+TEST(MethodTests, BadMissingStructPayloadStrictError) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  strict Method() -> () error int32;
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+}
+
+TEST(MethodTests, BadMissingStructPayloadFlexibleError) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> () error int32;
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+}
+
+TEST(MethodTests, GoodFlexibleNoErrorResponseUnion) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Example {
+    flexible Method() -> (struct {
+        foo string;
+    });
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto methods = &library.LookupProtocol("Example")->methods;
+  ASSERT_EQ(methods->size(), 1);
+  auto method = &methods->at(0);
+  auto response = method->maybe_response.get();
+  ASSERT_NOT_NULL(response);
+
+  ASSERT_EQ(response->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto id = static_cast<const fidl::flat::IdentifierType*>(response->type);
+  ASSERT_EQ(id->type_decl->kind, fidl::flat::Decl::Kind::kStruct);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  ASSERT_EQ(as_struct->members.size(), 1);
+
+  auto response_member = &as_struct->members.at(0);
+  ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto result_identifier =
+      static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
+  const fidl::flat::Union* result_union =
+      library.LookupUnion(std::string(result_identifier->name.decl_name()));
+  ASSERT_NOT_NULL(result_union);
+  ASSERT_NOT_NULL(result_union->attributes);
+  ASSERT_NOT_NULL(result_union->attributes->Get("result"));
+  ASSERT_EQ(result_union->members.size(), 3);
+
+  const auto& success = result_union->members.at(0);
+  ASSERT_NOT_NULL(success.maybe_used);
+  ASSERT_STREQ("response", std::string(success.maybe_used->name.data()).c_str());
+
+  const fidl::flat::Union::Member& error = result_union->members.at(1);
+  ASSERT_NULL(error.maybe_used);
+  ASSERT_STREQ("err", std::string(error.span->data()).c_str());
+
+  const fidl::flat::Union::Member& transport_error = result_union->members.at(2);
+  ASSERT_NOT_NULL(transport_error.maybe_used);
+  ASSERT_STREQ("transport_err", std::string(transport_error.maybe_used->name.data()).c_str());
+
+  ASSERT_NOT_NULL(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
+}
+
+TEST(MethodTests, GoodFlexibleErrorResponseUnion) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Example {
+    flexible Method() -> (struct {
+        foo string;
+    }) error uint32;
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto methods = &library.LookupProtocol("Example")->methods;
+  ASSERT_EQ(methods->size(), 1);
+  auto method = &methods->at(0);
+  auto response = method->maybe_response.get();
+  ASSERT_NOT_NULL(response);
+
+  ASSERT_EQ(response->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto id = static_cast<const fidl::flat::IdentifierType*>(response->type);
+  ASSERT_EQ(id->type_decl->kind, fidl::flat::Decl::Kind::kStruct);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  ASSERT_EQ(as_struct->members.size(), 1);
+
+  auto response_member = &as_struct->members.at(0);
+  ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto result_identifier =
+      static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
+  const fidl::flat::Union* result_union =
+      library.LookupUnion(std::string(result_identifier->name.decl_name()));
+  ASSERT_NOT_NULL(result_union);
+  ASSERT_NOT_NULL(result_union->attributes);
+  ASSERT_NOT_NULL(result_union->attributes->Get("result"));
+  ASSERT_EQ(result_union->members.size(), 3);
+
+  const auto& success = result_union->members.at(0);
+  ASSERT_NOT_NULL(success.maybe_used);
+  ASSERT_STREQ("response", std::string(success.maybe_used->name.data()).c_str());
+
+  const fidl::flat::Union::Member& error = result_union->members.at(1);
+  ASSERT_NOT_NULL(error.maybe_used);
+  ASSERT_STREQ("err", std::string(error.maybe_used->name.data()).c_str());
+
+  ASSERT_NOT_NULL(error.maybe_used->type_ctor->type);
+  ASSERT_EQ(error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto err_primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(error.maybe_used->type_ctor->type);
+  ASSERT_EQ(err_primitive_type->subtype, fidl::types::PrimitiveSubtype::kUint32);
+
+  const fidl::flat::Union::Member& transport_error = result_union->members.at(2);
+  ASSERT_NOT_NULL(transport_error.maybe_used);
+  ASSERT_STREQ("transport_err", std::string(transport_error.maybe_used->name.data()).c_str());
+
+  ASSERT_NOT_NULL(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto transport_err_primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(transport_err_primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
+}
 }  // namespace

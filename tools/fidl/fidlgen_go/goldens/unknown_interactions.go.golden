@@ -6,6 +6,89 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+type ExampleFlexibleTwoWayResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+}
+
+var _mExampleFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(ExampleFlexibleTwoWayResponse{})
+
+func (msg *ExampleFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _mExampleFlexibleTwoWayResponse
+}
+
+type exampleWithCtxFlexibleTwoWayResponse struct {
+	_      struct{}                    `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result ExampleFlexibleTwoWayResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mexampleWithCtxFlexibleTwoWayResponse = _bindings.CreateLazyMarshaler(exampleWithCtxFlexibleTwoWayResponse{})
+
+func (msg *exampleWithCtxFlexibleTwoWayResponse) Marshaler() _bindings.Marshaler {
+	return _mexampleWithCtxFlexibleTwoWayResponse
+}
+
+type I_exampleFlexibleTwoWayResultTag uint64
+
+const (
+	ExampleFlexibleTwoWayResultResponse     = 1 // 0x00000001
+	ExampleFlexibleTwoWayResultTransportErr = 3 // 0x00000003
+)
+
+type ExampleFlexibleTwoWayResult struct {
+	I_exampleFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	Response                         ExampleFlexibleTwoWayResponse `fidl_ordinal:"1"`
+	TransportErr                     int32                         `fidl_ordinal:"3"`
+}
+
+var _mExampleFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(ExampleFlexibleTwoWayResult{})
+
+func (msg *ExampleFlexibleTwoWayResult) Marshaler() _bindings.Marshaler {
+	return _mExampleFlexibleTwoWayResult
+}
+
+func (_m *ExampleFlexibleTwoWayResult) reset() {
+	switch _m.I_exampleFlexibleTwoWayResultTag {
+	case 1:
+		var _zeroed ExampleFlexibleTwoWayResponse
+		_m.Response = _zeroed
+	case 3:
+		var _zeroed int32
+		_m.TransportErr = _zeroed
+	}
+}
+
+func (_m *ExampleFlexibleTwoWayResult) Which() I_exampleFlexibleTwoWayResultTag {
+	return _m.I_exampleFlexibleTwoWayResultTag
+}
+
+func (_m *ExampleFlexibleTwoWayResult) Ordinal() uint64 {
+	return uint64(_m.I_exampleFlexibleTwoWayResultTag)
+}
+
+func (_m *ExampleFlexibleTwoWayResult) SetResponse(response ExampleFlexibleTwoWayResponse) {
+	_m.reset()
+	_m.I_exampleFlexibleTwoWayResultTag = ExampleFlexibleTwoWayResultResponse
+	_m.Response = response
+}
+
+func ExampleFlexibleTwoWayResultWithResponse(response ExampleFlexibleTwoWayResponse) ExampleFlexibleTwoWayResult {
+	var _u ExampleFlexibleTwoWayResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (_m *ExampleFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
+	_m.reset()
+	_m.I_exampleFlexibleTwoWayResultTag = ExampleFlexibleTwoWayResultTransportErr
+	_m.TransportErr = transportErr
+}
+
+func ExampleFlexibleTwoWayResultWithTransportErr(transportErr int32) ExampleFlexibleTwoWayResult {
+	var _u ExampleFlexibleTwoWayResult
+	_u.SetTransportErr(transportErr)
+	return _u
+}
+
 const (
 	ExampleStrictOneWayOrdinal   uint64 = 0x1f9937f425c8491a
 	ExampleFlexibleOneWayOrdinal uint64 = 0x200d2009e52a95b8
@@ -36,11 +119,11 @@ func (p *ExampleWithCtxInterface) StrictTwoWay(ctx_ _bindings.Context) error {
 	return err_
 }
 
-func (p *ExampleWithCtxInterface) FlexibleTwoWay(ctx_ _bindings.Context) error {
+func (p *ExampleWithCtxInterface) FlexibleTwoWay(ctx_ _bindings.Context) (ExampleFlexibleTwoWayResult, error) {
 	var req_ _bindings.Message
-	var resp_ _bindings.Message
+	resp_ := &exampleWithCtxFlexibleTwoWayResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleFlexibleTwoWayOrdinal, req_, resp_)
-	return err_
+	return (*resp_).Result, err_
 }
 
 func (p *ExampleWithCtxInterface) ExpectStrictEvent(ctx_ _bindings.Context) error {
@@ -59,7 +142,7 @@ type ExampleWithCtx interface {
 	StrictOneWay(ctx_ _bindings.Context) error
 	FlexibleOneWay(ctx_ _bindings.Context) error
 	StrictTwoWay(ctx_ _bindings.Context) error
-	FlexibleTwoWay(ctx_ _bindings.Context) error
+	FlexibleTwoWay(ctx_ _bindings.Context) (ExampleFlexibleTwoWayResult, error)
 }
 
 type ExampleWithCtxTransitionalBase struct{}
@@ -87,8 +170,9 @@ func (s_ *ExampleWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.
 		err_ := s_.Impl.StrictTwoWay(args_.Ctx)
 		return nil, true, err_
 	case ExampleFlexibleTwoWayOrdinal:
-		err_ := s_.Impl.FlexibleTwoWay(args_.Ctx)
-		return nil, true, err_
+		result, err_ := s_.Impl.FlexibleTwoWay(args_.Ctx)
+		out_ := &exampleWithCtxFlexibleTwoWayResponse{Result: result}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

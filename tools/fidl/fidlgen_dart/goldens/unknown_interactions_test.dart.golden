@@ -48,7 +48,7 @@ class Example$TestBase extends Example {
   }
 
   @override
-  $async.Future<void> flexibleTwoWay() {
+  $async.Future<ExampleFlexibleTwoWayResult> flexibleTwoWay() {
     return $async.Future.error(
         UnimplementedError(
             r'flexibleTwoWay not implemented on Example test base. Please implement.'),

@@ -17,6 +17,9 @@ namespace test_unknowninteractions {
 [[maybe_unused]] constexpr uint64_t kExample_FlexibleTwoWay_Ordinal =
     9070032238358100524lu;
 
+extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kExample_StrictEvent_Ordinal =
     2942732192976592869lu;
 
@@ -142,6 +145,47 @@ namespace test_unknowninteractions {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleTwoWay>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_unknowninteractions::Example::FlexibleTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::FlexibleTwoWay>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::FlexibleTwoWay>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>>(
+      client_end.handle(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -285,8 +329,12 @@ void fidl::internal::WireWeakAsyncClientImpl<
 }
 
 void fidl::internal::WireWeakAsyncClientImpl<
-    ::test_unknowninteractions::Example>::FlexibleTwoWay(::fit::callback<void()>
-                                                             _cb) {
+    ::test_unknowninteractions::Example>::
+    FlexibleTwoWay(
+        ::fit::callback<void(
+            ::fidl::WireResponse<
+                ::test_unknowninteractions::Example::FlexibleTwoWay>* response)>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -298,7 +346,10 @@ void fidl::internal::WireWeakAsyncClientImpl<
                   ::test_unknowninteractions::Example::FlexibleTwoWay>& result)
         override {
       if (result.ok()) {
-        cb_();
+        ::fidl::WireResponse<
+            ::test_unknowninteractions::Example::FlexibleTwoWay>* response =
+            result.Unwrap();
+        cb_(response);
       }
       delete this;
     }
@@ -474,7 +525,7 @@ fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
     return x;
   })();
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<16> read_storage;
+  ::fidl::internal::InlineMessageBuffer<48> read_storage;
   std::array<zx_handle_t, kHandleAllocSize> read_handles;
   // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
@@ -720,10 +771,12 @@ void fidl::internal::WireBufferCompleterImpl<
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>::Reply() {
+    ::test_unknowninteractions::Example::FlexibleTwoWay>::
+    Reply(
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
   ::fidl::internal::TransactionalResponse<
       ::test_unknowninteractions::Example::FlexibleTwoWay>
-      _response{};
+      _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
@@ -735,10 +788,12 @@ void fidl::internal::WireCompleterImpl<
 }
 
 void fidl::internal::WireBufferCompleterImpl<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>::Reply() {
+    ::test_unknowninteractions::Example::FlexibleTwoWay>::
+    Reply(
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
   ::fidl::internal::TransactionalResponse<
       ::test_unknowninteractions::Example::FlexibleTwoWay>
-      _response{};
+      _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
       ::test_unknowninteractions::Example::FlexibleTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

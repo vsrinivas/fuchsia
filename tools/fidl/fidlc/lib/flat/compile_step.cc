@@ -1095,7 +1095,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
           assert(type->kind == Type::Kind::kIdentifier);
           auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
           CompileDecl(decl);
-          if (method.has_error) {
+          if (method.HasResultUnion()) {
             assert(decl->kind == Decl::Kind::kStruct);
             auto response_struct = static_cast<const flat::Struct*>(decl);
             const auto* result_union_type = static_cast<const flat::IdentifierType*>(

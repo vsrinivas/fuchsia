@@ -9,11 +9,176 @@
 //
 namespace test {
 namespace unknowninteractions {
+class Example_FlexibleTwoWay_Response;
+
+class Example_FlexibleTwoWay_Result;
+
+class ExampleFlexibleTwoWayTopResponse;
+
 #ifdef __Fuchsia__
 
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 #endif  // __Fuchsia__
+
+class Example_FlexibleTwoWay_Response final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint8_t __reserved = 0u;
+
+  static inline ::std::unique_ptr<Example_FlexibleTwoWay_Response> New() {
+    return ::std::make_unique<Example_FlexibleTwoWay_Response>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     Example_FlexibleTwoWay_Response* value, size_t _offset);
+  zx_status_t Clone(Example_FlexibleTwoWay_Response* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::Example_FlexibleTwoWay_Response& _value,
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Response* _result) {
+  return _value.Clone(_result);
+}
+
+using Example_FlexibleTwoWay_ResponsePtr =
+    ::std::unique_ptr<Example_FlexibleTwoWay_Response>;
+
+class Example_FlexibleTwoWay_Result final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  Example_FlexibleTwoWay_Result();
+  ~Example_FlexibleTwoWay_Result();
+
+  Example_FlexibleTwoWay_Result(Example_FlexibleTwoWay_Result&&);
+  Example_FlexibleTwoWay_Result& operator=(Example_FlexibleTwoWay_Result&&);
+
+  static Example_FlexibleTwoWay_Result WithResponse(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Response&&);
+  static Example_FlexibleTwoWay_Result WithTransportErr(int32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kResponse = 1,      // 0x1
+    kTransportErr = 3,  // 0x3
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<Example_FlexibleTwoWay_Result> New() {
+    return ::std::make_unique<Example_FlexibleTwoWay_Result>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     Example_FlexibleTwoWay_Result* value, size_t offset);
+  zx_status_t Clone(Example_FlexibleTwoWay_Result* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_response() const {
+    return tag_ == ::test::unknowninteractions::Example_FlexibleTwoWay_Result::
+                       Tag::kResponse;
+  }
+
+  ::test::unknowninteractions::Example_FlexibleTwoWay_Response& response() {
+    EnsureStorageInitialized(::test::unknowninteractions::
+                                 Example_FlexibleTwoWay_Result::Tag::kResponse);
+    return response_;
+  }
+
+  const ::test::unknowninteractions::Example_FlexibleTwoWay_Response& response()
+      const {
+    ZX_ASSERT(is_response());
+    return response_;
+  }
+  Example_FlexibleTwoWay_Result& set_response(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Response value);
+
+  bool is_transport_err() const {
+    return tag_ == ::test::unknowninteractions::Example_FlexibleTwoWay_Result::
+                       Tag::kTransportErr;
+  }
+
+  int32_t& transport_err() {
+    EnsureStorageInitialized(
+        ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+            kTransportErr);
+    return transport_err_;
+  }
+
+  const int32_t& transport_err() const {
+    ZX_ASSERT(is_transport_err());
+    return transport_err_;
+  }
+  Example_FlexibleTwoWay_Result& set_transport_err(int32_t value);
+
+  ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag Which()
+      const {
+    return ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag(
+        tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+
+  friend ::fidl::Equality<
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag::Invalid);
+  union {
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Response response_;
+    int32_t transport_err_;
+  };
+};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::Example_FlexibleTwoWay_Result& value,
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Result* result) {
+  return value.Clone(result);
+}
+
+using Example_FlexibleTwoWay_ResultPtr =
+    ::std::unique_ptr<Example_FlexibleTwoWay_Result>;
+
+class ExampleFlexibleTwoWayTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::unknowninteractions::Example_FlexibleTwoWay_Result result{};
+
+  static inline ::std::unique_ptr<ExampleFlexibleTwoWayTopResponse> New() {
+    return ::std::make_unique<ExampleFlexibleTwoWayTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     ExampleFlexibleTwoWayTopResponse* value, size_t _offset);
+  zx_status_t Clone(ExampleFlexibleTwoWayTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse& _value,
+    ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleFlexibleTwoWayTopResponsePtr =
+    ::std::unique_ptr<ExampleFlexibleTwoWayTopResponse>;
 
 #ifdef __Fuchsia__
 
@@ -37,6 +202,11 @@ class Example_RequestEncoder {
   }
 };
 
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
+}  // namespace _internal
 class Example_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage StrictTwoWay(
@@ -44,7 +214,32 @@ class Example_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage FlexibleTwoWay(
-      ::fidl::MessageEncoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder,
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result* result) {
+    fidl_trace(WillHLCPPEncode);
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1:
+        _encoder->Alloc(24);
+        break;
+      case ::fidl::internal::WireFormatVersion::kV2:
+        _encoder->Alloc(16);
+        break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
+
+    } else {
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
+    }
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::unknowninteractions::_internal::
+            test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StrictEvent(
@@ -61,6 +256,158 @@ class Example_ResponseEncoder {
 }  // namespace unknowninteractions
 }  // namespace test
 namespace fidl {
+template <>
+struct CodingTraits<
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Response>
+    : public EncodableCodingTraits<
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1> {
+};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test::unknowninteractions::
+                          Example_FlexibleTwoWay_Response>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::Example_FlexibleTwoWay_Response& value,
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Response* result) {
+  return ::test::unknowninteractions::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::unknowninteractions::Example_FlexibleTwoWay_Response> {
+  bool operator()(
+      const ::test::unknowninteractions::Example_FlexibleTwoWay_Response& _lhs,
+      const ::test::unknowninteractions::Example_FlexibleTwoWay_Response& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::unknowninteractions::Example_FlexibleTwoWay_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::unknowninteractions::Example_FlexibleTwoWay_Result>
+    : public EncodableCodingTraits<
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Result, 24, 16> {
+};
+
+template <>
+struct CodingTraits<std::unique_ptr<
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Result>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Result>* value,
+      size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(
+      Decoder* _decoder,
+      std::unique_ptr<
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Result>* value,
+      size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(
+        new ::test::unknowninteractions::Example_FlexibleTwoWay_Result);
+
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Decode(
+        _decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::Example_FlexibleTwoWay_Result& value,
+    ::test::unknowninteractions::Example_FlexibleTwoWay_Result* result) {
+  return ::test::unknowninteractions::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::unknowninteractions::Example_FlexibleTwoWay_Result> {
+  bool operator()(
+      const ::test::unknowninteractions::Example_FlexibleTwoWay_Result& _lhs,
+      const ::test::unknowninteractions::Example_FlexibleTwoWay_Result& _rhs)
+      const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+              Invalid):
+        return true;
+      case ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+          kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::test::unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+          kTransportErr:
+        return ::fidl::Equals(_lhs.transport_err_, _rhs.transport_err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<
+    ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public EncodableCodingTraits<
+          ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
+          16> {};
+
+template <>
+struct HasPadding<::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::unknowninteractions::
+                          ExampleFlexibleTwoWayTopResponse>::value &&
+          IsMemcpyCompatible<::test::unknowninteractions::
+                                 Example_FlexibleTwoWay_Result>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse& value,
+    ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse* result) {
+  return ::test::unknowninteractions::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
+  bool operator()(
+      const ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse& _lhs,
+      const ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
 
 //
 // Proxies and stubs declarations
@@ -104,7 +451,8 @@ class Example {
   using StrictTwoWayCallback = fit::function<void()>;
 
   virtual void StrictTwoWay(StrictTwoWayCallback callback) = 0;
-  using FlexibleTwoWayCallback = fit::function<void()>;
+  using FlexibleTwoWayCallback = fit::function<void(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result)>;
 
   virtual void FlexibleTwoWay(FlexibleTwoWayCallback callback) = 0;
   using StrictEventCallback = fit::function<void()>;
@@ -128,7 +476,8 @@ class Example_ResponseDecoder {
   virtual ~Example_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
   virtual void StrictTwoWay() = 0;
-  virtual void FlexibleTwoWay() = 0;
+  virtual void FlexibleTwoWay(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result result) = 0;
   virtual void StrictEvent() = 0;
   virtual void FlexibleEvent() = 0;
 };
@@ -147,7 +496,9 @@ class Example_Sync {
   virtual zx_status_t StrictOneWay() = 0;
   virtual zx_status_t FlexibleOneWay() = 0;
   virtual zx_status_t StrictTwoWay() = 0;
-  virtual zx_status_t FlexibleTwoWay() = 0;
+  virtual zx_status_t FlexibleTwoWay(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result*
+          out_result) = 0;
 };
 
 class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
@@ -204,7 +555,9 @@ class Example_SyncProxy : public ::test::unknowninteractions::Example_Sync {
   // cts-coverage-fidl-name:test.unknowninteractions/Example.StrictTwoWay
   zx_status_t StrictTwoWay() override;
   // cts-coverage-fidl-name:test.unknowninteractions/Example.FlexibleTwoWay
-  zx_status_t FlexibleTwoWay() override;
+  zx_status_t FlexibleTwoWay(
+      ::test::unknowninteractions::Example_FlexibleTwoWay_Result* out_result)
+      override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

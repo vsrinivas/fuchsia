@@ -661,6 +661,14 @@ struct Protocol final : public TypeDecl {
     bool has_response;
     std::unique_ptr<TypeConstructor> maybe_response;
     bool has_error;
+
+    // Returns true if this method should use a result union. Result union is used if the method
+    // uses error syntax or if it is a flexible two-way method.
+    bool HasResultUnion() const {
+      return has_error ||
+             (has_request && has_response && strictness == types::Strictness::kFlexible);
+    }
+
     // This is set to the |Protocol| instance that owns this |Method|,
     // when the |Protocol| is constructed.
     Protocol* owning_protocol = nullptr;

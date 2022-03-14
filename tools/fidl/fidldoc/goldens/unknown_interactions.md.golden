@@ -35,7 +35,15 @@
 
 #### Response {#Example.FlexibleTwoWay_Response}
 
-&lt;EMPTY&gt;
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+        <tr>
+            <td><code>result</code></td>
+            <td>
+                <code><a class='link' href='#Example_FlexibleTwoWay_Result'>Example_FlexibleTwoWay_Result</a></code>
+            </td>
+        </tr>
+</table>
 
 ### StrictEvent {#Example.StrictEvent}
 
@@ -65,9 +73,46 @@
 
 &lt;EMPTY&gt;
 
+## **STRUCTS**
+
+### Example_FlexibleTwoWay_Response  {#Example_FlexibleTwoWay_Response data-text="Example_FlexibleTwoWay_Response"}
+*Defined in [test.unknowninteractions/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl;l=12)*
+
+&lt;EMPTY&gt;
 
 
 
+## **UNIONS**
+
+### Example_FlexibleTwoWay_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Example_FlexibleTwoWay_Result data-text="Example_FlexibleTwoWay_Result"}
+*Defined in [test.unknowninteractions/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl;l=12)*
+<table>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="Example_FlexibleTwoWay_Result.response">
+<td><h3 id="Example_FlexibleTwoWay_Result.response" class="add-link hide-from-toc">1</h3></td>
+            <td><code>response</code></td>
+            <td>
+                <code><a class='link' href='#Example_FlexibleTwoWay_Response'>Example_FlexibleTwoWay_Response</a></code>
+            </td>
+            <td></td>
+        </tr>
+        <tr id="Example_FlexibleTwoWay_Result.">
+<td><h3 id="Example_FlexibleTwoWay_Result." class="add-link hide-from-toc">2</h3></td>
+            <td><code></code></td>
+            <td>
+                <code></code>
+            </td>
+            <td></td>
+        </tr>
+        <tr id="Example_FlexibleTwoWay_Result.transport_err">
+<td><h3 id="Example_FlexibleTwoWay_Result.transport_err" class="add-link hide-from-toc">3</h3></td>
+            <td><code>transport_err</code></td>
+            <td>
+                <code>int32</code>
+            </td>
+            <td></td>
+        </tr>
+</table>
 
 
 

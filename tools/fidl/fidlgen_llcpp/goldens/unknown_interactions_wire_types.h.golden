@@ -22,4 +22,236 @@
 #include <fidl/test.unknowninteractions/cpp/common_types.h>
 #include <fidl/test.unknowninteractions/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {
+namespace wire {
+struct ExampleFlexibleTwoWayResponse;
+
+struct ExampleFlexibleTwoWayTopResponse;
+
+class ExampleFlexibleTwoWayResult;
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+
+struct ExampleFlexibleTwoWayResponse {
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
+
+class ExampleFlexibleTwoWayResult {
+ public:
+  using Response =
+      test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse;
+
+  ExampleFlexibleTwoWayResult()
+      : ordinal_(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  ExampleFlexibleTwoWayResult(const ExampleFlexibleTwoWayResult&) = default;
+  ExampleFlexibleTwoWayResult& operator=(const ExampleFlexibleTwoWayResult&) =
+      default;
+  ExampleFlexibleTwoWayResult(ExampleFlexibleTwoWayResult&&) = default;
+  ExampleFlexibleTwoWayResult& operator=(ExampleFlexibleTwoWayResult&&) =
+      default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,      // 0x1
+    kTransportErr = 3,  // 0x3
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::test_unknowninteractions::wire::
+                           ExampleFlexibleTwoWayResult::Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ == ::test_unknowninteractions::wire::
+                           ExampleFlexibleTwoWayResult::Ordinal::kResponse;
+  }
+  static ExampleFlexibleTwoWayResult WithResponse(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse val) {
+    ExampleFlexibleTwoWayResult result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  void set_response(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse elem) {
+    ordinal_ = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+        Ordinal::kResponse;
+    envelope_
+        .As<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>()
+        .set_data(std::move(elem));
+  }
+
+  ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse& response() {
+    ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::
+                              ExampleFlexibleTwoWayResult::Ordinal::kResponse);
+    return envelope_
+        .As<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>()
+        .get_data();
+  }
+  const ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::
+                              ExampleFlexibleTwoWayResult::Ordinal::kResponse);
+    return envelope_
+        .As<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>()
+        .get_data();
+  }
+
+  bool is_transport_err() const {
+    return ordinal_ == ::test_unknowninteractions::wire::
+                           ExampleFlexibleTwoWayResult::Ordinal::kTransportErr;
+  }
+  static ExampleFlexibleTwoWayResult WithTransportErr(int32_t val) {
+    ExampleFlexibleTwoWayResult result;
+    result.set_transport_err(std::move(val));
+    return result;
+  }
+
+  void set_transport_err(int32_t elem) {
+    ordinal_ = ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+        Ordinal::kTransportErr;
+    envelope_.As<int32_t>().set_data(std::move(elem));
+  }
+
+  int32_t& transport_err() {
+    ZX_ASSERT(ordinal_ ==
+              ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+                  Ordinal::kTransportErr);
+    return envelope_.As<int32_t>().get_data();
+  }
+  const int32_t& transport_err() const {
+    ZX_ASSERT(ordinal_ ==
+              ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+                  Ordinal::kTransportErr);
+    return envelope_.As<int32_t>().get_data();
+  }
+  ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::Tag Which()
+      const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::Tag>(
+        ordinal_);
+  }
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,      // 0x1
+    kTransportErr = 3,  // 0x3
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::Ordinal
+      ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
+struct ExampleFlexibleTwoWayTopResponse {
+  using Result = test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
+
+  ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result = {};
+};
+
+}  // namespace wire
+}  // namespace test_unknowninteractions
+namespace fidl {
+
+template <>
+struct TypeTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::wire::
+          test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse>);
+static_assert(
+    offsetof(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse,
+             __reserved) == 0);
+static_assert(
+    sizeof(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse) ==
+    TypeTraits<::test_unknowninteractions::wire::
+                   ExampleFlexibleTwoWayResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::wire::
+          test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse>);
+static_assert(
+    offsetof(::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
+             result) == 0);
+static_assert(
+    sizeof(
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse) ==
+    TypeTraits<::test_unknowninteractions::wire::
+                   ExampleFlexibleTwoWayTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unknowninteractions::wire::
+          test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult>);
+
+}  // namespace fidl

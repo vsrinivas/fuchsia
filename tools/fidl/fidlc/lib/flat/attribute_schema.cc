@@ -612,27 +612,30 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
   assert(element);
   assert(element->kind == Element::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(element);
-  assert(union_decl->members.size() == 2);
+  assert(union_decl->members.size() == 2 || union_decl->members.size() == 3);
   auto& error_member = union_decl->members.at(1);
-  assert(error_member.maybe_used && "must have an error member");
-  auto error_type = error_member.maybe_used->type_ctor->type;
+  assert((union_decl->members.size() == 3 || error_member.maybe_used != nullptr) &&
+         "must have an error variant if transport error not used");
 
-  const PrimitiveType* error_primitive = nullptr;
-  if (error_type->kind == Type::Kind::kPrimitive) {
-    error_primitive = static_cast<const PrimitiveType*>(error_type);
-  } else if (error_type->kind == Type::Kind::kIdentifier) {
-    auto identifier_type = static_cast<const IdentifierType*>(error_type);
-    if (identifier_type->type_decl->kind == Decl::Kind::kEnum) {
-      auto error_enum = static_cast<const Enum*>(identifier_type->type_decl);
-      assert(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
-      error_primitive = static_cast<const PrimitiveType*>(error_enum->subtype_ctor->type);
+  if (error_member.maybe_used != nullptr) {
+    auto error_type = error_member.maybe_used->type_ctor->type;
+    const PrimitiveType* error_primitive = nullptr;
+    if (error_type->kind == Type::Kind::kPrimitive) {
+      error_primitive = static_cast<const PrimitiveType*>(error_type);
+    } else if (error_type->kind == Type::Kind::kIdentifier) {
+      auto identifier_type = static_cast<const IdentifierType*>(error_type);
+      if (identifier_type->type_decl->kind == Decl::Kind::kEnum) {
+        auto error_enum = static_cast<const Enum*>(identifier_type->type_decl);
+        assert(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+        error_primitive = static_cast<const PrimitiveType*>(error_enum->subtype_ctor->type);
+      }
     }
-  }
 
-  if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
-                           error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
-    return false;
+    if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
+                             error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
+      reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
+      return false;
+    }
   }
 
   return true;

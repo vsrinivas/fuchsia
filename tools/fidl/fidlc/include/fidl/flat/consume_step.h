@@ -71,16 +71,26 @@ class ConsumeStep : public Compiler::Step {
   // Sets the naming context's generated name override to the @generated_name
   // attribute's value if present, otherwise does nothing.
   void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
+  // Generates the synthetic result type used for encoding the method's response, if the method has
+  // an error type or is marked as flexible (or both). Adds the generated type to the library and
+  // provides a `flat::TypeConstructor` that refers to it.
+  //
+  // The generated type includes both the outer wrapping struct and the result union.
   bool CreateMethodResult(const std::shared_ptr<NamingContext>& success_variant_context,
                           const std::shared_ptr<NamingContext>& err_variant_context,
-                          SourceSpan response_span, raw::ProtocolMethod* method,
+                          const std::shared_ptr<NamingContext>& transport_err_variant_context,
+                          bool has_err, bool has_transport_err, SourceSpan response_span,
+                          raw::ProtocolMethod* method,
                           std::unique_ptr<TypeConstructor> success_variant,
                           std::unique_ptr<TypeConstructor>* out_payload);
 
   std::unique_ptr<raw::File> file_;
 
   // Decl for default underlying type to use for bits and enums.
-  Decl* default_underlying_type;
+  Decl* default_underlying_type_;
+
+  // Decl for the type to use for transport_err.
+  Decl* transport_err_type_;
 
   // This map contains the same decls as library()->declarations keyed by
   // `utils::canonicalize(name.decl_name())` rather than `name.key()`.

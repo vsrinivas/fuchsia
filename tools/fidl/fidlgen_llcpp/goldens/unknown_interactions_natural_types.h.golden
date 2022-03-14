@@ -16,4 +16,357 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
+namespace test_unknowninteractions {
+class Example_FlexibleTwoWay_Response;
+
+class ExampleFlexibleTwoWayTopResponse;
+
+class Example_FlexibleTwoWay_Result;
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+
+class Example_FlexibleTwoWay_Response final {
+ private:
+  struct Storage_;
+
+ public:
+  Example_FlexibleTwoWay_Response(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  Example_FlexibleTwoWay_Response(uint8_t __reserved) noexcept
+      : storage_({.__reserved = std::move(__reserved)}) {}
+  Example_FlexibleTwoWay_Response()
+      : Example_FlexibleTwoWay_Response(Storage_{}) {}
+
+  Example_FlexibleTwoWay_Response(Example_FlexibleTwoWay_Response&&) noexcept =
+      default;
+  Example_FlexibleTwoWay_Response& operator=(
+      Example_FlexibleTwoWay_Response&&) noexcept = default;
+  Example_FlexibleTwoWay_Response(
+      const Example_FlexibleTwoWay_Response& other) noexcept
+      : Example_FlexibleTwoWay_Response(other.CloneStorage_()) {}
+  Example_FlexibleTwoWay_Response& operator=(
+      const Example_FlexibleTwoWay_Response& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Example_FlexibleTwoWay_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1,
+        1>::Equal(this, &other);
+  }
+  bool operator!=(const Example_FlexibleTwoWay_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1,
+        1>::Equal(this, &other);
+  }
+
+  uint8_t __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
+
+ private:
+  struct Storage_ final {
+    uint8_t __reserved = 0u;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Response>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::__reserved, 0, 0});
+};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
+
+class Example_FlexibleTwoWay_Result final {
+ private:
+  using Storage_ = cpp17::variant<
+      cpp17::monostate,
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Response, int32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 1,      // 0x1
+    kTransportErr = 3,  // 0x3
+  };
+
+  // Create an unknown value of this union.
+  Example_FlexibleTwoWay_Result() : storage_(std::make_shared<Storage_>()) {}
+
+  Example_FlexibleTwoWay_Result(Example_FlexibleTwoWay_Result&&) noexcept =
+      default;
+  Example_FlexibleTwoWay_Result& operator=(
+      Example_FlexibleTwoWay_Result&&) noexcept = default;
+  Example_FlexibleTwoWay_Result(
+      const Example_FlexibleTwoWay_Result& other) noexcept
+      : Example_FlexibleTwoWay_Result(other.CloneStorage_()) {}
+  Example_FlexibleTwoWay_Result& operator=(
+      const Example_FlexibleTwoWay_Result& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Example_FlexibleTwoWay_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Example_FlexibleTwoWay_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
+  constexpr ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag
+  Which() const {
+    return Example_FlexibleTwoWay_Result::IndexToTag(storage_->index());
+  }
+  static Example_FlexibleTwoWay_Result WithResponse(
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Response val) {
+    return Example_FlexibleTwoWay_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<1>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> response() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Example_FlexibleTwoWay_Result WithTransportErr(int32_t val) {
+    return Example_FlexibleTwoWay_Result(
+        std::make_shared<Storage_>(std::in_place_index_t<2>{}, std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> transport_err() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> transport_err() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Result>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit Example_FlexibleTwoWay_Result(std::shared_ptr<Storage_> storage)
+      : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag tag) {
+    switch (tag) {
+      case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+          kResponse:
+        return 1;
+      case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+          kTransportErr:
+        return 2;
+    }
+  }
+
+  static constexpr ::test_unknowninteractions::Example_FlexibleTwoWay_Result::
+      Tag
+      IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+            kResponse;
+      case 2:
+        return ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+            kTransportErr;
+      // TODO: what's the right thing to do here?
+      default:
+        return ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
+            kResponse;
+    }
+  }
+};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
+class ExampleFlexibleTwoWayTopResponse final {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleFlexibleTwoWayTopResponse(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  ExampleFlexibleTwoWayTopResponse(
+      ::test_unknowninteractions::Example_FlexibleTwoWay_Result result) noexcept
+      : storage_({.result = std::move(result)}) {}
+  ExampleFlexibleTwoWayTopResponse()
+      : ExampleFlexibleTwoWayTopResponse(Storage_{}) {}
+
+  ExampleFlexibleTwoWayTopResponse(
+      ExampleFlexibleTwoWayTopResponse&&) noexcept = default;
+  ExampleFlexibleTwoWayTopResponse& operator=(
+      ExampleFlexibleTwoWayTopResponse&&) noexcept = default;
+  ExampleFlexibleTwoWayTopResponse(
+      const ExampleFlexibleTwoWayTopResponse& other) noexcept
+      : ExampleFlexibleTwoWayTopResponse(other.CloneStorage_()) {}
+  ExampleFlexibleTwoWayTopResponse& operator=(
+      const ExampleFlexibleTwoWayTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(
+      const ExampleFlexibleTwoWayTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const ExampleFlexibleTwoWayTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+
+  const ::test_unknowninteractions::Example_FlexibleTwoWay_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  ::test_unknowninteractions::Example_FlexibleTwoWay_Result& result() {
+    return storage_.result;
+  }
+
+ private:
+  struct Storage_ final {
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Result result{};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_unknowninteractions::Example_FlexibleTwoWay_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
+};
+
+}  // namespace test_unknowninteractions
+namespace fidl {
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+
+template <>
+struct IsFidlType<::test_unknowninteractions::Example_FlexibleTwoWay_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Response>
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_unknowninteractions::Example_FlexibleTwoWay_Response>::
+              value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+
+template <>
+struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
+                24, 16> {};
+
+template <>
+struct internal::NaturalHasPadding<
+    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::
+              value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_unknowninteractions::Example_FlexibleTwoWay_Result>::
+              value> {};
+
+extern "C" const fidl_type_t
+    test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
+
+template <>
+struct IsFidlType<::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_unknowninteractions::Example_FlexibleTwoWay_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_unknowninteractions::Example_FlexibleTwoWay_Result> {};
+
+}  // namespace fidl
