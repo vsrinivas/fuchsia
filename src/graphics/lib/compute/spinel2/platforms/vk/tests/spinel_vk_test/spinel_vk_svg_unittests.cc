@@ -137,6 +137,7 @@ param const params[] = {
         }
       },
       { 0xFD0B4012, {
+          { param::AMD,    {} },
           { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
@@ -202,6 +203,7 @@ param const params[] = {
         }
       },
       { 0xEE9E0BBE, {
+          { param::AMD,  {} },
           { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
@@ -231,6 +233,7 @@ param const params[] = {
         }
       },
       { 0xBEFA6C49, {
+          { param::AMD,    {} },
           { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
@@ -269,6 +272,7 @@ param const params[] = {
         }
       },
       { 0xF994BD80, {
+          { param::AMD, {} },
           { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } },
         }
       },
@@ -339,6 +343,7 @@ param const params[] = {
         }
       },
       { 0xC5127B22, {
+          { param::AMD,    {} },
           { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }
         }
       },
@@ -380,6 +385,10 @@ param const params[] = {
     .name        = "rational_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
+      { 0xB783614E, {
+          { param::AMD,    {} }
+        }
+      },
       { 0xB90FF0FC, {
           { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
@@ -456,6 +465,10 @@ param const params[] = {
     .name        = "proj_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
+      { 0x13804D7A, {
+          { param::AMD,    {} },
+        }
+      },
       { 0x1502A167, {
           { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
@@ -513,6 +526,7 @@ param const params[] = {
         }
       },
       { 0xE86BA68F, {
+          { param::AMD,    {} },
           { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
@@ -533,6 +547,10 @@ param const params[] = {
     .surface     = { 1024, 1024 },
 
     .checksums = {
+      { 0xCB32986F, {
+          { param::AMD,    {} },
+        }
+      },
       { 0xCC46AC82, {
           { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
@@ -574,6 +592,7 @@ param const params[] = {
         }
       },
       { 0xC2E7CDA9, {
+          { param::AMD,    {} },
           { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } },
         }
       },
@@ -634,6 +653,7 @@ param const params[] = {
         }
       },
       { 0xD526D15B, {
+          { param::AMD,    {} },
           { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
