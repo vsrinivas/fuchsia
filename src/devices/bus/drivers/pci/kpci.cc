@@ -197,7 +197,7 @@ zx_status_t KernelPci::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_ir
 }
 
 void KernelPci::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
-  pci_interrupt_modes_t modes;
+  pci_interrupt_modes_t modes{};
   zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_LEGACY, &modes.legacy);
   zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI, &modes.msi);
   zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI_X, &modes.msix);
