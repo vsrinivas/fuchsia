@@ -25,7 +25,7 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
 ];
 
 #[cfg(not(test))]
-async fn get_ssh_key_path() -> Result<String> {
+async fn get_ssh_key_paths() -> Result<Vec<String>> {
     use anyhow::Context;
     const SSH_PRIV: &str = "ssh.priv";
     ffx_config::file(SSH_PRIV).await.context("getting path to an ssh private key from ssh.priv")
@@ -34,8 +34,8 @@ async fn get_ssh_key_path() -> Result<String> {
 #[cfg(test)]
 const TEST_SSH_KEY_PATH: &str = "ssh/ssh_key_in_test";
 #[cfg(test)]
-async fn get_ssh_key_path() -> Result<String> {
-    Ok(TEST_SSH_KEY_PATH.to_string())
+async fn get_ssh_key_paths() -> Result<Vec<String>> {
+    Ok(vec![TEST_SSH_KEY_PATH.to_string()])
 }
 
 async fn apply_auth_sock(cmd: &mut Command) {
@@ -51,12 +51,15 @@ pub async fn build_ssh_command(addr: SocketAddr, command: Vec<&str>) -> Result<C
         return Err(anyhow!("missing SSH command"));
     }
 
-    let key = get_ssh_key_path().await?;
+    let keys = get_ssh_key_paths().await?;
 
     let mut c = Command::new("ssh");
     apply_auth_sock(&mut c).await;
     c.args(DEFAULT_SSH_OPTIONS);
-    c.arg("-i").arg(key);
+
+    for key in keys {
+        c.arg("-i").arg(key);
+    }
 
     let mut addr_str = format!("{}", addr);
     let colon_port = addr_str.split_off(addr_str.rfind(':').expect("socket format includes port"));

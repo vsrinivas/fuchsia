@@ -67,12 +67,16 @@ impl HostPipeChild {
                 format!("{}", id).as_str(),
             ],
         )
-        .await?
-        .stdout(Stdio::piped())
-        .stdin(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("running target overnet pipe")?;
+        .await?;
+
+        log::debug!("Spawning new ssh instance: {:?}", ssh);
+
+        let mut ssh = ssh
+            .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .context("running target overnet pipe")?;
 
         let (pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
             overnet_pipe(hoist::hoist()).context("creating local overnet pipe")?,
