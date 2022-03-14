@@ -6,7 +6,7 @@ use heck::SnakeCase;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Map;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -19,6 +19,25 @@ use std::path::PathBuf;
 /// written in either case are synonyms.
 pub fn to_lower_snake_case(str: &str) -> String {
     str.to_snake_case().to_lowercase()
+}
+
+// This function takes a table or union payload, and "wraps" it into a struct with a single member
+// named "payload."
+pub fn wrap_non_struct_payload(payloads: &mut HashMap<String, Value>, name: String) {
+    payloads.insert(
+        name.clone(),
+        json!({
+            "members": json!([
+                json!({
+                    "name": "payload",
+                    "type": json!({
+                        "kind": "identifier",
+                        "identifier": &name,
+                    }),
+                }),
+            ]),
+        }),
+    );
 }
 
 #[derive(Serialize, Deserialize)]
@@ -106,13 +125,45 @@ impl FidlJson {
                         return false;
                     }
 
-                    // This declaration is used both as a top-level type which needds its own
+                    // This declaration is used both as a top-level type which needs its own
                     // documentation, as well as a payload, so it needs to be cloned into the
                     // payload store.
                     payloads.insert(strukt_name, strukt.clone());
                 }
                 true
             });
+        }
+
+        // Treat table and union payloads as "structs of one" with the lone member "payload"
+        // pointing to the user-specified table/union.
+        for table in &self.table_declarations {
+            let table_name = table["name"].as_str().unwrap().to_string();
+            if !payload_types.contains(&table_name) {
+                continue;
+            }
+            wrap_non_struct_payload(&mut payloads, table_name);
+        }
+        for union in &self.union_declarations {
+            let union_name = union["name"].as_str().unwrap().to_string();
+            if !payload_types.contains(&union_name) {
+                continue;
+            }
+            wrap_non_struct_payload(&mut payloads, union_name);
+        }
+
+        // Do the same for imported table/union payloads.
+        for ext_lib in &self.library_dependencies {
+            if let Some(ext_decls) = ext_lib["declarations"].as_object() {
+                for (name, ext_decl) in ext_decls {
+                    // Only need to look at union/tables contained in the payload list.
+                    if !payload_types.contains(name)
+                        || (ext_decl["kind"] != "union" && ext_decl["kind"] != "table")
+                    {
+                        continue;
+                    }
+                    wrap_non_struct_payload(&mut payloads, name.to_string());
+                }
+            }
         }
 
         // Insert copies of extracted payloads into the method definitions that utilize them.
@@ -123,8 +174,8 @@ impl FidlJson {
                 let req = m.get("maybe_request_payload");
                 if req.is_some() {
                     let typ = req.unwrap();
-                    let strukt = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
-                    m.insert("maybe_request".to_string(), strukt.to_owned().clone());
+                    let payload = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
+                    m.insert("maybe_request".to_string(), payload.to_owned().clone());
                 }
 
                 let resp = match m.get("maybe_response_payload") {
@@ -133,8 +184,8 @@ impl FidlJson {
                 };
                 if resp.is_some() {
                     let typ = resp.unwrap();
-                    let strukt = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
-                    m.insert("maybe_response".to_string(), strukt.to_owned().clone());
+                    let payload = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
+                    m.insert("maybe_response".to_string(), payload.to_owned().clone());
                 }
             }
         }
