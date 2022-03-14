@@ -14,8 +14,7 @@
 
 namespace f2fs {
 
-// TODO: change .configurable to true once the feature is supported
-// TODO: set default on for inline_dentry after inline dentry check on fsck is available
+// TODO: set .configurable to true when the feature is supported.
 const MountOpt default_option[] = {
     {"background_gc_off", 1, false},
 #ifdef F2FS_ROLL_FORWARD

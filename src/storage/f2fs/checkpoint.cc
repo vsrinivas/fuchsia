@@ -555,7 +555,6 @@ void F2fs::DoCheckpoint(bool is_umount) {
   // Here, we only have dirty meta Pages for CP pack
   WritebackOperation op = {.bSync = true};
   SyncMetaPages(op);
-  // TODO: Release resource in VnodeCache, FileCache
 
 #if 0  // porting needed
   // if (superblock_info.ckpt.ckpt_flags & kCpErrorFlag)

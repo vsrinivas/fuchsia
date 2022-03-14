@@ -185,8 +185,8 @@ uint32_t SegmentManager::Utilization() {
 // Sometimes f2fs may be better to drop out-of-place update policy.
 // So, if fs utilization is over kMinIpuUtil, then f2fs tries to write
 // data in the original place likewise other traditional file systems.
-// Currently set 0 in percentage, which means that f2fs always uses ipu.
-// It needs to be changed when gc is available.
+// TODO: Revisit it when GC is available.
+// Currently, we enforce ipu to overcome the lack of gc.
 constexpr uint32_t kMinIpuUtil = 0;
 bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (vnode->IsDir())
@@ -793,10 +793,9 @@ void SegmentManager::AllocateSegmentByDefault(CursegType type, bool force) {
   if (force) {
     NewCurseg(type, true);
   } else {
-    // TODO: Temporarily enable ssr for warm node segments
-    // when the kMountDisableRollForward bit is clear.
-    // It is very helpful not to waste node segments in the current sync io impl.
-    // Need to remove it after gc IMPL or cache.
+    // TODO: Enable LFS for warm node when gc is available.
+    // Temporarily enforce ssr for warm node segments.
+    // It is very helpful not to waste space of node segments without gc.
     if (!superblock_info.TestOpt(kMountDisableRollForward) && type == CursegType::kCursegWarmNode) {
       NewCurseg(type, false);
     } else if (NeedSSR() && GetSsrSegment(type)) {
