@@ -1563,7 +1563,22 @@ static bool dump_all_aspaces() {
   END_TEST;
 }
 
-static bool arch_is_user_accessible_range() {
+// Check if a range of addresses is accessible to the user. If `spectre_validation` is true, this is
+// done by checking if `validate_user_accessible_range` returns {0,0}. Otherwise, check using
+// `is_user_accessible_range`.
+static bool check_user_accessible_range(vaddr_t vaddr, size_t len, bool spectre_validation) {
+  if (spectre_validation) {
+    // If the address and length were not modified, then the pair is valid.
+    vaddr_t old_vaddr = vaddr;
+    size_t old_len = len;
+    internal::validate_user_accessible_range(&vaddr, &len);
+    return vaddr == old_vaddr && len == old_len;
+  }
+
+  return is_user_accessible_range(vaddr, len);
+}
+
+static bool check_user_accessible_range_test(bool spectre_validation) {
   BEGIN_TEST;
   vaddr_t va;
   size_t len;
@@ -1571,22 +1586,33 @@ static bool arch_is_user_accessible_range() {
   // Test address of zero.
   va = 0;
   len = PAGE_SIZE;
-  EXPECT_TRUE(is_user_accessible_range(va, len));
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
+
+  // Test address and length of zero (both are valid).
+  va = 0;
+  len = 0;
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
+
+  // Test very end of address space and zero length (this is invalid since the start has bit 55 set
+  // despite zero length).
+  va = std::numeric_limits<uint64_t>::max();
+  len = 0;
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test a regular user address.
   va = USER_ASPACE_BASE;
   len = PAGE_SIZE;
-  EXPECT_TRUE(is_user_accessible_range(va, len));
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test zero-length on a regular user address.
   va = USER_ASPACE_BASE;
   len = 0;
-  EXPECT_TRUE(is_user_accessible_range(va, len));
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test overflow past 64 bits.
   va = USER_ASPACE_BASE;
   len = std::numeric_limits<uint64_t>::max() - va + 1;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
 #if defined(__aarch64__)
 
@@ -1596,17 +1622,17 @@ static bool arch_is_user_accessible_range() {
   constexpr vaddr_t kBadAddrMask = UINT64_C(1) << 55;
   va = kBadAddrMask | USER_ASPACE_BASE;
   len = PAGE_SIZE;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test zero-length on a bad user address.
   va = kBadAddrMask | USER_ASPACE_BASE;
   len = 0;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test 2^55 is in the range of [va, va+len), ending on a bad user address.
   va = USER_ASPACE_BASE;
   len = kBadAddrMask;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test this returns false if any address within the range of [va, va+len)
   // contains a value where bit 55 is set. This also implies there are many
@@ -1618,13 +1644,13 @@ static bool arch_is_user_accessible_range() {
   len = 0x17f'ffff'ffff'ffff;  // Bits 0-56 (except 55) are set.
   ASSERT_TRUE(is_user_accessible(va));
   ASSERT_TRUE(is_user_accessible(va + len));
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test the range of the largest value less than 2^55 and the smallest value
   // greater than 2^55 where bit 55 == 0.
   va = (UINT64_C(1) << 55) - 1;
   len = 0x80'0000'0000'0001;  // End = va + len = 2^56.
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Be careful not to just check that 2^55 is in the range. We really want to
   // check whenever bit 55 is flipped in the range.
@@ -1633,21 +1659,28 @@ static bool arch_is_user_accessible_range() {
                               // 55 also is not set.
   ASSERT_TRUE(is_user_accessible(va));
   ASSERT_TRUE(is_user_accessible(va + len));
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   va = USER_ASPACE_BASE;
   len = (UINT64_C(1) << 57) + 1;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test a range above 2^56 where bit 55 is never set.
   va = 0x170'0000'0000'0000;
   len = 0xf'ffff'ffff'ffff;
-  EXPECT_TRUE(is_user_accessible_range(va, len));
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test a range right below 2^55 where bit 55 is never set.
   va = 0x70'0000'0000'0000;
   len = 0xf'ffff'ffff'ffff;
-  EXPECT_TRUE(is_user_accessible_range(va, len));
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
+
+  // Test the last valid user space address with a tag of 0.
+  va = std::numeric_limits<uint64_t>::max();
+  va &= ~(UINT64_C(0xFF) << 56);  // Set tag to zero.
+  va &= ~kBadAddrMask;            // Ensure valid user address.
+  len = 0;
+  EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
 
 #elif defined(__x86_64__)
 
@@ -1657,22 +1690,26 @@ static bool arch_is_user_accessible_range() {
   constexpr vaddr_t kBadAddrMask = UINT64_C(1) << 48;
   va = kBadAddrMask | USER_ASPACE_BASE;
   len = PAGE_SIZE;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test zero-length on a bad user address.
   va = kBadAddrMask | USER_ASPACE_BASE;
   len = 0;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test ending on a bad user address.
   va = USER_ASPACE_BASE;
   len = kBadAddrMask;
-  EXPECT_FALSE(is_user_accessible_range(va, len));
+  EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
 #endif
 
   END_TEST;
 }
+
+static bool arch_is_user_accessible_range() { return check_user_accessible_range_test(false); }
+
+static bool validate_user_address_range() { return check_user_accessible_range_test(true); }
 
 UNITTEST_START_TESTCASE(aspace_tests)
 VM_UNITTEST(vmm_alloc_smoke_test)
@@ -1692,6 +1729,7 @@ VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
 VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
 VM_UNITTEST(vm_mapping_attribution_merge_test)
 VM_UNITTEST(arch_is_user_accessible_range)
+VM_UNITTEST(validate_user_address_range)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(arch_vm_aspace_protect_split_pages)
 VM_UNITTEST(arch_vm_aspace_protect_split_pages_out_of_memory)

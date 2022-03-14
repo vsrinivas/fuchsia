@@ -16,10 +16,11 @@ static inline bool is_kernel_address(vaddr_t va) {
           va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
 }
 
+static inline constexpr uint8_t kHighVABit = 47;
+static inline constexpr uint64_t kUpperBitsMask = ~((UINT64_C(1) << (kHighVABit + 1)) - 1);
+
 static inline bool is_user_accessible(vaddr_t va) {
   // This address refers to userspace if everything above bit 47 is zero.
-  constexpr uint8_t kHighVABit = 47;
-  constexpr uint64_t kUpperBitsMask = ~((UINT64_C(1) << (kHighVABit + 1)) - 1);
   return (va & kUpperBitsMask) == 0;
 }
 

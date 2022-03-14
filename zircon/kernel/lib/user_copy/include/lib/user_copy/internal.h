@@ -31,8 +31,9 @@ struct is_copy_allowed
     : ktl::disjunction<ktl::conjunction<ktl::is_trivial<T>, ktl::is_standard_layout<T>,
                                         ktl::has_unique_object_representations<T>>> {};
 
-// Confine a |vaddr, len| pair to [0, top]; if either vaddr or vaddr+len cross top, fills in {0,0}
-void confine_user_address_range(vaddr_t* vaddr, size_t* len, const uintptr_t top);
+// Ensure that all addresses in the range [vaddr, vaddr+len) are accessible to the user. If any
+// address in this range is not accessible to the user, `vaddr` and `len` are set to {0,0}.
+void validate_user_accessible_range(vaddr_t* vaddr, size_t* len);
 
 }  // namespace internal
 
