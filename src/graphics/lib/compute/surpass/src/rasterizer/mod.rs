@@ -99,7 +99,7 @@ impl Rasterizer {
                 let local_x = (border_x & TILE_MASK as i32) as u8;
                 let local_y = (border_y & TILE_MASK as i32) as u8;
 
-                let border = (border_x << TILE_SHIFT) + PIXEL_WIDTH as i32;
+                let border = (border_x << PIXEL_SHIFT) + PIXEL_WIDTH as i32;
                 let height = y1_sub - y0_sub;
 
                 let double_area_multiplier =

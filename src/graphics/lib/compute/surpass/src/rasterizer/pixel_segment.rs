@@ -4,7 +4,7 @@
 
 use std::{cmp::Ordering, fmt, mem};
 
-use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, TILE_SHIFT, TILE_SIZE};
+use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH, TILE_SHIFT};
 
 pub const BIT_FIELD_LENS: [usize; 7] = {
     const fn log2_round_up(n: usize) -> usize {
@@ -21,8 +21,8 @@ pub const BIT_FIELD_LENS: [usize; 7] = {
         0,
         TILE_SHIFT,
         TILE_SHIFT,
-        log2_round_up((TILE_SIZE + 1) * 2),
-        log2_round_up((TILE_SIZE + 1) * 2),
+        log2_round_up((PIXEL_WIDTH + 1) * 2),
+        log2_round_up((PIXEL_WIDTH + 1) * 2),
     ];
 
     let layer_id_len = mem::size_of::<PixelSegment>() * 8
