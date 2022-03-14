@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::await_holding_refcell_ref)]
 use {
     crate::input_device,
     crate::input_handler::UnhandledInputHandler,
@@ -181,8 +182,7 @@ impl TouchInjectorHandler {
         self: &Rc<Self>,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
     ) -> Result<(), anyhow::Error> {
-        let mut inner = self.inner.borrow_mut();
-        if inner.injectors.contains_key(&touch_descriptor.device_id) {
+        if self.inner.borrow().injectors.contains_key(&touch_descriptor.device_id) {
             return Ok(());
         }
 
@@ -193,7 +193,7 @@ impl TouchInjectorHandler {
             .context("Failed to duplicate context view ref.")?;
         let target = fuchsia_scenic::duplicate_view_ref(&self.target_view_ref)
             .context("Failed to duplicate target view ref.")?;
-        let viewport = inner.viewport.clone();
+        let viewport = self.inner.borrow().viewport.clone();
         let config = pointerinjector::Config {
             device_id: Some(touch_descriptor.device_id),
             device_type: Some(pointerinjector::DeviceType::Touch),
@@ -207,15 +207,15 @@ impl TouchInjectorHandler {
             ..pointerinjector::Config::EMPTY
         };
 
+        // Keep track of the injector.
+        self.inner.borrow_mut().injectors.insert(touch_descriptor.device_id, device_proxy);
+
         // Register the new injector.
         self.injector_registry_proxy
             .register(config, device_server)
             .await
             .context("Failed to register injector.")?;
         fx_log_info!("Registered injector with device id {:?}", touch_descriptor.device_id);
-
-        // Keep track of the injector.
-        inner.injectors.insert(touch_descriptor.device_id, device_proxy);
 
         Ok(())
     }
@@ -257,8 +257,8 @@ impl TouchInjectorHandler {
             events.extend(new_events);
         }
 
-        let inner = self.inner.borrow();
-        if let Some(injector) = inner.injectors.get(&touch_descriptor.device_id) {
+        let injector = self.inner.borrow().injectors.get(&touch_descriptor.device_id).cloned();
+        if let Some(injector) = injector {
             let events_to_send = &mut events.into_iter();
             let _ = injector.inject(events_to_send).await;
             Ok(())
@@ -359,11 +359,12 @@ impl TouchInjectorHandler {
             match viewport_stream.next().await {
                 Some(Ok(new_viewport)) => {
                     // Update the viewport tracked by this handler.
-                    let mut inner = self.inner.borrow_mut();
-                    inner.viewport = Some(new_viewport.clone());
+                    self.inner.borrow_mut().viewport = Some(new_viewport.clone());
 
                     // Update Scenic with the latest viewport.
-                    for (_device_id, injector) in inner.injectors.iter() {
+                    let injectors: Vec<pointerinjector::DeviceProxy> =
+                        self.inner.borrow_mut().injectors.values().cloned().collect();
+                    for injector in injectors {
                         let events = &mut vec![pointerinjector::Event {
                             timestamp: Some(fuchsia_async::Time::now().into_nanos()),
                             data: Some(pointerinjector::Data::Viewport(new_viewport.clone())),
