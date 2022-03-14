@@ -10,10 +10,13 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
 #include "config.h"
+
+namespace {{cpp_namespace}} {
 
 template <class T>
 std::vector<T> from_vector_view(fidl::VectorView<T> v) {
@@ -34,7 +37,7 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
     return data;
 }
 
-{{cpp_namespace}}::Config {{cpp_namespace}}::Config::from_args() noexcept {
+Config Config::from_args() noexcept {
   // Get the VMO containing FIDL config
   zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_CONFIG_VMO);
   ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID, "Could not obtain Config VMO Handle");
@@ -78,7 +81,7 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
   ::{{fidl_cpp_namespace}}::wire::Config* fidl_config = decoded.PrimaryObject();
 
   // Convert the configuration into a new struct
-  {{cpp_namespace}}::Config c{
+  Config c{
     {{#each fields}}
       {{#if (is_string_vector type_)}}
         .{{ident}} = from_vector_string_view(fidl_config->{{ident}})
@@ -100,7 +103,7 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
   return c;
 }
 
-void {{cpp_namespace}}::Config::record_to_inspect(sys::ComponentInspector  * inspector) {
+void Config::record_to_inspect(sys::ComponentInspector* inspector) {
   inspect::Node inspect_config = inspector->root().CreateChild("config");
   {{#each fields}}
     {{#if (is_string_vector type_)}}
@@ -125,4 +128,21 @@ void {{cpp_namespace}}::Config::record_to_inspect(sys::ComponentInspector  * ins
 
   {{/each}}
   inspector->emplace(std::move(inspect_config));
+}
+
+std::ostream& operator<<(std::ostream& os, const Config& c) {
+  {{#each fields}}
+    {{#if (is_vector type_)}}
+      os << "  {{ident}}: [" << std::endl;
+      for (auto value : c.{{ident}}) {
+        os << "    " << value << "," << std::endl;
+      }
+      os << "]" << std::endl;
+    {{else}}
+      os << "  {{ident}}: " << c.{{ident}} << std::endl;
+    {{/if}}
+  {{~/each~}}
+  return os;
+}
+
 }

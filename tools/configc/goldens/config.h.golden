@@ -3,6 +3,7 @@
 
 #include <lib/sys/inspect/cpp/component.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,8 @@ struct Config {
 
   void record_to_inspect(sys::ComponentInspector* inspector);
 };
+
+std::ostream& operator<<(std::ostream& os, const cpp_elf_config_lib::Config& c);
 }  // namespace cpp_elf_config_lib
 
 #endif

@@ -10,10 +10,13 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
 #include "config.h"
+
+namespace cpp_elf_config_lib {
 
 template <class T>
 std::vector<T> from_vector_view(fidl::VectorView<T> v) {
@@ -35,7 +38,7 @@ std::vector<std::string> from_vector_string_view(
   return data;
 }
 
-cpp_elf_config_lib::Config cpp_elf_config_lib::Config::from_args() noexcept {
+Config Config::from_args() noexcept {
   // Get the VMO containing FIDL config
   zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_CONFIG_VMO);
   ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID,
@@ -82,7 +85,7 @@ cpp_elf_config_lib::Config cpp_elf_config_lib::Config::from_args() noexcept {
   ::my_config_lib::wire::Config* fidl_config = decoded.PrimaryObject();
 
   // Convert the configuration into a new struct
-  cpp_elf_config_lib::Config c{
+  Config c{
       .my_flag = fidl_config->my_flag,
       .my_int16 = fidl_config->my_int16,
       .my_int32 = fidl_config->my_int32,
@@ -108,8 +111,7 @@ cpp_elf_config_lib::Config cpp_elf_config_lib::Config::from_args() noexcept {
   return c;
 }
 
-void cpp_elf_config_lib::Config::record_to_inspect(
-    sys::ComponentInspector* inspector) {
+void Config::record_to_inspect(sys::ComponentInspector* inspector) {
   inspect::Node inspect_config = inspector->root().CreateChild("config");
   inspect_config.CreateBool("my_flag", this->my_flag, inspector);
 
@@ -204,3 +206,69 @@ void cpp_elf_config_lib::Config::record_to_inspect(
 
   inspector->emplace(std::move(inspect_config));
 }
+
+std::ostream& operator<<(std::ostream& os, const Config& c) {
+  os << "  my_flag: " << c.my_flag << std::endl;
+  os << "  my_int16: " << c.my_int16 << std::endl;
+  os << "  my_int32: " << c.my_int32 << std::endl;
+  os << "  my_int64: " << c.my_int64 << std::endl;
+  os << "  my_int8: " << c.my_int8 << std::endl;
+  os << "  my_string: " << c.my_string << std::endl;
+  os << "  my_uint16: " << c.my_uint16 << std::endl;
+  os << "  my_uint32: " << c.my_uint32 << std::endl;
+  os << "  my_uint64: " << c.my_uint64 << std::endl;
+  os << "  my_uint8: " << c.my_uint8 << std::endl;
+  os << "  my_vector_of_flag: [" << std::endl;
+  for (auto value : c.my_vector_of_flag) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_int16: [" << std::endl;
+  for (auto value : c.my_vector_of_int16) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_int32: [" << std::endl;
+  for (auto value : c.my_vector_of_int32) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_int64: [" << std::endl;
+  for (auto value : c.my_vector_of_int64) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_int8: [" << std::endl;
+  for (auto value : c.my_vector_of_int8) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_string: [" << std::endl;
+  for (auto value : c.my_vector_of_string) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_uint16: [" << std::endl;
+  for (auto value : c.my_vector_of_uint16) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_uint32: [" << std::endl;
+  for (auto value : c.my_vector_of_uint32) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_uint64: [" << std::endl;
+  for (auto value : c.my_vector_of_uint64) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  os << "  my_vector_of_uint8: [" << std::endl;
+  for (auto value : c.my_vector_of_uint8) {
+    os << "    " << value << "," << std::endl;
+  }
+  os << "]" << std::endl;
+  return os;
+}
+
+}  // namespace cpp_elf_config_lib
