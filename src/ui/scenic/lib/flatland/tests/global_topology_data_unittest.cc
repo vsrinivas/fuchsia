@@ -16,6 +16,8 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+#include <glm/gtx/matrix_transform_2d.hpp>
+
 using flatland::TransformGraph;
 using flatland::TransformHandle;
 
@@ -742,6 +744,82 @@ TEST(GlobalTopologyDataTest, HitTest_StartNodeTest) {
     auto result = hit_tester(view_ref_E_koid, {0, 0}, true);
     ASSERT_EQ(result.hits.size(), 1u);
     EXPECT_EQ(result.hits[0], view_ref_E_koid);
+  }
+}
+
+//  This test features a 2x1 parent view, with a 1x1 child view.
+//
+//  The child view is translated 1 pixel to the right, so hits from (0,0) to (1,1) should be
+//  received only by the parent, and hits from (1,1) to (2,1) should be received by child and
+//  parent.
+// -------------------
+// |P       |P/C     |
+// |        |        |
+// |        |        |
+// |        |        |
+// -------------------
+TEST(GlobalTopologyDataTest, HitTest_TranslatedChildView) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  const auto link_2 = GetLinkHandle(2);
+
+  auto [control_ref1, view_ref_parent] = scenic::ViewRefPair::New();
+  auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref_parent_koid = utils::ExtractKoid(view_ref_parent);
+  const zx_koid_t view_ref_child_koid = utils::ExtractKoid(view_ref_child);
+  const uint32_t kParentWidth = 2, kChildWidth = 1;
+  const uint32_t kHeight = 1;
+
+  const TransformHandle view_ref_parent_root_transform = {1, 0};
+  const TransformHandle view_ref_child_root_transform = {2, 0};
+  const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
+                                                                                 //
+                                                    {{{2, 0}, 0}}};              // 2:0
+
+  // Create the parent uber struct.
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref =
+        std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_parent));
+    TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kParentWidth, .height = kHeight};
+    uber_struct->local_clip_regions[view_ref_parent_root_transform] = std::move(clip_region);
+    uber_struct->local_hit_regions_map[view_ref_parent_root_transform] = {
+        {.region = {0, 0, kParentWidth, kHeight}}};
+
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  // Create the child uber struct.
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_struct->view_ref =
+        std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_child));
+    uber_struct->local_hit_regions_map[view_ref_child_root_transform] = {
+        {.region = {0, 0, kChildWidth, kHeight}}};
+
+    // Translate the child 1px to the right.
+    uber_struct->local_matrices[view_ref_child_root_transform] =
+        glm::translate(glm::mat3(), {1, 0});
+
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  MakeLink(links, 2);  // 0:2 - 2:0
+  auto hit_tester = GenerateHitTester(uber_structs, links, kLinkInstanceId, {1, 0}, {});
+
+  {
+    auto result = hit_tester(view_ref_parent_koid, {0, 0}, true);
+    EXPECT_EQ(result.hits.size(), 1u);
+    EXPECT_EQ(result.hits[0], view_ref_parent_koid);
+  }
+  {
+    auto result = hit_tester(view_ref_parent_koid, {1.1, 0}, true);
+    EXPECT_EQ(result.hits.size(), 2u);
+    EXPECT_EQ(result.hits[0], view_ref_child_koid);
+    EXPECT_EQ(result.hits[1], view_ref_parent_koid);
   }
 }
 

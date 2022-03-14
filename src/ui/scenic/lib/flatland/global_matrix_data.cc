@@ -60,6 +60,12 @@ std::array<glm::vec3, 4> ConvertRectToVerts(fuchsia::math::Rect rect) {
           glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y - rect.height), 1)};
 }
 
+std::array<glm::vec3, 4> ConvertRectFToVerts(fuchsia::math::RectF rect) {
+  return {glm::vec3(rect.x, rect.y, 1), glm::vec3(rect.x + rect.width, rect.y, 1),
+          glm::vec3(rect.x + rect.width, rect.y - rect.height, 1),
+          glm::vec3(rect.x, rect.y - rect.height, 1)};
+}
+
 // Template to handle both vec2 and vec3 inputs.
 template <typename T>
 fuchsia::math::Rect ConvertVertsToRect(const std::array<T, 4>& verts) {
@@ -69,11 +75,18 @@ fuchsia::math::Rect ConvertVertsToRect(const std::array<T, 4>& verts) {
           .height = static_cast<int32_t>(fabs(verts[2].y - verts[1].y))};
 }
 
+fuchsia::math::RectF ConvertVertsToRectF(const std::array<glm::vec2, 4>& verts) {
+  return {.x = verts[0].x,
+          .y = verts[0].y,
+          .width = fabs(verts[1].x - verts[0].x),
+          .height = fabs(verts[2].y - verts[1].y)};
+}
+
 // Assume that the 4 vertices represent a rectangle, and are provided in clockwise order,
 // starting at the top-left corner. Return a tuple of the transformed vertices as well as
 // those same transformed vertices reordered so that they are in clockwise order starting
 // at the top-left corner.
-std::tuple<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVerts(
+std::pair<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVerts(
     const glm::mat3& matrix, const std::array<glm::vec3, 4>& in_verts) {
   const std::array<glm::vec2, 4> verts = {
       matrix * in_verts[0],
@@ -102,6 +115,10 @@ std::tuple<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVer
 
 fuchsia::math::Rect MatrixMultiplyRect(const glm::mat3& matrix, fuchsia::math::Rect rect) {
   return ConvertVertsToRect(std::get<0>(MatrixMultiplyVerts(matrix, ConvertRectToVerts(rect))));
+}
+
+fuchsia::math::RectF MatrixMultiplyRectF(const glm::mat3& matrix, fuchsia::math::RectF rect) {
+  return ConvertVertsToRectF(std::get<0>(MatrixMultiplyVerts(matrix, ConvertRectFToVerts(rect))));
 }
 
 // TODO(fxbug.dev/77993): This will not produce the correct results for the display
@@ -334,12 +351,13 @@ GlobalHitRegionsMap ComputeGlobalHitRegions(
       for (auto& local_hit_region : regions_vec_kv->second) {
         auto local_rect = local_hit_region.region;
         auto global_clip = global_clip_regions[i];
-        // TODO(fxbug.dev/82678) Hit regions are described in each instance's local coordinate
-        // space. They should be converted to global coordinates. Hit regions should be clipped
-        // according to their view boundaries as well.
-        auto global_clipped_rect = local_rect;
 
-        global_hit_regions[handle].push_back({global_clipped_rect, local_hit_region.hit_test});
+        // Calculate the global position of the current hit region.
+        auto global_rect = MatrixMultiplyRectF(matrix_vector[i], local_rect);
+
+        // TODO(fxbug.dev/82678) Hit regions should be clipped according to their view boundaries.
+
+        global_hit_regions[handle].push_back({global_rect, local_hit_region.hit_test});
       }
     }
   }
