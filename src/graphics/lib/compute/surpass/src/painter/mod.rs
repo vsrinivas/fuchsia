@@ -765,10 +765,11 @@ mod tests {
             for (i, (((c0, c1), c2), alpha)) in self
                 .red
                 .iter()
+                .copied()
                 .flat_map(f32x8::to_array)
-                .zip(self.green.iter().flat_map(f32x8::to_array))
-                .zip(self.blue.iter().flat_map(f32x8::to_array))
-                .zip(self.alpha.iter().flat_map(f32x8::to_array))
+                .zip(self.green.iter().copied().flat_map(f32x8::to_array))
+                .zip(self.blue.iter().copied().flat_map(f32x8::to_array))
+                .zip(self.alpha.iter().copied().flat_map(f32x8::to_array))
                 .enumerate()
             {
                 colors[i] = [c0, c1, c2, alpha];

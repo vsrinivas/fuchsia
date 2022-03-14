@@ -370,7 +370,7 @@ impl f32x8 {
         Self(unsafe { [vld1q_f32(val.as_ptr()), vld1q_f32(val[4..].as_ptr())] })
     }
 
-    pub fn to_array(&self) -> [f32; 8] {
+    pub fn to_array(self) -> [f32; 8] {
         unsafe { std::mem::transmute(self.0) }
     }
 

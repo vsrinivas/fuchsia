@@ -187,7 +187,7 @@ impl LinesBuilder {
                 return Default::default();
             }
 
-            let order = match layer.as_ref().map(|layer| layer.order).flatten().or(layer_id) {
+            let order = match layer.as_ref().and_then(|layer| layer.order).or(layer_id) {
                 Some(order) => order,
                 None => return Default::default(),
             };
@@ -201,9 +201,8 @@ impl LinesBuilder {
 
             let transform = layer
                 .as_ref()
-                .map(|layer| layer.affine_transform.as_ref())
-                .flatten()
-                .or_else(|| transform.as_ref());
+                .and_then(|layer| layer.affine_transform.as_ref())
+                .or(transform.as_ref());
             let (p0x, p0y, p1x, p1y) = if let Some(transform) = transform {
                 let (p0x, p0y) = transform_point((p0x, p0y), transform);
                 let (p1x, p1y) = transform_point((p1x, p1y), transform);

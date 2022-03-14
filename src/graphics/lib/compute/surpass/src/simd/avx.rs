@@ -371,10 +371,8 @@ impl f32x8 {
         Self(unsafe { _mm256_loadu_ps(val.as_ptr()) })
     }
 
-    pub fn to_array(&self) -> [f32; 8] {
-        let mut result = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(result.as_mut_ptr(), self.0) }
-        result
+    pub fn to_array(self) -> [f32; 8] {
+        unsafe { std::mem::transmute(self.0) }
     }
 
     pub fn eq(self, other: Self) -> m32x8 {

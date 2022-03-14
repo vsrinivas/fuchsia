@@ -180,7 +180,7 @@ impl LinearLayout {
             let mut layout: Vec<_> = buffer
                 .chunks(width_stride)
                 .enumerate()
-                .map(|(j, row)| {
+                .flat_map(|(j, row)| {
                     row.slice(..width * 4).unwrap().chunks(TILE_SIZE * 4).enumerate().map(
                         move |(i, slice)| {
                             let j = j >> TILE_SHIFT;
@@ -188,7 +188,6 @@ impl LinearLayout {
                         },
                     )
                 })
-                .flatten()
                 .collect();
             layout.par_sort_by_key(|&(i, j, _)| (j, i));
 

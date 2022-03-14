@@ -44,6 +44,7 @@ impl<T> From<NonNull<T>> for SendNonNull<T> {
 static ROOT: AtomicCell<Option<SendNonNull<()>>> = AtomicCell::new(None);
 
 /// A [`prim@slice`] wrapper produced by [`SliceCache::access`].
+#[repr(C)]
 pub struct Slice<'a, T> {
     offset: isize,
     len: usize,
@@ -88,7 +89,7 @@ impl<'a, T> DerefMut for Slice<'a, T> {
 
 impl<T: fmt::Debug> fmt::Debug for Slice<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (&**self).fmt(f)
+        (**self).fmt(f)
     }
 }
 
@@ -218,6 +219,7 @@ impl fmt::Debug for Chunks<'_> {
 }
 
 /// A [reference] wrapper returned by [`SliceCache::access`].
+#[repr(transparent)]
 #[derive(Debug)]
 pub struct Ref<'a, T: ?Sized>(&'a mut T);
 
@@ -350,7 +352,6 @@ impl SliceCache {
             // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
             // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
             // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
-            #[allow(clippy::transmute_undefined_repr)] // TODO(fxbug.dev/95175)
             return Some(unsafe { mem::transmute(&mut *self.slices) });
         }
 
@@ -370,7 +371,6 @@ impl SliceCache {
                 // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
                 // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
                 // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
-                #[allow(clippy::transmute_undefined_repr)] // TODO(fxbug.dev/95175)
                 return Some(unsafe { mem::transmute(&mut *self.slices) });
             }
         }
