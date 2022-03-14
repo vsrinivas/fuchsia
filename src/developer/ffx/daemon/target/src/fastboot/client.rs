@@ -8,14 +8,14 @@ use {
     },
     crate::target::Target,
     crate::zedboot::reboot_to_bootloader,
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
     async_utils::async_once::Once,
     fastboot::UploadProgressListener as _,
     ffx_daemon_events::{TargetConnectionState, TargetEvent},
     fidl::Error as FidlError,
     fidl_fuchsia_developer_ffx::{
-        FastbootError, FastbootRequest, FastbootRequestStream, RebootListenerProxy,
+        FastbootError, FastbootRequest, FastbootRequestStream, RebootError, RebootListenerProxy,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy},
@@ -84,14 +84,16 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
         Ok(())
     }
 
-    async fn reboot_from_zedboot(&self, listener: &RebootListenerProxy) -> Result<()> {
-        listener.on_reboot()?;
+    async fn reboot_from_zedboot(&self, listener: &RebootListenerProxy) -> Result<(), RebootError> {
+        listener.on_reboot().map_err(|_| RebootError::FailedToSendOnReboot)?;
         match self.target.netsvc_address() {
             Some(addr) => {
-                reboot_to_bootloader(addr).await?;
+                reboot_to_bootloader(addr)
+                    .await
+                    .map_err(|_| RebootError::ZedbootCommunicationError)?;
                 self.check_for_fastboot().await
             }
-            None => bail!("Could not determine address to send Zedboot Reboot command"),
+            None => Err(RebootError::NoZedbootAddress),
         }
     }
 
@@ -102,7 +104,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
         }
     }
 
-    async fn check_for_fastboot(&self) -> Result<()> {
+    async fn check_for_fastboot(&self) -> Result<(), RebootError> {
         for _ in 0..2 {
             if self.is_target_in_fastboot() {
                 return Ok(());
@@ -118,19 +120,28 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 return Ok(());
             }
         }
-        bail!("Timed out checking for fastboot.")
+        Err(RebootError::TimedOut)
     }
 
-    async fn reboot_from_product(&self, listener: &RebootListenerProxy) -> Result<()> {
-        listener.on_reboot()?;
-        match self.get_admin_proxy().await?.reboot_to_bootloader().await {
+    async fn reboot_from_product(&self, listener: &RebootListenerProxy) -> Result<(), RebootError> {
+        listener.on_reboot().map_err(|_| RebootError::FailedToSendOnReboot)?;
+        match self
+            .get_admin_proxy()
+            .await
+            .map_err(|_| RebootError::TargetCommunication)?
+            .reboot_to_bootloader()
+            .await
+        {
             Ok(_) => self.check_for_fastboot().await,
             Err(_e @ FidlError::ClientChannelClosed { .. }) => self.check_for_fastboot().await,
-            Err(e) => bail!(e),
+            Err(e) => {
+                log::error!("FIDL Error for reboot_to_bootloader {:?}", e);
+                Err(RebootError::FailedToSendTargetReboot)
+            }
         }
     }
 
-    async fn prepare_device(&self, listener: &RebootListenerProxy) -> Result<()> {
+    async fn prepare_device(&self, listener: &RebootListenerProxy) -> Result<(), RebootError> {
         match self.target.get_connection_state() {
             TargetConnectionState::Fastboot(_) => Ok(()),
             TargetConnectionState::Zedboot(_) => self.reboot_from_zedboot(listener).await,
@@ -145,10 +156,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match self.prepare_device(&listener.into_proxy()?).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error preparing device: {}", e);
-                        responder
-                            .send(&mut Err(FastbootError::RebootFailed))
-                            .context("sending error response")?;
+                        log::error!("Error preparing device: {:?}", e);
+                        responder.send(&mut Err(e)).context("sending error response")?;
                     }
                 }
             }
@@ -226,7 +235,10 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             },
             FastbootRequest::RebootBootloader { listener, responder } => {
-                match reboot_bootloader(self.interface().await?).await {
+                match reboot_bootloader(self.interface().await?)
+                    .await
+                    .map_err(|_| RebootError::FastbootError)
+                {
                     Ok(_) => {
                         self.clear_interface().await;
                         match try_join!(
@@ -235,13 +247,13 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                                 .wait_for(Some(Duration::from_secs(30)), |e| {
                                     e == TargetEvent::Rediscovered
                                 })
-                                .map_err(|_| FastbootError::RediscoveredError),
+                                .map_err(|_| RebootError::TimedOut),
                             async move {
                                 listener
                                     .into_proxy()
-                                    .map_err(|_| FastbootError::CommunicationError)?
+                                    .map_err(|_| RebootError::FailedToSendOnReboot)?
                                     .on_reboot()
-                                    .map_err(|_| FastbootError::CommunicationError)
+                                    .map_err(|_| RebootError::FailedToSendOnReboot)
                             }
                         ) {
                             Ok(_) => {
@@ -266,9 +278,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     }
                     Err(e) => {
                         log::error!("Error rebooting: {:?}", e);
-                        responder
-                            .send(&mut Err(FastbootError::ProtocolError))
-                            .context("sending error response")?;
+                        responder.send(&mut Err(e)).context("sending error response")?;
                     }
                 }
             }
@@ -364,6 +374,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
 mod test {
     use {
         super::*,
+        anyhow::bail,
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_developer_ffx::{
@@ -574,7 +585,7 @@ mod test {
         let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
         let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.reboot_bootloader(reboot_client).await?;
-        assert_eq!(res.err(), Some(FastbootError::ProtocolError));
+        assert_eq!(res.err(), Some(RebootError::FastbootError));
         Ok(())
     }
 
@@ -584,7 +595,7 @@ mod test {
         let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
         let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         let res = proxy.reboot_bootloader(reboot_client).await?;
-        assert_eq!(res.err(), Some(FastbootError::CommunicationError));
+        assert_eq!(res.err(), Some(RebootError::FailedToSendOnReboot));
         Ok(())
     }
 
@@ -611,7 +622,7 @@ mod test {
                 .map_err(|e| anyhow!("error rebooting to bootloader: {:?}", e)),
         )
         .and_then(|(_, reboot)| {
-            assert_eq!(reboot.err(), Some(FastbootError::RediscoveredError));
+            assert_eq!(reboot.err(), Some(RebootError::FailedToSendOnReboot));
             Ok(())
         })
     }

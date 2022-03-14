@@ -23,6 +23,26 @@ type FastbootError = strict enum {
     REBOOT_FAILED = 6;
 };
 
+/// Adding more specific reboot errors.  These are not necessarily
+/// Fastboot errors because the target can be in Fuchsia state or
+/// Zedboot. Therefore, there is a separate error type for these.
+type RebootError = strict enum {
+    // Timed out waiting for the target to reboot
+    TIMED_OUT = 1;
+    // Failed sending the reboot signal.
+    FAILED_TO_SEND_TARGET_REBOOT = 2;
+    // Did not receive event that the reboot signal was sent.
+    FAILED_TO_SEND_ON_REBOOT = 3;
+    // Failed when sending zedboot reboot signal.
+    ZEDBOOT_COMMUNICATION_ERROR = 4;
+    // No Zedboot address found. Fatal internal error.
+    NO_ZEDBOOT_ADDRESS = 5;
+    // Overnet target communication error.
+    TARGET_COMMUNICATION = 6;
+    // Error sending the Fastboot reboot signal.
+    FASTBOOT_ERROR = 7;
+};
+
 /// Callback event listener for upload progress.
 protocol UploadProgressListener {
     OnError(struct {
@@ -57,7 +77,7 @@ protocol VariableListener {
 protocol Fastboot {
     Prepare(resource struct {
         listener client_end:RebootListener;
-    }) -> (struct {}) error FastbootError;
+    }) -> (struct {}) error RebootError;
     GetVar(struct {
         name string:64;
     }) -> (struct {
@@ -78,7 +98,7 @@ protocol Fastboot {
     Reboot() -> (struct {}) error FastbootError;
     RebootBootloader(resource struct {
         listener client_end:RebootListener;
-    }) -> (struct {}) error FastbootError;
+    }) -> (struct {}) error RebootError;
     ContinueBoot() -> (struct {}) error FastbootError;
     GetStaged(resource struct {
         path string:256;

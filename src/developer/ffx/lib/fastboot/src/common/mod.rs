@@ -13,15 +13,15 @@ use {
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
-    errors::{ffx_bail, ffx_error},
+    errors::ffx_bail,
     ffx_config::sdk::SdkVersion,
     fidl::{
         endpoints::{create_endpoints, ServerEnd},
         Error as FidlError,
     },
     fidl_fuchsia_developer_ffx::{
-        FastbootProxy, RebootListenerMarker, RebootListenerRequest, UploadProgressListenerMarker,
-        UploadProgressListenerRequest,
+        FastbootProxy, RebootError, RebootListenerMarker, RebootListenerRequest,
+        UploadProgressListenerMarker, UploadProgressListenerRequest,
     },
     futures::prelude::*,
     futures::try_join,
@@ -101,9 +101,6 @@ pub trait Boot {
 }
 
 pub const MISSING_PRODUCT: &str = "Manifest does not contain product";
-
-const REBOOT_ERR: &str = "Failed to reboot your device. \
-                          Power cycle the device manually and try again.";
 
 const LARGE_FILE: &str = "large file, please wait... ";
 const REVISION_VAR: &str = "hw-revision";
@@ -324,8 +321,39 @@ pub async fn reboot_bootloader<W: Write>(
         let d = Utc::now().signed_duration_since(start_time);
         log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
         done_time(writer, d)?;
-        reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
+        reboot.or_else(map_reboot_error)
     })
+}
+
+const REBOOT_MANUALLY: &str =
+    "\nIf the device did not reboot into the Fastboot state, try rebooting \n\
+     it manually and re-running the command. Otherwise, try re-running the \n\
+     command.";
+
+const TIMED_OUT: &str = "\nTimed out while waiting to rediscover device in Fastboot.";
+const SEND_TARGET_REBOOT: &str = "\nFailed while sending the target a reboot signal.";
+const SEND_ON_REBOOT: &str = "\nThere was an issue communication with the daemon.";
+const ZEDBOOT_COMMUNICATION: &str = "\nFailed to send the Zedboot reboot signal.";
+const NO_ZEDBOOT_ADDRESS: &str = "\nUnknown Zedboot address.";
+const TARGET_COMMUNICATION: &str = "\nThere was an issue communication with the target";
+const FASTBOOT_ERROR: &str = "\nThere was an issue sending the Fastboot reboot command";
+
+fn map_reboot_error(err: RebootError) -> Result<()> {
+    match err {
+        RebootError::TimedOut => ffx_bail!("{}{}", TIMED_OUT, REBOOT_MANUALLY),
+        RebootError::FailedToSendTargetReboot => {
+            ffx_bail!("{}{}", SEND_TARGET_REBOOT, REBOOT_MANUALLY)
+        }
+        RebootError::FailedToSendOnReboot => bail!("{}", SEND_ON_REBOOT),
+        RebootError::ZedbootCommunicationError => {
+            ffx_bail!("{}{}", ZEDBOOT_COMMUNICATION, REBOOT_MANUALLY)
+        }
+        RebootError::NoZedbootAddress => bail!("{}", NO_ZEDBOOT_ADDRESS),
+        RebootError::TargetCommunication => {
+            ffx_bail!("{}{}", TARGET_COMMUNICATION, REBOOT_MANUALLY)
+        }
+        RebootError::FastbootError => ffx_bail!("{}", FASTBOOT_ERROR),
+    }
 }
 
 pub async fn prepare<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
@@ -349,7 +377,7 @@ pub async fn prepare<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -
             log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
             done_time(writer, d)?;
         }
-        prepare.map_err(|e| anyhow!("failed preparing target for flashing: {:?}", e))
+        prepare.or_else(map_reboot_error)
     })
 }
 
@@ -438,9 +466,7 @@ where
     flash_partitions(writer, file_resolver, product.bootloader_partitions(), fastboot_proxy)
         .await?;
     if product.bootloader_partitions().len() > 0 && !cmd.no_bootloader_reboot {
-        reboot_bootloader(writer, &fastboot_proxy)
-            .await
-            .map_err(|_| ffx_error!("{}", REBOOT_ERR))?;
+        reboot_bootloader(writer, &fastboot_proxy).await?;
     }
     Ok(())
 }
