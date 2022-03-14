@@ -4,10 +4,7 @@
 
 use rayon::prelude::*;
 
-use crate::{
-    Lines, PIXEL_SHIFT, PIXEL_WIDTH, TILE_HEIGHT_MASK, TILE_HEIGHT_SHIFT, TILE_WIDTH_MASK,
-    TILE_WIDTH_SHIFT,
-};
+use crate::{Lines, PIXEL_SHIFT, PIXEL_WIDTH, TILE_MASK, TILE_SHIFT};
 
 mod grouped_iter;
 mod pixel_segment;
@@ -97,10 +94,10 @@ impl Rasterizer {
                 let border_x = x0_sub.min(x1_sub) >> PIXEL_SHIFT;
                 let border_y = y0_sub.min(y1_sub) >> PIXEL_SHIFT;
 
-                let tile_x = (border_x >> TILE_WIDTH_SHIFT as i32) as i16;
-                let tile_y = (border_y >> TILE_HEIGHT_SHIFT as i32) as i16;
-                let local_x = (border_x & TILE_WIDTH_MASK as i32) as u8;
-                let local_y = (border_y & TILE_HEIGHT_MASK as i32) as u8;
+                let tile_x = (border_x >> TILE_SHIFT as i32) as i16;
+                let tile_y = (border_y >> TILE_SHIFT as i32) as i16;
+                let local_x = (border_x & TILE_MASK as i32) as u8;
+                let local_y = (border_y & TILE_MASK as i32) as u8;
 
                 let border = (border_x << PIXEL_SHIFT) + PIXEL_WIDTH as i32;
                 let height = y1_sub - y0_sub;
@@ -136,10 +133,7 @@ impl Rasterizer {
 mod tests {
     use super::*;
 
-    use crate::{
-        rasterizer::pixel_segment::PixelSegmentUnpacked, LinesBuilder, Point, TILE_HEIGHT,
-        TILE_WIDTH,
-    };
+    use crate::{rasterizer::pixel_segment::PixelSegmentUnpacked, LinesBuilder, Point, TILE_SIZE};
 
     fn segments(p0: Point, p1: Point) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
@@ -308,8 +302,8 @@ mod tests {
     fn tile_octant_1() {
         assert_eq!(
             tiles(&segments(
-                Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
-                Point::new(TILE_WIDTH as f32 + 3.0, TILE_HEIGHT as f32 + 2.0),
+                Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
+                Point::new(TILE_SIZE as f32 + 3.0, TILE_SIZE as f32 + 2.0),
             )),
             [(1, 1, 0, 0), (1, 1, 1, 0), (1, 1, 1, 1), (1, 1, 2, 1)],
         );
@@ -319,8 +313,8 @@ mod tests {
     fn tile_octant_2() {
         assert_eq!(
             tiles(&segments(
-                Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
-                Point::new(TILE_WIDTH as f32 + 2.0, TILE_HEIGHT as f32 + 3.0),
+                Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
+                Point::new(TILE_SIZE as f32 + 2.0, TILE_SIZE as f32 + 3.0),
             )),
             [(1, 1, 0, 0), (1, 1, 0, 1), (1, 1, 1, 1), (1, 1, 1, 2)],
         );
@@ -330,14 +324,14 @@ mod tests {
     fn tile_octant_3() {
         assert_eq!(
             tiles(&segments(
-                Point::new(-(TILE_WIDTH as f32), TILE_HEIGHT as f32),
-                Point::new(-(TILE_WIDTH as f32) - 2.0, TILE_HEIGHT as f32 + 3.0),
+                Point::new(-(TILE_SIZE as f32), TILE_SIZE as f32),
+                Point::new(-(TILE_SIZE as f32) - 2.0, TILE_SIZE as f32 + 3.0),
             )),
             [
-                (-2, 1, TILE_WIDTH as u8 - 1, 0),
-                (-2, 1, TILE_WIDTH as u8 - 1, 1),
-                (-2, 1, TILE_WIDTH as u8 - 2, 1),
-                (-2, 1, TILE_WIDTH as u8 - 2, 2),
+                (-2, 1, TILE_SIZE as u8 - 1, 0),
+                (-2, 1, TILE_SIZE as u8 - 1, 1),
+                (-2, 1, TILE_SIZE as u8 - 2, 1),
+                (-2, 1, TILE_SIZE as u8 - 2, 2),
             ],
         );
     }
@@ -346,14 +340,14 @@ mod tests {
     fn tile_octant_4() {
         assert_eq!(
             tiles(&segments(
-                Point::new(-(TILE_WIDTH as f32), TILE_HEIGHT as f32),
-                Point::new(-(TILE_WIDTH as f32) - 3.0, TILE_HEIGHT as f32 + 2.0),
+                Point::new(-(TILE_SIZE as f32), TILE_SIZE as f32),
+                Point::new(-(TILE_SIZE as f32) - 3.0, TILE_SIZE as f32 + 2.0),
             )),
             [
-                (-2, 1, TILE_WIDTH as u8 - 1, 0),
-                (-2, 1, TILE_WIDTH as u8 - 2, 0),
-                (-2, 1, TILE_WIDTH as u8 - 2, 1),
-                (-2, 1, TILE_WIDTH as u8 - 3, 1),
+                (-2, 1, TILE_SIZE as u8 - 1, 0),
+                (-2, 1, TILE_SIZE as u8 - 2, 0),
+                (-2, 1, TILE_SIZE as u8 - 2, 1),
+                (-2, 1, TILE_SIZE as u8 - 3, 1),
             ],
         );
     }
@@ -362,14 +356,14 @@ mod tests {
     fn tile_octant_5() {
         assert_eq!(
             tiles(&segments(
-                Point::new(-(TILE_WIDTH as f32), -(TILE_HEIGHT as f32)),
-                Point::new(-(TILE_WIDTH as f32) - 3.0, -(TILE_HEIGHT as f32) - 2.0),
+                Point::new(-(TILE_SIZE as f32), -(TILE_SIZE as f32)),
+                Point::new(-(TILE_SIZE as f32) - 3.0, -(TILE_SIZE as f32) - 2.0),
             )),
             [
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 3, TILE_HEIGHT as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 3, TILE_SIZE as u8 - 2),
             ],
         );
     }
@@ -378,14 +372,14 @@ mod tests {
     fn tile_octant_6() {
         assert_eq!(
             tiles(&segments(
-                Point::new(-(TILE_WIDTH as f32), -(TILE_HEIGHT as f32)),
-                Point::new(-(TILE_WIDTH as f32) - 2.0, -(TILE_HEIGHT as f32) - 3.0),
+                Point::new(-(TILE_SIZE as f32), -(TILE_SIZE as f32)),
+                Point::new(-(TILE_SIZE as f32) - 2.0, -(TILE_SIZE as f32) - 3.0),
             )),
             [
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 3),
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 3),
             ],
         );
     }
@@ -394,14 +388,14 @@ mod tests {
     fn tile_octant_7() {
         assert_eq!(
             tiles(&segments(
-                Point::new(TILE_WIDTH as f32, -(TILE_HEIGHT as f32)),
-                Point::new(TILE_WIDTH as f32 + 2.0, -(TILE_HEIGHT as f32) - 3.0),
+                Point::new(TILE_SIZE as f32, -(TILE_SIZE as f32)),
+                Point::new(TILE_SIZE as f32 + 2.0, -(TILE_SIZE as f32) - 3.0),
             )),
             [
-                (1, -2, 0, TILE_HEIGHT as u8 - 1),
-                (1, -2, 0, TILE_HEIGHT as u8 - 2),
-                (1, -2, 1, TILE_HEIGHT as u8 - 2),
-                (1, -2, 1, TILE_HEIGHT as u8 - 3),
+                (1, -2, 0, TILE_SIZE as u8 - 1),
+                (1, -2, 0, TILE_SIZE as u8 - 2),
+                (1, -2, 1, TILE_SIZE as u8 - 2),
+                (1, -2, 1, TILE_SIZE as u8 - 3),
             ],
         );
     }
@@ -410,14 +404,14 @@ mod tests {
     fn tile_octant_8() {
         assert_eq!(
             tiles(&segments(
-                Point::new(TILE_WIDTH as f32, -(TILE_HEIGHT as f32)),
-                Point::new(TILE_WIDTH as f32 + 3.0, -(TILE_HEIGHT as f32) - 2.0),
+                Point::new(TILE_SIZE as f32, -(TILE_SIZE as f32)),
+                Point::new(TILE_SIZE as f32 + 3.0, -(TILE_SIZE as f32) - 2.0),
             )),
             [
-                (1, -2, 0, TILE_HEIGHT as u8 - 1),
-                (1, -2, 1, TILE_HEIGHT as u8 - 1),
-                (1, -2, 1, TILE_HEIGHT as u8 - 2),
-                (1, -2, 2, TILE_HEIGHT as u8 - 2),
+                (1, -2, 0, TILE_SIZE as u8 - 1),
+                (1, -2, 1, TILE_SIZE as u8 - 1),
+                (1, -2, 1, TILE_SIZE as u8 - 2),
+                (1, -2, 2, TILE_SIZE as u8 - 2),
             ],
         );
     }

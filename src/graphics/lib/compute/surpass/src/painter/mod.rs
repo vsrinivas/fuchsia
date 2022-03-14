@@ -18,7 +18,7 @@ use crate::{
     painter::layer_workbench::TileWriteOp,
     rasterizer::{search_last_by_key, PixelSegment},
     simd::{f32x4, f32x8, i16x16, i32x8, i8x16, u32x4, u32x8, u8x32, Simd},
-    PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_HEIGHT, TILE_WIDTH,
+    PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_SIZE,
 };
 
 mod layer_workbench;
@@ -48,8 +48,8 @@ macro_rules! cols {
             T::LANES
         }
 
-        let from = $x0 * crate::TILE_HEIGHT / size_of_el(&$array);
-        let to = $x1 * crate::TILE_HEIGHT / size_of_el(&$array);
+        let from = $x0 * crate::TILE_SIZE / size_of_el(&$array);
+        let to = $x1 * crate::TILE_SIZE / size_of_el(&$array);
 
         &$array[from..to]
     }};
@@ -59,8 +59,8 @@ macro_rules! cols {
             T::LANES
         }
 
-        let from = $x0 * crate::TILE_HEIGHT / size_of_el(&$array);
-        let to = $x1 * crate::TILE_HEIGHT / size_of_el(&$array);
+        let from = $x0 * crate::TILE_SIZE / size_of_el(&$array);
+        let to = $x1 * crate::TILE_SIZE / size_of_el(&$array);
 
         &mut $array[from..to]
     }};
@@ -170,8 +170,8 @@ pub struct Rect {
 impl Rect {
     pub fn new(horizontal: Range<usize>, vertical: Range<usize>) -> Self {
         Self {
-            hor: horizontal.start / TILE_WIDTH..(horizontal.end + TILE_WIDTH - 1) / TILE_WIDTH,
-            vert: vertical.start / TILE_HEIGHT..(vertical.end + TILE_HEIGHT - 1) / TILE_HEIGHT,
+            hor: horizontal.start / TILE_SIZE..(horizontal.end + TILE_SIZE - 1) / TILE_SIZE,
+            vert: vertical.start / TILE_SIZE..(vertical.end + TILE_SIZE - 1) / TILE_SIZE,
         }
     }
 }
@@ -201,11 +201,11 @@ pub trait LayerProps: Send + Sync {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Cover {
-    covers: [i8x16; TILE_HEIGHT / i8x16::LANES],
+    covers: [i8x16; TILE_SIZE / i8x16::LANES],
 }
 
 impl Cover {
-    pub fn as_slice_mut(&mut self) -> &mut [i8; TILE_HEIGHT] {
+    pub fn as_slice_mut(&mut self) -> &mut [i8; TILE_SIZE] {
         unsafe { mem::transmute(&mut self.covers) }
     }
 
@@ -252,14 +252,14 @@ pub(crate) struct CoverCarry {
 
 #[derive(Debug)]
 pub(crate) struct Painter {
-    doubled_areas: [i16x16; TILE_WIDTH * TILE_HEIGHT / i16x16::LANES],
-    covers: [i8x16; (TILE_WIDTH + 1) * TILE_HEIGHT / i8x16::LANES],
-    clip: Option<([f32x8; TILE_WIDTH * TILE_HEIGHT / f32x8::LANES], u32)>,
-    red: [f32x8; TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-    green: [f32x8; TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-    blue: [f32x8; TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-    alpha: [f32x8; TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-    srgb: [u8x32; TILE_WIDTH * TILE_HEIGHT * 4 / u8x32::LANES],
+    doubled_areas: [i16x16; TILE_SIZE * TILE_SIZE / i16x16::LANES],
+    covers: [i8x16; (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
+    clip: Option<([f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES], u32)>,
+    red: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
+    green: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
+    blue: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
+    alpha: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
+    srgb: [u8x32; TILE_SIZE * TILE_SIZE * 4 / u8x32::LANES],
 }
 
 impl LayerPainter for Painter {
@@ -272,13 +272,13 @@ impl LayerPainter for Painter {
         let x = segment.local_x() as usize;
         let y = segment.local_y() as usize;
 
-        let doubled_areas: &mut [i16; TILE_WIDTH * TILE_HEIGHT] =
+        let doubled_areas: &mut [i16; TILE_SIZE * TILE_SIZE] =
             unsafe { mem::transmute(&mut self.doubled_areas) };
-        let covers: &mut [i8; (TILE_WIDTH + 1) * TILE_HEIGHT] =
+        let covers: &mut [i8; (TILE_SIZE + 1) * TILE_SIZE] =
             unsafe { mem::transmute(&mut self.covers) };
 
-        doubled_areas[x * TILE_HEIGHT + y] += segment.double_area();
-        covers[(x + 1) * TILE_HEIGHT + y] += segment.cover();
+        doubled_areas[x * TILE_SIZE + y] += segment.double_area();
+        covers[(x + 1) * TILE_SIZE + y] += segment.cover();
     }
 
     fn acc_cover(&mut self, cover: Cover) {
@@ -300,9 +300,9 @@ impl LayerPainter for Painter {
         props: &Props,
         apply_clip: bool,
     ) -> Cover {
-        let mut doubled_areas = [i32x8::splat(0); TILE_HEIGHT / i32x8::LANES];
-        let mut covers = [i8x16::splat(0); TILE_HEIGHT / i8x16::LANES];
-        let mut coverages = [f32x8::splat(0.0); TILE_HEIGHT / f32x8::LANES];
+        let mut doubled_areas = [i32x8::splat(0); TILE_SIZE / i32x8::LANES];
+        let mut covers = [i8x16::splat(0); TILE_SIZE / i8x16::LANES];
+        let mut coverages = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
 
         if let Some((_, last_layer)) = self.clip {
             if last_layer < layer_id {
@@ -310,7 +310,7 @@ impl LayerPainter for Painter {
             }
         }
 
-        for x in 0..=TILE_WIDTH {
+        for x in 0..=TILE_SIZE {
             if x != 0 {
                 self.compute_doubled_areas(x - 1, &covers, &mut doubled_areas);
 
@@ -328,8 +328,8 @@ impl LayerPainter for Painter {
                             }
 
                             let fill = Self::fill_at(
-                                x + tile_x * TILE_WIDTH,
-                                y * f32x8::LANES + tile_y * TILE_HEIGHT,
+                                x + tile_x * TILE_SIZE,
+                                y * f32x8::LANES + tile_y * TILE_SIZE,
                                 style,
                             );
 
@@ -355,14 +355,14 @@ impl LayerPainter for Painter {
 impl Painter {
     pub fn new() -> Self {
         Self {
-            doubled_areas: [i16x16::splat(0); TILE_WIDTH * TILE_HEIGHT / i16x16::LANES],
-            covers: [i8x16::splat(0); (TILE_WIDTH + 1) * TILE_HEIGHT / i8x16::LANES],
+            doubled_areas: [i16x16::splat(0); TILE_SIZE * TILE_SIZE / i16x16::LANES],
+            covers: [i8x16::splat(0); (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
             clip: None,
-            red: [f32x8::splat(0.0); TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-            green: [f32x8::splat(0.0); TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-            blue: [f32x8::splat(0.0); TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-            alpha: [f32x8::splat(1.0); TILE_WIDTH * TILE_HEIGHT / f32x8::LANES],
-            srgb: [u8x32::splat(0); TILE_WIDTH * TILE_HEIGHT * 4 / u8x32::LANES],
+            red: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
+            green: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
+            blue: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
+            alpha: [f32x8::splat(1.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
+            srgb: [u8x32::splat(0); TILE_SIZE * TILE_SIZE * 4 / u8x32::LANES],
         }
     }
 
@@ -381,8 +381,8 @@ impl Painter {
     fn compute_doubled_areas(
         &self,
         x: usize,
-        covers: &[i8x16; TILE_HEIGHT / i8x16::LANES],
-        doubled_areas: &mut [i32x8; TILE_HEIGHT / i32x8::LANES],
+        covers: &[i8x16; TILE_SIZE / i8x16::LANES],
+        doubled_areas: &mut [i32x8; TILE_SIZE / i32x8::LANES],
     ) {
         let column = cols!(&self.doubled_areas, x, x + 1);
         for y in 0..covers.len() {
@@ -400,7 +400,7 @@ impl Painter {
         &mut self,
         x: usize,
         y: usize,
-        coverages: [f32x8; TILE_HEIGHT / f32x8::LANES],
+        coverages: [f32x8; TILE_SIZE / f32x8::LANES],
         is_clipped: bool,
         fill: [f32x8; 4],
         blend_mode: BlendMode,
@@ -438,11 +438,11 @@ impl Painter {
         &mut self,
         x: usize,
         y: usize,
-        coverages: [f32x8; TILE_HEIGHT / f32x8::LANES],
+        coverages: [f32x8; TILE_SIZE / f32x8::LANES],
         last_layer_id: u32,
     ) {
         let clip = self.clip.get_or_insert_with(|| {
-            ([f32x8::splat(0.0); TILE_WIDTH * TILE_HEIGHT / f32x8::LANES], last_layer_id)
+            ([f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES], last_layer_id)
         });
         cols!(&mut clip.0, x, x + 1)[y] = coverages[y];
     }
@@ -699,7 +699,7 @@ mod tests {
 
     use crate::{
         layout::LinearLayout, painter::style::Color, point::Point, rasterizer::Rasterizer,
-        LinesBuilder, TILE_HEIGHT, TILE_WIDTH,
+        LinesBuilder, TILE_SIZE,
     };
 
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -759,8 +759,8 @@ mod tests {
     }
 
     impl Painter {
-        fn colors(&self) -> [[f32; 4]; TILE_WIDTH * TILE_HEIGHT] {
-            let mut colors = [[0.0, 0.0, 0.0, 1.0]; TILE_WIDTH * TILE_HEIGHT];
+        fn colors(&self) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
+            let mut colors = [[0.0, 0.0, 0.0, 1.0]; TILE_SIZE * TILE_SIZE];
 
             for (i, (((c0, c1), c2), alpha)) in self
                 .red
@@ -802,7 +802,7 @@ mod tests {
         cover_carries: impl IntoIterator<Item = CoverCarry>,
         segments: &[PixelSegment],
         props: &impl LayerProps,
-    ) -> [[f32; 4]; TILE_WIDTH * TILE_HEIGHT] {
+    ) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
         let mut painter = Painter::new();
         let mut workbench = LayerWorkbench::new();
 
@@ -828,7 +828,7 @@ mod tests {
         cover_carry.layer_id = 1;
 
         let segments =
-            line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_HEIGHT as f32))], false);
+            line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))], false);
 
         let mut styles = HashMap::new();
 
@@ -842,8 +842,8 @@ mod tests {
     fn overlapping_triangles() {
         let segments = line_segments(
             &[
-                (Point::new(0.0, 0.0), Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32)),
-                (Point::new(TILE_WIDTH as f32, 0.0), Point::new(0.0, TILE_HEIGHT as f32)),
+                (Point::new(0.0, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32)),
+                (Point::new(TILE_SIZE as f32, 0.0), Point::new(0.0, TILE_SIZE as f32)),
             ],
             false,
         );
@@ -855,19 +855,19 @@ mod tests {
 
         let colors = paint_tile([], &segments, &styles);
 
-        let row_start = TILE_HEIGHT / 2 - 2;
-        let row_end = TILE_HEIGHT / 2 + 2;
+        let row_start = TILE_SIZE / 2 - 2;
+        let row_end = TILE_SIZE / 2 + 2;
 
-        let mut column = (TILE_WIDTH / 2 - 2) * TILE_WIDTH;
+        let mut column = (TILE_SIZE / 2 - 2) * TILE_SIZE;
         assert_eq!(colors[column + row_start..column + row_end], [GREEN_50, BLACK, BLACK, RED_50]);
 
-        column += TILE_WIDTH;
+        column += TILE_SIZE;
         assert_eq!(colors[column + row_start..column + row_end], [GREEN, GREEN_50, RED_50, RED]);
 
-        column += TILE_WIDTH;
+        column += TILE_SIZE;
         assert_eq!(colors[column + row_start..column + row_end], [GREEN, RED_GREEN_50, RED, RED]);
 
-        column += TILE_WIDTH;
+        column += TILE_SIZE;
         assert_eq!(colors[column + row_start..column + row_end], [RED_GREEN_50, RED, RED, RED]);
     }
 
@@ -875,8 +875,8 @@ mod tests {
     fn transparent_overlay() {
         let segments = line_segments(
             &[
-                (Point::new(0.0, 0.0), Point::new(0.0, TILE_HEIGHT as f32)),
-                (Point::new(0.0, 0.0), Point::new(0.0, TILE_HEIGHT as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
             ],
             false,
         );
@@ -891,55 +891,49 @@ mod tests {
 
     #[test]
     fn cover_carry_is_empty() {
-        assert!(Cover { covers: [i8x16::splat(0); TILE_HEIGHT / 16] }.is_empty(FillRule::NonZero));
-        assert!(!Cover { covers: [i8x16::splat(1); TILE_HEIGHT / 16] }.is_empty(FillRule::NonZero));
-        assert!(!Cover { covers: [i8x16::splat(-1); TILE_HEIGHT / 16] }.is_empty(FillRule::NonZero));
-        assert!(!Cover { covers: [i8x16::splat(16); TILE_HEIGHT / 16] }.is_empty(FillRule::NonZero));
-        assert!(
-            !Cover { covers: [i8x16::splat(-16); TILE_HEIGHT / 16] }.is_empty(FillRule::NonZero)
-        );
+        assert!(Cover { covers: [i8x16::splat(0); TILE_SIZE / 16] }.is_empty(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(1); TILE_SIZE / 16] }.is_empty(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(-1); TILE_SIZE / 16] }.is_empty(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(16); TILE_SIZE / 16] }.is_empty(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(-16); TILE_SIZE / 16] }.is_empty(FillRule::NonZero));
 
-        assert!(Cover { covers: [i8x16::splat(0); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(1); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(-1); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(16); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(
-            !Cover { covers: [i8x16::splat(-16); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd)
-        );
-        assert!(Cover { covers: [i8x16::splat(32); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(Cover { covers: [i8x16::splat(-32); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(48); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd));
-        assert!(
-            !Cover { covers: [i8x16::splat(-48); TILE_HEIGHT / 16] }.is_empty(FillRule::EvenOdd)
-        );
+        assert!(Cover { covers: [i8x16::splat(0); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(1); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(-1); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(16); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(-16); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(32); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(-32); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(48); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(-48); TILE_SIZE / 16] }.is_empty(FillRule::EvenOdd));
     }
 
     #[test]
     fn cover_carry_is_full() {
-        assert!(!Cover { covers: [i8x16::splat(0); TILE_HEIGHT / 16] }.is_full(FillRule::NonZero));
-        assert!(!Cover { covers: [i8x16::splat(1); TILE_HEIGHT / 16] }.is_full(FillRule::NonZero));
-        assert!(!Cover { covers: [i8x16::splat(-1); TILE_HEIGHT / 16] }.is_full(FillRule::NonZero));
-        assert!(Cover { covers: [i8x16::splat(16); TILE_HEIGHT / 16] }.is_full(FillRule::NonZero));
-        assert!(Cover { covers: [i8x16::splat(-16); TILE_HEIGHT / 16] }.is_full(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(0); TILE_SIZE / 16] }.is_full(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(1); TILE_SIZE / 16] }.is_full(FillRule::NonZero));
+        assert!(!Cover { covers: [i8x16::splat(-1); TILE_SIZE / 16] }.is_full(FillRule::NonZero));
+        assert!(Cover { covers: [i8x16::splat(16); TILE_SIZE / 16] }.is_full(FillRule::NonZero));
+        assert!(Cover { covers: [i8x16::splat(-16); TILE_SIZE / 16] }.is_full(FillRule::NonZero));
 
-        assert!(!Cover { covers: [i8x16::splat(0); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(1); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(-1); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(Cover { covers: [i8x16::splat(16); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(Cover { covers: [i8x16::splat(-16); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(32); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(!Cover { covers: [i8x16::splat(-32); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(Cover { covers: [i8x16::splat(48); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
-        assert!(Cover { covers: [i8x16::splat(-48); TILE_HEIGHT / 16] }.is_full(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(0); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(1); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(-1); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(16); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(-16); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(32); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(!Cover { covers: [i8x16::splat(-32); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(48); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
+        assert!(Cover { covers: [i8x16::splat(-48); TILE_SIZE / 16] }.is_full(FillRule::EvenOdd));
     }
 
     #[test]
     fn clip() {
         let segments = line_segments(
             &[
-                (Point::new(0.0, 0.0), Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32)),
-                (Point::new(0.0, 0.0), Point::new(0.0, TILE_HEIGHT as f32)),
-                (Point::new(0.0, 0.0), Point::new(0.0, TILE_HEIGHT as f32)),
+                (Point::new(0.0, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
             ],
             false,
         );
@@ -992,23 +986,20 @@ mod tests {
         workbench.drive_tile_painting(&mut painter, &context);
 
         let colors = painter.colors();
-        let mut col = [BLACK; TILE_WIDTH];
+        let mut col = [BLACK; TILE_SIZE];
 
-        for i in 0..TILE_WIDTH {
+        for i in 0..TILE_SIZE {
             col[i] = [0.5, 0.25, 0.0, 1.0];
 
             if i >= 1 {
                 col[i - 1] = RED;
             }
 
-            assert_eq!(colors[i * TILE_HEIGHT..(i + 1) * TILE_HEIGHT], col);
+            assert_eq!(colors[i * TILE_SIZE..(i + 1) * TILE_SIZE], col);
         }
 
         let segments = line_segments(
-            &[(
-                Point::new(TILE_WIDTH as f32, 0.0),
-                Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
-            )],
+            &[(Point::new(TILE_SIZE as f32, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32))],
             false,
         );
 
@@ -1017,7 +1008,7 @@ mod tests {
 
         workbench.drive_tile_painting(&mut painter, &context);
 
-        assert_eq!(painter.colors(), [RED; TILE_WIDTH * TILE_HEIGHT]);
+        assert_eq!(painter.colors(), [RED; TILE_SIZE * TILE_SIZE]);
     }
 
     #[test]
@@ -1069,9 +1060,9 @@ mod tests {
             }
         }
 
-        let width = TILE_WIDTH + TILE_WIDTH / 2;
-        let mut buffer = vec![0u8; width * TILE_HEIGHT * 4];
-        let mut buffer_layout = LinearLayout::new(width, width * 4, TILE_HEIGHT);
+        let size = TILE_SIZE + TILE_SIZE / 2;
+        let mut buffer = vec![0u8; size * size * 4];
+        let mut buffer_layout = LinearLayout::new(size, size * 4, size);
 
         let segments = &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)];
 
@@ -1103,8 +1094,8 @@ mod tests {
             }
         }
 
-        let mut buffer = vec![0u8; TILE_WIDTH * TILE_HEIGHT * 4];
-        let mut buffer_layout = LinearLayout::new(TILE_WIDTH, TILE_WIDTH * 4, TILE_HEIGHT);
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 4];
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE, TILE_SIZE * 4, TILE_SIZE);
 
         for_each_row(
             &mut buffer_layout,
@@ -1123,32 +1114,32 @@ mod tests {
 
     #[test]
     fn skip_opaque_tiles() {
-        let mut buffer = vec![0u8; TILE_WIDTH * TILE_HEIGHT * 3 * 4];
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 3 * 4];
 
-        let mut buffer_layout = LinearLayout::new(TILE_WIDTH * 3, TILE_WIDTH * 3 * 4, TILE_HEIGHT);
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE);
 
         let mut segments = vec![];
-        for y in 0..TILE_HEIGHT {
+        for y in 0..TILE_SIZE {
             segments.push(PixelSegment::new(
                 2,
                 -1,
                 0,
-                TILE_WIDTH as u8 - 1,
+                TILE_SIZE as u8 - 1,
                 y as u8,
                 0,
                 PIXEL_WIDTH as i8,
             ));
         }
 
-        segments.push(PixelSegment::new(0, -1, 0, TILE_WIDTH as u8 - 1, 0, 0, PIXEL_WIDTH as i8));
+        segments.push(PixelSegment::new(0, -1, 0, TILE_SIZE as u8 - 1, 0, 0, PIXEL_WIDTH as i8));
         segments.push(PixelSegment::new(1, 0, 0, 0, 1, 0, PIXEL_WIDTH as i8));
 
-        for y in 0..TILE_HEIGHT {
+        for y in 0..TILE_SIZE {
             segments.push(PixelSegment::new(
                 2,
                 1,
                 0,
-                TILE_WIDTH as u8 - 1,
+                TILE_SIZE as u8 - 1,
                 y as u8,
                 0,
                 -(PIXEL_WIDTH as i8),
@@ -1180,17 +1171,16 @@ mod tests {
         assert_eq!(
             tiles.iter().map(|slice| slice.to_vec()).collect::<Vec<_>>(),
             // First two tiles need to be completely red.
-            iter::repeat(vec![RED_RGBA; TILE_WIDTH].concat())
-                .take(TILE_HEIGHT)
-                .chain(iter::repeat(vec![RED_RGBA; TILE_WIDTH].concat()).take(TILE_HEIGHT))
+            iter::repeat(vec![RED_RGBA; TILE_SIZE].concat())
+                .take(TILE_SIZE)
+                .chain(iter::repeat(vec![RED_RGBA; TILE_SIZE].concat()).take(TILE_SIZE))
                 .chain(
                     // The last tile contains one blue and one green line.
-                    iter::once(vec![BLUE_RGBA; TILE_WIDTH].concat())
-                        .chain(iter::once(vec![GREEN_RGBA; TILE_WIDTH].concat()))
+                    iter::once(vec![BLUE_RGBA; TILE_SIZE].concat())
+                        .chain(iter::once(vec![GREEN_RGBA; TILE_SIZE].concat()))
                         // Followed by black lines (clear color).
                         .chain(
-                            iter::repeat(vec![BLACK_RGBA; TILE_WIDTH].concat())
-                                .take(TILE_HEIGHT - 2)
+                            iter::repeat(vec![BLACK_RGBA; TILE_SIZE].concat()).take(TILE_SIZE - 2)
                         )
                 )
                 .collect::<Vec<_>>()
@@ -1199,19 +1189,18 @@ mod tests {
 
     #[test]
     fn crop() {
-        let mut buffer = vec![0u8; TILE_WIDTH * TILE_HEIGHT * 9 * 4];
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 9 * 4];
 
-        let mut buffer_layout =
-            LinearLayout::new(TILE_WIDTH * 3, TILE_WIDTH * 3 * 4, TILE_HEIGHT * 3);
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE * 3);
 
         let mut segments = vec![];
         for j in 0..3 {
-            for y in 0..TILE_HEIGHT {
+            for y in 0..TILE_SIZE {
                 segments.push(PixelSegment::new(
                     0,
                     0,
                     j,
-                    TILE_WIDTH as u8 - 1,
+                    TILE_SIZE as u8 - 1,
                     y as u8,
                     0,
                     PIXEL_WIDTH as i8,
@@ -1233,10 +1222,7 @@ mod tests {
             None,
             &segments,
             REDF,
-            &Some(Rect::new(
-                TILE_WIDTH..TILE_WIDTH * 2 + TILE_WIDTH / 2,
-                TILE_HEIGHT..TILE_HEIGHT * 2,
-            )),
+            &Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
             &|layer| styles[&layer].clone(),
         );
 
@@ -1245,22 +1231,22 @@ mod tests {
         assert_eq!(
             tiles.iter().map(|slice| slice.to_vec()).collect::<Vec<_>>(),
             // First row of tiles needs to be completely black.
-            iter::repeat(vec![0u8; TILE_WIDTH * 4])
-                .take(TILE_HEIGHT * 3)
+            iter::repeat(vec![0u8; TILE_SIZE * 4])
+                .take(TILE_SIZE * 3)
                 // Second row begins with a black tile.
-                .chain(iter::repeat(vec![0u8; TILE_WIDTH * 4]).take(TILE_HEIGHT))
-                .chain(iter::repeat(vec![BLUE_RGBA; TILE_WIDTH].concat()).take(TILE_HEIGHT * 2))
+                .chain(iter::repeat(vec![0u8; TILE_SIZE * 4]).take(TILE_SIZE))
+                .chain(iter::repeat(vec![BLUE_RGBA; TILE_SIZE].concat()).take(TILE_SIZE * 2))
                 // Third row of tiles needs to be completely black as well.
-                .chain(iter::repeat(vec![0u8; TILE_WIDTH * 4]).take(TILE_HEIGHT * 3))
+                .chain(iter::repeat(vec![0u8; TILE_SIZE * 4]).take(TILE_SIZE * 3))
                 .collect::<Vec<_>>()
         );
     }
 
     #[test]
     fn tiles_len() {
-        let width = TILE_WIDTH * 4;
-        let width_stride = TILE_WIDTH * 5 * 4;
-        let height = TILE_HEIGHT * 8;
+        let width = TILE_SIZE * 4;
+        let width_stride = TILE_SIZE * 5 * 4;
+        let height = TILE_SIZE * 8;
 
         let buffer_layout = LinearLayout::new(width, width_stride, height);
 

@@ -4,7 +4,7 @@
 
 use std::{cmp::Ordering, fmt, mem};
 
-use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH, TILE_HEIGHT_SHIFT, TILE_WIDTH_SHIFT};
+use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH, TILE_SHIFT};
 
 pub const BIT_FIELD_LENS: [usize; 7] = {
     const fn log2_round_up(n: usize) -> usize {
@@ -16,11 +16,11 @@ pub const BIT_FIELD_LENS: [usize; 7] = {
     }
 
     let mut bit_field_lens = [
-        MAX_HEIGHT_SHIFT - TILE_HEIGHT_SHIFT,
-        MAX_WIDTH_SHIFT - TILE_WIDTH_SHIFT,
+        MAX_HEIGHT_SHIFT - TILE_SHIFT,
+        MAX_WIDTH_SHIFT - TILE_SHIFT,
         0,
-        TILE_HEIGHT_SHIFT,
-        TILE_WIDTH_SHIFT,
+        TILE_SHIFT,
+        TILE_SHIFT,
         log2_round_up((PIXEL_WIDTH + 1) * 2),
         log2_round_up((PIXEL_WIDTH + 1) * 2),
     ];
