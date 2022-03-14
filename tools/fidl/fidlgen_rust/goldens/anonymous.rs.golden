@@ -841,52 +841,6 @@ impl SomeProtocolRequest {
     }
 }
 
-pub struct SomeProtocolEncoder;
-
-impl SomeProtocolEncoder {
-    pub fn encode_some_method_request<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_union_member: &mut UnionMember,
-        mut in_table_member: TableMember,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x22ea52ec7a5146d8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_union_member), (in_table_member));
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.anonymous/SomeProtocolSomeMethodRequest");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-        Ok(())
-    }
-    pub fn encode_some_method_response<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_result: &mut SomeProtocolSomeMethodResult,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x22ea52ec7a5146d8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_result),);
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.anonymous/SomeProtocolSomeMethodResponse");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct SomeProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,

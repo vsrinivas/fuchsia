@@ -276,28 +276,6 @@ impl FirstProtocolRequest {
     }
 }
 
-pub struct FirstProtocolEncoder;
-
-impl FirstProtocolEncoder {
-    pub fn encode_method_on_first_request<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            0,
-            0x5828c91b57492931,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ();
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.service/FirstProtocolMethodOnFirstRequest");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct FirstProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -562,28 +540,6 @@ impl SecondProtocolRequest {
         match *self {
             SecondProtocolRequest::MethodOnSecond { .. } => "method_on_second",
         }
-    }
-}
-
-pub struct SecondProtocolEncoder;
-
-impl SecondProtocolEncoder {
-    pub fn encode_method_on_second_request<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            0,
-            0x70b439758de25c44,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ();
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.service/SecondProtocolMethodOnSecondRequest");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-        Ok(())
     }
 }
 

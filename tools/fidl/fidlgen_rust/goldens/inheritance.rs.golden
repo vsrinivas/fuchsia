@@ -303,51 +303,6 @@ impl Super_Request {
     }
 }
 
-pub struct Super_Encoder;
-
-impl Super_Encoder {
-    pub fn encode_foo_request<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_s: &str,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x68a61c2a230db8b8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_s),);
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooRequest");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-        Ok(())
-    }
-    pub fn encode_foo_response<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_y: i64,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x68a61c2a230db8b8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_y),);
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooResponse");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Super_ControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -720,51 +675,6 @@ impl SubRequest {
         match *self {
             SubRequest::Foo { .. } => "foo",
         }
-    }
-}
-
-pub struct SubEncoder;
-
-impl SubEncoder {
-    pub fn encode_foo_request<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_s: &str,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x68a61c2a230db8b8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_s),);
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooRequest");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-        Ok(())
-    }
-    pub fn encode_foo_response<'a>(
-        out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        tx_id: u32,
-        mut in_y: i64,
-    ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(
-            tx_id,
-            0x68a61c2a230db8b8,
-            fidl::encoding::DynamicFlags::empty(),
-        );
-        let mut body = ((in_y),);
-        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooResponse");
-        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
-        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
-        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
-
-        Ok(())
     }
 }
 

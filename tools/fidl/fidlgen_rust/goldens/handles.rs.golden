@@ -671,10 +671,6 @@ impl SomeProtocolRequest {
     }
 }
 
-pub struct SomeProtocolEncoder;
-
-impl SomeProtocolEncoder {}
-
 #[derive(Debug, Clone)]
 pub struct SomeProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
