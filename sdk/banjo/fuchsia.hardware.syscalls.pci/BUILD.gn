@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.syscalls.pci") {
-  sdk_category = "partner"
+  sdk_category = "experimental"
   sources = [ "pci.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
