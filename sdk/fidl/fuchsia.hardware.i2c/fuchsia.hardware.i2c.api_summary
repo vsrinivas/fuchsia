@@ -1,5 +1,3 @@
-protocol/member fuchsia.hardware.i2c/Device.SubordinateTransfer(vector<uint8>:8196 in) -> (int32 s,vector<uint8>:8196 out)
-protocol fuchsia.hardware.i2c/Device
 protocol/member fuchsia.hardware.i2c/Device2.Transfer(vector<bool>:8 segments_is_write,vector<vector<uint8>:8196>:8 write_segments_data,vector<uint8>:8 read_segments_length) -> (fuchsia.hardware.i2c/Device2_Transfer_Result result)
 protocol fuchsia.hardware.i2c/Device2
 struct/member fuchsia.hardware.i2c/Device2_Transfer_Response.read_segments_data vector<vector<uint8>:8196>:8
@@ -22,9 +20,6 @@ table fuchsia.hardware.i2c/I2CChannel
 const fuchsia.hardware.i2c/MAX_COUNT_SEGMENTS uint32 8
 const fuchsia.hardware.i2c/MAX_I2C_CHANNEL uint32 128
 const fuchsia.hardware.i2c/MAX_TRANSFER_SIZE uint32 8196
-struct/member fuchsia.hardware.i2c/Segment.len uint32
-struct/member fuchsia.hardware.i2c/Segment.type uint32
-struct fuchsia.hardware.i2c/Segment
 enum/member fuchsia.hardware.i2c/SegmentType.END 1
 enum/member fuchsia.hardware.i2c/SegmentType.READ 2
 enum/member fuchsia.hardware.i2c/SegmentType.WRITE 3

@@ -48,28 +48,7 @@ type I2CBusMetadata = table {
     1: channels vector<I2CChannel>:MAX_I2C_CHANNEL;
 };
 
-/// Segment header for a serialized SubordinateTransfer.
-/// TODO(fxbug.dev/32864): Avoid requiring serialization and have SubordinateTransfer take an argument of
-/// `vector<Segment>:MAX_SEGMENTS` instead once we have better support in the C bindings or for C++.
-@for_deprecated_c_bindings
-type Segment = struct {
-    type uint32;
-    len uint32;
-};
-
-@for_deprecated_c_bindings
-protocol Device {
-    /// Send and receive data on the I2C device.
-    SubordinateTransfer(struct {
-        in vector<uint8>:MAX_TRANSFER_SIZE;
-    }) -> (struct {
-        s zx.status;
-        out vector<uint8>:MAX_TRANSFER_SIZE;
-    });
-};
-
-// `Device2` removes the simple layout restriction and fully specifies the format in FIDL instead
-// of manually parsed structs as `Device` above.
+// A previous `Device` is now removed.
 protocol Device2 {
     /// Write and read segments of data for a particular I2C device.
     ///
