@@ -13,8 +13,8 @@ use {
 };
 
 lazy_static! {
-    // Regex to check whether the output of `lscpu` contains either VT-x or AMD-V to confirm that the CPU supports virtualization.
-    static ref CPU_VIRTUALIZATION_RE: Regex = Regex::new(r"Virtualization:(\s)*(VT-x|AMD-V).*").unwrap();
+    // Regex to check whether /proc/cpuinfo indicates either VT-x or AMD-V virtualization extensions.
+    static ref CPU_VIRTUALIZATION_RE: Regex = Regex::new(r"(?m)^flags\s*:.*\b(vmx|svm)\b").unwrap();
 }
 
 static NO_CPU_VIRT_MESSAGE: &str = "CPU does not support virtualization. This \
@@ -35,10 +35,11 @@ pub struct EmuAcceleration<'a> {
 }
 
 pub fn linux_check_cpu_virtualization(command_runner: &CommandRunner) -> Result<bool> {
-    let (status, stdout, stderr) = (command_runner)(&vec!["lscpu"])?;
+    let (status, stdout, stderr) = (command_runner)(&vec!["cat", "/proc/cpuinfo"])?;
+    print!("{}", stdout.as_str());
     if !status.success() {
         return Err(anyhow!(
-            "Could not exec `lscpu`: exited with code {}, stdout: {}, stderr: {}",
+            "Could not exec `cat /proc/cpuinfo`: exited with code {}, stdout: {}, stderr: {}",
             status.code(),
             stdout,
             stderr
@@ -91,89 +92,96 @@ impl PreflightCheck for EmuAcceleration<'_> {
 mod test {
     use {super::*, crate::command_runner::ExitStatus};
 
-    static LSCPU_OUTPUT_GOOD_INTEL: &str = "Architecture:                    x86_64
-    CPU op-mode(s):                  32-bit, 64-bit
-    Byte Order:                      Little Endian
-    Address sizes:                   46 bits physical, 48 bits virtual
-    CPU(s):                          12
-    On-line CPU(s) list:             0-11
-    Thread(s) per core:              2
-    Core(s) per socket:              6
-    Socket(s):                       1
-    NUMA node(s):                    1
-    Vendor ID:                       GenuineIntel
-    CPU family:                      6
-    Model:                           85
-    Model name:                      Intel(R) Xeon(R) W-2135 CPU @ 3.70GHz
-    Stepping:                        4
-    CPU MHz:                         1223.575
-    CPU max MHz:                     4500.0000
-    CPU min MHz:                     1200.0000
-    BogoMIPS:                        7399.70
-    Virtualization:                  VT-x
-    L1d cache:                       192 KiB
-    L1i cache:                       192 KiB
-    L2 cache:                        6 MiB
-    L3 cache:                        8.3 MiB
-    NUMA node0 CPU(s):               0-11";
-    static LSCPU_OUTPUT_GOOD_AMD: &str = "Architecture:                    x86_64
-    CPU op-mode(s):                  32-bit, 64-bit
-    Byte Order:                      Little Endian
-    Address sizes:                   43 bits physical, 48 bits virtual
-    CPU(s):                          128
-    On-line CPU(s) list:             0-127
-    Thread(s) per core:              2
-    Core(s) per socket:              64
-    Socket(s):                       1
-    NUMA node(s):                    1
-    Vendor ID:                       AuthenticAMD
-    CPU family:                      6
-    Model:                           85
-    Model name:                      AMD EPYC 7V12 64-Core Processor
-    Stepping:                        4
-    CPU MHz:                         1500.061
-    CPU max MHz:                     2450.0000
-    CPU min MHz:                     1500.0000
-    BogoMIPS:                        4900.44
-    Virtualization:                  AMD-V
-    L1d cache:                       2 MiB
-    L1i cache:                       2 MiB
-    L2 cache:                        32 MiB
-    L3 cache:                        256 MiB
-    NUMA node0 CPU(s):               0-127";
-    static LSCPU_OUTPUT_GOOD_BAD: &str = "Architecture:                    x86_64
-    CPU op-mode(s):                  32-bit, 64-bit
-    Byte Order:                      Little Endian
-    Address sizes:                   43 bits physical, 48 bits virtual
-    CPU(s):                          128
-    On-line CPU(s) list:             0-127
-    Thread(s) per core:              2
-    Core(s) per socket:              64
-    Socket(s):                       1
-    NUMA node(s):                    1
-    Vendor ID:                       AuthenticAMD
-    CPU family:                      6
-    Model:                           85
-    Model name:                      AMD EPYC 7V12 64-Core Processor
-    Stepping:                        4
-    CPU MHz:                         1500.061
-    CPU max MHz:                     2450.0000
-    CPU min MHz:                     1500.0000
-    BogoMIPS:                        4900.44
-    Virtualization:                  none
-    L1d cache:                       2 MiB
-    L1i cache:                       2 MiB
-    L2 cache:                        32 MiB
-    L3 cache:                        256 MiB
-    NUMA node0 CPU(s):               0-127";
+    static CPUINFO_OUTPUT_GOOD_INTEL: &str = "processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 142
+model name	: Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+stepping	: 10
+microcode	: 0xea
+cpu MHz		: 2100.000
+cache size	: 8192 KB
+physical id	: 0
+siblings	: 8
+core id		: 0
+cpu cores	: 4
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single pti ssbd ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d
+vmx flags	: vnmi preemption_timer invvpid ept_x_only ept_ad ept_1gb flexpriority tsc_offset vtpr mtf vapic ept vpid unrestricted_guest ple shadow_vmcs pml ept_mode_based_exec
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs taa itlb_multihit srbds
+bogomips	: 4199.88
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:";
+
+    static CPUINFO_OUTPUT_GOOD_AMD: &str = "processor       : 0
+vendor_id       : AuthenticAMD
+cpu family      : 23
+model           : 1
+model name      : AMD EPYC 7601 32-Core Processor
+stepping        : 2
+microcode       : 0x8001206
+cpu MHz         : 1200.000
+cache size      : 512 KB
+physical id     : 1
+siblings        : 64
+core id         : 7
+cpu cores       : 32
+apicid          : 127
+initial apicid  : 127
+fpu             : yes
+fpu_exception   : yes
+cpuid level     : 13
+wp              : yes
+flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc extd_apicid amd_dcm aperfmperf eagerfpu pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_l2 mwaitx cpb hw_pstate vmmcall fsgsbase bmi1 avx2 smep bmi2 rdseed adx smap clflushopt sha_ni xsaveopt xsavec xgetbv1 xsaves clzero irperf arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic overflow_recov succor smca
+bugs            : fxsave_leak sysret_ss_attrs null_seg
+bogomips        : 4399.27
+TLB size        : 2560 4K pages
+clflush size    : 64
+cache_alignment : 64
+address sizes   : 48 bits physical, 48 bits virtual
+power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]";
+    static CPUINFO_OUTPUT_GOOD_BAD: &str = "processor	: 0
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 1
+model name	: AMD EPYC 7601 32-Core Processor
+stepping	: 2
+microcode	: 0x1000065
+cpu MHz		: 2200.000
+cache size	: 512 KB
+physical id	: 0
+siblings	: 1
+core id		: 0
+cpu cores	: 1
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm rep_good nopl cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw perfctr_core ssbd ibpb vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 rdseed adx smap clflushopt sha_ni xsaveopt xsavec xgetbv1 virt_ssbd arat arch_capabilities
+bugs		: fxsave_leak sysret_ss_attrs null_seg spectre_v1 spectre_v2 spec_store_bypass
+bogomips	: 4401.33
+TLB size	: 1024 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 40 bits physical, 48 bits virtual
+power management:";
     static KERN_HV_SUPPORTED: &str = "\nkern.hv_support: 1\n";
     static KERN_HV_UNSUPPORTED: &str = "kern.hv_support: 0";
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_linux_cpu_unsupported() -> Result<()> {
         let run_command: CommandRunner = |args| {
-            assert_eq!(args.to_vec(), vec!["lscpu"]);
-            return Ok((ExitStatus(0), LSCPU_OUTPUT_GOOD_BAD.to_string(), "".to_string()));
+            assert_eq!(args.to_vec(), vec!["cat", "/proc/cpuinfo"]);
+            return Ok((ExitStatus(0), CPUINFO_OUTPUT_GOOD_BAD.to_string(), "".to_string()));
         };
 
         let check = EmuAcceleration::new(&run_command);
@@ -185,8 +193,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_linux_kvm_not_enabled() -> Result<()> {
         let run_command: CommandRunner = |args| {
-            if args.to_vec() == vec!["lscpu"] {
-                return Ok((ExitStatus(0), LSCPU_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
+            if args.to_vec() == vec!["cat", "/proc/cpuinfo"] {
+                return Ok((ExitStatus(0), CPUINFO_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
             }
             assert_eq!(args.to_vec(), vec!["test", "-r", "/dev/kvm"]);
             Ok((ExitStatus(1), "".to_string(), "".to_string()))
@@ -201,8 +209,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_linux_success_intel() -> Result<()> {
         let run_command: CommandRunner = |args| {
-            if args.to_vec() == vec!["lscpu"] {
-                return Ok((ExitStatus(0), LSCPU_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
+            if args.to_vec() == vec!["cat", "/proc/cpuinfo"] {
+                return Ok((ExitStatus(0), CPUINFO_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
             }
             assert_eq!(args.to_vec(), vec!["test", "-r", "/dev/kvm"]);
             Ok((ExitStatus(0), "".to_string(), "".to_string()))
@@ -217,8 +225,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_linux_success_amd() -> Result<()> {
         let run_command: CommandRunner = |args| {
-            if args.to_vec() == vec!["lscpu"] {
-                return Ok((ExitStatus(0), LSCPU_OUTPUT_GOOD_AMD.to_string(), "".to_string()));
+            if args.to_vec() == vec!["cat", "/proc/cpuinfo"] {
+                return Ok((ExitStatus(0), CPUINFO_OUTPUT_GOOD_AMD.to_string(), "".to_string()));
             }
             assert_eq!(args.to_vec(), vec!["test", "-r", "/dev/kvm"]);
             Ok((ExitStatus(0), "".to_string(), "".to_string()))
