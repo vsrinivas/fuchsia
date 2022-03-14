@@ -287,7 +287,7 @@ class OutgoingMessage : public ::fidl::Status {
     return message_.iovec;
   }
 
-  using Result::SetStatus;
+  using Status::SetStatus;
 
   const internal::TransportVTable* transport_vtable_ = nullptr;
   fidl_outgoing_msg_t message_ = {};

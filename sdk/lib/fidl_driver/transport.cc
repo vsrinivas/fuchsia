@@ -234,7 +234,7 @@ zx_status_t DriverWaiter::Begin() {
         status =
             fdf_channel_read(state.handle, 0, &arena, &data, &num_bytes, &handles, &num_handles);
         if (status != ZX_OK) {
-          return state.failure_handler(fidl::UnbindInfo(fidl::Result::TransportError(status)));
+          return state.failure_handler(fidl::UnbindInfo(fidl::Status::TransportError(status)));
         }
 
         internal::IncomingTransportContext incoming_transport_context =

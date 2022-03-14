@@ -88,7 +88,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    const fidl::Result event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+    const fidl::Status event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
                                           ->OnReadyForSendFrames(kRadioboundAllowanceInit);
     if (event_result.ok()) {
       zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInit) sent");
@@ -129,14 +129,14 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                               SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    const fidl::Result event_result =
+    const fidl::Status event_result =
         fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
             ->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
     if (!event_result.ok()) {
       zxlogf(ERROR, "OnError failed to send: %s", event_result.FormatDescription().c_str());
     }
   } else if (request->data.count() > kMaxFrameSize) {
-    const fidl::Result event_result =
+    const fidl::Status event_result =
         fidl::WireSendEvent((*ot_radio_obj_.fidl_binding_))
             ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
     if (!event_result.ok()) {
@@ -162,7 +162,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestVi
     ot_radio_obj_.radiobound_cnt_++;
 
     if ((ot_radio_obj_.radiobound_cnt_ & 1) == 0) {
-      const fidl::Result event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+      const fidl::Status event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
                                             ->OnReadyForSendFrames(kRadioboundAllowanceInc);
       if (event_result.ok()) {
         zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInc) sent");
@@ -341,7 +341,7 @@ zx_status_t FakeOtRadioDevice::TrySendClientboundFrame() {
       !clientbound_queue_.empty()) {
     // send out 1 packet
     auto data = fidl::VectorView<uint8_t>::FromExternal(clientbound_queue_.front());
-    fidl::Result result = fidl::WireSendEvent(*fidl_binding_)->OnReceiveFrame(data);
+    fidl::Status result = fidl::WireSendEvent(*fidl_binding_)->OnReceiveFrame(data);
     if (!result.ok()) {
       zxlogf(ERROR, "fake-ot-radio: failed to send OnReceive() event due to %s",
              result.FormatDescription().c_str());

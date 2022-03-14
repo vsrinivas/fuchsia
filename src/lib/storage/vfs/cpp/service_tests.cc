@@ -149,7 +149,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   };
 
   EventHandler event_handler;
-  fidl::Result handler_result = event_handler.HandleOneEvent(abc->client);
+  fidl::Status handler_result = event_handler.HandleOneEvent(abc->client);
   // Expect that |on_open| was received
   EXPECT_TRUE(handler_result.ok());
 

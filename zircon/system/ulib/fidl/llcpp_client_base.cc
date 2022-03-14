@@ -174,7 +174,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
     } else {
       // Received unknown txid.
       return UnbindInfo{
-          Result::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
+          Status::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
   return context->OnRawResult(std::move(msg), std::move(transport_context));

@@ -618,7 +618,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     TRACE_ASYNC_END("gfx", "BufferCollection::WaitForBuffersAllocated async", async_id, "this",
                     this, "logical_buffer_collection", &logical_buffer_collection());
     txn.Reply(logical_allocation_result_->status, std::move(v1));
-    fidl::Result reply_status = txn.result_of_reply();
+    fidl::Status reply_status = txn.result_of_reply();
     if (!reply_status.ok()) {
       FailAsync(FROM_HERE, reply_status.status(),
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"

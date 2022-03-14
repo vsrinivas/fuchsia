@@ -526,7 +526,7 @@ Dereferencing a `fidl::WireClient` provides access to the following methods:
 
 * For `StartGame` (fire and forget):
 
-    * `fidl::Result StartGame(bool start_first)`: Managed variant of a fire and
+    * `fidl::Status StartGame(bool start_first)`: Managed variant of a fire and
       forget method.
 
 * For `MakeMove` (two way):
@@ -560,7 +560,7 @@ valid.
 
 `fidl::WireClient::buffer` provides access to the following methods:
 
-* `fidl::Result StartGame(bool start_first)`: Caller-allocated variant of a fire
+* `fidl::Status StartGame(bool start_first)`: Caller-allocated variant of a fire
   and forget method.
 * `void MakeMove(uint8_t row, uint8_t col,
   fidl::WireResponseContext<MakeMove>* context)`: Asynchronous, caller-allocated
@@ -608,7 +608,7 @@ following methods:
 * `WireSyncClient& operator=(WireSyncClient&&)`: Default move assignment.
 * `const fidl::ClientEnd<TicTacToe>& client_end() const`: Returns the underlying
   [client endpoint](#typed-channels).
-* `fidl::Result StartGame(bool start_first)`: Managed variant of a fire and
+* `fidl::Status StartGame(bool start_first)`: Managed variant of a fire and
   forget method call. Buffer allocation for requests are entirely handled within
   this function.
 * `fidl::WireResult<TicTacToe::MakeMove> MakeMove(uint8_t row, uint8_t col)`:
@@ -619,7 +619,7 @@ following methods:
   FIDL wire-format and maximum length constraints. The buffers are allocated on
   the stack if they fit under 512 bytes, or else on the heap. See
   [WireResult](#result) for details on buffer management.
-* `fidl::Result HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to
+* `fidl::Status HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to
   consume exactly one event from the channel. See [Events](#events).
 
 `fidl::WireSyncClient<TicTacToe>::buffer` provides the following methods:
@@ -664,7 +664,7 @@ client endpoint:
 The managed variants of each method of `WireSyncClient` and `WireCall` all
 return a `fidl::WireResult<Method>` type, whereas the caller-allocating variants
 all return an `fidl::WireUnownedResult<Method>`. Fire and forget methods on
-`fidl::WireClient` return a `fidl::Result`. These types define the same set of
+`fidl::WireClient` return a `fidl::Status`. These types define the same set of
 methods:
 
 *   `zx_status status() const` returns the transport status. it returns the
@@ -785,8 +785,8 @@ correspond to the variants present in the [client API](#client). For example,
 both `MakeMoveCompleter::Sync` and `MakeMoveCompleter::Async` provide the
 following `Reply` methods:
 
-* `::fidl::Result Reply(bool success, fidl::ObjectView<GameState> new_state)`
-* `::fidl::Result Reply(fidl::BufferSpan _buffer, bool success,
+* `::fidl::Status Reply(bool success, fidl::ObjectView<GameState> new_state)`
+* `::fidl::Status Reply(fidl::BufferSpan _buffer, bool success,
   fidl::ObjectView<GameState> new_state)`
 
 Because the status returned by Reply is identical to the unbinding status, it
@@ -915,10 +915,10 @@ be allocated.
 There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
 
-* `::fidl::Result fidl::WireSyncClient<TicTacToe>::HandleOneEvent(
+* `::fidl::Status fidl::WireSyncClient<TicTacToe>::HandleOneEvent(
        SyncEventHandler& event_handler)`:
   A bound version for sync clients.
-* `::fidl::Result fidl::WireSyncEventHandler<TicTacToe>::HandleOneEvent(
+* `::fidl::Status fidl::WireSyncEventHandler<TicTacToe>::HandleOneEvent(
        fidl::UnownedClientEnd<TicTacToe> client_end)`:
   An unbound version that
   uses an `fidl::UnownedClientEnd<TicTacToe>` to handle one event for a
@@ -959,7 +959,7 @@ The event sender interface contains methods for sending each event. As a
 concrete example, the event sender interface for `TicTacToe` provides the
 following methods:
 
-* `fidl::Result OnOpponentMove(GameState new_state)`: Managed flavor.
+* `fidl::Status OnOpponentMove(GameState new_state)`: Managed flavor.
 
 Calling `.buffer(...)` returns a similar interface for the caller-allocating
 flavor, allocating encoding buffers from the memory resource passed to

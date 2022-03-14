@@ -387,7 +387,7 @@ fuchsia_driver_framework::wire::NodeAddArgs Node::CreateAddArgs(fidl::AnyArena& 
 
 void Node::OnBind() const {
   if (controller_ref_) {
-    fidl::Result result = fidl::WireSendEvent(*controller_ref_)->OnBind();
+    fidl::Status result = fidl::WireSendEvent(*controller_ref_)->OnBind();
     if (!result.ok()) {
       LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().data());
     }

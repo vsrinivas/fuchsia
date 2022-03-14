@@ -24,7 +24,7 @@
 namespace fidl {
 
 // |Error| is a type alias for when the result of an operation is an error.
-using Error = Result;
+using Error = Status;
 
 namespace internal {
 

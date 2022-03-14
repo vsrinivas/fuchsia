@@ -114,7 +114,7 @@ void LogListener::PendingMessage::Complete() {
   std::visit(overloaded{[](std::monostate&) {},
                         [](LogCompleter::Async& c) {
                           c.Reply();
-                          fidl::Result result = c.result_of_reply();
+                          fidl::Status result = c.result_of_reply();
                           if (!result.ok()) {
                             printf("netsvc: failed to confirm logs: %s\n",
                                    result.FormatDescription().c_str());
@@ -122,7 +122,7 @@ void LogListener::PendingMessage::Complete() {
                         },
                         [](LogManyCompleter::Async& c) {
                           c.Reply();
-                          fidl::Result result = c.result_of_reply();
+                          fidl::Status result = c.result_of_reply();
                           if (!result.ok()) {
                             printf("netsvc: failed to confirm logs: %s\n",
                                    result.FormatDescription().c_str());

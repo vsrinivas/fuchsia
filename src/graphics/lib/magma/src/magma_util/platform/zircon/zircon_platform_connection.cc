@@ -20,7 +20,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
   magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
                                                  uint32_t buffer_offset, uint64_t time,
                                                  uint32_t result_flags) override {
-    fidl::Result result =
+    fidl::Status result =
         fidl::WireSendEvent(server_end_)
             ->OnPerformanceCounterReadCompleted(
                 trigger_id, buffer_id, buffer_offset, time,
@@ -144,7 +144,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   bytes_imported_ += size;
 
   if (messages_consumed_ >= kMaxInflightMessages / 2) {
-    fidl::Result result =
+    fidl::Status result =
         fidl::WireSendEvent(server_binding_.value())->OnNotifyMessagesConsumed(messages_consumed_);
     if (result.ok()) {
       messages_consumed_ = 0;
@@ -154,7 +154,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 
   if (bytes_imported_ >= kMaxInflightBytes / 2) {
-    fidl::Result result =
+    fidl::Status result =
         fidl::WireSendEvent(server_binding_.value())->OnNotifyMemoryImported(bytes_imported_);
     if (result.ok()) {
       bytes_imported_ = 0;

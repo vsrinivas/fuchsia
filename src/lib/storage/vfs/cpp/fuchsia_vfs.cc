@@ -348,7 +348,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
   if (options->flags.describe) {
     zx::status<VnodeRepresentation> result = internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      // TODO(fxbug.dev/95144) Use the returned fidl::Result's status value.
+      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
       (void)fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
           ->OnOpen(result.status_value(), fio::wire::NodeInfo());
       return result.status_value();
@@ -357,7 +357,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
       fidl::ServerEnd<fuchsia_io::Node> typed_server_end(std::move(server_end));
-      // TODO(fxbug.dev/95144) Use the returned fidl::Result's status value.
+      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
       (void)fidl::WireSendEvent(typed_server_end)->OnOpen(ZX_OK, std::move(info));
       server_end = typed_server_end.TakeChannel();
     });

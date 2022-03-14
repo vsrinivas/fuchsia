@@ -136,7 +136,7 @@ void CoreDisplayTest::SetUp() {
 
   EventHandler event_handler;
   do {
-    fidl::Result result = dc_client_.HandleOneEvent(event_handler);
+    fidl::Status result = dc_client_.HandleOneEvent(event_handler);
     ASSERT_TRUE(result.ok());
   } while (!event_handler.has_display());
 

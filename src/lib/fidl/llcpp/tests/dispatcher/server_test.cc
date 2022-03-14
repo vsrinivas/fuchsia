@@ -154,7 +154,7 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
   };
 
   {
-    auto msg = fidl::IncomingMessage::Create(fidl::Result::TransportError(ZX_ERR_BAD_HANDLE));
+    auto msg = fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_BAD_HANDLE));
     MockTransaction txn;
     fidl::DispatchResult result = fidl::internal::TryDispatch(
         nullptr, msg, fidl::internal::IncomingTransportContext(), &txn, nullptr, nullptr);
@@ -163,7 +163,7 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
   }
 
   {
-    auto msg = fidl::IncomingMessage::Create(fidl::Result::TransportError(ZX_ERR_BAD_HANDLE));
+    auto msg = fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_BAD_HANDLE));
     MockTransaction txn;
     fidl::internal::Dispatch(nullptr, msg, fidl::internal::IncomingTransportContext(), &txn,
                              nullptr, nullptr);

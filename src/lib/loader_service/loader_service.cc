@@ -63,7 +63,7 @@ void LoaderConnection::LoadObject(LoadObjectRequestView request,
     }
 
     completer.Reply(status.status_value(), std::move(status).value_or(zx::vmo()));
-    fidl::Result result = completer.result_of_reply();
+    fidl::Status result = completer.result_of_reply();
     if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to LoadObject(" << name
                        << "): " << result.error();
@@ -92,7 +92,7 @@ void LoaderConnection::Config(ConfigRequestView request, ConfigCompleter::Sync& 
 
   auto reply = [this, &config_str, &completer](zx_status_t status) {
     completer.Reply(status);
-    fidl::Result result = completer.result_of_reply();
+    fidl::Status result = completer.result_of_reply();
     if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to Config(" << config_str
                        << "): " << result.error();

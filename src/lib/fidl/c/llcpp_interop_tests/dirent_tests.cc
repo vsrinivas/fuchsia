@@ -598,7 +598,7 @@ void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dire
   };
 
   EventHandler event_handler(expected_dirents);
-  ::fidl::Result result = event_handler.HandleOneEvent(zx::unowned_channel(chan));
+  ::fidl::Status result = event_handler.HandleOneEvent(zx::unowned_channel(chan));
   ASSERT_OK(result.status());
   ASSERT_OK(event_handler.status());
 }

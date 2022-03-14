@@ -1102,7 +1102,7 @@ void Client::ApplyConfig() {
 
   bool config_missing_image = false;
   // Clients can apply zero-layer configs. Ensure that the VLA is at least 1 element long.
-  layer_t* layers[layers_.size()+1];
+  layer_t* layers[layers_.size() + 1];
   int layer_idx = 0;
 
   // Layers may have pending images, and it is possible that a layer still
@@ -1193,7 +1193,7 @@ void Client::SetOwnership(bool is_owner) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   is_owner_ = is_owner;
 
-  fidl::Result result = binding_state_.SendEvents([&](auto&& endpoint) {
+  fidl::Status result = binding_state_.SendEvents([&](auto&& endpoint) {
     return fidl::WireSendEvent(endpoint)->OnClientOwnershipChange(is_owner);
   });
   if (!result.ok()) {
@@ -1370,7 +1370,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   }
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
-    fidl::Result result = binding_state_.SendEvents([&](auto&& endpoint) {
+    fidl::Status result = binding_state_.SendEvents([&](auto&& endpoint) {
       return fidl::WireSendEvent(endpoint)->OnDisplaysChanged(
           fidl::VectorView<fhd::wire::Info>::FromExternal(coded_configs),
           fidl::VectorView<uint64_t>::FromExternal(removed_ids));
@@ -1641,7 +1641,7 @@ zx_status_t ClientProxy::OnCaptureComplete() {
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                         config_stamp_t controller_stamp) {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
-  fidl::Result event_sending_result = fidl::Result::Ok();
+  fidl::Status event_sending_result = fidl::Status::Ok();
 
   config_stamp_t client_stamp = {};
   auto it =

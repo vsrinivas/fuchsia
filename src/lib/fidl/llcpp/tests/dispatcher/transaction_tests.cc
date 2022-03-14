@@ -152,7 +152,7 @@ TEST(CompleterResultOfReply, EncodeError) {
   // We are using the fact that 2 isn't a valid enum value to cause an error.
   EXPECT_FALSE(txn.error().has_value());
   completer.Reply(static_cast<fidl_test_coding_fuchsia::wire::TestEnum>(2));
-  fidl::Result result = completer.result_of_reply();
+  fidl::Status result = completer.result_of_reply();
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
 }
@@ -172,7 +172,7 @@ TEST(CompleterResultOfReply, TransportError) {
   FakeTransportErrorTransaction txn{};
   Completer completer(&txn);
   completer.Reply(0);
-  fidl::Result result = completer.result_of_reply();
+  fidl::Status result = completer.result_of_reply();
   EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
   EXPECT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
 }

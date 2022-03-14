@@ -321,15 +321,10 @@ class [[nodiscard]] Status {
 // Logs a full description of the result to an output stream.
 std::ostream& operator<<(std::ostream& ostream, const Status& result);
 
-// fidl::Result is being renamed to fidl::Status and will be removed after
-// there are no more usages.
-// TODO(fxbug.dev/95217) Remove this alias.
-using Result = Status;
-
 // Implement |DisplayError| for |fidl::Result|.
 template <>
-struct fidl::internal::DisplayError<fidl::Result> {
-  static size_t Format(const fidl::Result& value, char* destination, size_t capacity);
+struct fidl::internal::DisplayError<fidl::Status> {
+  static size_t Format(const fidl::Status& value, char* destination, size_t capacity);
 };
 
 // |Error| is a type alias for when the result of an operation is an error.

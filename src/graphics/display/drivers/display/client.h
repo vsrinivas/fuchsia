@@ -137,11 +137,11 @@ class DisplayControllerBindingState {
   //
   // |fn| must be a templated lambda that calls
   // |fidl::WireSendEvent(arg)->OnSomeEvent| to send |OnSomeEvent| event, and
-  // returns a |fidl::Result|.
+  // returns a |fidl::Status|.
   template <typename EventSenderConsumer>
-  fidl::Result SendEvents(EventSenderConsumer&& fn) {
+  fidl::Status SendEvents(EventSenderConsumer&& fn) {
     return std::visit(
-        [&](auto&& arg) -> fidl::Result {
+        [&](auto&& arg) -> fidl::Status {
           using T = std::decay_t<decltype(arg)>;
           if constexpr (std::is_same_v<T, fidl::ServerBindingRef<Protocol>>) {
             return fn(arg);

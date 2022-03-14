@@ -79,7 +79,7 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(fidl::UnownedClientEnd<fio::No
     };
 
     EventHandler event_handler{};
-    fidl::Result event_result = event_handler.HandleOneEvent(channel);
+    fidl::Status event_result = event_handler.HandleOneEvent(channel);
     // Expect that |on_open| was received
     ASSERT_TRUE(event_result.ok());
     fidl::WireEvent<fio::Node::OnOpen> response = event_handler.GetResponse();

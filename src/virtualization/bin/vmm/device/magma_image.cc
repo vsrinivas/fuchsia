@@ -435,7 +435,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return unbind_info->status();
   }
 
-  const fidl::Result call_result = collection_->Close();
+  const fidl::Status call_result = collection_->Close();
   if (!call_result.ok()) {
     LOG_VERBOSE("Close: %s", call_result.FormatDescription().c_str());
   }

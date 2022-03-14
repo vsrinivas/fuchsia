@@ -98,7 +98,7 @@ Err Executor::Execute(std::unique_ptr<Command> command,
 
   EventHandler event_handler(out_callback, err_callback);
   while (!event_handler.done()) {
-    ::fidl::Result result = client_->HandleOneEvent(event_handler);
+    ::fidl::Status result = client_->HandleOneEvent(event_handler);
     if (!result.ok()) {
       return Err(result.status(), result.status_string());
     }

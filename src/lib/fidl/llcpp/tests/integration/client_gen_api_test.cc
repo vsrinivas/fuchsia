@@ -150,7 +150,7 @@ TEST(GenAPITestCase, OneWaySyncManaged) {
   auto server = std::make_shared<Server>(kData, strlen(kData));
   fidl::BindServer(loop.dispatcher(), std::move(remote), server);
 
-  fidl::Result result = client.sync()->OneWay(fidl::StringView(kData));
+  fidl::Status result = client.sync()->OneWay(fidl::StringView(kData));
   EXPECT_OK(result.status());
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_EQ(1, server->one_way_count());
@@ -753,7 +753,7 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
     // Make a client method call which should fail, but not interfere with
     // reading the event.
     {
-      fidl::Result result = client->OneWay("foo");
+      fidl::Status result = client->OneWay("foo");
       EXPECT_EQ(fidl::Reason::kPeerClosed, result.reason());
       EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
     }
@@ -762,7 +762,7 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
 
     // The client binding should still be torn down.
     {
-      fidl::Result result = client->OneWay("foo");
+      fidl::Status result = client->OneWay("foo");
       EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
       EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
     }

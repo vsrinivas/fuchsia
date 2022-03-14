@@ -189,32 +189,32 @@ class Service final : public fidl::WireServer<fuchsia_shell::Shell> {
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
-  fidl::Result OnError(uint64_t context_id,
+  fidl::Status OnError(uint64_t context_id,
                        fidl::VectorView<fuchsia_shell::wire::Location>&& locations,
                        const std::string& error_message) {
     return fidl::WireSendEvent(binding_.value())
         ->OnError(context_id, std::move(locations), fidl::StringView::FromExternal(error_message));
   }
 
-  fidl::Result OnError(uint64_t context_id, const std::string& error_message) {
+  fidl::Status OnError(uint64_t context_id, const std::string& error_message) {
     fidl::VectorView<fuchsia_shell::wire::Location> locations;
     return OnError(context_id, std::move(locations), error_message);
   }
 
-  fidl::Result OnDumpDone(uint64_t context_id) {
+  fidl::Status OnDumpDone(uint64_t context_id) {
     return fidl::WireSendEvent(binding_.value())->OnDumpDone(context_id);
   }
 
-  fidl::Result OnExecutionDone(uint64_t context_id, fuchsia_shell::wire::ExecuteResult result) {
+  fidl::Status OnExecutionDone(uint64_t context_id, fuchsia_shell::wire::ExecuteResult result) {
     return fidl::WireSendEvent(binding_.value())->OnExecutionDone(context_id, result);
   }
 
-  fidl::Result OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
+  fidl::Status OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
     return fidl::WireSendEvent(binding_.value())
         ->OnTextResult(context_id, fidl::StringView::FromExternal(result), partial_result);
   }
 
-  fidl::Result OnResult(uint64_t context_id, fidl::VectorView<fuchsia_shell::wire::Node>&& nodes,
+  fidl::Status OnResult(uint64_t context_id, fidl::VectorView<fuchsia_shell::wire::Node>&& nodes,
                         bool partial_result) {
     return fidl::WireSendEvent(binding_.value())
         ->OnResult(context_id, std::move(nodes), partial_result);

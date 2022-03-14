@@ -702,7 +702,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
           std::thread([&worker_start, &worker_running, &server_binding, &num_failures]() {
             ZX_ASSERT(ZX_OK == sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
             for (size_t i = 0; i < kNumEventsPerThread; i++) {
-              fidl::Result result =
+              fidl::Status result =
                   fidl::WireSendEvent(server_binding)->OnEvent(fidl::StringView("a"));
               if (!result.ok()) {
                 // |ZX_ERR_CANCELED| indicates unbinding has happened.
@@ -1254,7 +1254,7 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingEvent) {
   fidl::ServerBindingRef<Example> binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  fidl::Result result = fidl::WireSendEvent(binding)->OnEvent("");
+  fidl::Status result = fidl::WireSendEvent(binding)->OnEvent("");
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
 
   ASSERT_FALSE(observer.DidUnbind());
@@ -1299,7 +1299,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
   local.reset();
 
   // Sending event fails due to client endpoint closing.
-  fidl::Result result = fidl::WireSendEvent(binding)->OnEvent("");
+  fidl::Status result = fidl::WireSendEvent(binding)->OnEvent("");
   ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
 
   // The initial call should still be processed.
@@ -1318,7 +1318,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
       // Sending reply fails due to client endpoint closing.
       EXPECT_EQ(request->in.get(), kData);
       completer.Reply(kData);
-      fidl::Result result = completer.result_of_reply();
+      fidl::Status result = completer.result_of_reply();
       EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
       two_way_called_ = true;
     }

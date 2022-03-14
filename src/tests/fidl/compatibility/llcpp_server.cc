@@ -259,7 +259,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoMinimalNoRetVal(EchoMinimalNoRetValRequestView request,
                            EchoMinimalNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      fidl::Result result = fidl::WireSendEvent(server_binding_.value())->EchoMinimalEvent();
+      fidl::Status result = fidl::WireSendEvent(server_binding_.value())->EchoMinimalEvent();
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
@@ -267,7 +267,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        fidl::Result result() const { return result_; }
+        fidl::Status result() const { return result_; }
 
         void EchoMinimalEvent(fidl::WireEvent<Echo::EchoMinimalEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())->EchoMinimalEvent();
@@ -280,7 +280,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        fidl::Result result_ = fidl::Result::Ok();
+        fidl::Status result_ = fidl::Status::Ok();
       };
 
       EchoClientApp app(request->forward_to_server);
@@ -326,7 +326,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoStructNoRetVal(EchoStructNoRetValRequestView request,
                           EchoStructNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      fidl::Result result =
+      fidl::Status result =
           fidl::WireSendEvent(server_binding_.value())->EchoEvent(std::move(request->value));
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
@@ -335,7 +335,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        fidl::Result result() const { return result_; }
+        fidl::Status result() const { return result_; }
 
         void EchoEvent(fidl::WireEvent<Echo::EchoEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())
@@ -349,7 +349,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        fidl::Result result_ = fidl::Result::Ok();
+        fidl::Status result_ = fidl::Status::Ok();
       };
 
       EchoClientApp app(request->forward_to_server);
@@ -519,7 +519,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoNamedStructNoRetVal(EchoNamedStructNoRetValRequestView request,
                                EchoNamedStructNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      fidl::Result result =
+      fidl::Status result =
           fidl::WireSendEvent(server_binding_.value())->OnEchoNamedEvent(std::move(request->value));
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
@@ -528,7 +528,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        fidl::Result result() const { return result_; }
+        fidl::Status result() const { return result_; }
 
         void OnEchoNamedEvent(fidl::WireEvent<Echo::OnEchoNamedEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())
@@ -542,7 +542,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        fidl::Result result_ = fidl::Result::Ok();
+        fidl::Status result_ = fidl::Status::Ok();
       };
 
       EchoClientApp app(request->forward_to_server);
@@ -612,7 +612,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       fidl::Arena allocator;
       fidl_test_compatibility::wire::ResponseTable resp(allocator);
       resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
-      fidl::Result result =
+      fidl::Status result =
           fidl::WireSendEvent(server_binding_.value())->OnEchoTablePayloadEvent(std::move(resp));
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
@@ -621,7 +621,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        fidl::Result result() const { return result_; }
+        fidl::Status result() const { return result_; }
 
         void OnEchoTablePayloadEvent(
             fidl::WireEvent<Echo::OnEchoTablePayloadEvent>* event) override {
@@ -636,7 +636,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        fidl::Result result_ = fidl::Result::Ok();
+        fidl::Status result_ = fidl::Status::Ok();
       };
 
       EchoClientApp app(request->forward_to_server());
@@ -768,7 +768,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         resp = fidl_test_compatibility::wire::ResponseUnion::WithUnsigned_(
             allocator, request->unsigned_().value);
       }
-      fidl::Result result =
+      fidl::Status result =
           fidl::WireSendEvent(server_binding_.value())->OnEchoUnionPayloadEvent(std::move(resp));
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
@@ -777,7 +777,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        fidl::Result result() const { return result_; }
+        fidl::Status result() const { return result_; }
         void OnEchoUnionPayloadEvent(
             fidl::WireEvent<Echo::OnEchoUnionPayloadEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())
@@ -791,7 +791,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        fidl::Result result_ = fidl::Result::Ok();
+        fidl::Status result_ = fidl::Status::Ok();
       };
 
       EchoClientApp app(forward_to_server);

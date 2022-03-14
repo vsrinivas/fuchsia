@@ -141,7 +141,7 @@ std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info) {
   return ostream;
 }
 
-size_t fidl::internal::DisplayError<fidl::Result>::Format(const fidl::Result& value,
+size_t fidl::internal::DisplayError<fidl::Status>::Format(const fidl::Status& value,
                                                           char* destination, size_t capacity) {
   return value.FormatImpl(destination, capacity, false);
 }

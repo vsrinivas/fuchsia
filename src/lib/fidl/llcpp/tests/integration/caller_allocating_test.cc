@@ -187,7 +187,7 @@ TEST_F(WireClientTest, OneWayCallerAllocate) {
   fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
 
-  fidl::Result result = client.buffer(buffer.view())->Frob("test");
+  fidl::Status result = client.buffer(buffer.view())->Frob("test");
   loop()->RunUntilIdle();
 
   EXPECT_OK(result.status());
@@ -231,7 +231,7 @@ TEST_F(WireSharedClientTest, OneWayCallerAllocate) {
   fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
   fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
 
-  fidl::Result result = client.buffer(buffer.view())->Frob("test");
+  fidl::Status result = client.buffer(buffer.view())->Frob("test");
   loop()->RunUntilIdle();
 
   EXPECT_OK(result.status());
@@ -292,7 +292,7 @@ TEST_F(WireSendEventTest, ServerBindingRefCallerAllocate) {
   fidl::Arena arena;
   ExpectHrobEventHandler event_handler{"test"};
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
-  fidl::Result result = fidl::WireSendEvent(binding_ref()).buffer(arena)->Hrob("test");
+  fidl::Status result = fidl::WireSendEvent(binding_ref()).buffer(arena)->Hrob("test");
 
   EXPECT_OK(result.status());
   EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
@@ -304,7 +304,7 @@ TEST_F(WireSendEventTest, ServerBindingRefCallerAllocateInsufficientBufferSize) 
   uint8_t small_buffer[8];
   ExpectPeerClosedEventHandler event_handler;
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher(), &event_handler);
-  fidl::Result result = fidl::WireSendEvent(binding_ref())
+  fidl::Status result = fidl::WireSendEvent(binding_ref())
                             .buffer(fidl::BufferSpan(small_buffer, sizeof(small_buffer)))
                             ->Hrob("test");
 
@@ -313,7 +313,7 @@ TEST_F(WireSendEventTest, ServerBindingRefCallerAllocateInsufficientBufferSize) 
   // Server is unbound due to the error.
   loop()->RunUntilIdle();
   EXPECT_TRUE(event_handler.peer_closed());
-  fidl::Result error = fidl::WireSendEvent(binding_ref())->Hrob("test");
+  fidl::Status error = fidl::WireSendEvent(binding_ref())->Hrob("test");
   EXPECT_TRUE(error.is_canceled());
 }
 
@@ -326,7 +326,7 @@ TEST(WireSendEventTest, ServerEndCallerAllocate) {
   fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);
 
   fidl::Arena arena;
-  fidl::Result result = fidl::WireSendEvent(server_end).buffer(arena)->Hrob("test");
+  fidl::Status result = fidl::WireSendEvent(server_end).buffer(arena)->Hrob("test");
 
   EXPECT_OK(result.status());
   EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
@@ -343,7 +343,7 @@ TEST(WireSendEventTest, ServerEndCallerAllocateInsufficientBufferSize) {
   fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);
 
   uint8_t small_buffer[8];
-  fidl::Result result = fidl::WireSendEvent(server_end)
+  fidl::Status result = fidl::WireSendEvent(server_end)
                             .buffer(fidl::BufferSpan(small_buffer, sizeof(small_buffer)))
                             ->Hrob("test");
 
@@ -424,7 +424,7 @@ TEST_F(WireCompleterTest, CallerAllocateInsufficientBufferSize) {
         FIDL_ALIGNDECL uint8_t small[8];
         fidl::BufferSpan small_buf(small, sizeof(small));
         completer.buffer(small_buf).Reply(request->value);
-        fidl::Result result = completer.result_of_reply();
+        fidl::Status result = completer.result_of_reply();
         EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
         EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
       });

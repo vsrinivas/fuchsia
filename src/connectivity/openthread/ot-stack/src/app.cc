@@ -113,7 +113,7 @@ void OtStackApp::UpdateClientOutboundAllowance() {
   client_outbound_cnt++;
   if (((client_outbound_allowance_ & 1) == 0) && device_client_ptr_) {
     FX_LOGS(DEBUG) << "ot-stack: OnReadyForSendFrames: " << client_outbound_allowance_;
-    const fidl::Result result =
+    const fidl::Status result =
         fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
     if (!result.ok()) {
       FX_LOGS(ERROR) << "FIDL error while sending OnReadyForSendFrames event: "
@@ -393,7 +393,7 @@ void OtStackApp::SendOneFrameToClient() {
   }
   if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(client_inbound_queue_.front());
-    const fidl::Result result = fidl::WireSendEvent(*binding_)->OnReceiveFrame(std::move(data));
+    const fidl::Status result = fidl::WireSendEvent(*binding_)->OnReceiveFrame(std::move(data));
     if (!result.ok()) {
       FX_LOGS(ERROR) << "FIDL error while sending OnReceiveFrame event: "
                      << result.FormatDescription();
@@ -590,7 +590,7 @@ void OtStackApp::OnError(fidl::WireEvent<fidl_spinel::Device::OnError>* event) {
 }
 
 zx_status_t OtStackApp::Unknown() {
-  const fidl::Result result =
+  const fidl::Status result =
       fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
   if (!result.ok()) {
     return result.status();
@@ -610,7 +610,7 @@ void OtStackApp::EventThread() {
           FX_LOGS(ERROR) << "ot-radio channel closed, terminating event thread";
           return;
         }
-        ::fidl::Result result = HandleOneEvent(device_client_ptr_.client_end());
+        ::fidl::Status result = HandleOneEvent(device_client_ptr_.client_end());
         if (!result.ok() || (handler_status_ != ZX_OK)) {
           FX_PLOGS(ERROR, result.ok() ? handler_status_ : result.status())
               << "error calling fidl::WireSyncClient<fidl_spinel::Device>::HandleEvents(), "

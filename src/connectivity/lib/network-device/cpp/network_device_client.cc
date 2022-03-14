@@ -401,7 +401,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
     state->result = std::move(info.value());
     completer.complete_ok();
   });
-  const fidl::Result result = device_->GetPort(port_id, std::move(port_endpoints->server));
+  const fidl::Status result = device_->GetPort(port_id, std::move(port_endpoints->server));
   if (!result.ok()) {
     callback(zx::error(result.status()));
     return;
@@ -434,7 +434,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
           state->result.unicast_address = result.value().address;
           completer.complete_ok();
         });
-    const fidl::Result result = state->port_client->GetMac(std::move(mac_server));
+    const fidl::Status result = state->port_client->GetMac(std::move(mac_server));
     if (!result.ok()) {
       return fpromise::make_error_promise(result.status());
     }
@@ -504,7 +504,7 @@ void NetworkDeviceClient::GetPorts(PortsCallback callback) {
     callback(zx::error(watcher_endpoints.error_value()));
     return;
   }
-  const fidl::Result result = device_->GetPortWatcher(std::move(watcher_endpoints->server));
+  const fidl::Status result = device_->GetPortWatcher(std::move(watcher_endpoints->server));
   if (!result.ok()) {
     callback(zx::error(result.status()));
     return;
@@ -553,7 +553,7 @@ zx_status_t NetworkDeviceClient::KillSession() {
   tx_wait_.Cancel();
   tx_writable_wait_.Cancel();
 
-  const fidl::Result result = session_->Close();
+  const fidl::Status result = session_->Close();
   if (result.is_peer_closed()) {
     return ZX_OK;
   }
@@ -573,12 +573,12 @@ NetworkDeviceClient::WatchStatus(netdev::wire::PortId port_id, StatusCallback ca
     return watcher_endpoints.take_error();
   }
   {
-    fidl::Result result = device_->GetPort(port_id, std::move(port_endpoints->server));
+    fidl::Status result = device_->GetPort(port_id, std::move(port_endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
   }
-  fidl::Result result = fidl::WireCall(port_endpoints->client)
+  fidl::Status result = fidl::WireCall(port_endpoints->client)
                             ->GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
   if (!result.ok()) {
     return zx::error(result.status());

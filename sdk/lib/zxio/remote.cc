@@ -879,7 +879,7 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
   }
   auto [node_client_end, node_server_end] = std::move(node_ends.value());
 
-  fidl::Result result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+  fidl::Status result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
                             ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
                                    std::move(node_server_end));
   if (!result.ok()) {
