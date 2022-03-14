@@ -314,6 +314,8 @@ fn get_json_type_string_from_ty_string(ty_string: &str) -> Option<&str> {
     let map_types = &["Map", "BTreeMap", "HashMap"];
     if ty_string == "String" {
         Some("string")
+    } else if ty_string == "OneOrMany" {
+        Some("string or array of strings")
     } else if map_types.iter().any(|v| v == &ty_string) {
         Some("object")
     } else if number_types.iter().any(|v| v == &ty_string) {

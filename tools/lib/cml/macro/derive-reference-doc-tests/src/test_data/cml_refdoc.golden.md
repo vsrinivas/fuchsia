@@ -428,30 +428,28 @@ _array of `object` (optional)_
 Declares the capabilities that are made available to the parent component or to the
 framework. It is valid to `expose` from `self` or from a child component.
 
-Keys:
+One and only one of the capability type keys (`protocol`, `directory`, `service`, ...) is required.
 
--   A capability declaration, one of:
-    -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
-        or an array of names.
-    -   `directory`: The [name](#name) of a [directory capability][doc-directory],
-        or an array of names.
-    -   `runner`: The [name](#name) of a [runner capability][doc-runners],
-        or an array of names.
-    -   `resolver`: The [name](#name) of a [resolver capability][doc-resolvers],
-        or an array of names.
--   `from`: The source of the capability, one of:
-    -   `self`: This component. Requires a corresponding
-        [`capability`](#capabilities) declaration.
-    -   `framework`: The Component Framework runtime.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `to` _(optional)_: The capability target. Either `parent` or `framework`.
-    Defaults to `parent`.
--   `as` _(optional)_: The [name](#name) for the capability as it
-    will be known by the target. If omitted, defaults to the original name. This
-    property cannot be used when `protocol` is an array of multiple items. `as`
-    cannot be used when an array of multiple names is provided.
-
+- `service`: (_optional `string or array of strings`_) 
+- `protocol`: (_optional `string or array of strings`_) When routing a protocol, the [name](#name) of a [protocol capability][doc-protocol].
+- `directory`: (_optional `string or array of strings`_) When routing a directory, the [name](#name) of a [directory capability][doc-directory].
+- `runner`: (_optional `string or array of strings`_) When routing a runner, the [name](#name) of a [runner capability][doc-runners].
+- `resolver`: (_optional `string or array of strings`_) When routing a resolver, the [name](#name) of a [resolver capability][doc-resolvers].
+- `from`: (_`string or array of strings`_) `from`: The source of the capability, one of:
+  -   `self`: This component. Requires a corresponding
+      [`capability`](#capabilities) declaration.
+  -   `framework`: The Component Framework runtime.
+  -   `#<child-name>`: A [reference](#references) to a child component
+      instance.
+- `as`: (_optional `string`_) The [name](#name) for the capability as it will be known by the target. If omitted,
+  defaults to the original name. `as` cannot be used when an array of multiple capability
+  names is provided.
+- `to`: (_optional `string`_) The capability target. Either `parent` or `framework`. Defaults to `parent`.
+- `rights`: (_optional `string`_) (`directory` only) the maximum [directory rights][doc-directory-rights] to apply to
+  the exposed directory capability.
+- `subdir`: (_optional `string`_) (`directory` only) the relative path of a subdirectory within the source directory
+  capability to route.
+- `modes`: (_optional `string`_) TODO(fxbug.dev/95553): Add documentation here when appropriate.
 Example:
 
 ```json5
@@ -483,6 +481,8 @@ expose: [
     },
 ],
 ```
+
+
 
 ### `offer` {#offer}
 
