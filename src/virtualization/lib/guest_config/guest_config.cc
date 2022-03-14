@@ -106,20 +106,10 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
   return open_at(path, fidl::InterfaceRequest<fuchsia::io::File>(std::move(server)));
 }
 
-std::vector<std::string> split(const std::string& spec, char delim) {
-  std::istringstream token_stream(spec);
-  std::string token;
-  std::vector<std::string> tokens;
-  while (std::getline(token_stream, token, delim)) {
-    tokens.push_back(token);
-  }
-  return tokens;
-}
-
-zx_status_t parse_memory(const std::string& value, size_t* out) {
+zx_status_t parse(const std::string& name, const std::string& value, uint64_t* out) {
   char modifier = 'b';
-  size_t size;
-  int ret = sscanf(value.c_str(), "%zd%c", &size, &modifier);
+  uint64_t size;
+  int ret = sscanf(value.c_str(), "%lu%c", &size, &modifier);
   if (ret < 1) {
     FX_LOGS(ERROR) << "Value is not a size string: " << value;
     return ZX_ERR_INVALID_ARGS;
@@ -143,37 +133,6 @@ zx_status_t parse_memory(const std::string& value, size_t* out) {
   }
 
   *out = size;
-  return ZX_OK;
-}
-
-zx_status_t parse(const std::string& name, const std::string& value,
-                  fuchsia::virtualization::MemorySpec* out) {
-  out->base = 0;
-  out->policy = fuchsia::virtualization::MemoryPolicy::GUEST_CACHED;
-  std::vector<std::string> tokens = split(value, ',');
-  if (tokens.size() == 1) {
-    return parse_memory(tokens[0], &out->size);
-  }
-  if (tokens.size() > 3) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  zx_status_t status = parse<uint64_t, fxl::Base::k16>(name, tokens[0], &out->base);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = parse_memory(tokens[1], &out->size);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (tokens.size() != 3) {
-    return ZX_OK;
-  } else if (tokens[2] == "cached") {
-    out->policy = fuchsia::virtualization::MemoryPolicy::HOST_CACHED;
-  } else if (tokens[2] == "device") {
-    out->policy = fuchsia::virtualization::MemoryPolicy::HOST_DEVICE;
-  } else {
-    return ZX_ERR_INVALID_ARGS;
-  }
   return ZX_OK;
 }
 
@@ -252,6 +211,7 @@ class OptionHandlerWithDefaultValue : public OptionHandlerWithoutDefaultValue<T,
   const T default_value_;
 };
 
+using GuestMemoryOptionHandler = OptionHandlerWithDefaultValue<uint64_t>;
 using NumCpusOptionHandler = OptionHandlerWithDefaultValue<uint8_t>;
 using BoolOptionHandler = OptionHandlerWithDefaultValue<bool, /* require_value */ false>;
 using StringOptionHandler = OptionHandlerWithoutDefaultValue<std::string>;
@@ -370,14 +330,14 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   std::unordered_map<std::string, std::unique_ptr<OptionHandler>> handlers;
   handlers.emplace("cmdline-add", std::make_unique<RepeatedOptionHandler<std::string>>(
                                       &GuestConfig::mutable_cmdline_add));
+  handlers.emplace("memory", std::make_unique<GuestMemoryOptionHandler>(
+                                 &GuestConfig::has_guest_memory, &GuestConfig::mutable_guest_memory,
+                                 kDefaultMemory));
   handlers.emplace(
       "cpus", std::make_unique<NumCpusOptionHandler>(
                   &GuestConfig::has_cpus, &GuestConfig::mutable_cpus, zx_system_get_num_cpus()));
   handlers.emplace("interrupt", std::make_unique<RepeatedOptionHandler<uint32_t>>(
                                     &GuestConfig::mutable_interrupts));
-  handlers.emplace("memory",
-                   std::make_unique<RepeatedOptionHandler<fuchsia::virtualization::MemorySpec>>(
-                       &GuestConfig::mutable_memory));
   handlers.emplace("default-net",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_default_net,
                                                        &GuestConfig::mutable_default_net, true));
@@ -467,10 +427,6 @@ void PrintCommandLineUsage(const char* program_name) {
 }
 
 void SetDefaults(GuestConfig* cfg) {
-  if (!cfg->has_memory()) {
-    cfg->mutable_memory()->push_back({.size = kDefaultMemory});
-  }
-
   for (const auto& [name, handler] : GetCmdlineOptionHanders()) {
     handler->MaybeSetDefault(cfg);
   }
