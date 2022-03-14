@@ -598,11 +598,16 @@ adhere to a particular schema.
 
 _`object` (optional)_
 
-A JSON object containing all configuration fields for this component. Each field must have
-a key and a value type.
+The configuration schema as defined by a component. Each key represents a single field
+in the schema.
 
 NOTE: This feature is currently experimental and access is controlled through an allowlist
 in fuchsia.git at `//tools/cmc/build/restricted_features/BUILD.gn`.
+
+Configuration fields are JSON objects and must define a `type` which can be one of the
+following strings:
+`bool`, `uint8`, `int8`, `uint16`, `int16`, `uint32`, `int32`, `uint64`, `int64`,
+`string`, `vector`
 
 Example:
 
@@ -611,15 +616,39 @@ config: {
     debug_mode: {
         type: "bool"
     },
+}
+```
+
+Strings must define the `max_size` property as a non-zero integer.
+
+Example:
+
+```json5
+config: {
+    verbosity: {
+        type: "string",
+        max_size: 20,
+    }
+}
+```
+
+Vectors must set the `max_count` property as a non-zero integer. Vectors must also set the
+`element` property as a JSON object which describes the element being contained in the
+vector. Vectors can contain booleans, integers, and strings but cannot contain other
+vectors.
+
+Example:
+
+```json5
+config: {
     tags: {
         type: "vector",
-        max_count: 10,
+        max_count: 20,
         element: {
             type: "string",
-            max_size: 20
+            max_size: 50,
         }
     }
 }
 ```
-TODO(fxbug.dev/87560): Write detailed syntax for the `config` section
 
