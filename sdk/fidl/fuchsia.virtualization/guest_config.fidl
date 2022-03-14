@@ -123,7 +123,11 @@ type GuestConfig = resource table {
     /// The number of CPUs to provide to a guest.
     7: cpus uint8;
     /// The layout of memory to be mapped into a guest.
+    @deprecated("User specified layouts are being removed, see fxb/94972")
     8: memory vector<MemorySpec>:MAX_MEMORY;
+    /// Amount of guest memory required, in bytes. This value may be rounded up depending on
+    /// the system configuration.
+   22: guest_memory uint64;
     /// A list of physical interrupts to bind to.
     9: interrupts vector<uint32>:MAX_INTERRUPTS;
     /// A list of block devices to give a guest. Cannot be changed from the
