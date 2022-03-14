@@ -172,19 +172,8 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
 }
 
 static void vmxoff_task(void* arg) {
-  // From Volume 3, Section 28.3.3.4: Software can use the INVEPT instruction
-  // with the “all-context” INVEPT type immediately after execution of the VMXON
-  // instruction or immediately prior to execution of the VMXOFF instruction.
-  // Either prevents potentially undesired retention of information cached from
-  // EPT paging structures between separate uses of VMX operation.
-  zx_status_t status = invept(InvEpt::ALL_CONTEXT, 0);
-  if (status != ZX_OK) {
-    dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", arch_curr_cpu_num());
-    return;
-  }
-
   // Execute VMXOFF.
-  status = vmxoff();
+  zx_status_t status = vmxoff();
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to turn off VMX on CPU %u\n", arch_curr_cpu_num());
     return;
