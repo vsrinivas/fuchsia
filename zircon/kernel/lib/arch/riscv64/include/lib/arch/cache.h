@@ -48,7 +48,7 @@ inline void InvalidateGlobalInstructionCache() {
 }
 
 // Invalidate both the instruction and data TLBs.
-inline void InvalidateLocalTlbs() {  }
+inline void InvalidateLocalTlbs() { asm volatile("sfence.vma zero, zero" ::: "memory"); }
 
 // Local per-cpu cache flush routines.
 //

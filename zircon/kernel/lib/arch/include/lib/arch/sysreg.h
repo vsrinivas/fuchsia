@@ -199,6 +199,31 @@ class SysReg {
 #define ARCH_X86_SYSREG(RegisterTag, RegisterName) class SysReg
 #endif
 
+// <lib/arch/riscv64/*.h> headers use this to declare Riscv64 system registers.
+// RegisterTag is an unique C++ type that has a static Get() method.
+// RegisterName is a string literal of the assembly name for the register.
+//
+// When compiling for Riscv64, this makes arch::SysReg()::Io<RegisterTag>()
+// and arch::SysReg()::Read<RegisterTag>() available.  It does nothing at all
+// when compiling for other machines.
+//
+#if defined(__riscv) && __riscv_xlen == 64
+#define ARCH_RISCV64_SYSREG(RegisterTag, RegisterName)                                    \
+  template <>                                                                             \
+  inline void SysReg::WriteRegister<RegisterTag>(typename RegisterTag::ValueType value) { \
+    __riscv_csrw(RegisterName, value);                                                   \
+  }                                                                                       \
+  template <>                                                                             \
+  inline typename RegisterTag::ValueType SysReg::ReadRegister<RegisterTag>() {            \
+    return __riscv_csrr(RegisterName);                                                   \
+  }                                                                                       \
+  class SysReg
+// The extra incomplete redeclaration just consumes a semicolon in the macro.
+#else
+// These are not callable and will cause a compilation failure if used.
+#define ARCH_RISCV64_SYSREG(RegisterTag, RegisterName) class SysReg
+#endif
+
 // arch::SysRegBase provides a shorthand for defining register types.  The
 // standard boilerplate of `struct T : public hwreg::RegisterBase<T, uint64_t>`
 // is replaced with `struct T : public arch::SysRegBase<T>`.  This provides the

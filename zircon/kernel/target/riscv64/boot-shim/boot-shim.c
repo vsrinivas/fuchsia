@@ -199,43 +199,29 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 }
 
 static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ctx) {
-  // look for optional RAM size in device tree
-  // do this last so device tree can override value in boot-shim-config.h
-  if (ctx->memory_size) {
-    zbi_mem_range_t mem_range;
-    mem_range.paddr = ctx->memory_base;
-    mem_range.length = ctx->memory_size;
-    mem_range.type = ZBI_MEM_RANGE_RAM;
-
-    uart_puts("Setting RAM base and size device tree value: ");
-    uart_print_hex(ctx->memory_base);
-    uart_puts(" ");
-    uart_print_hex(ctx->memory_size);
-    uart_puts("\n");
-    append_boot_item(zbi, ZBI_TYPE_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
-  } else {
-    uart_puts("RAM size not found in device tree\n");
-  }
-
-  if (ctx->reserved_size) {
-    zbi_mem_range_t mem_range;
-    mem_range.paddr = ctx->reserved_base;
-    mem_range.length = ctx->reserved_size;
-    mem_range.type = ZBI_MEM_RANGE_RESERVED;
-
-    uart_puts("Reserving range: ");
-    uart_print_hex(ctx->reserved_base);
-    uart_puts(" ");
-    uart_print_hex(ctx->reserved_size);
-    uart_puts("\n");
-    append_boot_item(zbi, ZBI_TYPE_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
-  }
-
   // append kernel command line
   if (ctx->cmdline && ctx->cmdline_length) {
     append_boot_item(zbi, ZBI_TYPE_CMDLINE, 0, ctx->cmdline, ctx->cmdline_length);
   }
   append_boot_item(zbi, ZBI_TYPE_DEVICETREE, 0, ctx->devicetree.data, ctx->devicetree.size);
+}
+
+static bool device_tree_memory_range(device_tree_context_t* ctx, zbi_mem_range_t* range) {
+  if (!ctx->memory_size) {
+    uart_puts("RAM size not found in device tree\n");
+    return false;
+  }
+
+  uart_puts("Setting RAM base and size device tree value: ");
+  uart_print_hex(ctx->memory_base);
+  uart_puts(" ");
+  uart_print_hex(ctx->memory_size);
+  uart_puts("\n");
+
+  range->paddr = ctx->memory_base;
+  range->length = ctx->memory_size;
+  range->type = ZBI_MEM_RANGE_RAM;
+  return true;
 }
 
 #else
@@ -244,8 +230,40 @@ typedef struct {
 } device_tree_context_t;
 static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) { return NULL; }
 static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ctx) {}
+static bool device_tree_memory_range(device_tree_context_t* ctx, zbi_mem_range_t* range) {
+  return false;
+}
 
 #endif  // HAS_DEVICE_TREE
+
+// Append board memory information to the ZBI.
+//
+// The memory information mostly consists of a number of static entries with
+// (optionally) an additional single entry from the device tree at the end.
+static void append_board_memory_info(zbi_header_t* zbi, device_tree_context_t* ctx) {
+  // Fetch the device tree memory entry if present.
+  zbi_mem_range_t device_tree_range;
+  bool has_extra_range = device_tree_memory_range(ctx, &device_tree_range);
+
+  // Allocate space in the ZBI for the memory ranges.
+  char* output_buffer;
+  zbi_result_t result =
+      zbi_create_entry(zbi, SIZE_MAX, ZBI_TYPE_MEM_CONFIG, /*extra=*/0, /*flags=*/0,
+                       sizeof(mem_config) + (has_extra_range ? sizeof(device_tree_range) : 0),
+                       (void**)&output_buffer);
+  if (result != ZBI_RESULT_OK) {
+    fail("zbi_create_entry failed\n");
+  }
+
+  // Copy over the static entries.
+  memcpy(output_buffer, mem_config, sizeof(mem_config));
+  output_buffer += sizeof(mem_config);
+
+  // Copy over the additional entry if required.
+  if (has_extra_range) {
+    memcpy(output_buffer, &device_tree_range, sizeof(device_tree_range));
+  }
+}
 
 __attribute__((unused)) static void dump_words(const char* what, const void* data) {
   uart_puts(what);
@@ -316,6 +334,9 @@ boot_shim_return_t boot_shim(uint64_t hart_id, void* device_tree) {
 
   // Add board-specific ZBI items.
   append_board_boot_item(zbi);
+
+  // Add memory information.
+  append_board_memory_info(zbi, &ctx);
 
   // Append items from device tree.
   append_from_device_tree(zbi, &ctx);

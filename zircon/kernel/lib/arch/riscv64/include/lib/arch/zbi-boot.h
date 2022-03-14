@@ -30,16 +30,7 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
   // Clear the stack and frame pointers and the link register so no misleading
   // breadcrumbs are left.
   uintptr_t entry = reinterpret_cast<uintptr_t>(kernel) + kernel->data_kernel.entry;
-  __asm__ volatile(
-      R"""(
-      mv a0, %[zbi]
-      jal %[entry]
-      )"""
-      :
-      : [entry] "r"(entry), [zbi] "r"(zbi)
-      :);
-
-  // TODO(revest) jump to kernel
+  (*(void (*)(zbi_header_t *))entry)(zbi);
   __builtin_unreachable();
 }
 

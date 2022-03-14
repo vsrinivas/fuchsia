@@ -11,6 +11,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Read 64-bit system register.
+#define __riscv_csrr(reg)                          \
+  ({                                               \
+    uint64_t _val;                                 \
+    __asm__ volatile("csrr %0," reg : "=r"(_val)); \
+    _val;                                          \
+  })
+
+// Write 64-bit system register.
+#define __riscv_csrw(reg, val)                        \
+  ({                                                  \
+    uint64_t _val = (val);                            \
+    __asm__ volatile("csrw " reg ", %0" ::"r"(_val)); \
+  })
+
 // Provide the machine-independent <lib/arch/intrin.h> API.
 
 #ifdef __cplusplus

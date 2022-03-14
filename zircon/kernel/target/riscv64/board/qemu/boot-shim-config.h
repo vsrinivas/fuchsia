@@ -15,6 +15,20 @@
 static uint64_t boot_hart_id = 0;
 static size_t cpu_count = 0;
 
+static const zbi_mem_range_t mem_config[] = {
+    // ZBI_MEM_RANGE_RAM will come from device tree
+    {
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+        .paddr = 0,
+        .length = 0x40000000,
+    },
+    {
+        .type = ZBI_MEM_RANGE_RESERVED,
+        .paddr = 0x80000000,
+        .length = 0x80000,
+    },
+};
+
 static const dcfg_simple_t uart_driver = {
     .mmio_phys = 0x10000000,
     .irq = 10,

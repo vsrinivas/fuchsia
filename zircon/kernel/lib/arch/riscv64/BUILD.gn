@@ -11,7 +11,9 @@ zx_library("riscv64") {
   host = true
   static = true
   visibility = [ "../*" ]
-  sources = []
+  sources = [
+    "cache.cc",
+  ]
   include_dirs = [
     "include",
     "../include",

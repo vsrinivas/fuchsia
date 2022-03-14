@@ -30,7 +30,6 @@
 
   // Clear .bss.  Note this assumes it's aligned to 16, which is ensured
   // by BOOT_STACK_ALIGN (and other alignments in .bss) and the linker script.
-1:
   lla t0, _edata
   lla t1, _end
 0:
@@ -47,7 +46,7 @@
   // Now the full C++ ABI is available.  This could theoretically be a tail
   // call since it's obliged never to return, but it's nice to have the
   // caller in a backtrace.
-//  jal PhysMain
+  jal PhysMain
 
   // Trap forever just in case it does return.
 0:

@@ -69,6 +69,8 @@ if (current_toolchain == default_toolchain) {
       # any bug to be unusually dangerous.  So compile with minimal
       # undefined behavior checking in all builds, regardless of variant.
       "//build/config/zircon/instrumentation:ubsan-trap",
+
+      "//build/config/zircon:no_stack_protector",
     ]
 
     # Always enable frame pointers.
