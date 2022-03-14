@@ -42,7 +42,7 @@ use {
             low_power_manager::PowerModeManager, phy_manager::PhyManager,
         },
         regulatory_manager::RegulatoryManager,
-        telemetry::serve_telemetry,
+        telemetry::{connect_to_metrics_logger_factory, create_metrics_logger, serve_telemetry},
         util,
     },
 };
@@ -284,23 +284,20 @@ async fn run_all_futures() -> Result<(), Error> {
     };
 
     // Cobalt 1.1
-    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
-        fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
-    >()
-    .context("failed to connect to metrics service")?;
-    let (cobalt_1dot1_proxy, cobalt_1dot1_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-            .context("failed to create MetricEventLoggerMarker endponts")?;
-    let project_spec = fidl_fuchsia_metrics::ProjectSpec {
-        customer_id: None, // defaults to fuchsia
-        project_id: Some(metrics::PROJECT_ID),
-        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
+    let cobalt_1dot1_svc = connect_to_metrics_logger_factory().await?;
+    let cobalt_1dot1_proxy = match create_metrics_logger(cobalt_1dot1_svc, None).await {
+        Ok(proxy) => proxy,
+        Err(e) => {
+            warn!("Metrics logging is unavailable: {}", e);
+
+            // If it is not possible to acquire a metrics logging proxy, create a disconnected
+            // proxy and attempt to serve the policy API with metrics disabled.
+            let (proxy, _) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                    .context("failed to create MetricEventLoggerMarker endponts")?;
+            proxy
+        }
     };
-    if let Err(e) =
-        cobalt_1dot1_svc.create_metric_event_logger(project_spec, cobalt_1dot1_server).await
-    {
-        error!("create_metric_event_logger failure: {}", e);
-    }
 
     // According to doc, ThreadRng is cryptographically secure:
     // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html

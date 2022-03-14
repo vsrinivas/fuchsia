@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 mod convert;
+pub mod experiment;
 mod windowed_stats;
 
 use {
     crate::{telemetry::windowed_stats::WindowedStats, util::pseudo_energy::PseudoDecibel},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::{
@@ -214,6 +216,11 @@ pub enum TelemetryEvent {
     /// Notify telemetry that there was a decision to look for networks to roam to after evaluating
     /// the existing connection.
     RoamingScan,
+    /// Notify telemetry that its experiment group has changed and that a new metrics logger must
+    /// be created.
+    UpdateExperiment {
+        experiment: experiment::ExperimentUpdate,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -665,6 +672,9 @@ pub struct Telemetry {
 
     // Auto-persistence on various client stats counters
     auto_persist_client_stats_counters: AutoPersist<()>,
+
+    // Storage for recalling what experiments are currently active.
+    experiments: experiment::Experiments,
 }
 
 impl Telemetry {
@@ -722,6 +732,7 @@ impl Telemetry {
                 "wlancfg-client-stats-counters",
                 persistence_req_sender.clone(),
             ),
+            experiments: experiment::Experiments::new(),
         }
     }
 
@@ -1015,6 +1026,27 @@ impl Telemetry {
             TelemetryEvent::RoamingScan => {
                 self.stats_logger.log_roaming_scan_metrics().await;
             }
+            TelemetryEvent::UpdateExperiment { experiment } => {
+                let cobalt_1dot1_svc = match connect_to_metrics_logger_factory().await {
+                    Ok(svc) => svc,
+                    Err(e) => {
+                        warn!("{}", e);
+                        return;
+                    }
+                };
+
+                self.experiments.update_experiment(experiment);
+                let active_experiments = self.experiments.get_experiment_ids();
+                let cobalt_1dot1_proxy =
+                    match create_metrics_logger(cobalt_1dot1_svc, Some(active_experiments)).await {
+                        Ok(proxy) => proxy,
+                        Err(e) => {
+                            warn!("failed to update experiment ID: {}", e);
+                            return;
+                        }
+                    };
+                self.stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
+            }
         }
     }
 
@@ -1107,6 +1139,51 @@ impl Telemetry {
 // Example: 0.02f64 (i.e. 2%) -> 200 per ten thousand
 fn float_to_ten_thousandth(value: f64) -> i64 {
     (value * 10000f64) as i64
+}
+
+pub async fn connect_to_metrics_logger_factory(
+) -> Result<fidl_fuchsia_metrics::MetricEventLoggerFactoryProxy, Error> {
+    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
+        fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+    >()
+    .context("failed to connect to metrics service")?;
+    Ok(cobalt_1dot1_svc)
+}
+
+// Communicates with the MetricEventLoggerFactory service to create a MetricEventLoggerProxy for
+// the caller.
+pub async fn create_metrics_logger(
+    factory_proxy: fidl_fuchsia_metrics::MetricEventLoggerFactoryProxy,
+    experiment_ids: Option<Vec<u32>>,
+) -> Result<fidl_fuchsia_metrics::MetricEventLoggerProxy, Error> {
+    let (cobalt_1dot1_proxy, cobalt_1dot1_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+            .context("failed to create MetricEventLoggerMarker endponts")?;
+
+    let project_spec = fidl_fuchsia_metrics::ProjectSpec {
+        customer_id: None, // defaults to fuchsia
+        project_id: Some(metrics::PROJECT_ID),
+        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
+    };
+
+    let experiment_ids = match experiment_ids {
+        Some(experiment_ids) => experiment_ids,
+        None => experiment::default_experiments(),
+    };
+
+    let status = factory_proxy
+        .create_metric_event_logger_with_experiments(
+            project_spec,
+            &experiment_ids,
+            cobalt_1dot1_server,
+        )
+        .await
+        .context("failed to create metrics event logger")?;
+
+    match status {
+        fidl_fuchsia_metrics::Status::Ok => Ok(cobalt_1dot1_proxy),
+        other => Err(format_err!("failed to create metrics event logger: {:?}", other)),
+    }
 }
 
 const HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
@@ -5294,6 +5371,83 @@ mod tests {
         test_helper.advance_by(5.minutes(), test_fut.as_mut());
         let tags = test_helper.get_persistence_reqs();
         assert!(tags.contains(&"wlancfg-client-stats-counters".to_string()), "tags: {:?}", tags);
+    }
+
+    #[derive(PartialEq)]
+    enum CreateMetricsLoggerFailureMode {
+        None,
+        FactoryRequest,
+        ApiFailure,
+    }
+
+    #[test_case(None, CreateMetricsLoggerFailureMode::None)]
+    #[test_case(None, CreateMetricsLoggerFailureMode::FactoryRequest)]
+    #[test_case(None, CreateMetricsLoggerFailureMode::ApiFailure)]
+    #[test_case(Some(vec![123]), CreateMetricsLoggerFailureMode::None)]
+    #[test_case(Some(vec![123]), CreateMetricsLoggerFailureMode::FactoryRequest)]
+    #[test_case(Some(vec![123]), CreateMetricsLoggerFailureMode::ApiFailure)]
+    #[fuchsia::test]
+    fn test_create_metrics_logger(
+        experiment_id: Option<Vec<u32>>,
+        failure_mode: CreateMetricsLoggerFailureMode,
+    ) {
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
+        let (factory_proxy, mut factory_stream) = fidl::endpoints::create_proxy_and_stream::<
+            fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+        >()
+        .expect("failed to create proxy and stream.");
+
+        let fut = create_metrics_logger(factory_proxy, experiment_id.clone());
+        pin_mut!(fut);
+
+        // First, test the case where the factory service cannot be reached and expect an error.
+        if failure_mode == CreateMetricsLoggerFailureMode::FactoryRequest {
+            drop(factory_stream);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+            return;
+        }
+
+        // If the test case is intended to allow the factory service to be contacted, run the
+        // request future until stalled.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Depending on whether or not we specified an experiment ID, we expect different API
+        // requests.
+        let request = exec.run_until_stalled(&mut factory_stream.next());
+        let expected_experiments = match experiment_id {
+            Some(experiment_ids) => experiment_ids,
+            None => experiment::default_experiments(),
+        };
+        assert_variant!(
+            request,
+            Poll::Ready(Some(Ok(fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::CreateMetricEventLoggerWithExperiments {
+                project_spec: fidl_fuchsia_metrics::ProjectSpec {
+                    customer_id: None,
+                    project_id: Some(metrics::PROJECT_ID),
+                    ..
+                },
+                experiment_ids,
+                responder,
+                ..
+            }))) => {
+                assert_eq!(experiment_ids, expected_experiments);
+                match failure_mode {
+                    CreateMetricsLoggerFailureMode::FactoryRequest => panic!("The factory request failure should have been handled already."),
+                    CreateMetricsLoggerFailureMode::None => responder.send(fidl_fuchsia_metrics::Status::Ok).expect("failed to send response"),
+                    CreateMetricsLoggerFailureMode::ApiFailure => responder.send(fidl_fuchsia_metrics::Status::InvalidArguments).expect("failed to send response"),
+                }
+            }
+        );
+
+        // The future should run to completion and the output will vary depending on the specified
+        // failure mode.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(result) => {
+            match failure_mode {
+                CreateMetricsLoggerFailureMode::FactoryRequest => panic!("The factory request failure should have been handled already."),
+                CreateMetricsLoggerFailureMode::None => assert_variant!(result, Ok(_)),
+                CreateMetricsLoggerFailureMode::ApiFailure => assert_variant!(result, Err(_))
+            }
+        });
     }
 
     struct TestHelper {
