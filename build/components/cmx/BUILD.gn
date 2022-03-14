@@ -115,7 +115,6 @@ group("cmx_allowlist") {
     "//sdk/lib/inspect/service/cpp/tests:*",
     "//sdk/lib/modular/cpp:*",
     "//sdk/lib/modular/testing/cpp:*",
-    "//sdk/lib/procfs/cpp:*",
     "//sdk/lib/sys/component/cpp/tests:*",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:*",
     "//sdk/lib/sys/cpp/testing/examples/test_with_environment:*",
