@@ -73,7 +73,7 @@ class Datastore {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
-  IdentityRedactor redactor_;
+  std::unique_ptr<RedactorBase> redactor_;
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 

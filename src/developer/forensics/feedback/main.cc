@@ -38,6 +38,9 @@ namespace forensics::feedback {
 int main() {
   syslog::SetTags({"forensics", "feedback"});
 
+  // TODO(fxbug.dev/655811): Remove once redaction can be enabled.
+  FX_CHECK(!files::IsFile(kEnableRedactDataPath));
+
   // Delay serving the outgoing directory because the migration happens asynchronously and the
   // component's services cannot be used until the migration has completed.
   forensics::component::Component component(/*lazy_outgoing_dir=*/true);

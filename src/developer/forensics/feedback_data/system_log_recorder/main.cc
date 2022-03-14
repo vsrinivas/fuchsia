@@ -12,6 +12,7 @@
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
 
+#include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/controller.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
@@ -62,7 +63,7 @@ int main() {
                                  .max_num_files = kMaxNumLogFiles,
                                  .total_log_size = kPersistentLogsMaxSize,
                              },
-                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
+                             feedback::RedactorFromConfig(),
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 
   // Set up the controller to shut down or flush the buffers of the system log recorder when it gets

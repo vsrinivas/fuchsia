@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "src/developer/forensics/feedback/device_id_provider.h"
+#include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider_factory.h"
 #include "src/developer/forensics/feedback_data/annotations/static_annotations.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
@@ -36,6 +37,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
+      redactor_(feedback::RedactorFromConfig()),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
       annotation_manager_(annotation_manager),
@@ -179,7 +181,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher_, services_,
                             MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog, timeout),
-                            &redactor_);
+                            redactor_.get());
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_,
                               MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout),

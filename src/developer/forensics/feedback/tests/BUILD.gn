@@ -215,6 +215,19 @@ executable("namespace_init_unittest_exe") {
   ]
 }
 
+executable("redactor_factory_unittest_exe") {
+  testonly = true
+
+  sources = [ "redactor_factory_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback:redactor_factory",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("startup_annotations_unittest_exe") {
   testonly = true
 
@@ -409,6 +422,14 @@ fuchsia_component("namespace_init_unittest") {
   deps = [ ":namespace_init_unittest_exe" ]
 }
 
+fuchsia_component("redactor_factory_unittest") {
+  testonly = true
+
+  manifest = "meta/redactor_factory_unittest.cml"
+
+  deps = [ ":redactor_factory_unittest_exe" ]
+}
+
 fuchsia_component("startup_annotations_unittest") {
   testonly = true
 
@@ -440,6 +461,7 @@ fuchsia_test_package("feedback-tests") {
     ":last_reboot_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
+    ":redactor_factory_unittest",
     ":startup_annotations_unittest",
   ]
 

@@ -15,6 +15,7 @@ namespace forensics::feedback {
 constexpr zx::duration kDirectoryMigratorResponeTimeout = zx::min(1);
 
 constexpr char kUseRemoteDeviceIdProviderPath[] = "/config/data/feedback/remote_device_id_provider";
+constexpr char kEnableRedactDataPath[] = "/config/data/feedback/redact_data";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Reboot reporting

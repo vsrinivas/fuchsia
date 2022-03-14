@@ -7,7 +7,6 @@
 ###############################################################################
 group("tests") {
   testonly = true
-
   deps = [
     "migration:tests",
     "reboot_log/tests",
@@ -164,4 +163,18 @@ source_set("namespace_init") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
+}
+
+source_set("redactor_factory") {
+  sources = [
+    "redactor_factory.cc",
+    "redactor_factory.h",
+  ]
+
+  public_deps = [
+    ":constants",
+    "//src/developer/forensics/utils/redact",
+  ]
+
+  deps = [ "//src/lib/files" ]
 }
