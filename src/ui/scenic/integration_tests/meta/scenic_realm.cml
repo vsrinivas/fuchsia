@@ -101,6 +101,7 @@
                 "fuchsia.ui.observation.test.Registry",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
         },

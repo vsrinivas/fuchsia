@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -18,13 +18,10 @@
 #include <string>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/integration_tests/utils.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 // These tests exercise the "context View Space to target View Space" coordinate transform logic,
 // applied to pointer events sent to sessions using the input injection API.
@@ -42,26 +39,8 @@ using fuchsia::ui::input::PointerEventType;
 using fuchsia::ui::views::ViewRef;
 static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
 
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.scenic.Scenic",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.pointerinjector.Registry",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
-
 using fuchsia::ui::views::ViewRef;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 std::unique_ptr<scenic::Session> CreateSession(fuchsia::ui::scenic::Scenic* scenic) {
   fuchsia::ui::scenic::SessionEndpoints endpoints;
@@ -105,7 +84,7 @@ struct RootSession {
   std::unique_ptr<scenic::ViewHolder> view_holder;
 };
 
-class GfxLegacyCoordinateTransformTest2 : public gtest::TestWithEnvironmentFixture {
+class GfxLegacyCoordinateTransformTest2 : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
   // clang-format off
   static constexpr std::array<float, 9> kIdentityMatrix = {
@@ -118,62 +97,27 @@ class GfxLegacyCoordinateTransformTest2 : public gtest::TestWithEnvironmentFixtu
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+            .AddRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
+            .Build());
 
-    environment_ = CreateNewEnclosingEnvironment(
-        "gfx_legacy_coordinate_transform_test2_environment", CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(scenic_.NewRequest());
+    scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
-    environment_->ConnectToService(registry_.NewRequest());
+    registry_ = realm_->Connect<fuchsia::ui::pointerinjector::Registry>();
     registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
+      FAIL("Lost connection to pointerinjector Registry: %s", zx_status_get_string(status));
     });
 
     // Set up root view.
     root_session_ = std::make_unique<RootSession>(scenic());
-    root_session_->session->set_error_handler([](auto) { FAIL() << "Root session terminated."; });
+    root_session_->session->set_error_handler([](auto) { FAIL("Root session terminated."); });
     BlockingPresent(*root_session_->session);
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    registry_.set_error_handler(nullptr);
-    scenic_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   void BlockingPresent(scenic::Session& session) {
@@ -264,11 +208,10 @@ class GfxLegacyCoordinateTransformTest2 : public gtest::TestWithEnvironmentFixtu
   std::unique_ptr<RootSession> root_session_;
 
  private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::pointerinjector::RegistryPtr registry_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
+  std::unique_ptr<RealmRoot> realm_;
 };
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation
@@ -350,9 +293,9 @@ TEST_F(GfxLegacyCoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransfo
     holder_1.SetViewProperties(k5x5x1);
     // Scale, rotate and translate the context to verify that it has no effect on the outcome.
     holder_1.SetScale(2, 3, 1);
-    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
-    holder_1.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    const auto rotation_quaternion = angleAxis(static_cast<float>(M_PI) / 2.f, {0, 0, 1});
+    holder_1.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     holder_1.SetTranslation(1, 0, 0);
     BlockingPresent(*root_session_->session);
   }
@@ -379,9 +322,9 @@ TEST_F(GfxLegacyCoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransfo
     holder_2.SetScale(2, 3, 1);
     // Rotate 90 degrees counter clockwise around Z-axis (Z-axis points into screen, so appears as
     // clockwise rotation).
-    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
-    holder_2.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    const auto rotation_quaternion = angleAxis(static_cast<float>(M_PI) / 2.f, {0, 0, 1});
+    holder_2.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     // Translate by 1 in the X direction.
     holder_2.SetTranslation(1, 0, 0);
     BlockingPresent(*child1_session);
@@ -556,9 +499,9 @@ TEST_F(GfxLegacyCoordinateTransformTest2, InjectedInput_OnRotatedChild_ShouldHit
     // Rotate 90 degrees counter clockwise around Z-axis (Z-axis points into screen, so appears as
     // clockwise rotation).
     holder_2.SetAnchor(2.5f, 2.5f, 0);
-    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
-    holder_2.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    const auto rotation_quaternion = angleAxis(static_cast<float>(M_PI) / 2.f, {0, 0, 1});
+    holder_2.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     view.AddChild(holder_2);
     BlockingPresent(*root_session_->session);
   }

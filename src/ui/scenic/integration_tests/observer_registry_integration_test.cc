@@ -327,9 +327,6 @@ class GfxObserverRegistryIntegrationTest : public zxtest::Test, public loop_fixt
     realm_ = std::make_unique<RealmRoot>(
         ScenicRealmBuilder()
             .AddRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
-            .AddRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
-            .AddRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
-            .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
             .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
             .Build());
 

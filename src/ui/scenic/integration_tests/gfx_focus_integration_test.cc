@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -18,12 +18,13 @@
 
 #include <vector>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
-#include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
+#include "src/ui/scenic/integration_tests/utils.h"
 
 #define EXPECT_VIEW_REF_MATCH(view_ref1, view_ref2) \
-  EXPECT_EQ(utils::ExtractKoid(view_ref1), utils::ExtractKoid(view_ref2))
+  EXPECT_EQ(ExtractKoid(view_ref1), ExtractKoid(view_ref2))
 
 // This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
 // fuchsia.ui.views.Focuser, fuchsia.ui.views.ViewRefFocused) in the context of the GFX compositor
@@ -37,24 +38,7 @@
 //   child
 namespace integration_tests {
 
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.scenic.Scenic",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.focus.FocusChainListenerRegistry",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services from outside the test environment.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 // "Long enough" time to wait before assuming focus chain updates won't arrive.
 // Should not be used when actually expecting an update to occur.
@@ -111,7 +95,8 @@ struct RootSession {
 };
 
 // Test fixture that sets up an environment with a Scenic we can connect to.
-class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
+class GfxFocusIntegrationTest : public zxtest::Test,
+                                public loop_fixture::RealLoop,
                                 public FocusChainListener {
  protected:
   GfxFocusIntegrationTest() : focus_chain_listener_(this) {}
@@ -119,27 +104,23 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+            .AddRealmProtocol(fuchsia::ui::focus::FocusChainListenerRegistry::Name_)
+            .Build());
 
-    environment_ =
-        CreateNewEnclosingEnvironment("gfx_focus_integration_test_environment", CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(scenic_.NewRequest());
+    scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
-    environment_->ConnectToService(focus_chain_listener_registry_.NewRequest());
+
+    focus_chain_listener_registry_ =
+        realm_->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
     focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to FocusChainListener: " << zx_status_get_string(status);
+      FAIL("Lost connection to FocusChainListener: %s", zx_status_get_string(status));
     });
 
     // Set up focus chain listener and wait for the initial null focus chain.
@@ -156,7 +137,7 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     endpoints.set_view_ref_focused(root_focused_.NewRequest());
     root_session_ = std::make_unique<RootSession>(scenic(), std::move(endpoints));
     root_session_->session.set_error_handler([](zx_status_t status) {
-      FAIL() << "Root session terminated: " << zx_status_get_string(status);
+      FAIL("Root session terminated: %s", zx_status_get_string(status));
     });
     BlockingPresent(root_session_->session);
 
@@ -178,18 +159,6 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     observed_focus_chains_.clear();
   }
 
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    focus_chain_listener_registry_.set_error_handler(nullptr);
-    scenic_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
   void BlockingPresent(scenic::Session& session) {
     bool presented = false;
     session.set_on_frame_presented_handler([&presented](auto) { presented = true; });
@@ -203,23 +172,6 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
         std::make_unique<scenic::ViewHolder>(&root_session_->session, std::move(token), "holder");
     root_session_->scene.AddChild(*root_session_->view_holder);
     BlockingPresent(root_session_->session);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   bool RequestFocusChange(fuchsia::ui::views::FocuserPtr& view_focuser_ptr, const ViewRef& target) {
@@ -267,9 +219,8 @@ class GfxFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
 
   std::vector<FocusChain> observed_focus_chains_;
 
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
+  std::unique_ptr<RealmRoot> realm_;
 };
 
 TEST_F(GfxFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFail) {
@@ -402,7 +353,7 @@ TEST_F(GfxFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
 
 TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
   root_session_->session.set_error_handler(
-      [](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });
+      [](zx_status_t) { FAIL("Client shut down unexpectedly."); });
 
   root_focuser_.Unbind();
 
@@ -448,7 +399,7 @@ TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) {
 
 TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectDoesNotKillSession) {
   root_session_->session.set_error_handler(
-      [](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });
+      [](zx_status_t) { FAIL("Client shut down unexpectedly."); });
 
   root_focused_.Unbind();
 

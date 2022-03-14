@@ -22,8 +22,7 @@ source_set("common_deps") {
     "utils.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.lifecycle",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    ":scenic_realm_builder",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -41,10 +40,10 @@ source_set("common_deps_cts") {
     "utils.h",
   ]
   public_deps = [
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    ":scenic_realm_builder",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -81,30 +80,26 @@ executable("gfx_focus_integration_test_bin") {
   testonly = true
   sources = [ "gfx_focus_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk/fidl/fuchsia.ui.focus",
-    "//src/ui/scenic/lib/utils",
   ]
 }
 
 fuchsia_test_component("gfx_focus_integration_test") {
   component_name = "gfx_focus_integration_test"
-  manifest = "meta/gfx_focus_integration_test.cmx"
+  manifest = "meta/gfx_focus_integration_test.cml"
   deps = [ ":gfx_focus_integration_test_bin" ]
 }
 
 executable("gfx_legacy_coordinate_transform_test_bin") {
   testonly = true
   sources = [ "gfx_legacy_coordinate_transform_test.cc" ]
-  deps = [
-    ":common_deps",
-    "//third_party/glm",
-  ]
+  deps = [ ":common_deps_cts" ]
 }
 
 fuchsia_test_component("gfx_legacy_coordinate_transform_test") {
   component_name = "gfx_legacy_coordinate_transform_test"
-  manifest = "meta/gfx_legacy_coordinate_transform_test.cmx"
+  manifest = "meta/gfx_legacy_coordinate_transform_test.cml"
   deps = [ ":gfx_legacy_coordinate_transform_test_bin" ]
 }
 
@@ -112,15 +107,14 @@ executable("gfx_legacy_coordinate_transform_test2_bin") {
   testonly = true
   sources = [ "gfx_legacy_coordinate_transform_test2.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//third_party/glm",
   ]
 }
 
 fuchsia_test_component("gfx_legacy_coordinate_transform_test2") {
   component_name = "gfx_legacy_coordinate_transform_test2"
-  manifest = "meta/gfx_legacy_coordinate_transform_test2.cmx"
+  manifest = "meta/gfx_legacy_coordinate_transform_test2.cml"
   deps = [ ":gfx_legacy_coordinate_transform_test2_bin" ]
 }
 
@@ -128,14 +122,14 @@ executable("gfx_startup_input_test_bin") {
   testonly = true
   sources = [ "gfx_startup_input_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }
 
 fuchsia_test_component("gfx_startup_input_test") {
   component_name = "gfx_startup_input_test"
-  manifest = "meta/gfx_startup_input_test.cmx"
+  manifest = "meta/gfx_startup_input_test.cml"
   deps = [ ":gfx_startup_input_test_bin" ]
 }
 
@@ -143,16 +137,15 @@ executable("gfx_touch_integration_test_bin") {
   testonly = true
   sources = [ "gfx_touch_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//third_party/glm",
   ]
 }
 
 fuchsia_test_component("gfx_touch_integration_test") {
   component_name = "gfx_touch_integration_test"
-  manifest = "meta/gfx_touch_integration_test.cmx"
+  manifest = "meta/gfx_touch_integration_test.cml"
   deps = [ ":gfx_touch_integration_test_bin" ]
 }
 
@@ -160,16 +153,15 @@ executable("gfx_mouse_integration_test_bin") {
   testonly = true
   sources = [ "gfx_mouse_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//third_party/glm",
   ]
 }
 
 fuchsia_test_component("gfx_mouse_integration_test") {
   component_name = "gfx_mouse_integration_test"
-  manifest = "meta/gfx_mouse_integration_test.cmx"
+  manifest = "meta/gfx_mouse_integration_test.cml"
   deps = [ ":gfx_mouse_integration_test_bin" ]
 }
 
@@ -177,14 +169,14 @@ executable("gfx_view_ref_installed_integration_test_bin") {
   testonly = true
   sources = [ "gfx_view_ref_installed_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }
 
 fuchsia_test_component("gfx_view_ref_installed_integration_test") {
   component_name = "gfx_view_ref_installed_integration_test"
-  manifest = "meta/gfx_view_ref_installed_integration_test.cmx"
+  manifest = "meta/gfx_view_ref_installed_integration_test.cml"
   deps = [ ":gfx_view_ref_installed_integration_test_bin" ]
 }
 
@@ -193,7 +185,6 @@ executable("flatland_touch_integration_test_bin") {
   sources = [ "flatland_touch_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
@@ -211,7 +202,6 @@ executable("flatland_focus_integration_test_bin") {
   sources = [ "flatland_focus_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
   ]
@@ -228,7 +218,6 @@ executable("observer_registry_integration_test_bin") {
   sources = [ "observer_registry_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.focus",
     "//sdk//fidl/fuchsia.ui.observation.geometry",
@@ -247,7 +236,6 @@ executable("screenshot_integration_test_bin") {
   sources = [ "screenshot_integration_test.cc" ]
   deps = [
     ":common_deps",
-    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/screenshot:screenshot",
@@ -267,7 +255,6 @@ executable("flatland_mouse_integration_test_bin") {
   sources = [ "flatland_mouse_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.input.report",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
@@ -282,7 +269,6 @@ fuchsia_test_component("flatland_mouse_integration_test") {
 }
 
 fuchsia_test_package("gfx_integration_tests") {
-  package_deps_for_infra_only = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   test_components = [
     ":gfx_focus_integration_test",
     ":gfx_legacy_coordinate_transform_test",
@@ -295,8 +281,10 @@ fuchsia_test_package("gfx_integration_tests") {
 
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
-  deps = [ "//src/ui/scenic:component" ]
 }
 
 fuchsia_test_package("flatland_integration_tests") {

@@ -113,6 +113,42 @@ zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
   return ExtractKoid(view_ref.reference);
 }
 
+Mat3 ArrayToMat3(std::array<float, 9> array) {
+  Mat3 mat;
+  for (size_t row = 0; row < mat.size(); row++) {
+    for (size_t col = 0; col < mat[0].size(); col++) {
+      mat[row][col] = array[mat.size() * row + col];
+    }
+  }
+  return mat;
+}
+
+Vec3 operator*(const Mat3& mat, const Vec3& vec) {
+  Vec3 result = {0, 0, 0};
+  for (size_t col = 0; col < mat[0].size(); col++) {
+    for (size_t row = 0; row < mat.size(); row++) {
+      result[col] += mat[row][col] * vec[row];
+    }
+  }
+  return result;
+}
+
+Vec3& operator/(Vec3& vec, float num) {
+  for (size_t i = 0; i < vec.size(); i++) {
+    vec[i] /= num;
+  }
+  return vec;
+}
+
+Vec4 angleAxis(float angle, const Vec3& vec) {
+  Vec4 result;
+  result[0] = vec[0] * sin(angle * 0.5f);
+  result[1] = vec[1] * sin(angle * 0.5f);
+  result[2] = vec[2] * sin(angle * 0.5f);
+  result[3] = cos(angle * 0.5f);
+  return result;
+}
+
 PointerCommandGenerator::PointerCommandGenerator(uint32_t compositor_id, uint32_t device_id,
                                                  uint32_t pointer_id, PointerEventType type,
                                                  uint32_t buttons)

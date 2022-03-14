@@ -63,40 +63,9 @@ using fuchsia::ui::pointer::TouchResponseType;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
-using Mat3 = std::array<std::array<float, 3>, 3>;
-using Vec3 = std::array<float, 3>;
 using RealmRoot = sys::testing::experimental::RealmRoot;
 
 namespace {
-
-Mat3 ArrayToMat3(std::array<float, 9> array) {
-  Mat3 mat;
-  for (size_t row = 0; row < mat.size(); row++) {
-    for (size_t col = 0; col < mat[0].size(); col++) {
-      mat[row][col] = array[mat.size() * row + col];
-    }
-  }
-  return mat;
-}
-
-// Matrix multiplication between a 3X3 matrix and 3X1 matrix.
-Vec3 operator*(const Mat3& mat, const Vec3& vec) {
-  Vec3 result = {0, 0, 0};
-  for (size_t row = 0; row < mat.size(); row++) {
-    for (size_t col = 0; col < mat[0].size(); col++) {
-      result[row] += mat[row][col] * vec[col];
-    }
-  }
-  return result;
-}
-
-Vec3& operator/(Vec3& vec, float num) {
-  for (size_t i = 0; i < vec.size(); i++) {
-    vec[i] /= num;
-  }
-  return vec;
-}
-
 std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer, const Mat3& transform) {
   const Vec3 homogenous_pointer = {pointer[0], pointer[1], 1};
   Vec3 transformed_pointer = transform * homogenous_pointer;

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -18,15 +18,10 @@
 #include <string>
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/integration_tests/utils.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 // These tests exercise the integration between GFX and the InputSystem, including the View-to-View
 // transform logic between the injection point and the receiver.
@@ -66,42 +61,16 @@ using fuchsia::ui::pointer::MouseEvent;
 using fuchsia::ui::pointer::MouseViewStatus;
 using fuchsia::ui::pointerinjector::EventPhase;
 using fuchsia::ui::views::ViewRef;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 namespace {
 
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.scenic.Scenic",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.pointerinjector.Registry",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
-
-glm::mat3 ArrayToMat3(std::array<float, 9> array) {
-  // clang-format off
-  return glm::mat3(array[0], array[1], array[2],  // first column
-                   array[3], array[4], array[5],  // second column
-                   array[6], array[7], array[8]); // third column
-  // clang-format on
-}
-
-std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer,
-                                            const glm::mat3& transform) {
-  const glm::vec3 homogenous_pointer{pointer[0], pointer[1], 1};
-  const glm::vec3 transformed_pointer = transform * homogenous_pointer;
-  const glm::vec3 homogenized = transformed_pointer / transformed_pointer.z;
-  return {homogenized.x, homogenized.y};
+std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer, const Mat3& transform) {
+  const Vec3 homogenous_pointer = {pointer[0], pointer[1], 1};
+  Vec3 transformed_pointer = transform * homogenous_pointer;
+  FX_CHECK(transformed_pointer[2] != 0);
+  const Vec3& homogenized = transformed_pointer / transformed_pointer[2];
+  return {homogenized[0], homogenized[1]};
 }
 
 void ExpectEqualPointer(const fuchsia::ui::pointer::MousePointerSample& pointer_sample,
@@ -109,30 +78,31 @@ void ExpectEqualPointer(const fuchsia::ui::pointer::MousePointerSample& pointer_
                         float expected_y, std::optional<int64_t> expected_scroll_v,
                         std::optional<int64_t> expected_scroll_h,
                         std::vector<uint8_t> expected_buttons, uint32_t line_number) {
-  constexpr float kEpsilon = std::numeric_limits<float>::epsilon() * 1000;
-  const glm::mat3 transform_matrix = ArrayToMat3(viewport_to_view_transform);
+  const Mat3 transform_matrix = ArrayToMat3(viewport_to_view_transform);
   const std::array<float, 2> transformed_pointer =
       TransformPointerCoords(pointer_sample.position_in_viewport(), transform_matrix);
-  EXPECT_NEAR(transformed_pointer[0], expected_x, kEpsilon) << "Line: " << line_number;
-  EXPECT_NEAR(transformed_pointer[1], expected_y, kEpsilon) << "Line: " << line_number;
+  EXPECT_TRUE(CmpFloatingValues(transformed_pointer[0], expected_x), "Line: %d", line_number);
+  EXPECT_TRUE(CmpFloatingValues(transformed_pointer[1], expected_y), "Line: %d", line_number);
   if (expected_scroll_v.has_value()) {
-    ASSERT_TRUE(pointer_sample.has_scroll_v()) << "Line: " << line_number;
-    EXPECT_EQ(pointer_sample.scroll_v(), expected_scroll_v.value()) << "Line: " << line_number;
+    ASSERT_TRUE(pointer_sample.has_scroll_v(), "Line: %d", line_number);
+    EXPECT_EQ(pointer_sample.scroll_v(), expected_scroll_v.value(), "Line: %d", line_number);
   } else {
-    EXPECT_FALSE(pointer_sample.has_scroll_v()) << "Line: " << line_number;
+    EXPECT_FALSE(pointer_sample.has_scroll_v(), "Line: %d", line_number);
   }
   if (expected_scroll_h.has_value()) {
-    ASSERT_TRUE(pointer_sample.has_scroll_h()) << "Line: " << line_number;
-    EXPECT_EQ(pointer_sample.scroll_h(), expected_scroll_h.value()) << "Line: " << line_number;
+    ASSERT_TRUE(pointer_sample.has_scroll_h(), "Line: %d", line_number);
+    EXPECT_EQ(pointer_sample.scroll_h(), expected_scroll_h.value(), "Line: %d", line_number);
   } else {
-    EXPECT_FALSE(pointer_sample.has_scroll_h()) << "Line: " << line_number;
+    EXPECT_FALSE(pointer_sample.has_scroll_h(), "Line: %d", line_number);
   }
   if (expected_buttons.empty()) {
-    EXPECT_FALSE(pointer_sample.has_pressed_buttons()) << "Line: " << line_number;
+    EXPECT_FALSE(pointer_sample.has_pressed_buttons(), "Line: %d", line_number);
   } else {
-    ASSERT_TRUE(pointer_sample.has_pressed_buttons()) << "Line: " << line_number;
-    EXPECT_THAT(pointer_sample.pressed_buttons(), testing::ElementsAreArray(expected_buttons))
-        << "Line: " << line_number;
+    ASSERT_TRUE(pointer_sample.has_pressed_buttons(), "Line: %d", line_number);
+    ASSERT_EQ(pointer_sample.pressed_buttons().size(), expected_buttons.size());
+    for (uint8_t i = 0; i < pointer_sample.pressed_buttons().size(); i++) {
+      EXPECT_EQ(pointer_sample.pressed_buttons()[i], expected_buttons[i], "Line: %d", line_number);
+    }
   }
 }
 
@@ -192,7 +162,7 @@ struct RootSession {
 
 }  // namespace
 
-class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
+class GfxMouseIntegrationTest : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
   static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
   static constexpr uint32_t kDeviceId = 1111;
@@ -208,62 +178,27 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = std::make_unique<RealmRoot>(
+        ScenicRealmBuilder()
+            .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+            .AddRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
+            .Build());
 
-    environment_ =
-        CreateNewEnclosingEnvironment("gfx_mouse_integration_test_environment", CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(scenic_.NewRequest());
+    scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
-    environment_->ConnectToService(registry_.NewRequest());
+    registry_ = realm_->Connect<fuchsia::ui::pointerinjector::Registry>();
     registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
+      FAIL("Lost connection to pointerinjector Registry: %s", zx_status_get_string(status));
     });
 
     // Set up root view.
     root_session_ = std::make_unique<RootSession>(scenic());
-    root_session_->session->set_error_handler([](auto) { FAIL() << "Root session terminated."; });
+    root_session_->session->set_error_handler([](auto) { FAIL("Root session terminated."); });
     BlockingPresent(*root_session_->session);
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    registry_.set_error_handler(nullptr);
-    scenic_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   void BlockingPresent(scenic::Session& session) {
@@ -384,14 +319,13 @@ class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
   bool injector_channel_closed_ = false;
 
  private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::pointerinjector::RegistryPtr registry_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
 
   // Holds watch loops so they stay alive through the duration of the test.
   std::vector<std::function<void(std::vector<MouseEvent>)>> watch_loops_;
+  std::unique_ptr<RealmRoot> realm_;
 };
 
 // Test for checking that the pointerinjector channel is closed when context and target relationship
@@ -497,7 +431,7 @@ TEST_F(GfxMouseIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
 
   // 90 degrees counter clockwise rotation around Z-axis (Z-axis points into screen, so appears as
   // clockwise rotation).
-  const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
+  const auto rotation_quaternion = angleAxis(static_cast<float>(M_PI) / 2.f, {0, 0, 1});
 
   // Set up scene with two ViewHolders, one a child of the other.
   auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
@@ -509,8 +443,8 @@ TEST_F(GfxMouseIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
     holder_1.SetViewProperties(k5x5x1);
     // Scale, rotate and translate the context to verify that it has no effect on the outcome.
     holder_1.SetScale(2, 3, 1);
-    holder_1.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    holder_1.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     holder_1.SetTranslation(1, 0, 0);
 
     scenic::ViewHolder holder_2(root_session_->session, std::move(vh2), "holder_2");
@@ -519,8 +453,8 @@ TEST_F(GfxMouseIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
     // Scale, rotate and translate target.
     // Scale X by 2 and Y by 3.
     holder_2.SetScale(2, 3, 1);
-    holder_2.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    holder_2.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     // Translate by 1 in the X direction.
     holder_2.SetTranslation(1, 0, 0);
     BlockingPresent(*root_session_->session);
@@ -570,10 +504,14 @@ TEST_F(GfxMouseIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
   {  // Check layout validity.
     EXPECT_EQ(child_events[0].device_info().id(), kDeviceId);
     const auto& view_parameters = child_events[0].view_parameters();
-    EXPECT_THAT(view_parameters.view.min, testing::ElementsAre(0.f, 0.f));
-    EXPECT_THAT(view_parameters.view.max, testing::ElementsAre(5.f, 5.f));
-    EXPECT_THAT(view_parameters.viewport.min, testing::ElementsAre(0.f, 0.f));
-    EXPECT_THAT(view_parameters.viewport.max, testing::ElementsAre(9.f, 9.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.view.min[0], 0.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.view.min[1], 0.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.view.max[0], 5.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.view.max[1], 5.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.viewport.min[0], 0.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.viewport.min[1], 0.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.viewport.max[0], 9.f));
+    EXPECT_TRUE(CmpFloatingValues(view_parameters.viewport.max[1], 9.f));
   }
 
   {
@@ -731,9 +669,9 @@ TEST_F(GfxMouseIntegrationTest, InjectedInput_OnRotatedChild_ShouldHitEdges) {
     // Rotate 90 degrees counter clockwise around Z-axis (Z-axis points into screen, so appears as
     // clockwise rotation).
     holder_2.SetAnchor(2.5f, 2.5f, 0);
-    const auto rotation_quaternion = glm::angleAxis(glm::pi<float>() / 2.f, glm::vec3(0, 0, 1));
-    holder_2.SetRotation(rotation_quaternion.x, rotation_quaternion.y, rotation_quaternion.z,
-                         rotation_quaternion.w);
+    const auto rotation_quaternion = angleAxis(static_cast<float>(M_PI) / 2.f, {0, 0, 1});
+    holder_2.SetRotation(rotation_quaternion[0], rotation_quaternion[1], rotation_quaternion[2],
+                         rotation_quaternion[3]);
     view.AddChild(holder_2);
     BlockingPresent(*root_session_->session);
   }
@@ -959,7 +897,7 @@ TEST_F(GfxMouseIntegrationTest, HoverTest) {
     }
     {
       const auto& event = child_events[3];
-      EXPECT_FALSE(event.has_pointer_sample()) << "Should get no pointer sample on View Exit";
+      EXPECT_FALSE(event.has_pointer_sample(), "Should get no pointer sample on View Exit");
       ASSERT_TRUE(event.has_stream_info());
       EXPECT_EQ(event.stream_info().status, MouseViewStatus::EXITED);
     }

@@ -8,6 +8,9 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 namespace integration_tests {
+using Mat3 = std::array<std::array<float, 3>, 3>;
+using Vec3 = std::array<float, 3>;
+using Vec4 = std::array<float, 4>;
 
 bool PointerMatches(
     const fuchsia::ui::input::PointerEvent& event, uint32_t pointer_id,
@@ -20,6 +23,16 @@ bool CmpFloatingValues(float num1, float num2);
 zx_koid_t ExtractKoid(const zx::object_base& object);
 
 zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);
+
+Mat3 ArrayToMat3(std::array<float, 9> array);
+
+// Matrix multiplication between a 1X3 matrix and 3X3 matrix.
+Vec3 operator*(const Mat3& mat, const Vec3& vec);
+
+Vec3& operator/(Vec3& vec, float num);
+
+// |glm::angleAxis|.
+Vec4 angleAxis(float angle, const Vec3& vec);
 
 // Creates pointer event commands for one finger, where the pointer "device" is
 // tied to one compositor. Helps remove boilerplate clutter.
