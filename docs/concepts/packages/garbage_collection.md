@@ -13,8 +13,8 @@ guaranteed to always be present. Base packages cannot be deleted.
 
 The dynamic index stores a mapping of all ephemerally fetched packages. `pkgfs`
 will pre-populate the dynamic index with any present packages (i.e. `meta.far`
-and all `BLOB`s resolved) listed in `/system/data/cache_packages`. In memory, the dynamic
-index has the most recently resolved version of a package with the same name
+and all `BLOB`s resolved) listed in `/system/data/cache_packages.json`. In memory, the
+dynamic index has the most recently resolved version of a package with the same name
 by keying on the `$name/$variant` of the package. `pkgfs` then "forgets" about
 the old version of the package. The old version of the package is still present
 in the system but no longer referenced. The dynamic index is then used to implement

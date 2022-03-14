@@ -39,6 +39,12 @@ impl PackageManifest {
         }
     }
 
+    pub fn repository(&self) -> &Option<String> {
+        match &self.0 {
+            VersionedPackageManifest::Version1(manifest) => &manifest.repository,
+        }
+    }
+
     pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
         let mut blobs = Vec::with_capacity(package.blobs().len());
         for (merkle, blob_entry) in package.blobs().iter() {
@@ -302,5 +308,6 @@ mod tests {
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
+        assert_eq!(&None, package_manifest.repository());
     }
 }
