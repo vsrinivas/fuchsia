@@ -1148,6 +1148,13 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
 
       if (header.contentLocation == EnvelopeContentLocation.inline) {
         if (fieldType != null) {
+          if (decoder.wireFormat == WireFormat.v2 &&
+              fieldType.inlineSize(decoder.wireFormat) > 4) {
+            throw FidlError(
+                'received inline data, but field size indicates an out-of-line payload',
+                FidlErrorCode.fidlInvalidInlineBitInEnvelope);
+          }
+
           final claimedHandles = decoder.countClaimedHandles();
           final fieldInlineSize = fieldType.inlineSize(decoder.wireFormat);
           final field = fieldType.decode(decoder, headerOffset, depth + 1);
@@ -1177,7 +1184,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
         if (decoder.wireFormat == WireFormat.v2 &&
             fieldType.inlineSize(decoder.wireFormat) <= 4) {
           throw FidlError(
-              'envelope contents out-of-line when they should be inline',
+              'received out-of-line data, but field size indicates an inline payload',
               FidlErrorCode.fidlInvalidInlineBitInEnvelope);
         }
 
