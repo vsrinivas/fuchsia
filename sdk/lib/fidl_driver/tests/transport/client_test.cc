@@ -40,3 +40,43 @@ TEST(Client, ServerReset) {
 
   sync_completion_wait(&event_handler.completion, ZX_TIME_INFINITE);
 }
+
+TEST(Client, ServerResetMidCall) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  ASSERT_OK(dispatcher.status_value());
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
+
+  struct EventHandler : public fdf::WireAsyncEventHandler<test_transport::TwoWayTest> {
+    void on_fidl_error(fidl::UnbindInfo unbind_info) override {
+      EXPECT_TRUE(unbind_info.is_peer_closed());
+      sync_completion_signal(&completion);
+    }
+
+    sync_completion_t completion;
+  };
+
+  EventHandler event_handler;
+  fdf::WireSharedClient<test_transport::TwoWayTest> client;
+  client.Bind(std::move(client_end), dispatcher->get(), &event_handler);
+
+  auto arena = fdf::Arena::Create(0, "");
+  ASSERT_OK(arena.status_value());
+  sync_completion_t call_completion;
+  client.buffer(*arena)->TwoWay(
+      0u, [&call_completion](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+        EXPECT_TRUE(result.is_peer_closed());
+        sync_completion_signal(&call_completion);
+      });
+
+  server_end.reset();
+
+  sync_completion_wait(&event_handler.completion, ZX_TIME_INFINITE);
+  sync_completion_wait(&call_completion, ZX_TIME_INFINITE);
+}
