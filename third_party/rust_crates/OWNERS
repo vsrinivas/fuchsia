@@ -1,3 +1,15 @@
+# This directory needs to follow review and tooling processes that not all
+# global OWNERS are familiar with.
+#
+# See https://fuchsia.dev/fuchsia-src/development/languages/rust/external_crates
+# and Google-specific instructions at go/tq-rust-external-reviews.
+set noparent
+
 adamperry@google.com
+computerdruid@google.com
+dkoloski@google.com
 etryzelaar@google.com
+josephry@google.com
 tmandry@google.com
+
+# COMPONENT: Rust>third_party
