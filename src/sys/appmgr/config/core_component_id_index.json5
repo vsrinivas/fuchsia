@@ -100,13 +100,6 @@
         },
         {
             instance_id: "72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
             moniker: "/core/tee_manager",
         },
         {
