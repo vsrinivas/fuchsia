@@ -294,7 +294,7 @@ mod tests {
 
     use surpass::{
         painter::{Color, RGBA},
-        TILE_SIZE,
+        TILE_HEIGHT, TILE_WIDTH,
     };
 
     use crate::{
@@ -527,21 +527,21 @@ mod tests {
 
     #[test]
     fn render_change_layers_only() {
-        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
         let layer_id = composition.create_layer();
         composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
-        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0)).unwrap();
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_WIDTH as i32, 0)).unwrap();
 
         let layer_id = composition.create_layer();
         composition
-            .insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32 + 1, 0))
+            .insert_in_layer(layer_id, &pixel_path(TILE_WIDTH as i32 + 1, 0))
             .unwrap()
             .set_props(solid(GREENF));
-        composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0)).unwrap();
+        composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_WIDTH as i32, 0)).unwrap();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -553,11 +553,11 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], RED);
-        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED);
-        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], GREEN);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], GREEN);
+        assert_eq!(buffer[TILE_WIDTH * 4..TILE_WIDTH * 4 + 4], RED);
+        assert_eq!(buffer[(TILE_WIDTH + 1) * 4..(TILE_WIDTH + 1) * 4 + 4], GREEN);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], GREEN);
 
-        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.get_mut(layer_id).unwrap().set_props(solid(REDF));
 
@@ -571,21 +571,21 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], BLACK);
-        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED);
-        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], RED);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED);
+        assert_eq!(buffer[TILE_WIDTH * 4..TILE_WIDTH * 4 + 4], RED);
+        assert_eq!(buffer[(TILE_WIDTH + 1) * 4..(TILE_WIDTH + 1) * 4 + 4], RED);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], RED);
     }
 
     #[test]
     fn clear_emptied_tiles() {
-        let mut buffer = [BLACK; 2 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(2 * TILE_SIZE, 2 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK; 2 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(2 * TILE_WIDTH, 2 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
         let layer_id = composition.create_layer();
         composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
-        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0)).unwrap();
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_WIDTH as i32, 0)).unwrap();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -599,7 +599,7 @@ mod tests {
         assert_eq!(buffer[0..4], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_WIDTH as f32, 0.0]).unwrap(),
         );
 
         composition.render(
@@ -614,7 +614,7 @@ mod tests {
         assert_eq!(buffer[0..4], BLACK);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_WIDTH as f32), 0.0]).unwrap(),
         );
 
         composition.render(
@@ -629,7 +629,7 @@ mod tests {
         assert_eq!(buffer[0..4], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_WIDTH as f32]).unwrap(),
         );
 
         composition.render(
@@ -646,8 +646,8 @@ mod tests {
 
     #[test]
     fn separare_layer_caches() {
-        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(TILE_SIZE, TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK; TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(TILE_WIDTH, TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache0 = composition.create_buffer_layer_cache();
         let layer_cache1 = composition.create_buffer_layer_cache();
@@ -666,7 +666,7 @@ mod tests {
 
         assert_eq!(buffer[0..4], RED);
 
-        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK; TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -707,7 +707,7 @@ mod tests {
         assert_eq!(buffer[0..4], BLACK);
         assert_eq!(buffer[4..8], RED);
 
-        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK; TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -727,19 +727,19 @@ mod tests {
         let mut builder = PathBuilder::new();
 
         builder.move_to(Point::new(0.0, 0.0));
-        builder.line_to(Point::new(0.0, TILE_SIZE as f32));
-        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, 0.0));
-        builder.line_to(Point::new(TILE_SIZE as f32, 0.0));
-        builder.line_to(Point::new(TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, 0.0));
+        builder.line_to(Point::new(0.0, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(3.0 * TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(3.0 * TILE_WIDTH as f32, 0.0));
+        builder.line_to(Point::new(TILE_WIDTH as f32, 0.0));
+        builder.line_to(Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(2.0 * TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(2.0 * TILE_WIDTH as f32, 0.0));
         builder.line_to(Point::new(0.0, 0.0));
 
         let path = builder.build();
 
-        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
 
         let mut composition = Composition::new();
 
@@ -757,7 +757,7 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], RED);
-        assert_eq!(buffer[TILE_SIZE * 4..(TILE_SIZE * 4 + 4)], BLACK);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED);
+        assert_eq!(buffer[TILE_WIDTH * 4..(TILE_WIDTH * 4 + 4)], BLACK);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], RED);
     }
 }

@@ -452,7 +452,7 @@ mod tests {
     use crate::{
         painter::{style::Color, Props},
         simd::{i8x16, Simd},
-        PIXEL_WIDTH, TILE_SIZE,
+        PIXEL_WIDTH, TILE_HEIGHT,
     };
 
     const WHITE: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
@@ -506,9 +506,9 @@ mod tests {
 
     fn cover(layer_id: u32, cover_type: CoverType) -> CoverCarry {
         let cover = match cover_type {
-            CoverType::Partial => Cover { covers: [i8x16::splat(1); TILE_SIZE / i8x16::LANES] },
+            CoverType::Partial => Cover { covers: [i8x16::splat(1); TILE_HEIGHT / i8x16::LANES] },
             CoverType::Full => {
-                Cover { covers: [i8x16::splat(PIXEL_WIDTH as i8); TILE_SIZE / i8x16::LANES] }
+                Cover { covers: [i8x16::splat(PIXEL_WIDTH as i8); TILE_HEIGHT / i8x16::LANES] }
             }
         };
 
