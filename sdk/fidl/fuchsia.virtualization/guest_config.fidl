@@ -20,28 +20,6 @@ type KernelType = strict enum {
     LINUX = 1;
 };
 
-/// Memory policy for a MemorySpec.
-type MemoryPolicy = strict enum {
-    /// Map a VMO as cached memory into a guest physical address space.
-    GUEST_CACHED = 0;
-    /// Map a VMO with 1:1 correspondence with host memory as cached memory into
-    /// a guest physical address space.
-    HOST_CACHED = 1;
-    /// Map a VMO with 1:1 correspondence with host memory as device memory into
-    /// a guest physical address space.
-    HOST_DEVICE = 2;
-};
-
-/// Properties describing a region of guest physical address space.
-type MemorySpec = struct {
-    /// Base address of a region of guest physical address space.
-    base zx.gpaddr;
-    /// Size of a region of guest physical address space.
-    size uint64;
-    /// Memory policy of a region of guest physical address space.
-    policy MemoryPolicy;
-};
-
 /// Mode of the file backing a block device.
 type BlockMode = strict enum {
     /// Reads and writes are allowed.
@@ -122,12 +100,9 @@ type GuestConfig = resource table {
 
     /// The number of CPUs to provide to a guest.
     7: cpus uint8;
-    /// The layout of memory to be mapped into a guest.
-    @deprecated("User specified layouts are being removed, see fxb/94972")
-    8: memory vector<MemorySpec>:MAX_MEMORY;
     /// Amount of guest memory required, in bytes. This value may be rounded up depending on
     /// the system configuration.
-   22: guest_memory uint64;
+    8: guest_memory uint64;
     /// A list of physical interrupts to bind to.
     9: interrupts vector<uint32>:MAX_INTERRUPTS;
     /// A list of block devices to give a guest. Cannot be changed from the
