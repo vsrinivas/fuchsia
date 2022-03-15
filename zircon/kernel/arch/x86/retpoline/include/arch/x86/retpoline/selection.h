@@ -19,14 +19,11 @@
 template <typename CpuidIoProvider, typename MsrIoProvider>
 inline std::string_view SelectX86RetpolineAlternative(CpuidIoProvider&& cpuid, MsrIoProvider&& msr,
                                                       const BootOptions& options) {
-  // If the preferred Spectre v2 mitigation strategy is IBRS alone, then we
-  // do not need retpolines.
-  const bool mitigated_by_ibrs =
-      arch::GetPreferredSpectreV2Mitigation(cpuid, msr) == arch::SpectreV2Mitigation::kIbrs;
-  if (options.x86_disable_spec_mitigations || mitigated_by_ibrs) {
+  if (options.x86_disable_spec_mitigations) {
     return "__x86_indirect_thunk_unsafe_r11";
+  } else {
+    return "__x86_indirect_thunk_basic_r11";
   }
-  return "__x86_indirect_thunk_basic_r11";
 }
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_RETPOLINE_INCLUDE_ARCH_X86_RETPOLINE_SELECTION_H_
