@@ -22,22 +22,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
-          ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>>(
-          ::test_protocolrequest::kParent_GetChild_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
-    GetChild(::fidl::ClientResponseCallback<
-             ::test_protocolrequest::Parent::GetChild>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolrequest::Parent::GetChild>>(
+          ::test_protocolrequest::Parent::GetChild>(
           ::test_protocolrequest::kParent_GetChild_Ordinal,
           std::move(_callback)));
 }
@@ -51,24 +36,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,
-          ::fidl::ClientCallback<
-              ::test_protocolrequest::Parent::GetChildRequest>>(
-          ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
-    GetChildRequest(::fidl::ClientResponseCallback<
-                    ::test_protocolrequest::Parent::GetChildRequest>&&
-                        _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolrequest::Parent::GetChildRequest>>(
+          ::test_protocolrequest::Parent::GetChildRequest>(
           ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
           std::move(_callback)));
 }

@@ -26,34 +26,8 @@ void fidl::internal::NaturalClientImpl<
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>,
-          ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                     ComposedCallWhichMayFail>>(
-          ::test_errorsyntax::
-              kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    ComposedCallWhichMayFail(
-        ::test_errorsyntax_parent::
-            ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                ComposedCallWhichMayFail>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>,
-          ::fidl::ClientResponseCallback<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                  ComposedCallWhichMayFail>>(
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>(
           ::test_errorsyntax::
               kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
           std::move(_callback)));
@@ -74,35 +48,11 @@ void fidl::internal::NaturalClientImpl<
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-          ::fidl::ClientCallback<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
           ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
           std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax>::
-    CallWhichMayFail(
-        ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
-            payload,
-        ::fidl::ClientResponseCallback<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
-            _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_errorsyntax::
-                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-          ::fidl::ClientResponseCallback<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
-          ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-          std::move(_callback)));
-}
+
 namespace test_errorsyntax {
 #endif  // __Fuchsia__
 

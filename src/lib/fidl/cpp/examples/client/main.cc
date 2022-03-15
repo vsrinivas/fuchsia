@@ -49,13 +49,11 @@ int main(int argc, const char** argv) {
 
   // [START two_way_natural_result]
   // Make an EchoString call with natural types and result callback.
-  client->EchoString(
-      {"hello"},
-      [&](fitx::result<fidl::Error, fidl::Response<fuchsia_examples::Echo::EchoString>>& result) {
-        ZX_ASSERT(result.is_ok());
-        std::cout << "(Natural types) got response: " << result->response() << std::endl;
-        loop.Quit();
-      });
+  client->EchoString({"hello"}, [&](fidl::Result<fuchsia_examples::Echo::EchoString>& result) {
+    ZX_ASSERT(result.is_ok());
+    std::cout << "(Natural types) got response: " << result->response() << std::endl;
+    loop.Quit();
+  });
   // [END two_way_natural_result]
   loop.Run();
   loop.ResetQuit();
@@ -63,8 +61,7 @@ int main(int argc, const char** argv) {
   // [START two_way_designated_natural_result]
   // Make an EchoString call with natural types, using named arguments in the request object.
   client->EchoString(
-      {{.value = "hello"}},
-      [&](fitx::result<fidl::Error, fidl::Response<fuchsia_examples::Echo::EchoString>>& result) {
+      {{.value = "hello"}}, [&](fidl::Result<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT(result.is_ok());
         std::cout << "(Natural types) got response: " << result->response() << std::endl;
         loop.Quit();
@@ -77,29 +74,12 @@ int main(int argc, const char** argv) {
   // Make an EchoString call with natural types, passing the entire request as one object.
   fuchsia_examples::EchoEchoStringRequest request{"hello"};
   client->EchoString(
-      std::move(request),
-      [&](fitx::result<fidl::Error, fidl::Response<fuchsia_examples::Echo::EchoString>>& result) {
+      std::move(request), [&](fidl::Result<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT(result.is_ok());
         std::cout << "(Natural types) got response: " << result->response() << std::endl;
         loop.Quit();
       });
   // [END two_way_payload_natural_result]
-  loop.Run();
-  loop.ResetQuit();
-
-  // [START two_way_natural_response]
-  // Make an EchoString call with natural types and response callback.
-  client->EchoString({"hello"}, [&](fidl::Response<fuchsia_examples::Echo::EchoString>& reply) {
-    // Response arguments are accessed through an arrow indirection.
-    std::cout << "(Natural types) got response: " << reply->response() << std::endl;
-    // Alternatively, you may access the response payload object (a struct in
-    // this case) directly. They are equivalent.
-    fuchsia_examples::EchoEchoStringTopResponse& response = *reply;
-    ZX_ASSERT(response.response() == reply->response());
-
-    loop.Quit();
-  });
-  // [END two_way_natural_response]
   loop.Run();
   loop.ResetQuit();
 

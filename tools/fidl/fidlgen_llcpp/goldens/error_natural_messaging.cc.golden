@@ -16,25 +16,10 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_error::Example::Foo>,
-          ::fidl::ClientCallback<::test_error::Example::Foo>>(
+      ::fidl::internal::MakeResponseContext<::test_error::Example::Foo>(
           ::test_error::kExample_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
-    ::test_error::ExampleFooRequest&& payload,
-    ::fidl::ClientResponseCallback<::test_error::Example::Foo>&& _callback)
-    const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_error::kExample_foo_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_error::Example::Foo>,
-          ::fidl::ClientResponseCallback<::test_error::Example::Foo>>(
-          ::test_error::kExample_foo_Ordinal, std::move(_callback)));
-}
+
 namespace test_error {
 #endif  // __Fuchsia__
 

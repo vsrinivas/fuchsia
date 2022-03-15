@@ -427,6 +427,10 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 
 {{- define "Protocol:NaturalMessagingHeader" }}
+  {{- range .TwoWayMethods }}
+    {{- template "Method:Types:NaturalMessagingHeader" . }}
+  {{- end }}
+
   {{- /* This decouples the natural messaging header from the messaging header. */}}
   {{- /* For example, we could transition one of them off of coding tables independently. */}}
   {{- range .Methods }}

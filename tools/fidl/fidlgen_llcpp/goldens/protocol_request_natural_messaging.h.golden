@@ -4,6 +4,7 @@
 
 #include <fidl/test.protocolrequest/cpp/markers.h>
 #include <fidl/test.protocolrequest/cpp/natural_types.h>
+#include <fidl/test.protocolrequest/cpp/wire_messaging.h>
 #include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
@@ -13,6 +14,34 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl {}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_protocolrequest::Parent::GetChild> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_protocolrequest::Parent::GetChild>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_protocolrequest::Parent::GetChildRequest> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_protocolrequest::Parent::GetChildRequest>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
 namespace test_protocolrequest {
 __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildTopResponseTable;
@@ -68,17 +97,12 @@ struct ::fidl::internal::MessageTraits<
 };
 namespace test_protocolrequest {}  // namespace test_protocolrequest
 template <>
-class ::fidl::internal::ClientCallbackTraits<
-    ::test_protocolrequest::Parent::GetChild>
-    final {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final
+    : public ::fitx::result<::fidl::Error,
+                            ::test_protocolrequest::ParentGetChildTopResponse> {
  public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Response<::test_protocolrequest::Parent::GetChild>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::test_protocolrequest::Parent::GetChild>&)>;
+  using ::fitx::result<
+      ::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse>::result;
 };
 
 template <>
@@ -122,17 +146,14 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::test_protocolrequest::ParentGetChildRequestTopResponse;
 };
 template <>
-class ::fidl::internal::ClientCallbackTraits<
-    ::test_protocolrequest::Parent::GetChildRequest>
-    final {
- public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<
+class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final
+    : public ::fitx::result<
           ::fidl::Error,
-          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&)>;
+          ::test_protocolrequest::ParentGetChildRequestTopResponse> {
+ public:
+  using ::fitx::result<
+      ::fidl::Error,
+      ::test_protocolrequest::ParentGetChildRequestTopResponse>::result;
 };
 
 template <>
@@ -144,17 +165,9 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final
       ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>&&
           _callback) const;
 
-  void GetChild(
-      ::fidl::ClientResponseCallback<::test_protocolrequest::Parent::GetChild>&&
-          _callback) const;
-
   void GetChildRequest(
       ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChildRequest>&&
           _callback) const;
-
-  void GetChildRequest(
-      ::fidl::ClientResponseCallback<
-          ::test_protocolrequest::Parent::GetChildRequest>&& _callback) const;
 
   ::fitx::result<::fidl::Error> TakeChild(
       ::test_protocolrequest::ParentTakeChildRequest&& payload) const;
@@ -364,12 +377,6 @@ class ::fidl::internal::NaturalCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::MethodTypes<::test_protocolrequest::Parent::GetChild> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_protocolrequest::Parent::GetChild>>;
-};
-
-template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChildRequest>
     : public ::fidl::CompleterBase {
@@ -379,13 +386,6 @@ class ::fidl::internal::NaturalCompleterBase<
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-struct ::fidl::internal::MethodTypes<
-    ::test_protocolrequest::Parent::GetChildRequest> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_protocolrequest::Parent::GetChildRequest>>;
 };
 
 template <>

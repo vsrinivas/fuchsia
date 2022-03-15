@@ -18,24 +18,10 @@ void fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_nullable::SimpleProtocol::Add>,
-          ::fidl::ClientCallback<::test_nullable::SimpleProtocol::Add>>(
+          ::test_nullable::SimpleProtocol::Add>(
           ::test_nullable::kSimpleProtocol_Add_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
-    ::test_nullable::SimpleProtocolAddRequest&& payload,
-    ::fidl::ClientResponseCallback<::test_nullable::SimpleProtocol::Add>&&
-        _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_nullable::SimpleProtocol::Add>,
-          ::fidl::ClientResponseCallback<::test_nullable::SimpleProtocol::Add>>(
-          ::test_nullable::kSimpleProtocol_Add_Ordinal, std::move(_callback)));
-}
+
 namespace test_nullable {
 #endif  // __Fuchsia__
 

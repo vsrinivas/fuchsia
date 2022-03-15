@@ -58,29 +58,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposed(
-        ::test_protocolpayloads_imported::ImportStructPayload&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayComposed>(
           ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
           std::move(_callback)));
 }
@@ -98,31 +76,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
-          ::test_protocolpayloads::
-              kMainProtocol_TwoWayComposedWithError_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayComposedWithError(
-        ::test_protocolpayloads_imported::ImportStructPayload&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&&
-            _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolpayloads::
-                   kMainProtocol_TwoWayComposedWithError_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
           ::test_protocolpayloads::
               kMainProtocol_TwoWayComposedWithError_Ordinal,
           std::move(_callback)));
@@ -139,26 +93,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocal(::test_protocolpayloads::LocalStructPayload&& payload,
-                ::fidl::ClientResponseCallback<
-                    ::test_protocolpayloads::MainProtocol::TwoWayLocal>&&
-                    _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>(
           ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
           std::move(_callback)));
 }
@@ -176,30 +111,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayLocalWithError(
-        ::test_protocolpayloads::LocalStructPayload&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&&
-            _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
           ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
           std::move(_callback)));
 }
@@ -216,27 +128,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImport(
-        ::test_protocolpayloads_imported::ImportStructPayload&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayImport>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>(
           ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
           std::move(_callback)));
 }
@@ -254,30 +146,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayImportWithError(
-        ::test_protocolpayloads_imported::ImportStructPayload&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&&
-            _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
           ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
           std::move(_callback)));
 }
@@ -293,26 +162,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnon(::test_protocolpayloads::MainProtocolTwoWayAnonRequest&& payload,
-               ::fidl::ClientResponseCallback<
-                   ::test_protocolpayloads::MainProtocol::TwoWayAnon>&&
-                   _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>(
           ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
           std::move(_callback)));
 }
@@ -331,31 +181,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-          ::fidl::ClientCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
-          ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
-    TwoWayAnonWithError(
-        ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest&&
-            payload,
-        ::fidl::ClientResponseCallback<
-            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&&
-            _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-          ::fidl::ClientResponseCallback<
-              ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
+          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
           ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
           std::move(_callback)));
 }

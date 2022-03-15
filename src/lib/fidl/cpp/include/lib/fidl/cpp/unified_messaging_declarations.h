@@ -57,6 +57,38 @@ class Response;
 template <typename Method>
 class Event;
 
+// |Result| represents the result of calling a two-way FIDL method |Method|.
+//
+// It inherits from different `fitx::result` types depending on |Method|:
+//
+// - When the method does not use the error syntax:
+//     - When the method response has no body:
+//
+//           fitx::result<fidl::Error>
+//
+//     - When the method response has a body:
+//
+//           fitx::result<fidl::Error, MethodPayload>
+//
+//       where `fidl::Error` is a type representing any transport error or
+//       protocol level terminal errors such as epitaphs, and |MethodPayload|
+//       is the response type.
+//
+// - When the method uses the error syntax:
+//     - When the method response payload is an empty struct:
+//
+//           fitx::result<fidl::AnyErrorIn<Method>>
+//
+//     - When the method response payload is not an empty struct:
+//
+//           fitx::result<fidl::AnyErrorIn<Method>, MethodPayload>
+//
+//       where |MethodPayload| is the success type.
+//
+// See also |fidl::AnyErrorIn|.
+template <typename Method>
+class Result;
+
 namespace internal {
 
 // |MessageTraits| contains information about a request or response message:
@@ -86,14 +118,17 @@ class NaturalEventSender;
 template <typename Protocol>
 class NaturalClientImpl;
 
-// |ClientCallbackTraits| contains two nested definitions, that describe the
-// async callback types used in the |fidl::Client| for the FIDL method |Method|,
-// that works with natural domain objects:
-//
-// - |ResultCallback|: the callback taking a |fitx::result| type.
-// - |ResponseCallback|: the callback taking a |fidl::Response| type.
-template <typename Method>
-class ClientCallbackTraits;
+// |NaturalMethodTypes| gives access to:
+// - |Completer|: the completer type associated with a particular method.
+// - if two-way:
+//     - |ResultCallback|: the client callback taking a |fidl::Result| type.
+//     - |HasApplicationError|: whether the method uses the error syntax.
+//     - if using the error syntax:
+//         - |IsEmptyStructPayload|: whether the success payload is an empty struct.
+//     - otherwise:
+//         - |IsAbsentBody|: whether the response has no body.
+template <typename FidlMethod>
+struct NaturalMethodTypes;
 
 // |NaturalEventHandlerInterface| contains handlers for each event inside
 // the protocol |FidlProtocol|.

@@ -25,33 +25,8 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_union::TestProtocol::
-                               StrictXUnionHenceResponseMayBeStackAllocated>,
-          ::fidl::ClientCallback<
-              ::test_union::TestProtocol::
-                  StrictXUnionHenceResponseMayBeStackAllocated>>(
-          ::test_union::
-              kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fidl::ClientResponseCallback<
-            ::test_union::TestProtocol::
-                StrictXUnionHenceResponseMayBeStackAllocated>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_union::
-              kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_union::TestProtocol::
-                               StrictXUnionHenceResponseMayBeStackAllocated>,
-          ::fidl::ClientResponseCallback<
-              ::test_union::TestProtocol::
-                  StrictXUnionHenceResponseMayBeStackAllocated>>(
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>(
           ::test_union::
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
           std::move(_callback)));
@@ -70,37 +45,13 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
-          ::fidl::ClientCallback<
-              ::test_union::TestProtocol::
-                  FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>(
           ::test_union::
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
           std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fidl::ClientResponseCallback<
-            ::test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_union::
-              kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
-          ::fidl::ClientResponseCallback<
-              ::test_union::TestProtocol::
-                  FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-          ::test_union::
-              kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-          std::move(_callback)));
-}
+
 namespace test_union {
 #endif  // __Fuchsia__
 

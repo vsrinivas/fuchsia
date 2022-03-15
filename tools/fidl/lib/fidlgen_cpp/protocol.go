@@ -93,9 +93,11 @@ var (
 	NaturalRequest     = fidlNs.member("Request")
 	NaturalResponse    = fidlNs.member("Response")
 	NaturalEvent       = fidlNs.member("Event")
+	NaturalAnyErrorIn  = fidlNs.member("AnyErrorIn")
+	NaturalResult      = fidlNs.member("Result")
 	MessageTraits      = internalNs.member("MessageTraits")
 	MessageBase        = internalNs.member("MessageBase")
-	NaturalMethodTypes = internalNs.member("MethodTypes")
+	NaturalMethodTypes = internalNs.member("NaturalMethodTypes")
 
 	// Client types
 	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
@@ -484,6 +486,8 @@ type unifiedMethod struct {
 	RequestMessageTraits       name
 	RequestMessageBase         name
 	NaturalResponse            name
+	NaturalResult              name
+	NaturalAnyErrorIn          name
 	ResponseMessageTraits      name
 	ResponseMessageBase        name
 	NaturalEvent               name
@@ -501,6 +505,8 @@ type unifiedMethod struct {
 func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) unifiedMethod {
 	naturalRequest := NaturalRequest.template(methodMarker)
 	naturalResponse := NaturalResponse.template(methodMarker)
+	naturalResult := NaturalResult.template(methodMarker)
+	naturalAnyErrorIn := NaturalAnyErrorIn.template(methodMarker)
 	naturalEvent := NaturalEvent.template(methodMarker)
 	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
@@ -508,6 +514,8 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 		RequestMessageTraits:       MessageTraits.template(naturalRequest),
 		RequestMessageBase:         MessageBase.template(naturalRequest),
 		NaturalResponse:            naturalResponse,
+		NaturalResult:              naturalResult,
+		NaturalAnyErrorIn:          naturalAnyErrorIn,
 		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
 		ResponseMessageBase:        MessageBase.template(naturalResponse),
 		NaturalEvent:               naturalEvent,
@@ -588,6 +596,22 @@ func (m Method) WireCompleterArg() string {
 
 func (m Method) NaturalCompleterArg() string {
 	return m.appendName("Completer").nest("Sync").Name()
+}
+
+func (m Method) NaturalResultBase() string {
+	if m.Result != nil {
+		if len(m.Result.ValueParameters) > 0 {
+			return fmt.Sprintf("::fitx::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
+		} else {
+			return fmt.Sprintf("::fitx::result<%s>", m.NaturalAnyErrorIn)
+		}
+	} else {
+		if len(m.ResponseArgs) > 0 {
+			return fmt.Sprintf("::fitx::result<::fidl::Error, %s>", m.ResponsePayload)
+		} else {
+			return "::fitx::result<::fidl::Error>"
+		}
+	}
 }
 
 // CtsMethodAnnotation generates a comment containing information about the FIDL

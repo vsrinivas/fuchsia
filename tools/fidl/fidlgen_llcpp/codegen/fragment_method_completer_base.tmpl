@@ -159,10 +159,6 @@ class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
   using ::fidl::CompleterBase::CompleterBase;
 };
 
-template<>
-struct {{ .NaturalMethodTypes }} {
-  using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
-};
 {{- end }}
 
 

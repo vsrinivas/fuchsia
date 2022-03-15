@@ -19,31 +19,11 @@ void fidl::internal::NaturalClientImpl<
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
-          ::fidl::ClientCallback<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
           ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
           std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>::
-    GetFoo(::fidl::ClientResponseCallback<
-           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
-               _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{
-          ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
-          ::fidl::ClientResponseCallback<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-          ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
-          std::move(_callback)));
-}
+
 namespace test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
 

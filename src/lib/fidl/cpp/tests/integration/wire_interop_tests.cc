@@ -197,12 +197,12 @@ TEST_F(UnifiedClientToWireServer, RoundTrip) {
     auto node = MakeNaturalFile();
     fidl_cpp_wire_interop_test::InteropRoundTripRequest request{std::move(node)};
     bool got_response = false;
-    client()->RoundTrip(
-        std::move(request),
-        [&](fidl::Response<fidl_cpp_wire_interop_test::Interop::RoundTrip>& response) {
-          CheckNaturalFile(response->node());
-          got_response = true;
-        });
+    client()->RoundTrip(std::move(request),
+                        [&](fidl::Result<fidl_cpp_wire_interop_test::Interop::RoundTrip>& result) {
+                          ASSERT_TRUE(result.is_ok());
+                          CheckNaturalFile(result->node());
+                          got_response = true;
+                        });
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, server.num_calls);
     EXPECT_TRUE(got_response);
@@ -252,13 +252,11 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
     bool got_response = false;
     client()->TryRoundTrip(
         std::move(request),
-        [&](fidl::Response<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& response) {
-          // TODO(fxbug.dev/90111): Translate error syntax to `::fitx::result`.
-          fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result result =
-              std::move(response->result());
-          ASSERT_OK(result.err().value_or(ZX_OK));
-
-          fidl_cpp_wire_interop_test::Node node = result.response()->node();
+        [&](fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          ASSERT_TRUE(result.is_ok());
+          fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Response payload =
+              std::move(result.value());
+          fidl_cpp_wire_interop_test::Node node = payload.node();
           CheckNaturalDir(node);
           got_response = true;
         });
@@ -292,12 +290,13 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
     bool got_response = false;
     client()->TryRoundTrip(
         std::move(request),
-        [&](fidl::Response<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& response) {
-          // TODO(fxbug.dev/90111): Translate error syntax to `::fitx::result`.
-          fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result result =
-              std::move(response->result());
-          ASSERT_TRUE(result.err().has_value());
-          EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.err().value());
+        [&](fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
+          ASSERT_FALSE(result.is_ok());
+          ASSERT_TRUE(result.is_error());
+          fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
+              result.error_value();
+          ASSERT_TRUE(error.is_application_error());
+          EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.application_error());
           got_response = true;
         });
     ASSERT_OK(loop().RunUntilIdle());

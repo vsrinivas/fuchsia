@@ -6,6 +6,7 @@
 #include <fidl/test.middle/cpp/natural_messaging.h>
 #include <fidl/test.transitivedependenciescompose/cpp/markers.h>
 #include <fidl/test.transitivedependenciescompose/cpp/natural_types.h>
+#include <fidl/test.transitivedependenciescompose/cpp/wire_messaging.h>
 #include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
@@ -15,6 +16,20 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl {}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_transitivedependenciescompose::Top::GetFoo> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_transitivedependenciescompose::Top::GetFoo>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
 namespace test_transitivedependenciescompose {
 __LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 
@@ -56,17 +71,12 @@ struct ::fidl::internal::MessageTraits<
 namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 template <>
-class ::fidl::internal::ClientCallbackTraits<
-    ::test_transitivedependenciescompose::Top::GetFoo>
-    final {
+class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final
+    : public ::fitx::result<::fidl::Error,
+                            ::test_bottom::BottomGetFooTopResponse> {
  public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<::fidl::Error,
-                     ::fidl::Response<
-                         ::test_transitivedependenciescompose::Top::GetFoo>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>&)>;
+  using ::fitx::result<::fidl::Error,
+                       ::test_bottom::BottomGetFooTopResponse>::result;
 };
 
 template <>
@@ -77,10 +87,6 @@ class ::fidl::internal::NaturalClientImpl<
   using NaturalClientBase::NaturalClientBase;
   void GetFoo(
       ::fidl::ClientCallback<
-          ::test_transitivedependenciescompose::Top::GetFoo>&& _callback) const;
-
-  void GetFoo(
-      ::fidl::ClientResponseCallback<
           ::test_transitivedependenciescompose::Top::GetFoo>&& _callback) const;
 };
 namespace test_transitivedependenciescompose {
@@ -178,13 +184,6 @@ class ::fidl::internal::NaturalCompleterBase<
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-struct ::fidl::internal::MethodTypes<
-    ::test_transitivedependenciescompose::Top::GetFoo> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_transitivedependenciescompose::Top::GetFoo>>;
 };
 
 template <>

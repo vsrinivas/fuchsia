@@ -24,27 +24,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-          ::fidl::ClientCallback<
-              ::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-          ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
-    SendAndReceive(
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
-        ::fidl::ClientResponseCallback<
-            ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-          ::fidl::ClientResponseCallback<
-              ::test_emptystruct::EmptyProtocol::SendAndReceive>>(
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>(
           ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
           std::move(_callback)));
 }

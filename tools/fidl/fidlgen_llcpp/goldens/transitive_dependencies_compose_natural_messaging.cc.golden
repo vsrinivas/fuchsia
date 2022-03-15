@@ -18,28 +18,11 @@ void fidl::internal::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>,
-          ::fidl::ClientCallback<
-              ::test_transitivedependenciescompose::Top::GetFoo>>(
+          ::test_transitivedependenciescompose::Top::GetFoo>(
           ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
           std::move(_callback)));
 }
-void fidl::internal::
-    NaturalClientImpl<::test_transitivedependenciescompose::Top>::GetFoo(
-        ::fidl::ClientResponseCallback<
-            ::test_transitivedependenciescompose::Top::GetFoo>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>,
-          ::fidl::ClientResponseCallback<
-              ::test_transitivedependenciescompose::Top::GetFoo>>(
-          ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
-          std::move(_callback)));
-}
+
 namespace test_transitivedependenciescompose {
 #endif  // __Fuchsia__
 

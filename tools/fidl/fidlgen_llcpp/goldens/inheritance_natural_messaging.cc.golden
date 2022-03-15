@@ -16,25 +16,10 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_inheritance::Super::Foo>,
-          ::fidl::ClientCallback<::test_inheritance::Super::Foo>>(
+      ::fidl::internal::MakeResponseContext<::test_inheritance::Super::Foo>(
           ::test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
-    ::test_inheritance::SuperFooRequest&& payload,
-    ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>&& _callback)
-    const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksuper_foo_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_inheritance::Super::Foo>,
-          ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>>(
-          ::test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
-}
+
 namespace test_inheritance {
 #endif  // __Fuchsia__
 
@@ -121,25 +106,10 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder,
                                                    std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_inheritance::Sub::Foo>,
-          ::fidl::ClientCallback<::test_inheritance::Sub::Foo>>(
+      ::fidl::internal::MakeResponseContext<::test_inheritance::Sub::Foo>(
           ::test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
 }
-void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
-    ::test_inheritance::SuperFooRequest&& payload,
-    ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&& _callback)
-    const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_inheritance::ksub_foo_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_inheritance::Sub::Foo>,
-          ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>>(
-          ::test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
-}
+
 namespace test_inheritance {
 #endif  // __Fuchsia__
 

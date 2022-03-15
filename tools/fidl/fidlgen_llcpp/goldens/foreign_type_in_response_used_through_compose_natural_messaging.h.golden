@@ -5,6 +5,7 @@
 #include <fidl/test.bottom/cpp/natural_messaging.h>
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/natural_types.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire_messaging.h>
 #include <fidl/test.middle/cpp/natural_messaging.h>
 #include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
@@ -15,6 +16,21 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl {}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
 namespace test_foreigntypeinresponseusedthroughcompose {
 __LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 
@@ -57,19 +73,13 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
 namespace test_foreigntypeinresponseusedthroughcompose {
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 template <>
-class ::fidl::internal::ClientCallbackTraits<
+class ::fidl::Result<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-    final {
+    final : public ::fitx::result<::fidl::Error,
+                                  ::test_middle::MiddleGetFooTopResponse> {
  public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Response<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<
-          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&)>;
+  using ::fitx::result<::fidl::Error,
+                       ::test_middle::MiddleGetFooTopResponse>::result;
 };
 
 template <>
@@ -79,10 +89,6 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   void GetFoo(::fidl::ClientCallback<
-              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
-                  _callback) const;
-
-  void GetFoo(::fidl::ClientResponseCallback<
               ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
                   _callback) const;
 };
@@ -183,13 +189,6 @@ class ::fidl::internal::NaturalCompleterBase<
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-struct ::fidl::internal::MethodTypes<
-    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
 };
 
 template <>

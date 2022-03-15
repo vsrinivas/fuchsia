@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_MAKE_RESPONSE_CONTEXT_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_MAKE_RESPONSE_CONTEXT_H_
 
+#include <lib/fidl/cpp/any_error_in.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/client_base.h>
 
@@ -14,8 +15,11 @@ namespace internal {
 // |MakeResponseContext| is a helper to create an adaptor from a |ResponseContext|
 // to a response/result callback. It returns a raw pointer which deletes itself
 // upon the receipt of a response or an error.
-template <typename NaturalResponse, typename CallbackType>
-ResponseContext* MakeResponseContext(uint64_t ordinal, CallbackType&& callback) {
+template <typename FidlMethod>
+ResponseContext* MakeResponseContext(uint64_t ordinal,
+                                     ::fidl::ClientCallback<FidlMethod> callback) {
+  using CallbackType = ::fidl::ClientCallback<FidlMethod>;
+
   class ResponseContext final : public ::fidl::internal::ResponseContext {
    public:
     explicit ResponseContext(uint64_t ordinal, CallbackType&& callback)
@@ -25,8 +29,10 @@ ResponseContext* MakeResponseContext(uint64_t ordinal, CallbackType&& callback) 
     ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
         ::fidl::IncomingMessage&& result,
         ::fidl::internal::IncomingTransportContext transport_context) override {
-      using IsResultCallback =
-          std::is_invocable<CallbackType, ::fitx::result<::fidl::Error, NaturalResponse>&>;
+      using NaturalResponse = ::fidl::Response<FidlMethod>;
+      constexpr bool HasApplicationError =
+          ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
+
       struct DeleteSelf {
         ResponseContext* c;
         ~DeleteSelf() { delete c; }
@@ -34,10 +40,8 @@ ResponseContext* MakeResponseContext(uint64_t ordinal, CallbackType&& callback) 
 
       // Check transport error.
       if (!result.ok()) {
-        ::fitx::result<::fidl::Error, NaturalResponse> error = ::fitx::error(result.error());
-        if constexpr (IsResultCallback::value) {
-          callback_(error);
-        }
+        ::fidl::Result<FidlMethod> error = ::fitx::error(result.error());
+        callback_(error);
         return cpp17::nullopt;
       }
 
@@ -47,22 +51,43 @@ ResponseContext* MakeResponseContext(uint64_t ordinal, CallbackType&& callback) 
       // Check decoding error.
       if (decoded.is_error()) {
         ::fidl::UnbindInfo unbind_info = ::fidl::UnbindInfo(decoded.error_value());
-        if constexpr (IsResultCallback::value) {
-          callback_(decoded);
-        }
+        ::fidl::Result<FidlMethod> error = ::fitx::error(decoded.error_value());
+        callback_(error);
         return unbind_info;
       }
 
-      // Success callback.
-      if constexpr (IsResultCallback::value) {
-        callback_(decoded);
+      if constexpr (HasApplicationError) {
+        // Fold application error.
+        if (decoded.value()->result().err().has_value()) {
+          ::fidl::Result<FidlMethod> error = ::fitx::error(decoded.value()->result().err().value());
+          callback_(error);
+        } else {
+          ZX_DEBUG_ASSERT(decoded.value()->result().response().has_value());
+          if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
+            // Omit empty structs.
+            ::fidl::Result<FidlMethod> value = ::fitx::success();
+            callback_(value);
+          } else {
+            ::fidl::Result<FidlMethod> value =
+                ::fitx::ok(std::move(*decoded.value()->result().response().take()));
+            callback_(value);
+          }
+        }
       } else {
-        callback_(decoded.value());
+        if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody) {
+          // Absent body.
+          ::fidl::Result<FidlMethod> value = ::fitx::success();
+          callback_(value);
+        } else {
+          ::fidl::Result<FidlMethod> value = ::fitx::ok(std::move(*decoded.value()));
+          callback_(value);
+        }
       }
+
       return cpp17::nullopt;
     }
 
-    CallbackType callback_;
+    ::fidl::ClientCallback<FidlMethod> callback_;
   };
 
   return new ResponseContext(ordinal, std::forward<CallbackType>(callback));

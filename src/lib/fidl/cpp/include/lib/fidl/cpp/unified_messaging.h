@@ -24,12 +24,12 @@ namespace fidl {
 namespace internal {
 
 template <typename FidlMethod>
-struct MethodTypes {
+struct NaturalMethodTypes {
   using Completer = ::fidl::Completer<>;
 };
 
 template <typename FidlMethod>
-using NaturalCompleter = typename fidl::internal::MethodTypes<FidlMethod>::Completer;
+using NaturalCompleter = typename fidl::internal::NaturalMethodTypes<FidlMethod>::Completer;
 
 // Note: application error types used in the error syntax are limited to int32,
 // uint32, and enums thereof. Thus the same application error types are shared
@@ -119,21 +119,10 @@ inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Status result) {
 //
 // It is of the form:
 //
-//     void Callback(::fitx::result<::fidl::Error, ::fidl::Response<Method>>&);
+//     void Callback(::fidl::Result<Method>&);
 //
 template <typename Method>
-using ClientCallback = typename internal::ClientCallbackTraits<Method>::ResultCallback;
-
-// |ClientResponseCallback| is the async callback type used in the
-// |fidl::Client| for the FIDL method |Method| that ignores errors, that works
-// with natural domain objects.
-//
-// It is of the form:
-//
-//     void Callback(::fidl::Response<Method>&);
-//
-template <typename Method>
-using ClientResponseCallback = typename internal::ClientCallbackTraits<Method>::ResponseCallback;
+using ClientCallback = typename internal::NaturalMethodTypes<Method>::ResultCallback;
 
 }  // namespace fidl
 

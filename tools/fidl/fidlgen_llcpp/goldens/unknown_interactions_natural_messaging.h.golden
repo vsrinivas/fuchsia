@@ -4,6 +4,7 @@
 
 #include <fidl/test.unknowninteractions/cpp/markers.h>
 #include <fidl/test.unknowninteractions/cpp/natural_types.h>
+#include <fidl/test.unknowninteractions/cpp/wire_messaging.h>
 #include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
@@ -13,6 +14,34 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl {}  // namespace fidl
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_unknowninteractions::Example::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_unknowninteractions::Example::StrictTwoWay>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = true;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<
+    ::test_unknowninteractions::Example::FlexibleTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
+
+  using ResultCallback = ::fit::callback<void(
+      ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>&)>;
+
+  static constexpr bool HasApplicationError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
 namespace test_unknowninteractions {
 __LOCAL extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
@@ -86,17 +115,10 @@ struct ::fidl::internal::MessageTraits<
 };
 namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 template <>
-class ::fidl::internal::ClientCallbackTraits<
-    ::test_unknowninteractions::Example::StrictTwoWay>
-    final {
+class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final
+    : public ::fitx::result<::fidl::Error> {
  public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<::fidl::Error,
-                     ::fidl::Response<
-                         ::test_unknowninteractions::Example::StrictTwoWay>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>&)>;
+  using ::fitx::result<::fidl::Error>::result;
 };
 
 template <>
@@ -138,17 +160,14 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse;
 };
 template <>
-class ::fidl::internal::ClientCallbackTraits<
-    ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final {
+class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final
+    : public ::fitx::result<
+          ::fidl::Error,
+          ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse> {
  public:
-  ClientCallbackTraits() = delete;
-  using ResultCallback = ::fit::callback<void(
-      ::fitx::result<::fidl::Error,
-                     ::fidl::Response<::test_unknowninteractions::Example::
-                                          FlexibleTwoWay>>&)>;
-  using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&)>;
+  using ::fitx::result<
+      ::fidl::Error,
+      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::result;
 };
 
 template <>
@@ -160,15 +179,7 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>
       ::fidl::ClientCallback<
           ::test_unknowninteractions::Example::StrictTwoWay>&& _callback) const;
 
-  void StrictTwoWay(
-      ::fidl::ClientResponseCallback<
-          ::test_unknowninteractions::Example::StrictTwoWay>&& _callback) const;
-
   void FlexibleTwoWay(::fidl::ClientCallback<
-                      ::test_unknowninteractions::Example::FlexibleTwoWay>&&
-                          _callback) const;
-
-  void FlexibleTwoWay(::fidl::ClientResponseCallback<
                       ::test_unknowninteractions::Example::FlexibleTwoWay>&&
                           _callback) const;
 
@@ -357,13 +368,6 @@ class ::fidl::internal::NaturalCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::MethodTypes<
-    ::test_unknowninteractions::Example::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_unknowninteractions::Example::StrictTwoWay>>;
-};
-
-template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
     : public ::fidl::CompleterBase {
@@ -373,13 +377,6 @@ class ::fidl::internal::NaturalCompleterBase<
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-struct ::fidl::internal::MethodTypes<
-    ::test_unknowninteractions::Example::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
 };
 
 template <>

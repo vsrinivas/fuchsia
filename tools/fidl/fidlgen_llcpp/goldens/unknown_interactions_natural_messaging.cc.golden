@@ -27,24 +27,7 @@ void fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::ClientCallback<
-              ::test_unknowninteractions::Example::StrictTwoWay>>(
-          ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::
-    StrictTwoWay(::fidl::ClientResponseCallback<
-                 ::test_unknowninteractions::Example::StrictTwoWay>&& _callback)
-        const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_unknowninteractions::kExample_StrictTwoWay_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>,
-          ::fidl::ClientResponseCallback<
-              ::test_unknowninteractions::Example::StrictTwoWay>>(
+          ::test_unknowninteractions::Example::StrictTwoWay>(
           ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
           std::move(_callback)));
 }
@@ -58,24 +41,7 @@ void fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::ClientCallback<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>>(
-          ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
-          std::move(_callback)));
-}
-void fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::
-    FlexibleTwoWay(::fidl::ClientResponseCallback<
-                   ::test_unknowninteractions::Example::FlexibleTwoWay>&&
-                       _callback) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
-      _encoder{::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal};
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder),
-      ::fidl::internal::MakeResponseContext<
-          ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>,
-          ::fidl::ClientResponseCallback<
-              ::test_unknowninteractions::Example::FlexibleTwoWay>>(
+          ::test_unknowninteractions::Example::FlexibleTwoWay>(
           ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
           std::move(_callback)));
 }

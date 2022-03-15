@@ -242,30 +242,30 @@ Overall guiding principles:
 
 #### Natural API, asynchronous
 
-We define a `fidl::Result<MethodMarker>` templated alias:
+We define a `fidl::Result<MethodMarker>` templated class:
 
 `fidl::Result<FooMethod>` represents the result of calling method `FooMethod`:
 
 ```c++
 template <typename Method>
-fidl::Result<Method> = ...;
+class fidl::Result { ... };
 ```
 
 The precise definition that it expands to depends on the shape of the method:
 
 * When the method does not use the error syntax:
-  - When the method response has no body: `fidl::Result<FooMethod>` aliases to
+  - When the method response has no body: `fidl::Result<FooMethod>` inherits
     `fitx::result<fidl::Error>`.
-  - When the method response has a body: `fidl::Result<FooMethod>` aliases to
+  - When the method response has a body: `fidl::Result<FooMethod>` inherits
     `fitx::result<fidl::Error, FooMethodPayload>`, where `fidl::Error` is a type
     representing any transport error or protocol level terminal errors such as
     epitaphs.
 * When the method uses the error syntax:
   - When the method response payload is an empty struct:
-    `fidl::Result<FooMethod>` aliases to
+    `fidl::Result<FooMethod>` inherits
     `fitx::result<fidl::AnyErrorIn<FooMethod>>` (see `AnyErrorIn` below).
   - When the method response payload is not an empty struct:
-    `fidl::Result<FooMethod>` aliases to
+    `fidl::Result<FooMethod>` inherits
   `fitx::result<fidl::AnyErrorIn<FooMethod>, FooMethodPayload>`.
 
 `AnyErrorIn` is used to implement [error folding][error-folding] of transport

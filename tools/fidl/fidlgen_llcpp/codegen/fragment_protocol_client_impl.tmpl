@@ -97,11 +97,6 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
 {{ printf "%s&& _callback" .CallbackType }}
 {{- end }}
 
-{{- define "Method:ClientAsyncRequestArgumentsWithResponse:Helper" -}}
-{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload, {{ end }}
-{{ printf "%s&& _callback" .ClientResponseCallbackType }}
-{{- end }}
-
 {{- define "Method:ClientRequestArgumentsOneWay:Helper" -}}
 {{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload{{ end }}
 {{- end }}
@@ -120,12 +115,9 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
 
 {{- EnsureNamespace "" }}
 template <>
-class {{ .ClientCallbackTraits }} final {
+class {{ .NaturalResult }} final : public {{ .NaturalResultBase }} {
  public:
-  {{ .ClientCallbackTraits.Self }}() = delete;
-  using ResultCallback =
-      ::fit::callback<void (::fitx::result<::fidl::Error, {{ .NaturalResponse }}>&)>;
-  using ResponseCallback = ::fit::callback<void ({{ .NaturalResponse }}&)>;
+  using {{ .NaturalResultBase }}::result;
 };
 {{ end }}
 
@@ -138,9 +130,6 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   {{- range .TwoWayMethods }}
   {{- .Docs }}
   void {{ .Name }}({{ template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const;
-{{ "" }}
-  {{- .Docs }}
-  void {{ .Name }}({{ template "Method:ClientAsyncRequestArgumentsWithResponse:Helper" . }}) const;
 {{ "" }}
   {{- end }}
 
@@ -174,25 +163,11 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(
-        _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
-      ::fidl::internal::MakeResponseContext<
-          {{ .NaturalResponse }}, {{ .CallbackType }}
-      >({{ .OrdinalName }}, std::move(_callback))
+          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+      ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback))
   );
 }
 
-{{- EnsureNamespace "" }}
-void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
-    {{- template "Method:ClientAsyncRequestArgumentsWithResponse:Helper" . }}) const {
-  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(
-        _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
-      ::fidl::internal::MakeResponseContext<
-          {{ .NaturalResponse }}, {{ .ClientResponseCallbackType }}
-      >({{ .OrdinalName }}, std::move(_callback))
-  );
-}
 {{ end }}
 
 {{- range .OneWayMethods }}
