@@ -34,7 +34,7 @@ namespace media::audio::test {
 //
 // If --save-input-and-output is specified, saving input|output files for every test frequency
 // consumes too much on-device storage. Just save the files for this specified frequency.
-static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
+constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 
 //
 // Custom build-time flags
@@ -42,52 +42,53 @@ static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 // For normal CQ operation, the below should be FALSE.
 //
 // Debug positioning and values of the renderer's input buffer, by showing certain sections.
-static constexpr bool kDebugInputBuffer = false;
+constexpr bool kDisplayInputBuffer = false;
 // Debug positioning and values of the output ring buffer snapshot, by showing certain sections.
-static constexpr bool kDebugOutputBuffer = false;
-// If debugging input or output ring buffers (above), display buffers for all test frequencies?
-static constexpr bool kDebugBuffersAtAllFrequencies = false;
+constexpr bool kDisplayOutputBuffer = false;
+// If debugging input/output ring buffer contents, show sections for ALL frequencies.
+constexpr bool kDisplayBuffersAtAllFrequencies = false;
 // Retain/display worst-case single-test-case results in a looped run. Used to update limits.
-static constexpr bool kRetainWorstCaseResults = false;
-// Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
-static constexpr bool kDisplaySummaryResults = false;
+constexpr bool kRetainWorstCaseResults = false;
+// Show results at test-end in tabular form, for copy/compare to results vectors.
+constexpr bool kDisplaySummaryResults = false;
 //
 // For normal CQ operation, the below should be TRUE.  (They aid in debugging sporadic CQ issues.)
 //
 // Displaying results on-the-fly helps correlate an UNDERFLOW with the affected frequency.
-static constexpr bool kDisplayInProgressResults = true;
-// On significant FR/SiNAD failure (-20db), display relevant output buffer sections while we can.
-static constexpr bool kDebugOutputBufferOnFailure = true;
+constexpr bool kDisplayInProgressResults = true;
+// On significant FR/SiNAD failure, display relevant output buffer sections.
+constexpr bool kDisplayOutputBufferOnFailure = true;
 
-// Additional related configuration
+// Related configuration
 //
 // How many input frames on either side of "positions of interest" to display
-static constexpr int64_t kInputDisplayWindow = 16;
+constexpr int64_t kInputDisplayWindow = 16;
 // How many output frames on either side of "positions of interest" to display
-static constexpr int64_t kOutputDisplayWindow = 48;
+constexpr int64_t kOutputDisplayWindow = 48;
 // Displaying a larger set of "beginning of signal" and "end of signal" frames helps us diagnose
 // output delays and incorrect pipeline widths.
-static constexpr int64_t kOutputAdditionalSignalStartDisplayWindow = 80;
-static constexpr int64_t kOutputAdditionalSignalEndDisplayWindow = 80;
+constexpr int64_t kOutputAdditionalSignalStartDisplayWindow = 80;
+constexpr int64_t kOutputAdditionalSignalEndDisplayWindow = 80;
 // If not displaying buffers at all frequencies, only show this one (applies to input and output).
-// 1 khz is a reasonable mid-range input for saved files, debugging, and single-frequency tests.
-static constexpr int32_t kFrequencyForBufferDebugging = 1000;
-// Dumping buffers for every failure may be too verbose. Only dump ones worse than these limits.
-static constexpr double kDebugOutputBufferOnFailureFreqRespDbTolerance = 20.0;
-static constexpr double kDebugOutputBufferOnFailureSinadDbTolerance = 20.0;
+// 1 kHz is a reasonable mid-range input for saved files, debugging, and single-frequency tests.
+constexpr int32_t kFrequencyForBufferDebugging = 1000;
+// Dumping buffers for every failure may be too verbose. Only dump ones where FR fails by 20 dB...
+constexpr double kDisplayOutputBufferOnFailureFreqRespDbTolerance = 20.0;
+// ... or SiNAD fails by 20 dB.
+constexpr double kDisplayOutputBufferOnFailureSinadDbTolerance = 20.0;
 
 //
 // Consts related to fidelity testing thresholds
 //
 // The power-of-two size of our spectrum analysis buffer, and our frequency spectrum set.
-static constexpr int64_t kFreqTestBufSize = 65536;
+constexpr int64_t kFreqTestBufSize = 65536;
 // When testing fidelity, we compare actual measured dB to expected dB. These tests are designed
 // to pass if 'actual >= expected', OR less but within the following tolerance. This tolerance
 // also sets the digits of precision for 'expected' values, when stored or displayed.
-static constexpr double kFidelityDbTolerance = 0.001;
+constexpr double kFidelityDbTolerance = 0.001;
 
 // For each test_name|channel, we maintain two results arrays: Frequency Response and
-// Signal-to-Noise-and-Distortion (sinad). A map of array results is saved as a function-local
+// Signal-to-Noise-and-Distortion (SiNAD). A map of array results is saved as a function-local
 // static variable. If kRetainWorstCaseResults is set, we persist results across repeated test runs.
 //
 // Note: two test cases must not collide on the same test_name/channel. Thus, test cases must take
@@ -100,6 +101,19 @@ struct ResultsIndex {
     return std::tie(test_name, channel) < std::tie(rhs.test_name, rhs.channel);
   }
 };
+
+// When displaying in-progress results, storing worst-case results and comparing results to required
+// minimum thresholds, we use the actual level_db and sinad_db values as calculated.
+// Purely when displaying summary results, we cap level_db and sinad_db to 0 and 160 respectively.
+//
+// Why? Summary results are usually shown for copying to results vectors (e.g. fidelity_results.cc)
+// to be used for future pass/fail comparisons. When making these assessments, frequency response >0
+// dB is not preferable to 0 dB. Most all analog hardware cannot realize SiNAD >160 dB, and within
+// our current implementation a value >160 dB is clearly a "harmonic spike" since it would require
+// >26.5 bits of precision (exceeding the precision of a normalized-float32 pipeline like ours).
+// Also, clamping our required SiNAD to 160 dB conceptually pairs with FIDL constant MUTED_GAIN_DB.
+constexpr double kMaxFrequencyResponse = 0.0;
+constexpr double kMaxSignalToNoiseAndDistortion = 160.0;
 
 // static
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> HermeticFidelityTest::FillArray(
@@ -130,7 +144,7 @@ std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTe
 }
 
 // static
-// Retrieve (initially allocating, if necessary) the array of sinad results for this path|channel.
+// Retrieve (initially allocating, if necessary) the array of SiNAD results for this path|channel.
 // A map of these array results is saved as a function-local static variable.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::sinad_results(
     std::string test_name, int32_t channel) {
@@ -194,10 +208,24 @@ std::vector<HermeticFidelityTest::Frequency> HermeticFidelityTest::GetTestFreque
     const HermeticFidelityTest::TestCase<InputFormat, OutputFormat>& tc) {
   if (tc.single_frequency_to_test.has_value()) {
     auto freq_display_val = tc.single_frequency_to_test.value();
+    // If `single_frequency_to_test` is specified, it should be in kReferenceFrequencies.
+    // If not, round down to a lower frequency that is, and use those results.
+    size_t freq_idx;
+    for (freq_idx = 0u; freq_idx < kNumReferenceFreqs - 1; ++freq_idx) {
+      if (freq_display_val <= kReferenceFrequencies[freq_idx + 1]) {
+        break;
+      }
+    }
+    if (freq_display_val != kReferenceFrequencies[freq_idx]) {
+      FX_LOGS(WARNING) << "Frequency " << freq_display_val
+                       << " not found in kReferenceFrequencies. Using "
+                       << kReferenceFrequencies[freq_idx] << " Hz instead";
+      freq_display_val = kReferenceFrequencies[freq_idx];
+    }
     return {{
         .display_val = freq_display_val,
         .periods = FrequencyToPeriods(tc.output_format.frames_per_second(), freq_display_val),
-        .idx = 0u,
+        .idx = freq_idx,
     }};
   }
 
@@ -380,6 +408,7 @@ template <ASF InputFormat>
 void HermeticFidelityTest::DisplayInputBufferSections(const AudioBuffer<InputFormat>& buffer,
                                                       const std::string& initial_tag,
                                                       const SignalSectionIndices& input_indices) {
+  printf("\n");
   buffer.Display(0, kInputDisplayWindow, initial_tag);
   buffer.Display(input_indices.stabilization_start - kInputDisplayWindow,
                  input_indices.stabilization_start,
@@ -417,6 +446,7 @@ template <ASF OutputFormat>
 void HermeticFidelityTest::DisplayOutputBufferSections(const AudioBuffer<OutputFormat>& buffer,
                                                        const std::string& initial_tag,
                                                        const SignalSectionIndices& output_indices) {
+  printf("\n");
   buffer.Display(0, kOutputDisplayWindow, initial_tag);
   buffer.Display(output_indices.stabilization_start - kOutputDisplayWindow,
                  output_indices.stabilization_start,
@@ -428,7 +458,7 @@ void HermeticFidelityTest::DisplayOutputBufferSections(const AudioBuffer<OutputF
   buffer.Display(output_indices.analysis_start - kOutputDisplayWindow -
                      kOutputAdditionalSignalStartDisplayWindow,
                  output_indices.analysis_start,
-                 "End of initial stabilization (should be fully stable by end of section)");
+                 "End of initial stabilization (should fully stabilize by end of section)");
 
   buffer.Display(output_indices.analysis_start,
                  output_indices.analysis_start + kOutputDisplayWindow +
@@ -444,11 +474,12 @@ void HermeticFidelityTest::DisplayOutputBufferSections(const AudioBuffer<OutputF
       output_indices.analysis_end + kOutputDisplayWindow + kOutputAdditionalSignalEndDisplayWindow,
       "Start of final stabilization (should resemble start of analysis section)");
   buffer.Display(output_indices.stabilization_end - kOutputDisplayWindow,
-                 output_indices.stabilization_end, "End of final stabilization (may destabilize)");
+                 output_indices.stabilization_end,
+                 "End of final stabilization (may destabilize, then suddenly drop)");
 
   buffer.Display(output_indices.stabilization_end,
                  output_indices.stabilization_end + kOutputDisplayWindow,
-                 "Start of final ramp-out (should start to ramp out; may be unstable)");
+                 "Start of final ramp-out (may be unstable)");
   buffer.Display(buffer.NumFrames() - kOutputDisplayWindow, buffer.NumFrames(),
                  "End of output buffer (should be silent)");
 }
@@ -458,38 +489,35 @@ void HermeticFidelityTest::DisplaySummaryResults(
     const TestCase<InputFormat, OutputFormat>& test_case,
     const std::vector<HermeticFidelityTest::Frequency>& frequencies_to_display) {
   // Loop by channel, displaying summary results, in a separate loop from checking each result.
+  std::string single_freq_info{""};
+  if (frequencies_to_display.size() == 1) {
+    single_freq_info =
+        (std::string(" source ") + std::to_string(frequencies_to_display[0].display_val) + " Hz [" +
+         std::to_string(frequencies_to_display[0].idx) + "] -");
+  }
+
   for (const auto& channel_spec : test_case.channels_to_measure) {
     // Show results in tabular forms, for easy copy into hermetic_fidelity_results.cc.
     // We don't enforce greater-than-unity response if it occurs, so clamp these to a max of 0.0.
     const auto& chan_level_results_db = level_results(test_case.test_name, channel_spec.channel);
     printf("\n\tFull-spectrum Frequency Response - %s -%s output channel %d",
-           test_case.test_name.c_str(),
-           (frequencies_to_display.size() == 1
-                ? (std::string(" source ") + std::to_string(frequencies_to_display[0].display_val) +
-                   " Hz -")
-                : "")
-               .c_str(),
-           channel_spec.channel);
+           test_case.test_name.c_str(), single_freq_info.c_str(), channel_spec.channel);
     for (const auto& freq : frequencies_to_display) {
       printf("%s %8.3f,", (freq.idx % 10 == 0 ? "\n" : ""),
              std::min(floor(chan_level_results_db[freq.idx] / kFidelityDbTolerance) *
                           kFidelityDbTolerance,
-                      0.0));
+                      kMaxFrequencyResponse));
     }
     printf("\n");
 
     const auto& chan_sinad_results_db = sinad_results(test_case.test_name, channel_spec.channel);
     printf("\n\tSignal-to-Noise and Distortion -   %s -%s output channel %d",
-           test_case.test_name.c_str(),
-           (frequencies_to_display.size() == 1
-                ? (std::string(" source ") + std::to_string(frequencies_to_display[0].display_val) +
-                   " Hz -")
-                : "")
-               .c_str(),
-           channel_spec.channel);
+           test_case.test_name.c_str(), single_freq_info.c_str(), channel_spec.channel);
     for (const auto& freq : frequencies_to_display) {
       printf("%s %8.3f,", (freq.idx % 10 == 0 ? "\n" : ""),
-             floor(chan_sinad_results_db[freq.idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
+             std::min(floor(chan_sinad_results_db[freq.idx] / kFidelityDbTolerance) *
+                          kFidelityDbTolerance,
+                      kMaxSignalToNoiseAndDistortion));
     }
     printf("\n\n");
   }
@@ -522,7 +550,7 @@ void HermeticFidelityTest::VerifyResults(
 }
 
 // Additional fidelity assessments, potentially added in the future:
-// (1) Dynamic range (1kHz input at -30/60/90 db: measure level, sinad. Overall gain sensitivity)
+// (1) Dynamic range (1kHz input at -30/60/90 db: measure level, SiNAD. Overall gain sensitivity)
 //     This should clearly show the impact of dynamic compression in the effects chain.
 // (2) Assess the e2e input data path (from device to capturer)
 //     Included for completeness: we apply no capture effects; should equal audio_fidelity_tests.
@@ -599,7 +627,7 @@ void HermeticFidelityTest::Run(
   auto input_signal_len =
       init_stabilization_len + input_signal_frames_to_measure + final_stabilization_len;
   auto total_input_buffer_len = init_silence_len + input_signal_len + final_silence_len;
-  if constexpr (kDebugInputBuffer) {
+  if constexpr (kDisplayInputBuffer) {
     FX_LOGS(INFO) << "init_silence_len " << init_silence_len << " + pre-stabilization "
                   << init_stabilization_len << " + frames_to_measure "
                   << input_signal_frames_to_measure << " + post-stabilization "
@@ -729,11 +757,11 @@ void HermeticFidelityTest::Run(
     FX_CHECK(input.NumFrames() == static_cast<int64_t>(total_input_buffer_len))
         << "Incorrect input length: testcode logic error";
 
-    if constexpr (kDebugInputBuffer) {
-      if (kDebugBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging) {
+    if constexpr (kDisplayInputBuffer) {
+      if (kDisplayBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging) {
         // We construct the input buffer in pieces. If signals don't align at these seams, it causes
         // distortion. For debugging, show these "seam" locations in the input buffer we created.
-        std::string tag = "\nInput buffer for " + std::to_string(freq.display_val) + " Hz [" +
+        std::string tag = "Input buffer for " + std::to_string(freq.display_val) + " Hz [" +
                           std::to_string(freq.idx) + "]";
 
         DisplayInputBufferSections(input, tag,
@@ -748,7 +776,7 @@ void HermeticFidelityTest::Run(
     if (save_fidelity_wav_files_) {
       // We shouldn't save files for ALL frequencies -- just save the files for this frequency.
       if (freq.display_val == kFrequencyForSavedWavFiles) {
-        std::string test_name = tc.test_name + "_" + std::to_string(freq.display_val) + "hz";
+        std::string test_name = tc.test_name + "_" + std::to_string(freq.display_val);
         HermeticPipelineTest::WriteWavFile<InputFormat>(test_name, "input",
                                                         AudioBufferSlice(&input));
       }
@@ -783,10 +811,12 @@ void HermeticFidelityTest::Run(
                           freq.display_val > low_pass_frequency || channel_is_out_of_band);
 
       double sinad_db, level_db = 0.0;
+      AudioFreqResult freq_result;
       if (out_of_band) {
         // For out-of-band frequencies, we use the sinad array to store Out-of-Band Rejection,
         // which is measured as the sinad(all frequencies), assuming a full-scale input.
-        sinad_db = DoubleToDb(1.0 / MeasureAudioFreqs(output, {}).total_magn_other);
+        freq_result = MeasureAudioFreqs(output, {});
+        sinad_db = DoubleToDb(1.0 / freq_result.total_magn_other);
 
         if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
@@ -795,21 +825,22 @@ void HermeticFidelityTest::Run(
                         << std::setw(8) << sinad_db << " db";
         }
       } else {
-        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq.periods)});
-        level_db = DoubleToDb(result.magnitudes[freq.periods]);
+        freq_result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq.periods)});
+        level_db = DoubleToDb(freq_result.magnitudes[freq.periods]);
         if (isinf(level_db) && level_db < 0) {
           // If an expected signal was truly absent (silence), we probably underflowed. This
           // [level_db, sinad_db] pair is meaningless, so set sinad_db to -INFINITY as well.
           sinad_db = -INFINITY;
         } else {
-          sinad_db = DoubleToDb(result.magnitudes[freq.periods] / result.total_magn_other);
+          sinad_db =
+              DoubleToDb(freq_result.magnitudes[freq.periods] / freq_result.total_magn_other);
         }
 
         if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
                         << freq.display_val << " Hz [" << std::setw(2) << freq.idx << "] --  level "
                         << std::fixed << std::setprecision(4) << std::setw(9) << level_db
-                        << " db,  sinad " << std::setw(8) << sinad_db << " db";
+                        << " db,  SiNAD " << std::setw(8) << sinad_db << " db";
         }
       }
 
@@ -817,49 +848,44 @@ void HermeticFidelityTest::Run(
         // We shouldn't save files for the full frequency set -- just save files for this frequency.
         if (freq.display_val == kFrequencyForSavedWavFiles) {
           std::string test_name = tc.test_name + "_chan" + std::to_string(channel_spec.channel) +
-                                  "_" + std::to_string(freq.display_val) + "hz";
+                                  "_" + std::to_string(freq.display_val);
           HermeticPipelineTest::WriteWavFile<OutputFormat>(test_name, "output", output);
         }
       }
 
-      if constexpr (kDebugOutputBuffer || kDebugOutputBufferOnFailure) {
-        double required_level =
+      if constexpr (kDisplayOutputBufferOnFailure || kDisplayOutputBuffer) {
+        double required_level_db =
             channel_spec.freq_resp_lower_limits_db[freq.idx] - kFidelityDbTolerance;
-        double required_sinad = channel_spec.sinad_lower_limits_db[freq.idx] - kFidelityDbTolerance;
-        std::string tag;
-        // Display output buffer on failure, if all of 1) 'debug output failures' config flag is
-        // set, 2) frequency is not out-of-band, 3) buffer is NOT entirely silent (SiNAD ==
-        // -infinity), and 4) Frequency Response and/or SiNAD failure exceeds the tolerance.
-        bool display_output_buffer_for_failure =
-            kDebugOutputBufferOnFailure && !out_of_band && !isinf(sinad_db) &&
-            (level_db + kDebugOutputBufferOnFailureFreqRespDbTolerance < required_level ||
-             sinad_db + kDebugOutputBufferOnFailureSinadDbTolerance < required_sinad);
-        if (display_output_buffer_for_failure) {
-          tag = "\nFAILURE (freq resp " + std::to_string(level_db) + "dB, should have been " +
-                std::to_string(required_level) + "dB; sinad " + std::to_string(sinad_db) +
-                "dB, should have been " + std::to_string(required_sinad) +
-                "dB): \nOutput buffer for " + std::to_string(freq.display_val) + " Hz [" +
-                std::to_string(freq.idx) + "] (" + std::to_string(freq.periods) + "-periods-in-" +
-                std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
-                std::to_string(adjusted_periods) + "; channel " +
-                std::to_string(channel_spec.channel);
-        }
+        double required_sinad_db =
+            channel_spec.sinad_lower_limits_db[freq.idx] - kFidelityDbTolerance;
 
-        // Display output buffer anyway, if 1) 'debug output buffer' config flag is set, and 2) we
+        // Display output buffer on failure, if all of 1) 'display buffer on failure' flag is set,
+        // 2) frequency is not out-of-band, 3) buffer is NOT entirely silent (SiNAD > -infinity),
+        // and 4) failure (Frequency Response or SiNAD) exceeds tolerance.
+        bool display_output_buffer_for_failure =
+            kDisplayOutputBufferOnFailure && !out_of_band && !(isinf(sinad_db) && sinad_db < 0) &&
+            (level_db + kDisplayOutputBufferOnFailureFreqRespDbTolerance < required_level_db ||
+             sinad_db + kDisplayOutputBufferOnFailureSinadDbTolerance < required_sinad_db);
+
+        // Display output buffer anyway, if 1) 'display output buffer' config flag is set, and 2) we
         // are configured to display either all frequencies or this specific frequency.
         bool display_output_buffer_for_success =
-            kDebugOutputBuffer &&
-            (kDebugBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging);
-        // If we will display it for failure reasons, then use the failure tag instead.
-        if (!display_output_buffer_for_failure && display_output_buffer_for_success) {
-          tag = "\nOutput buffer for " + std::to_string(freq.display_val) + " Hz [" +
+            kDisplayOutputBuffer &&
+            (kDisplayBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging);
+
+        if (display_output_buffer_for_failure) {
+          printf(
+              "\nFAILURE (freq resp %f dB, should have been %f dB; sinad %f dB, should have been "
+              "%f dB)",
+              level_db, required_level_db, sinad_db, required_sinad_db);
+        }
+        if (display_output_buffer_for_failure || display_output_buffer_for_success) {
+          std::string tag;
+          tag = "Output buffer for " + std::to_string(freq.display_val) + " Hz [" +
                 std::to_string(freq.idx) + "] (" + std::to_string(freq.periods) + "-periods-in-" +
                 std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
                 std::to_string(adjusted_periods) + "; channel " +
                 std::to_string(channel_spec.channel);
-        }
-
-        if (display_output_buffer_for_failure || display_output_buffer_for_success) {
           DisplayOutputBufferSections(ring_buffer_chan, tag,
                                       {.stabilization_start = output_stabilization_start,
                                        .analysis_start = output_analysis_start,
@@ -869,7 +895,7 @@ void HermeticFidelityTest::Run(
       }
 
       // In case of underflows, exit early (don't assess the remaining channels). Also don't retain
-      // level+sinad vals or compare to our worst-case, since the measurements are invalid.
+      // level+SiNAD vals or compare to our worst-case, since the measurements are invalid.
       // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
       if (DeviceHasUnderflows(device)) {
         break;
