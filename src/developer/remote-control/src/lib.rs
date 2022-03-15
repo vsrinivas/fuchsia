@@ -83,6 +83,7 @@ impl RemoteControlService {
             .try_for_each_concurrent(None, |request| async {
                 match request {
                     rcs::RemoteControlRequest::EchoString { value, responder } => {
+                        log::info!("Received echo string {}", value);
                         responder.send(&value)?;
                         Ok(())
                     }
