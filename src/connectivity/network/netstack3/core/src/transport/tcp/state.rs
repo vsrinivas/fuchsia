@@ -3,8 +3,16 @@
 // found in the LICENSE file.
 
 //! TCP state machine per [RFC 793](https://tools.ietf.org/html/rfc793).
+// Note: All RFC quotes (with two extra spaces at the beginning of each line) in
+// this file are from https://tools.ietf.org/html/rfc793#section-3.9 if not
+// specified otherwise.
+
+use core::{convert::TryFrom as _, num::TryFromIntError};
+
+use explicit::ResultExt as _;
 
 use crate::transport::tcp::{
+    buffer::{Assembler, ReceiveBuffer},
     segment::{Payload, Segment},
     seqnum::{SeqNum, WindowSize},
     Control, UserError,
@@ -134,10 +142,10 @@ impl SynSent {
     /// Transitions to ESTABLSHED if the incoming segment is a proper SYN-ACK.
     /// Transitions to SYN-RCVD if the incoming segment is a SYN. Otherwise,
     /// the segment is dropped or an RST is generated.
-    fn on_segment(
+    fn on_segment<R: ReceiveBuffer>(
         &self,
         Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents }: Segment<impl Payload>,
-    ) -> (Option<Either<Either<Established, SynRcvd>, Closed<UserError>>>, Option<Segment<()>>)
+    ) -> (Option<Either<Either<Established<R>, SynRcvd>, Closed<UserError>>>, Option<Segment<()>>)
     {
         let Self { iss } = *self;
         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
@@ -207,12 +215,15 @@ impl SynSent {
                             let irs = seg_seq;
                             let established = Established {
                                 snd: Send { nxt: iss + 1, una: ack, wnd: seg_wnd },
-                                rcv: Recv { nxt: irs + 1, wnd: WindowSize::DEFAULT },
+                                rcv: Recv {
+                                    buffer: R::default(),
+                                    assembler: Assembler::new(irs + 1),
+                                },
                             };
                             let ack_seg = Segment::ack(
                                 established.snd.nxt,
-                                established.rcv.nxt,
-                                established.rcv.wnd,
+                                established.rcv.nxt(),
+                                established.rcv.wnd(),
                             );
                             (Some(Either::A(Either::A(established))), Some(ack_seg))
                         } else {
@@ -253,10 +264,11 @@ struct SynRcvd {
 }
 
 impl SynRcvd {
-    fn on_segment(
+    fn on_segment<R: ReceiveBuffer>(
         &self,
         incoming: Segment<impl Payload>,
-    ) -> (Option<Either<Either<Established, Listen>, Closed<UserError>>>, Option<Segment<()>>) {
+    ) -> (Option<Either<Either<Established<R>, Listen>, Closed<UserError>>>, Option<Segment<()>>)
+    {
         let SynRcvd { iss, irs } = *self;
         let is_rst = incoming.contents.control() == Some(Control::RST);
         let incoming = match incoming.overlap(irs + 1, WindowSize::DEFAULT) {
@@ -334,7 +346,10 @@ impl SynRcvd {
                             (
                                 Some(Either::A(Either::A(Established {
                                     snd: Send { nxt: iss + 1, una: ack, wnd: WindowSize::DEFAULT },
-                                    rcv: Recv { nxt: irs + 1, wnd: WindowSize::DEFAULT },
+                                    rcv: Recv {
+                                        buffer: R::default(),
+                                        assembler: Assembler::new(irs + 1),
+                                    },
                                 }))),
                                 None,
                             )
@@ -363,9 +378,23 @@ struct Send {
 /// TCP control block variables that are responsible for receiving.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Recv {
-    nxt: SeqNum,
-    wnd: WindowSize,
+struct Recv<R: ReceiveBuffer> {
+    buffer: R,
+    assembler: Assembler,
+}
+
+impl<R: ReceiveBuffer> Recv<R> {
+    fn wnd(&self) -> WindowSize {
+        let wnd = self.buffer.cap() - self.buffer.len();
+        u32::try_from(wnd)
+            .ok_checked::<TryFromIntError>()
+            .and_then(WindowSize::new)
+            .unwrap_or(WindowSize::MAX)
+    }
+
+    fn nxt(&self) -> SeqNum {
+        self.assembler.nxt()
+    }
 }
 
 /// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
@@ -375,21 +404,106 @@ struct Recv {
 ///   of the connection.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Established {
+struct Established<R: ReceiveBuffer> {
     snd: Send,
-    rcv: Recv,
+    rcv: Recv<R>,
+}
+
+impl<R: ReceiveBuffer> Established<R> {
+    fn on_segment(
+        &mut self,
+        incoming: Segment<impl Payload>,
+    ) -> (Option<Closed<UserError>>, Option<Segment<()>>) {
+        let Self { snd, rcv } = self;
+        let Segment { seq, ack, wnd: _, contents } = match incoming.overlap(rcv.nxt(), rcv.wnd()) {
+            None => return (None, Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()))),
+            Some(seg) => seg,
+        };
+        //   If the RST bit is set then, any outstanding RECEIVEs and SEND
+        //   should receive "reset" responses.  All segment queues should be
+        //   flushed.  Users should also receive an unsolicited general
+        //   "connection reset" signal.  Enter the CLOSED state, delete the
+        //   TCB, and return.
+        if contents.control() == Some(Control::RST) {
+            return (Some(Closed { reason: UserError::ConnectionReset }), None);
+        }
+        //   If the SYN is in the window it is an error, send a reset, any
+        //   outstanding RECEIVEs and SEND should receive "reset" responses,
+        //   all segment queues should be flushed, the user should also
+        //   receive an unsolicited general "connection reset" signal, enter
+        //   the CLOSED state, delete the TCB, and return.
+        //   If the SYN is not in the window this step would not be reached
+        //   and an ack would have been sent in the first step (sequence
+        //   number check).
+        if contents.control() == Some(Control::SYN) {
+            return (
+                Some(Closed { reason: UserError::ConnectionReset }),
+                Some(Segment::rst(snd.nxt)),
+            );
+        }
+        match ack {
+            Some(ack) => {
+                if ack.after(snd.nxt) {
+                    //   If the ACK acks something not yet sent (SEG.ACK >
+                    //   SND.NXT) then send an ACK, drop the segment, and
+                    //   return.
+                    return (None, Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()).into()));
+                } else {
+                    // TODO(https://fxbug.dev/91315): Update send states here.
+                    // 1. update the window size.
+                    // 2. reclaim space in the send buffer for acked data.
+                    // 3. form a new segment to send if possible.
+                    //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
+                    //   ignored.
+                }
+            }
+            //   if the ACK bit is off drop the segment and return.
+            None => return (None, None),
+        }
+        //   Once in the ESTABLISHED state, it is possible to deliver segment
+        //   text to user RECEIVE buffers.  Text from segments can be moved
+        //   into buffers until either the buffer is full or the segment is
+        //   empty.  If the segment empties and carries an PUSH flag, then
+        //   the user is informed, when the buffer is returned, that a PUSH
+        //   has been received.
+        //
+        //   When the TCP takes responsibility for delivering the data to the
+        //   user it must also acknowledge the receipt of the data.
+        //   Once the TCP takes responsibility for the data it advances
+        //   RCV.NXT over the data accepted, and adjusts RCV.WND as
+        //   apporopriate to the current buffer availability.  The total of
+        //   RCV.NXT and RCV.WND should not be reduced.
+        //
+        //   Please note the window management suggestions in section 3.7.
+        //   Send an acknowledgment of the form:
+        //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+        //   This acknowledgment should be piggybacked on a segment being
+        //   transmitted if possible without incurring undue delay.
+        if contents.data().len() > 0 {
+            let offset = usize::try_from(seq - rcv.nxt()).unwrap_or_else(|TryFromIntError {..}| {
+                panic!("The segment was trimmed to fit the window, thus seg.seq({:?}) must not come before rcv.nxt({:?})", seq, rcv.nxt());
+            });
+            // Write the segment data in the buffer and keep track if it fills
+            // any hole in the assembler.
+            let nwritten = rcv.buffer.write_at(offset, contents.data());
+            let readable = rcv.assembler.insert(seq..seq + nwritten);
+            rcv.buffer.make_readable(readable);
+        }
+        // TODO(https://fxbug.dev/93522): Handle FIN.
+        (None, Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd())))
+    }
 }
 
 #[derive(Debug)]
-enum State {
+enum State<R: ReceiveBuffer> {
     Closed(Closed<UserError>),
     Listen(Listen),
     SynRcvd(SynRcvd),
     SynSent(SynSent),
-    Established(Established),
+    Established(Established<R>),
 }
 
-impl State {
+impl<R: ReceiveBuffer> State<R> {
     /// Processes an incoming segment and advances the state machine.
     #[cfg_attr(not(test), allow(dead_code))]
     fn on_segment<P: Payload>(&mut self, incoming: Segment<P>) -> Option<Segment<()>> {
@@ -398,8 +512,9 @@ impl State {
                 let (maybe_new_state, seg) = synrcvd.on_segment(incoming);
                 (maybe_new_state.map(State::from), seg)
             }
-            State::Established(_established) => {
-                todo!("TODO(https://fxbug.dev/91315): Implement basic flow control")
+            State::Established(established) => {
+                let (maybe_new_state, seg) = established.on_segment(incoming);
+                (maybe_new_state.map(State::from), seg)
             }
             State::SynSent(synsent) => {
                 let (maybe_new_state, seg) = synsent.on_segment(incoming);
@@ -425,10 +540,11 @@ enum Either<A, B> {
     B(B),
 }
 
-impl<A, B> From<Either<A, B>> for State
+impl<A, B, R> From<Either<A, B>> for State<R>
 where
-    A: Into<State>,
-    B: Into<State>,
+    R: ReceiveBuffer,
+    A: Into<State<R>>,
+    B: Into<State<R>>,
 {
     fn from(or: Either<A, B>) -> Self {
         match or {
@@ -438,42 +554,45 @@ where
     }
 }
 
-impl From<Closed<UserError>> for State {
+impl<R: ReceiveBuffer> From<Closed<UserError>> for State<R> {
     fn from(closed: Closed<UserError>) -> Self {
         State::Closed(closed)
     }
 }
 
-impl From<Listen> for State {
+impl<R: ReceiveBuffer> From<Listen> for State<R> {
     fn from(listen: Listen) -> Self {
         State::Listen(listen)
     }
 }
 
-impl From<SynRcvd> for State {
+impl<R: ReceiveBuffer> From<SynRcvd> for State<R> {
     fn from(synrcvd: SynRcvd) -> Self {
         State::SynRcvd(synrcvd)
     }
 }
 
-impl From<SynSent> for State {
+impl<R: ReceiveBuffer> From<SynSent> for State<R> {
     fn from(synsent: SynSent) -> Self {
         State::SynSent(synsent)
     }
 }
 
-impl From<Established> for State {
-    fn from(established: Established) -> Self {
+impl<R: ReceiveBuffer> From<Established<R>> for State<R> {
+    fn from(established: Established<R>) -> Self {
         State::Established(established)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use core::num::NonZeroUsize;
+
     use assert_matches::assert_matches;
     use test_case::test_case;
 
     use super::*;
+    use crate::transport::tcp::buffer::{Buffer, RingBuffer};
 
     const ISS_1: SeqNum = SeqNum::new(100);
     const ISS_2: SeqNum = SeqNum::new(300);
@@ -483,6 +602,38 @@ mod test {
             let (seg, truncated) = Segment::with_data(seq, Some(ack), None, wnd, data);
             assert_eq!(truncated, 0);
             seg
+        }
+    }
+
+    /// A buffer that can't read or write for test purpose.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    struct NullBuffer;
+
+    impl Buffer for NullBuffer {
+        fn len(&self) -> usize {
+            0
+        }
+
+        fn cap(&self) -> usize {
+            0
+        }
+    }
+
+    impl ReceiveBuffer for NullBuffer {
+        fn write_at<P: Payload>(&mut self, _offset: usize, _data: &P) -> usize {
+            0
+        }
+
+        fn make_readable(&mut self, count: usize) {
+            assert_eq!(count, 0);
+        }
+
+        fn read_with<'a, F>(&'a mut self, f: F) -> usize
+        where
+            F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
+        {
+            assert_eq!(f(&[]), 0);
+            0
         }
     }
 
@@ -536,8 +687,10 @@ mod test {
     => (None, None); "acceptable ACK(ISS) without RST")]
     fn segment_arrives_when_syn_sent(
         incoming: Segment<()>,
-    ) -> (Option<Either<Either<Established, SynRcvd>, Closed<UserError>>>, Option<Segment<()>>)
-    {
+    ) -> (
+        Option<Either<Either<Established<NullBuffer>, SynRcvd>, Closed<UserError>>>,
+        Option<Segment<()>>,
+    ) {
         let syn_sent = SynSent { iss: ISS_1 };
         syn_sent.on_segment(incoming)
     }
@@ -578,7 +731,7 @@ mod test {
     => (
         Some(Either::A(Either::A(Established {
             snd: Send { nxt: ISS_2 + 1, una: ISS_2 + 1, wnd: WindowSize::DEFAULT },
-            rcv: Recv { nxt: ISS_1 + 1, wnd: WindowSize::DEFAULT },
+            rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
         }))),
         None,
     ); "acceptable ack (ISS + 1)")]
@@ -596,9 +749,29 @@ mod test {
     => (None, None); "no ack")]
     fn segment_arrives_when_syn_rcvd(
         incoming: Segment<()>,
-    ) -> (Option<Either<Either<Established, Listen>, Closed<UserError>>>, Option<Segment<()>>) {
+    ) -> (
+        Option<Either<Either<Established<NullBuffer>, Listen>, Closed<UserError>>>,
+        Option<Segment<()>>,
+    ) {
         let syn_rcvd = SynRcvd { iss: ISS_2, irs: ISS_1 };
         syn_rcvd.on_segment(incoming)
+    }
+
+    #[test_case(Segment::syn(ISS_2 + 1, WindowSize::DEFAULT)
+        => (Some(Closed { reason: UserError::ConnectionReset }), Some(Segment::rst(ISS_1 + 1))))]
+    #[test_case(Segment::rst(ISS_2 + 1)
+        => (Some(Closed { reason: UserError::ConnectionReset }), None))]
+    fn segment_arrives_when_established(
+        incoming: Segment<()>,
+    ) -> (Option<Closed<UserError>>, Option<Segment<()>>) {
+        let mut established = Established {
+            snd: Send { nxt: ISS_1 + 1, una: ISS_1 + 1, wnd: WindowSize::DEFAULT },
+            rcv: Recv {
+                buffer: RingBuffer::new(NonZeroUsize::new(1).unwrap()),
+                assembler: Assembler::new(ISS_2 + 1),
+            },
+        };
+        established.on_segment(incoming)
     }
 
     #[test]
@@ -615,23 +788,23 @@ mod test {
             irs: ISS_1,
         });
         let ack_seg = active.on_segment(syn_ack).expect("failed to generate a ack segment");
-        assert_eq!(ack_seg, Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT));
+        assert_eq!(ack_seg, Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::ZERO));
         assert_matches!(active, State::Established(established) if established == Established {
             snd: Send {
                 nxt: ISS_1 + 1,
                 una: ISS_1 + 1,
-                wnd: WindowSize::DEFAULT
+                wnd: WindowSize::DEFAULT,
             },
-            rcv: Recv { nxt: ISS_2 + 1, wnd: WindowSize::DEFAULT }
+            rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) }
         });
         assert_eq!(passive.on_segment(ack_seg), None);
         assert_matches!(passive, State::Established(established) if established == Established {
             snd: Send {
                 nxt: ISS_2 + 1,
                 una: ISS_2 + 1,
-                wnd: WindowSize::DEFAULT
+                wnd: WindowSize::DEFAULT,
             },
-            rcv: Recv { nxt: ISS_1 + 1, wnd: WindowSize::DEFAULT }
+            rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) }
         })
     }
 
@@ -668,11 +841,11 @@ mod test {
             snd: Send {
                 nxt: ISS_1 + 1,
                 una: ISS_1 + 1,
-                wnd: WindowSize::DEFAULT
+                wnd: WindowSize::DEFAULT,
             },
             rcv: Recv {
-                nxt: ISS_2 + 1,
-                wnd: WindowSize::DEFAULT
+                buffer: NullBuffer,
+                assembler: Assembler::new(ISS_2 + 1),
             }
         });
 
@@ -680,12 +853,103 @@ mod test {
             snd: Send {
                 nxt: ISS_2 + 1,
                 una: ISS_2 + 1,
-                wnd: WindowSize::DEFAULT
+                wnd: WindowSize::DEFAULT,
             },
             rcv: Recv {
-                nxt: ISS_1 + 1,
-                wnd: WindowSize::DEFAULT
+                buffer: NullBuffer,
+                assembler: Assembler::new(ISS_1 + 1),
             }
         });
+    }
+
+    #[test]
+    fn established_receive() {
+        const BUFFER_SIZE: usize = 16;
+        const BUFFER_SIZE_U32: u32 = BUFFER_SIZE as u32;
+        let mut established = Established {
+            snd: Send { nxt: ISS_1 + 1, una: ISS_1 + 1, wnd: WindowSize::ZERO },
+            rcv: Recv {
+                buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
+                assembler: Assembler::new(ISS_2 + 1),
+            },
+        };
+
+        const TEST_BYTES: &[u8] = "Hello".as_bytes();
+        const TEST_BYTES_LEN: u32 = TEST_BYTES.len() as u32;
+
+        // Received an expected segment at rcv.nxt.
+        assert_eq!(
+            established.on_segment(Segment::data(
+                ISS_2 + 1,
+                ISS_1 + 1,
+                WindowSize::ZERO,
+                TEST_BYTES,
+            )),
+            (
+                None,
+                Some(Segment::ack(
+                    ISS_1 + 1,
+                    ISS_2 + 1 + TEST_BYTES.len(),
+                    WindowSize::new(BUFFER_SIZE_U32 - TEST_BYTES_LEN).unwrap()
+                )),
+            )
+        );
+        assert_eq!(
+            established.rcv.buffer.read_with(|available| {
+                assert_eq!(available, &[TEST_BYTES]);
+                available[0].len()
+            }),
+            TEST_BYTES.len()
+        );
+
+        // Receive an out-of-order segment.
+        assert_eq!(
+            established.on_segment(Segment::data(
+                ISS_2 + 1 + TEST_BYTES.len() * 2,
+                ISS_1 + 1,
+                WindowSize::ZERO,
+                TEST_BYTES,
+            )),
+            (
+                None,
+                Some(Segment::ack(
+                    ISS_1 + 1,
+                    ISS_2 + 1 + TEST_BYTES.len(),
+                    WindowSize::new(BUFFER_SIZE_U32).unwrap()
+                )),
+            )
+        );
+        assert_eq!(
+            established.rcv.buffer.read_with(|available| {
+                assert_eq!(available, &[&[][..]]);
+                0
+            }),
+            0
+        );
+
+        // Receive the next segment that fills the hole.
+        assert_eq!(
+            established.on_segment(Segment::data(
+                ISS_2 + 1 + TEST_BYTES.len(),
+                ISS_1 + 1,
+                WindowSize::ZERO,
+                TEST_BYTES,
+            )),
+            (
+                None,
+                Some(Segment::ack(
+                    ISS_1 + 1,
+                    ISS_2 + 1 + 3 * TEST_BYTES.len(),
+                    WindowSize::new(BUFFER_SIZE_U32 - 2 * TEST_BYTES_LEN).unwrap()
+                )),
+            )
+        );
+        assert_eq!(
+            established.rcv.buffer.read_with(|available| {
+                assert_eq!(available, &[[TEST_BYTES, TEST_BYTES].concat()]);
+                available[0].len()
+            }),
+            10
+        );
     }
 }

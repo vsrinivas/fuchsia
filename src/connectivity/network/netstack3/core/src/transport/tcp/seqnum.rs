@@ -169,6 +169,13 @@ impl From<WindowSize> for u32 {
     }
 }
 
+#[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
+impl From<WindowSize> for usize {
+    fn from(WindowSize(wnd): WindowSize) -> Self {
+        wnd as usize
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::{

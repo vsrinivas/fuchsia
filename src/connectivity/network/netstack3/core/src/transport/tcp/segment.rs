@@ -6,8 +6,6 @@
 
 use core::{convert::TryFrom as _, num::TryFromIntError, ops::Range};
 
-use packet::{Fragment, FragmentedByteSlice};
-
 use crate::transport::tcp::{
     seqnum::{SeqNum, WindowSize},
     Control,
@@ -58,6 +56,10 @@ impl<P: Payload> Contents<P> {
 
     pub(super) fn control(&self) -> Option<Control> {
         self.control
+    }
+
+    pub(super) fn data(&self) -> &P {
+        &self.data
     }
 }
 
@@ -231,7 +233,7 @@ impl Segment<()> {
 }
 
 /// A TCP payload that operates around `u32` instead of `usize`.
-pub(super) trait Payload: Sized {
+pub trait Payload: Sized {
     /// Returns the length of the payload.
     fn len(&self) -> usize;
 
@@ -245,13 +247,12 @@ pub(super) trait Payload: Sized {
     /// the start).
     fn slice(self, range: Range<u32>) -> Self;
 
-    /// Copies the payload into `dst`.
+    /// Copies part of the payload beginning at `offset` into `dst`.
     ///
     /// # Panics
     ///
-    /// This function will panic if the target and the payload have different
-    /// lengths.
-    fn copy_to(&self, dst: &mut [u8]);
+    /// Panics if offset is too large or we couldn't fill the `dst` slice.
+    fn partial_copy(&self, offset: usize, dst: &mut [u8]);
 }
 
 impl Payload for &[u8] {
@@ -273,8 +274,8 @@ impl Payload for &[u8] {
         &self[start..end]
     }
 
-    fn copy_to(&self, dst: &mut [u8]) {
-        dst.copy_from_slice(self)
+    fn partial_copy(&self, offset: usize, dst: &mut [u8]) {
+        dst.copy_from_slice(&self[offset..offset + dst.len()])
     }
 }
 
@@ -293,33 +294,13 @@ impl Payload for () {
         ()
     }
 
-    fn copy_to(&self, dst: &mut [u8]) {
-        if dst.len() != 0 {
+    fn partial_copy(&self, offset: usize, dst: &mut [u8]) {
+        if dst.len() != 0 || offset != 0 {
             panic!(
                 "source slice length (0) does not match destination slice length ({})",
                 dst.len()
             );
         }
-    }
-}
-
-impl<B: Fragment> Payload for FragmentedByteSlice<'_, B> {
-    fn len(&self) -> usize {
-        FragmentedByteSlice::len(self)
-    }
-
-    fn slice(self, Range { start, end }: Range<u32>) -> Self {
-        // The following `unwrap`s are ok because:
-        // `usize::try_from(x)` fails when `x > usize::MAX`; given that
-        // `self.len() <= usize::MAX`, panic would be expected because `range`
-        // exceeds the bound of the `self`.
-        let start = usize::try_from(start).unwrap();
-        let end = usize::try_from(end).unwrap();
-        FragmentedByteSlice::slice(self, start..end)
-    }
-
-    fn copy_to(&self, dst: &mut [u8]) {
-        self.copy_into_slice(dst)
     }
 }
 
@@ -333,7 +314,6 @@ impl From<Segment<()>> for Segment<&'static [u8]> {
 
 #[cfg(test)]
 mod test {
-    use packet::AsFragmentedByteSlice as _;
     use test_case::test_case;
 
     use super::*;
@@ -360,11 +340,10 @@ mod test {
 
     #[test_case(&[1, 2, 3, 4, 5][..], 0..4 => [1, 2, 3, 4])]
     #[test_case((), 0..0 => [0, 0, 0, 0])]
-    #[test_case([&[1, 2][..], &[3, 4][..], &[5, 6][..]].as_fragmented_byte_slice(), 1..5 => [2, 3, 4, 5])]
     fn payload_slice_copy(data: impl Payload, range: Range<u32>) -> [u8; 4] {
         let sliced = data.slice(range);
         let mut buffer = [0; 4];
-        sliced.copy_to(&mut buffer[..sliced.len()]);
+        sliced.partial_copy(0, &mut buffer[..sliced.len()]);
         buffer
     }
 
@@ -388,7 +367,7 @@ mod test {
             TestPayload(range)
         }
 
-        fn copy_to(&self, _dst: &mut [u8]) {
+        fn partial_copy(&self, _offset: usize, _dst: &mut [u8]) {
             unimplemented!("TestPayload doesn't carry any data");
         }
     }
