@@ -14,7 +14,7 @@ namespace forensics {
 // string to have an ID X and always have it.
 class RedactionIdCache {
  public:
-  RedactionIdCache() = default;
+  explicit RedactionIdCache(int starting_id = 0);
 
   int GetId(const std::string& value);
 
@@ -26,7 +26,7 @@ class RedactionIdCache {
 
  private:
   // TODO(fxbug.dev/94086): The map grows unbounded, expose the number of elements with Inspect.
-  int next_id_{0};
+  int next_id_;
   std::unordered_map<std::string, int> ids_;
 };
 

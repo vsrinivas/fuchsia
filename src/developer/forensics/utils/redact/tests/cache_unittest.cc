@@ -29,5 +29,24 @@ TEST(RedactionIdCacheTest, GetId) {
   EXPECT_EQ(cache.GetId("value4"), 4);
 }
 
+TEST(RedactionIdCacheTest, StartingId) {
+  RedactionIdCache cache(100);
+  EXPECT_EQ(cache.GetId("value1"), 101);
+  EXPECT_EQ(cache.GetId("value1"), 101);
+  EXPECT_EQ(cache.GetId("value1"), 101);
+
+  EXPECT_EQ(cache.GetId("value2"), 102);
+  EXPECT_EQ(cache.GetId("value2"), 102);
+  EXPECT_EQ(cache.GetId("value2"), 102);
+
+  EXPECT_EQ(cache.GetId("value3"), 103);
+  EXPECT_EQ(cache.GetId("value3"), 103);
+  EXPECT_EQ(cache.GetId("value3"), 103);
+
+  EXPECT_EQ(cache.GetId("value4"), 104);
+  EXPECT_EQ(cache.GetId("value4"), 104);
+  EXPECT_EQ(cache.GetId("value4"), 104);
+}
+
 }  // namespace
 }  // namespace forensics

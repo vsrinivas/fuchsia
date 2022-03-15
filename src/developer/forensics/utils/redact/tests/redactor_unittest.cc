@@ -31,7 +31,7 @@ class RedactorTest : public ::testing::Test {
   const Redactor& redactor() const { return redactor_; }
 
  private:
-  Redactor redactor_;
+  Redactor redactor_{0u};
 };
 
 TEST_F(RedactorTest, Check) {

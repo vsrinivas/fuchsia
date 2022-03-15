@@ -99,7 +99,7 @@ constexpr std::string_view kRedactedCanary =
 
 }  // namespace
 
-Redactor::Redactor() {
+Redactor::Redactor(const int starting_id) : cache_(starting_id) {
   Add(ReplaceIPv4())
       .Add(ReplaceIPv6())
       .Add(ReplaceMac())

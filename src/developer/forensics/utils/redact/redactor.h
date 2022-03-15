@@ -33,7 +33,7 @@ class RedactorBase {
 // https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/diagnostics/archivist/src/logs/redact.rs
 class Redactor : public RedactorBase {
  public:
-  Redactor();
+  explicit Redactor(int starting_id);
   ~Redactor() override = default;
 
   std::string& Redact(std::string& text) override;

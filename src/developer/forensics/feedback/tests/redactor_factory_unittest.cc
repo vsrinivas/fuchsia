@@ -15,8 +15,8 @@
 namespace forensics::feedback {
 namespace {
 
-constexpr std::string_view kUnredacted = "foo@bar.com";
-constexpr std::string_view kRedacted = "<REDACTED-EMAIL>";
+constexpr std::string_view kUnredacted = "8.8.8.8";
+constexpr std::string_view kRedacted = "<REDACTED-IPV4: 11>";
 
 TEST(RedactorFromConfig, FileMissing) {
   auto redactor = RedactorFromConfig("missing");
@@ -31,7 +31,7 @@ TEST(RedactorFromConfig, FilePresent) {
   std::string path;
   ASSERT_TRUE(temp_dir.NewTempFile(&path));
 
-  auto redactor = RedactorFromConfig(path);
+  auto redactor = RedactorFromConfig(path, [] { return 10; });
 
   std::string text(kUnredacted);
   EXPECT_EQ(redactor->Redact(text), kRedacted);

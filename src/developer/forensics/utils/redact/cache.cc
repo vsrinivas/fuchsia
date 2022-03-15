@@ -8,6 +8,8 @@
 
 namespace forensics {
 
+RedactionIdCache::RedactionIdCache(const int starting_id) : next_id_(starting_id) {}
+
 int RedactionIdCache::GetId(const std::string& value) {
   if (ids_.count(value) == 0) {
     ids_[value] = ++next_id_;
