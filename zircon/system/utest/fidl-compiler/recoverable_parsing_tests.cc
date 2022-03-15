@@ -299,7 +299,7 @@ extra_token // Second error
 
 // This test ensures that recoverable parsing works as intended for constraints,
 // and returns useful and actionable information back to users.
-TEST(ReecoverableParsingTests, BadConstraintsRecoverability) {
+TEST(RecoverableParsingTests, BadConstraintsRecoverability) {
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -339,6 +339,41 @@ type TypeDecl = struct {
   EXPECT_ERR(errors[8], fidl::ErrUnexpectedTokenOfKind);
   EXPECT_ERR(errors[9], fidl::ErrInvalidCharacter);
   EXPECT_ERR(errors[10], fidl::ErrUnexpectedToken);
+}
+
+TEST(RecoverableParsingTests, InvalidStringLiterals) {
+  std::vector<std::string> invalid_string_literals{
+      R"(
+// error: invalid hex digit 'G'
+const str1 string:1 = "\x0G";
+    )",
+      R"(
+// error: invalid escape sequence 'i'
+const str2 string:1 = "\i";
+    )",
+      R"(
+// error: invalid oct digit '9'
+const str3 string:1 = "\297";
+    )",
+      R"(
+// error: unexpected line-break in string literal
+const str4 string:1 = "Hello
+World";
+    )",
+  };
+
+  std::vector<std::string> expected_errors{
+      fidl::ErrInvalidHexDigit.msg.data(), fidl::ErrInvalidEscapeSequence.msg.data(),
+      fidl::ErrInvalidOctDigit.msg.data(), fidl::ErrUnexpectedLineBreak.msg.data()};
+
+  for (size_t i = 0; i < invalid_string_literals.size(); i++) {
+    const auto& invalidStringLiteral = invalid_string_literals[i];
+    TestLibrary library(R"FIDL(library example; )FIDL" + invalidStringLiteral);
+    ASSERT_FALSE(library.Compile());
+    const auto& currErrors = library.errors();
+    ASSERT_EQ(currErrors.size(), 1);
+    ASSERT_EQ(currErrors[0]->def.msg.data(), expected_errors[i]);
+  }
 }
 
 }  // namespace

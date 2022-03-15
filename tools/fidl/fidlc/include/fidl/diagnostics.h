@@ -13,6 +13,10 @@ namespace fidl {
 // Lexer
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<std::string_view> ErrInvalidCharacter("invalid character '{}'");
+constexpr ErrorDef<> ErrUnexpectedLineBreak("unexpected line-break in string literal");
+constexpr ErrorDef<std::string_view> ErrInvalidEscapeSequence("invalid escape sequence '{}'");
+constexpr ErrorDef<char> ErrInvalidHexDigit("invalid hex digit '{}'");
+constexpr ErrorDef<char> ErrInvalidOctDigit("invalid oct digit '{}'");
 
 // ---------------------------------------------------------------------------
 // Parser

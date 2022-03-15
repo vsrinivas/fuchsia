@@ -8,6 +8,8 @@
 
 #include <map>
 
+#include "fidl/diagnostics.h"
+
 namespace fidl {
 
 namespace {
@@ -173,23 +175,125 @@ Token Lexer::LexIdentifier() {
                subkind);
 }
 
+static bool IsHexDigit(char c) {
+  return ('0' <= c && c <= '9') || ('A' <= c && c <= 'F') || ('a' <= c && c <= 'f');
+}
+
 Token Lexer::LexStringLiteral() {
-  auto last = Peek();
+  enum StringLiteralLexingState {
+    kNotEscapeSeq,
+    kStartOfEscapeSeq,
+    kHexSeq,
+    kOctSeq,
+    kLittleUSeq,
+    kBigUSeq,
+  };
+  auto state = kNotEscapeSeq;
+  int chars_left = 0;
 
   // Lexing a "string literal" to the next matching delimiter.
+  // TODO(fxbug.dev/88490): This doesn't check if it is a valid UTF-8 string.
+  // In particular, it doesn't check whether the Unicode code-points
+  // are valid or not.
   for (;;) {
-    auto next = Consume();
-    switch (next) {
+    auto curr = Consume();
+    switch (curr) {
       case 0:
         return LexEndOfStream();
-      case '"':
-        // This escaping logic is incorrect for the input: "\\"
-        if (last != '\\')
-          return Finish(Token::Kind::kStringLiteral);
-        [[fallthrough]];
-      default:
-        last = next;
+      case '\n':
+      case '\r': {
+        // Cannot have line-break in string literal
+        SourceSpan span(std::string_view(current_, 1), source_file_);
+        Fail(ErrUnexpectedLineBreak, span);
+        chars_left = 0;
+        state = kNotEscapeSeq;
+        break;
+      }
     }
+    switch (state) {
+      case kNotEscapeSeq:
+        if (curr == '"')
+          return Finish(Token::Kind::kStringLiteral);
+        if (curr == '\\')
+          state = kStartOfEscapeSeq;
+        break;
+      case kStartOfEscapeSeq:
+        switch (curr) {
+          case 'x':
+            // Hex \xnn
+            state = kHexSeq;
+            chars_left = 2;
+            break;
+          case '0':
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+            // Oct \nnn
+            state = kOctSeq;
+            chars_left = 2;
+            break;
+          case 'u':
+            // Unicode code point: U+nnnn
+            state = kLittleUSeq;
+            chars_left = 4;
+            break;
+          case 'U':
+            // Unicode code point: U+nnnnnnnn
+            state = kBigUSeq;
+            chars_left = 8;
+            break;
+          case 'a':
+          case 'b':
+          case 'f':
+          case 'n':
+          case 'r':
+          case 't':
+          case 'v':
+          case '\\':
+          case '"':
+            // Escape sequence ends here
+            state = kNotEscapeSeq;
+            chars_left = 0;
+            break;
+          default:
+            SourceSpan span(std::string_view(current_ - 1, 2), source_file_);
+            Fail(ErrInvalidEscapeSequence, span, span.data());
+            chars_left = 0;
+            state = kNotEscapeSeq;
+        }
+        break;
+      case kHexSeq:
+      case kBigUSeq:
+      case kLittleUSeq:
+        if (!IsHexDigit(curr)) {
+          SourceSpan span(std::string_view(current_, 1), source_file_);
+          Fail(ErrInvalidHexDigit, span, curr);
+          chars_left = 0;
+          state = kNotEscapeSeq;
+        } else {
+          --chars_left;
+          if (chars_left == 0)
+            state = kNotEscapeSeq;
+        }
+        break;
+      case kOctSeq:
+        if (curr < '0' || curr > '7') {
+          SourceSpan span(std::string_view(current_, 1), source_file_);
+          Fail(ErrInvalidOctDigit, span, curr);
+          chars_left = 0;
+          state = kNotEscapeSeq;
+        } else {
+          --chars_left;
+          if (chars_left == 0)
+            state = kNotEscapeSeq;
+        }
+        break;
+    }
+    assert(chars_left >= 0 && "chars_left in escape sequence must be non-negative");
   }
 }
 
