@@ -104,12 +104,17 @@ class StrictFoo final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_requestflexibleenvelope::StrictFoo::Tag tag) {
     switch (tag) {
       case ::test_requestflexibleenvelope::StrictFoo::Tag::kS:
         return 1;
       case ::test_requestflexibleenvelope::StrictFoo::Tag::kI:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -346,6 +351,7 @@ class FlexibleFoo final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_requestflexibleenvelope::FlexibleFoo::Tag tag) {
     switch (tag) {
       case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS:
@@ -354,6 +360,10 @@ class FlexibleFoo final {
         return 2;
       case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

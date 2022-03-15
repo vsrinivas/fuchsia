@@ -491,12 +491,17 @@ class SimpleUnion final {
   explicit SimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_nullable::SimpleUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_nullable::SimpleUnion::Tag tag) {
     switch (tag) {
       case ::test_nullable::SimpleUnion::Tag::kA:
         return 1;
       case ::test_nullable::SimpleUnion::Tag::kB:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

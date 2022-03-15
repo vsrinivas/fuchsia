@@ -87,10 +87,15 @@ class UnionSmallArray final {
   explicit UnionSmallArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_arrays::UnionSmallArray::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_arrays::UnionSmallArray::Tag tag) {
     switch (tag) {
       case ::test_arrays::UnionSmallArray::Tag::kA:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -167,10 +172,15 @@ class UnionLargeArray final {
   explicit UnionLargeArray(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_arrays::UnionLargeArray::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_arrays::UnionLargeArray::Tag tag) {
     switch (tag) {
       case ::test_arrays::UnionLargeArray::Tag::kA:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

@@ -445,14 +445,12 @@ void IncomingMessage::Decode(const fidl_type_t* message_type,
       (header()->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
     wire_format_version = internal::WireFormatVersion::kV2;
   }
-  Decode__Internal_MayBreak(wire_format_version, message_type, true, out_transformed_buffer, false);
+  Decode(wire_format_version, message_type, true, out_transformed_buffer, false);
 }
 
-void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire_format_version,
-                                                const fidl_type_t* message_type,
-                                                bool is_transactional,
-                                                std::unique_ptr<uint8_t[]>* out_transformed_buffer,
-                                                bool hlcpp_mode) {
+void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
+                             const fidl_type_t* message_type, bool is_transactional,
+                             std::unique_ptr<uint8_t[]>* out_transformed_buffer, bool hlcpp_mode) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
 
   if (wire_format_version == internal::WireFormatVersion::kV1) {

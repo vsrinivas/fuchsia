@@ -208,10 +208,15 @@ class StrictUnion final {
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_doccomments::StrictUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_doccomments::StrictUnion::Tag tag) {
     switch (tag) {
       case ::test_doccomments::StrictUnion::Tag::kField:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -292,12 +297,17 @@ class FlexibleUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_doccomments::FlexibleUnion::Tag tag) {
     switch (tag) {
       case ::test_doccomments::FlexibleUnion::Tag::kField:
         return 1;
       case ::test_doccomments::FlexibleUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -415,15 +425,19 @@ struct internal::NaturalCodingTraits<
                      ::test_doccomments::MyStrictBits* value, size_t offset,
                      size_t recursion_depth) {
     if (static_cast<uint32_t>(*value) & ~3ull) {
-      encoder->SetError("unknown bit set in bits value");
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_doccomments::MyStrictBits>(offset) =
         *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_doccomments::MyStrictBits* value, size_t offset) {
+                     ::test_doccomments::MyStrictBits* value, size_t offset,
+                     size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyStrictBits>(offset);
+    if (static_cast<uint32_t>(*value) & ~3ull) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
   }
 };
 template <>
@@ -440,7 +454,8 @@ struct internal::NaturalCodingTraits<
         *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_doccomments::MyFlexibleBits* value, size_t offset) {
+                     ::test_doccomments::MyFlexibleBits* value, size_t offset,
+                     size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset);
   }
@@ -461,16 +476,25 @@ struct internal::NaturalCodingTraits<
       case ::test_doccomments::MyStrictEnum::kBar:
         break;
       default:
-        encoder->SetError("unknown enum value");
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
         return;
     }
     *encoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset) =
         *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_doccomments::MyStrictEnum* value, size_t offset) {
+                     ::test_doccomments::MyStrictEnum* value, size_t offset,
+                     size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset);
+    switch (*value) {
+      case ::test_doccomments::MyStrictEnum::kFoo:
+      case ::test_doccomments::MyStrictEnum::kBar:
+        break;
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
   }
 };
 template <>
@@ -487,7 +511,8 @@ struct internal::NaturalCodingTraits<
         *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_doccomments::MyFlexibleEnum* value, size_t offset) {
+                     ::test_doccomments::MyFlexibleEnum* value, size_t offset,
+                     size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset);
   }

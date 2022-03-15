@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 
+#include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
@@ -125,16 +126,38 @@ template <typename FidlType>
   ZX_ASSERT(!message.is_transactional());
 
   const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
-  std::unique_ptr<uint8_t[]> transformed_buffer;
-  message.Decode__Internal_MayBreak(metadata.wire_format_version(), coding_table, false,
-                                    &transformed_buffer, true);
-  if (!message.ok()) {
-    return ::fitx::error(std::move(message));
+  zx_status_t status;
+  const char* err_msg;
+  switch (metadata.wire_format_version()) {
+    case fidl::internal::WireFormatVersion::kV1: {
+      status = internal__fidl_validate__v1__may_break(
+          coding_table, message.bytes(), message.byte_actual(), message.handle_actual(), &err_msg);
+      break;
+    }
+    case fidl::internal::WireFormatVersion::kV2: {
+      status = internal__fidl_validate__v2__may_break(
+          coding_table, message.bytes(), message.byte_actual(), message.handle_actual(), &err_msg);
+      break;
+    }
   }
-  ::fidl::internal::NaturalDecoder decoder(std::move(message));
+  if (status != ZX_OK) {
+    return ::fitx::error(::fidl::Error::DecodeError(status, err_msg));
+  }
+
+  ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());
+  size_t offset;
+  if (!decoder.Alloc(
+          ::fidl::internal::NaturalDecodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
+              &decoder),
+          &offset)) {
+    return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
+  }
   FidlType value{};
-  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(&decoder,
-                                                                                        &value, 0);
+  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(
+      &decoder, &value, offset, kRecursionDepthInitial);
+  if (decoder.status() != ZX_OK) {
+    return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
+  }
   return ::fitx::ok(std::move(value));
 }
 

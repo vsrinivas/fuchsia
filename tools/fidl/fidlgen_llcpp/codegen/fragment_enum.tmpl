@@ -125,14 +125,28 @@ using {{ .Name }} = {{ .Unified }};
           break;
         {{- end }}
         default:
-          encoder->SetError("unknown enum value");
+          encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
           return;
       }
       {{- end }}
       *encoder->template GetPtr<{{ . }}>(offset) = *value;
     }
-    static void Decode(internal::NaturalDecoder* decoder, {{ . }}* value, size_t offset) {
+    static void Decode(internal::NaturalDecoder* decoder, {{ . }}* value, size_t offset, size_t recursion_depth) {
       *value = *decoder->template GetPtr<{{ . }}>(offset);
+      {{- if .Strictness }}
+      {{- $enumType := . }}
+      switch (*value) {
+        {{- range .Members }}
+        case {{ $enumType }}::{{ .Unified }}:
+        {{- end }}
+        {{- if .Members }}
+          break;
+        {{- end }}
+        default:
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+          return;
+      }
+      {{- end }}
     }
   };
 

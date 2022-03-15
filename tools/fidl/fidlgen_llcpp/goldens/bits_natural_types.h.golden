@@ -26,13 +26,17 @@ struct internal::NaturalCodingTraits<
                      ::test_bits::StrictBits* value, size_t offset,
                      size_t recursion_depth) {
     if (static_cast<uint64_t>(*value) & ~9223372036854775809ull) {
-      encoder->SetError("unknown bit set in bits value");
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_bits::StrictBits>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_bits::StrictBits* value, size_t offset) {
+                     ::test_bits::StrictBits* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bits::StrictBits>(offset);
+    if (static_cast<uint64_t>(*value) & ~9223372036854775809ull) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
   }
 };
 template <>
@@ -45,13 +49,17 @@ struct internal::NaturalCodingTraits<
                      ::test_bits::MyBits* value, size_t offset,
                      size_t recursion_depth) {
     if (static_cast<uint32_t>(*value) & ~7ull) {
-      encoder->SetError("unknown bit set in bits value");
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_bits::MyBits>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_bits::MyBits* value, size_t offset) {
+                     ::test_bits::MyBits* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bits::MyBits>(offset);
+    if (static_cast<uint32_t>(*value) & ~7ull) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
   }
 };
 template <>
@@ -66,7 +74,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_bits::FlexibleBits>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_bits::FlexibleBits* value, size_t offset) {
+                     ::test_bits::FlexibleBits* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bits::FlexibleBits>(offset);
   }
 };

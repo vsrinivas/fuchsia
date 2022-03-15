@@ -91,27 +91,107 @@ void NaturalEnvelopeEncodeOptional(NaturalEncoder* encoder, std::optional<Field>
 }
 
 template <typename Constraint, typename Field>
-void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<Field>* value,
-                                   size_t offset) {
-  fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
-  if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-    value->emplace();
-    fidl::internal::NaturalDecode<Constraint>(decoder, &value->value(),
-                                              decoder->EnvelopeValueOffset(envelope));
-  } else {
-    value->reset();
+void NaturalEnvelopeDecode(NaturalDecoder* decoder, Field* value, size_t offset,
+                           size_t recursion_depth) {
+  size_t body_size = NaturalDecodingInlineSize<Field, Constraint>(decoder);
+  const size_t length_before = decoder->CurrentLength();
+  const size_t handles_before = decoder->CurrentHandleCount();
+  switch (decoder->wire_format()) {
+    case ::fidl::internal::WireFormatVersion::kV1: {
+      fidl_envelope_t* envelope = decoder->GetPtr<fidl_envelope_t>(offset);
+      size_t body_offset;
+      if (!decoder->Alloc(body_size, &body_offset)) {
+        return;
+      }
+      fidl::internal::NaturalDecode<Constraint>(decoder, value, body_offset, recursion_depth);
+
+      if (decoder->CurrentHandleCount() != handles_before + envelope->num_handles) {
+        decoder->SetError(kCodingErrorInvalidNumHandlesSpecifiedInEnvelope);
+      }
+      if (decoder->CurrentLength() != length_before + envelope->num_bytes) {
+        decoder->SetError(kCodingErrorInvalidNumBytesSpecifiedInEnvelope);
+      }
+      return;
+    }
+    case ::fidl::internal::WireFormatVersion::kV2: {
+      fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
+      if (::fidl::internal::NaturalDecodingInlineSize<Field, Constraint>(decoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        if (!(envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK)) {
+          decoder->SetError(kCodingErrorInvalidInlineBit);
+          return;
+        }
+
+        fidl::internal::NaturalDecode<Constraint>(
+            decoder, value, decoder->GetOffset(&envelope->inline_value), recursion_depth);
+
+        if (decoder->CurrentHandleCount() != handles_before + envelope->num_handles) {
+          decoder->SetError(kCodingErrorInvalidNumHandlesSpecifiedInEnvelope);
+        }
+        return;
+      }
+
+      if (envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) {
+        decoder->SetError(kCodingErrorInvalidInlineBit);
+        return;
+      }
+
+      size_t body_offset;
+      if (!decoder->Alloc(body_size, &body_offset)) {
+        return;
+      }
+      fidl::internal::NaturalDecode<Constraint>(decoder, value, body_offset, recursion_depth);
+
+      if (decoder->CurrentHandleCount() != handles_before + envelope->num_handles) {
+        decoder->SetError(kCodingErrorInvalidNumHandlesSpecifiedInEnvelope);
+      }
+      if (decoder->CurrentLength() != length_before + envelope->num_bytes) {
+        decoder->SetError(kCodingErrorInvalidNumBytesSpecifiedInEnvelope);
+      }
+    }
   }
 }
 
 template <typename Constraint, typename Field>
-bool NaturalEnvelopeDecode(NaturalDecoder* decoder, Field* value, size_t offset) {
-  fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
-  if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-    fidl::internal::NaturalDecode<Constraint>(decoder, value,
-                                              decoder->EnvelopeValueOffset(envelope));
-    return true;
-  } else {
-    return false;
+void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<Field>* value,
+                                   size_t offset, size_t recursion_depth) {
+  switch (decoder->wire_format()) {
+    case ::fidl::internal::WireFormatVersion::kV1: {
+      fidl_envelope_t* envelope = decoder->GetPtr<fidl_envelope_t>(offset);
+      switch (reinterpret_cast<uintptr_t>(envelope->data)) {
+        case FIDL_ALLOC_PRESENT: {
+          value->emplace();
+          NaturalEnvelopeDecode<Constraint>(decoder, &value->value(), offset, recursion_depth);
+          return;
+        }
+        case FIDL_ALLOC_ABSENT: {
+          if (envelope->num_bytes != 0) {
+            decoder->SetError(kCodingErrorNonEmptyByteCountInNullEnvelope);
+            return;
+          }
+          if (envelope->num_handles != 0) {
+            decoder->SetError(kCodingErrorNonEmptyHandleCountInNullEnvelope);
+            return;
+          }
+          value->reset();
+          return;
+        }
+        default: {
+          decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+          return;
+        }
+      }
+    }
+    case ::fidl::internal::WireFormatVersion::kV2: {
+      fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
+      if (*reinterpret_cast<const void* const*>(envelope) == nullptr) {
+        value->reset();
+        return;
+      }
+      value->emplace();
+      NaturalEnvelopeDecode<Constraint>(decoder, &value->value(), offset, recursion_depth);
+      return;
+    }
   }
 }
 
@@ -207,10 +287,15 @@ struct NaturalStructCodingTraits {
     });
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
+    const auto wire_format = decoder->wire_format();
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
+      size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
+                                ? member_info.offset_v1
+                                : member_info.offset_v2;
       using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-      fidl::internal::NaturalDecode<Constraint>(decoder, member, offset + member_info.offset_v2);
+      fidl::internal::NaturalDecode<Constraint>(decoder, member, offset + field_offset,
+                                                recursion_depth);
     });
   }
 
@@ -253,7 +338,7 @@ struct NaturalTableCodingTraits {
     if (max_ordinal == 0)
       return;
     if (recursion_depth + 2 > kRecursionDepthMax) {
-      encoder->SetError("recursion depth exceeded");
+      encoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
     size_t envelope_size = (encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
@@ -282,23 +367,44 @@ struct NaturalTableCodingTraits {
     }
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
 
-    if (!encoded->data) {
-      *value = T{};
+    switch (reinterpret_cast<uintptr_t>(encoded->data)) {
+      case FIDL_ALLOC_PRESENT:
+        break;
+      case FIDL_ALLOC_ABSENT: {
+        *value = T{};
+        if (encoded->count != 0) {
+          decoder->SetError(kCodingErrorNullTableMustHaveSizeZero);
+          return;
+        }
+        return;
+      }
+      default: {
+        decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+        return;
+      }
+    }
+    if (recursion_depth + 2 > kRecursionDepthMax) {
+      decoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
 
-    size_t base = decoder->GetOffset(encoded->data);
+    size_t envelope_size = (decoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+                               ? sizeof(fidl_envelope_t)
+                               : sizeof(fidl_envelope_v2_t);
     size_t count = encoded->count;
-    constexpr size_t envelope_size = sizeof(fidl_envelope_v2_t);
+    size_t base;
+    if (!decoder->Alloc(envelope_size * count, &base)) {
+      return;
+    }
 
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       size_t member_offset = base + (member_info.ordinal - 1) * envelope_size;
       if (member_info.ordinal <= count) {
         using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-        NaturalEnvelopeDecodeOptional<Constraint>(decoder, member, member_offset);
+        NaturalEnvelopeDecodeOptional<Constraint>(decoder, member, member_offset, recursion_depth);
       } else {
         member->reset();
       }
@@ -333,7 +439,7 @@ struct NaturalUnionCodingTraits {
     const size_t index = value->storage_->index();
     ZX_ASSERT(index > 0);
     if (recursion_depth + 1 > kRecursionDepthMax) {
-      encoder->SetError("recursion depth exceeded");
+      encoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
     const size_t envelope_offset = offset + offsetof(fidl_xunion_t, envelope);
@@ -359,27 +465,41 @@ struct NaturalUnionCodingTraits {
     }
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
+    // Note: fidl_xunion_t and fidl_xunion_v2_t have xunion->tag in the same layout position
+    // and the same value of offsetof(fidl_xunion_t, envelope).
+    static_assert(sizeof(fidl_xunion_t::tag) == sizeof(fidl_xunion_v2_t::tag));
+    static_assert(offsetof(fidl_xunion_t, tag) == offsetof(fidl_xunion_v2_t, tag));
+    static_assert(offsetof(fidl_xunion_t, envelope) == offsetof(fidl_xunion_v2_t, envelope));
+
     fidl_xunion_v2_t* xunion = decoder->GetPtr<fidl_xunion_v2_t>(offset);
-    const size_t index = T::TagToIndex(static_cast<typename T::Tag>(xunion->tag));
+    const size_t index = T::TagToIndex(decoder, static_cast<typename T::Tag>(xunion->tag));
+    if (decoder->status() != ZX_OK) {
+      return;
+    }
     ZX_ASSERT(index > 0);
-    const size_t envelope_offset = offset + offsetof(fidl_xunion_t, envelope);
-    DecodeMember(decoder, value, envelope_offset, index);
+    if (recursion_depth + 1 > kRecursionDepthMax) {
+      decoder->SetError(kCodingErrorRecursionDepthExceeded);
+      return;
+    }
+    const size_t envelope_offset = offset + offsetof(fidl_xunion_v2_t, envelope);
+    DecodeMember(decoder, value, envelope_offset, index, recursion_depth + 1);
   }
 
   template <size_t I = 1>
   static void DecodeMember(NaturalDecoder* decoder, T* value, size_t envelope_offset,
-                           const size_t index) {
+                           const size_t index, size_t recursion_depth) {
     static_assert(I > 0);
     if constexpr (I < std::variant_size_v<typename T::Storage_>) {
       if (I == index) {
         value->storage_->template emplace<I>();
         auto& member_info = std::get<I>(T::kMembers);
         using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-        NaturalEnvelopeDecode<Constraint>(decoder, &std::get<I>(*value->storage_), envelope_offset);
+        NaturalEnvelopeDecode<Constraint>(decoder, &std::get<I>(*value->storage_), envelope_offset,
+                                          recursion_depth);
         return;
       }
-      return DecodeMember<I + 1>(decoder, value, envelope_offset, index);
+      return DecodeMember<I + 1>(decoder, value, envelope_offset, index, recursion_depth);
     }
     // TODO: dcheck
   }

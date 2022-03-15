@@ -243,14 +243,23 @@ struct internal::NaturalCodingTraits<
       case ::test_typealiases::obj_type::kChannel:
         break;
       default:
-        encoder->SetError("unknown enum value");
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
         return;
     }
     *encoder->template GetPtr<::test_typealiases::obj_type>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_typealiases::obj_type* value, size_t offset) {
+                     ::test_typealiases::obj_type* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_typealiases::obj_type>(offset);
+    switch (*value) {
+      case ::test_typealiases::obj_type::kNone:
+      case ::test_typealiases::obj_type::kChannel:
+        break;
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
   }
 };
 

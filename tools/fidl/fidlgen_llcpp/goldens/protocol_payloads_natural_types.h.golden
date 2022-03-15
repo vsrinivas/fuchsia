@@ -150,6 +150,7 @@ class MainProtocol_TwoWayImportWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -159,6 +160,10 @@ class MainProtocol_TwoWayImportWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -415,6 +420,7 @@ class MainProtocol_TwoWayAnonWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -424,6 +430,10 @@ class MainProtocol_TwoWayAnonWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -607,6 +617,7 @@ class MainProtocol_OnImportWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Tag::
@@ -615,6 +626,10 @@ class MainProtocol_OnImportWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_OnImportWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -867,6 +882,7 @@ class MainProtocol_OnAnonWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Tag::
@@ -875,6 +891,10 @@ class MainProtocol_OnAnonWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1463,6 +1483,7 @@ class MainProtocol_TwoWayLocalWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -1472,6 +1493,10 @@ class MainProtocol_TwoWayLocalWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1654,6 +1679,7 @@ class MainProtocol_OnLocalWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Tag::
@@ -1662,6 +1688,10 @@ class MainProtocol_OnLocalWithError_Result final {
       case ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

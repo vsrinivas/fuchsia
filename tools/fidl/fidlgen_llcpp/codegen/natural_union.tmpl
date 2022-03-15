@@ -94,7 +94,7 @@ class {{ .Name }} final {
 
   explicit {{ .Name }}(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex({{ .TagEnum }} tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, {{ .TagEnum }} tag) {
     switch (tag) {
       {{- range .Members }}
         case {{ .TagName }}: return {{ .NaturalIndex }};
@@ -102,6 +102,10 @@ class {{ .Name }} final {
       {{- if .IsFlexible }}
         case {{ .TagUnknown }}: return 0;
       {{- end }}
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

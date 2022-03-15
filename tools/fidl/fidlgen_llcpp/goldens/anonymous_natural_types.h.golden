@@ -98,12 +98,17 @@ class UnionMember final {
   explicit UnionMember(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_anonymous::UnionMember::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_anonymous::UnionMember::Tag tag) {
     switch (tag) {
       case ::test_anonymous::UnionMember::Tag::kUnionData:
         return 1;
       case ::test_anonymous::UnionMember::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -558,7 +563,8 @@ class Expression final {
   explicit Expression(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_anonymous::Expression::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_anonymous::Expression::Tag tag) {
     switch (tag) {
       case ::test_anonymous::Expression::Tag::kValue:
         return 1;
@@ -568,6 +574,10 @@ class Expression final {
         return 3;
       case ::test_anonymous::Expression::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -737,12 +747,17 @@ class SomeProtocol_SomeMethod_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag tag) {
     switch (tag) {
       case ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kResponse:
         return 1;
       case ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1112,7 +1127,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_anonymous::Flags>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::Flags* value, size_t offset) {
+                     ::test_anonymous::Flags* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_anonymous::Flags>(offset);
   }
 };
@@ -1129,7 +1145,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_anonymous::BitsMember>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::BitsMember* value, size_t offset) {
+                     ::test_anonymous::BitsMember* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_anonymous::BitsMember>(offset);
   }
 };
@@ -1149,7 +1166,7 @@ struct internal::NaturalCodingTraits<
   }
   static void Decode(internal::NaturalDecoder* decoder,
                      ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
     *value =
         *decoder
              ->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
@@ -1168,7 +1185,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_anonymous::Op>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::Op* value, size_t offset) {
+                     ::test_anonymous::Op* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_anonymous::Op>(offset);
   }
 };

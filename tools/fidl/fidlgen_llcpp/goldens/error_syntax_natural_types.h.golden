@@ -185,6 +185,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
           tag) {
     switch (tag) {
@@ -194,6 +195,10 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
       case ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

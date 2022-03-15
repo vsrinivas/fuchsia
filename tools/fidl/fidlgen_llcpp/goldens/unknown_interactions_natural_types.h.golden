@@ -168,6 +168,7 @@ class Example_FlexibleTwoWay_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag tag) {
     switch (tag) {
       case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
@@ -176,6 +177,10 @@ class Example_FlexibleTwoWay_Result final {
       case ::test_unknowninteractions::Example_FlexibleTwoWay_Result::Tag::
           kTransportErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

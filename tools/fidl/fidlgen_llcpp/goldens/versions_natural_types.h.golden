@@ -83,12 +83,17 @@ class Union final {
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_versions::Union::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_versions::Union::Tag tag) {
     switch (tag) {
       case ::test_versions::Union::Tag::kX:
         return 1;
       case ::test_versions::Union::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -276,7 +281,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_versions::Bits>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_versions::Bits* value, size_t offset) {
+                     ::test_versions::Bits* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_versions::Bits>(offset);
   }
 };
@@ -293,7 +299,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_versions::Enum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_versions::Enum* value, size_t offset) {
+                     ::test_versions::Enum* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_versions::Enum>(offset);
   }
 };

@@ -30,14 +30,23 @@ struct internal::NaturalCodingTraits<
       case ::test_enum::MyStrictEnum::kBar:
         break;
       default:
-        encoder->SetError("unknown enum value");
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
         return;
     }
     *encoder->template GetPtr<::test_enum::MyStrictEnum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyStrictEnum* value, size_t offset) {
+                     ::test_enum::MyStrictEnum* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_enum::MyStrictEnum>(offset);
+    switch (*value) {
+      case ::test_enum::MyStrictEnum::kFoo:
+      case ::test_enum::MyStrictEnum::kBar:
+        break;
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
   }
 };
 template <>
@@ -55,7 +64,7 @@ struct internal::NaturalCodingTraits<
   }
   static void Decode(internal::NaturalDecoder* decoder,
                      ::test_enum::MyFlexibleEnumWithCustomUnknown* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(
             offset);
@@ -74,7 +83,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_enum::MyFlexibleEnum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyFlexibleEnum* value, size_t offset) {
+                     ::test_enum::MyFlexibleEnum* value, size_t offset,
+                     size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_enum::MyFlexibleEnum>(offset);
   }
 };
@@ -92,7 +102,8 @@ struct internal::NaturalCodingTraits<
         *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_enum::MyEmptyFlexibleEnum* value, size_t offset) {
+                     ::test_enum::MyEmptyFlexibleEnum* value, size_t offset,
+                     size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset);
   }

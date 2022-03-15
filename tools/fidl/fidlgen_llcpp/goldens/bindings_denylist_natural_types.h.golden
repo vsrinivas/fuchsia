@@ -126,10 +126,15 @@ class OnlyLlcpp final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::OnlyLlcpp::Tag tag) {
     switch (tag) {
       case ::test_bindingsdenylist::OnlyLlcpp::Tag::kX:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -435,6 +440,7 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::Tag
           tag) {
     switch (tag) {
@@ -444,6 +450,10 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -689,6 +699,7 @@ class DenyEachBinding_OnlyDenyRust_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag tag) {
     switch (tag) {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
@@ -697,6 +708,10 @@ class DenyEachBinding_OnlyDenyRust_Result final {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -945,6 +960,7 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::Tag
           tag) {
     switch (tag) {
@@ -954,6 +970,10 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1198,6 +1218,7 @@ class DenyEachBinding_OnlyDenyGo_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag tag) {
     switch (tag) {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
@@ -1206,6 +1227,10 @@ class DenyEachBinding_OnlyDenyGo_Result final {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1449,6 +1474,7 @@ class DenyEachBinding_OnlyDenyDart_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag tag) {
     switch (tag) {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
@@ -1457,6 +1483,10 @@ class DenyEachBinding_OnlyDenyDart_Result final {
       case ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

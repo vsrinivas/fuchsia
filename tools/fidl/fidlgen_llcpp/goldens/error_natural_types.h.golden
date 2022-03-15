@@ -154,12 +154,17 @@ class Example_foo_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_error::Example_foo_Result::Tag tag) {
     switch (tag) {
       case ::test_error::Example_foo_Result::Tag::kResponse:
         return 1;
       case ::test_error::Example_foo_Result::Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

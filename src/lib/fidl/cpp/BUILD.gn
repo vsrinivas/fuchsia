@@ -15,6 +15,7 @@ source_set("cpp_base") {
   ]
   sources = [
     "internal/message_extensions.cc",
+    "natural_coding_traits.cc",
     "natural_decoder.cc",
     "natural_encoder.cc",
   ]

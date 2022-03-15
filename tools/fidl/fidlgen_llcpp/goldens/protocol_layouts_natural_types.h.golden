@@ -152,6 +152,7 @@ class MainProtocol_TwoWayImportWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -161,6 +162,10 @@ class MainProtocol_TwoWayImportWithError_Result final {
       case ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -329,6 +334,7 @@ class MainProtocol_TwoWayAnonWithError_Response final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response::Tag
           tag) {
     switch (tag) {
@@ -338,6 +344,10 @@ class MainProtocol_TwoWayAnonWithError_Response final {
       case ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response::
           Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -445,6 +455,7 @@ class MainProtocol_TwoWayAnonWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -454,6 +465,10 @@ class MainProtocol_TwoWayAnonWithError_Result final {
       case ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -637,6 +652,7 @@ class MainProtocol_OnImportWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_OnImportWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::MainProtocol_OnImportWithError_Result::Tag::
@@ -645,6 +661,10 @@ class MainProtocol_OnImportWithError_Result final {
       case ::test_protocollayouts::MainProtocol_OnImportWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -885,6 +905,7 @@ class MainProtocol_OnAnonWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_OnAnonWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::MainProtocol_OnAnonWithError_Result::Tag::
@@ -893,6 +914,10 @@ class MainProtocol_OnAnonWithError_Result final {
       case ::test_protocollayouts::MainProtocol_OnAnonWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1169,12 +1194,17 @@ class MainProtocolTwoWayAnonRequest final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
         return 1;
       case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1313,12 +1343,17 @@ class MainProtocolOnAnonRequest final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocolOnAnonRequest::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
         return 1;
       case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1395,12 +1430,17 @@ class LocalUnionPayload final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::LocalUnionPayload::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::LocalUnionPayload::Tag::kB:
         return 1;
       case ::test_protocollayouts::LocalUnionPayload::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1505,6 +1545,7 @@ class MainProtocol_TwoWayLocalWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag
           tag) {
     switch (tag) {
@@ -1514,6 +1555,10 @@ class MainProtocol_TwoWayLocalWithError_Result final {
       case ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result::
           Tag::kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1745,6 +1790,7 @@ class MainProtocol_OnLocalWithError_Result final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_protocollayouts::MainProtocol_OnLocalWithError_Result::Tag tag) {
     switch (tag) {
       case ::test_protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::
@@ -1753,6 +1799,10 @@ class MainProtocol_OnLocalWithError_Result final {
       case ::test_protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::
           kErr:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

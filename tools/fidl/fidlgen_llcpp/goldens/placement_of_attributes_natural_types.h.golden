@@ -91,12 +91,17 @@ class ExampleXUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_placementofattributes::ExampleXUnion::Tag tag) {
     switch (tag) {
       case ::test_placementofattributes::ExampleXUnion::Tag::kVariant:
         return 1;
       case ::test_placementofattributes::ExampleXUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -172,10 +177,15 @@ class ExampleUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_placementofattributes::ExampleUnion::Tag tag) {
     switch (tag) {
       case ::test_placementofattributes::ExampleUnion::Tag::kVariant:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -499,17 +509,20 @@ struct internal::NaturalCodingTraits<
                      ::test_placementofattributes::ExampleBits* value,
                      size_t offset, size_t recursion_depth) {
     if (static_cast<uint32_t>(*value) & ~1ull) {
-      encoder->SetError("unknown bit set in bits value");
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
         offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
                      ::test_placementofattributes::ExampleBits* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_placementofattributes::ExampleBits>(
             offset);
+    if (static_cast<uint32_t>(*value) & ~1ull) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
   }
 };
 
@@ -527,7 +540,7 @@ struct internal::NaturalCodingTraits<
       case ::test_placementofattributes::ExampleEnum::kMember:
         break;
       default:
-        encoder->SetError("unknown enum value");
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
         return;
     }
     *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
@@ -535,10 +548,17 @@ struct internal::NaturalCodingTraits<
   }
   static void Decode(internal::NaturalDecoder* decoder,
                      ::test_placementofattributes::ExampleEnum* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
     *value =
         *decoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
             offset);
+    switch (*value) {
+      case ::test_placementofattributes::ExampleEnum::kMember:
+        break;
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
   }
 };
 

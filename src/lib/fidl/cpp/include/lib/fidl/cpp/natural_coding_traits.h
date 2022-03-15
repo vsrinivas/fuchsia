@@ -18,6 +18,28 @@
 
 namespace fidl::internal {
 
+// Use extern definitions of errors to avoid a copy for each .cc file including
+// this .h file.
+extern const char* const kCodingErrorInvalidBoolean;
+extern const char* const kCodingErrorVectorLimitExceeded;
+extern const char* const kCodingErrorNullDataReceivedForNonNullableVector;
+extern const char* const kCodingErrorNullVectorMustHaveSizeZero;
+extern const char* const kCodingErrorStringLimitExceeded;
+extern const char* const kCodingErrorNullDataReceivedForNonNullableString;
+extern const char* const kCodingErrorNullStringMustHaveSizeZero;
+extern const char* const kCodingErrorStringNotValidUtf8;
+extern const char* const kCodingErrorNullTableMustHaveSizeZero;
+extern const char* const kCodingErrorInvalidNumBytesSpecifiedInEnvelope;
+extern const char* const kCodingErrorInvalidNumHandlesSpecifiedInEnvelope;
+extern const char* const kCodingErrorNonEmptyByteCountInNullEnvelope;
+extern const char* const kCodingErrorNonEmptyHandleCountInNullEnvelope;
+extern const char* const kCodingErrorInvalidInlineBit;
+extern const char* const kCodingErrorUnknownBitSetInBitsValue;
+extern const char* const kCodingErrorUnknownEnumValue;
+extern const char* const kCodingErrorUnknownUnionTag;
+extern const char* const kCodingErrorRecursionDepthExceeded;
+extern const char* const kCodingErrorInvalidPresenceIndicator;
+
 struct NaturalCodingConstraintEmpty {};
 
 template <zx_obj_type_t ObjType, zx_rights_t Rights>
@@ -56,7 +78,13 @@ size_t NaturalEncodingInlineSize(NaturalEncoder* encoder) {
 
 template <typename T, typename Constraint>
 size_t NaturalDecodingInlineSize(NaturalDecoder* decoder) {
-  return NaturalCodingTraits<T, Constraint>::inline_size_v2;
+  switch (decoder->wire_format()) {
+    case ::fidl::internal::WireFormatVersion::kV1:
+      return NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee;
+    case ::fidl::internal::WireFormatVersion::kV2:
+      return NaturalCodingTraits<T, Constraint>::inline_size_v2;
+  }
+  __builtin_unreachable();
 }
 
 template <typename T>
@@ -67,7 +95,7 @@ struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
   static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
     *encoder->template GetPtr<T>(offset) = *value;
   }
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<T>(offset);
   }
 };
@@ -78,24 +106,30 @@ struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(bool);
   static void Encode(NaturalEncoder* encoder, bool* value, size_t offset, size_t recursion_depth) {
     if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
-      encoder->SetError("invalid boolean value");
+      encoder->SetError(kCodingErrorInvalidBoolean);
       return;
     }
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset,
                      size_t recursion_depth) {
-    if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
-      encoder->SetError("invalid boolean value");
+    bool b = *value;
+    Encode(encoder, &b, offset, recursion_depth);
+  }
+  static void Decode(NaturalDecoder* decoder, bool* value, size_t offset, size_t recursion_depth) {
+    uint8_t uintval = *decoder->template GetPtr<uint8_t>(offset);
+    if (!(static_cast<uint8_t>(uintval) == 0 || static_cast<uint8_t>(uintval) == 1)) {
+      decoder->SetError(kCodingErrorInvalidBoolean);
       return;
     }
-    *encoder->template GetPtr<bool>(offset) = *value;
-  }
-  static void Decode(NaturalDecoder* decoder, bool* value, size_t offset) {
+
     *value = *decoder->template GetPtr<bool>(offset);
   }
-  static void Decode(NaturalDecoder* decoder, std::vector<bool>::iterator value, size_t offset) {
-    *value = *decoder->template GetPtr<bool>(offset);
+  static void Decode(NaturalDecoder* decoder, std::vector<bool>::iterator value, size_t offset,
+                     size_t recursion_depth) {
+    bool b;
+    Decode(decoder, &b, offset, recursion_depth);
+    *value = b;
   }
 };
 
@@ -127,7 +161,7 @@ void NaturalEncodeVectorBody(NaturalUseStdCopy<false>, NaturalEncoder* encoder,
 template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<true>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
-                             size_t count) {
+                             size_t count, size_t recursion_depth) {
   static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee == sizeof(T),
                 "stride doesn't match object size");
   *out = std::vector<T>(decoder->template GetPtr<T>(in_begin_offset),
@@ -137,13 +171,13 @@ void NaturalDecodeVectorBody(NaturalUseStdCopy<true>, NaturalDecoder* decoder,
 template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<false>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
-                             size_t count) {
+                             size_t count, size_t recursion_depth) {
   out->resize(count);
   size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
   size_t in_offset = in_begin_offset;
   typename std::vector<T>::iterator out_it = out->begin();
   for (; in_offset < in_end_offset; in_offset += stride, out_it++) {
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, &*out_it, in_offset);
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, &*out_it, in_offset, recursion_depth);
   }
 }
 
@@ -156,11 +190,11 @@ struct NaturalCodingTraits<::std::vector<T>, Constraint> {
                      size_t recursion_depth) {
     size_t count = value->size();
     if (count > Constraint::limit) {
-      encoder->SetError("vector limit exceeded");
+      encoder->SetError(kCodingErrorVectorLimitExceeded);
       return;
     }
     if (recursion_depth + 1 > kRecursionDepthMax) {
-      encoder->SetError("recursion depth exceeded");
+      encoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
 
@@ -173,14 +207,35 @@ struct NaturalCodingTraits<::std::vector<T>, Constraint> {
         internal::NaturalUseStdCopy<NaturalIsMemcpyCompatible<T>::value>(), encoder, value->begin(),
         value->end(), base, recursion_depth + 1);
   }
-  static void Decode(NaturalDecoder* decoder, ::std::vector<T>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, ::std::vector<T>* value, size_t offset,
+                     size_t recursion_depth) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
-    size_t stride = NaturalDecodingInlineSize<T, InnerConstraint>(decoder);
-    size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
+    switch (reinterpret_cast<uintptr_t>(encoded->data)) {
+      case FIDL_ALLOC_PRESENT:
+        break;
+      case FIDL_ALLOC_ABSENT: {
+        decoder->SetError(kCodingErrorNullDataReceivedForNonNullableVector);
+        return;
+      }
+      default: {
+        decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+        return;
+      }
+    }
+    if (recursion_depth + 1 > kRecursionDepthMax) {
+      decoder->SetError(kCodingErrorRecursionDepthExceeded);
+      return;
+    }
+
+    size_t stride = NaturalDecodingInlineSize<T, InnerConstraint>(decoder);
+    size_t base;
+    if (!decoder->Alloc(count * stride, &base)) {
+      return;
+    }
     internal::NaturalDecodeVectorBody<T, InnerConstraint>(
         internal::NaturalUseStdCopy<NaturalIsMemcpyCompatible<T>::value>(), decoder, base,
-        base + stride * count, value, count);
+        base + stride * count, value, count, recursion_depth + 1);
   }
 };
 
@@ -202,14 +257,16 @@ struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
                                                  recursion_depth);
     }
   }
-  static void Decode(NaturalDecoder* decoder, std::array<T, N>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, std::array<T, N>* value, size_t offset,
+                     size_t recursion_depth) {
     size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
     if (NaturalIsMemcpyCompatible<T>::value) {
       memcpy(&value[0], decoder->template GetPtr<void>(offset), N * stride);
       return;
     }
     for (size_t i = 0; i < N; ++i) {
-      NaturalCodingTraits<T, Constraint>::Decode(decoder, &value->at(i), offset + i * stride);
+      NaturalCodingTraits<T, Constraint>::Decode(decoder, &value->at(i), offset + i * stride,
+                                                 recursion_depth);
     }
   }
 };
@@ -229,8 +286,14 @@ struct NaturalCodingTraits<
                           },
                           offset);
   }
-  static void Decode(NaturalDecoder* decoder, zx::object_base* value, size_t offset) {
-    decoder->DecodeHandle(value, offset);
+  static void Decode(NaturalDecoder* decoder, zx::object_base* value, size_t offset,
+                     size_t recursion_depth) {
+    decoder->DecodeHandle(value,
+                          {
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
+                          },
+                          offset);
   }
 };
 #endif  // __Fuchsia__
@@ -251,18 +314,30 @@ struct NaturalCodingTraits<cpp17::optional<std::vector<T>>, Constraint> {
     vec->count = 0;
     vec->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
   }
-  static void Decode(NaturalDecoder* decoder, cpp17::optional<std::vector<T>>* value,
-                     size_t offset) {
+  static void Decode(NaturalDecoder* decoder, cpp17::optional<std::vector<T>>* value, size_t offset,
+                     size_t recursion_depth) {
     fidl_vector_t* vec = decoder->template GetPtr<fidl_vector_t>(offset);
-    if (vec->data == nullptr) {
-      ZX_ASSERT(vec->count == 0);
-      value->reset();
-      return;
+    switch (reinterpret_cast<uintptr_t>(vec->data)) {
+      case FIDL_ALLOC_PRESENT: {
+        std::vector<T> unwrapped;
+        fidl::internal::NaturalCodingTraits<std::vector<T>, Constraint>::Decode(
+            decoder, &unwrapped, offset, recursion_depth);
+        value->emplace(std::move(unwrapped));
+        return;
+      }
+      case FIDL_ALLOC_ABSENT: {
+        if (vec->count != 0) {
+          decoder->SetError(kCodingErrorNullVectorMustHaveSizeZero);
+          return;
+        }
+        value->reset();
+        return;
+      }
+      default: {
+        decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+        return;
+      }
     }
-    std::vector<T> unwrapped;
-    fidl::internal::NaturalCodingTraits<std::vector<T>, Constraint>::Decode(decoder, &unwrapped,
-                                                                            offset);
-    value->emplace(std::move(unwrapped));
   }
 };
 
@@ -275,7 +350,7 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
                      size_t recursion_depth) {
     if (value->get()) {
       if (recursion_depth + 1 > kRecursionDepthMax) {
-        encoder->SetError("recursion depth exceeded");
+        encoder->SetError(kCodingErrorRecursionDepthExceeded);
         return;
       }
 
@@ -288,12 +363,25 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
   }
-  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset,
+                     size_t recursion_depth) {
     uintptr_t ptr = *decoder->template GetPtr<uintptr_t>(offset);
-    if (!ptr)
+    if (!ptr) {
       return value->reset();
+    }
+
+    if (recursion_depth + 1 > kRecursionDepthMax) {
+      decoder->SetError(kCodingErrorRecursionDepthExceeded);
+      return;
+    }
     *value = std::make_unique<T>();
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
+    size_t alloc_size = NaturalDecodingInlineSize<T, Constraint>(decoder);
+    size_t body_offset;
+    if (!decoder->Alloc(alloc_size, &body_offset)) {
+      return;
+    }
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), body_offset,
+                                               recursion_depth + 1);
   }
 };
 
@@ -313,14 +401,15 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
     // Buffer is zero-initialized.
   }
 
-  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset,
+                     size_t recursion_depth) {
     fidl_xunion_v2_t* u = decoder->template GetPtr<fidl_xunion_v2_t>(offset);
     if (FidlIsZeroEnvelope(&u->envelope)) {
       *value = nullptr;
       return;
     }
     *value = std::make_unique<T>();
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset);
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset, recursion_depth);
   }
 };
 
@@ -333,16 +422,16 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
                      size_t recursion_depth) {
     const size_t size = value->size();
     if (value->size() > Constraint::limit) {
-      encoder->SetError("string limit exceeded");
+      encoder->SetError(kCodingErrorStringLimitExceeded);
       return;
     }
     zx_status_t status = fidl_validate_string(value->data(), value->size());
     if (status != ZX_OK) {
-      encoder->SetError("string is not valid utf-8");
+      encoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
     }
     if (recursion_depth + 1 > kRecursionDepthMax) {
-      encoder->SetError("recursion depth exceeded");
+      encoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
 
@@ -353,10 +442,41 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
     char* payload = encoder->template GetPtr<char>(base);
     memcpy(payload, value->data(), size);
   }
-  static void Decode(NaturalDecoder* decoder, std::string* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, std::string* value, size_t offset,
+                     size_t recursion_depth) {
+    if (recursion_depth + 1 > kRecursionDepthMax) {
+      decoder->SetError(kCodingErrorRecursionDepthExceeded);
+      return;
+    }
+
     fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
-    ZX_ASSERT(string->data != nullptr);
-    *value = std::string(string->data, string->size);
+    if (string->size > Constraint::limit) {
+      decoder->SetError(kCodingErrorStringLimitExceeded);
+      return;
+    }
+    switch (reinterpret_cast<uintptr_t>(string->data)) {
+      case FIDL_ALLOC_PRESENT:
+        break;
+      case FIDL_ALLOC_ABSENT: {
+        decoder->SetError(kCodingErrorNullDataReceivedForNonNullableString);
+        return;
+      }
+      default: {
+        decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+        return;
+      }
+    }
+    size_t base;
+    if (!decoder->Alloc(string->size, &base)) {
+      return;
+    }
+    char* payload = decoder->template GetPtr<char>(base);
+    zx_status_t status = fidl_validate_string(payload, string->size);
+    if (status != ZX_OK) {
+      decoder->SetError(kCodingErrorStringNotValidUtf8);
+      return;
+    }
+    *value = std::string(payload, string->size);
   }
 };
 
@@ -376,17 +496,30 @@ struct NaturalCodingTraits<cpp17::optional<std::string>, Constraint> {
     string->size = 0;
     string->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
   }
-  static void Decode(NaturalDecoder* decoder, cpp17::optional<std::string>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, cpp17::optional<std::string>* value, size_t offset,
+                     size_t recursion_depth) {
     fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
-    if (string->data == nullptr) {
-      ZX_ASSERT(string->size == 0);
-      value->reset();
-      return;
+    switch (reinterpret_cast<uintptr_t>(string->data)) {
+      case FIDL_ALLOC_PRESENT: {
+        std::string unwrapped;
+        fidl::internal::NaturalCodingTraits<std::string, Constraint>::Decode(
+            decoder, &unwrapped, offset, recursion_depth);
+        value->emplace(unwrapped);
+        return;
+      }
+      case FIDL_ALLOC_ABSENT: {
+        if (string->size != 0) {
+          decoder->SetError(kCodingErrorNullStringMustHaveSizeZero);
+          return;
+        }
+        value->reset();
+        return;
+      }
+      default: {
+        decoder->SetError(kCodingErrorInvalidPresenceIndicator);
+        return;
+      }
     }
-    std::string unwrapped;
-    fidl::internal::NaturalCodingTraits<std::string, Constraint>::Decode(decoder, &unwrapped,
-                                                                         offset);
-    value->emplace(unwrapped);
   }
 };
 
@@ -403,9 +536,15 @@ struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
                           offset);
   }
 
-  static void Decode(NaturalDecoder* decoder, ClientEnd<T>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, ClientEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
     zx::channel channel;
-    decoder->DecodeHandle(&channel, offset);
+    decoder->DecodeHandle(&channel,
+                          {
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
+                          },
+                          offset);
     *value = ClientEnd<T>(std::move(channel));
   }
 };
@@ -422,9 +561,15 @@ struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
                           offset);
   }
 
-  static void Decode(NaturalDecoder* decoder, ServerEnd<T>* value, size_t offset) {
+  static void Decode(NaturalDecoder* decoder, ServerEnd<T>* value, size_t offset,
+                     size_t recursion_depth) {
     zx::channel channel;
-    decoder->DecodeHandle(&channel, offset);
+    decoder->DecodeHandle(&channel,
+                          {
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
+                          },
+                          offset);
     *value = ServerEnd<T>(std::move(channel));
   }
 };
@@ -436,8 +581,8 @@ void NaturalEncode(NaturalEncoder* encoder, T* value, size_t offset, size_t recu
 }
 
 template <typename Constraint, typename T>
-void NaturalDecode(NaturalDecoder* decoder, T* value, size_t offset) {
-  NaturalCodingTraits<T, Constraint>::Decode(decoder, value, offset);
+void NaturalDecode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
+  NaturalCodingTraits<T, Constraint>::Decode(decoder, value, offset, recursion_depth);
 }
 
 }  // namespace fidl::internal

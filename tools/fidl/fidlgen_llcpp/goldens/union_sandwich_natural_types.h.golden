@@ -94,10 +94,15 @@ class UnionSize8Alignment4 final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_unionsandwich::UnionSize8Alignment4::Tag tag) {
     switch (tag) {
       case ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -260,10 +265,15 @@ class UnionSize36Alignment4 final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_unionsandwich::UnionSize36Alignment4::Tag tag) {
     switch (tag) {
       case ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -426,10 +436,15 @@ class UnionSize12Alignment4 final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_unionsandwich::UnionSize12Alignment4::Tag tag) {
     switch (tag) {
       case ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -659,10 +674,15 @@ class UnionSize24Alignment8 final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_unionsandwich::UnionSize24Alignment8::Tag tag) {
     switch (tag) {
       case ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 

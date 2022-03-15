@@ -137,12 +137,17 @@ class UnionWithAttributes final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::UnionWithAttributes::Tag tag) {
     switch (tag) {
       case ::test_union::UnionWithAttributes::Tag::kX:
         return 1;
       case ::test_union::UnionWithAttributes::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -249,7 +254,8 @@ class Union final {
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::Union::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::Union::Tag tag) {
     switch (tag) {
       case ::test_union::Union::Tag::kPrimitive:
         return 1;
@@ -257,6 +263,10 @@ class Union final {
         return 2;
       case ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor:
         return 3;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -429,7 +439,8 @@ class StrictUnion final {
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::StrictUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::StrictUnion::Tag tag) {
     switch (tag) {
       case ::test_union::StrictUnion::Tag::kPrimitive:
         return 1;
@@ -437,6 +448,10 @@ class StrictUnion final {
         return 2;
       case ::test_union::StrictUnion::Tag::kVectorStringAlsoNeedsConstructor:
         return 3;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -546,6 +561,7 @@ class StrictSimpleXUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::StrictSimpleXUnion::Tag tag) {
     switch (tag) {
       case ::test_union::StrictSimpleXUnion::Tag::kI:
@@ -554,6 +570,10 @@ class StrictSimpleXUnion final {
         return 2;
       case ::test_union::StrictSimpleXUnion::Tag::kS:
         return 3;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -647,12 +667,17 @@ class StrictFoo final {
   explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::StrictFoo::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::StrictFoo::Tag tag) {
     switch (tag) {
       case ::test_union::StrictFoo::Tag::kS:
         return 1;
       case ::test_union::StrictFoo::Tag::kI:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -731,10 +756,15 @@ class StrictBoundedXUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::StrictBoundedXUnion::Tag tag) {
     switch (tag) {
       case ::test_union::StrictBoundedXUnion::Tag::kV:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -906,12 +936,17 @@ class ReverseOrdinalUnion final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::ReverseOrdinalUnion::Tag tag) {
     switch (tag) {
       case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
         return 1;
       case ::test_union::ReverseOrdinalUnion::Tag::kFirst:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1111,12 +1146,17 @@ class StrictPizzaOrPasta final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::StrictPizzaOrPasta::Tag tag) {
     switch (tag) {
       case ::test_union::StrictPizzaOrPasta::Tag::kPizza:
         return 1;
       case ::test_union::StrictPizzaOrPasta::Tag::kPasta:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1209,12 +1249,17 @@ class PizzaOrPasta final {
   explicit PizzaOrPasta(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::PizzaOrPasta::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::PizzaOrPasta::Tag tag) {
     switch (tag) {
       case ::test_union::PizzaOrPasta::Tag::kPizza:
         return 1;
       case ::test_union::PizzaOrPasta::Tag::kPasta:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1308,6 +1353,7 @@ class FlexiblePizzaOrPasta final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::FlexiblePizzaOrPasta::Tag tag) {
     switch (tag) {
       case ::test_union::FlexiblePizzaOrPasta::Tag::kPizza:
@@ -1316,6 +1362,10 @@ class FlexiblePizzaOrPasta final {
         return 2;
       case ::test_union::FlexiblePizzaOrPasta::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1408,12 +1458,17 @@ class ExplicitPizzaOrPasta final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::ExplicitPizzaOrPasta::Tag tag) {
     switch (tag) {
       case ::test_union::ExplicitPizzaOrPasta::Tag::kPizza:
         return 1;
       case ::test_union::ExplicitPizzaOrPasta::Tag::kPasta:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1506,7 +1561,8 @@ class OlderSimpleUnion final {
   explicit OlderSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::OlderSimpleUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::OlderSimpleUnion::Tag tag) {
     switch (tag) {
       case ::test_union::OlderSimpleUnion::Tag::kI:
         return 1;
@@ -1514,6 +1570,10 @@ class OlderSimpleUnion final {
         return 2;
       case ::test_union::OlderSimpleUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1760,7 +1820,8 @@ class NewerSimpleUnion final {
   explicit NewerSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::NewerSimpleUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::NewerSimpleUnion::Tag tag) {
     switch (tag) {
       case ::test_union::NewerSimpleUnion::Tag::kI:
         return 1;
@@ -1770,6 +1831,10 @@ class NewerSimpleUnion final {
         return 3;
       case ::test_union::NewerSimpleUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1883,7 +1948,8 @@ class FlexibleUnion final {
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::FlexibleUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::FlexibleUnion::Tag tag) {
     switch (tag) {
       case ::test_union::FlexibleUnion::Tag::kPrimitive:
         return 1;
@@ -1893,6 +1959,10 @@ class FlexibleUnion final {
         return 3;
       case ::test_union::FlexibleUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -1986,7 +2056,8 @@ class FlexibleFoo final {
   explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::FlexibleFoo::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::FlexibleFoo::Tag tag) {
     switch (tag) {
       case ::test_union::FlexibleFoo::Tag::kS:
         return 1;
@@ -1994,6 +2065,10 @@ class FlexibleFoo final {
         return 2;
       case ::test_union::FlexibleFoo::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2070,10 +2145,15 @@ class FieldCollision final {
   explicit FieldCollision(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::FieldCollision::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::FieldCollision::Tag tag) {
     switch (tag) {
       case ::test_union::FieldCollision::Tag::kFieldCollisionTag:
         return 1;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2163,7 +2243,8 @@ class ExplicitXUnion final {
   explicit ExplicitXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::ExplicitXUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::ExplicitXUnion::Tag tag) {
     switch (tag) {
       case ::test_union::ExplicitXUnion::Tag::kI:
         return 1;
@@ -2171,6 +2252,10 @@ class ExplicitXUnion final {
         return 2;
       case ::test_union::ExplicitXUnion::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2328,12 +2413,17 @@ class ExplicitUnion final {
   explicit ExplicitUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::ExplicitUnion::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::ExplicitUnion::Tag tag) {
     switch (tag) {
       case ::test_union::ExplicitUnion::Tag::kPrimitive:
         return 1;
       case ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2424,12 +2514,17 @@ class ExplicitStrictFoo final {
   explicit ExplicitStrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::ExplicitStrictFoo::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::ExplicitStrictFoo::Tag tag) {
     switch (tag) {
       case ::test_union::ExplicitStrictFoo::Tag::kS:
         return 1;
       case ::test_union::ExplicitStrictFoo::Tag::kI:
         return 2;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2522,7 +2617,8 @@ class ExplicitFoo final {
   explicit ExplicitFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
 
-  static constexpr size_t TagToIndex(::test_union::ExplicitFoo::Tag tag) {
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder,
+                                     ::test_union::ExplicitFoo::Tag tag) {
     switch (tag) {
       case ::test_union::ExplicitFoo::Tag::kS:
         return 1;
@@ -2530,6 +2626,10 @@ class ExplicitFoo final {
         return 2;
       case ::test_union::ExplicitFoo::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
@@ -2659,12 +2759,17 @@ class XUnionContainingEmptyStruct final {
       : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(
+      ::fidl::internal::NaturalDecoder* decoder,
       ::test_union::XUnionContainingEmptyStruct::Tag tag) {
     switch (tag) {
       case ::test_union::XUnionContainingEmptyStruct::Tag::kEmpty:
         return 1;
       case ::test_union::XUnionContainingEmptyStruct::Tag::kUnknown:
         return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
     }
   }
 
