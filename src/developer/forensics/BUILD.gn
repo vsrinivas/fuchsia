@@ -257,6 +257,14 @@ config_data("feedback_data_limit_inspect_data") {
   outputs = [ "feedback_data/limit_inspect_data" ]
 }
 
+config_data("feedback_redact_data") {
+  for_pkg = "forensics"
+
+  sources = [ "feedback/configs/redact_data" ]
+
+  outputs = [ "feedback/redact_data" ]
+}
+
 config_data("feedback_remote_device_id_provider") {
   for_pkg = "forensics"
 
