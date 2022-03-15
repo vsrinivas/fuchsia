@@ -870,9 +870,16 @@ test "$trace" = 0 || {
 #  --bindir=$HOME/re-client/install-bin
 # and pass options available in the new version, e.g.:
 #  --preserve_symlink
+#
+# --canonicalize_working_dir: coerce the output dir to a constant.
+#   This requires that the command be insensitive to output dir, and
+#   that its outputs do not leak the remote output dir.
+#   Ensuring that the results reproduce consistently across different
+#   build directories helps with caching.
 remote_rustc_command=(
   "$remote_action_wrapper"
   --exec_root="$project_root"
+  --canonicalize_working_dir=true
   "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
   --output_files="$remote_outputs_joined"
@@ -901,7 +908,20 @@ then
   #   https://github.com/pest-parser/pest/pull/522
   # Rewrite the depfile if it contains any absolute paths from the remote
   # build; paths should be relative to the root_build_dir.
-  sed -i -e "s|$remote_project_root/out/[^/]*/||g" "$depfile"
+  #
+  # Assume that the output dir is two levels down from the exec_root.
+  #
+  # When using the `canonicalize_working_dir` reproxy option,
+  # the output directory is coerced to a predictable 'set_by_reclient' constant.
+  # See https://source.corp.google.com/foundry-x-re-client/internal/pkg/reproxy/action.go;l=131
+  # It is still possible for a tool to leak absolute paths, which could
+  # expose that constant in returned artifacts.
+  # We forgive this for depfiles, but other artifacts should be verified
+  # separately.
+
+  sed -i -e "s|$remote_project_root/out/[^/]*/||g" \
+    -e "s|$remote_project_root/set_by_reclient/[^/]*/||g" \
+    "$depfile"
 
   mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
   for f in "${remote_depfile_inputs[@]}"
