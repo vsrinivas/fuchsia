@@ -19,7 +19,7 @@ function fx-flash {
     return 1
   fi
 
-  ffx_flash_args=("--ssh-key" "$(get-ssh-authkeys)") || {
+  ffx_flash_args=("--authorized-keys" "$(get-ssh-authkeys)") || {
     fx-warn "Cannot find a valid authorized keys file. Recovery will be flashed."
     ffx_flash_args=("--product" "recovery")
   }

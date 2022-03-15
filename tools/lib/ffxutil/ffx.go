@@ -143,7 +143,7 @@ func (f *FFXInstance) BootloaderBoot(ctx context.Context, zbi, vbmeta, slot stri
 
 // Flash flashes the target.
 func (f *FFXInstance) Flash(ctx context.Context, manifest, sshKey string) error {
-	return f.RunWithTarget(ctx, "target", "flash", "--ssh-key", sshKey, manifest)
+	return f.RunWithTarget(ctx, "target", "flash", "--authorized-keys", sshKey, manifest)
 }
 
 // List lists all available targets.
