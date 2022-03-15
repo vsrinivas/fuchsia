@@ -4,6 +4,7 @@
 
 #include "src/lib/storage/fs_management/cpp/admin.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -28,9 +29,9 @@ enum State {
   kStarted,
 };
 
-constexpr InitOptions kEmptyOptions = {};
+constexpr MountOptions kEmptyOptions = {};
 
-constexpr InitOptions kReadonlyOptions = {
+constexpr MountOptions kReadonlyOptions = {
     .readonly = true,
     // Remaining options are same as default values.
 };
@@ -39,7 +40,7 @@ constexpr char kTestFilePath[] = "test_file";
 
 class OutgoingDirectoryFixture : public testing::Test {
  public:
-  explicit OutgoingDirectoryFixture(DiskFormat format, InitOptions options = {})
+  explicit OutgoingDirectoryFixture(DiskFormat format, MountOptions options = {})
       : format_(format), options_(options) {}
 
   void SetUp() override {
@@ -73,15 +74,15 @@ class OutgoingDirectoryFixture : public testing::Test {
   }
 
  protected:
-  void StartFilesystem(const InitOptions& options) {
+  void StartFilesystem(const MountOptions& options) {
     ASSERT_EQ(state_, kFormatted);
 
-    auto device_or = ramdisk_.channel();
-    ASSERT_EQ(device_or.status_value(), ZX_OK);
+    fbl::unique_fd device_fd(open(ramdisk_.path().c_str(), O_RDWR));
+    ASSERT_TRUE(device_fd);
 
-    auto export_root = FsInit(std::move(*device_or), format_, options);
-    ASSERT_TRUE(export_root.is_ok()) << export_root.status_string();
-    export_client_ = fidl::WireSyncClient<Directory>(std::move(export_root.value()));
+    auto fs_or = Mount(std::move(device_fd), nullptr, format_, options, launch_stdio_async);
+    ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
+    export_client_ = fidl::WireSyncClient<Directory>(std::move(*fs_or).TakeExportRoot());
 
     auto data_root = FsRootHandle(export_client_.client_end());
     ASSERT_TRUE(data_root.is_ok()) << data_root.status_string();
@@ -104,7 +105,7 @@ class OutgoingDirectoryFixture : public testing::Test {
   State state_ = kFormatted;
   storage::RamDisk ramdisk_;
   DiskFormat format_;
-  InitOptions options_ = {};
+  MountOptions options_ = {};
   fidl::WireSyncClient<Directory> export_client_;
   fidl::WireSyncClient<Directory> data_client_;
 };
@@ -113,11 +114,11 @@ class OutgoingDirectoryFixture : public testing::Test {
 
 struct OutgoingDirectoryTestParameters {
   DiskFormat format;
-  InitOptions options;
+  MountOptions options;
 };
 
 std::string PrintTestSuffix(
-    const testing::TestParamInfo<std::tuple<DiskFormat, InitOptions>> params) {
+    const testing::TestParamInfo<std::tuple<DiskFormat, MountOptions>> params) {
   std::stringstream out;
   out << DiskFormatString(std::get<0>(params.param));
   if (std::get<1>(params.param).readonly) {
@@ -129,7 +130,7 @@ std::string PrintTestSuffix(
 // Generalized outgoing directory tests which should work in both mutable and read-only modes.
 class OutgoingDirectoryTest
     : public OutgoingDirectoryFixture,
-      public testing::WithParamInterface<std::tuple<DiskFormat, InitOptions>> {
+      public testing::WithParamInterface<std::tuple<DiskFormat, MountOptions>> {
  public:
   OutgoingDirectoryTest()
       : OutgoingDirectoryFixture(std::get<0>(GetParam()), std::get<1>(GetParam())) {}

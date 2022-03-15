@@ -24,39 +24,6 @@ inline constexpr std::string_view kPathFactory = "/factory";
 inline constexpr std::string_view kPathVolume = "/volume";
 inline constexpr std::string_view kPathDevBlock = "/dev/class/block";
 
-struct InitOptions {
-  bool readonly = false;
-  bool verbose_mount = false;
-  bool collect_metrics = false;
-
-  // Ensures that requests to the mountpoint will be propagated to the underlying FS
-  bool wait_until_ready = true;
-
-  // An optional compression algorithm specifier for the filesystem to use when storing files (if
-  // the filesystem supports it).
-  const char* write_compression_algorithm = nullptr;
-
-  // An optional compression level for the filesystem to use when storing files (if the filesystem
-  // and the configured |write_compression_algorithm| supports it).
-  // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
-  int write_compression_level = -1;
-
-  // An optional eviction policy specifier for the filesystem to use for in-memory structures (if
-  // the filesystem supports it).
-  const char* cache_eviction_policy = nullptr;
-
-  // If true, run fsck after every transaction (if supported). This is for testing/debugging
-  // purposes.
-  bool fsck_after_every_transaction = false;
-
-  // If true, decompression is run in a sandbox component.
-  bool sandbox_decompression = false;
-
-  // Provide a launch callback function pointer for configuring how the underlying filesystem
-  // process is launched.
-  LaunchCallback callback = &launch_stdio_async;
-};
-
 struct MkfsOptions {
   uint32_t fvm_data_slices = 1;
   bool verbose = false;
@@ -96,21 +63,6 @@ zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
 // Check and repair a device with a requested disk format.
 zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions& options,
                  LaunchCallback cb);
-
-// Initialize the filesystem present on |device_handle|, returning a connection to the outgoing
-// directory in |out_export_root|. The outgoing directory implements |fuchsia.io/Directory| and
-// contains handles to services exported by the filesystem.
-//
-// The outgoing directory has the following layout -
-//     |/root| - the data root of the filesystem
-//
-// Specific filesystems may have additional entries in the outgoing directory for
-// filesystem-specific operations.
-//
-// |device_handle| is always consumed.
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsInit(zx::channel device_handle, DiskFormat df,
-                                                          const InitOptions& options,
-                                                          zx::channel crypt_client = {});
 
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(

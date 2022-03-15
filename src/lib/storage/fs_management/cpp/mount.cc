@@ -15,6 +15,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <string.h>
@@ -34,6 +35,7 @@
 #include <fbl/vector.h>
 #include <pretty/hexdump.h>
 
+#include "src/lib/storage/fs_management/cpp/path.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fs_management {
@@ -42,6 +44,118 @@ namespace {
 namespace fio = fuchsia_io;
 
 using Directory = fuchsia_io::Directory;
+
+zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::channel device,
+                                                    const MountOptions& options, LaunchCallback cb,
+                                                    zx::channel crypt_client) {
+  zx_status_t status;
+  auto outgoing_directory_or = fidl::CreateEndpoints<Directory>();
+  if (outgoing_directory_or.is_error())
+    return outgoing_directory_or.take_error();
+  std::array<zx_handle_t, 3> handles = {device.release(),
+                                        outgoing_directory_or->server.TakeChannel().release(),
+                                        crypt_client.release()};
+  std::array<uint32_t, 3> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST,
+                                 PA_HND(PA_USER0, 2)};
+
+  // |compression_level| should outlive |argv|.
+  std::string compression_level;
+  std::vector<const char*> argv;
+  argv.push_back(binary);
+  if (options.verbose_mount) {
+    argv.push_back("--verbose");
+  }
+
+  argv.push_back("mount");
+
+  if (options.readonly) {
+    argv.push_back("--readonly");
+  }
+  if (options.collect_metrics) {
+    argv.push_back("--metrics");
+  }
+  if (options.write_compression_algorithm) {
+    argv.push_back("--compression");
+    argv.push_back(options.write_compression_algorithm);
+  }
+  if (options.write_compression_level >= 0) {
+    compression_level = std::to_string(options.write_compression_level);
+    argv.push_back("--compression_level");
+    argv.push_back(compression_level.c_str());
+  }
+  if (options.cache_eviction_policy) {
+    argv.push_back("--eviction_policy");
+    argv.push_back(options.cache_eviction_policy);
+  }
+  if (options.fsck_after_every_transaction) {
+    argv.push_back("--fsck_after_every_transaction");
+  }
+  if (options.sandbox_decompression) {
+    argv.push_back("--sandbox_decompression");
+  }
+  argv.push_back(nullptr);
+  int argc = static_cast<int>(argv.size() - 1);
+
+  if ((status = cb(argc, argv.data(), handles.data(), ids.data(),
+                   handles[2] == ZX_HANDLE_INVALID ? 2 : 3)) != ZX_OK) {
+    return zx::error(status);
+  }
+
+  auto cleanup = fit::defer([&outgoing_directory_or]() {
+    [[maybe_unused]] auto result = Shutdown(outgoing_directory_or->client);
+  });
+
+  if (options.wait_until_ready) {
+    // Wait until the filesystem is ready to take incoming requests
+    auto result = fidl::WireCall(outgoing_directory_or->client)->Describe();
+    switch (result.status()) {
+      case ZX_OK:
+        break;
+      case ZX_ERR_PEER_CLOSED:
+        return zx::error(ZX_ERR_BAD_STATE);
+      default:
+        return zx::error(result.status());
+    }
+  }
+
+  cleanup.cancel();
+  return zx::ok(std::move(outgoing_directory_or->client));
+}
+
+__EXPORT
+zx::status<fidl::ClientEnd<Directory>> FsInit(zx::channel device, DiskFormat df,
+                                              const MountOptions& options, LaunchCallback cb,
+                                              zx::channel crypt_client) {
+  switch (df) {
+    case kDiskFormatMinfs:
+      return InitNativeFs(GetBinaryPath("minfs").c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+    case kDiskFormatFxfs:
+      return InitNativeFs(GetBinaryPath("fxfs").c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+    case kDiskFormatBlobfs:
+      return InitNativeFs(GetBinaryPath("blobfs").c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+    case kDiskFormatFat:
+      // For now, fatfs will only ever be in a package and never in /boot/bin, so we can hard-code
+      // the path.
+      return InitNativeFs("/pkg/bin/fatfs", std::move(device), options, cb,
+                          std::move(crypt_client));
+    case kDiskFormatFactoryfs:
+      return InitNativeFs(GetBinaryPath("factoryfs").c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+    case kDiskFormatF2fs:
+      return InitNativeFs(GetBinaryPath("f2fs").c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+    default:
+      auto* format = CustomDiskFormat::Get(df);
+      if (format == nullptr) {
+        return zx::error(ZX_ERR_NOT_SUPPORTED);
+      }
+      return InitNativeFs(format->binary_path().c_str(), std::move(device), options, cb,
+                          std::move(crypt_client));
+  }
+}
 
 zx::status<std::pair<fidl::ClientEnd<Directory>, fidl::ClientEnd<Directory>>> StartFilesystem(
     fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options, LaunchCallback cb,
@@ -54,24 +168,8 @@ zx::status<std::pair<fidl::ClientEnd<Directory>, fidl::ClientEnd<Directory>>> St
     return zx::error(status);
   }
 
-  // convert mount options to init options
-  InitOptions init_options = {
-      .readonly = options.readonly,
-      .verbose_mount = options.verbose_mount,
-      .collect_metrics = options.collect_metrics,
-      .wait_until_ready = options.wait_until_ready,
-      .write_compression_algorithm = options.write_compression_algorithm,
-      // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
-      // needed.
-      .write_compression_level = -1,
-      .cache_eviction_policy = options.cache_eviction_policy,
-      .fsck_after_every_transaction = options.fsck_after_every_transaction,
-      .sandbox_decompression = options.sandbox_decompression,
-      .callback = cb,
-  };
-
   // launch the filesystem process
-  auto export_root_or = FsInit(std::move(device), df, init_options, std::move(crypt_client));
+  auto export_root_or = FsInit(std::move(device), df, options, cb, std::move(crypt_client));
   if (export_root_or.is_error()) {
     return export_root_or.take_error();
   }

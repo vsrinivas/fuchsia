@@ -28,6 +28,11 @@ struct MountOptions {
   // the filesystem supports it).
   const char* write_compression_algorithm = nullptr;
 
+  // An optional compression level for the filesystem to use when storing files (if the filesystem
+  // and the configured |write_compression_algorithm| supports it).
+  // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
+  int write_compression_level = -1;
+
   // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
   // the filesystem supports it).
   const char* cache_eviction_policy = nullptr;
