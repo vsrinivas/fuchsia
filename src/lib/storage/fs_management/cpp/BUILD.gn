@@ -72,20 +72,40 @@ if (is_fuchsia) {
   }
 }
 
+test("fs-management-unittest") {
+  sources = [
+    "fvm.cc",
+    "fvm_test.cc",
+  ]
+  deps = [
+    ":fs-management",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/storage/fvm",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+fuchsia_unittest_component("fs-management-unittest-component") {
+  deps = [ ":fs-management-unittest" ]
+}
+
 test("fs-management-test") {
   configs += [ "//build/config:all_source" ]
   sources = [
     "admin_test.cc",
     "format_test.cc",
-    "fvm.cc",
-    "fvm_test.cc",
     "mount_test.cc",
   ]
   deps = [
     ":fs-management",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
@@ -117,7 +137,10 @@ fuchsia_component("fs-management-test-component") {
 }
 
 fuchsia_test_package("fs-management-tests") {
-  test_components = [ ":fs-management-test-component" ]
+  test_components = [
+    ":fs-management-test-component",
+    ":fs-management-unittest-component",
+  ]
   test_specs = {
     log_settings = {
       # Required due to no access to Cobalt for minfs
