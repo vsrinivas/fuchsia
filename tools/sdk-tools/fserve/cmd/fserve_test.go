@@ -1061,8 +1061,8 @@ func TestMain(t *testing.T) {
 			expectedExitCode:                     1,
 		},
 		{
-			testName:                             "server mode ffx does not support `-private-key`",
-			args:                                 []string{os.Args[0], "-data-path", dataDir, "--private-key", "/path/to/custom/private-key", "--version", "1.0.0"},
+			testName:                             "server mode ffx ignores `-private-key`",
+			args:                                 []string{os.Args[0], "-data-path", dataDir, "--private-key", "/path/to/custom/private-key", "--package-archive", dataDir + "/path/to/archive"},
 			ffxTargetList:                        `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			ffxTargetGetSSHAddress:               `[::1f]:22`,
 			ffxConfigServerMode:                  "\"ffx\"",
@@ -1070,11 +1070,10 @@ func TestMain(t *testing.T) {
 			expectedFFXRepositoryServerStartArgs: "--config ffx_repository=true repository server start",
 			expectedFFXRepositoryAddArgs:         "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "some-device/packages/amber-files"),
 			expectedFFXRepositoryRegisterArgs:    "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
-			expectedExitCode:                     1,
 		},
 		{
-			testName:                             "server mode ffx does not support `--sshconfig`",
-			args:                                 []string{os.Args[0], "-data-path", dataDir, "--sshconfig", "/path/to/custom/sshconfig", "--version", "1.0.0"},
+			testName:                             "server mode ffx ignores `--sshconfig`",
+			args:                                 []string{os.Args[0], "-data-path", dataDir, "--sshconfig", "/path/to/custom/sshconfig", "--package-archive", dataDir + "/path/to/archive"},
 			ffxTargetList:                        `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			ffxTargetGetSSHAddress:               `[::1f]:22`,
 			ffxConfigServerMode:                  "\"ffx\"",
@@ -1082,7 +1081,6 @@ func TestMain(t *testing.T) {
 			expectedFFXRepositoryServerStartArgs: "--config ffx_repository=true repository server start",
 			expectedFFXRepositoryAddArgs:         "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "some-device/packages/amber-files"),
 			expectedFFXRepositoryRegisterArgs:    "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
-			expectedExitCode:                     1,
 		},
 		{
 			testName:                             "server mode ffx supports persisting metadata",
