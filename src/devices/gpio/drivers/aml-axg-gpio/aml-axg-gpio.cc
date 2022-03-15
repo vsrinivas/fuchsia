@@ -462,6 +462,62 @@ zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
   return ZX_OK;
 }
 
+zx_status_t AmlAxgGpio::GpioImplGetDriveStrength(uint32_t pin, uint64_t* out) {
+  zx_status_t st;
+
+  if (info_.pid == PDEV_PID_AMLOGIC_A113) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!out) {
+    zxlogf(ERROR, "AmlAxgGpio::GpioImplGetDriveStrength: Missing required parameter `out`");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const AmlGpioBlock* block;
+  uint32_t pinindex;
+
+  if ((st = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {
+    zxlogf(ERROR, "AmlAxgGpio::GpioImplGetDriveStrength: pin not found %u", pin);
+    return st;
+  }
+
+  pinindex = pin - block->pin_block;
+  if (pinindex >= kMaxPinsInDSReg) {
+    pinindex = pinindex % kMaxPinsInDSReg;
+  }
+
+  const uint32_t shift = pinindex * 2;
+  uint32_t value = 0;
+
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->ds_offset * sizeof(uint32_t));
+    value = (regval >> shift) & 0x3;
+  }
+
+  switch (value) {
+    case DRV_500UA:
+      *out = 500;
+      break;
+    case DRV_2500UA:
+      *out = 2500;
+      break;
+    case DRV_3000UA:
+      *out = 3000;
+      break;
+    case DRV_4000UA:
+      *out = 4000;
+      break;
+    default:
+      zxlogf(ERROR, "AmlAxgGpio::GpioImplGetDriveStrength: Unexpected drive strength value: %u",
+             value);
+      return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
                                                  uint64_t* out_actual_ua) {
   zx_status_t status;

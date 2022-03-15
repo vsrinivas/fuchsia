@@ -39,6 +39,13 @@ protocol GpioImpl {
         s zx.status;
         actual_ua uint64;
     });
+    /// Returns the configured drive strength for a GPIO pin in microamps (ua).
+    GetDriveStrength(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        value uint64;
+    });
     /// Reads the current value of a GPIO (0 or 1).
     Read(struct {
         index uint32;

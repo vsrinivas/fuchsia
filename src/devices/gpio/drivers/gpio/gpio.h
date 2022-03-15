@@ -52,6 +52,7 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   zx_status_t GpioReleaseInterrupt();
   zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
   zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua);
+  zx_status_t GpioGetDriveStrength(uint64_t* ds_ua);
 
   // FIDL
   void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
@@ -93,6 +94,16 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
     zx_status_t status = GpioSetDriveStrength(request->ds_ua, &actual);
     if (status == ZX_OK) {
       completer.ReplySuccess(actual);
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+  void GetDriveStrength(GetDriveStrengthRequestView request,
+                        GetDriveStrengthCompleter::Sync& completer) override {
+    uint64_t result_ua = 0;
+    zx_status_t status = GpioGetDriveStrength(&result_ua);
+    if (status == ZX_OK) {
+      completer.ReplySuccess(result_ua);
     } else {
       completer.ReplyError(status);
     }

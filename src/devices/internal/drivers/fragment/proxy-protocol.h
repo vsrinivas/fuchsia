@@ -79,6 +79,7 @@ enum class GpioOp {
   RELEASE_INTERRUPT,
   SET_POLARITY,
   SET_DRIVE_STRENGTH,
+  GET_DRIVE_STRENGTH,
 };
 
 struct GpioProxyRequest {

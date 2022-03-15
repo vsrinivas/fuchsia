@@ -9,7 +9,7 @@
 #include <lib/zx/status.h>
 #include <stdio.h>
 
-enum GpioFunc { Read, Write, ConfigIn, ConfigOut, SetDriveStrength, Invalid };
+enum GpioFunc { Read, Write, ConfigIn, ConfigOut, SetDriveStrength, GetDriveStrength, Invalid };
 
 template <typename T, typename ReturnType>
 zx::status<ReturnType> GetStatus(const T& result);

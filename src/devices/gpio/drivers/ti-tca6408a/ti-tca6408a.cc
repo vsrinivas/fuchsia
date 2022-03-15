@@ -86,6 +86,10 @@ zx_status_t TiTca6408a::GpioImplSetDriveStrength(uint32_t index, uint64_t ua,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t TiTca6408a::GpioImplGetDriveStrength(uint32_t index, uint64_t* ua) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t TiTca6408a::GpioImplRead(uint32_t index, uint8_t* out_value) {
   if (!IsIndexInRange(index)) {
     return ZX_ERR_OUT_OF_RANGE;

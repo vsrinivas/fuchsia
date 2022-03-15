@@ -26,8 +26,8 @@ static void usage() {
   printf("                         1 - GPIO_PULL_UP\n");
   printf("                         2 - GPIO_NO_PULL\n");
   printf("    gpioutil o DEVICE initial_value     [Config GPIO as OUT with <initial_value>]\n\n");
-  printf(
-      "    gpioutil d DEVICE uA                [Set GPIO Drive Strength to <uA> (microAmperes)]\n");
+  printf("    gpioutil d DEVICE uA                [Set GPIO Drive Strength to <uA> (microamps)]\n");
+  printf("    gpioutil d DEVICE                   [Print GPIO Drive Strength in microamps\n");
   printf(
       "     * DEVICE is path to device. Sample: "
       "/dev/sys/platform/05:04:1/aml-axg-gpio/gpio-<pin>,\n");

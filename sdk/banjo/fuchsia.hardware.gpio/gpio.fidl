@@ -74,4 +74,9 @@ protocol Gpio {
         s zx.status;
         actual_ds_ua uint64;
     });
+    /// Get GPIO drive strength.
+    GetDriveStrength() -> (struct {
+        s zx.status;
+        value uint64;
+    });
 };

@@ -522,6 +522,16 @@ TEST_F(S905d2AmlAxgGpioTest, S905d2SetDriveStrength) {
   mock_mmio_interrupt_->VerifyAll();
 }
 
+TEST_F(S905d2AmlAxgGpioTest, S905d2GetDriveStrength) {
+  (*mock_mmio_gpio_a0_)[0x08 * sizeof(uint32_t)].ExpectRead(0xFFFFFFFB);
+  uint64_t result = 0;
+  EXPECT_OK(gpio_->GpioImplGetDriveStrength(0x62, &result));
+  EXPECT_EQ(result, 3000);
+  mock_mmio_gpio_->VerifyAll();
+  mock_mmio_gpio_a0_->VerifyAll();
+  mock_mmio_interrupt_->VerifyAll();
+}
+
 }  // namespace gpio
 
 int main(int argc, char **argv) { return RUN_ALL_TESTS(argc, argv); }

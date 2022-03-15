@@ -50,12 +50,15 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       *out_value = static_cast<uint8_t>(std::stoul(argv[3]));
       break;
     case 'd':
-      *func = SetDriveStrength;
-
-      if (argc < 4) {
+      if (argc >= 4) {
+        *func = SetDriveStrength;
+        *ds_ua = static_cast<uint64_t>(std::stoull(argv[3]));
+      } else if (argc == 3) {
+        *func = GetDriveStrength;
+      } else {
         return -1;
       }
-      *ds_ua = static_cast<uint64_t>(std::stoull(argv[3]));
+
       break;
     default:
       *func = Invalid;
@@ -109,6 +112,15 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
         return -2;
       }
       printf("Set drive strength to %lu\n", result->result.response().actual_ds_ua);
+      break;
+    }
+    case GetDriveStrength: {
+      auto result = client->GetDriveStrength();
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
+        printf("Could not get drive strength\n");
+        return -2;
+      }
+      printf("Drive Strength: %lu ua\n", result->result.response().result_ua);
       break;
     }
     default:

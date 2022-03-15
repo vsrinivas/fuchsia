@@ -122,6 +122,7 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t GpioReleaseInterrupt();
   zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
   zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua);
+  zx_status_t GpioGetDriveStrength(uint64_t* ds_ua);
   void HdmiConnect(zx::channel chan);
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);

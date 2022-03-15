@@ -33,6 +33,7 @@ class TiTca6408a : public DeviceType, public ddk::GpioImplProtocol<TiTca6408a, d
   zx_status_t GpioImplConfigOut(uint32_t index, uint8_t initial_value);
   zx_status_t GpioImplSetAltFunction(uint32_t index, uint64_t function);
   zx_status_t GpioImplSetDriveStrength(uint32_t index, uint64_t ua, uint64_t* out_actual_ua);
+  zx_status_t GpioImplGetDriveStrength(uint32_t index, uint64_t* ua);
   zx_status_t GpioImplRead(uint32_t index, uint8_t* out_value);
   zx_status_t GpioImplWrite(uint32_t index, uint8_t value);
   zx_status_t GpioImplGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);

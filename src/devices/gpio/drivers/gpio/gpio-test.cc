@@ -85,6 +85,11 @@ TEST_F(GpioTest, TestFidlAll) {
   auto result_drivestrength = client->SetDriveStrength(2000);
   EXPECT_OK(result_drivestrength.status());
   EXPECT_EQ(result_drivestrength->result.response().actual_ds_ua, 2000);
+
+  gpio_impl_.ExpectGetDriveStrength(ZX_OK, 0, 2000);
+  auto result_getds = client->GetDriveStrength();
+  EXPECT_OK(result_getds.status());
+  EXPECT_EQ(result_getds->result.response().result_ua, 2000);
 }
 
 TEST_F(GpioTest, TestBanjoSetDriveStrength) {
@@ -92,6 +97,13 @@ TEST_F(GpioTest, TestBanjoSetDriveStrength) {
   gpio_impl_.ExpectSetDriveStrength(ZX_OK, 0, 3000, 3000);
   EXPECT_OK(gpio_->GpioSetDriveStrength(3000, &actual));
   EXPECT_EQ(actual, 3000);
+}
+
+TEST_F(GpioTest, TestBanjoGetDriveStrength) {
+  uint64_t result = 0;
+  gpio_impl_.ExpectGetDriveStrength(ZX_OK, 0, 3000);
+  EXPECT_OK(gpio_->GpioGetDriveStrength(&result));
+  EXPECT_EQ(result, 3000);
 }
 
 TEST_F(GpioTest, TestCloseReleasesInterrupt) {
