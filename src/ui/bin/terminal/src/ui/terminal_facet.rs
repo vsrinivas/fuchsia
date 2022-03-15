@@ -9,9 +9,10 @@ use {
         drawing::path_for_rounded_rectangle,
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
         scene::{facets::Facet, LayerGroup, SceneOrder},
-        Coord, Rect, Size, ViewAssistantContext,
+        AppSender, Coord, Rect, Size, ViewAssistantContext, ViewKey,
     },
     fuchsia_trace as ftrace,
+    std::time::{Duration, Instant},
     std::{any::Any, cell::RefCell, convert::TryFrom, rc::Rc},
     term_model::{ansi::TermInfo, config::Config, Term},
     terminal::{renderable_layers, FontSet, Offset, Renderer},
@@ -29,8 +30,9 @@ impl Default for UIConfig {
 pub type TerminalConfig = Config<UIConfig>;
 
 pub enum TerminalMessages {
-    #[allow(dead_code)]
     SetScrollThumbMessage(Option<(Rect, f32)>),
+    /// Scroll thumb fade-out starting time and duration.
+    SetScrollThumbFadeOutMessage(Option<(Instant, Duration)>),
 }
 
 fn raster_for_rounded_rectangle(
@@ -43,25 +45,44 @@ fn raster_for_rounded_rectangle(
     raster_builder.build()
 }
 
+// Computes the current scroll thumb alpha value for a fade-out effect started at `starting_time` for a duration of `duration`.
+fn scroll_thumb_fade_out_alpha(starting_time: Instant, duration: Duration, alpha: f32) -> f32 {
+    let time = starting_time.elapsed().min(duration).as_secs_f32();
+    let duration = duration.as_secs_f32();
+    alpha - (alpha / duration) * time
+}
+
 /// Facet that implements a terminal text grid with a scroll bar.
 pub struct TerminalFacet<T> {
+    app_sender: Option<AppSender>,
+    view_key: ViewKey,
     font_set: FontSet,
     size: Size,
     term: Rc<RefCell<Term<T>>>,
     scroll_thumb: Option<(Rect, f32)>,
+    scroll_thumb_fade_out: Option<(Instant, Duration)>,
     thumb_order: Option<SceneOrder>,
     renderer: Renderer,
 }
 
 impl<T: 'static> TerminalFacet<T> {
-    pub fn new(font_set: FontSet, cell_size: &Size, term: Rc<RefCell<Term<T>>>) -> Self {
+    pub fn new(
+        app_sender: Option<AppSender>,
+        view_key: ViewKey,
+        font_set: FontSet,
+        cell_size: &Size,
+        term: Rc<RefCell<Term<T>>>,
+    ) -> Self {
         let renderer = Renderer::new(&font_set, cell_size);
 
         TerminalFacet {
+            app_sender,
+            view_key,
             font_set,
             size: Size::zero(),
             term,
             scroll_thumb: None,
+            scroll_thumb_fade_out: None,
             thumb_order: None,
             renderer,
         }
@@ -99,6 +120,9 @@ impl<T: 'static> Facet for TerminalFacet<T> {
 
         // Add new scrollbar thumb.
         if let Some((thumb, alpha)) = self.scroll_thumb {
+            let alpha = self.scroll_thumb_fade_out.map_or(alpha, |(starting_time, delay)| {
+                scroll_thumb_fade_out_alpha(starting_time, delay, alpha)
+            });
             // Linear to sRGB.
             let srgb = (alpha.powf(1.0 / 2.2) * 255.0) as u8;
             let color = Color { r: srgb, g: srgb, b: srgb, a: (alpha * 255.0) as u8 };
@@ -113,6 +137,12 @@ impl<T: 'static> Facet for TerminalFacet<T> {
             };
             layer_group.insert(new_thumb_order, layer);
             self.thumb_order = Some(new_thumb_order);
+
+            if self.scroll_thumb_fade_out.is_some() {
+                if let Some(app_sender) = &self.app_sender {
+                    app_sender.request_render(self.view_key);
+                }
+            }
         }
 
         Ok(())
@@ -122,7 +152,13 @@ impl<T: 'static> Facet for TerminalFacet<T> {
         if let Some(message) = message.downcast_ref::<TerminalMessages>() {
             match message {
                 TerminalMessages::SetScrollThumbMessage(thumb) => {
+                    if thumb.is_none() {
+                        self.scroll_thumb_fade_out = None;
+                    }
                     self.scroll_thumb = *thumb;
+                }
+                TerminalMessages::SetScrollThumbFadeOutMessage(thumb_fade_out) => {
+                    self.scroll_thumb_fade_out = *thumb_fade_out;
                 }
             }
         }
@@ -130,5 +166,41 @@ impl<T: 'static> Facet for TerminalFacet<T> {
 
     fn calculate_size(&self, _: Size) -> Size {
         self.size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    macro_rules! assert_approx {
+        ( $left:expr, $right:expr ) => {{
+            assert!(($left - $right).abs() < 0.01, "{:?} != {:?}", $left, $right,);
+        }};
+    }
+
+    #[test]
+    fn scroll_thumb_fade_out() {
+        let alpha: f32 = 1.0;
+        let time = Instant::now();
+        let delay = Duration::from_secs_f32(1.0);
+
+        assert_approx!(
+            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.25), delay, alpha),
+            0.75
+        );
+        assert_approx!(
+            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.5), delay, alpha),
+            0.5
+        );
+        assert_approx!(
+            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.75), delay, alpha),
+            0.25
+        );
+        assert_approx!(
+            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(1.0), delay, alpha),
+            0.0
+        );
     }
 }

@@ -10,11 +10,12 @@ use {
         ViewKey,
     },
     fuchsia_async as fasync, fuchsia_trace as ftrace,
+    std::time::{Duration, Instant},
 };
 
 // Hide scroll thumb after 1 second of scrolling or mouse leaving
 // the scroll bar frame.
-const HIDE_SCROLL_THUMB_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+const HIDE_SCROLL_THUMB_DELAY: Duration = Duration::from_secs(1);
 
 // Width of scroll bar frame. This is the width of the thumb when
 // entering wide mode and is also the width of the area that can
@@ -25,22 +26,31 @@ struct HideScrollThumbTimer {
     app_sender: Option<AppSender>,
     view_id: ViewKey,
     task: Option<fasync::Task<()>>,
-    delay: std::time::Duration,
+    delay: Duration,
 }
 
 impl HideScrollThumbTimer {
-    fn new(app_sender: AppSender, view_id: ViewKey, delay: std::time::Duration) -> Self {
+    fn new(app_sender: AppSender, view_id: ViewKey, delay: Duration) -> Self {
         Self { app_sender: Some(app_sender), view_id, task: None, delay }
     }
 
-    // Schedule task that will queue a scroll thumb message to hide the thumb.
+    // Schedule task that will apply a fade out effect after half the delay time has elapsed.
     fn schedule(&mut self) {
         if let Some(app_sender) = &self.app_sender {
-            let timer = fasync::Timer::new(fuchsia_async::Time::after(self.delay.into()));
+            let delay = self.delay.div_f32(2.0);
             let app_sender = app_sender.clone();
             let view_id = self.view_id;
             let task = fasync::Task::local(async move {
-                timer.await;
+                fasync::Timer::new(fasync::Time::after(delay.into())).await;
+                app_sender.queue_message(
+                    MessageTarget::View(view_id),
+                    make_message(TerminalMessages::SetScrollThumbFadeOutMessage(Some((
+                        Instant::now(),
+                        delay,
+                    )))),
+                );
+                app_sender.request_render(view_id);
+                fasync::Timer::new(fasync::Time::after(delay.into())).await;
                 app_sender.queue_message(
                     MessageTarget::View(view_id),
                     make_message(TerminalMessages::SetScrollThumbMessage(None)),
@@ -59,6 +69,13 @@ impl HideScrollThumbTimer {
                 task.cancel().await;
             })
             .detach();
+            if let Some(app_sender) = &self.app_sender {
+                app_sender.queue_message(
+                    MessageTarget::View(self.view_id),
+                    make_message(TerminalMessages::SetScrollThumbFadeOutMessage(None)),
+                );
+                app_sender.request_render(self.view_id);
+            }
             true
         } else {
             false
@@ -77,7 +94,7 @@ impl Default for HideScrollThumbTimer {
             app_sender: None,
             view_id: 0,
             task: None,
-            delay: std::time::Duration::default(),
+            delay: Duration::default(),
         }
     }
 }

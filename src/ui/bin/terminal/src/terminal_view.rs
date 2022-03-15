@@ -608,6 +608,8 @@ impl ViewAssistant for TerminalViewAssistant {
             let cell_size =
                 size2(self.last_known_size_info.cell_width, self.last_known_size_info.cell_height);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
+                self.app_sender.app_sender.clone(),
+                self.view_key,
                 self.font_set.clone(),
                 &cell_size,
                 self.term.clone(),
@@ -696,6 +698,17 @@ impl ViewAssistant for TerminalViewAssistant {
                         scene_details.scene.send_message(
                             &scene_details.terminal,
                             Box::new(TerminalMessages::SetScrollThumbMessage(*thumb)),
+                        );
+                    }
+                }
+                TerminalMessages::SetScrollThumbFadeOutMessage(thumb_fade_out) => {
+                    // Forward message to the terminal facet.
+                    if let Some(scene_details) = &mut self.scene_details {
+                        scene_details.scene.send_message(
+                            &scene_details.terminal,
+                            Box::new(TerminalMessages::SetScrollThumbFadeOutMessage(
+                                *thumb_fade_out,
+                            )),
                         );
                     }
                 }
