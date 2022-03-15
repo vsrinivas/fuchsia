@@ -1429,7 +1429,7 @@ Add code to test the output in Inspect:
    ```
 
    Note: If you use the LazyNode or LazyValues features, you will need to
-   use inspect::ReadFromInspector and run the returned fit::promise to
+   use inspect::ReadFromInspector and run the returned fpromise::promise to
    completion. See the solution to this part for an example.
 
    The snippet above reads the underlying virtual memory object (VMO)

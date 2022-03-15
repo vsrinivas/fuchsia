@@ -442,7 +442,7 @@ a value. The callback function is invoked when the property value is read.
           inspector.GetRoot().CreateInt("performance_score",
                                         this->CalculatePerformance(), &inspector);
 
-          // Callbacks return a fit::promise<Inspector>, so return a result
+          // Callbacks return a fpromise::promise<Inspector>, so return a result
           // promise containing the value we created.
           // You can alternatively return a promise that is completed by
           // some asynchronous task.

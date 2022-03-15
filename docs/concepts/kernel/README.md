@@ -51,7 +51,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Driver interfaces - audio overview](/docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_overview.md)
 
 + [libc](/docs/development/languages/c-cpp/libc.md)
-+ [C++ fit::promise<> guide](/docs/development/languages/c-cpp/fit_promise_guide.md)
++ [C++ fpromise::promise<> guide](/docs/development/languages/c-cpp/fpromise_promise_guide.md)
 
 + [Testing](/docs/development/testing/testing.md)
 + [Kernel tracing](/docs/development/tracing/advanced/recording-a-kernel-trace.md)
