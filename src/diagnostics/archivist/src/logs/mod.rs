@@ -95,6 +95,8 @@ mod tests {
                         url: "fuchsia-pkg://UNKNOWN",
                         logs: {
                             last_timestamp: AnyProperty,
+                            sockets_closed: 1u64,
+                            sockets_opened: 1u64,
                             total: {
                                 number: 5u64,
                                 bytes: AnyProperty,
@@ -173,6 +175,8 @@ mod tests {
                             url: "http://foo.com",
                             logs: {
                                 last_timestamp: AnyProperty,
+                                sockets_closed: 1u64,
+                                sockets_opened: 1u64,
                                 total: {
                                     number: 1u64,
                                     bytes: AnyProperty,
@@ -211,6 +215,8 @@ mod tests {
                             url: "http://bar.com",
                             logs: {
                                 last_timestamp: AnyProperty,
+                                sockets_closed: 1u64,
+                                sockets_opened: 1u64,
                                 total: {
                                     number: 1u64,
                                     bytes: AnyProperty,
@@ -633,6 +639,8 @@ mod tests {
                         url: "fuchsia-boot://kernel",
                         logs: {
                             last_timestamp: AnyProperty,
+                            sockets_closed: 0u64,
+                            sockets_opened: 0u64,
                             total: {
                                 number: 3u64,
                                 bytes: AnyProperty,

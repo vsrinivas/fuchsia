@@ -51,6 +51,7 @@ pub struct LogMessageSocket<E> {
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
     pub fn new(socket: zx::Socket, stats: Arc<LogStreamStats>) -> Result<Self, io::Error> {
+        stats.open_socket();
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
@@ -67,6 +68,7 @@ impl LogMessageSocket<StructuredEncoding> {
         socket: zx::Socket,
         stats: Arc<LogStreamStats>,
     ) -> Result<Self, io::Error> {
+        stats.open_socket();
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
@@ -89,6 +91,12 @@ where
 
         let msg_bytes = &self.buffer[..len];
         E::wrap_bytes(msg_bytes, self.stats.clone())
+    }
+}
+
+impl<E> Drop for LogMessageSocket<E> {
+    fn drop(&mut self) {
+        self.stats.close_socket();
     }
 }
 

@@ -9,6 +9,8 @@ use fuchsia_inspect_derive::Inspect;
 
 #[derive(Debug, Default, Inspect)]
 pub struct LogStreamStats {
+    sockets_opened: UintProperty,
+    sockets_closed: UintProperty,
     last_timestamp: IntProperty,
     total: LogCounter,
     rolled_out: LogCounter,
@@ -23,6 +25,14 @@ pub struct LogStreamStats {
 }
 
 impl LogStreamStats {
+    pub fn open_socket(&self) {
+        self.sockets_opened.add(1);
+    }
+
+    pub fn close_socket(&self) {
+        self.sockets_closed.add(1);
+    }
+
     pub fn increment_rolled_out(&self, msg: &StoredMessage) {
         self.rolled_out.count(msg);
     }
