@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {
   output_name = "virtual_audio_service"
@@ -45,4 +46,8 @@ config_data("virtual_audio_config") {
   for_pkg = "sysmgr"
   outputs = [ "virtual_audio_service.config" ]
   sources = [ "service.config" ]
+}
+
+core_shard("virtual_audio_service_shard") {
+  shard_file = "meta/virtual_audio_service.core_shard.cml"
 }
