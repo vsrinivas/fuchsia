@@ -1601,13 +1601,12 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
   zx_status_t ret;
   iwl_assert_lock_held(&mvm->mutex);
 
-#if 0   // NEEDS_PORTING
-    // TODO(43484): Enable LAR (Location Aware Regulatory)
-    if (iwl_mvm_is_lar_supported(mvm) && !mvm->lar_regdom_set) {
-        IWL_ERR(mvm, "scan while LAR regdomain is not set\n");
-        return ZX_ERR_UNAVAILABLE;
-    }
-#endif  // NEEDS_PORTING
+  // If LAR is supported, do not allow scan before the regulatory code is obtained. The regulatory
+  // code is usually obtained during the initialization stage.
+  if (iwl_mvm_is_lar_supported(mvm) && !mvm->lar_regdom_set) {
+    IWL_ERR(mvm, "scan while LAR regdomain is not set\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
 
   ret = iwl_mvm_check_running_scans(mvm, IWL_MVM_SCAN_REGULAR);
   if (ret != ZX_OK) {
