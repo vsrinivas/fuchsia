@@ -5535,18 +5535,6 @@ struct CmsgSocketOption {
   int optname_to_enable_receive;
 };
 
-using SocketDomainAndOption = std::tuple<sa_family_t, CmsgSocketOption>;
-
-std::string SocketDomainAndOptionToString(
-    const testing::TestParamInfo<SocketDomainAndOption>& info) {
-  auto const& [domain, cmsg_opt] = info.param;
-  std::ostringstream oss;
-  oss << socketDomainToString(domain);
-  oss << '_' << cmsg_opt.cmsg.level_str;
-  oss << '_' << cmsg_opt.cmsg.type_str;
-  return oss.str();
-}
-
 class NetDatagramSocketsCmsgTestBase : public testing::Test {
  protected:
   void SetUpDatagramSockets(sa_family_t domain) {
@@ -5601,6 +5589,13 @@ class NetDatagramSocketsCmsgTestBase : public testing::Test {
   template <typename F>
   void ReceiveAndCheckMessage(const char* sent_buf, ssize_t sent_buf_len, void* control,
                               socklen_t control_len, F check) const {
+    ASSERT_NO_FATAL_FAILURE(
+        ReceiveAndCheckMessageBase(sent_buf, sent_buf_len, control, control_len, check));
+  }
+
+  template <typename F>
+  void ReceiveAndCheckMessageBase(const char* sent_buf, ssize_t sent_buf_len, void* control,
+                                  socklen_t control_len, F check) const {
     char recv_buf[sent_buf_len + 1];
     iovec iovec = {
         .iov_base = recv_buf,
@@ -5619,6 +5614,74 @@ class NetDatagramSocketsCmsgTestBase : public testing::Test {
     check(msghdr);
   }
 
+  fbl::unique_fd const& bound() const { return bound_; }
+
+  fbl::unique_fd const& connected() const { return connected_; }
+
+ private:
+  fbl::unique_fd bound_;
+  fbl::unique_fd connected_;
+};
+
+enum class EnableCmsgReceiveTime { AfterSocketSetup, BetweenSendAndRecv };
+
+std::string_view enableCmsgReceiveTimeToString(EnableCmsgReceiveTime enable_cmsg_receive_time) {
+  switch (enable_cmsg_receive_time) {
+    case EnableCmsgReceiveTime::AfterSocketSetup:
+      return "AfterSocketSetup";
+    case EnableCmsgReceiveTime::BetweenSendAndRecv:
+      return "BetweenSendAndRecv";
+  }
+}
+
+using SocketDomainAndOptionAndEnableCmsgReceiveTime =
+    std::tuple<sa_family_t, CmsgSocketOption, EnableCmsgReceiveTime>;
+
+std::string SocketDomainAndOptionAndEnableCmsgReceiveTimeToString(
+    const testing::TestParamInfo<SocketDomainAndOptionAndEnableCmsgReceiveTime>& info) {
+  auto const& [domain, cmsg_opt, enable_cmsg_receive_time] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << cmsg_opt.cmsg.level_str;
+  oss << '_' << cmsg_opt.cmsg.type_str;
+  oss << '_' << enableCmsgReceiveTimeToString(enable_cmsg_receive_time);
+  return oss.str();
+}
+
+class NetDatagramSocketsCmsgRecvTestBase : public NetDatagramSocketsCmsgTestBase {
+ protected:
+  void SetUpDatagramSockets(sa_family_t domain, EnableCmsgReceiveTime enable_cmsg_receive_time) {
+    enable_cmsg_receive_time_ = enable_cmsg_receive_time;
+    ASSERT_NO_FATAL_FAILURE(NetDatagramSocketsCmsgTestBase::SetUpDatagramSockets(domain));
+    if (enable_cmsg_receive_time_ == EnableCmsgReceiveTime::AfterSocketSetup) {
+      ASSERT_NO_FATAL_FAILURE(EnableReceivingCmsg());
+    }
+  }
+
+  virtual void EnableReceivingCmsg() const = 0;
+
+  template <typename F>
+  void ReceiveAndCheckMessage(const char* sent_buf, ssize_t sent_buf_len, void* control,
+                              socklen_t control_len, F check) const {
+    if (enable_cmsg_receive_time_ == EnableCmsgReceiveTime::BetweenSendAndRecv) {
+      // Ensure the packet is ready to be read by the client when the
+      // control message is requested; this lets us test that control
+      // messages are applied to all subsequent incoming payloads.
+      pollfd pfd = {
+          .fd = bound().get(),
+          .events = POLLIN,
+      };
+      int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+      ASSERT_GE(n, 0) << strerror(errno);
+      ASSERT_EQ(n, 1);
+      ASSERT_EQ(pfd.revents, POLLIN);
+
+      ASSERT_NO_FATAL_FAILURE(EnableReceivingCmsg());
+    }
+    ASSERT_NO_FATAL_FAILURE(
+        ReceiveAndCheckMessageBase(sent_buf, sent_buf_len, control, control_len, check));
+  }
+
   template <typename F>
   void SendAndCheckReceivedMessage(void* control, socklen_t control_len, F check) {
     constexpr char send_buf[] = "hello";
@@ -5629,23 +5692,22 @@ class NetDatagramSocketsCmsgTestBase : public testing::Test {
     ReceiveAndCheckMessage(send_buf, sizeof(send_buf), control, control_len, check);
   }
 
-  fbl::unique_fd const& bound() const { return bound_; }
-
-  fbl::unique_fd const& connected() const { return connected_; }
-
  private:
-  fbl::unique_fd bound_;
-  fbl::unique_fd connected_;
+  EnableCmsgReceiveTime enable_cmsg_receive_time_;
 };
 
-class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
-                                       public testing::WithParamInterface<SocketDomainAndOption> {
+class NetDatagramSocketsCmsgRecvTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::WithParamInterface<SocketDomainAndOptionAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
-    auto const& [domain, cmsg_sockopt] = GetParam();
+    auto const& [domain, cmsg_sockopt, enable_cmsg_receive_time] = GetParam();
 
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain, enable_cmsg_receive_time));
+  }
 
+  void EnableReceivingCmsg() const override {
+    auto const& [domain, cmsg_sockopt, enable_cmsg_receive_time] = GetParam();
     // Enable the specified socket option.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.cmsg.level,
@@ -5668,42 +5730,6 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, NullPtrNoControlMessages) {
     EXPECT_EQ(msghdr.msg_controllen, 0u);
     EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
   }));
-}
-
-TEST_P(NetDatagramSocketsCmsgRecvTest, DisableReceiveSocketOption) {
-  // The SetUp enables the receival of the parametrized control message. Confirm that we initially
-  // receive the control message, and then check that disabling the receive option does exactly
-  // just that.
-  auto const& cmsg_sockopt = std::get<1>(GetParam());
-
-  {
-    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
-    ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(
-        control, socklen_t(sizeof(control)), [cmsg_sockopt](msghdr& msghdr) {
-          EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(cmsg_sockopt.cmsg_size));
-          cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
-          ASSERT_NE(cmsg, nullptr);
-          EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(cmsg_sockopt.cmsg_size));
-          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
-          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
-          EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
-        }));
-  }
-
-  constexpr int kZero = 0;
-  ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.cmsg.level,
-                       cmsg_sockopt.optname_to_enable_receive, &kZero, sizeof(kZero)),
-            0)
-      << strerror(errno);
-
-  {
-    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
-    ASSERT_NO_FATAL_FAILURE(
-        SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [](msghdr& msghdr) {
-          EXPECT_EQ(msghdr.msg_controllen, 0u);
-          EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
-        }));
-  }
 }
 
 TEST_P(NetDatagramSocketsCmsgRecvTest, NullControlBuffer) {
@@ -5808,10 +5834,107 @@ INSTANTIATE_TEST_SUITE_P(
                              .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMPNS),
                              .cmsg_size = sizeof(timespec),
                              .optname_to_enable_receive = SO_TIMESTAMPNS,
-                         })),
-    SocketDomainAndOptionToString);
+                         }),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                     EnableCmsgReceiveTime::BetweenSendAndRecv)),
+    SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
+    testing::Combine(testing::Values(AF_INET),
+                     testing::Values(
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TOS),
+                             .cmsg_size = sizeof(uint8_t),
+                             .optname_to_enable_receive = IP_RECVTOS,
+                         },
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TTL),
+                             .cmsg_size = sizeof(int),
+                             .optname_to_enable_receive = IP_RECVTTL,
+                         }),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                     EnableCmsgReceiveTime::BetweenSendAndRecv)),
+    SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
+
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
+    testing::Combine(testing::Values(AF_INET6),
+                     testing::Values(
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_TCLASS),
+                             .cmsg_size = sizeof(int),
+                             .optname_to_enable_receive = IPV6_RECVTCLASS,
+                         },
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
+                             .cmsg_size = sizeof(int),
+                             .optname_to_enable_receive = IPV6_RECVHOPLIMIT,
+                         }),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                     EnableCmsgReceiveTime::BetweenSendAndRecv)),
+    SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
+
+// Tests in this suite assume that control messages are requested after setup only. Create
+// a new class that can be parameterized in order to fulfill this expectation.
+class NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest : public NetDatagramSocketsCmsgRecvTest {};
+
+TEST_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest, DisableReceiveSocketOption) {
+  // The SetUp enables the receipt of the parametrized control message. Confirm that we initially
+  // receive the control message, and then check that disabling the receive option does exactly
+  // just that.
+  auto const& cmsg_sockopt = std::get<1>(GetParam());
+
+  {
+    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
+    ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(
+        control, socklen_t(sizeof(control)), [cmsg_sockopt](msghdr& msghdr) {
+          EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(cmsg_sockopt.cmsg_size));
+          cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+          ASSERT_NE(cmsg, nullptr);
+          EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(cmsg_sockopt.cmsg_size));
+          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
+          EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+        }));
+  }
+
+  constexpr int kZero = 0;
+  ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.cmsg.level,
+                       cmsg_sockopt.optname_to_enable_receive, &kZero, sizeof(kZero)),
+            0)
+      << strerror(errno);
+
+  {
+    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
+    ASSERT_NO_FATAL_FAILURE(
+        SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [](msghdr& msghdr) {
+          EXPECT_EQ(msghdr.msg_controllen, 0u);
+          EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+        }));
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTests,
+    NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6),
+                     testing::Values(
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMP),
+                             .cmsg_size = sizeof(timeval),
+                             .optname_to_enable_receive = SO_TIMESTAMP,
+                         },
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMPNS),
+                             .cmsg_size = sizeof(timespec),
+                             .optname_to_enable_receive = SO_TIMESTAMPNS,
+                         }),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup)),
+    SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv4Tests,
+                         NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
                          testing::Combine(testing::Values(AF_INET),
                                           testing::Values(
                                               CmsgSocketOption{
@@ -5823,10 +5946,12 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSockets
                                                   .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TTL),
                                                   .cmsg_size = sizeof(int),
                                                   .optname_to_enable_receive = IP_RECVTTL,
-                                              })),
-                         SocketDomainAndOptionToString);
+                                              }),
+                                          testing::Values(EnableCmsgReceiveTime::AfterSocketSetup)),
+                         SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv6Tests,
+                         NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
                          testing::Combine(testing::Values(AF_INET6),
                                           testing::Values(
                                               CmsgSocketOption{
@@ -5838,8 +5963,9 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSockets
                                                   .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
                                                   .cmsg_size = sizeof(int),
                                                   .optname_to_enable_receive = IPV6_RECVHOPLIMIT,
-                                              })),
-                         SocketDomainAndOptionToString);
+                                              }),
+                                          testing::Values(EnableCmsgReceiveTime::AfterSocketSetup)),
+                         SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
                                        public testing::WithParamInterface<sa_family_t> {
@@ -5992,12 +6118,27 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgSendTests, NetDatagramSocketsCmsg
                          testing::Values(AF_INET, AF_INET6),
                          [](const auto info) { return socketDomainToString(info.param); });
 
-class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBase,
-                                            public testing::WithParamInterface<sa_family_t> {
+using SocketDomainAndEnableCmsgReceiveTime = std::tuple<sa_family_t, EnableCmsgReceiveTime>;
+
+std::string SocketDomainAndEnableCmsgReceiveTimeToString(
+    const testing::TestParamInfo<SocketDomainAndEnableCmsgReceiveTime>& info) {
+  auto const& [domain, enable_cmsg_receive_time] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << enableCmsgReceiveTimeToString(enable_cmsg_receive_time);
+  return oss.str();
+}
+
+class NetDatagramSocketsCmsgTimestampTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::WithParamInterface<SocketDomainAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
+    auto [domain, enable_cmsg_receive_time] = GetParam();
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain, enable_cmsg_receive_time));
+  }
 
+  void EnableReceivingCmsg() const override {
     // Enable receiving SO_TIMESTAMP control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMP, &kOne, sizeof(kOne)), 0)
@@ -6075,16 +6216,23 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
       }));
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampTests, NetDatagramSocketsCmsgTimestampTest,
-                         testing::Values(AF_INET, AF_INET6),
-                         [](const auto info) { return socketDomainToString(info.param); });
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgTimestampTests, NetDatagramSocketsCmsgTimestampTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                     EnableCmsgReceiveTime::BetweenSendAndRecv)),
+    SocketDomainAndEnableCmsgReceiveTimeToString);
 
-class NetDatagramSocketsCmsgTimestampNsTest : public NetDatagramSocketsCmsgTestBase,
-                                              public testing::WithParamInterface<sa_family_t> {
+class NetDatagramSocketsCmsgTimestampNsTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::WithParamInterface<SocketDomainAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
+    auto [domain, enable_cmsg_receive_time] = GetParam();
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain, enable_cmsg_receive_time));
+  }
 
+  void EnableReceivingCmsg() const override {
     // Enable receiving SO_TIMESTAMPNS control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMPNS, &kOne, sizeof(kOne)), 0)
@@ -6178,16 +6326,20 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvCmsgUnalignedControlBuffer) {
       }));
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampNsTests,
-                         NetDatagramSocketsCmsgTimestampNsTest, testing::Values(AF_INET, AF_INET6),
-                         [](const auto info) { return socketDomainToString(info.param); });
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgTimestampNsTests, NetDatagramSocketsCmsgTimestampNsTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6),
+                     testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                     EnableCmsgReceiveTime::BetweenSendAndRecv)),
+    SocketDomainAndEnableCmsgReceiveTimeToString);
 
-class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase {
+class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgRecvTestBase,
+                                        public testing::WithParamInterface<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
 
-    // Enable receiving IP_TOS control message.
+  void EnableReceivingCmsg() const override {
+    // Enable receiving IP_RECVTOS control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_IP, IP_RECVTOS, &kOne, sizeof(kOne)), 0)
         << strerror(errno);
@@ -6200,7 +6352,7 @@ class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase {
   }
 };
 
-TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsg) {
+TEST_P(NetDatagramSocketsCmsgIpTosTest, RecvCmsg) {
   constexpr uint8_t tos = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TOS, &tos, sizeof(tos)), 0) << strerror(errno);
 
@@ -6220,7 +6372,7 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsg) {
       }));
 }
 
-TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
+TEST_P(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
   constexpr uint8_t tos = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TOS, &tos, sizeof(tos)), 0) << strerror(errno);
 
@@ -6242,7 +6394,7 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
   }));
 }
 
-TEST_F(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
+TEST_P(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
   constexpr uint8_t tos = 42;
   char send_buf[] = "hello";
   iovec iovec = {
@@ -6288,11 +6440,19 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
       }));
 }
 
-class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgTestBase {
- protected:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTosTests, NetDatagramSocketsCmsgIpTosTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
 
+class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgRecvTestBase,
+                                        public testing::WithParamInterface<EnableCmsgReceiveTime> {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
+
+  void EnableReceivingCmsg() const override {
     // Enable receiving IP_TTL control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_IP, IP_RECVTTL, &kOne, sizeof(kOne)), 0)
@@ -6306,7 +6466,7 @@ class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgTestBase {
   }
 };
 
-TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsg) {
+TEST_P(NetDatagramSocketsCmsgIpTtlTest, RecvCmsg) {
   constexpr int kTtl = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TTL, &kTtl, sizeof(kTtl)), 0)
       << strerror(errno);
@@ -6327,7 +6487,7 @@ TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsg) {
       }));
 }
 
-TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
+TEST_P(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
   constexpr int kDefaultTTL = 64;
   char control[CMSG_SPACE(sizeof(kDefaultTTL)) + 1];
   ASSERT_NO_FATAL_FAILURE(
@@ -6352,11 +6512,20 @@ TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
       }));
 }
 
-class NetDatagramSocketsCmsgIpv6TClassTest : public NetDatagramSocketsCmsgTestBase {
- protected:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6));
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTtlTests, NetDatagramSocketsCmsgIpTtlTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
 
+class NetDatagramSocketsCmsgIpv6TClassTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::WithParamInterface<EnableCmsgReceiveTime> {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+
+  void EnableReceivingCmsg() const override {
     // Enable receiving IPV6_TCLASS control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVTCLASS, &kOne, sizeof(kOne)), 0)
@@ -6370,7 +6539,7 @@ class NetDatagramSocketsCmsgIpv6TClassTest : public NetDatagramSocketsCmsgTestBa
   }
 };
 
-TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsg) {
+TEST_P(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsg) {
   constexpr int kTClass = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_TCLASS, &kTClass, sizeof(kTClass)), 0)
       << strerror(errno);
@@ -6391,7 +6560,7 @@ TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsg) {
       }));
 }
 
-TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsgUnalignedControlBuffer) {
+TEST_P(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsgUnalignedControlBuffer) {
   constexpr int kTClass = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_TCLASS, &kTClass, sizeof(kTClass)), 0)
       << strerror(errno);
@@ -6419,11 +6588,21 @@ TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsgUnalignedControlBuffer) {
       }));
 }
 
-class NetDatagramSocketsCmsgIpv6HopLimitTest : public NetDatagramSocketsCmsgTestBase {
- protected:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6));
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6TClassTests,
+                         NetDatagramSocketsCmsgIpv6TClassTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
 
+class NetDatagramSocketsCmsgIpv6HopLimitTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::WithParamInterface<EnableCmsgReceiveTime> {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+
+  void EnableReceivingCmsg() const override {
     // Enable receiving IPV6_HOPLIMIT control message.
     constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVHOPLIMIT, &kOne, sizeof(kOne)), 0)
@@ -6437,7 +6616,7 @@ class NetDatagramSocketsCmsgIpv6HopLimitTest : public NetDatagramSocketsCmsgTest
   }
 };
 
-TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsg) {
+TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsg) {
   constexpr int kHopLimit = 42;
   ASSERT_EQ(
       setsockopt(connected().get(), SOL_IPV6, IPV6_UNICAST_HOPS, &kHopLimit, sizeof(kHopLimit)), 0)
@@ -6459,7 +6638,7 @@ TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsg) {
       }));
 }
 
-TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
+TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
   constexpr int kDefaultHopLimit = 64;
   char control[CMSG_SPACE(sizeof(kDefaultHopLimit)) + 1];
   ASSERT_NO_FATAL_FAILURE(
@@ -6483,5 +6662,13 @@ TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
         EXPECT_EQ(recv_hoplimit, kDefaultHopLimit);
       }));
 }
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6HopLimitTests,
+                         NetDatagramSocketsCmsgIpv6HopLimitTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
 
 }  // namespace
