@@ -20,7 +20,7 @@ Source code shortcuts:
 
 For more orientation, see
 
--   [System Architecture](/docs/concepts/bluetooth/architecture.md)
+-   [System Architecture](/docs/development/bluetooth/concepts/architecture.md)
 -   [Respectful Code](#Respectful-Code)
 
 For a note on used (and avoided) vocabulary, see
