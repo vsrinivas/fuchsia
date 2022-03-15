@@ -54,7 +54,6 @@ var (
 	// Extra targets to build when building images. Needed for size checks and tracking.
 	extraTargetsForImages = []string{
 		"build/images:record_filesystem_sizes",
-		"build/images:system_snapshot",
 	}
 )
 
