@@ -90,7 +90,7 @@ class Driver {
   fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> profile_client_;
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
   service::OutgoingDirectory outgoing_;
 
