@@ -289,7 +289,7 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
 
   zx_status_t status = internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
       coding_config, response_type, trimmed_result_bytes, trimmed_num_bytes, handles,
-      handle_metadata, num_handles, error_address(), false);
+      handle_metadata, num_handles, error_address());
   if (status != ZX_OK) {
     SetStatus(fidl::Status::DecodeError(status, *error_address()));
     return;
@@ -445,12 +445,12 @@ void IncomingMessage::Decode(const fidl_type_t* message_type,
       (header()->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
     wire_format_version = internal::WireFormatVersion::kV2;
   }
-  Decode(wire_format_version, message_type, true, out_transformed_buffer, false);
+  Decode(wire_format_version, message_type, true, out_transformed_buffer);
 }
 
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
                              const fidl_type_t* message_type, bool is_transactional,
-                             std::unique_ptr<uint8_t[]>* out_transformed_buffer, bool hlcpp_mode) {
+                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
 
   if (wire_format_version == internal::WireFormatVersion::kV1) {
@@ -505,8 +505,7 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
   fidl_trace(WillLLCPPDecode, message_type, trimmed_bytes, trimmed_num_bytes, handle_actual());
   zx_status_t status = fidl::internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
       *transport_vtable_->encoding_configuration, message_type, trimmed_bytes, trimmed_num_bytes,
-      message_.handles, message_.handle_metadata, message_.num_handles, error_address(),
-      hlcpp_mode);
+      message_.handles, message_.handle_metadata, message_.num_handles, error_address());
   fidl_trace(DidLLCPPDecode);
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();

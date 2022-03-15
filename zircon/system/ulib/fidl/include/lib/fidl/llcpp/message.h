@@ -529,7 +529,7 @@ class IncomingMessage : public ::fidl::Status {
     ZX_ASSERT(!is_transactional_);
     ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
     Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
-           fidl::IsFidlTransactionalMessage<FidlType>::value, out_transformed_buffer, false);
+           fidl::IsFidlTransactionalMessage<FidlType>::value, out_transformed_buffer);
   }
 
   // Decodes the message using |message_type| for the specified |wire_format_version|. If this
@@ -542,8 +542,7 @@ class IncomingMessage : public ::fidl::Status {
   //
   // This method should be used after a read.
   void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type,
-              bool is_transactional, std::unique_ptr<uint8_t[]>* out_transformed_buffer,
-              bool hlcpp_mode);
+              bool is_transactional, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
 
   // Release the handle ownership after the message has been converted to its
   // decoded form. When used standalone and not as part of a |Decode|, this
