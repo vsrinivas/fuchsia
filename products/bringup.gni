@@ -30,6 +30,9 @@ product_bootfs_labels += [
   "//products/kernel_cmdline:kernel.oom.behavior--jobkill",
   "//products/kernel_cmdline:netsvc.all-features--true",
   "//products/kernel_cmdline:netsvc.disable--false",
+
+  # skips bootsvc, booting directly into component manager from userboot
+  "//products/kernel_cmdline:userboot-next--skip_bootsvc",
 ]
 
 # TODO(fxbug.dev/56988): We shouldn't need runtests, but right now it's used by profile
