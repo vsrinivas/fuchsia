@@ -14,7 +14,7 @@ mod lib;
 
 #[async_trait]
 impl Mocks for EchoClientTest {
-    async fn service_1_impl(handles: LocalComponentHandles) -> Result<(), Error> {
+    async fn echo_impl(handles: LocalComponentHandles) -> Result<(), Error> {
         let mut fs = ServiceFs::new();
         let mut tasks = vec![];
 

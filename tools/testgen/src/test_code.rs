@@ -70,6 +70,24 @@ pub fn convert_to_camel(input: &str) -> String {
     return camel;
 }
 
+// Convert CamelCase to snake_case
+pub fn convert_to_snake(input: &str) -> String {
+    let mut snake = "".to_string();
+    for c in input.chars() {
+        if c.is_uppercase() {
+            if snake.len() > 1 {
+                snake.push('_');
+            }
+            snake.push(c.to_ascii_lowercase());
+            continue;
+        } else if c == '-' {
+            continue;
+        }
+        snake.push(c);
+    }
+    return snake;
+}
+
 pub fn copyright(comment: &str) -> String {
     let current_date = chrono::Utc::now();
     let year = current_date.year();
@@ -93,6 +111,26 @@ mod test {
 
         let camel_4 = convert_to_camel("logstats");
         assert_eq!(camel_4, "Logstats");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_convert_snake_case() -> Result<()> {
+        let snake_1 = convert_to_snake("LogStats");
+        assert_eq!(snake_1, "log_stats");
+
+        let snake_2 = convert_to_snake("logStats");
+        assert_eq!(snake_2, "log_stats");
+
+        let snake_3 = convert_to_snake("Log");
+        assert_eq!(snake_3, "log");
+
+        let snake_4 = convert_to_snake("logstats");
+        assert_eq!(snake_4, "logstats");
+
+        let snake_5 = convert_to_snake("Log-Stats");
+        assert_eq!(snake_5, "log_stats");
 
         Ok(())
     }

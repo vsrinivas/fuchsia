@@ -11,7 +11,7 @@ const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_client_test#meta/ech
 
 #[async_trait]
 pub trait Mocks {
-    async fn service_1_impl(handles: LocalComponentHandles) -> Result<(), Error>;
+    async fn echo_impl(handles: LocalComponentHandles) -> Result<(), Error>;
 }
 pub struct EchoClientTest;
 
@@ -20,12 +20,10 @@ impl EchoClientTest {
         let builder = RealmBuilder::new().await?;
         let echo_client =
             builder.add_child("echo_client", COMPONENT_URL, ChildOptions::new()).await?;
-        let service_1 = builder
+        let echo = builder
             .add_local_child(
-                "service_1",
-                move |handles: LocalComponentHandles| {
-                    Box::pin(EchoClientTest::service_1_impl(handles))
-                },
+                "echo",
+                move |handles: LocalComponentHandles| Box::pin(EchoClientTest::echo_impl(handles)),
                 ChildOptions::new(),
             )
             .await?;
@@ -33,7 +31,7 @@ impl EchoClientTest {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
-                    .from(&service_1)
+                    .from(&echo)
                     .to(Ref::parent())
                     .to(&echo_client),
             )

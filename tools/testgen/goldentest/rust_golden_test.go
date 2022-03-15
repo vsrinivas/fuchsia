@@ -8,7 +8,6 @@ import (
 	"flag"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -76,17 +75,6 @@ func runTestGen(t *testing.T) {
 	}
 }
 
-func compareLineByLine(t *testing.T, golden, generated []string, filename string) {
-	if len(golden) != len(generated) {
-		t.Errorf("Found mismatched line count for %s: golden file contains %d lines and generateed file contains %d lines", filename, len(golden), len(generated))
-	}
-	for i, ref := range golden {
-		if diff := cmp.Diff(ref, generated[i]); diff != "" {
-			t.Errorf("Found mismatch in %s (-want +got):\n%s", filename, diff)
-		}
-	}
-}
-
 func diff(t *testing.T, generated_path, golden_path string) {
 	generated_code, err := os.ReadFile(generated_path)
 	if err != nil {
@@ -96,7 +84,9 @@ func diff(t *testing.T, generated_path, golden_path string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	compareLineByLine(t, strings.Split(string(golden_code), "\n")[1:], strings.Split(string(generated_code), "\n")[1:], path.Base(golden_path))
+	if diff := cmp.Diff(strings.Join(strings.Split(string(golden_code), "\n")[1:], "\n"), strings.Join(strings.Split(string(generated_code), "\n")[1:], "\n")); diff != "" {
+		t.Errorf("Found mismatch in generated code (-want +got):\n%s", diff)
+	}
 }
 
 func compareGolden(t *testing.T) {

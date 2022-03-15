@@ -8,8 +8,8 @@ use crate::generate_build::{CppBuildGenerator, RustBuildGenerator};
 use crate::generate_cpp_test::{CppTestCode, CppTestCodeGenerator};
 use crate::generate_manifest::{CppManifestGenerator, RustManifestGenerator};
 use crate::generate_rust_test::{RustLibGenerator, RustTestCode, RustTestCodeGenerator};
-use crate::test_code::{CodeGenerator, TestCodeBuilder};
-
+use crate::test_code::{convert_to_snake, CodeGenerator, TestCodeBuilder};
+use ansi_term::Colour::*;
 use anyhow::{format_err, Result};
 use fidl_fuchsia_component_decl::*;
 use regex::Regex;
@@ -25,9 +25,14 @@ mod generate_manifest;
 mod generate_rust_test;
 mod test_code;
 
-// protocols provided by component test framework, if the component-under-test 'use' any of
+// Protocols provided by component test framework, if the component-under-test 'use' any of
 // these protocols, the capability source will be routed from RouteEndpoint::above_root()
 const TEST_REALM_CAPABILITIES: &'static [&'static str] = &["fuchsia.logger.LogSink"];
+
+// Capabilities provided by component framework. These capabilities are skipped from generated
+// mocked templates.
+const COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_RUST: &'static str = "fidl_fuchsia_component";
+const COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_CPP: &'static str = "/fuchsia/component/";
 
 fn main() -> Result<()> {
     let input: AutoTestGeneratorCommand = argh::from_env();
@@ -187,27 +192,40 @@ fn write_rust(
 
     let mut stdout = std::io::stdout();
 
-    // Write rust test code file
     let mut code_dest = PathBuf::from(&input.out_dir);
     code_dest.push("src");
     std::fs::create_dir_all(&code_dest).unwrap();
 
+    // Write rust test lib file
+    let mut lib_code_dest = code_dest.clone();
+    lib_code_dest.push("lib.rs");
+    let rust_lib_code_generator = RustLibGenerator { code, copyright: !input.nocopyright };
+    println!(
+        "writing lib.rs to {}, {}",
+        lib_code_dest.display(),
+        Blue.paint("this file will be regenerated each time, edit with caution!")
+    );
+    rust_lib_code_generator.write_file(&mut File::create(lib_code_dest)?)?;
+    if input.verbose {
+        rust_lib_code_generator.write_file(&mut stdout)?;
+    }
+
+    // Write rust test code file
     let mut test_code_dest = code_dest.clone();
     test_code_dest.push(&output_file_name);
     test_code_dest.set_extension("rs");
-
-    let mut lib_code_dest = code_dest.clone();
-    lib_code_dest.push("lib.rs");
-
-    println!("writing rust file to {}", test_code_dest.display());
-    let rust_mod_code_generator = RustLibGenerator { code, copyright: !input.nocopyright };
-    let rust_test_code_generator = RustTestCodeGenerator { code, copyright: !input.nocopyright };
-
-    rust_mod_code_generator.write_file(&mut File::create(lib_code_dest)?)?;
-    rust_test_code_generator.write_file(&mut File::create(test_code_dest)?)?;
-    if input.verbose {
-        rust_mod_code_generator.write_file(&mut stdout)?;
-        rust_test_code_generator.write_file(&mut stdout)?;
+    if !test_code_dest.exists() {
+        println!(
+            "writing rust test file to {}, {}",
+            test_code_dest.display(),
+            Blue.paint("this file will only get generated once.")
+        );
+        let rust_test_code_generator =
+            RustTestCodeGenerator { code, copyright: !input.nocopyright };
+        rust_test_code_generator.write_file(&mut File::create(test_code_dest)?)?;
+        if input.verbose {
+            rust_test_code_generator.write_file(&mut stdout)?;
+        }
     }
 
     // Write manifest cml file
@@ -216,31 +234,42 @@ fn write_rust(
     std::fs::create_dir_all(&manifest_dest).unwrap();
     manifest_dest.push(&output_file_name);
     manifest_dest.set_extension("cml");
-    println!("writing manifest file to {}", manifest_dest.display());
-    let manifest_generator = RustManifestGenerator {
-        test_program_name: output_file_name.to_string(),
-        copyright: !input.nocopyright,
-    };
-    manifest_generator.write_file(&mut File::create(manifest_dest)?)?;
-    if input.verbose {
-        manifest_generator.write_file(&mut stdout)?;
+    if !manifest_dest.exists() {
+        println!(
+            "writing manifest file to {}, {}",
+            manifest_dest.display(),
+            Blue.paint("this file will only get generated once.")
+        );
+        let manifest_generator = RustManifestGenerator {
+            test_program_name: output_file_name.to_string(),
+            copyright: !input.nocopyright,
+        };
+        manifest_generator.write_file(&mut File::create(manifest_dest)?)?;
+        if input.verbose {
+            manifest_generator.write_file(&mut stdout)?;
+        }
     }
 
     // Write build file
     let mut build_dest = PathBuf::from(&input.out_dir);
     build_dest.push("BUILD.gn");
-    println!("writing build file to {}", build_dest.display());
-    let build_generator = RustBuildGenerator {
-        test_program_name: output_file_name.to_string(),
-        component_name: component_name.to_string(),
-        mock: input.generate_mocks,
-        copyright: !input.nocopyright,
-    };
-    build_generator.write_file(&mut File::create(build_dest)?)?;
-    if input.verbose {
-        build_generator.write_file(&mut stdout)?;
+    if !build_dest.exists() {
+        println!(
+            "writing build file to {}, {}",
+            build_dest.display(),
+            Blue.paint("this file will only get generated once.")
+        );
+        let build_generator = RustBuildGenerator {
+            test_program_name: output_file_name.to_string(),
+            component_name: component_name.to_string(),
+            mock: input.generate_mocks,
+            copyright: !input.nocopyright,
+        };
+        build_generator.write_file(&mut File::create(build_dest)?)?;
+        if input.verbose {
+            build_generator.write_file(&mut stdout)?;
+        }
     }
-
     Ok(())
 }
 
@@ -251,7 +280,6 @@ fn update_code_for_use_declaration(
     gen_mocks: bool,
     cpp: bool,
 ) -> Result<()> {
-    let mut dep_counter = 1;
     let mut dep_protocols = Protocols { protocols: HashMap::new() };
 
     for i in 0..uses.len() {
@@ -261,23 +289,20 @@ fn update_code_for_use_declaration(
                     if TEST_REALM_CAPABILITIES.into_iter().any(|v| v == &protocol) {
                         code.add_protocol(protocol, "root", vec!["self".to_string()]);
                     } else {
-                        let component_name = format!("service_{}", dep_counter);
-                        // Note: we don't know which component offers this service, we'll
-                        // label the service with a generic name: 'service_x', where x is
-                        // a number. We'll use the generic name "{URL}" indicating that user
-                        // needs to fill this value themselves.
+                        let fields: Vec<&str> = protocol.split(".").collect();
+                        let component_name = convert_to_snake(fields.last().unwrap());
+                        // Note: we don't know which component offers this service, we'll use the
+                        // generic name "{URL}" indicating that user needs to fill this value
+                        // themselves.
                         if cpp {
                             dep_protocols.add_protocol_cpp(&protocol, &component_name)?;
                         } else {
                             dep_protocols.add_protocol_rust(&protocol, &component_name)?;
                         }
-
-                        let component_url = "{URL}";
-                        dep_counter += 1;
                         code.add_component(
                             &component_name,
-                            &component_url,
-                            &component_name.to_ascii_uppercase(),
+                            "{URL}",
+                            &format!("{}_URL", &component_name.to_ascii_uppercase()),
                             gen_mocks,
                         );
                         // Note: "root" => test framework (i.e "RouteEndpoint::above_root()")
@@ -317,24 +342,29 @@ fn update_code_for_use_declaration(
         }
     }
     if gen_mocks && dep_protocols.protocols.len() > 0 {
-        if cpp {
-            code.add_import("<zircon/status.h>");
-        } else {
-            code.add_import("fuchsia_component::server::*");
-        }
+        let mut has_mock = false;
         for (component, protocols) in dep_protocols.protocols.iter() {
             for (fidl_lib, markers) in protocols.iter() {
-                if cpp {
+                if cpp && !fidl_lib.starts_with(COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_CPP) {
                     code.add_import(&format!("<{}>", fidl_lib));
                     // TODO(yuanzhi) What does the mock look like when we have multiple protocols to mock
                     // within the same component?
                     code.add_mock_impl(&component, &markers[0]);
-                } else {
-                    code.add_import(&format!("{}::*", fidl_lib));
-                    // TODO(yuanzhi) Currently we ignore the 'protocol' field. But we can improve the generated
-                    // mock function by auto generate function signature for the protocol that needs mocking.
-                    code.add_mock_impl(&component, &markers[0]);
+                    has_mock = true;
                 }
+                // Rust
+                if !cpp && !fidl_lib.starts_with(COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_RUST) {
+                    code.add_import(&format!("{}::*", fidl_lib));
+                    code.add_mock_impl(&component, &markers[0]);
+                    has_mock = true;
+                }
+            }
+        }
+        if has_mock {
+            if cpp {
+                code.add_import("<zircon/status.h>");
+            } else {
+                code.add_import("fuchsia_component::server::*");
             }
         }
     }
@@ -350,8 +380,6 @@ fn update_code_for_expose_declaration(
     let mut protos_to_test = Protocols { protocols: HashMap::new() };
 
     for i in 0..exposes.len() {
-        // println!("exposes {:?}", &exposes[i]);
-
         match &exposes[i] {
             Expose::Protocol(decl) => {
                 if let Some(protocol) = &decl.source_name {
@@ -548,18 +576,18 @@ mod test {
         )?;
         let create_realm_impl = code.realm_builder_snippets.join("\n");
         let expect_realm_snippets = r#"      .AddLocalChild(
-        "service_1",
-        &mock_service_1)
+        "archive_accessor",
+        &mock_archive_accessor)
       .AddRoute(component_testing::Route {
         .capabilities = {component_testing::Protocol {"fuchsia.diagnostics.ArchiveAccessor"}},
-        .source = component_testing::ChildRef{"service_1"},
+        .source = component_testing::ChildRef{"archive_accessor"},
         .targets = {component_testing::ParentRef(), component_testing::ChildRef{"foo_bar"}, }})
       .AddLocalChild(
-        "service_2",
-        &mock_service_2)
+        "metric_event_logger_factory",
+        &mock_metric_event_logger_factory)
       .AddRoute(component_testing::Route {
         .capabilities = {component_testing::Protocol {"fuchsia.metrics.MetricEventLoggerFactory"}},
-        .source = component_testing::ChildRef{"service_2"},
+        .source = component_testing::ChildRef{"metric_event_logger_factory"},
         .targets = {component_testing::ParentRef(), component_testing::ChildRef{"foo_bar"}, }})
       .AddRoute(component_testing::Route {
         .capabilities = {component_testing::Directory {
@@ -604,9 +632,9 @@ mod test {
             false, /* cpp */
         )?;
         let create_realm_impl = code.realm_builder_snippets.join("\n");
-        let expect_realm_snippets = r#"        let service_1 = builder.add_local_child(
-            "service_1",
-            move |handles: LocalComponentHandles| Box::pin(FooBarTest::service_1_impl(handles)),
+        let expect_realm_snippets = r#"        let archive_accessor = builder.add_local_child(
+            "archive_accessor",
+            move |handles: LocalComponentHandles| Box::pin(FooBarTest::archive_accessor_impl(handles)),
             ChildOptions::new()
         )
         .await?;
@@ -614,14 +642,14 @@ mod test {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.diagnostics.ArchiveAccessor"))
-                    .from(&service_1)
+                    .from(&archive_accessor)
                     .to(Ref::parent())
                     .to(&foo_bar),
             )
             .await?;
-        let service_2 = builder.add_local_child(
-            "service_2",
-            move |handles: LocalComponentHandles| Box::pin(FooBarTest::service_2_impl(handles)),
+        let metric_event_logger_factory = builder.add_local_child(
+            "metric_event_logger_factory",
+            move |handles: LocalComponentHandles| Box::pin(FooBarTest::metric_event_logger_factory_impl(handles)),
             ChildOptions::new()
         )
         .await?;
@@ -629,7 +657,7 @@ mod test {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.metrics.MetricEventLoggerFactory"))
-                    .from(&service_2)
+                    .from(&metric_event_logger_factory)
                     .to(Ref::parent())
                     .to(&foo_bar),
             )
