@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("ui_test_manager") {
+  testonly = true
+
+  sources = [
+    "flatland_scene_manager_scene.h",
+    "flatland_test_manager_scene.h",
+    "gfx_root_presenter_scene.h",
+    "gfx_scene_manager_scene.h",
+    "gfx_test_manager_scene.h",
+    "ui_test_manager.h",
+    "ui_test_scene.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}
