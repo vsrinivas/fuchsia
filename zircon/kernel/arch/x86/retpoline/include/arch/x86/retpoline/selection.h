@@ -26,9 +26,6 @@ inline std::string_view SelectX86RetpolineAlternative(CpuidIoProvider&& cpuid, M
   if (options.x86_disable_spec_mitigations || mitigated_by_ibrs) {
     return "__x86_indirect_thunk_unsafe_r11";
   }
-  if (arch::GetVendor(cpuid) == arch::Vendor::kAmd) {
-    return "__x86_indirect_thunk_amd_r11";
-  }
   return "__x86_indirect_thunk_basic_r11";
 }
 

@@ -362,7 +362,7 @@ static bool test_spectre_v2_mitigations() {
     EXPECT_EQ(check_buffer[0], 0x41);
     EXPECT_EQ(check_buffer[1], 0xff);
     EXPECT_EQ(check_buffer[2], 0xe3);
-  } else if (x86_vendor == X86_VENDOR_INTEL) {
+  } else {
     // We expect the generic thunk to be:
     // __x86_indirect_thunk:
     //  e8 ?? ?? ?? ?? call ...
@@ -370,19 +370,6 @@ static bool test_spectre_v2_mitigations() {
     // We cannot test the exact contents of the thunk as the call target depends on the internal
     // alignment. Instead check that the first byte is the call instruction we expect.
     EXPECT_EQ(check_buffer[0], 0xe8);
-  } else if (x86_vendor == X86_VENDOR_AMD) {
-    // We expect the AMD thunk to be:
-    // __x86_indirect_thunk:
-    //   0f ae e8      lfence
-    //   41 ff e3      jmp *%r11
-    EXPECT_EQ(check_buffer[0], 0x0f);
-    EXPECT_EQ(check_buffer[1], 0xae);
-    EXPECT_EQ(check_buffer[2], 0xe8);
-    EXPECT_EQ(check_buffer[3], 0x41);
-    EXPECT_EQ(check_buffer[4], 0xff);
-    EXPECT_EQ(check_buffer[5], 0xe3);
-  } else {
-    ASSERT_TRUE(false, "Unknown vendor.");
   }
 
   END_TEST;
