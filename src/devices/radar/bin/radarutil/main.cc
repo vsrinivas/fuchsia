@@ -15,7 +15,7 @@
 #include "radarutil.h"
 
 namespace {
-constexpr char kRadarDevicePath[] = "/dev/class/radar/000";
+constexpr char kRadarDevicePath[] = "/svc/fuchsia.hardware.radar.RadarBurstReaderProvider";
 }  // namespace
 
 int main(int argc, char** argv) {
