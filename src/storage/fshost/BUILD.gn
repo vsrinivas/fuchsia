@@ -197,11 +197,11 @@ source_set("block-watcher") {
     sources += [ "extract-metadata-noop.cc" ]
   }
 
-  if (data_filesystem_format == "fxfs") {
+  if (fs_switch || data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs" ]
   }
 
-  if (data_filesystem_format == "f2fs") {
+  if (fs_switch || data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
@@ -237,7 +237,7 @@ executable("fshost") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  if (data_filesystem_format == "fxfs") {
+  if (fs_switch || data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
