@@ -238,6 +238,37 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 
 }  // namespace internal
 
+void AudioFreqResult::Display(std::string tag, double magn_display_threshold) {
+  printf("\n%s", tag.c_str());
+
+  printf("\n  total_magn_signal:              %.9f", total_magn_signal);
+  printf("\n  total_magn_other:               %.9f", total_magn_other);
+
+  printf("\n  magnitudes:           ");
+  for (const auto& [key, value] : magnitudes) {
+    printf("  [%5d] %.9f,", key, value);
+  }
+  printf("\n  phases:               ");
+  for (const auto& [key, value] : phases) {
+    printf("  [%5d] %.9f,", key, value);
+  }
+
+  printf("\n  all_magnitudes >= %.9f (0 - %lu):", magn_display_threshold,
+         all_square_magnitudes.size() - 1);
+  for (auto idx = 0u, displayed = 0u; idx < all_square_magnitudes.size(); ++idx) {
+    auto magn = std::sqrt(all_square_magnitudes[idx]);
+    if (magn < magn_display_threshold) {
+      continue;
+    }
+    if (displayed % 8 == 0) {
+      printf("\n  ");
+    }
+    printf("  [%5d] %.9f,", idx, magn);
+    ++displayed;
+  }
+  printf("\n");
+}
+
 // For specified audio buffer & length, analyze the contents and return the magnitude (and phase) of
 // signal at given frequency (i.e. frequency at which 'freq' periods fit perfectly within buffer
 // length). Also return the magnitude of all other content. Useful for frequency response and

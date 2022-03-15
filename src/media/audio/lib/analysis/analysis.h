@@ -46,6 +46,8 @@ void InverseFFT(double* real, double* imag, uint32_t buf_size);
 }  // namespace internal
 
 struct AudioFreqResult {
+  void Display(std::string tag = "", double magn_display_threshold = 0.0);
+
   // Raw list of square magnitudes for all bins up to size/2.
   std::vector<double> all_square_magnitudes;
 
