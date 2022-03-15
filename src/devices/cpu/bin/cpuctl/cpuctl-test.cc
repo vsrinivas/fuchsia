@@ -72,8 +72,6 @@ class FakeCpuDevice : TestDeviceType,
                                GetMinDriverLogSeverityCompleter::Sync& _completer) override {}
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override {}
-  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                             RunCompatibilityTestsCompleter::Sync& _completer) override {}
 
  private:
   virtual void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,

@@ -23,7 +23,6 @@
 #include <fbl/string.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
-#include "src/devices/bin/driver_manager/driver_test_reporter.h"
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
@@ -75,14 +74,6 @@ struct UnbindTaskOpts;
 // Device should not go through auto-bind process
 #define DEV_CTX_SKIP_AUTOBIND      0x0100
 
-// Signals used on the test event
-#define TEST_BIND_DONE_SIGNAL ZX_USER_SIGNAL_0
-#define TEST_SUSPEND_DONE_SIGNAL ZX_USER_SIGNAL_1
-#define TEST_RESUME_DONE_SIGNAL ZX_USER_SIGNAL_2
-#define TEST_REMOVE_DONE_SIGNAL ZX_USER_SIGNAL_3
-
-constexpr zx::duration kDefaultTestTimeout = zx::sec(5);
-
 // clang-format on
 
 // Tags used for container membership identification
@@ -120,8 +111,6 @@ class Device
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& _completer) override;
   void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
                               ScheduleUnbindChildrenCompleter::Sync& _completer) override;
-  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                             RunCompatibilityTestsCompleter::Sync& _completer) override;
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable
@@ -462,9 +451,6 @@ class Device
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
-  void DriverCompatibilityTest(zx::duration test_time,
-                               std::optional<RunCompatibilityTestsCompleter::Async> completer);
-
   zx::channel take_client_remote() { return std::move(client_remote_); }
   bool has_outgoing_directory() { return outgoing_dir_.is_valid(); }
   fidl::ClientEnd<fio::Directory> take_outgoing_dir() { return std::move(outgoing_dir_); }
@@ -533,43 +519,7 @@ class Device
 
   void InitializeInspectValues();
 
-  enum class TestStateMachine {
-    kTestNotStarted = 1,
-    kTestUnbindSent,
-    kTestBindSent,
-    kTestBindDone,
-    kTestSuspendSent,
-    kTestSuspendDone,
-    kTestResumeSent,
-    kTestResumeDone,
-    kTestDone,
-  };
-
-  TestStateMachine test_state() {
-    fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
-    return test_state_;
-  }
-
-  void set_test_state(TestStateMachine new_state) {
-    fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
-    test_state_ = new_state;
-  }
-
   void clear_active_resume() { active_resume_ = nullptr; }
-  void set_test_time(zx::duration& test_time) { test_time_ = test_time; }
-  zx::duration& test_time() { return test_time_; }
-  const char* GetTestDriverName();
-  zx::event& test_event() { return test_event_; }
-
-  // This is public for testing purposes.
-  std::unique_ptr<DriverTestReporter> test_reporter;
-
-  zx_status_t set_test_output(zx::channel test_output, async_dispatcher_t* dispatcher) {
-    test_output_ = std::move(test_output);
-    test_wait_.set_object(test_output_.get());
-    test_wait_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    return test_wait_.Begin(dispatcher);
-  }
 
   const fidl::WireSharedClient<fuchsia_device_manager::DeviceController>& device_controller()
       const {
@@ -598,24 +548,8 @@ class Device
   bool IsAlreadyBound() const;
 
  private:
-  void HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
-
-  // The driver sends output from run_unit_tests over this channel.
-  zx::channel test_output_;
-
-  // Async waiter that drives the consumption of test_output_. It is triggered when the channel is
-  // closed by the driver, signalling the end of the tests. We don't print log messages until the
-  // entire test is finished to avoid interleaving output from multiple drivers.
-  //
-  // TODO(https://fxbug.dev/34151): Handle the case where the channel fills up before we begin
-  // reading.
-  async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
-
   fidl::WireSharedClient<fuchsia_device_manager::DeviceController> device_controller_;
   std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>> coordinator_binding_;
-
-  int RunCompatibilityTests();
 
   const fbl::String name_;
   const fbl::String libname_;
@@ -708,13 +642,6 @@ class Device
   // Provides incoming directory for the driver which binds to this device.
   fidl::ClientEnd<fio::Directory> outgoing_dir_;
 
-  // For compatibility tests.
-  fbl::Mutex test_state_lock_;
-  TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
-  zx::event test_event_;
-  zx::duration test_time_;
-  fuchsia_device_manager::wire::CompatibilityTestStatus test_status_;
-  std::optional<RunCompatibilityTestsCompleter::Async> compatibility_test_completer_;
 
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;

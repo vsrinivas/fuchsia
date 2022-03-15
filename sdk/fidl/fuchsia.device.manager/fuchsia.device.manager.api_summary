@@ -9,14 +9,6 @@ struct/member fuchsia.device.manager/BindInstruction.arg uint32
 struct/member fuchsia.device.manager/BindInstruction.debug uint32
 struct/member fuchsia.device.manager/BindInstruction.op uint32
 struct fuchsia.device.manager/BindInstruction
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_BIND_NO_DDKADD 2
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_BIND_TIMEOUT 3
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_INTERNAL 7
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_SUSPEND_DDKREMOVE 6
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_NO_DDKREMOVE 4
-enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_TIMEOUT 5
-enum/member fuchsia.device.manager/CompatibilityTestStatus.OK 1
-strict enum fuchsia.device.manager/CompatibilityTestStatus uint32
 struct/member fuchsia.device.manager/CompositeDevice.fragments vector<fuchsia.device.manager/Fragment>:16
 struct/member fuchsia.device.manager/CompositeDevice.name string:31
 struct fuchsia.device.manager/CompositeDevice
@@ -35,7 +27,6 @@ protocol/member fuchsia.device.manager/Coordinator.GetMetadata(uint32 key) -> (f
 protocol/member fuchsia.device.manager/Coordinator.GetMetadataSize(uint32 key) -> (fuchsia.device.manager/Coordinator_GetMetadataSize_Result result)
 protocol/member fuchsia.device.manager/Coordinator.GetTopologicalPath() -> (fuchsia.device.manager/Coordinator_GetTopologicalPath_Result result)
 protocol/member fuchsia.device.manager/Coordinator.LoadFirmware(string:1024 driver_path,string:1024 fw_path) -> (fuchsia.device.manager/Coordinator_LoadFirmware_Result result)
-protocol/member fuchsia.device.manager/Coordinator.RunCompatibilityTests(int64 hook_wait_time) -> (fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result result)
 protocol/member fuchsia.device.manager/Coordinator.ScheduleRemove(bool unbind_self)
 protocol/member fuchsia.device.manager/Coordinator.ScheduleUnbindChildren()
 protocol fuchsia.device.manager/Coordinator
@@ -77,11 +68,6 @@ resource struct fuchsia.device.manager/Coordinator_LoadFirmware_Response
 union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.err int32
 union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.response fuchsia.device.manager/Coordinator_LoadFirmware_Response
 resource strict union fuchsia.device.manager/Coordinator_LoadFirmware_Result
-struct/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response.status fuchsia.device.manager/CompatibilityTestStatus
-struct fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response
-union/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result.err int32
-union/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result.response fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response
-strict union fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result
 const fuchsia.device.manager/DEVICE_ARGS_MAX uint32 1024
 const fuchsia.device.manager/DEVICE_FRAGMENT_PARTS_MAX uint32 16
 const fuchsia.device.manager/DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX uint32 32

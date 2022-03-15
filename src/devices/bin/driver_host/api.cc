@@ -354,13 +354,6 @@ zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev)
   return internal::ContextForApi()->ScheduleUnbindChildren(dev);
 }
 
-zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
-                                           int64_t hook_wait_time,
-                                           fit::callback<void(zx_status_t)> cb) {
-  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-  return internal::ContextForApi()->DeviceRunCompatibilityTests(dev, hook_wait_time, std::move(cb));
-}
-
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                         uint32_t flags) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());

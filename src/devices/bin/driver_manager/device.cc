@@ -39,7 +39,6 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       publish_task_([this] { coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this)); }),
       client_remote_(std::move(client_remote)),
       outgoing_dir_(std::move(outgoing_dir)) {
-  test_reporter = std::make_unique<DriverTestReporter>(name_);
   inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
                    name_.c_str(), std::move(inspect_vmo));
   set_state(Device::State::kActive);  // set default state
@@ -580,36 +579,6 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   return ZX_OK;
 }
 
-void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                              zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to wait on test output for device %p '%s': %s", this, name_.data(),
-         zx_status_get_string(status));
-    return;
-  }
-  if (!(signal->observed & ZX_CHANNEL_PEER_CLOSED)) {
-    LOGF(WARNING, "Unexpected signal state %#08x for device %p '%s'", signal->observed, this,
-         name_.data());
-    return;
-  }
-
-  test_reporter->TestStart();
-
-  fidl::BindServer(dispatcher,
-                   fidl::ServerEnd<fuchsia_driver_test_logger::Logger>(std::move(test_output_)),
-                   test_reporter.get(),
-                   [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
-                          fidl::ServerEnd<fuchsia_driver_test_logger::Logger> server_end) {
-                     if (info.is_user_initiated() || info.is_peer_closed()) {
-                       test_reporter->TestFinished();
-                       return;
-                     }
-                     auto reason = info.FormatDescription();
-                     LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this,
-                          name_.data(), reason.c_str());
-                   });
-}
-
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   // This function should only be called once
   ZX_DEBUG_ASSERT(props_.data() == nullptr);
@@ -654,135 +623,6 @@ void Device::set_host(fbl::RefPtr<DriverHost> host) {
     set_local_id(host_->new_device_id());
   }
 }
-
-const char* Device::GetTestDriverName() {
-  for (auto& child : children()) {
-    return this->coordinator->LibnameToDriver(child.libname().data())->name.data();
-  }
-  return nullptr;
-}
-
-void Device::DriverCompatibilityTest(
-    zx::duration test_time, std::optional<RunCompatibilityTestsCompleter::Async> completer) {
-  thrd_t t;
-  if (test_state() != TestStateMachine::kTestNotStarted) {
-    if (completer) {
-      completer->ReplySuccess(fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal);
-    }
-    return;
-  }
-  set_test_time(test_time);
-  if (completer) {
-    compatibility_test_completer_ = *std::move(completer);
-  }
-  auto cb = [](void* arg) -> int {
-    auto dev = fbl::RefPtr(reinterpret_cast<Device*>(arg));
-    return dev->RunCompatibilityTests();
-  };
-  int ret = thrd_create_with_name(&t, cb, this, "compatibility-tests-thread");
-  if (ret != thrd_success) {
-    LOGF(ERROR, "Failed to create thread for driver compatibility test '%s': %d",
-         GetTestDriverName(), ret);
-    if (compatibility_test_completer_) {
-      compatibility_test_completer_->ReplySuccess(
-          fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal);
-      compatibility_test_completer_.reset();
-    }
-    return;
-  }
-  thrd_detach(t);
-}
-
-#define TEST_LOGF(severity, message...) FX_LOGF(severity, "compatibility", message)
-
-int Device::RunCompatibilityTests() {
-  const char* test_driver_name = GetTestDriverName();
-  TEST_LOGF(INFO, "Running test '%s'", test_driver_name);
-  auto cleanup = fit::defer([this]() {
-    if (compatibility_test_completer_) {
-      compatibility_test_completer_->ReplySuccess(test_status_);
-    }
-    test_event().reset();
-    set_test_state(Device::TestStateMachine::kTestDone);
-    compatibility_test_completer_.reset();
-  });
-  // Device should be bound for test to work
-  if (!(flags & DEV_CTX_BOUND) || children().is_empty()) {
-    TEST_LOGF(ERROR, "[  FAILED  ] %s: Parent device not bound", test_driver_name);
-    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindNoDdkadd;
-    return ZX_ERR_BAD_STATE;
-  }
-  zx_status_t status = zx::event::create(0, &test_event());
-  if (status != ZX_OK) {
-    TEST_LOGF(ERROR, "[  FAILED  ] %s: Event creation failed, %s", test_driver_name,
-              zx_status_get_string(status));
-    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Issue unbind on all its children.
-  for (auto itr = children().begin(); itr != children().end();) {
-    auto& child = *itr;
-    itr++;
-    this->set_test_state(Device::TestStateMachine::kTestUnbindSent);
-    coordinator->device_manager()->ScheduleDriverHostRequestedRemove(fbl::RefPtr<Device>(&child),
-                                                                     true /* unbind_self */);
-  }
-
-  zx_signals_t observed = 0;
-  // Now wait for the device to be removed.
-  status =
-      test_event().wait_one(TEST_REMOVE_DONE_SIGNAL, zx::deadline_after(test_time()), &observed);
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_TIMED_OUT) {
-      // The Remove did not complete.
-      TEST_LOGF(ERROR,
-                "[  FAILED  ] %s: Timed out waiting for device to be removed, check if"
-                " device_remove() was called in the unbind routine of the driver: %s",
-                test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrUnbindTimeout;
-    } else {
-      TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for device to be removed: %s",
-                test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
-    }
-    return ZX_ERR_INTERNAL;
-  }
-  this->set_test_state(Device::TestStateMachine::kTestBindSent);
-  this->coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this));
-  observed = 0;
-  status = test_event().wait_one(TEST_BIND_DONE_SIGNAL, zx::deadline_after(test_time()), &observed);
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_TIMED_OUT) {
-      // The Bind did not complete.
-      TEST_LOGF(ERROR,
-                "[  FAILED  ] %s: Timed out waiting for driver to be bound, check if there"
-                " is blocking IO in the driver's bind(): %s",
-                test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindTimeout;
-    } else {
-      TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for driver to be bound: %s",
-                test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
-    }
-    return ZX_ERR_INTERNAL;
-  }
-  this->set_test_state(Device::TestStateMachine::kTestBindDone);
-  if (this->children().is_empty()) {
-    TEST_LOGF(ERROR,
-              "[  FAILED  ] %s: Driver did not add a child device in bind(), check if it called "
-              "DdkAdd()",
-              test_driver_name);
-    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindNoDdkadd;
-    return -1;
-  }
-  TEST_LOGF(INFO, "[  PASSED  ] %s", test_driver_name);
-  // TODO(ravoorir): Test Suspend and Resume hooks
-  test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kOk;
-  return ZX_OK;
-}
-
-#undef TEST_LOGF
 
 // TODO(fxb/74654): Implement support for string properties.
 void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) {
@@ -922,16 +762,6 @@ void Device::AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::S
   } else {
     completer.ReplySuccess();
   }
-}
-void Device::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                                   RunCompatibilityTestsCompleter::Sync& completer) {
-  auto dev = fbl::RefPtr(this);
-  fbl::RefPtr<Device>& real_parent = dev;
-  if (dev->flags & DEV_CTX_PROXY) {
-    real_parent = dev->parent();
-  }
-  zx::duration test_time = zx::nsec(request->hook_wait_time);
-  real_parent->DriverCompatibilityTest(test_time, completer.ToAsync());
 }
 
 void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,

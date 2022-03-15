@@ -224,47 +224,6 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libna
           dev->flags &= (~DEV_CTX_BOUND);
           return;
         }
-
-        fbl::RefPtr<Device> real_parent;
-        if (dev->flags & DEV_CTX_PROXY) {
-          real_parent = dev->parent();
-        } else {
-          real_parent = dev;
-        }
-        for (auto& child : real_parent->children()) {
-          const char* drivername =
-              dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
-          auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
-
-          auto compat_test_enabled = (*dev->coordinator->boot_args())
-                                         ->GetBool(fidl::StringView::FromExternal(bootarg), false);
-          if (compat_test_enabled.ok() && compat_test_enabled->value &&
-              (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
-            bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
-            auto test_wait_time = (*dev->coordinator->boot_args())
-                                      ->GetString(fidl::StringView::FromExternal(bootarg));
-            zx::duration test_time = kDefaultTestTimeout;
-            if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
-              auto test_timeout =
-                  std::string{test_wait_time->value.data(), test_wait_time->value.size()};
-              test_time = zx::msec(atoi(test_timeout.data()));
-            }
-            real_parent->DriverCompatibilityTest(test_time, std::nullopt);
-            break;
-          } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
-            real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
-            break;
-          }
-        }
-        if (result->test_output.is_valid()) {
-          LOGF(INFO, "Setting test channel for driver '%s'", dev->name().data());
-          auto status =
-              dev->set_test_output(std::move(result->test_output), dev->coordinator->dispatcher());
-          if (status != ZX_OK) {
-            LOGF(ERROR, "Failed to wait on test output for driver '%s': %s", dev->name().data(),
-                 zx_status_get_string(status));
-          }
-        }
       });
   dev->flags |= DEV_CTX_BOUND;
   return ZX_OK;

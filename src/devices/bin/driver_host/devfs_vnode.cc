@@ -201,18 +201,6 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
   completer.Reply(status);
 }
 
-void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                                       RunCompatibilityTestsCompleter::Sync& completer) {
-  auto shared_completer =
-      std::make_shared<RunCompatibilityTestsCompleter::Async>(completer.ToAsync());
-  zx_status_t status = device_run_compatibility_tests(
-      dev_, request->hook_wait_time,
-      [shared_completer](zx_status_t status) mutable { shared_completer->Reply(status); });
-  if (status != ZX_OK) {
-    shared_completer->Reply(status);
-  }
-}
-
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
   uint32_t out_state;

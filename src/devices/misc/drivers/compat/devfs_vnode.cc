@@ -177,11 +177,6 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                                       RunCompatibilityTestsCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
-}
-
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);

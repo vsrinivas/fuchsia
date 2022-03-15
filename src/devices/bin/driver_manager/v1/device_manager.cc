@@ -307,24 +307,10 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
   // if we have a parent, disconnect and downref it
   fbl::RefPtr<Device> parent = dev->parent();
   if (parent != nullptr) {
-    Device* real_parent;
-    if (parent->flags & DEV_CTX_PROXY) {
-      real_parent = parent->parent().get();
-    } else {
-      real_parent = parent.get();
-    }
     dev->DetachFromParent();
     if (!(dev->flags & DEV_CTX_PROXY)) {
       if (parent->children().is_empty()) {
         parent->flags &= (~DEV_CTX_BOUND);
-        if (real_parent->test_state() == Device::TestStateMachine::kTestUnbindSent) {
-          real_parent->test_event().signal(0, TEST_REMOVE_DONE_SIGNAL);
-          if (!(dev->flags & DEV_CTX_PROXY)) {
-            // remove from list of all devices
-            devices_.erase(*dev);
-          }
-          return ZX_OK;
-        }
 
         // TODO: This code is to cause the bind process to
         //      restart and get a new driver_host to be launched

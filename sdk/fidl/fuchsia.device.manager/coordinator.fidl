@@ -118,17 +118,6 @@ type CompositeDeviceDescriptor = struct {
     metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
 };
 
-/// A enum of CompatibilityTestStatus
-type CompatibilityTestStatus = strict enum : uint32 {
-    OK = 1;
-    ERR_BIND_NO_DDKADD = 2;
-    ERR_BIND_TIMEOUT = 3;
-    ERR_UNBIND_NO_DDKREMOVE = 4;
-    ERR_UNBIND_TIMEOUT = 5;
-    ERR_SUSPEND_DDKREMOVE = 6;
-    ERR_INTERNAL = 7;
-};
-
 /// Protocol for controlling devices in a devhost process from the devcoordinator
 protocol DeviceController {
     /// Bind the requested driver to this device.  `driver_path` is informational,
@@ -346,15 +335,4 @@ protocol Coordinator {
         name string:DEVICE_NAME_MAX;
         comp_desc CompositeDeviceDescriptor;
     }) -> (struct {}) error zx.status;
-
-    /// Run Compatibility tests for the driver that binds to this device.
-    /// The hook_wait_time is the time that the driver expects to take for
-    /// each device hook in nanoseconds.
-    /// Returns whether the compatibility tests started, and does not convey
-    /// anything about the status of the test.
-    RunCompatibilityTests(struct {
-        hook_wait_time int64;
-    }) -> (struct {
-        status CompatibilityTestStatus;
-    }) error zx.status;
 };

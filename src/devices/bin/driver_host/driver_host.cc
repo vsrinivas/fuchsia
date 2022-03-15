@@ -921,33 +921,6 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
   return call_status;
 }
 
-zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
-                                                           int64_t hook_wait_time,
-                                                           fit::callback<void(zx_status_t)> cb) {
-  const auto& client = dev->coordinator_client;
-  if (!client) {
-    return ZX_ERR_IO_REFUSED;
-  }
-  VLOGD(1, *dev, "run-compatibility-test");
-  client->RunCompatibilityTests(
-      hook_wait_time,
-      [cb = std::move(cb),
-       dev](fidl::WireUnownedResult<fuchsia_device_manager::Coordinator::RunCompatibilityTests>&
-                result) mutable {
-        log_rpc_result(dev, "run-compatibility-test", result.status());
-        if (!result.ok()) {
-          cb(result.status());
-          return;
-        }
-        if (result->result.is_err()) {
-          cb(result->result.err());
-        } else {
-          cb(static_cast<zx_status_t>(result->result.response().status));
-        }
-      });
-  return ZX_OK;
-}
-
 zx_status_t DriverHostContext::LoadFirmware(const zx_driver_t* drv,
                                             const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                             zx_handle_t* vmo_handle, size_t* size) {

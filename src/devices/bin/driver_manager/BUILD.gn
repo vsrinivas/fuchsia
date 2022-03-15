@@ -68,8 +68,6 @@ source_set("lib") {
     "driver_host_loader_service.h",
     "driver_loader.cc",
     "driver_loader.h",
-    "driver_test_reporter.cc",
-    "driver_test_reporter.h",
     "inspect.cc",
     "package_resolver.cc",
     "system_instance.cc",

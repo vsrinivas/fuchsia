@@ -311,11 +311,6 @@ class NetworkDeviceImpl : public EndpointImpl,
     callback(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void RunCompatibilityTests(int64_t hook_wait_time,
-                             RunCompatibilityTestsCallback callback) override {
-    callback(0);
-  }
-
   void GetCurrentPerformanceState(GetCurrentPerformanceStateCallback callback) override {
     callback(0);
   }

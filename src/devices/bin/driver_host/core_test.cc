@@ -76,12 +76,6 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   }
   void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
                               ScheduleUnbindChildrenCompleter::Sync& completer) override {}
-  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                             RunCompatibilityTestsCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResult response;
-    response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
-  }
 
   uint32_t bind_count() { return bind_count_.load(); }
 

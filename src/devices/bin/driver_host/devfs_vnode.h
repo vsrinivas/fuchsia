@@ -44,8 +44,6 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                                   GetCurrentPerformanceStateCompleter::Sync& completer) override;
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override;
-  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
-                             RunCompatibilityTestsCompleter::Sync& _completer) override;
   void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
 

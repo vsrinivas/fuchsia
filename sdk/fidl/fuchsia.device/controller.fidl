@@ -164,16 +164,6 @@ protocol Controller {
         status zx.status;
     });
 
-    /// Runs compatibility tests for the driver that binds to this device.
-    /// The `hook_wait_time` is the time that the driver expects to take for
-    /// each device hook in nanoseconds.
-    /// Returns whether the driver passed the compatibility check.
-    RunCompatibilityTests(struct {
-        hook_wait_time int64;
-    }) -> (struct {
-        status uint32;
-    });
-
     /// Gets the current performance state of the device.
     GetCurrentPerformanceState() -> (struct {
         out_state uint32;
