@@ -39,9 +39,18 @@ struct InfoArgs {
 
 /// Show the active refresh rate for one or more displays
 #[derive(FromArgs)]
-#[argh(subcommand, name = "fps")]
-struct FpsArgs {
+#[argh(subcommand, name = "vsync")]
+struct VsyncArgs {
     /// ID of the display to show
+    #[argh(positional)]
+    id: Option<u64>,
+}
+
+/// Play a double buffered animation using fence synchronization.
+#[derive(FromArgs)]
+#[argh(subcommand, name = "squares")]
+struct SquaresArgs {
+    /// ID of the display to play the animation on
     #[argh(positional)]
     id: Option<u64>,
 }
@@ -50,7 +59,8 @@ struct FpsArgs {
 #[argh(subcommand)]
 enum SubCommands {
     Info(InfoArgs),
-    Fps(FpsArgs),
+    Vsync(VsyncArgs),
+    Squares(SquaresArgs),
 }
 
 #[fasync::run_singlethreaded]
@@ -62,7 +72,8 @@ async fn main() -> Result<(), Error> {
     let cmd_future = async {
         match args.cmd {
             SubCommands::Info(args) => commands::show_display_info(&controller, args.id, args.fidl),
-            SubCommands::Fps(args) => commands::fps(&controller, args.id).await,
+            SubCommands::Vsync(args) => commands::vsync(&controller, args.id).await,
+            SubCommands::Squares(args) => commands::squares(&controller, args.id).await,
         }
     };
 

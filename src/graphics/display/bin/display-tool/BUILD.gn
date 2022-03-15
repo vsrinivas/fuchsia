@@ -22,6 +22,8 @@ rustc_binary("bin") {
 
   sources = [
     "src/commands.rs",
+    "src/commands/double_buffered_fence_loop.rs",
+    "src/commands/static_config_vsync_loop.rs",
     "src/draw.rs",
     "src/fps.rs",
     "src/main.rs",
