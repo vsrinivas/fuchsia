@@ -22,6 +22,9 @@ declare_args() {
   # These come after synthesized arguments to configure blobfs and pkgfs.
   devmgr_config = []
 
+  # Build the gigaboot bootloader.
+  use_gigaboot = false
+
   # Generate a UEFI disk image
   build_uefi_disk = false
 

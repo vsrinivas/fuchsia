@@ -46,6 +46,7 @@ board_fshost_config += [ "gpt-all" ]
 
 use_vbmeta = true
 build_uefi_disk = true
+use_gigaboot = true
 avb_key =
     "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =

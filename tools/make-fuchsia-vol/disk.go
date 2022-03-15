@@ -330,7 +330,7 @@ func createPartitionTable(disk *diskInfo, sizes *partitionSizes, abr, verbose, r
 	}
 }
 
-func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes partitionSizes, bootMode BootPartition) {
+func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes partitionSizes, bootMode BootPartition, arch string) {
 	f, err := os.OpenFile(disk, os.O_RDWR, 0750)
 	if err != nil {
 		log.Fatal(err)
@@ -388,12 +388,21 @@ func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes
 	if err != nil {
 		log.Fatal(err)
 	}
-	tf.WriteString("efi\\boot\\bootx64.efi")
+	// The UEFI spec requires that the bootloader binary be named bootx64.efi
+	// on x64 platforms and bootaa64.efi on ARM64 platforms.
+	// See section 3.5.1.1 "Removable Media Boot Behavior" in the spec at
+	// https://uefi.org/sites/default/files/resources/UEFI_Spec_2_9_2021_03_18.pdf
+	// for more information.
+	bootloaderName := "bootx64.efi"
+	if arch == "arm64" {
+		bootloaderName = "bootaa64.efi"
+	}
+	tf.WriteString(fmt.Sprintf("efi\\boot\\%s", bootloaderName))
 	tf.Close()
 	defer os.Remove(tf.Name())
 
 	msCopyIn(root, tf.Name(), "EFI/Google/GSetup/Boot")
-	msCopyIn(root, *bootloader, "EFI/BOOT/bootx64.efi")
+	msCopyIn(root, *bootloader, fmt.Sprintf("EFI/BOOT/%s", bootloaderName))
 	if !*abr {
 		msCopyIn(root, *zbi, "zircon.bin")
 		msCopyIn(root, *zedboot, "zedboot.bin")

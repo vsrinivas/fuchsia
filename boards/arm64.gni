@@ -42,3 +42,12 @@ max_zedboot_zbi_size = 16777216  # 16 MiB
 # Supports only virtual devices.
 board_is_emu = true
 board_is_phys = false
+
+# Build a UEFI image for virtualized platforms.
+build_uefi_disk = true
+use_gigaboot = true
+use_vbmeta = true
+avb_atx_metadata =
+    "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
+avb_key =
+    "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"

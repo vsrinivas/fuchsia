@@ -26,6 +26,7 @@ var (
 	verbose         = flag.Bool("verbose", false, "enable verbose logging")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 
+	arch       = flag.String("arch", "x64", "the architecture of the target CPU (x64|arm64)")
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
 	zbi        = flag.String("zbi", "", "path to zbi (default: zircon-a from image manifests)")
 	cmdline    = flag.String("cmdline", "", "path to command line file (if exists)")
@@ -128,7 +129,7 @@ func main() {
 		fvmSize:    uint64(*fvmSize),
 	}
 	partitions := createPartitionTable(&diskInfo, &sizes, *abr, *verbose, *ramdiskOnly, *useSparseFvm)
-	writeDisk(disk, partitions, diskInfo, sizes, bootMode)
+	writeDisk(disk, partitions, diskInfo, sizes, bootMode, *arch)
 }
 
 func initArguments() BootPartition {

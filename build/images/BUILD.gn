@@ -64,12 +64,6 @@ default_image_deps = [ labels.images ]
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
-# Whether to build Gigaboot. Right now we wish to use it on any x86 board that
-# is not chromebook-x64, which has its own prefered bootloader.
-#
-# TODO(fxbug.dev/58072): Support Gigaboot on ARM UEFI targets is in progress.
-use_gigaboot = target_cpu != "arm64" && !use_vboot
-
 #####
 # These are the package groups that are used to build the system:
 
@@ -1335,9 +1329,17 @@ compiled_action("uefi-disk") {
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   inputs = [ mkfs_bin ]
+  bootloader_path = "efi_${target_cpu}/boot${target_cpu}.efi"
+  if (target_cpu == "arm64") {
+    bootloader_path = "efi_${target_cpu}/bootaa64.efi"
+  }
   args = [
     "-fuchsia-build-dir",
     rebase_path("$root_build_dir"),
+    "-arch",
+    target_cpu,
+    "-bootloader",
+    bootloader_path,
     "-resize",
     "10000000000",  # 10GB
   ]
