@@ -13,45 +13,39 @@
 
 namespace compat {
 
-// A ServiceDir represents DFv2's version of a service.
-// This is a helper class which will remove the directory from its parent
-// when this class goes out of scope.
-class ServiceDir {
+// An OwnedInstance is a class that owns an instance in a service. When this
+// class goes out of scope, the instance will be removed from the service.
+class OwnedInstance {
  public:
   // This class can only be moved, it cannot be copied.
-  ServiceDir(const ServiceDir&) = delete;
-  ServiceDir& operator=(const ServiceDir&) = delete;
-  ServiceDir(ServiceDir&& other) = default;
-  ServiceDir& operator=(ServiceDir&& other) = default;
+  OwnedInstance(const OwnedInstance&) = delete;
+  OwnedInstance& operator=(const OwnedInstance&) = delete;
+  OwnedInstance(OwnedInstance&& other) = default;
+  OwnedInstance& operator=(OwnedInstance&& other) = default;
 
-  ~ServiceDir() {
-    if (parent_) {
-      parent_->RemoveEntry(name_);
+  ~OwnedInstance() {
+    if (service_) {
+      service_->RemoveEntry(name_);
     }
   }
 
-  static zx::status<ServiceDir> Create(fbl::RefPtr<fs::PseudoDir> parent, std::string_view name) {
-    ServiceDir service(std::move(parent));
-
-    service.dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-    service.name_ = name;
-
-    zx_status_t status = service.parent_->AddEntry(name, service.dir_);
+  static zx::status<OwnedInstance> Create(fbl::RefPtr<fs::PseudoDir> service, std::string_view name,
+                                          fbl::RefPtr<fs::PseudoDir> instance) {
+    zx_status_t status = service->AddEntry(name, instance);
     if (status != ZX_OK) {
       return zx::error(status);
     }
 
-    return zx::ok(std::move(service));
+    return zx::ok(OwnedInstance(std::move(service), name, std::move(instance)));
   }
 
-  fbl::RefPtr<fs::PseudoDir>& dir() { return dir_; }
-
  private:
-  explicit ServiceDir(fbl::RefPtr<fs::PseudoDir> parent) : parent_(std::move(parent)) {}
-
+  OwnedInstance(fbl::RefPtr<fs::PseudoDir> service, std::string_view name,
+                fbl::RefPtr<fs::PseudoDir> instance)
+      : name_(name), service_(std::move(service)), instance_(std::move(instance)) {}
   std::string name_;
-  fbl::RefPtr<fs::PseudoDir> parent_;
-  fbl::RefPtr<fs::PseudoDir> dir_;
+  fbl::RefPtr<fs::PseudoDir> service_;
+  fbl::RefPtr<fs::PseudoDir> instance_;
 };
 
 }  // namespace compat

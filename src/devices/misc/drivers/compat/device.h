@@ -68,7 +68,7 @@ class Device : public std::enable_shared_from_this<Device>,
     vnode_teardown_callback_ = std::move(cb);
   }
 
-  zx_status_t StartCompatService(ServiceDir dir);
+  zx_status_t StartCompatInstance(fbl::RefPtr<fs::PseudoDir>& compat_service);
 
   zx_status_t CreateNode();
 
@@ -121,7 +121,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   std::optional<fit::callback<void()>> vnode_teardown_callback_;
 
-  std::optional<ServiceDir> compat_service_;
+  std::optional<OwnedInstance> compat_instance_;
 
   // The device's parent. If this field is set then the Device ptr is guaranteed
   // to be non-null. The parent is also guaranteed to outlive its child.

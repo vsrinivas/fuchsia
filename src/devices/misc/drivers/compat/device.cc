@@ -190,7 +190,7 @@ zx_status_t Device::CreateNode() {
   ref.set_self(fcd::wire::SelfRef());
   fcd::wire::OfferDirectory compat_dir(arena);
   compat_dir.set_source_name(arena, "fuchsia.driver.compat.Service");
-  compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service");
+  compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service-default");
   compat_dir.set_rights(arena, fuchsia_io::wire::kRwStarDir);
   compat_dir.set_subdir(arena, fidl::StringView::FromExternal(name_));
   compat_dir.set_dependency_type(fcd::wire::DependencyType::kStrong);
@@ -433,21 +433,23 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return ops_->message(context_, msg, txn);
 }
 
-zx_status_t Device::StartCompatService(ServiceDir dir) {
-  compat_service_.emplace(std::move(dir));
-
+zx_status_t Device::StartCompatInstance(fbl::RefPtr<fs::PseudoDir>& compat_service) {
   service::ServiceHandler handler;
-  fuchsia_driver_compat::Service::Handler compat_service(&handler);
+  fuchsia_driver_compat::Service::Handler compat_instance(&handler);
   auto device = [this](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) -> zx::status<> {
     fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher_,
                                                                       std::move(server_end), this);
     return zx::ok();
   };
-  zx::status<> status = compat_service.add_device(std::move(device));
+  zx::status<> status = compat_instance.add_device(std::move(device));
   if (status.is_error()) {
     return status.status_value();
   }
-  compat_service_->dir()->AddEntry("default", handler.TakeDirectory());
+  auto instance = OwnedInstance::Create(compat_service, Name(), handler.TakeDirectory());
+  if (instance.is_error()) {
+    return instance.status_value();
+  }
+  compat_instance_ = std::move(instance.value());
 
   return ZX_OK;
 }

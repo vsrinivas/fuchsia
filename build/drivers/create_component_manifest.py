@@ -106,9 +106,9 @@ def main():
             }, {
                 'protocol': "fuchsia.boot.Items"
             }, {
-                'directory': "fuchsia.driver.compat.Service",
+                'directory': "fuchsia.driver.compat.Service-default",
                 'rights': ['rw*'],
-                'path': "/fuchsia.driver.compat.Service",
+                'path': "/fuchsia.driver.compat.Service/default",
             }
         ]
         manifest['capabilities'] = [

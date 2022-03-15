@@ -528,23 +528,18 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
-  auto result = ServiceDir::Create(compat_service_, args->name);
-  if (result.is_error()) {
-    FDF_LOG(ERROR, "Device %s: failed to add device %s, creating ServiceDir failed with: %s",
-            parent->Name(), args->name, result.status_string());
-    return result.status_value();
-  }
-
   zx_device_t* child;
   zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
     return status;
   }
-  if (out) {
-    *out = child;
-  }
 
-  child->StartCompatService(std::move(result.value()));
+  status = child->StartCompatInstance(compat_service_);
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Device %s: failed to add device %s, creating Compat instance failed with: %s",
+            parent->Name(), args->name, zx_status_get_string(status));
+    return status;
+  }
 
   std::string child_protocol = "device-" + std::to_string(next_device_id_);
   next_device_id_++;
@@ -586,7 +581,11 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
           .wrap_with(scope_);
   executor_.schedule_task(std::move(task));
 
-  return status;
+  if (out) {
+    *out = child;
+  }
+
+  return ZX_OK;
 }
 
 zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const char* name) {
