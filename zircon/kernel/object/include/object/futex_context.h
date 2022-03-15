@@ -10,6 +10,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/types.h>
 
+#include <arch/vm.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_ptr.h>
@@ -25,8 +26,7 @@ class ThreadDispatcher;
 class FutexId {
  public:
   // Shift for a better ID for hashing since the low bits are zero.
-  FutexId(user_in_ptr<const zx_futex_t> value_ptr)
-      : id_(reinterpret_cast<uintptr_t>(value_ptr.get()) >> 2) {}
+  FutexId(user_in_ptr<const zx_futex_t> value_ptr) : id_(GetFutexID(value_ptr.get()) >> 2) {}
   bool operator==(const FutexId& other) const { return id_ == other.id_; }
   bool operator!=(const FutexId& other) const { return id_ != other.id_; }
   uintptr_t get() const { return id_; }
@@ -36,6 +36,19 @@ class FutexId {
 
  private:
   constexpr FutexId() : id_(0) {}
+
+  static inline uintptr_t GetFutexID(const zx_futex_t* value_ptr) {
+    uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr);
+#if defined(__aarch64__)
+    // The futex ID is the pointer to the futex itself. This pointer may be tagged.
+    // As per [RFC 143]
+    // (https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0143_userspace_top_byte_ignore),
+    // tagged user pointers are treated the same as their untagged equivalents.
+    futex_id = arch_detag_ptr(futex_id);
+#endif
+    return futex_id;
+  }
+
   uintptr_t id_;
 };
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/elf-psabi/sp.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/process.h>
@@ -10,6 +11,7 @@
 #include <zircon/features.h>
 #include <zircon/hw/debug/arm64.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
@@ -187,6 +189,76 @@ TEST(TopByteIgnoreTests, TaggedFARWatchpoint) {
   uintptr_t tagged_ptr = AddTag(watched_addr, kTestTag);
   ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, far));
   ASSERT_EQ(far, tagged_ptr);
+}
+
+static zx_koid_t get_object_koid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
+  return info.koid;
+}
+
+void TestFutexWaitWake(uint8_t wait_tag, uint8_t wake_tag, uint8_t get_owner_tag) {
+  constexpr uint32_t kThreadWakeAllCount = std::numeric_limits<uint32_t>::max();
+  constexpr zx_futex_t kFutexVal = 1;
+  zx_futex_t futex = kFutexVal;
+  thrd_t thread;
+  struct ThreadArgs {
+    zx_futex_t* futex;
+    std::atomic<bool> about_to_wait;
+    zx_handle_t new_owner;
+  };
+  ThreadArgs thread_args{
+      AddTag(&futex, wait_tag),
+      false,
+      thrd_get_zx_handle(thrd_current()),
+  };
+
+  // Start a new thread that will wait until the current thread wakes the futex.
+  ASSERT_EQ(thrd_create(
+                &thread,
+                [](void* arg) -> int {
+                  auto* thread_args = reinterpret_cast<ThreadArgs*>(arg);
+                  thread_args->about_to_wait.store(true);
+                  // Note that we pass in the futex value separately rather than derefing the futex
+                  // pointer because, under ASan, a tagged futex pointer will cause some tag bits to
+                  // spill into the rest of the pointer when calculating shadow memory if we do the
+                  // dereference. This avoids us needing to do that.
+                  zx_status_t status =
+                      zx_futex_wait(thread_args->futex, kFutexVal, thread_args->new_owner,
+                                    zx_deadline_after(ZX_TIME_INFINITE));
+                  return static_cast<int>(status);
+                },
+                &thread_args),
+            0);
+
+  // If something goes wrong and we bail out early, do our best to shut down as cleanly
+  auto cleanup = fit::defer([&]() {
+    EXPECT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
+    int result;
+    EXPECT_EQ(thrd_join(thread, &result), 0);
+    EXPECT_EQ(result, 0);
+  });
+
+  // Ensure that we're waiting on the futex before we wake it.
+  zx_info_thread_t info = {};
+  while (info.state != ZX_THREAD_STATE_BLOCKED_FUTEX) {
+    ASSERT_OK(zx_object_get_info(thrd_get_zx_handle(thread), ZX_INFO_THREAD, &info, sizeof(info),
+                                 nullptr, nullptr));
+  }
+
+  // Check the owner.
+  zx_koid_t owner;
+  EXPECT_OK(zx_futex_get_owner(AddTag(&futex, get_owner_tag), &owner));
+  EXPECT_EQ(owner, get_object_koid(thrd_get_zx_handle(thrd_current())));
+}
+
+TEST(TopByteIgnoreTests, FutexWaitWake) {
+  TestFutexWaitWake(0, 0, 0);                       // Wait and wake same futex on the same tag.
+  TestFutexWaitWake(kTestTag, kTestTag, kTestTag);  // Wait and wake same futex on the same tag.
+  TestFutexWaitWake(kTestTag, kTestTag + 1,
+                    kTestTag + 2);  // Wait and wake same futex on different tags.
 }
 
 #elif defined(__x86_64__)

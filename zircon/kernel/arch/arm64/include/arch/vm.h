@@ -19,6 +19,8 @@ static inline bool is_kernel_address(vaddr_t va) {
 
 static inline constexpr uint8_t kHighVABit = 55;
 static inline constexpr uint64_t kUserBitMask = UINT64_C(1) << kHighVABit;
+static inline constexpr uint64_t kTbiBit = 56;
+static inline constexpr uint64_t kTbiMask = ~((UINT64_C(1) << kTbiBit) - 1);
 
 // This address refers to userspace if bit 55 is zero.
 static inline bool is_user_accessible(vaddr_t va) { return (va & kUserBitMask) == 0; }
@@ -54,5 +56,7 @@ static inline bool is_user_accessible_range(vaddr_t va, size_t len) {
 static inline bool arch_is_valid_user_pc(vaddr_t pc) {
   return (pc == 0) || (is_user_accessible(pc) && !is_kernel_address(pc));
 }
+
+static inline uintptr_t arch_detag_ptr(uintptr_t ptr) { return ptr & ~kTbiMask; }
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_VM_H_
