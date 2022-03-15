@@ -59,6 +59,7 @@ source_set("src") {
     "intel-hda-stream.h",
     "nhlt.cc",
     "nhlt.h",
+    "pci_regs.h",
     "utils.cc",
     "utils.h",
   ]
@@ -128,11 +129,15 @@ test("controller_test") {
     "intel-dsp-ipc-test.cc",
     "intel-dsp-modules-test.cc",
     "intel-dsp-topology-test.cc",
+    "intel-hda-controller-test.cc",
     "nhlt_test.cc",
   ]
   deps = [
     ":src",
     "//sdk/lib/fdio",
+    "//src/devices/lib/acpi/mock:mock-acpi",
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/mock-ddk",
     "//src/media/audio/drivers/lib/intel-hda",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",

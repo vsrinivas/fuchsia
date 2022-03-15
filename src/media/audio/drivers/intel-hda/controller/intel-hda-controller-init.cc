@@ -4,6 +4,7 @@
 
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -22,6 +23,7 @@
 #include "intel-dsp.h"
 #include "intel-hda-controller.h"
 #include "intel-hda-stream.h"
+#include "pci_regs.h"
 #include "utils.h"
 
 namespace audio {
@@ -37,6 +39,33 @@ constexpr zx_duration_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC = ZX_USEC(521);  // 
 constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
 }  // namespace
 
+void IntelHDAController::UpdateMiscbdcge(bool enable) {
+  ddk::Pci pci(pci_);
+  uint32_t cgctl = 0;
+  pci.ConfigRead32(kPciRegCgctl, &cgctl);
+  cgctl &= ~kPciRegCgctlBitMaskMiscbdcge;
+  cgctl |= enable ? kPciRegCgctlBitMaskMiscbdcge : 0;
+  pci.ConfigWrite32(kPciRegCgctl, cgctl);
+}
+
+void IntelHDAController::PreResetControllerHardware() {
+  // Clear CGCTL's MISCBDCGE for Skylake/Kabylake systems.
+  if ((pci_dev_info_.vendor_id == INTEL_HDA_PCI_VID) &&
+      (pci_dev_info_.device_id == INTEL_HDA_PCI_DID_KABYLAKE ||
+       pci_dev_info_.device_id == INTEL_HDA_PCI_DID_SKYLAKE)) {
+    UpdateMiscbdcge(false);
+  }
+}
+
+void IntelHDAController::PostResetControllerHardware() {
+  // Set CGCTL's MISCBDCGE for Skylake/Kabylake systems.
+  if ((pci_dev_info_.vendor_id == INTEL_HDA_PCI_VID) &&
+      (pci_dev_info_.device_id == INTEL_HDA_PCI_DID_KABYLAKE ||
+       pci_dev_info_.device_id == INTEL_HDA_PCI_DID_SKYLAKE)) {
+    UpdateMiscbdcge(true);
+  }
+}
+
 // Get the version of the hardware.
 //
 // The HDA_REG_GCTL_HWINIT bit must be confirmed to be "1" prior to calling this function.
@@ -44,9 +73,12 @@ IntelHDAController::HdaVersion IntelHDAController::GetHardwareVersion() {
   return HdaVersion{.major = REG_RD(&regs()->vmaj), .minor = REG_RD(&regs()->vmin)};
 }
 
-zx_status_t IntelHDAController::ResetControllerHW() {
+zx_status_t IntelHDAController::ResetControllerHardware() {
   zx_status_t res;
 
+  PreResetControllerHardware();
+
+  auto cleanup = fit::defer([this]() { PostResetControllerHardware(); });
   // Are we currently being held in reset?  If not, try to make sure that all
   // of our DMA streams are stopped and have been reset (but are not being
   // held in reset) before cycling the controller.  Anecdotally, holding a
@@ -572,24 +604,28 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   }
 
   // Completely reset the hardware
-  res = ResetControllerHW();
-  if (res != ZX_OK)
+  res = ResetControllerHardware();
+  if (res != ZX_OK) {
     return res;
+  }
 
   // Setup interrupts and enable bus mastering.
   res = SetupPCIInterrupts();
-  if (res != ZX_OK)
+  if (res != ZX_OK) {
     return res;
+  }
 
   // Allocate and set up our stream descriptors.
   res = SetupStreamDescriptors();
-  if (res != ZX_OK)
+  if (res != ZX_OK) {
     return res;
+  }
 
   // Allocate and set up the codec communication ring buffers (CORB/RIRB)
   res = SetupCommandBuffer();
-  if (res != ZX_OK)
+  if (res != ZX_OK) {
     return res;
+  }
 
   // Generate a device name, initialize our device structure, and attempt to
   // publish our device.

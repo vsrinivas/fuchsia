@@ -67,7 +67,12 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   static zx_status_t DriverInit(void** out_ctx);
   static zx_status_t DriverBind(void* ctx, zx_device_t* device);
+  static zx_status_t BindWithAcpi(void* ctx, zx_device_t* device, acpi::Client acpi_client);
   static void DriverRelease(void* ctx);
+
+ protected:
+  zx_status_t ResetControllerHardware();             // Protected for unit testing.
+  zx_status_t SetupPCIDevice(zx_device_t* pci_dev);  // Protected for unit testing.
 
  private:
   enum class State : uint32_t {
@@ -123,8 +128,6 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   // Methods used during initialization
   zx_status_t InitInternal(zx_device_t* pci_dev);
-  zx_status_t ResetControllerHW();
-  zx_status_t SetupPCIDevice(zx_device_t* pci_dev);
   zx_status_t SetupPCIInterrupts();
   zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
   zx_status_t SetupCommandBufferSize(MMIO_PTR uint8_t* size_reg, unsigned int* entry_count);
@@ -151,6 +154,10 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   // Thunk for interacting with client channels
   zx_status_t ProcessClientRequest(Channel* channel);
   zx_status_t SnapshotRegs(Channel* channel, const ihda_controller_snapshot_regs_req_t& req);
+
+  void UpdateMiscbdcge(bool enable);
+  void PreResetControllerHardware();
+  void PostResetControllerHardware();
 
   // VMAR for memory mapped registers.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;

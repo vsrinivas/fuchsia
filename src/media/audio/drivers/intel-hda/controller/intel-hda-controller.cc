@@ -387,9 +387,14 @@ zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
   if (acpi.is_error()) {
     return acpi.error_value();
   }
+  return BindWithAcpi(ctx, device, std::move(acpi.value()));
+}
+
+zx_status_t IntelHDAController::BindWithAcpi(void* ctx, zx_device_t* device,
+                                             acpi::Client acpi_client) {
   fbl::AllocChecker ac;
   fbl::RefPtr<IntelHDAController> controller(
-      fbl::AdoptRef(new (&ac) IntelHDAController(std::move(acpi.value()))));
+      fbl::AdoptRef(new (&ac) IntelHDAController(std::move(acpi_client))));
 
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
