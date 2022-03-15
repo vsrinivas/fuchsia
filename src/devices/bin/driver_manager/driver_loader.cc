@@ -67,6 +67,44 @@ MatchedCompositeDevice CreateMatchedCompositeDevice(
   return composite;
 }
 
+// TODO(fxb/95268): Move common composite device fields in driver_index.fidl
+// into a separate struct. This will allow us to reduce the duplicate code
+// between CreateMatchedDeviceGroupInfo() and CreateMatchedCompositeDevice().
+zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
+    fdf::wire::MatchedDeviceGroupInfo device_group_info) {
+  if (!device_group_info.has_topological_path()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  MatchedCompositeDevice composite = {};
+  if (device_group_info.has_num_nodes()) {
+    composite.num_nodes = device_group_info.num_nodes();
+  }
+
+  if (device_group_info.has_node_index()) {
+    composite.node = device_group_info.node_index();
+  }
+
+  if (device_group_info.has_composite_name()) {
+    composite.name = std::string(device_group_info.composite_name().data(),
+                                 device_group_info.composite_name().size());
+  }
+
+  if (device_group_info.has_node_names()) {
+    std::vector<std::string> names;
+    for (auto& name : device_group_info.node_names()) {
+      names.push_back(std::string(name.data(), name.size()));
+    }
+    composite.node_names = std::move(names);
+  }
+
+  return zx::ok(MatchedDeviceGroupInfo{
+      .topological_path = std::string(device_group_info.topological_path().data(),
+                                      device_group_info.topological_path().size()),
+      .composite = composite,
+  });
+}
+
 }  // namespace
 
 DriverLoader::~DriverLoader() {
@@ -293,8 +331,15 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   const auto& drivers = result->result.response().drivers;
 
   for (auto driver : drivers) {
-    // TODO(fxb/91510): Support device groups.
     if (driver.is_device_group()) {
+      auto device_group = CreateMatchedDeviceGroupInfo(driver.device_group());
+      if (device_group.is_error()) {
+        LOGF(ERROR,
+             "DriverIndex: MatchDriverV1 response is missing fields in MatchedDeviceGroupInfo");
+        continue;
+      }
+
+      matched_drivers.push_back(device_group.value());
       continue;
     }
 

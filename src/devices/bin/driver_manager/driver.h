@@ -37,8 +37,13 @@ struct MatchedCompositeDriverInfo {
   MatchedDriverInfo driver_info;
 };
 
-// TODO(fxb/91510): Support device groups.
-typedef std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo> MatchedDriver;
+struct MatchedDeviceGroupInfo {
+  std::string topological_path;
+  MatchedCompositeDevice composite;
+};
+
+using MatchedDriver =
+    std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo, MatchedDeviceGroupInfo>;
 
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;

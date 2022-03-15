@@ -15,6 +15,8 @@
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
+namespace fdf = fuchsia_driver_framework;
+
 class FakeResolver : public internal::PackageResolverInterface {
  public:
   zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override {
@@ -29,7 +31,7 @@ class FakeResolver : public internal::PackageResolverInterface {
   std::map<std::string, std::unique_ptr<Driver>> map;
 };
 
-class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
+class FakeDriverLoaderIndex final : public fidl::WireServer<fdf::DriverIndex> {
  public:
   void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -40,23 +42,27 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_frame
     completer.Reply();
   }
 
-  // The fake driver index is used only for drivers-as-components and so it
-  // doesn't need any V1 APIs.
   void MatchDriversV1(MatchDriversV1RequestView request,
                       MatchDriversV1Completer::Sync& completer) override {
     fidl::Arena allocator;
-    fidl::VectorView<fuchsia_driver_framework::wire::MatchedDriver> drivers(allocator,
-                                                                            driver_urls.size());
+    fidl::VectorView<fdf::wire::MatchedDriver> drivers(allocator,
+                                                       driver_urls.size() + device_groups.size());
     size_t index = 0;
     for (auto& driver : driver_urls) {
-      auto driver_info = fuchsia_driver_framework::wire::MatchedDriverInfo(allocator);
+      auto driver_info = fdf::wire::MatchedDriverInfo(allocator);
       driver_info.set_driver_url(fidl::ObjectView<fidl::StringView>(allocator, allocator, driver));
 
-      drivers[index] = fuchsia_driver_framework::wire::MatchedDriver::WithDriver(
-          fidl::ObjectView<fuchsia_driver_framework::wire::MatchedDriverInfo>(allocator,
-                                                                              driver_info));
+      drivers[index] = fdf::wire::MatchedDriver::WithDriver(
+          fidl::ObjectView<fdf::wire::MatchedDriverInfo>(allocator, driver_info));
       index++;
     }
+
+    for (auto& device_group : device_groups) {
+      drivers[index] = fdf::wire::MatchedDriver::WithDeviceGroup(
+          fidl::ObjectView<fdf::wire::MatchedDeviceGroupInfo>(allocator, device_group));
+      index++;
+    }
+
     completer.ReplySuccess(drivers);
   }
 
@@ -66,16 +72,17 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_frame
   }
 
   std::vector<std::string> driver_urls;
+  std::vector<fdf::wire::MatchedDeviceGroupInfo> device_groups;
 };
 
 class DriverLoaderTest : public zxtest::Test {
  public:
   void SetUp() override {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_driver_framework::DriverIndex>();
+    auto endpoints = fidl::CreateEndpoints<fdf::DriverIndex>();
     ASSERT_FALSE(endpoints.is_error());
     fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &driver_index_server);
-    driver_index = fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex>(
-        std::move(endpoints->client), loop.dispatcher());
+    driver_index =
+        fidl::WireSharedClient<fdf::DriverIndex>(std::move(endpoints->client), loop.dispatcher());
   }
 
   void TearDown() override {}
@@ -83,7 +90,7 @@ class DriverLoaderTest : public zxtest::Test {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
   FakeDriverLoaderIndex driver_index_server;
   FakeResolver resolver;
-  fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex> driver_index;
+  fidl::WireSharedClient<fdf::DriverIndex> driver_index;
 };
 
 TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
@@ -107,7 +114,7 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   loop.StartThread("fidl-thread");
 
   DriverLoader::MatchDeviceConfig config;
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
   ASSERT_EQ(drivers.size(), 1);
   ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
@@ -138,7 +145,7 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
   sync_completion_wait(&base_drivers, ZX_TIME_INFINITE);
 
   DriverLoader::MatchDeviceConfig config;
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 2);
@@ -167,7 +174,7 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
   loop.StartThread("fidl-thread");
 
   DriverLoader::MatchDeviceConfig config;
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 2);
@@ -196,7 +203,7 @@ TEST_F(DriverLoaderTest, TestLibname) {
 
   DriverLoader::MatchDeviceConfig config;
   config.libname = name2;
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 1);
@@ -224,7 +231,7 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   // We can also match libname by the path that the URL turns into.
   DriverLoader::MatchDeviceConfig config;
   config.libname = "/boot/driver/driver2.so";
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 1);
@@ -259,10 +266,133 @@ TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   // We can also match libname by the path that the URL turns into.
   DriverLoader::MatchDeviceConfig config;
   config.only_return_base_and_fallback_drivers = true;
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 2);
   ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name1);
   ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, name3);
+}
+
+TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
+  fidl::Arena allocator;
+
+  // Add first device group.
+  fidl::VectorView<fidl::StringView> node_names_1(allocator, 2);
+  node_names_1[0] = fidl::StringView(allocator, "whimbrel");
+  node_names_1[1] = fidl::StringView(allocator, "curlew");
+
+  auto device_group_1 = fdf::wire::MatchedDeviceGroupInfo(allocator);
+  device_group_1.set_topological_path(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_1"));
+  device_group_1.set_composite_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_1"));
+  device_group_1.set_node_names(
+      fidl::ObjectView<fidl::VectorView<fidl::StringView>>(allocator, std::move(node_names_1)));
+  device_group_1.set_num_nodes(2);
+  device_group_1.set_node_index(1);
+  driver_index_server.device_groups.push_back(device_group_1);
+
+  // Add second device group.
+  fidl::VectorView<fidl::StringView> node_names_2(allocator, 1);
+  node_names_2[0] = fidl::StringView(allocator, "sanderling");
+
+  auto device_group_2 = fdf::wire::MatchedDeviceGroupInfo(allocator);
+  device_group_2.set_topological_path(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group_2"));
+  device_group_2.set_composite_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group_2"));
+  device_group_2.set_node_names(
+      fidl::ObjectView<fidl::VectorView<fidl::StringView>>(allocator, std::move(node_names_1)));
+  device_group_2.set_num_nodes(1);
+  device_group_2.set_node_index(0);
+  driver_index_server.device_groups.push_back(device_group_2);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false);
+  loop.StartThread("fidl-thread");
+
+  DriverLoader::MatchDeviceConfig config;
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
+  ASSERT_EQ(drivers.size(), 2);
+
+  auto device_group_result_1 = std::get<MatchedDeviceGroupInfo>(drivers[0]);
+  ASSERT_STREQ("test/path/device_group_1", device_group_result_1.topological_path);
+  ASSERT_EQ(1, device_group_result_1.composite.node);
+  ASSERT_EQ(2, device_group_result_1.composite.num_nodes);
+  ASSERT_STREQ("device_group_1", device_group_result_1.composite.name);
+
+  auto device_group_result_2 = std::get<MatchedDeviceGroupInfo>(drivers[1]);
+  ASSERT_STREQ("test/path/device_group_2", device_group_result_2.topological_path);
+  ASSERT_EQ(0, device_group_result_2.composite.node);
+  ASSERT_EQ(1, device_group_result_2.composite.num_nodes);
+  ASSERT_STREQ("device_group_2", device_group_result_2.composite.name);
+}
+
+TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
+  fidl::Arena allocator;
+
+  fidl::VectorView<fidl::StringView> node_names(allocator, 2);
+  node_names[0] = fidl::StringView(allocator, "whimbrel");
+  node_names[1] = fidl::StringView(allocator, "curlew");
+
+  auto device_group = fdf::wire::MatchedDeviceGroupInfo(allocator);
+  device_group.set_topological_path(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "test/path/device_group"));
+  device_group.set_composite_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group"));
+  device_group.set_node_names(
+      fidl::ObjectView<fidl::VectorView<fidl::StringView>>(allocator, std::move(node_names)));
+  device_group.set_num_nodes(2);
+  device_group.set_node_index(1);
+
+  auto driver_name = "fuchsia_boot:///#driver.so";
+  driver_index_server.device_groups.push_back(device_group);
+  driver_index_server.driver_urls.push_back(driver_name);
+
+  auto driver = std::make_unique<Driver>();
+  driver->libname = driver_name;
+  resolver.map[driver_name] = std::move(driver);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false);
+  loop.StartThread("fidl-thread");
+
+  DriverLoader::MatchDeviceConfig config;
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
+  ASSERT_EQ(drivers.size(), 2);
+
+  // Check driver.
+  ASSERT_EQ(driver_name, std::get<MatchedDriverInfo>(drivers[0]).driver->libname);
+
+  // Check device group.
+  auto device_group_result = std::get<MatchedDeviceGroupInfo>(drivers[1]);
+  ASSERT_STREQ("test/path/device_group", device_group_result.topological_path);
+  ASSERT_EQ(1, device_group_result.composite.node);
+  ASSERT_EQ(2, device_group_result.composite.num_nodes);
+  ASSERT_STREQ("device_group", device_group_result.composite.name);
+}
+
+TEST_F(DriverLoaderTest, TestReturnDeviceGroupNoTopologicalPath) {
+  fidl::Arena allocator;
+
+  fidl::VectorView<fidl::StringView> node_names(allocator, 2);
+  node_names[0] = fidl::StringView(allocator, "whimbrel");
+
+  auto device_group = fdf::wire::MatchedDeviceGroupInfo(allocator);
+  device_group.set_composite_name(
+      fidl::ObjectView<fidl::StringView>(allocator, allocator, "device_group"));
+  device_group.set_num_nodes(1);
+  device_group.set_node_index(0);
+  driver_index_server.device_groups.push_back(device_group);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false);
+  loop.StartThread("fidl-thread");
+
+  DriverLoader::MatchDeviceConfig config;
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+  ASSERT_EQ(drivers.size(), 0);
 }
