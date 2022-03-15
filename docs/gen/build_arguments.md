@@ -140,7 +140,7 @@ be visible to Driver Manager. These package labels are also considered to be in 
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -148,7 +148,7 @@ From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -2753,7 +2753,7 @@ they must be separated into their own list.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -2761,7 +2761,7 @@ From //build/images/args.gni:85
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -3399,7 +3399,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:66
 
 **Overridden from the default:** `[]`
 
@@ -3407,7 +3407,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:63
+From //products/bringup.gni:66
 
 **Overridden from the default:** `[]`
 
@@ -3493,17 +3493,17 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:24
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:userboot-next--skip_bootsvc", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:43
 
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//products/kernel_cmdline:userboot-next--skip_bootsvc", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:40
+From //products/bringup.gni:43
 
 **Overridden from the default:** `[]`
 
@@ -3514,7 +3514,7 @@ Passed as the `product` key in the product assembly config.
 
 **Current value for `target_cpu = "arm64"`:** `{ }`
 
-From //products/bringup.gni:67
+From //products/bringup.gni:70
 
 **Overridden from the default:** `{ }`
 
@@ -3522,7 +3522,7 @@ From //build/product.gni:33
 
 **Current value for `target_cpu = "x64"`:** `{ }`
 
-From //products/bringup.gni:67
+From //products/bringup.gni:70
 
 **Overridden from the default:** `{ }`
 
@@ -3823,7 +3823,7 @@ an extension mechanism for SDK bits outside of the main repository.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:65
+From //products/bringup.gni:68
 
 **Overridden from the default:** `[]`
 
@@ -3831,7 +3831,7 @@ From //BUILD.gn:64
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:65
+From //products/bringup.gni:68
 
 **Overridden from the default:** `[]`
 
