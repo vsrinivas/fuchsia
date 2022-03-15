@@ -39,6 +39,7 @@ fuchsia_driver_component("ddk-fallback-test") {
   deps = [ ":ddk-fallback-test-driver" ]
   info = "ddk-fallback-test-info.json"
   colocate = true
+  fallback = true
 }
 
 fuchsia_driver("ddk-not-fallback-test-driver") {

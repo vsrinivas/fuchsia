@@ -45,22 +45,40 @@ class FallbackTest : public zxtest::Test {
   IsolatedDevmgr devmgr_;
 };
 
-TEST_F(FallbackTest, TestNotFallbackTakesPriority) {
+TEST_F(FallbackTest, TestNotFallbackTakesPriorityDfv1) {
   IsolatedDevmgr::Args args;
+  args.use_driver_framework_v2 = false;
   ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
   ASSERT_NO_FATAL_FAILURE(CheckDriverBound(false));
 }
 
-TEST_F(FallbackTest, TestFallbackBoundWhenAlone) {
+TEST_F(FallbackTest, TestFallbackBoundWhenAloneDfv1) {
   IsolatedDevmgr::Args args;
+  args.use_driver_framework_v2 = false;
   args.driver_disable.push_back("ddk_not_fallback_test");
   ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
   ASSERT_NO_FATAL_FAILURE(CheckDriverBound(true));
 }
 
-TEST_F(FallbackTest, TestFallbackBoundWhenEager) {
+TEST_F(FallbackTest, TestFallbackBoundWhenEagerDfv1) {
   IsolatedDevmgr::Args args;
+  args.use_driver_framework_v2 = false;
   args.driver_bind_eager.push_back("ddk_fallback_test");
+  ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
+  ASSERT_NO_FATAL_FAILURE(CheckDriverBound(true));
+}
+
+TEST_F(FallbackTest, TestNotFallbackTakesPriorityDfv2) {
+  IsolatedDevmgr::Args args;
+  args.use_driver_framework_v2 = true;
+  ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
+  ASSERT_NO_FATAL_FAILURE(CheckDriverBound(false));
+}
+
+TEST_F(FallbackTest, TestFallbackBoundWhenAloneDfv2) {
+  IsolatedDevmgr::Args args;
+  args.use_driver_framework_v2 = true;
+  args.driver_disable.push_back("fuchsia-boot:///#meta/ddk-not-fallback-test.cm");
   ASSERT_NO_FATAL_FAILURE(LaunchDevmgr(std::move(args)));
   ASSERT_NO_FATAL_FAILURE(CheckDriverBound(true));
 }
