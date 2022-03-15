@@ -28,7 +28,10 @@ config("compiler") {
     "-nostdlib++",
     "${rebased_clang_prefix}/../lib/libc++.a",
   ]
-  configs = [ ":sysroot" ]
+  configs = [
+    ":sysroot",
+    ":clang_defaults",
+  ]
 
   rustflags = [
     "-Clinker=$rebased_clang_prefix/clang++",
@@ -44,6 +47,27 @@ config("sysroot") {
   cflags = [ "--sysroot=$sysroot" ]
   ldflags = cflags
   asmflags = cflags
+
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
+}
+
+# These flags are enabled by default in Fuchsia's Clang toolchain, but we set
+# them explicitly to support other Clang toolchains and Clang-based tools.
+config("clang_defaults") {
+  cflags_cc = [
+    # Use libc++ as the C++ standard library.
+    "-stdlib=libc++",
+  ]
+  ldflags = [
+    # Use libc++ as the C++ standard library.
+    "-stdlib=libc++",
+
+    # Use compiler-rt as the compiler runtime.
+    "-rtlib=compiler-rt",
+  ]
 
   rustflags = []
   foreach(flag, ldflags) {
