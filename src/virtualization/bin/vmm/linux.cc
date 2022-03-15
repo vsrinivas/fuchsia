@@ -474,12 +474,12 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
     status = add_memory_entry(dtb, memory_off, addr, size);
   };
   for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
-    // Do not use device memory when yielding normal memory.
-    if (spec.policy != fuchsia::virtualization::MemoryPolicy::HOST_DEVICE) {
-      dev_mem.YieldInverseRange(spec.base, spec.size, yield);
-      if (status != ZX_OK) {
-        return status;
-      }
+    // MemorySpec is being deprecated, see fxb/94972 for details.
+    FX_CHECK(spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED)
+        << "Only guest cached memory can be specified";
+    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
+    if (status != ZX_OK) {
+      return status;
     }
   }
 

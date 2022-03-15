@@ -96,16 +96,14 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  FX_CHECK(!cfg.has_memory()) << "User defined memory regions are deprecated";
+  FX_CHECK(cfg.has_guest_memory()) << "A guest memory value must be provided";
+
   // Temporarily convert guest_memory back to a memory region while we deprecate these user
   // defined memory regions. See fxb/94972 for details.
-  if (cfg.has_guest_memory()) {
-    FX_CHECK(!cfg.has_memory())
-        << "User defined memory regions must not be provided if guest_memory is set";
-    cfg.mutable_memory()->push_back(
-        {.base = 0x0,
-         .size = cfg.guest_memory(),
-         .policy = fuchsia::virtualization::MemoryPolicy::GUEST_CACHED});
-  }
+  cfg.mutable_memory()->push_back({.base = 0x0,
+                                   .size = cfg.guest_memory(),
+                                   .policy = fuchsia::virtualization::MemoryPolicy::GUEST_CACHED});
 
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
@@ -117,12 +115,6 @@ int main(int argc, char** argv) {
     if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
       FX_LOGS(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
-    }
-    // Add device memory range.
-    if (spec.policy == fuchsia::virtualization::MemoryPolicy::HOST_DEVICE &&
-        !dev_mem.AddRange(spec.base, spec.size)) {
-      FX_LOGS(ERROR) << "Failed to add device memory at 0x" << std::hex << spec.base;
-      return ZX_ERR_INTERNAL;
     }
   }
 

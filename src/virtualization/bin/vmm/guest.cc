@@ -31,15 +31,6 @@ static constexpr uint32_t trap_kind(TrapType type) {
   }
 }
 
-static constexpr uint32_t cache_policy(fuchsia::virtualization::MemoryPolicy policy) {
-  switch (policy) {
-    case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
-      return ZX_CACHE_POLICY_UNCACHED_DEVICE;
-    default:
-      return ZX_CACHE_POLICY_CACHED;
-  }
-}
-
 zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory) {
   zx::resource hypervisor_resource;
   zx_status_t status = get_hypervisor_resource(&hypervisor_resource);
@@ -53,7 +44,6 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
     return status;
   }
 
-  zx::resource mmio_resource;
   zx::resource vmex_resource;
   for (const fuchsia::virtualization::MemorySpec& spec : memory) {
     zx::vmo vmo;
@@ -62,26 +52,6 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         status = zx::vmo::create(spec.size, 0, &vmo);
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "Failed to create VMO " << zx_status_get_string(status);
-          return status;
-        }
-        break;
-      case fuchsia::virtualization::MemoryPolicy::HOST_CACHED:
-      case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
-        if (!mmio_resource) {
-          status = get_mmio_resource(&mmio_resource);
-          if (status != ZX_OK) {
-            FX_LOGS(ERROR) << "Failed to get mmio resource " << zx_status_get_string(status);
-            return status;
-          }
-        }
-        status = zx::vmo::create_physical(mmio_resource, spec.base, spec.size, &vmo);
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to create physical VMO " << zx_status_get_string(status);
-          return status;
-        }
-        status = vmo.set_cache_policy(cache_policy(spec.policy));
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to set cache policy on VMO " << zx_status_get_string(status);
           return status;
         }
         break;

@@ -7,6 +7,8 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <zircon/boot/image.h>
 
+#include <sdk/lib/syslog/cpp/macros.h>
+
 std::vector<zbi_mem_range_t> ZbiMemoryRanges(
     const std::vector<fuchsia::virtualization::MemorySpec>& specs, size_t mem_size,
     const DevMem& dev_mem) {
@@ -20,10 +22,10 @@ std::vector<zbi_mem_range_t> ZbiMemoryRanges(
   };
 
   for (const fuchsia::virtualization::MemorySpec& spec : specs) {
-    // Do not use device memory when yielding normal memory.
-    if (spec.policy != fuchsia::virtualization::MemoryPolicy::HOST_DEVICE) {
-      dev_mem.YieldInverseRange(spec.base, spec.size, yield);
-    }
+    // MemorySpec is being deprecated, see fxb/94972 for details.
+    FX_CHECK(spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED)
+        << "Only guest cached memory can be specified";
+    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
   }
 
   // Zircon only supports a limited number of peripheral ranges so for any
