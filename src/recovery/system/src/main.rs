@@ -256,7 +256,7 @@ impl RenderResources {
                         countdown_text_size,
                         Point::zero(),
                         TextFacetOptions {
-                            color: Color::green(),
+                            color: Color::white(),
                             horizontal_alignment: TextHorizontalAlignment::Center,
                             vertical_alignment: TextVerticalAlignment::Bottom,
                             visual: true,
