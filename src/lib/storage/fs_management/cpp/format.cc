@@ -15,6 +15,7 @@
 #include <pretty/hexdump.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 namespace fs_management {
 namespace {
@@ -57,11 +58,6 @@ enum DiskFormatLogVerbosity {
 };
 
 DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
-  if (lseek(fd, 0, SEEK_SET) != 0) {
-    fprintf(stderr, "DetectDiskFormat: Cannot seek to start of device.\n");
-    return kDiskFormatUnknown;
-  }
-
   fdio_cpp::UnownedFdioCaller caller(fd);
   auto resp = fidl::WireCall<fblock::Block>(caller.channel())->GetInfo();
   if (!resp.ok() || resp.value().status != ZX_OK) {
@@ -91,7 +87,8 @@ DiskFormat DetectDiskFormatImpl(int fd, DiskFormatLogVerbosity verbosity) {
   ZX_DEBUG_ASSERT_MSG(buffer_size > 0, "Expected buffer_size to be greater than 0\n");
 
   uint8_t data[buffer_size];
-  if (read(fd, data, buffer_size) != static_cast<ssize_t>(buffer_size)) {
+  auto result = block_client::SingleReadBytes(fd, data, buffer_size, 0);
+  if (result != ZX_OK) {
     fprintf(stderr, "DetectDiskFormat: Error reading block device.\n");
     return kDiskFormatUnknown;
   }
