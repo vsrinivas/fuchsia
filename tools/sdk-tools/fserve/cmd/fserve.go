@@ -15,6 +15,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -407,7 +408,7 @@ func (s *ffxServer) startServer(ctx context.Context, sdk sdkProvider) error {
 func (s *ffxServer) registerRepository(ctx context.Context, sdk sdkProvider) error {
 	targetAddress := s.targetAddress
 	if s.sshPort != "" {
-		targetAddress = fmt.Sprintf("[%s]:%s", targetAddress, s.sshPort)
+		targetAddress = net.JoinHostPort(targetAddress, s.sshPort)
 	}
 
 	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until

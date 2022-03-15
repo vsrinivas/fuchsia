@@ -1093,6 +1093,50 @@ func TestMain(t *testing.T) {
 			expectedFFXRepositoryAddArgs:         "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "some-device/packages/amber-files"),
 			expectedFFXRepositoryRegisterArgs:    "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com --storage-type persistent",
 		},
+		{
+			testName:               "server mode ffx supports ipv4 and custom ssh port",
+			args:                   []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
+			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["127.0.0.1"]}]`,
+			ffxTargetGetSSHAddress: `127.0.0.1:10002`,
+			deviceConfiguration: `{
+				"remote-target-name": {
+					"bucket":"fuchsia-bucket",
+					"device-name":"remote-target-name",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"default": "true",
+					"device-port": "10002"
+				}
+			}`,
+			ffxConfigServerMode:                  "\"ffx\"",
+			expectedFFXRepositoryServerStopArgs:  "--config ffx_repository=true repository server stop",
+			expectedFFXRepositoryServerStartArgs: "--config ffx_repository=true repository server start",
+			expectedFFXRepositoryAddArgs:         "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "custom/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs:    "--config ffx_repository=true --target 127.0.0.1:10002 target repository register --repository devhost --alias fuchsia.com",
+		},
+		{
+			testName:               "server mode ffx supports ipv6 and custom ssh port",
+			args:                   []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
+			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:10002`,
+			deviceConfiguration: `{
+				"remote-target-name": {
+					"bucket":"fuchsia-bucket",
+					"device-name":"remote-target-name",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"default": "true",
+					"device-port": "10002"
+				}
+			}`,
+			ffxConfigServerMode:                  "\"ffx\"",
+			expectedFFXRepositoryServerStopArgs:  "--config ffx_repository=true repository server stop",
+			expectedFFXRepositoryServerStartArgs: "--config ffx_repository=true repository server start",
+			expectedFFXRepositoryAddArgs:         "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "custom/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs:    "--config ffx_repository=true --target [::1f]:10002 target repository register --repository devhost --alias fuchsia.com",
+		},
 	}
 
 	for _, test := range tests {
