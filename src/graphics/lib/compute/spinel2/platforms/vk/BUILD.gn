@@ -5,7 +5,7 @@
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
 #
-# Spinel Vulkan sources
+# Spinel configs
 #
 config("config") {
   include_dirs = [ "include" ]
@@ -26,7 +26,10 @@ config("config_disable_trace") {
   defines = [ "SPN_VK_DISABLE_TRACE" ]
 }
 
-source_set("vk") {
+#
+# Spinel headers
+#
+source_set("vk_headers") {
   public_configs = [
     ":config",
     ":config_debug_utils",
@@ -34,6 +37,20 @@ source_set("vk") {
   public = [
     "include/spinel/platforms/vk/spinel_vk.h",
     "include/spinel/platforms/vk/spinel_vk_types.h",
+  ]
+  sources = [
+    "include/spinel/platforms/vk/spinel_vk.h",
+    "include/spinel/platforms/vk/spinel_vk_types.h",
+  ]
+}
+
+#
+# Spinel sources
+#
+source_set("vk") {
+  public_configs = [
+    ":config",
+    ":config_debug_utils",
   ]
   sources = [
     "allocator.c",
@@ -49,8 +66,6 @@ source_set("vk") {
     "expand_x.h",
     "handle_pool.c",
     "handle_pool.h",
-    "include/spinel/platforms/vk/spinel_vk.h",
-    "include/spinel/platforms/vk/spinel_vk_types.h",
     "path_builder_impl.c",
     "path_builder_impl.h",
     "queue_pool.c",
@@ -73,6 +88,7 @@ source_set("vk") {
   ]
   include_dirs = [ "${graphics_compute_dir}/spinel2" ]
   public_deps = [
+    ":vk_headers",
     "${graphics_compute_dir}/spinel2:spinel2",
     graphics_compute_vulkan_loader_target,
   ]

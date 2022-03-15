@@ -5,13 +5,16 @@
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
 #
-# Spinel library
+# Spinel config
 #
 config("config") {
   include_dirs = [ "include" ]
 }
 
-source_set("spinel2") {
+#
+# Spinel headers
+#
+source_set("spinel2_headers") {
   public_configs = [ ":config" ]
   public = [
     "include/spinel/spinel.h",
@@ -20,6 +23,19 @@ source_set("spinel2") {
     "include/spinel/spinel_result.h",
     "include/spinel/spinel_types.h",
   ]
+  sources = [
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_opcodes.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+  ]
+}
+
+#
+# Spinel sources
+#
+source_set("spinel2") {
   sources = [
     "composition.c",
     "composition.h",
@@ -45,40 +61,12 @@ source_set("spinel2") {
     "weakref.c",
     "weakref.h",
   ]
+  public_deps = [ ":spinel2_headers" ]
   deps = [ "${graphics_compute_dir}/common" ]
 
+  #
   # Platform-specific libraries and tests are
   # friends of this source set.
-  friend = [
-    "platforms/vk",
-    # "platforms/vk/tests",
-  ]
+  #
+  friend = [ "platforms/vk" ]
 }
-
-# group("spinel_ext_unittests") {
-#   testonly = true
-#   public_deps = [ "ext/svg2spinel:svg2spinel_unittests" ]
-# }
-
-# This group provides a target that tests can link against.  It
-# provides the Vulkan-based Spinel API, and the vk_find_targets loader
-# library that simply links all target files into the library itself
-# for easier deployments.
-
-# group("spinel_vk_for_tests") {
-#   public_deps = [
-#     ":spinel",
-#     "platforms/vk:vk",
-#     "platforms/vk:vk_find_target",
-#   ]
-# }
-
-# group("tests") {
-#   testonly = true
-#   public_deps = [ "platforms/vk/tests" ]
-# }
-
-# group("vk_unittests") {
-#   testonly = true
-#   public_deps = [ "platforms/vk/tests:vk_unittests" ]
-# }
