@@ -18,10 +18,21 @@
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
 
+// For devices that can have their addresses anywhere we run a dynamic
+// allocator that starts fairly high in the guest physical address space.
+constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
+
 enum class TrapType {
   MMIO_SYNC = 0,
   MMIO_BELL = 1,
   PIO_SYNC = 2,
+};
+
+struct GuestMemoryRegion {
+  // Base address of a region of guest physical address space.
+  zx_gpaddr_t base;
+  // Size of a region of guest physical address space in bytes.
+  uint64_t size;
 };
 
 class Guest {
@@ -38,7 +49,7 @@ class Guest {
   using VcpuArray = std::array<std::optional<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;
 
-  zx_status_t Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory);
+  zx_status_t Init(uint64_t guest_memory);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   const zx::guest& object() { return guest_; }
@@ -56,14 +67,23 @@ class Guest {
   // Signals an interrupt to the VCPUs indicated by |mask|.
   zx_status_t Interrupt(uint64_t mask, uint32_t vector);
 
+  // Returns zx_system_get_page_size aligned guest memory.
+  static uint64_t GetPageAlignedGuestMemory(uint64_t guest_memory);
+
+  // Generates guest memory regions with total size |guest_memory|, avoiding any device memory.
+  static void GenerateGuestMemoryRegions(uint64_t guest_memory,
+                                         std::vector<GuestMemoryRegion>* regions);
+
   const IoMappingList& mappings() const { return mappings_; }
   const VcpuArray& vcpus() const { return vcpus_; }
+  const std::vector<GuestMemoryRegion>& memory_regions() const { return memory_regions_; }
 
  private:
   zx::guest guest_;
   zx::vmar vmar_;
   PhysMem phys_mem_;
   IoMappingList mappings_;
+  std::vector<GuestMemoryRegion> memory_regions_;
 
   std::shared_mutex mutex_;
   VcpuArray vcpus_;

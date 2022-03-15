@@ -167,6 +167,7 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
 
 static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cfg,
                                   const PhysMem& phys_mem, const DevMem& dev_mem,
+                                  const std::vector<GuestMemoryRegion>& guest_mem,
                                   const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
   const size_t zbi_max = phys_mem.size() - zbi_off;
   cpp20::span<std::byte> zbi{phys_mem.aligned_as<std::byte>(zbi_off), zbi_max};
@@ -190,7 +191,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
     }
   }
 
-  std::vector<zbi_mem_range_t> zbi_ranges = ZbiMemoryRanges(cfg.memory(), phys_mem.size(), dev_mem);
+  std::vector<zbi_mem_range_t> zbi_ranges = ZbiMemoryRanges(guest_mem, phys_mem.size(), dev_mem);
   status = LogIfZbiError(
       image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG}, zbitl::AsBytes(zbi_ranges)),
       "Failed to append memory configuration");
@@ -256,8 +257,9 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
 }
 
 zx_status_t setup_zircon(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
-                         const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
-                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
+                         const DevMem& dev_mem, const std::vector<GuestMemoryRegion>& guest_mem,
+                         const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
+                         uintptr_t* boot_ptr) {
   fbl::unique_fd kernel_fd;
   zx_status_t status = fdio_fd_create(cfg->mutable_kernel()->TakeChannel().release(),
                                       kernel_fd.reset_and_get_address());
@@ -271,7 +273,7 @@ zx_status_t setup_zircon(fuchsia::virtualization::GuestConfig* cfg, const PhysMe
     return status;
   }
 
-  status = build_data_zbi(*cfg, phys_mem, dev_mem, devices, kRamdiskOffset);
+  status = build_data_zbi(*cfg, phys_mem, dev_mem, guest_mem, devices, kRamdiskOffset);
   if (status != ZX_OK) {
     return status;
   }

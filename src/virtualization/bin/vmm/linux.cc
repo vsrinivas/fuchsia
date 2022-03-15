@@ -14,7 +14,6 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/bits.h"
-#include "src/virtualization/bin/vmm/guest.h"
 
 __BEGIN_CDECLS
 #include <libfdt.h>
@@ -360,6 +359,7 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
 static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
                                     const fuchsia::virtualization::GuestConfig& cfg,
                                     const PhysMem& phys_mem, const DevMem& dev_mem,
+                                    const std::vector<GuestMemoryRegion>& guest_mem,
                                     const std::vector<PlatformDevice*>& devices,
                                     const std::string& cmdline, fbl::unique_fd dtb_overlay_fd,
                                     const size_t ramdisk_size) {
@@ -473,11 +473,8 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
     }
     status = add_memory_entry(dtb, memory_off, addr, size);
   };
-  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
-    // MemorySpec is being deprecated, see fxb/94972 for details.
-    FX_CHECK(spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED)
-        << "Only guest cached memory can be specified";
-    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
+  for (const GuestMemoryRegion& mem : guest_mem) {
+    dev_mem.YieldInverseRange(mem.base, mem.size, yield);
     if (status != ZX_OK) {
       return status;
     }
@@ -503,8 +500,9 @@ static std::string linux_cmdline(std::string cmdline) {
 }
 
 zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
-                        const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
-                        uintptr_t* guest_ip, uintptr_t* boot_ptr) {
+                        const DevMem& dev_mem, const std::vector<GuestMemoryRegion>& guest_mem,
+                        const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
+                        uintptr_t* boot_ptr) {
   fbl::unique_fd kernel_fd;
   zx_status_t status = fdio_fd_create(cfg->mutable_kernel()->TakeChannel().release(),
                                       kernel_fd.reset_and_get_address());
@@ -565,8 +563,8 @@ zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem
       FX_LOGS(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
-    status = load_device_tree(std::move(dtb_fd), *cfg, phys_mem, dev_mem, devices, cmdline,
-                              std::move(dtb_overlay_fd), ramdisk_size);
+    status = load_device_tree(std::move(dtb_fd), *cfg, phys_mem, dev_mem, guest_mem, devices,
+                              cmdline, std::move(dtb_overlay_fd), ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }

@@ -11,11 +11,11 @@
 #include <vector>
 
 #include "src/virtualization/bin/vmm/dev_mem.h"
+#include "src/virtualization/bin/vmm/guest.h"
 
 // Constructs an array of zbi_mem_range_t ranges describing the physical
 // memory layout.
-std::vector<zbi_mem_range_t> ZbiMemoryRanges(
-    const std::vector<fuchsia::virtualization::MemorySpec>& specs, size_t mem_size,
-    const DevMem& dev_mem);
+std::vector<zbi_mem_range_t> ZbiMemoryRanges(const std::vector<GuestMemoryRegion>& guest_mem,
+                                             size_t mem_size, const DevMem& dev_mem);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_MEMORY_H_

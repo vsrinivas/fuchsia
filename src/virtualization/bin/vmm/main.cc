@@ -67,10 +67,6 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #error Unknown architecture.
 #endif
 
-// For devices that can have their addresses anywhere we run a dynamic
-// allocator that starts fairly high in the guest physical address space.
-static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
-
 static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
   static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
   zx_gpaddr_t ret = next_device_addr;
@@ -96,32 +92,16 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  FX_CHECK(!cfg.has_memory()) << "User defined memory regions are deprecated";
-  FX_CHECK(cfg.has_guest_memory()) << "A guest memory value must be provided";
-
-  // Temporarily convert guest_memory back to a memory region while we deprecate these user
-  // defined memory regions. See fxb/94972 for details.
-  cfg.mutable_memory()->push_back({.base = 0x0,
-                                   .size = cfg.guest_memory(),
-                                   .policy = fuchsia::virtualization::MemoryPolicy::GUEST_CACHED});
-
+  DevMem dev_mem;
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
 
-  DevMem dev_mem;
-  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
-    // Avoid a collision between static and dynamic address assignment.
-    if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
-      FX_LOGS(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
-      return ZX_ERR_INVALID_ARGS;
-    }
-  }
-
   std::optional guest_opt = std::make_optional<Guest>();
   Guest& guest = guest_opt.value();
 
-  status = guest.Init(cfg.memory());
+  FX_CHECK(cfg.has_guest_memory()) << "A guest memory value must be provided";
+  status = guest.Init(cfg.guest_memory());
   if (status != ZX_OK) {
     return status;
   }
@@ -474,10 +454,12 @@ int main(int argc, char** argv) {
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel_type()) {
     case fuchsia::virtualization::KernelType::ZIRCON:
-      status = setup_zircon(&cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+      status = setup_zircon(&cfg, guest.phys_mem(), dev_mem, guest.memory_regions(),
+                            platform_devices, &entry, &boot_ptr);
       break;
     case fuchsia::virtualization::KernelType::LINUX:
-      status = setup_linux(&cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+      status = setup_linux(&cfg, guest.phys_mem(), dev_mem, guest.memory_regions(),
+                           platform_devices, &entry, &boot_ptr);
       break;
     default:
       FX_LOGS(ERROR) << "Unknown kernel";

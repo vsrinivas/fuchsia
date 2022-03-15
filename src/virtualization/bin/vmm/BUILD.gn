@@ -189,6 +189,7 @@ executable("vmm_unittests") {
 
   sources = [
     "dev_mem_unittest.cc",
+    "guest_unittest.cc",
     "pci_unittest.cc",
     "phys_mem_fake.h",
     "virtio_device_fake.h",
