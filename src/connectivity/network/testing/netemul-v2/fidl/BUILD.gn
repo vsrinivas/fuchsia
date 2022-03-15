@@ -17,7 +17,6 @@ fidl("fuchsia.netemul") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.url",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//zircon/vdso/zx",
   ]
 }

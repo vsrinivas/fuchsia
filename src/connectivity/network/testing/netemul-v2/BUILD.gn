@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "runner:tests",
     "service:tests",
+    "sync-manager:compile",
   ]
 }

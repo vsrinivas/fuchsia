@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "sync_manager"
+  sources = [ "main.cc" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/connectivity/network/testing/netemul/lib/sync:sync_service",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("sync-manager") {
+  testonly = true
+  manifest = "meta/sync-manager.cml"
+  deps = [ ":bin" ]
+}
+
+# TODO(https://fxbug.dev/92176): remove once this is connected to the build
+# graph elsewhere, e.g. through usage in the configurable netstack tests.
+group("compile") {
+  testonly = true
+  deps = [ ":sync-manager" ]
+}

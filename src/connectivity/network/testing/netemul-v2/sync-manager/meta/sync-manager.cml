@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/sync_manager",
+    },
+    capabilities: [
+        { protocol: "fuchsia.netemul.sync.SyncManager" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.netemul.sync.SyncManager",
+            from: "self",
+        },
+    ],
+}

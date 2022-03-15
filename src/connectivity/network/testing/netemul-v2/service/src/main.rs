@@ -324,7 +324,6 @@ async fn create_realm_instance(
                                 });
                                 UniqueCapability::DevFs { name: capability_name.into() }
                             }
-                            fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
                                 let () = route_network_context_to_component(
                                     &builder,
@@ -979,9 +978,6 @@ async fn handle_sandbox(
                         .root
                         .connect_request_to_protocol_at_exposed_dir(network_context)
                         .unwrap_or_else(|e| error!("error getting NetworkContext: {:?}", e))
-                }
-                SandboxRequest::GetSyncManager { sync_manager: _, control_handle: _ } => {
-                    todo!("https://fxbug.dev/72403): route netemul-provided sync manager")
                 }
             }
             Ok(())

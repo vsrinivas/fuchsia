@@ -6,7 +6,6 @@ library fuchsia.netemul;
 using fuchsia.component;
 using fuchsia.io;
 using fuchsia.netemul.network;
-using fuchsia.netemul.sync;
 using fuchsia.url;
 using zx;
 
@@ -16,9 +15,8 @@ type Empty = struct {};
 ///
 /// Every connection to `Sandbox` represents a self-contained context where
 /// [`fuchsia.netemul/ManagedRealm`]s can be created. The
-/// [`fuchsia.netemul.network/NetworkContext`] and
-/// [`fuchsia.netemul.sync/SyncManager`] instances offered by it are the same
-/// that are exposed to any `ManagedRealm`s created by the `Sandbox`.
+/// [`fuchsia.netemul.network/NetworkContext`] instance offered by it is the
+/// same that is exposed to any `ManagedRealm`s created by the `Sandbox`.
 ///
 /// The lifetime of the created realms (and the context services) is bound to
 /// the connection to the `Sandbox` protocol. If the channel is closed, all the
@@ -92,10 +90,7 @@ protocol Sandbox {
                             2: subdir string:fuchsia.component.MAX_PATH_LENGTH;
                         };
 
-                        /// The synchronization manager offered by netemul,
-                        /// shared between all the managed realms in a given
-                        /// sandbox.
-                        2: netemul_sync_manager Empty;
+                        2: reserved;
                         /// The network context offered by netemul, shared
                         /// between all the managed realms in a given sandbox.
                         3: netemul_network_context Empty;
@@ -164,18 +159,12 @@ protocol Sandbox {
     GetNetworkContext(resource struct {
         network_context server_end:fuchsia.netemul.network.NetworkContext;
     });
-    /// Gets this sandbox's synchronization manager.
-    ///
-    /// + request `sync_manager` request handle to the synchronization manager.
-    GetSyncManager(resource struct {
-        sync_manager server_end:fuchsia.netemul.sync.SyncManager;
-    });
 };
 
 /// `ManagedRealm` is a netemul-managed realm.
 ///
 /// A `ManagedRealm` is hermetic with respect to capabilities except for
-///  * netemul-provided capabilities to allow networking and synchronization
+///  * netemul-provided capabilities to allow networking
 ///  * logging
 ///
 /// `ManagedRealm` also provides a `devfs` instance: a directory standing for a
