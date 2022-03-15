@@ -10,7 +10,6 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/pool.h>
 #include <lib/zbitl/items/mem-config.h>
-#include <zircon/assert.h>
 
 #include <cstddef>
 #include <cstring>
@@ -19,21 +18,6 @@
 #include <phys/page-table.h>
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
-
-namespace {
-
-// In the legacy fixed-address format, the entry address is always above 1M.
-// In the new format, it's an offset and in practice it's never > 1M.  So
-// this is a safe-enough heuristic to distinguish the new from the ol
-bool IsLegacyEntryAddress(uint64_t address) {
-#if defined(__x86_64__) || defined(__i386__)
-  return address > TrampolineBoot::kLegacyLoadAddress;
-#else
-  return false;
-#endif
-}
-
-}  // namespace
 
 // This describes the "trampoline" area that is set up in some memory that's
 // safely out of the way: not part of this shim's own image, which might be
@@ -52,17 +36,16 @@ class TrampolineBoot::Trampoline {
 
   static size_t size() { return offsetof(Trampoline, code_) + TrampolineCode().size(); }
 
-  [[noreturn]] void Boot(const zircon_kernel_t* kernel, uint32_t kernel_size, uint64_t load_address,
-                         uint64_t entry_address, void* zbi) {
+  [[noreturn]] void Boot(const zircon_kernel_t* kernel, uint32_t kernel_size, void* zbi) {
     TrampolineArgs args = {
-        .dst = load_address,
+        .dst = kFixedLoadAddress,
         .src = reinterpret_cast<uintptr_t>(kernel),
         .count = kernel_size,
-        .entry = entry_address,
+        .entry = static_cast<uintptr_t>(kernel->data_kernel.entry),
         .zbi = reinterpret_cast<uintptr_t>(zbi),
     };
     args.SetDirection();
-    ZX_ASSERT(args.entry == entry_address);
+    ZX_ASSERT(args.entry == kernel->data_kernel.entry);
     arch::ZbiBootRaw(reinterpret_cast<uintptr_t>(code_), &args);
   }
 
@@ -157,32 +140,17 @@ class TrampolineBoot::Trampoline {
   ktl::byte code_[];
 };
 
-void TrampolineBoot::SetKernelAddresses() {
-  kernel_entry_address_ = BootZbi::KernelEntryAddress();
-  if (IsLegacyEntryAddress(KernelHeader()->entry)) {
-    set_kernel_load_address(kLegacyLoadAddress);
-    kernel_entry_address_ = KernelHeader()->entry;
-  }
-}
-
-fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
-                                                  ktl::optional<uint64_t> kernel_load_address) {
-  if (kernel_load_address) {
-    set_kernel_load_address(*kernel_load_address);
-  }
-
-  if (!kernel_load_address_) {
+fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) {
+  if (KernelHeader()->entry < kFixedLoadAddress) {
     // New-style position-independent kernel.
     return BootZbi::Load(extra_data_capacity);
   }
 
-  auto load_address = *kernel_load_address_;
-
   // Now we know how much space the kernel image needs.
   // Reserve it at the fixed load address.
   auto& pool = Allocation::GetPool();
-  if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel, load_address,
-                                                KernelMemorySize());
+  if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel,
+                                                kFixedLoadAddress, KernelMemorySize());
       result.is_error()) {
     return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve kernel's load image"sv}};
   }
@@ -195,7 +163,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   // the data and kernel image memory and from this shim's own image, but as
   // soon as we boot into the new kernel it will be reclaimable memory.
   if (auto result = BootZbi::Load(extra_data_capacity + static_cast<uint32_t>(Trampoline::size()),
-                                  load_address);
+                                  kFixedLoadAddress);
       result.is_error()) {
     return result.take_error();
   }
@@ -234,13 +202,10 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   uintptr_t kernel_size = static_cast<uintptr_t>(KernelLoadSize());
   ZX_ASSERT(kernel_size == KernelLoadSize());
 
-  if (kernel_load_address_) {
-    uintptr_t fixed_first = static_cast<uintptr_t>(kernel_load_address_.value());
-    uintptr_t fixed_last = static_cast<uintptr_t>(*kernel_load_address_ + KernelLoadSize() - 1);
-    ZX_ASSERT_MSG(fixed_first == *kernel_load_address_, "%" PRIu64 " != %" PRIu64 " ",
-                  static_cast<uint64_t>(fixed_first), *kernel_load_address_);
-    ZX_ASSERT(fixed_last == *kernel_load_address_ + KernelLoadSize() - 1);
-  }
+  uintptr_t fixed_first = static_cast<uintptr_t>(kFixedLoadAddress);
+  uintptr_t fixed_last = static_cast<uintptr_t>(kFixedLoadAddress + KernelLoadSize() - 1);
+  ZX_ASSERT(fixed_first == kFixedLoadAddress);
+  ZX_ASSERT(fixed_last == kFixedLoadAddress + KernelLoadSize() - 1);
 
   if (!trampoline_) {
     // This is a new-style position-independent kernel.  Boot it where it is.
@@ -251,28 +216,14 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   LogFixedAddresses();
   LogBoot(KernelEntryAddress());
 
-  trampoline_->Boot(KernelImage(), KernelLoadSize(), *kernel_load_address_, KernelEntryAddress(),
-                    argument.value_or(DataZbi().storage().data()));
-}
-
-fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi) {
-  auto res = BootZbi::Init(zbi);
-  SetKernelAddresses();
-  return res;
-}
-
-fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi,
-                                                         InputZbi::iterator kernel_item) {
-  auto res = BootZbi::Init(zbi, kernel_item);
-  SetKernelAddresses();
-  return res;
+  trampoline_->Boot(KernelImage(), KernelLoadSize(), argument.value_or(DataZbi().storage().data()));
 }
 
 // This output lines up with what BootZbi::LogAddresses() prints.
 void TrampolineBoot::LogFixedAddresses() const {
 #define ADDR "0x%016" PRIx64
   const auto& name = Symbolize::kProgramName_;
-  const uint64_t kernel = kernel_load_address_.value();
+  const uint64_t kernel = kFixedLoadAddress;
   const uint64_t bss = kernel + KernelLoadSize();
   const uint64_t end = kernel + KernelMemorySize();
   debugf("%s: Relocated @ [" ADDR ", " ADDR ")\n", name, kernel, bss);
