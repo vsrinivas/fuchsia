@@ -1222,17 +1222,6 @@ fn create_offer_decl(
         ftest::Capability2::Event(event) => {
             let source_name = try_into_source_name(&event.name)?;
             let target_name = try_into_target_name(&event.name, &event.as_)?;
-            let mode = event
-                .mode
-                .as_ref()
-                .ok_or_else(|| {
-                    RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                        "capability `mode` received was empty: {:?}",
-                        event.clone()
-                    ))
-                })?
-                .clone()
-                .fidl_into_native();
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
             cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
                 source,
@@ -1240,7 +1229,7 @@ fn create_offer_decl(
                 target,
                 target_name,
                 filter,
-                mode,
+                mode: cm_rust::EventMode::Async,
             })
         }
         _ => {
@@ -1412,19 +1401,13 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&event.name, &event.as_)?;
-            let mode = event.mode.as_ref().ok_or_else(|| {
-                RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
-                    "capability `mode` received was empty: {:?}",
-                    event.clone()
-                ))
-            })?;
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
             cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
                 source: cm_rust::UseSource::Parent,
                 source_name: source_name.clone(),
                 target_name: source_name,
                 filter,
-                mode: mode.clone().fidl_into_native(),
+                mode: cm_rust::EventMode::Async,
                 dependency_type: cm_rust::DependencyType::Strong,
             })
         }
@@ -3346,7 +3329,6 @@ mod tests {
                 &mut vec![ftest::Capability2::Event(ftest::Event {
                     name: Some("directory_ready".to_string()),
                     as_: None,
-                    mode: Some(fcdecl::EventMode::Sync),
                     filter: Some(fdata::Dictionary {
                         entries: Some(vec![fdata::DictionaryEntry {
                             key: "name".to_string(),
@@ -3390,7 +3372,7 @@ mod tests {
                     filter: Some(hashmap!(
                         "name".to_string() => cm_rust::DictionaryValue::Str("hippos".to_string()),
                     )),
-                    mode: cm_rust::EventMode::Sync,
+                    mode: cm_rust::EventMode::Async,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },

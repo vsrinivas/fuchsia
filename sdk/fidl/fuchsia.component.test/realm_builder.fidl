@@ -191,8 +191,7 @@ type Service = table {
 type Event = table {
     1: name fuchsia.component.name;
     2: as fuchsia.component.name; // optional
-    3: mode fuchsia.component.decl.EventMode;
-    4: filter fuchsia.data.Dictionary;
+    3: filter fuchsia.data.Dictionary;
 };
 
 /// Properties that may be set on a child when it is added to a realm

@@ -1736,17 +1736,13 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::event(Event::Started, cm_rust::EventMode::Async))
-                .capability(Capability::event(Event::Stopped, cm_rust::EventMode::Async))
-                .capability(Capability::event(Event::Running, cm_rust::EventMode::Async))
-                .capability(Capability::event(
-                    Event::directory_ready("diagnostics"),
-                    cm_rust::EventMode::Async,
-                ))
-                .capability(Capability::event(
-                    Event::capability_requested("fuchsia.logger.LogSink"),
-                    cm_rust::EventMode::Async,
-                ))
+                .capability(Capability::event(Event::Started))
+                .capability(Capability::event(Event::Stopped))
+                .capability(Capability::event(Event::Running))
+                .capability(Capability::event(Event::directory_ready("diagnostics")))
+                .capability(Capability::event(Event::capability_requested(
+                    "fuchsia.logger.LogSink",
+                )))
                 .from(Ref::framework())
                 .to(&archivist),
         )

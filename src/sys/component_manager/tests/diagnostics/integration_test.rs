@@ -16,10 +16,9 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
-                .capability(Capability::event(
-                    fuchsia_component_test::Event::DirectoryReady("diagnostics".to_string()),
-                    cm_rust::EventMode::Async,
-                ))
+                .capability(Capability::event(fuchsia_component_test::Event::DirectoryReady(
+                    "diagnostics".to_string(),
+                )))
                 .from(Ref::parent())
                 .to(&root),
         )

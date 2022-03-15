@@ -29,7 +29,6 @@ struct/member fuchsia.component.test/DirectoryEntry.file_path string:100
 resource struct fuchsia.component.test/DirectoryEntry
 table/member fuchsia.component.test/Event.as string:100
 table/member fuchsia.component.test/Event.filter fuchsia.data/Dictionary
-table/member fuchsia.component.test/Event.mode fuchsia.component.decl/EventMode
 table/member fuchsia.component.test/Event.name string:100
 table fuchsia.component.test/Event
 const fuchsia.component.test/LOCAL_COMPONENT_NAME_KEY string "LOCAL_COMPONENT_NAME"

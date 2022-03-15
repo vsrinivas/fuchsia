@@ -259,8 +259,8 @@ impl Capability {
     }
 
     /// Creates a new event capability.
-    pub fn event(event: Event, mode: cm_rust::EventMode) -> EventCapability {
-        EventCapability { event, mode }
+    pub fn event(event: Event) -> EventCapability {
+        EventCapability { event }
     }
 }
 
@@ -443,7 +443,6 @@ impl Into<ftest::Capability2> for ServiceCapability {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EventCapability {
     event: Event,
-    mode: cm_rust::EventMode,
 }
 
 impl Into<ftest::Capability2> for EventCapability {
@@ -451,7 +450,6 @@ impl Into<ftest::Capability2> for EventCapability {
         ftest::Capability2::Event(ftest::Event {
             name: Some(self.event.name().to_string()),
             as_: None,
-            mode: Some(self.mode.native_into_fidl()),
             filter: self.event.filter().map(NativeIntoFidl::native_into_fidl),
             ..ftest::Event::EMPTY
         })
@@ -1469,16 +1467,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn event_capability_construction() {
+        assert_eq!(Capability::event(Event::Started), EventCapability { event: Event::Started },);
         assert_eq!(
-            Capability::event(Event::Started, cm_rust::EventMode::Sync),
-            EventCapability { event: Event::Started, mode: cm_rust::EventMode::Sync },
-        );
-        assert_eq!(
-            Capability::event(Event::directory_ready("hippos"), cm_rust::EventMode::Async),
-            EventCapability {
-                event: Event::DirectoryReady("hippos".to_string()),
-                mode: cm_rust::EventMode::Async,
-            },
+            Capability::event(Event::directory_ready("hippos")),
+            EventCapability { event: Event::DirectoryReady("hippos".to_string()) },
         );
     }
 
