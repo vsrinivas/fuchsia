@@ -38,6 +38,7 @@ pub struct MetricLogger {
     current_interval_errors: HashSet<LogIdentifierAndComponent>,
     next_interval_index: u64,
     reached_capacity: bool,
+    last_cobalt_failure_time: u64,
 }
 
 type ComponentEventCodeMap = HashMap<String, u32>;
@@ -61,6 +62,9 @@ pub const PING_FILE_PATH: &str = "<Ping>";
 
 /// What line number to use for the ping message or when the source is not known.
 pub const EMPTY_LINE_NUMBER: u64 = 0;
+
+/// Number of seconds to wait after Cobalt fails before logging another metric.
+pub const COBALT_BACKOFF_SECONDS: u64 = 60;
 
 // Establishes a channel to Cobalt.
 async fn connect_to_cobalt(specs: &MetricSpecs) -> Result<MetricEventLoggerProxy, anyhow::Error> {
@@ -88,6 +92,7 @@ impl MetricLogger {
             current_interval_errors: HashSet::new(),
             next_interval_index: 0,
             reached_capacity: false,
+            last_cobalt_failure_time: 0,
         })
     }
 
@@ -159,6 +164,15 @@ impl MetricLogger {
         metric_id: u32,
         log_identifier_and_component: &LogIdentifierAndComponent,
     ) -> Result<(), anyhow::Error> {
+        let now = fasync::Time::now().into_nanos() as u64 / 1_000_000_000;
+        // If Cobalt failed recently, don't try to log another metric again. Cobalt may log an ERROR
+        // in response to the failure and if we log the metric in response to the ERROR, we will get
+        // stuck in an endless loop.
+        if self.last_cobalt_failure_time != 0
+            && now < self.last_cobalt_failure_time + COBALT_BACKOFF_SECONDS
+        {
+            return Ok(());
+        }
         let status_result = self
             .proxy
             .log_string(
@@ -177,7 +191,14 @@ impl MetricLogger {
         let status = status_result?;
         match status {
             Status::Ok => Ok(()),
-            _ => Err(anyhow::format_err!("Cobalt returned error: {}", status as u8)),
+            _ => {
+                fx_log_warn!(
+                    "Not logging metrics for {} seconds because Cobalt failed",
+                    COBALT_BACKOFF_SECONDS
+                );
+                self.last_cobalt_failure_time = now;
+                Err(anyhow::format_err!("Cobalt returned error: {}", status as u8))
+            }
         }
     }
 }
