@@ -19,7 +19,7 @@ namespace astro {
 
 constexpr pbus_mmio_t backlight_mmios[] = {
     {
-        .base = S905D2_GPIO_A0_BASE,
+        .base = S905D2_GPIO_AO_BASE,
         .length = S905D2_GPIO_AO_LENGTH,
     },
 };

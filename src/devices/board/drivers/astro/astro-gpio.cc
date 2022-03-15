@@ -26,7 +26,7 @@ static const pbus_mmio_t gpio_mmios[] = {
         .length = S905D2_GPIO_LENGTH,
     },
     {
-        .base = S905D2_GPIO_A0_BASE,
+        .base = S905D2_GPIO_AO_BASE,
         .length = S905D2_GPIO_AO_LENGTH,
     },
     {

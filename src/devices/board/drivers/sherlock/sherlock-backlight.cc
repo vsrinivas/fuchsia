@@ -17,7 +17,7 @@ namespace sherlock {
 
 constexpr pbus_mmio_t backlight_mmios[] = {
     {
-        .base = T931_GPIO_A0_BASE,
+        .base = T931_GPIO_AO_BASE,
         .length = T931_GPIO_AO_LENGTH,
     },
 };

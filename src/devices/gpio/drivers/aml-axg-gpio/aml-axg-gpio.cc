@@ -48,7 +48,7 @@ namespace gpio {
 // MMIO indices (based on aml-gpio.c gpio_mmios)
 enum {
   MMIO_GPIO = 0,
-  MMIO_GPIO_A0 = 1,
+  MMIO_GPIO_AO = 1,
   MMIO_GPIO_INTERRUPTS = 2,
 };
 
@@ -68,7 +68,7 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  if ((status = pdev.MapMmio(MMIO_GPIO_A0, &mmio_gpio_a0)) != ZX_OK) {
+  if ((status = pdev.MapMmio(MMIO_GPIO_AO, &mmio_gpio_a0)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::Create: MapMmio failed");
     return status;
   }

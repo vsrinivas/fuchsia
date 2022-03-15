@@ -51,7 +51,7 @@ zx_status_t Sherlock::AudioInit() {
           .length = T931_GPIO_LENGTH,
       },
       {
-          .base = T931_GPIO_A0_BASE,
+          .base = T931_GPIO_AO_BASE,
           .length = T931_GPIO_AO_LENGTH,
       },
   };
