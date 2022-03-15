@@ -5,11 +5,12 @@
 use {
     crate::ConfigLevel,
     anyhow::{Context, Result},
+    errors::ffx_error,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
         fmt,
-        fs::File,
+        fs::{File, OpenOptions},
         io::{BufReader, Write},
         path::Path,
         sync::Mutex,
@@ -116,7 +117,19 @@ impl Environment {
 
     pub fn init_env_file(path: &Path) -> Result<()> {
         let _e = ENV_MUTEX.lock().unwrap();
-        let mut f = File::create(path)?;
+        let mut f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)
+            .map_err(|e| {
+                ffx_error!(
+                    "Could not create envinronment file from given path \"{}\": {}",
+                    path.display(),
+                    e
+                )
+            })?;
         f.write_all(b"{}")?;
         f.sync_all()?;
         Ok(())
