@@ -145,6 +145,17 @@ config("suppress-ubsan.DO-NOT-USE-THIS") {
   ]
 }
 
+# TODO(fxbug.dev/93804): Disable VLA bounds checking for a limited set of targets.
+# Do not add this into any new targets where this is not already used.
+config("suppress-ubsan-vla-bounds.DO-NOT-USE-THIS") {
+  cflags = [ "-fno-sanitize=vla-bound" ]
+  visibility = [
+    "//src/graphics/display/drivers/display:*",
+    "//src/lib/storage/vfs/cpp:*",
+    "//src/storage/blobfs/test:*",
+  ]
+}
+
 config("no-shadow-call-stack") {
   if (current_cpu == "arm64" && !is_gcc) {
     cflags = [ "-fno-sanitize=shadow-call-stack" ]
@@ -201,10 +212,6 @@ variant("ubsan") {
     # host tools, which is a net win.
     common_flags += [ "-fno-sanitize=vptr" ]
   }
-
-  # TODO(fxbug.dev/93804): Remove this once all instances of non-positive VLA
-  # sizes are fixed.
-  common_flags += [ "-fno-sanitize=vla-bound" ]
 
   # If asan is also in use, it handles ubsan_default_options indirectly.
   if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] ==
