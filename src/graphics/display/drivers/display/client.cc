@@ -927,20 +927,25 @@ void Client::SetMinimumRgb(SetMinimumRgbRequestView request,
 
 bool Client::CheckConfig(fhd::wire::ConfigResult* res,
                          std::vector<fhd::wire::ClientCompositionOp>* ops) {
-  const display_config_t* configs[configs_.size()];
-  layer_t* layers[layers_.size()];
-  uint32_t layer_cfg_results[layers_.size()];
-  uint32_t* display_layer_cfg_results[configs_.size()];
-  memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
-
   if (res && ops) {
     *res = fhd::wire::ConfigResult::kOk;
     ops->clear();
   }
+  if (configs_.size() == 0) {
+    // An empty config is always valid.
+    return true;
+  }
+  const size_t layers_size = std::max(static_cast<size_t>(1), layers_.size());
+  const display_config_t* configs[configs_.size()];
+  layer_t* layers[layers_size];
+  uint32_t layer_cfg_results[layers_size];
+  uint32_t* display_layer_cfg_results[configs_.size()];
+  memset(layer_cfg_results, 0, layers_size * sizeof(uint32_t));
+
 
   bool config_fail = false;
-  int config_idx = 0;
-  int layer_idx = 0;
+  size_t config_idx = 0;
+  size_t layer_idx = 0;
   for (auto& display_config : configs_) {
     if (display_config.pending_layers_.is_empty()) {
       continue;
@@ -1041,7 +1046,7 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   }
 
   bool layer_fail = false;
-  for (int i = 0; i < config_idx && !layer_fail; i++) {
+  for (size_t i = 0; i < config_idx && !layer_fail; i++) {
     for (unsigned j = 0; j < configs[i]->layer_count && !layer_fail; j++) {
       if (display_layer_cfg_results[i][j]) {
         layer_fail = true;
