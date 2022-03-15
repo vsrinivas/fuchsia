@@ -42,6 +42,9 @@ rustc_binary("rust_binary") {
   source_root = "main.rs"
   sources = [ "main.rs" ]
   deps = [ ":example_blobstore" ]
+
+  # TODO(fxbug.dev/92670): .o path has redundant output-dir
+  configs += [ "//build/config/rust:output_dir_sensitive" ]
 }
 
 # Unit tests that accompany the Rust sources used in the rust_cxx_ffi_library() target above can be

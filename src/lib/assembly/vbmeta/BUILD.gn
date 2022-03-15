@@ -137,6 +137,10 @@ if (is_host) {
       ":expected_vbmeta",
     ]
     configs += [ ":integration_test_assets" ]
+
+    # TODO(fxbug.dev/92670): source file references output-dir in env var,
+    # so the remote build won't work with a renamed output-dir.
+    configs += [ "//build/config/rust:output_dir_sensitive" ]
     inputs = [
       test_avb_key,
       test_avb_atx_metadata,

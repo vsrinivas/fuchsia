@@ -155,6 +155,12 @@ template("_fidl_cpp_library_impl") {
     config_target_name = "${target_name}__config"
     config(config_target_name) {
       include_dirs = [ root ]
+
+      # TODO(fxbug.dev/92670): The .cc.o files from generated sources
+      # contain a redundant output-dir.
+      # This needs to be propagated through public_deps to all
+      # Rust targets that link these.
+      configs = [ "//build/config/rust:output_dir_sensitive" ]
     }
   }
 
