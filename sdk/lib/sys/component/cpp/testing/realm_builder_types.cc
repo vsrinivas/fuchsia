@@ -12,8 +12,11 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <memory>
+
+#include "zircon/status.h"
 
 namespace component_testing {
 
@@ -55,10 +58,16 @@ sys::OutgoingDirectory* LocalComponentHandles::outgoing() { return &outgoing_dir
 sys::ServiceDirectory LocalComponentHandles::svc() {
   zx::channel local;
   zx::channel remote;
-  ZX_ASSERT(zx::channel::create(0, &local, &remote) == ZX_OK);
-  ZX_ASSERT(fdio_ns_connect(namespace_, kSvcDirectoryPath,
-                            fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                            remote.release()) == ZX_OK);
+  ZX_COMPONENT_ASSERT_STATUS_OK("zx::channel/create", zx::channel::create(0, &local, &remote));
+
+  auto status = fdio_ns_connect(namespace_, kSvcDirectoryPath,
+                                fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                                remote.release());
+  ZX_ASSERT_MSG(status == ZX_OK,
+                "fdio_ns_connect on LocalComponent's /svc directory failed: %s\nThis most often "
+                "occurs when a component has no FIDL protocols routed to it.",
+                zx_status_get_string(status));
+
   return sys::ServiceDirectory(std::move(local));
 }
 
