@@ -1,0 +1,98 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            name: "drm-tests",
+            environment: "#legacy-test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                // Tests can write to debug logs
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+
+                // Tests can produce trace.
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#drm-tests",
+        },
+
+        // These system capabilities are offered for use by the drm tests.
+        {
+            protocol: [
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.net.http.Loader",
+                "fuchsia.sysmem.Allocator",
+            ],
+            from: "parent",
+            to: "#drm-tests",
+        },
+        {
+            directory: "dev-sysmem",
+            from: "parent",
+            to: "#drm-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-securemem",
+            from: "parent",
+            to: "#drm-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-tee",
+            from: "parent",
+            to: "#drm-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: "#drm-tests",
+            rights: [ "rx*" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#drm-tests",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#drm-tests",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#drm-tests",
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: "#drm-tests",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#drm-tests",
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#drm-tests",
+        },
+    ],
+}

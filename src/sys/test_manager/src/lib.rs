@@ -90,6 +90,7 @@ const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
 const VULKAN_TESTS_COLLECTION: &'static str = "vulkan-tests";
 const CHROMIUM_TESTS_COLLECTION: &'static str = "chromium-tests";
+const DRM_TESTS_COLLECTION: &'static str = "drm-tests";
 
 lazy_static! {
     static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
@@ -98,7 +99,8 @@ lazy_static! {
         ("system", SYSTEM_TESTS_COLLECTION),
         ("cts", CTS_TESTS_COLLECTION),
         ("vulkan", VULKAN_TESTS_COLLECTION),
-        ("chromium", CHROMIUM_TESTS_COLLECTION)
+        ("chromium", CHROMIUM_TESTS_COLLECTION),
+        ("drm", DRM_TESTS_COLLECTION)
     ]
     .iter()
     .copied()

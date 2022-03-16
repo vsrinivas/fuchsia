@@ -81,6 +81,7 @@
         // Needed by some non-hermetic tests
         {
             protocol: [
+                "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.RootResource",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
@@ -216,6 +217,13 @@
             as: "dev-tee",
             to: "#test_manager",
             subdir: "class/tee",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-securemem",
+            to: "#test_manager",
+            subdir: "class/securemem",
         },
 
         // Tests of the media system want to test against the real hardware
