@@ -63,7 +63,9 @@ int main() {
                                  .max_num_files = kMaxNumLogFiles,
                                  .total_log_size = kPersistentLogsMaxSize,
                              },
-                             feedback::RedactorFromConfig(),
+                             // Don't set up Inspect because all messages in the previous boot log
+                             // are in the currnt boot log and counted in Inspect.
+                             feedback::RedactorFromConfig(nullptr /*no inspect*/),
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 
   // Set up the controller to shut down or flush the buffers of the system log recorder when it gets

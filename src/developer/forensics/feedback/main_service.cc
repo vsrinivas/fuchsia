@@ -41,7 +41,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       clock_(clock),
       inspect_root_(inspect_root),
       cobalt_(cobalt),
-      redactor_(RedactorFromConfig()),
+      redactor_(RedactorFromConfig(inspect_root)),
       device_id_provider_(
           MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
       inspect_node_manager_(inspect_root),

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_REDACT_CACHE_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_REDACT_CACHE_H_
 
+#include <lib/inspect/cpp/vmo/types.h>
+
 #include <string>
 #include <unordered_map>
 
@@ -14,7 +16,7 @@ namespace forensics {
 // string to have an ID X and always have it.
 class RedactionIdCache {
  public:
-  explicit RedactionIdCache(int starting_id = 0);
+  explicit RedactionIdCache(inspect::UintProperty size_node, int starting_id = 0);
 
   int GetId(const std::string& value);
 
@@ -28,6 +30,7 @@ class RedactionIdCache {
   // TODO(fxbug.dev/94086): The map grows unbounded, expose the number of elements with Inspect.
   int next_id_;
   std::unordered_map<std::string, int> ids_;
+  inspect::UintProperty size_node_;
 };
 
 }  // namespace forensics

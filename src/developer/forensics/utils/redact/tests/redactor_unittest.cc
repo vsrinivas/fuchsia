@@ -4,6 +4,8 @@
 
 #include "src/developer/forensics/utils/redact/redactor.h"
 
+#include <lib/inspect/cpp/vmo/types.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -31,7 +33,7 @@ class RedactorTest : public ::testing::Test {
   const Redactor& redactor() const { return redactor_; }
 
  private:
-  Redactor redactor_{0u};
+  Redactor redactor_{0u, inspect::UintProperty()};
 };
 
 TEST_F(RedactorTest, Check) {

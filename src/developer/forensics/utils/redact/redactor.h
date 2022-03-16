@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_REDACT_REDACTOR_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_REDACT_REDACTOR_H_
 
+#include <lib/inspect/cpp/vmo/types.h>
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,7 +35,7 @@ class RedactorBase {
 // https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/diagnostics/archivist/src/logs/redact.rs
 class Redactor : public RedactorBase {
  public:
-  explicit Redactor(int starting_id);
+  explicit Redactor(int starting_id, inspect::UintProperty cache_size);
   ~Redactor() override = default;
 
   std::string& Redact(std::string& text) override;

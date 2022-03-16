@@ -15,6 +15,7 @@ executable("cache_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils/redact",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

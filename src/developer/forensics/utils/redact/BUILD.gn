@@ -12,6 +12,8 @@ source_set("redact") {
     "replacer.h",
   ]
 
+  public_deps = [ "//sdk/lib/sys/inspect/cpp" ]
+
   deps = [
     "//sdk/lib/fit",
     "//src/lib/fxl",

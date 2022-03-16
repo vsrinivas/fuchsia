@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/utils/redact/redactor.h"
 
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string_view>
@@ -99,7 +100,8 @@ constexpr std::string_view kRedactedCanary =
 
 }  // namespace
 
-Redactor::Redactor(const int starting_id) : cache_(starting_id) {
+Redactor::Redactor(const int starting_id, inspect::UintProperty cache_size)
+    : cache_(std::move(cache_size), starting_id) {
   Add(ReplaceIPv4())
       .Add(ReplaceIPv6())
       .Add(ReplaceMac())

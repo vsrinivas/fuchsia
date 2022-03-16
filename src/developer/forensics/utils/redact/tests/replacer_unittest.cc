@@ -4,6 +4,8 @@
 
 #include "src/developer/forensics/utils/redact/replacer.h"
 
+#include <lib/inspect/cpp/vmo/types.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -49,7 +51,7 @@ INSTANTIATE_TEST_SUITE_P(TextReplacement, TextReplacerTest,
 TEST_P(TextReplacerTest, ReplaceWithText) {
   auto param = GetParam();
 
-  RedactionIdCache cache;
+  RedactionIdCache cache(inspect::UintProperty{});
   Replacer replacer = ReplaceWithText(param.pattern, param.replacement);
   if (param.text == std::nullopt || param.expected_output == std::nullopt) {
     EXPECT_EQ(replacer, nullptr);
@@ -108,7 +110,7 @@ INSTANTIATE_TEST_SUITE_P(IdReplacement, IdReplacerTest,
 TEST_P(IdReplacerTest, ReplaceWithIdFormatString) {
   auto param = GetParam();
 
-  RedactionIdCache cache;
+  RedactionIdCache cache(inspect::UintProperty{});
   Replacer replacer = ReplaceWithIdFormatString(param.pattern, param.replacement);
   if (param.text == std::nullopt || param.expected_output == std::nullopt) {
     EXPECT_EQ(replacer, nullptr);
@@ -178,7 +180,7 @@ INSTANTIATE_TEST_SUITE_P(IPv4Replacement, IPv4ReplacerTest,
 TEST_P(IPv4ReplacerTest, ReplaceIPv4) {
   auto param = GetParam();
 
-  RedactionIdCache cache;
+  RedactionIdCache cache(inspect::UintProperty{});
   Replacer replacer = ReplaceIPv4();
   ASSERT_NE(replacer, nullptr);
   EXPECT_EQ(replacer(cache, param.text), param.expected_output);
@@ -294,14 +296,14 @@ INSTANTIATE_TEST_SUITE_P(IPv6Replacement, IPv6ReplacerTest,
 TEST_P(IPv6ReplacerTest, ReplaceIPv6) {
   auto param = GetParam();
 
-  RedactionIdCache cache;
+  RedactionIdCache cache(inspect::UintProperty{});
   Replacer replacer = ReplaceIPv6();
   ASSERT_NE(replacer, nullptr);
   EXPECT_EQ(replacer(cache, param.text), param.expected_output);
 }
 
 TEST(MacReplacerTest, ReplaceMac) {
-  RedactionIdCache cache;
+  RedactionIdCache cache(inspect::UintProperty{});
   Replacer replacer = ReplaceMac();
   ASSERT_NE(replacer, nullptr);
 

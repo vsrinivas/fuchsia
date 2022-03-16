@@ -223,6 +223,7 @@ executable("redactor_factory_unittest_exe") {
   deps = [
     "//src/developer/forensics/feedback:redactor_factory",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

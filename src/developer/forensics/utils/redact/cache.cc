@@ -8,11 +8,15 @@
 
 namespace forensics {
 
-RedactionIdCache::RedactionIdCache(const int starting_id) : next_id_(starting_id) {}
+RedactionIdCache::RedactionIdCache(inspect::UintProperty size_node, const int starting_id)
+    : next_id_(starting_id), size_node_(std::move(size_node)) {
+  size_node_.Set(0u);
+}
 
 int RedactionIdCache::GetId(const std::string& value) {
   if (ids_.count(value) == 0) {
     ids_[value] = ++next_id_;
+    size_node_.Add(1u);
   }
   return ids_[value];
 }

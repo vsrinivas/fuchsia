@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_REDACTOR_FACTORY_H_
 
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
 #include <memory>
 
@@ -22,7 +23,7 @@ int DefaultCacheIdFn();
 // Returns an IdentityRedactor if the file at |enable_flag_file| doesn't exist, otherwise return a
 // Redactor.
 std::unique_ptr<RedactorBase> RedactorFromConfig(
-    const std::string& enable_flag_file = kEnableRedactDataPath,
+    inspect::Node* root_node, const std::string& enable_flag_file = kEnableRedactDataPath,
     ::fit::function<int()> seed_cache_id = DefaultCacheIdFn);
 
 }  // namespace forensics::feedback
