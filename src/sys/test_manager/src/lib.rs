@@ -1514,6 +1514,19 @@ where
     .try_flatten()
 }
 
+fn get_global_non_hermetic_pkg_allowlist() -> HashSet<String> {
+    hashset! {
+        "driver_test_realm".to_string(),
+        "regulatory_region".to_string(),
+        "archivist-with-feedback-filtering".to_string(),
+        "archivist-with-legacy-metrics".to_string(),
+        "archivist-with-feedback-filtering-disabled".to_string(),
+        "battery-manager".to_string(),
+        "fuzz-registry".to_string(),
+        "test_manager".to_string(),
+    }
+}
+
 async fn get_realm(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
@@ -1538,15 +1551,19 @@ async fn get_realm(
     // If this is realm is inside the hermetic tests collections, set up the
     // hermetic resolver local component.
     let mut test_root_child_opts = ChildOptions::new().eager();
+    let mut allowed_package_names = None;
     if collection.eq(HERMETIC_TESTS_COLLECTION) {
-        let allowed_package_names = hashset! {test_package.to_string()};
+        let mut allowed_list = get_global_non_hermetic_pkg_allowlist();
+        allowed_list.insert(test_package.into());
+        allowed_package_names = Some(Arc::new(allowed_list));
+        let allowed_package_names = allowed_package_names.clone();
         wrapper_realm
             .add_local_child(
                 HERMETIC_RESOLVER_REALM_NAME,
                 move |handles| {
                     Box::pin(resolver::serve_hermetic_resolver(
                         handles,
-                        allowed_package_names.clone(),
+                        allowed_package_names.clone().unwrap(),
                         resolver.clone(),
                         true,
                     ))
@@ -1685,54 +1702,50 @@ async fn get_realm(
         )
         .await?;
 
-    // If this is not a hermetic test, generate an enclosing environment to allow
-    // the test to launch CFv1 components.
-    if !collection.eq(HERMETIC_TESTS_COLLECTION) {
-        let enclosing_env = wrapper_realm
-            .add_local_child(
-                ENCLOSING_ENV_REALM_NAME,
-                move |handles| Box::pin(gen_enclosing_env(handles)),
-                ChildOptions::new(),
-            )
-            .await?;
+    let enclosing_env = wrapper_realm
+        .add_local_child(
+            ENCLOSING_ENV_REALM_NAME,
+            move |handles| Box::pin(gen_enclosing_env(handles, allowed_package_names.clone())),
+            ChildOptions::new(),
+        )
+        .await?;
 
-        // archivist to enclosing env
-        wrapper_realm
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                    .from(&archivist)
-                    .to(&enclosing_env),
-            )
-            .await?;
+    // archivist to enclosing env
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(&archivist)
+                .to(&enclosing_env),
+        )
+        .await?;
 
-        // enclosing env to test root
-        wrapper_realm
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol::<fv1sys::EnvironmentMarker>())
-                    .capability(Capability::protocol::<fv1sys::LauncherMarker>())
-                    .capability(Capability::protocol::<fv1sys::LoaderMarker>())
-                    .from(&enclosing_env)
-                    .to(&test_root),
-            )
-            .await?;
+    // enclosing env to test root
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fv1sys::EnvironmentMarker>())
+                .capability(Capability::protocol::<fv1sys::LauncherMarker>())
+                .capability(Capability::protocol::<fv1sys::LoaderMarker>())
+                .from(&enclosing_env)
+                .to(&test_root),
+        )
+        .await?;
 
-        // debug to enclosing env
-        // This must be done manually, as there is currently no way to add a "use from debug"
-        // declaration using `add_route`.
-        let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
-        enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-            source: cm_rust::UseSource::Debug,
-            source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
-            target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
-                .as_str()
-                .try_into()
-                .unwrap(),
-            dependency_type: cm_rust::DependencyType::Strong,
-        }));
-        wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
-    }
+    // debug to enclosing env
+    // This must be done manually, as there is currently no way to add a "use from debug"
+    // declaration using `add_route`.
+    let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
+    enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+        source: cm_rust::UseSource::Debug,
+        source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
+        target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
+            .as_str()
+            .try_into()
+            .unwrap(),
+        dependency_type: cm_rust::DependencyType::Strong,
+    }));
+    wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
 
     // wrapper realm to archivist
     wrapper_realm
@@ -1949,28 +1962,57 @@ impl Drop for EnclosingEnvironment {
 }
 
 impl EnclosingEnvironment {
-    fn new(incoming_svc: fio::DirectoryProxy) -> Result<Arc<Self>, Error> {
+    fn new(
+        incoming_svc: fio::DirectoryProxy,
+        allowed_package_names: Option<Arc<HashSet<String>>>,
+    ) -> Result<Arc<Self>, Error> {
         let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
         let (additional_svc, additional_directory_request) = zx::Channel::create()?;
         let incoming_svc = Arc::new(incoming_svc);
         let incoming_svc_clone = incoming_svc.clone();
         let mut fs = ServiceFs::new();
-        fs.add_service_at(fv1sys::LoaderMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
-                warn!("Cannot connect to loader: {}", e);
+        let mut loader_tasks = vec![];
+        let loader_service = connect_to_protocol::<fv1sys::LoaderMarker>()?;
+        match allowed_package_names {
+            Some(allowed_package_names) => {
+                fs.add_fidl_service(move |stream: fv1sys::LoaderRequestStream| {
+                    let allowed_package_names = allowed_package_names.clone();
+                    let loader_service = loader_service.clone();
+                    loader_tasks.push(fasync::Task::spawn(async move {
+                        resolver::serve_hermetic_loader(
+                            stream,
+                            allowed_package_names,
+                            loader_service.clone(),
+                        )
+                        .await;
+                    }));
+                });
             }
-            None
-        })
-        .add_service_at(fdebugdata::DebugDataMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            if let Err(e) = fdio::service_connect_at(
-                incoming_svc_clone.as_channel().as_ref(),
-                fdebugdata::DebugDataMarker::NAME,
-                chan,
-            ) {
-                warn!("cannot connect to DebugData: {}", e);
+            None => {
+                fs.add_service_at(
+                    fv1sys::LoaderMarker::NAME,
+                    move |chan: fuchsia_zircon::Channel| {
+                        if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
+                            warn!("Cannot connect to loader: {}", e);
+                        }
+                        None
+                    },
+                );
             }
-            None
-        })
+        }
+        fs.add_service_at(
+            fdebugdata::DebugDataMarker::NAME,
+            move |chan: fuchsia_zircon::Channel| {
+                if let Err(e) = fdio::service_connect_at(
+                    incoming_svc_clone.as_channel().as_ref(),
+                    fdebugdata::DebugDataMarker::NAME,
+                    chan,
+                ) {
+                    warn!("cannot connect to DebugData: {}", e);
+                }
+                None
+            },
+        )
         .add_service_at("fuchsia.logger.LogSink", move |chan: fuchsia_zircon::Channel| {
             if let Err(e) = fdio::service_connect_at(
                 incoming_svc.as_channel().as_ref(),
@@ -2100,12 +2142,15 @@ impl EnclosingEnvironment {
 
 /// Create a new and single enclosing env for every test. Each test only gets a single enclosing env
 /// no matter how many times it connects to Environment service.
-async fn gen_enclosing_env(handles: LocalComponentHandles) -> Result<(), Error> {
+async fn gen_enclosing_env(
+    handles: LocalComponentHandles,
+    allowed_package_names: Option<Arc<HashSet<String>>>,
+) -> Result<(), Error> {
     // This function should only be called when test tries to connect to Environment or Launcher.
     let mut fs = ServiceFs::new();
     let incoming_svc = handles.clone_from_namespace("svc")?;
-    let enclosing_env =
-        EnclosingEnvironment::new(incoming_svc).context("Cannot create enclosing env")?;
+    let enclosing_env = EnclosingEnvironment::new(incoming_svc, allowed_package_names)
+        .context("Cannot create enclosing env")?;
     let enclosing_env_clone = enclosing_env.clone();
     let enclosing_env_clone2 = enclosing_env.clone();
 

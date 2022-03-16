@@ -349,6 +349,10 @@ To migrate this test to the Test Runner Framework, do the following:
     ```json5
     // my_component_test.cml (test component)
     {
+        include: [
+            // If using Wrapped CMX component.
+            "sys/testing/hermetic-tier-2-test.shard.cml",
+        ],
         ...
 
         // Add capability providers
