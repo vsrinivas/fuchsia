@@ -182,6 +182,7 @@ pub struct MemoryManagerState {
     /// Stack location and size
     pub stack_base: UserAddress,
     pub stack_size: usize,
+    pub stack_start: UserAddress,
 }
 
 impl MemoryManagerState {
@@ -807,6 +808,7 @@ impl MemoryManager {
                 executable_node: None,
                 stack_base: UserAddress::default(),
                 stack_size: 0,
+                stack_start: UserAddress::default(),
             }),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
         })
@@ -1441,7 +1443,7 @@ impl FileOps for ProcStatFile {
             let command = command.as_c_str().to_str().unwrap_or("unknown");
             let mut stats = [0u64; 49];
             let mm_state = self.task.mm.state.read();
-            stats[24] = mm_state.stack_base.ptr() as u64;
+            stats[24] = mm_state.stack_start.ptr() as u64;
             let stat_str = stats.map(|n| n.to_string()).join(" ");
             write!(sink, "{} ({}) R {}\n", self.task.get_pid(), command, stat_str)?;
             Ok(None)

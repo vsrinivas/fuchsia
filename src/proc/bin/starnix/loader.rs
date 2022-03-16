@@ -421,6 +421,7 @@ pub fn load_executable(
     let mut mm_state = current_task.mm.state.write();
     mm_state.stack_base = stack_base;
     mm_state.stack_size = stack_size;
+    mm_state.stack_start = stack;
 
     Ok(ThreadStartInfo { entry, stack, dt_debug_address })
 }
