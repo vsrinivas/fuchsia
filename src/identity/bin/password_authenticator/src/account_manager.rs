@@ -60,6 +60,12 @@ impl From<ProvisionError> for faccount::Error {
     }
 }
 
+enum EnrollmentScheme {
+    NullKey,
+    Scrypt,
+    Pinweaver,
+}
+
 impl<DM, AMS> AccountManager<DM, AMS>
 where
     DM: DiskManager,
@@ -380,7 +386,7 @@ where
             faccount::Error::InvalidRequest
         })?;
 
-        let metadata = if password == INSECURE_EMPTY_PASSWORD {
+        let enrollment_scheme = if password == INSECURE_EMPTY_PASSWORD {
             if !self.options.allow_null {
                 // Empty passwords are only supported when the allow_null option is true.
                 warn!(
@@ -388,7 +394,7 @@ where
                     allow_null=false");
                 return Err(faccount::Error::InvalidRequest);
             }
-            AccountMetadata::new_null(name.to_string())
+            EnrollmentScheme::NullKey
         } else {
             if !(self.options.allow_scrypt || self.options.allow_pinweaver) {
                 // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
@@ -406,7 +412,18 @@ where
                 );
                 return Err(faccount::Error::InvalidRequest);
             }
-            AccountMetadata::new_scrypt(name.to_string())
+
+            if self.options.allow_pinweaver {
+                EnrollmentScheme::Pinweaver
+            } else {
+                EnrollmentScheme::Scrypt
+            }
+        };
+
+        let metadata = match enrollment_scheme {
+            EnrollmentScheme::NullKey => AccountMetadata::new_null(name.to_string()),
+            EnrollmentScheme::Scrypt => AccountMetadata::new_scrypt(name.to_string()),
+            EnrollmentScheme::Pinweaver => unimplemented!(),
         };
 
         // For now, we only contemplate one account ID
@@ -644,9 +661,9 @@ mod test {
         vfs::execution_scope::ExecutionScope,
     };
 
-    // By default allow any form of password and encryption.
+    // By default, allow any implemented form of password and encryption.
     const DEFAULT_OPTIONS: Options =
-        Options { allow_null: true, allow_scrypt: true, allow_pinweaver: true };
+        Options { allow_null: true, allow_scrypt: true, allow_pinweaver: false };
     // Define more restrictive options to verify exclusions are implemented correctly.
     const NULL_ONLY_OPTIONS: Options =
         Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
