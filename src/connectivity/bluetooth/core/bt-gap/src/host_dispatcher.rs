@@ -54,6 +54,17 @@ use crate::{
     watch_peers::PeerWatcher,
 };
 
+pub use fidl_fuchsia_device::DEFAULT_DEVICE_NAME;
+
+/// Policies for HostDispatcher::set_name
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum NameReplace {
+    /// Keep the current name if it is already set, but set a new name if it hasn't been.
+    Keep,
+    /// Replace the current name unconditionally.
+    Replace,
+}
+
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 
 /// Available FIDL services that can be provided by a particular Host
@@ -158,7 +169,8 @@ struct HostDispatcherState {
     stash: Stash,
 
     // GAP state
-    name: String,
+    // Name, if set. If not set, hosts will not have a set name.
+    name: Option<String>,
     appearance: Appearance,
     discovery: DiscoveryState,
     discoverable: Option<Weak<HostDiscoverableSession>>,
@@ -333,7 +345,6 @@ impl HostDispatcher {
     /// that these requests are handled. This can be done by passing the mpsc::Receiver into a
     /// GenericAccessService struct and ensuring its run method is scheduled.
     pub fn new(
-        name: String,
         appearance: Appearance,
         stash: Stash,
         inspect: inspect::Node,
@@ -346,7 +357,7 @@ impl HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
             host_devices: HashMap::new(),
-            name,
+            name: None,
             appearance,
             config_settings: build_config::load_default(),
             peers: HashMap::new(),
@@ -370,18 +381,21 @@ impl HostDispatcher {
     }
 
     pub fn get_name(&self) -> String {
-        self.state.read().name.clone()
+        self.state.read().name.clone().unwrap_or(DEFAULT_DEVICE_NAME.to_string())
     }
 
     pub fn get_appearance(&self) -> Appearance {
         self.state.read().appearance
     }
 
-    pub async fn set_name(&self, name: String) -> types::Result<()> {
-        self.state.write().name = name;
+    pub async fn set_name(&self, name: String, replace: NameReplace) -> types::Result<()> {
+        if NameReplace::Keep == replace && self.state.read().name.is_some() {
+            return Ok(());
+        }
+        self.state.write().name = Some(name);
         match self.active_host().await {
             Some(host) => {
-                let name = self.state.read().name.clone();
+                let name = self.get_name();
                 host.set_name(name).await
             }
             None => Err(types::Error::no_host()),
@@ -726,14 +740,8 @@ impl HostDispatcher {
         Ok(())
     }
 
-    /// Adds a bt-host device to the host dispatcher. Called by the watch_hosts device watcher
-    pub async fn add_device(&self, host_path: &Path) -> Result<(), Error> {
-        let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
-        let host_dev = bt::util::open_rdwr(host_path)
-            .context(format!("failed to open {:?} device file", host_path))?;
-        let device_topo = fdio::device_get_topo_path(&host_dev)?;
-        info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
-        let host_device = init_host(host_path, node).await?;
+    /// Finishes initializing a host device by setting host configs and services.
+    pub async fn add_host_device(&self, host_device: &HostDevice) -> Result<(), Error> {
         let dbg_ids = host_device.debug_identifiers();
 
         // TODO(fxbug.dev/66615): Make sure that the bt-host device is left in a well-known state if
@@ -754,8 +762,10 @@ impl HostDispatcher {
             .context(format!("{:?}: failed to configure bt-host device", dbg_ids))?;
 
         // Assign the name that is currently assigned to the HostDispatcher as the local name.
-        let fut = host_device.set_name(self.state.read().name.clone());
-        fut.await
+        let name = self.get_name();
+        host_device
+            .set_name(name)
+            .await
             .map_err(|e| e.as_failure())
             .context(format!("{:?}: failed to set name of bt-host", dbg_ids))?;
 
@@ -772,6 +782,19 @@ impl HostDispatcher {
         self.handle_pairing_requests(host_device.clone());
 
         self.state.write().add_host(host_device.id(), host_device.clone());
+
+        Ok(())
+    }
+
+    /// Adds a bt-host device to the host dispatcher. Called by the watch_hosts device watcher
+    pub async fn add_host_by_path(&self, host_path: &Path) -> Result<(), Error> {
+        let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
+        let host_dev = bt::util::open_rdwr(host_path)
+            .context(format!("failed to open {:?} device file", host_path))?;
+        let device_topo = fdio::device_get_topo_path(&host_dev)?;
+        info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
+        let host_device = init_host(host_path, node).await?;
+        self.add_host_device(&host_device).await?;
 
         // Start listening to Host interface events.
         fasync::Task::spawn(host_device.watch_events(self.clone()).map(|r| {
@@ -853,11 +876,6 @@ impl HostDispatcher {
         if let Some(handle) = &mut dispatcher.pairing_dispatcher {
             handle.add_host(host.id(), host.proxy().clone());
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn add_test_host(&self, id: HostId, host: HostDevice) {
-        self.state.write().add_host(id, host);
     }
 }
 
@@ -1024,12 +1042,13 @@ async fn assign_host_data(
 pub(crate) mod test {
     use super::*;
 
-    use {
-        fidl::endpoints,
-        fidl_fuchsia_bluetooth_host::{HostMarker, HostRequestStream},
-        fuchsia_bluetooth::inspect::placeholder_node,
-        futures::future::join,
+    use fidl_fuchsia_bluetooth_gatt::{
+        LocalServiceDelegateProxy, LocalServiceRequestStream, Server_Request,
+        Server_RequestStream as GattServerRequestStream,
     };
+    use fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream};
+    use fuchsia_bluetooth::inspect::placeholder_node;
+    use futures::{future::join, StreamExt};
 
     pub(crate) fn make_test_dispatcher(
         watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
@@ -1039,7 +1058,6 @@ pub(crate) mod test {
     ) -> HostDispatcher {
         let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
         HostDispatcher::new(
-            "test".to_string(),
             Appearance::Display,
             Stash::in_memory_mock(),
             placeholder_node(),
@@ -1075,16 +1093,72 @@ pub(crate) mod test {
         dispatcher
     }
 
-    pub(crate) fn create_and_add_test_host_to_dispatcher(
+    #[derive(Default)]
+    pub(crate) struct GasEndpoints {
+        gatt_server: Option<GattServerRequestStream>,
+        delegate: Option<LocalServiceDelegateProxy>,
+        service: Option<LocalServiceRequestStream>,
+    }
+
+    async fn handle_standard_host_server_init(
+        mut host_server: HostRequestStream,
+    ) -> (HostRequestStream, GasEndpoints) {
+        let mut gas_endpoints = GasEndpoints::default();
+        while gas_endpoints.gatt_server.is_none() {
+            match host_server.next().await {
+                Some(Ok(HostRequest::SetLocalName { responder, .. })) => {
+                    info!("Setting Local Name");
+                    let _ = responder.send(&mut Ok(()));
+                }
+                Some(Ok(HostRequest::SetDeviceClass { responder, .. })) => {
+                    info!("Setting Device Class");
+                    let _ = responder.send(&mut Ok(()));
+                }
+                Some(Ok(HostRequest::RequestGattServer_ { server, .. })) => {
+                    // don't respond at all on the server side.
+                    info!("Storing Gatt Server");
+                    let mut gatt_server = server.into_stream().unwrap();
+                    info!("GAS Server was started, waiting for publish");
+                    // The Generic Access Service now publishes itself.
+                    match gatt_server.next().await {
+                        Some(Ok(Server_Request::PublishService {
+                            info,
+                            delegate,
+                            service,
+                            responder,
+                        })) => {
+                            info!("Captured publish of GAS Service: {:?}", info);
+                            gas_endpoints.delegate = Some(delegate.into_proxy().unwrap());
+                            gas_endpoints.service = Some(service.into_stream().unwrap());
+                            let _ =
+                                responder.send(&mut fidl_fuchsia_bluetooth::Status { error: None });
+                        }
+                        x => error!("Got unexpected GAS Server request: {:?}", x),
+                    }
+                    gas_endpoints.gatt_server = Some(gatt_server);
+                }
+                Some(Ok(HostRequest::SetConnectable { responder, .. })) => {
+                    info!("Setting connectable");
+                    let _ = responder.send(&mut Ok(()));
+                }
+                Some(Ok(req)) => info!("Unhandled Host Request in add: {:?}", req),
+                Some(Err(e)) => error!("Error in host server: {:?}", e),
+                None => break,
+            }
+        }
+        info!("Finishing host_device mocking for add host");
+        (host_server, gas_endpoints)
+    }
+
+    pub(crate) async fn create_and_add_test_host_to_dispatcher(
         id: HostId,
         dispatcher: &HostDispatcher,
-    ) -> types::Result<HostRequestStream> {
-        let (host_proxy, host_server) = endpoints::create_proxy_and_stream::<HostMarker>()?;
-        let id_val = id.0 as u8;
-        let address = Address::Public([id_val; 6]);
-        let path = format!("/dev/host{}", id_val);
-        let host_device = HostDevice::mock(id, address, Path::new(&path), host_proxy);
-        dispatcher.add_test_host(id, host_device);
-        Ok(host_server)
+    ) -> types::Result<(HostRequestStream, HostDevice, GasEndpoints)> {
+        let (host_server, host_device) = HostDevice::mock_from_id(id);
+        let host_server_init_handler = handle_standard_host_server_init(host_server);
+        let (res, (host_server, gas_endpoints)) =
+            join(dispatcher.add_host_device(&host_device), host_server_init_handler).await;
+        res?;
+        Ok((host_server, host_device, gas_endpoints))
     }
 }

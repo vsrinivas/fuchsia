@@ -12,13 +12,12 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker},
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
+    fidl_fuchsia_device::NameProviderMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::{
-        channel::mpsc,
-        future::{try_join5, BoxFuture},
-        FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+        channel::mpsc, future::BoxFuture, try_join, FutureExt, StreamExt, TryFutureExt,
+        TryStreamExt,
     },
     log::{error, info, warn},
     pin_utils::pin_mut,
@@ -64,13 +63,13 @@ async fn main() -> Result<(), Error> {
 }
 
 /// Returns the device host name that we assign as the local Bluetooth device name by default.
-async fn get_host_name() -> Result<String, Error> {
+async fn get_host_name() -> types::Result<String> {
     // Obtain the local device name to assign it as the default Bluetooth name,
     let name_provider = connect_to_protocol::<NameProviderMarker>()?;
     name_provider
         .get_device_name()
         .await?
-        .map_err(|e| format_err!("failed to obtain host name: {:?}", e))
+        .map_err(|e| format_err!("failed to obtain host name: {:?}", e).into())
 }
 
 fn host_service_handler(
@@ -108,17 +107,6 @@ impl BtGap {
             .context("Error initializing Stash service")?;
         info!("Data store initialized successfully");
 
-        info!("Obtaining system host name...");
-        let local_name = match get_host_name().await {
-            Ok(name) => {
-                info!("System host name obtained successfully.");
-                name
-            }
-            Err(e) => {
-                warn!("Error obtaining system host name, falling back to default name: {:?}", e);
-                DEFAULT_DEVICE_NAME.to_string()
-            }
-        };
         let (gas_channel_sender, gas_requests) = mpsc::channel(0);
 
         // Initialize a HangingGetBroker to process watch_peers requests
@@ -151,7 +139,6 @@ impl BtGap {
             .boxed();
 
         let hd = HostDispatcher::new(
-            local_name,
             Appearance::Display,
             stash,
             inspect.root().create_child("system"),
@@ -170,24 +157,36 @@ impl BtGap {
     async fn run(self) -> Result<(), Error> {
         let watch_for_hosts = run_host_watcher(self.hd.clone());
 
-        let run_generic_access_service = GenericAccessService {
-            hd: self.hd.clone(),
-            generic_access_req_stream: self.gas_requests,
-        }
-        .run()
-        .map(|()| Err::<(), Error>(format_err!("Generic Access Server terminated unexpectedly")));
+        let set_local_name = {
+            let hd = self.hd.clone();
+            async move {
+                info!("Obtaining system host name...");
+                if let Err(e) = get_host_name()
+                    .and_then(|name| hd.set_name(name, host_dispatcher::NameReplace::Keep))
+                    .await
+                {
+                    warn!("Error setting Bluetooth host name from system: {:?}", e);
+                }
+                Ok(())
+            }
+        };
+
+        let run_generic_access_service =
+            GenericAccessService::build(&self.hd, self.gas_requests).run().map(|()| {
+                Err::<(), Error>(format_err!("Generic Access Server terminated unexpectedly"))
+            });
 
         let serve_fidl = serve_fidl(self.hd.clone(), self.inspect);
 
-        try_join5(
+        try_join!(
+            set_local_name,
             serve_fidl,
             watch_for_hosts,
             run_generic_access_service,
             self.run_watch_peers,
             self.run_watch_hosts,
         )
-        .await
-        .map(|_| ())
+        .map(|((), (), (), (), (), ())| ())
     }
 }
 
@@ -198,7 +197,7 @@ async fn run_host_watcher(hd: HostDispatcher) -> Result<(), Error> {
     while let Some(msg) = host_events.try_next().await.context("failed to watch hosts")? {
         match msg {
             HostAdded(device_path) => {
-                let result = hd.add_device(&device_path).await;
+                let result = hd.add_host_by_path(&device_path).await;
                 if let Err(e) = &result {
                     warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                 }

@@ -4,7 +4,7 @@
 
 use crate::{
     build_config::{BrEdrConfig, Config},
-    host_dispatcher::{test as hd_test, HostDispatcher},
+    host_dispatcher::{test as hd_test, HostDispatcher, NameReplace, DEFAULT_DEVICE_NAME},
     store::stash::Stash,
     types,
 };
@@ -21,7 +21,8 @@ use {
         bonding_data::example, Address, HostData, HostId, Identity, Peer, PeerId,
     },
     fuchsia_inspect::{self as inspect, assert_data_tree},
-    futures::{channel::mpsc, future::join, stream::TryStreamExt, FutureExt},
+    futures::{channel::mpsc, future::join, stream::TryStreamExt, FutureExt, StreamExt},
+    log::info,
     std::{
         collections::{HashMap, HashSet},
         path::Path,
@@ -63,7 +64,6 @@ async fn on_device_changed_inspect_state() {
         hanging_get::DEFAULT_CHANNEL_SIZE,
     );
     let dispatcher = HostDispatcher::new(
-        "test".to_string(),
         Appearance::Display,
         stash,
         system_inspect,
@@ -117,7 +117,7 @@ async fn test_change_name_no_deadlock() {
     // host to test whether or not we can send messages to the GAS task. We just want to make
     // sure that the function actually returns and doesn't deadlock.
     assert_matches!(
-        dispatcher.set_name("test-change".to_string()).await.unwrap_err(),
+        dispatcher.set_name("test-change".to_string(), NameReplace::Replace).await.unwrap_err(),
         types::Error::SysError(sys::Error::Failed)
     );
 }
@@ -130,16 +130,15 @@ async fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool
 async fn apply_settings_fails_host_removed() {
     let dispatcher = hd_test::make_simple_test_dispatcher();
     let host_id = HostId(42);
-    let mut host_server =
-        hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).unwrap();
+    let (mut host_server, _, _gatt_server) =
+        hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).await.unwrap();
     assert!(host_is_in_dispatcher(&host_id, &dispatcher).await);
     let run_host = async move {
-        if let Ok(Some(HostRequest::SetConnectable { responder, .. })) =
-            host_server.try_next().await
-        {
-            responder.send(&mut Err(sys::Error::Failed)).unwrap();
-        } else {
-            panic!("Unexpected request");
+        match host_server.try_next().await {
+            Ok(Some(HostRequest::SetConnectable { responder, .. })) => {
+                responder.send(&mut Err(sys::Error::Failed)).unwrap()
+            }
+            x => panic!("Unexpected request: {:?}", x),
         }
     };
     let disable_connectable_fut = async {
@@ -158,6 +157,48 @@ async fn apply_settings_fails_host_removed() {
     assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
 }
 
+#[fuchsia::test]
+async fn default_name_behavior() {
+    let dispatcher = hd_test::make_simple_test_dispatcher();
+    let host_id = HostId(42);
+    let (mut host_server, _, _gatt_server) =
+        hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).await.unwrap();
+
+    let _host_server_answers_set_name = fasync::Task::spawn(async move {
+        while let Some(request) = host_server.next().await {
+            if let Err(e) = request {
+                panic!("Unexpected error from host server: {:?}", e);
+            }
+            use fidl_fuchsia_bluetooth_host::HostRequest;
+            match request.unwrap() {
+                HostRequest::SetLocalName { local_name, responder } => {
+                    info!("Host Local name was set to {}", local_name);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                x => panic!("Unexpected request to host server: {:?}", x),
+            }
+        }
+        info!("Ended host server stream");
+    });
+
+    assert_eq!(dispatcher.get_name(), DEFAULT_DEVICE_NAME);
+    // TODO: assert that host_server gets a the default name set
+    // No name is set, so this should set the name.
+    let test_name = "Sapphire💖";
+    dispatcher.set_name(test_name.to_string(), NameReplace::Keep).await.unwrap();
+    info!("Name is set");
+    assert_eq!(dispatcher.get_name(), test_name);
+    // Replacing with ::Replace should replace the name
+    let replace_name = "Fuchsia Sapphire";
+    dispatcher.set_name(replace_name.to_string(), NameReplace::Replace).await.unwrap();
+    info!("Name is set 2");
+    assert_eq!(dispatcher.get_name(), replace_name);
+    // Replacing again with Keep should not change the name
+    dispatcher.set_name(test_name.to_string(), NameReplace::Keep).await.unwrap();
+    info!("Name is set 3");
+    assert_eq!(dispatcher.get_name(), replace_name);
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
     // initiate test host-dispatcher
@@ -165,8 +206,8 @@ async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
 
     // add a test host with a channel we provide, which fails on restore_bonds()
     let host_id = HostId(1);
-    let mut host_server =
-        hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
+    let (mut host_server, _, _gatt_server) =
+        hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).await.unwrap();
     assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
 
     let run_host = async {
@@ -227,6 +268,7 @@ async fn test_notify_host_watcher_of_active_hosts() {
     let host_id_0 = HostId(0);
     let _host_server_0 =
         hd_test::create_and_add_test_host_to_dispatcher(host_id_0, &host_dispatcher)
+            .await
             .expect("add test host succeeds");
     assert!(host_is_in_dispatcher(&host_id_0, &host_dispatcher).await);
 
@@ -245,6 +287,7 @@ async fn test_notify_host_watcher_of_active_hosts() {
     let host_id_1 = HostId(1);
     let _host_server_1 =
         hd_test::create_and_add_test_host_to_dispatcher(host_id_1, &host_dispatcher)
+            .await
             .expect("add test host succeeds");
     assert!(host_is_in_dispatcher(&host_id_1, &host_dispatcher).await);
 

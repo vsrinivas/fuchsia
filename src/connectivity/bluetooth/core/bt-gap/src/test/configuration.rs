@@ -21,14 +21,15 @@ use crate::{
 };
 
 #[cfg(test)]
-fn setup_configuration_test() -> types::Result<(
+async fn setup_configuration_test() -> types::Result<(
     HostRequestStream,
     HostDispatcher,
     ConfigurationProxy,
     ConfigurationRequestStream,
 )> {
     let dispatcher = hd_test::make_simple_test_dispatcher();
-    let host_server = hd_test::create_and_add_test_host_to_dispatcher(HostId(42), &dispatcher)?;
+    let (host_server, _, _gatt_server) =
+        hd_test::create_and_add_test_host_to_dispatcher(HostId(42), &dispatcher).await?;
     let (client, server) =
         fidl::endpoints::create_proxy_and_stream::<ConfigurationMarker>().unwrap();
     Ok((host_server, dispatcher, client, server))
@@ -54,7 +55,8 @@ macro_rules! handle_host_req_fut {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn disable_le_privacy() {
-    let (host_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let (host_server, dispatcher, config_client, server) =
+        setup_configuration_test().await.unwrap();
     let run_configuration = configuration::run(dispatcher, server);
     let make_request = async move {
         let response = config_client
@@ -79,7 +81,8 @@ async fn disable_le_privacy() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn disable_le_background_scan() {
-    let (host_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let (host_server, dispatcher, config_client, server) =
+        setup_configuration_test().await.unwrap();
     let run_configuration = configuration::run(dispatcher, server);
     let make_request = async move {
         let response = config_client
@@ -101,7 +104,8 @@ async fn disable_le_background_scan() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn disable_connectable_mode() {
-    let (host_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let (host_server, dispatcher, config_client, server) =
+        setup_configuration_test().await.unwrap();
     let run_configuration = configuration::run(dispatcher, server);
     let make_request = async move {
         let response = config_client
@@ -130,7 +134,8 @@ async fn disable_connectable_mode() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn set_secure_connections_only() {
-    let (host_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let (host_server, dispatcher, config_client, server) =
+        setup_configuration_test().await.unwrap();
     let run_configuration = configuration::run(dispatcher, server);
     let make_request = async move {
         let response = config_client
@@ -159,11 +164,12 @@ async fn set_secure_connections_only() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn configure_applies_to_multiple_devices() {
     // `setup_configuration_test` adds the first host, and in this test we add a second
-    let (host1_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let (host1_server, dispatcher, config_client, server) =
+        setup_configuration_test().await.unwrap();
     let host1_info = dispatcher.active_host().await.unwrap().info();
     let host2_id = HostId(host1_info.id.0 + 1);
-    let host2_server =
-        hd_test::create_and_add_test_host_to_dispatcher(host2_id, &dispatcher).unwrap();
+    let (host2_server, _, _gatt_server) =
+        hd_test::create_and_add_test_host_to_dispatcher(host2_id, &dispatcher).await.unwrap();
 
     let run_configuration = configuration::run(dispatcher, server);
     let make_request = async move {

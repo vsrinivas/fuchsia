@@ -6,32 +6,27 @@ use {
     anyhow::Error,
     assert_matches::assert_matches,
     fidl::endpoints,
-    fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
+    fidl_fuchsia_bluetooth_host::HostRequest,
     fidl_fuchsia_bluetooth_sys::AccessMarker,
     fuchsia_bluetooth::types::{
         pairing_options::{BondableMode, PairingOptions, SecurityLevel},
-        Address, HostId, PeerId, Technology,
+        HostId, PeerId, Technology,
     },
     futures::{future, stream::TryStreamExt},
     parking_lot::RwLock,
-    std::{path::Path, sync::Arc},
+    std::sync::Arc,
 };
 
-use crate::{
-    host_device::{self, HostDevice},
-    host_dispatcher,
-    services::access,
-};
+use crate::{host_device, host_dispatcher, services::access};
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_pair() -> Result<(), Error> {
     let dispatcher = host_dispatcher::test::make_simple_test_dispatcher();
-    let (host_proxy, host_server) = endpoints::create_proxy_and_stream::<HostMarker>()?;
 
-    let address = Address::Public([1, 2, 3, 4, 5, 6]);
-    let host_id = HostId(42);
-    let host_device = HostDevice::mock(host_id, address, Path::new("/dev/host"), host_proxy);
-    dispatcher.add_test_host(host_id, host_device);
+    let (host_server, _, _gatt_server) =
+        host_dispatcher::test::create_and_add_test_host_to_dispatcher(HostId(42), &dispatcher)
+            .await
+            .unwrap();
 
     let (client, server) = endpoints::create_proxy_and_stream::<AccessMarker>()?;
     let run_access = access::run(dispatcher, server);
@@ -71,28 +66,26 @@ async fn test_pair() -> Result<(), Error> {
 
 // Test that we can start discovery on a host then migrate that discovery session onto a different
 // host when the original host is deactivated
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_discovery_over_adapter_change() -> Result<(), Error> {
     // Create mock host dispatcher
     let hd = host_dispatcher::test::make_simple_test_dispatcher();
 
     // Add Host #1 to dispatcher and make active
-    let (host_proxy_1, host_server_1) = endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let active_host_path = Path::new("/dev/host1");
-    let addr = Address::Public([0, 0, 0, 0, 0, 1]);
-    let host_1 = HostDevice::mock(HostId(1), addr, active_host_path, host_proxy_1).as_inactive();
+    let (host_server_1, host_1, _gatt_server_1) =
+        host_dispatcher::test::create_and_add_test_host_to_dispatcher(HostId(1), &hd)
+            .await
+            .unwrap();
     let host_info_1 = Arc::new(RwLock::new(host_1.info()));
 
-    hd.add_test_host(HostId(1), host_1.clone());
     hd.set_active_host(HostId(1))?;
 
     // Add Host #2 to dispatcher
-    let (host_proxy_2, host_server_2) = endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let addr = Address::Public([0, 0, 0, 0, 0, 2]);
-    let inactive_host_path = Path::new("/dev/host2");
-    let host_2 = HostDevice::mock(HostId(2), addr, inactive_host_path, host_proxy_2).as_inactive();
+    let (host_server_2, host_2, _gatt_server_2) =
+        host_dispatcher::test::create_and_add_test_host_to_dispatcher(HostId(2), &hd)
+            .await
+            .unwrap();
     let host_info_2 = Arc::new(RwLock::new(host_2.info()));
-    hd.add_test_host(HostId(2), host_2.clone());
 
     // Create access server future
     let (access_client, access_server) = endpoints::create_proxy_and_stream::<AccessMarker>()?;
@@ -115,7 +108,7 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         assert!(is_discovering);
 
         // Deactivate Host #1
-        hd.rm_device(active_host_path).await;
+        hd.rm_device(host_1.path()).await;
 
         // Assert that Host #2 is now marked as discovering
         let _ = host_2

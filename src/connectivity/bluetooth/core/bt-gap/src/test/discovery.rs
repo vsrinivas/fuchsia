@@ -2,20 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    host_device::{self, HostDevice},
-    host_dispatcher,
-    services::access,
-};
+use crate::{host_device, host_dispatcher, services::access};
 use {
-    fidl_fuchsia_bluetooth_host::HostMarker,
     fidl_fuchsia_bluetooth_sys::AccessMarker,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::{Address, HostId},
+    fuchsia_bluetooth::types::HostId,
     futures::{future::join, stream::FuturesUnordered},
     parking_lot::RwLock,
     proptest::prelude::*,
-    std::{collections::HashMap, fmt::Debug, iter, path::PathBuf, pin::Pin, sync::Arc},
+    std::{collections::HashMap, fmt::Debug, iter, pin::Pin, sync::Arc},
 };
 
 // Maximum number of mock access.fidl clients we simulate.
@@ -91,14 +86,11 @@ proptest! {
         let hd = host_dispatcher::test::make_simple_test_dispatcher();
 
         // Add mock host to dispatcher and make active
-        let host_id = HostId(1);
-        let host_address = Address::Public([0, 0, 0, 0, 0, 1]);
-        let (host_proxy, host_stream) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
-        let mock_host = HostDevice::mock(host_id, host_address, &PathBuf::from("/dev/host1"), host_proxy);
-        let host_info = Arc::new(RwLock::new(mock_host.info()));
-
-        let _ = hd.add_test_host(host_id, mock_host.clone());
-        hd.set_active_host(host_id)?;
+        let add_mock_host_fut = host_dispatcher::test::create_and_add_test_host_to_dispatcher(HostId(1), &hd);
+        futures::pin_mut!(add_mock_host_fut);
+        let (host_stream, host_device, _gatt_server) = executor.run_singlethreaded(&mut add_mock_host_fut).unwrap();
+        let host_info = Arc::new(RwLock::new(host_device.info()));
+        hd.set_active_host(host_device.id())?;
 
         // Maps {client no. -> discovery session token}
         let mut discovery_sessions = HashMap::new();
@@ -144,7 +136,7 @@ proptest! {
                         &mut executor,
                         &mut access_sessions,
                         &mut host_task,
-                        mock_host.clone(),
+                        host_device.clone(),
                     );
                     // INVARIANT:
                     // If discovery_sessions is nonempty, at least one client holds a discovery
@@ -165,7 +157,7 @@ proptest! {
             &mut executor,
             &mut access_sessions,
             &mut host_task,
-            mock_host.clone(),
+            host_device.clone(),
         );
         prop_assert!(!is_discovering);
     }

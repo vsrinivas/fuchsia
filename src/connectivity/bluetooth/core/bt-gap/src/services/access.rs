@@ -86,7 +86,7 @@ async fn handler(
         }
         AccessRequest::SetLocalName { name, control_handle: _ } => {
             info!("fuchsia.bluetooth.sys.Access.SetLocalName(..)");
-            if let Err(e) = hd.set_name(name).await {
+            if let Err(e) = hd.set_name(name, NameReplace::Replace).await {
                 warn!("Error setting local name: {:?}", e);
             }
             Ok(())

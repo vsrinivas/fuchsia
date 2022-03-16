@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    anyhow::{format_err, Error},
-    fidl::endpoints::{create_endpoints, create_request_stream, ClientEnd},
-    fidl_fuchsia_bluetooth_gatt::{
-        self as gatt, LocalServiceDelegateOnReadValueResponder,
-        LocalServiceDelegateRequest as ServiceDelegateReq,
-        LocalServiceDelegateRequestStream as ServiceDelegateReqStream, LocalServiceMarker,
-        Server_Proxy,
-    },
-    futures::{channel::mpsc, SinkExt, StreamExt},
-    log::{info, warn},
+use anyhow::{format_err, Error};
+use fidl::endpoints::{create_endpoints, create_request_stream, ClientEnd};
+use fidl_fuchsia_bluetooth_gatt::{
+    self as gatt, LocalServiceDelegateOnReadValueResponder,
+    LocalServiceDelegateRequest as ServiceDelegateReq,
+    LocalServiceDelegateRequestStream as ServiceDelegateReqStream, LocalServiceMarker,
+    Server_Proxy,
 };
+use futures::{channel::mpsc, SinkExt, StreamExt};
+use log::{info, warn};
 
 use crate::host_dispatcher::HostDispatcher;
 
@@ -137,11 +135,15 @@ impl GasProxy {
 /// the GAS Proxy task, which proxies the requests from that specific host to the
 /// sender end of the channel stored in this struct.
 pub struct GenericAccessService {
-    pub hd: HostDispatcher,
-    pub generic_access_req_stream: mpsc::Receiver<ServiceDelegateReq>,
+    hd: HostDispatcher,
+    generic_access_req_stream: mpsc::Receiver<ServiceDelegateReq>,
 }
 
 impl GenericAccessService {
+    pub fn build(hd: &HostDispatcher, request_stream: mpsc::Receiver<ServiceDelegateReq>) -> Self {
+        Self { hd: hd.clone(), generic_access_req_stream: request_stream }
+    }
+
     fn send_read_response(
         &self,
         responder: LocalServiceDelegateOnReadValueResponder,
@@ -187,22 +189,22 @@ impl GenericAccessService {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::store::stash::Stash,
-        async_helpers::hanging_get::asynchronous as hanging_get,
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
-        fidl_fuchsia_bluetooth::Appearance,
-        fidl_fuchsia_bluetooth_gatt::{
-            LocalServiceDelegateMarker, LocalServiceDelegateProxy,
-            LocalServiceDelegateRequest as ServiceDelegateReq, LocalServiceMarker, Server_Marker,
-        },
-        fuchsia_async as fasync, fuchsia_inspect as inspect,
-        futures::FutureExt,
-        std::collections::HashMap,
+    use super::*;
+    use async_helpers::hanging_get::asynchronous as hanging_get;
+    use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
+    use fidl_fuchsia_bluetooth::Appearance;
+    use fidl_fuchsia_bluetooth_gatt::{
+        LocalServiceDelegateMarker, LocalServiceDelegateProxy,
+        LocalServiceDelegateRequest as ServiceDelegateReq, LocalServiceMarker, Server_Marker,
     };
+    use fuchsia_async as fasync;
+    use fuchsia_inspect as inspect;
+    use futures::FutureExt;
+    use std::collections::HashMap;
 
-    const TEST_DEVICE_NAME: &str = "test-generic-access-service";
+    use crate::host_dispatcher::{NameReplace, DEFAULT_DEVICE_NAME};
+    use crate::store::stash::Stash;
+
     const TEST_DEVICE_APPEARANCE: Appearance = Appearance::Computer;
 
     fn setup_generic_access_service() -> (LocalServiceDelegateProxy, HostDispatcher) {
@@ -239,7 +241,6 @@ mod tests {
             hanging_get::DEFAULT_CHANNEL_SIZE,
         );
         let dispatcher = HostDispatcher::new(
-            TEST_DEVICE_NAME.to_string(),
             TEST_DEVICE_APPEARANCE,
             stash,
             system_inspect,
@@ -249,7 +250,6 @@ mod tests {
             watch_hosts_broker.new_publisher(),
             watch_hosts_broker.new_registrar(),
         );
-
         let service = GenericAccessService { hd: dispatcher.clone(), generic_access_req_stream };
         fasync::Task::spawn(service.run()).detach();
         (generic_access_delegate_client, dispatcher)
@@ -260,9 +260,10 @@ mod tests {
         let (delegate_client, host_dispatcher) = setup_generic_access_service();
         let (expected_device_name, _err) =
             delegate_client.on_read_value(GENERIC_ACCESS_DEVICE_NAME_ID, 0).await.unwrap();
-        assert_eq!(expected_device_name.unwrap(), TEST_DEVICE_NAME.as_bytes());
+        assert_eq!(expected_device_name.unwrap(), DEFAULT_DEVICE_NAME.as_bytes());
+        // This is expected to error since there is no host.
         let _ = host_dispatcher
-            .set_name("test-generic-access-service-1".to_string())
+            .set_name("test-generic-access-service-1".to_string(), NameReplace::Replace)
             .await
             .unwrap_err();
         let (expected_device_name, _err) =

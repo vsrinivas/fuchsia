@@ -342,6 +342,20 @@ impl HostDevice {
     }
 
     #[cfg(test)]
+    pub(crate) fn mock_from_id(
+        id: HostId,
+    ) -> (fidl_fuchsia_bluetooth_host::HostRequestStream, HostDevice) {
+        let (host_proxy, host_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_bluetooth_host::HostMarker>()
+                .unwrap();
+        let id_val = id.0 as u8;
+        let address = Address::Public([id_val; 6]);
+        let path = format!("/dev/host{}", id_val);
+        let host_device = HostDevice::mock(id, address, Path::new(&path), host_proxy);
+        (host_stream, host_device)
+    }
+
+    #[cfg(test)]
     pub(crate) fn mock(id: HostId, address: Address, path: &Path, proxy: HostProxy) -> HostDevice {
         let info = HostInfo {
             id,
@@ -353,14 +367,6 @@ impl HostDevice {
             discovering: false,
         };
         HostDevice::new(path.into(), proxy, Inspectable::new(info, placeholder_node()))
-    }
-
-    #[cfg(test)]
-    pub(crate) fn as_inactive(self) -> HostDevice {
-        let mut new_info = self.info();
-        new_info.active = false;
-        self.0.info.write().update(new_info);
-        self
     }
 }
 
@@ -407,6 +413,7 @@ pub(crate) mod test {
     use super::*;
 
     use {
+        fidl::endpoints::Responder,
         fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream},
         fidl_fuchsia_bluetooth_sys::HostInfo as FidlHostInfo,
         futures::{future, TryStreamExt},
@@ -419,25 +426,29 @@ pub(crate) mod test {
     ) -> Result<(), anyhow::Error> {
         server
             .try_for_each(move |req| {
-                // Set discovery field of host info
-                if let HostRequest::StartDiscovery { responder } = req {
-                    assert!(!host_info.read().discovering);
-                    host_info.write().discovering = true;
-                    assert_matches::assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                info!("Handling {:?} in discovery host server", req);
+                match req {
+                    HostRequest::StartDiscovery { responder } => {
+                        assert!(!host_info.read().discovering);
+                        host_info.write().discovering = true;
+                        assert_matches::assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                    }
+                    HostRequest::StopDiscovery { control_handle: _ } => {
+                        assert!(host_info.read().discovering);
+                        host_info.write().discovering = false;
+                    }
+                    HostRequest::WatchState { responder } => {
+                        assert_matches::assert_matches!(
+                            responder.send(FidlHostInfo::from(host_info.read().clone())),
+                            Ok(())
+                        );
+                    }
+                    HostRequest::WatchPeers { responder, .. } => {
+                        info!("Got watch peers, never responding..");
+                        responder.drop_without_shutdown();
+                    }
+                    x => panic!("Unexpected request in discovery host server: {:?}", x),
                 }
-                // Clear discovery field of host info
-                else if let HostRequest::StopDiscovery { control_handle: _ } = req {
-                    assert!(host_info.read().discovering);
-                    host_info.write().discovering = false;
-                }
-                // Update host with current info state
-                else if let HostRequest::WatchState { responder } = req {
-                    assert_matches::assert_matches!(
-                        responder.send(FidlHostInfo::from(host_info.read().clone())),
-                        Ok(())
-                    );
-                }
-
                 future::ok(())
             })
             .await
