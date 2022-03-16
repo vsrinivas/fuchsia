@@ -85,16 +85,16 @@ static pbus_dev_t spi_dev = []() {
 
 zx_status_t Nelson::SpiInit() {
   // setup pinmux for SPICC1 bus arbiter.
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(4), 3);  // MOSI
-  gpio_impl_.SetDriveStrength(S905D2_GPIOH(4), 2500, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SPI_B_MOSI, 3);  // MOSI
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_B_MOSI, 2500, nullptr);
 
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(5), 3);  // MISO
-  gpio_impl_.SetDriveStrength(S905D2_GPIOH(5), 2500, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SPI_B_MISO, 3);  // MISO
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_B_MISO, 2500, nullptr);
 
   gpio_impl_.ConfigOut(GPIO_SOC_SPI_B_SS0, 1);  // SS0
 
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);  // SCLK
-  gpio_impl_.SetDriveStrength(S905D2_GPIOH(7), 2500, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SPI_B_SCLK, 3);  // SCLK
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_B_SCLK, 2500, nullptr);
 
   std::vector<pbus_metadata_t> spi_metadata;
   spi_metadata.emplace_back(pbus_metadata_t{

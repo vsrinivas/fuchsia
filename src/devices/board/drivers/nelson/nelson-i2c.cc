@@ -7,9 +7,10 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-gpio.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
+#include "nelson-gpios.h"
 #include "nelson.h"
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
@@ -18,15 +19,15 @@ using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
-        .base = S905D2_I2C_AO_0_BASE,
+        .base = S905D3_I2C_AO_0_BASE,
         .length = 0x20,
     },
     {
-        .base = S905D2_I2C2_BASE,
+        .base = S905D3_I2C2_BASE,
         .length = 0x20,
     },
     {
-        .base = S905D2_I2C3_BASE,
+        .base = S905D3_I2C3_BASE,
         .length = 0x20,
     },
 };
@@ -39,15 +40,15 @@ static const uint32_t i2c_clock_delays[] = {
 
 static const pbus_irq_t i2c_irqs[] = {
     {
-        .irq = S905D2_I2C_AO_0_IRQ,
+        .irq = S905D3_I2C_AO_0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_I2C2_IRQ,
+        .irq = S905D3_I2C2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_I2C3_IRQ,
+        .irq = S905D3_I2C3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -127,20 +128,20 @@ zx_status_t Nelson::I2cInit() {
   // setup pinmux for our I2C busses
 
   // i2c_ao_0
-  gpio_impl_.SetAltFunction(S905D2_GPIOAO(2), 1);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOAO(2), 2500, nullptr);
-  gpio_impl_.SetAltFunction(S905D2_GPIOAO(3), 1);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOAO(3), 2500, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SENSORS_I2C_SCL, 1);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SENSORS_I2C_SCL, 2500, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SENSORS_I2C_SDA, 1);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SENSORS_I2C_SDA, 2500, nullptr);
   // i2c2
-  gpio_impl_.SetAltFunction(S905D2_GPIOZ(14), 3);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOZ(14), 3000, nullptr);
-  gpio_impl_.SetAltFunction(S905D2_GPIOZ(15), 3);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOZ(15), 3000, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_TOUCH_I2C_SDA, 3);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_TOUCH_I2C_SDA, 3000, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_TOUCH_I2C_SCL, 3);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_TOUCH_I2C_SCL, 3000, nullptr);
   // i2c3
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(14), 2);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(14), 3000, nullptr);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(15), 2);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(15), 3000, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_AV_I2C_SDA, 2);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_AV_I2C_SDA, 3000, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_AV_I2C_SCL, 2);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_AV_I2C_SCL, 3000, nullptr);
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {

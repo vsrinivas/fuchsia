@@ -160,30 +160,30 @@ zx_status_t Nelson::AudioInit() {
   };
 
   // TDM pin assignments.
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(1), S905D3_GPIOA_1_TDMB_SCLK_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(2), S905D3_GPIOA_2_TDMB_FS_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(3), S905D3_GPIOA_3_TDMB_D0_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_I2S_SCLK, S905D3_GPIOA_1_TDMB_SCLK_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_I2S_FS, S905D3_GPIOA_2_TDMB_FS_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_I2S_DO0, S905D3_GPIOA_3_TDMB_D0_FN);
   gpio_impl_.SetAltFunction(S905D3_GPIOA(6), S905D3_GPIOA_6_TDMB_DIN3_FN);
   constexpr uint64_t ua = 3000;
-  gpio_impl_.SetDriveStrength(S905D3_GPIOA(1), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D3_GPIOA(2), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D3_GPIOA(3), ua, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_I2S_SCLK, ua, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_I2S_FS, ua, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_I2S_DO0, ua, nullptr);
 
 #ifdef ENABLE_BT
   // PCM pin assignments.
-  gpio_impl_.SetAltFunction(S905D3_GPIOX(8), S905D3_GPIOX_8_TDMA_DIN1_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOX(9), S905D3_GPIOX_9_TDMA_D0_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOX(10), S905D3_GPIOX_10_TDMA_FS_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOX(11), S905D3_GPIOX_11_TDMA_SCLK_FN);
-  gpio_impl_.SetDriveStrength(S905D3_GPIOX(9), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D3_GPIOX(10), ua, nullptr);
-  gpio_impl_.SetDriveStrength(S905D3_GPIOX(11), ua, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_BT_PCM_IN, S905D3_GPIOX_8_TDMA_DIN1_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_BT_PCM_OUT, S905D3_GPIOX_9_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_BT_PCM_SYNC, S905D3_GPIOX_10_TDMA_FS_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_BT_PCM_CLK, S905D3_GPIOX_11_TDMA_SCLK_FN);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_BT_PCM_OUT, ua, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_BT_PCM_SYNC, ua, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_BT_PCM_CLK, ua, nullptr);
 #endif
 
   // PDM pin assignments
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(7), S905D3_GPIOA_7_PDM_DCLK_FN);
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(8), S905D3_GPIOA_8_PDM_DIN0_FN);  // First 2 MICs.
-  gpio_impl_.SetAltFunction(S905D3_GPIOA(9), S905D3_GPIOA_9_PDM_DIN1_FN);  // Third MIC.
+  gpio_impl_.SetAltFunction(GPIO_SOC_MIC_DCLK, S905D3_GPIOA_7_PDM_DCLK_FN);
+  gpio_impl_.SetAltFunction(GPIO_SOC_MICLR_DIN0, S905D3_GPIOA_8_PDM_DIN0_FN);  // First 2 MICs.
+  gpio_impl_.SetAltFunction(GPIO_SOC_MICLR_DIN1, S905D3_GPIOA_9_PDM_DIN1_FN);  // Third MIC.
 
   // Board info.
   pdev_board_info_t board_info = {};
@@ -240,8 +240,8 @@ zx_status_t Nelson::AudioInit() {
 
   if (board_info.board_revision < BOARD_REV_P2) {
     // CODEC pin assignments.
-    gpio_impl_.SetAltFunction(S905D3_GPIOA(5), 0);  // GPIO
-    gpio_impl_.ConfigOut(S905D3_GPIOA(5), 0);
+    gpio_impl_.SetAltFunction(GPIO_SOC_AUDIO_EN, 0);  // GPIO
+    gpio_impl_.ConfigOut(GPIO_SOC_AUDIO_EN, 0);
 
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
@@ -266,8 +266,8 @@ zx_status_t Nelson::AudioInit() {
     }
   } else {
     // CODEC pin assignments.
-    gpio_impl_.SetAltFunction(S905D3_GPIOA(0), 0);  // BOOST_EN_SOC as GPIO.
-    gpio_impl_.ConfigOut(S905D3_GPIOA(0), 1);       // BOOST_EN_SOC to high.
+    gpio_impl_.SetAltFunction(GPIO_INRUSH_EN_SOC, 0);  // BOOST_EN_SOC as GPIO.
+    gpio_impl_.ConfigOut(GPIO_INRUSH_EN_SOC, 1);       // BOOST_EN_SOC to high.
     // From the TAS5805m codec reference manual:
     // "9.5.3.1 Startup Procedures
     // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
@@ -280,7 +280,7 @@ zx_status_t Nelson::AudioInit() {
     // state.
     // 6. The device is now in normal operation."
     // Step 3 PDN setup and 5ms delay is executed below.
-    gpio_impl_.ConfigOut(S905D3_GPIOA(5), 1);  // Set PDN_N to high.
+    gpio_impl_.ConfigOut(GPIO_SOC_AUDIO_EN, 1);  // Set PDN_N to high.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     // I2S clocks are configured by the controller and the rest of the initialization is done
     // in the codec itself.

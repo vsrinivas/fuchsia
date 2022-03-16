@@ -189,7 +189,7 @@ zx_status_t Nelson::GpioInit() {
   }
 
   // Enable mute LED so it will be controlled by mute switch.
-  status = gpio_impl_.ConfigOut(S905D3_GPIOAO(11), 1);
+  status = gpio_impl_.ConfigOut(GPIO_AMBER_LED_PWM, 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
   }
@@ -197,11 +197,11 @@ zx_status_t Nelson::GpioInit() {
 #ifdef GPIO_TEST
   static const pbus_gpio_t gpio_test_gpios[] = {{
                                                     // SYS_LED
-                                                    .gpio = S905D3_GPIOAO(11),
+                                                    .gpio = GPIO_AMBER_LED_PWM,
                                                 },
                                                 {
                                                     // JTAG Adapter Pin
-                                                    .gpio = S905D3_GPIOAO(6),
+                                                    .gpio = GPIO_SOC_JTAG_TCK,
                                                 }};
 
   const pbus_dev_t gpio_test_dev = []() {

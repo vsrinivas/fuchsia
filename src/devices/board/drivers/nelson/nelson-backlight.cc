@@ -9,7 +9,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_backlight_bind.h"
@@ -19,8 +19,8 @@ namespace nelson {
 
 constexpr pbus_mmio_t backlight_mmios[] = {
     {
-        .base = S905D2_GPIO_AO_BASE,
-        .length = S905D2_GPIO_AO_LENGTH,
+        .base = S905D3_GPIO_AO_BASE,
+        .length = S905D3_GPIO_AO_LENGTH,
     },
 };
 

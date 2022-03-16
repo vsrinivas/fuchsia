@@ -29,7 +29,6 @@ namespace nelson {
 #define GPIO_SOC_AV_I2C_SDA     S905D3_GPIOA(14)
 #define GPIO_SOC_AV_I2C_SCL     S905D3_GPIOA(15)
 
-
 // GPIO Z Bank
 #define GPIO_HW_ID_3            S905D3_GPIOZ(0)
 #define GPIO_SOC_TH_BOOT_MODE_L S905D3_GPIOZ(1)
@@ -48,7 +47,6 @@ namespace nelson {
 #define GPIO_SOC_TOUCH_I2C_SDA  S905D3_GPIOZ(14)
 #define GPIO_SOC_TOUCH_I2C_SCL  S905D3_GPIOZ(15)
 
-
 // GPIO C Bank
 #define GPIO_SOC_SPI_A_MOSI     S905D3_GPIOC(0)
 #define GPIO_SOC_SPI_A_MISO     S905D3_GPIOC(1)
@@ -58,7 +56,6 @@ namespace nelson {
 #define GPIO_TH_SOC_INT         S905D3_GPIOC(5)
 // GPIOC(6)
 #define GPIO_SOC_TH_INT         S905D3_GPIOC(7)
-
 
 // GPIO X Bank
 #define GPIO_SOC_WIFI_SDIO_D0    S905D3_GPIOX(0)
@@ -93,7 +90,6 @@ namespace nelson {
 #define GPIO_SOC_SPI_B_SCLK     S905D3_GPIOH(7)
 // GPIOH(8)
 
-
 // GPIO AO Banks
 #define GPIO_SOC_DEBUG_UARTAO_TX S905D3_GPIOAO(0)
 #define GPIO_SOC_DEBUG_UARTAO_RX S905D3_GPIOAO(1)
@@ -107,7 +103,6 @@ namespace nelson {
 #define GPIO_SOC_JTAG_TDO        S905D3_GPIOAO(9)
 #define GPIO_FDR_L               S905D3_GPIOAO(10)
 #define GPIO_AMBER_LED_PWM       S905D3_GPIOAO(11)
-
 
 // GPIOE Banks
 #define GPIO_SOC_VDDEE_PWM       S905D3_GPIOE(0)
