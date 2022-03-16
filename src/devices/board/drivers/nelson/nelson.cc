@@ -68,10 +68,10 @@ uint32_t Nelson::GetBoardOption() {
 uint32_t Nelson::GetDisplayId() {
   if (!display_id_) {
     uint8_t id0, id1;
-    gpio_impl_.ConfigIn(GPIO_DISPLAY_ID0, GPIO_NO_PULL);
-    gpio_impl_.ConfigIn(GPIO_DISPLAY_ID1, GPIO_NO_PULL);
-    gpio_impl_.Read(GPIO_DISPLAY_ID0, &id0);
-    gpio_impl_.Read(GPIO_DISPLAY_ID1, &id1);
+    gpio_impl_.ConfigIn(GPIO_DISP_SOC_ID0, GPIO_NO_PULL);
+    gpio_impl_.ConfigIn(GPIO_DISP_SOC_ID1, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_DISP_SOC_ID0, &id0);
+    gpio_impl_.Read(GPIO_DISP_SOC_ID1, &id1);
     display_id_.emplace((id1 << 1) | id0);
   }
 

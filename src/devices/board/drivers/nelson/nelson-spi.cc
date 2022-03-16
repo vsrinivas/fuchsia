@@ -91,7 +91,7 @@ zx_status_t Nelson::SpiInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOH(5), 3);  // MISO
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(5), 2500, nullptr);
 
-  gpio_impl_.ConfigOut(GPIO_SPICC1_SS0, 1);  // SS0
+  gpio_impl_.ConfigOut(GPIO_SOC_SPI_B_SS0, 1);  // SS0
 
   gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);  // SCLK
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(7), 2500, nullptr);
