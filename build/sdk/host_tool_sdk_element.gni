@@ -5,7 +5,7 @@
 import("sdk_element.gni")
 
 # Defines an SDK element containing a host tool binary.
-
+#
 # Parameters
 #   deps (required)
 #     A single element list containing the GN label that builds the host tool
@@ -17,7 +17,7 @@ import("sdk_element.gni")
 #     `output_name` parameter -- this should be that same name.
 #
 #   description (optional)
-#     Description of the host tool, to be included in the element's metadata. If
+#     Description of the host tool to be included in the element's metadata. If
 #     omitted, defaults to "$output_name host tool for $output_toolchain.".
 template("host_tool_sdk_element") {
   assert(defined(invoker.deps), "Must define deps.")
@@ -43,7 +43,7 @@ template("host_tool_sdk_element") {
     deps = gn_deps
 
     schema = {
-      source = "//sdk/schema/host_tool-f8025966.json"
+      source = "//sdk/schema/sdk/host_tool-f8025966.json"
     }
 
     meta = {

@@ -33,52 +33,8 @@
                 "linux",
                 "mac"
             ]
-        },
-        "versioned_sdk_element": {
-            "allOf": [
-                {
-                    "$ref": "#/definitions/envelope"
-                },
-                {
-                    "properties": {
-                        "data": {
-                            "description": "Base type for SDK elements",
-                            "properties": {
-                                "description": {
-                                    "description": "A human readable description of the SDK element.",
-                                    "maxLength": 1024,
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "description": "The name of the element",
-                                    "type": "string"
-                                },
-                                "host_os": {
-                                    "$ref": "#/definitions/os"
-                                },
-                                "host_arch": {
-                                    "$ref": "#/definitions/arch"
-                                },
-                                "target_arch": {
-                                    "$ref": "#/definitions/arch"
-                                },
-                                "element_type": {
-                                    "description": "Type of the SDK element.",
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "element_type"
-                            ],
-                            "type": "object"
-                        }
-                    },
-                    "type": "object"
-                }
-            ],
-            "type": "object"
         }
     },
+    "description": "Schema definitions widely share across many different schemata.",
     "id": "https://fuchsia.dev/schema/common-00000000.json"
 }

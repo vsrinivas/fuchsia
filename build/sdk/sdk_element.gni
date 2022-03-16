@@ -101,7 +101,10 @@ template("sdk_element") {
   if (defined(schema.deps)) {
     schema_deps = schema.deps
   } else {
-    schema_deps = [ "//build/sdk/meta/common.json" ]
+    schema_deps = [
+      "//sdk/schema/common-00000000.json",
+      "//sdk/schema/sdk/sdk_common-00000000.json",
+    ]
   }
 
   # Validate the file scope.

@@ -1,0 +1,75 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "deps": {
+            "description": "A list of SDK element the containing element depends on.",
+            "items": {
+                "$ref": "#/definitions/element_name"
+            },
+            "type": "array"
+        },
+        "sources": {
+            "description": "A list of files that constitute an SDK element. Each file is a path relative to the root of the SDK package.",
+            "items": {
+                "$ref": "#/definitions/file_path"
+            },
+            "type": "array"
+        },
+        "element_name": {
+            "description": "An SDK element name.",
+            "type": "string",
+            "pattern": "^[0-9a-zA-Z_]{1,128}$"
+        },
+        "file_path": {
+            "description": "A relative path name inside an SDK package.",
+            "type": "string",
+            "pattern": "^(?:[^/]+/)[^/]+$"
+        },
+        "versioned_element": {
+            "allOf": [
+                {
+                    "$ref": "common-0000000.json#/definitions/envelope"
+                },
+                {
+                    "properties": {
+                        "data": {
+                            "description": "Base type for SDK elements",
+                            "properties": {
+                                "description": {
+                                    "description": "A human readable description of the SDK element.",
+                                    "maxLength": 1024,
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "$ref": "#/definitions/element_name"
+                                },
+                                "host_os": {
+                                    "$ref": "common-0000000.json#/definitions/os"
+                                },
+                                "host_arch": {
+                                    "$ref": "common-0000000.json#/definitions/arch"
+                                },
+                                "target_arch": {
+                                    "$ref": "common-0000000.json#/definitions/arch"
+                                },
+                                "element_type": {
+                                    "description": "Type of the SDK element.",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "element_type"
+                            ],
+                            "type": "object"
+                        }
+                    },
+                    "type": "object"
+                }
+            ],
+            "type": "object"
+        }
+    },
+    "description": "Schema definitions widely shared across different SDK schemata.",
+    "id": "https://fuchsia.dev/schema/sdk/sdk_common-00000000.json"
+}
