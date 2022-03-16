@@ -341,7 +341,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
 
     /// Handles `buf` from `sender`.
     ///
-    /// Returns `Ok(Some(sock, dst, data))` if a `data` must be sent to `dst`
+    /// Returns `Ok(Some(sock, data, dst))` if a `data` must be sent to `dst`
     /// over `sock`.
     ///
     /// Returns `Ok(None)` if no action is required and the handler is ready to
