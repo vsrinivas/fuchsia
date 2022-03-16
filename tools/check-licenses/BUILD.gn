@@ -73,6 +73,7 @@ go_library("lib") {
     "//third_party/golibs:golang.org/x/sync",
     "//third_party/golibs:golang.org/x/text",
     "//tools/check-licenses/file",
+    "//tools/check-licenses/license",
     "//tools/lib/logger",
   ]
 }
