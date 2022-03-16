@@ -24,6 +24,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
