@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	//"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
-	//"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	//"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	//"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
 )
@@ -58,10 +58,10 @@ func initialize(c *CheckLicensesConfig) error {
 	if err := file.Initialize(c.File); err != nil {
 		return err
 	}
+	if err := license.Initialize(c.License); err != nil {
+		return err
+	}
 	/*
-		if err := license.Initialize(c.License); err != nil {
-			return err
-		}
 		if err := project.Initialize(c.Project); err != nil {
 			return err
 		}

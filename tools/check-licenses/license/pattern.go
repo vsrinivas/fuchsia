@@ -7,18 +7,32 @@ package license
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
+
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 )
 
 // Pattern contains a searchable regex pattern for finding license text
 // in source files and LICENSE files across the repository.
 type Pattern struct {
-	re *regexp.Regexp
+	Name    string
+	Matches []*file.FileData
+	re      *regexp.Regexp
 
-	sync.Mutex
+	// Maps that keep track of previous successful and failed
+	// searches, keyed using filedata hash.
+	previousMatches    map[string]bool
+	previousMismatches map[string]bool
 }
+
+// Order implements sort.Interface for []*Pattern based on the Name field.
+type Order []*Pattern
+
+func (a Order) Len() int           { return len(a) }
+func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Order) Less(i, j int) bool { return a[i].Name < a[j].Name }
 
 // NewPattern returns a Pattern object with the regex pattern loaded from the .lic folder.
 // Some preprocessing is done to the pattern (e.g. removing code comment characters).
@@ -42,14 +56,30 @@ func NewPattern(path string) (*Pattern, error) {
 	}
 
 	return &Pattern{
-		re: re,
+		Name:               filepath.Base(path),
+		Matches:            make([]*file.FileData, 0),
+		previousMatches:    make(map[string]bool),
+		previousMismatches: make(map[string]bool),
+		re:                 re,
 	}, nil
 }
 
 // Search the given data slice for text that matches this Pattern regex.
-func (p *Pattern) Search(data []byte) bool {
-	if m := p.re.FindSubmatch(data); m != nil {
+func (p *Pattern) Search(d *file.FileData) bool {
+	// If we've seen this data segment before, return the previous result.
+	// This should be faster than running the regex search.
+	if _, ok := p.previousMatches[d.Hash()]; ok {
+		p.Matches = append(p.Matches, d)
+		return true
+	} else if _, ok := p.previousMismatches[d.Hash()]; ok {
+		return false
+	}
+
+	if m := p.re.FindSubmatch(d.Data); m != nil {
+		p.Matches = append(p.Matches, d)
+		p.previousMatches[d.Hash()] = true
 		return true
 	}
+	p.previousMismatches[d.Hash()] = true
 	return false
 }
