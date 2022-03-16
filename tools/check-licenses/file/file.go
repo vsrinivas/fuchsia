@@ -5,74 +5,38 @@
 package file
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 )
 
-type FileType string
-
-const (
-	Any                  FileType = "any"
-	CopyrightHeader               = "copyright_header"
-	SingleLicense                 = "single_license"
-	MultiLicenseChromium          = "multi_license_chromium"
-	MultiLicenseFlutter           = "multi_license_flutter"
-	MultiLicenseGoogle            = "multi_license_google"
-)
-
-var FileTypes map[string]FileType
-
-func init() {
-	FileTypes = map[string]FileType{
-		"any":                    Any,
-		"copyright_header":       CopyrightHeader,
-		"single_license":         SingleLicense,
-		"multi_license_chromium": MultiLicenseChromium,
-		"multi_license_flutter":  MultiLicenseFlutter,
-		"multi_license_google":   MultiLicenseGoogle,
-	}
-}
-
+// File is a data struct used to hold the path and text content
+// of a file in the fuchsia tree.
 type File struct {
 	Name string
 	Path string `json:"path"`
-
-	LicenseFormat FileType `json:"licenseFormat"`
+	Data []*FileData
 }
 
-func NewFile(path string) *File {
-	return &File{
-		Name:          filepath.Base(path),
-		Path:          path,
-		LicenseFormat: Any,
+// NewFile returns a new File struct, with the file content loaded
+// in.
+//
+// TODO(jcecil): Consider making the "load" process lazy, to use
+// less memory during execution.
+func NewFile(path string, ft FileType) (*File, error) {
+	// If this file was already created, return the previous File object.
+	if f, ok := AllFiles[path]; ok {
+		plusVal(RepeatedFileTraversal, path)
+		return f, nil
 	}
-}
 
-// There are many duplicate LICENSE and NOTICE files in the fuchsia repository.
-// We can save a lot of search time by detecting duplicates and reusing results.
-func (f *File) Hash() (string, error) {
-	data, err := f.ReadAll()
+	data, err := NewFileData(path, ft)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	hasher := sha1.New()
-	hasher.Write(data)
-	return base64.URLEncoding.EncodeToString(hasher.Sum(nil)), nil
-}
-
-func (f *File) ReadAll() ([]byte, error) {
-	// TODO: Handle ascii / utf-8 conversion here.
-	return ioutil.ReadFile(f.Path)
-}
-
-func (f *File) SetLicenseFormat(format string) error {
-	if val, ok := FileTypes[format]; ok {
-		f.LicenseFormat = val
-		return nil
-	}
-	return fmt.Errorf("Format %v isn't a valid License Format.", format)
+	plusVal(NumFiles, path)
+	return &File{
+		Name: filepath.Base(path),
+		Path: path,
+		Data: data,
+	}, nil
 }

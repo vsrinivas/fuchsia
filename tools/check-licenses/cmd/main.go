@@ -45,6 +45,8 @@ var (
 	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
 	buildDir          = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
 	gnPath            = flag.String("gn_path", "", "Path to GN executable. Required when target is specified.")
+
+	defaultConfig = flag.String("default", os.Getenv("FUCHSIA_DIR")+"/tools/check-licenses/_config.json", "Default config file, used for check-licenses v2.")
 )
 
 func mainImpl() error {
@@ -222,6 +224,14 @@ func mainImpl() error {
 		config.Target = *target
 	}
 
+	// v2 codepath
+	/*
+		config_v2, err := checklicenses.NewCheckLicensesConfig(*defaultConfig)
+		if err != nil {
+			return err
+		}
+		if err := checklicenses.Execute(context.Background(), config_v2); err != nil {
+	*/
 	if err := checklicenses.Run(context.Background(), config); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}

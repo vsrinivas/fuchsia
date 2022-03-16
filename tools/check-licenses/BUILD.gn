@@ -44,6 +44,7 @@ go_library("lib") {
     "chromium.go",
     "config.go",
     "config_test.go",
+    "config_v2.go",
     "driver.go",
     "file.go",
     "file_test.go",
@@ -70,9 +71,8 @@ go_library("lib") {
     ":noticetxt",
     ":templates",
     "//third_party/golibs:golang.org/x/sync",
-    "//tools/check-licenses/filetree",
-    "//tools/check-licenses/project",
-    "//tools/check-licenses/results",
+    "//third_party/golibs:golang.org/x/text",
+    "//tools/check-licenses/file",
     "//tools/lib/logger",
   ]
 }
@@ -98,6 +98,7 @@ group("tests") {
     ":check-licenses_lib_tests($host_toolchain)",
     ":check-licenses_main_tests($host_toolchain)",
     ":check-licenses_noticetxt_tests($host_toolchain)",
+    "file:tests",
   ]
 }
 
