@@ -14,7 +14,7 @@
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/accessibility_view.h"
 
 namespace a11y {
 

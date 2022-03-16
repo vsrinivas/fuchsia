@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/accessibility_view.h"
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
 #include "src/ui/input/lib/injector/injector.h"
 

@@ -14,7 +14,7 @@ executable("view_tests") {
 
   sources = [
     "a11y_view_semantics_test.cc",
-    "a11y_view_test.cc",
+    "gfx_accessibility_view_test.cc",
     "view_manager_test.cc",
     "view_wrapper_test.cc",
   ]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/gfx_accessibility_view.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
@@ -52,10 +52,10 @@ class FakeAccessibilityViewRegistry : public fuchsia::ui::accessibility::view::R
   fidl::BindingSet<fuchsia::ui::accessibility::view::Registry> bindings_;
 };
 
-class AccessibilityViewTest : public gtest::TestLoopFixture {
+class GfxAccessibilityViewTest : public gtest::TestLoopFixture {
  public:
-  AccessibilityViewTest() = default;
-  ~AccessibilityViewTest() override = default;
+  GfxAccessibilityViewTest() = default;
+  ~GfxAccessibilityViewTest() override = default;
 
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
@@ -84,8 +84,8 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
   fuchsia::ui::views::ViewHolderToken client_view_holder_token_;
 };
 
-TEST_F(AccessibilityViewTest, TestConstruction) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, TestConstruction) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -106,8 +106,8 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
   EXPECT_EQ(view_holders.begin()->second.parent_id, a11y_view_id);
 }
 
-TEST_F(AccessibilityViewTest, TestViewProperties) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, TestViewProperties) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -146,8 +146,8 @@ TEST_F(AccessibilityViewTest, TestViewProperties) {
   EXPECT_EQ(a11y_view_properties->bounding_box.min.z, new_view_properties.bounding_box.min.z);
 }
 
-TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, InvokesRegisteredCallbacks) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -166,7 +166,7 @@ TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
   });
 
   a11y_view.add_view_properties_changed_callback(
-      [&view_properties_received](fuchsia::ui::gfx::ViewProperties properties) {
+      [&view_properties_received](const fuchsia::ui::composition::ViewportProperties& properties) {
         view_properties_received = true;
         return true;
       });
@@ -205,8 +205,8 @@ TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
   EXPECT_TRUE(scene_ready_2);
 }
 
-TEST_F(AccessibilityViewTest, Reinitialize) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, Reinitialize) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -226,8 +226,8 @@ TEST_F(AccessibilityViewTest, Reinitialize) {
   EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
 }
 
-TEST_F(AccessibilityViewTest, TestViewHolderDisconnected) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, TestViewHolderDisconnected) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -260,8 +260,8 @@ TEST_F(AccessibilityViewTest, TestViewHolderDisconnected) {
   EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
 }
 
-TEST_F(AccessibilityViewTest, ViewHolderDisconnectedUninitializedView) {
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+TEST_F(GfxAccessibilityViewTest, ViewHolderDisconnectedUninitializedView) {
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 

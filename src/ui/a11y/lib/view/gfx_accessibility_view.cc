@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/gfx_accessibility_view.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -13,12 +13,24 @@
 namespace a11y {
 namespace {
 
+bool InvokeViewPropertiesChangedCallback(
+    const fuchsia::ui::gfx::ViewProperties& properties,
+    const GfxAccessibilityView::ViewPropertiesChangedCallback& callback) {
+  fuchsia::ui::composition::ViewportProperties flatland_properties;
+  flatland_properties.mutable_logical_size()->width =
+      static_cast<uint32_t>(properties.bounding_box.max.x);
+  flatland_properties.mutable_logical_size()->height =
+      static_cast<uint32_t>(properties.bounding_box.max.y);
+
+  return callback(flatland_properties);
+}
+
 void InvokeViewPropertiesChangedCallbacks(
     const fuchsia::ui::gfx::ViewProperties& properties,
-    std::vector<AccessibilityView::ViewPropertiesChangedCallback>* callbacks) {
+    std::vector<GfxAccessibilityView::ViewPropertiesChangedCallback>* callbacks) {
   auto it = callbacks->begin();
   while (it != callbacks->end()) {
-    if ((*it)(properties)) {
+    if (InvokeViewPropertiesChangedCallback(properties, *it)) {
       it++;
     } else {
       callbacks->erase(it);
@@ -26,7 +38,7 @@ void InvokeViewPropertiesChangedCallbacks(
   }
 }
 
-void InvokeSceneReadyCallbacks(std::vector<AccessibilityView::SceneReadyCallback>* callbacks) {
+void InvokeSceneReadyCallbacks(std::vector<GfxAccessibilityView::SceneReadyCallback>* callbacks) {
   auto it = callbacks->begin();
   while (it != callbacks->end()) {
     if ((*it)()) {
@@ -39,12 +51,12 @@ void InvokeSceneReadyCallbacks(std::vector<AccessibilityView::SceneReadyCallback
 
 }  // namespace
 
-AccessibilityView::AccessibilityView(sys::ComponentContext* context) : context_(context) {
+GfxAccessibilityView::GfxAccessibilityView(sys::ComponentContext* context) : context_(context) {
   FX_DCHECK(context_);
   Initialize();
 }
 
-void AccessibilityView::Initialize() {
+void GfxAccessibilityView::Initialize() {
   // Reset object state. Tests will fail if we try to destroy a session with
   // live resources, so we need to explicitly destroy all of our views/view
   // holders.
@@ -159,7 +171,7 @@ void AccessibilityView::Initialize() {
       });
 }
 
-void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
+void GfxAccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   bool changes_to_present = false;
   bool view_properties_changed = false;
   for (const auto& event : events) {
@@ -204,7 +216,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
         const auto& view_holder_disconnected_event = gfx_event.view_holder_disconnected();
         // If the a11y view is disconnected, try to reinitialize it.
         // We may get a ViewHolderDisconnected event if the call to
-        // CreateAccessibilityViewHolder() fails, so we need to check that the
+        // CreateGfxAccessibilityViewHolder() fails, so we need to check that the
         // a11y view was previously initialized. Otherwise, we'll get stuck in
         // an infinite loop.
         if (view_holder_disconnected_event.view_id == a11y_view_->id() && is_initialized()) {
@@ -233,7 +245,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
   }
 }
 
-std::optional<fuchsia::ui::views::ViewRef> AccessibilityView::view_ref() {
+std::optional<fuchsia::ui::views::ViewRef> GfxAccessibilityView::view_ref() {
   if (!view_ref_) {
     return std::nullopt;
   }
@@ -242,23 +254,24 @@ std::optional<fuchsia::ui::views::ViewRef> AccessibilityView::view_ref() {
   return std::move(copy);
 }
 
-void AccessibilityView::add_view_properties_changed_callback(
+void GfxAccessibilityView::add_view_properties_changed_callback(
     ViewPropertiesChangedCallback callback) {
   view_properties_changed_callbacks_.push_back(std::move(callback));
   if (a11y_view_properties_) {
-    view_properties_changed_callbacks_.back()(*a11y_view_properties_);
+    InvokeViewPropertiesChangedCallback(*a11y_view_properties_,
+                                        view_properties_changed_callbacks_.back());
   }
 }
 
-void AccessibilityView::add_scene_ready_callback(SceneReadyCallback callback) {
+void GfxAccessibilityView::add_scene_ready_callback(SceneReadyCallback callback) {
   scene_ready_callbacks_.push_back(std::move(callback));
   if (is_initialized()) {
     scene_ready_callbacks_.back()();
   }
 }
 
-void AccessibilityView::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
-                                     RequestFocusCallback callback) {
+void GfxAccessibilityView::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
+                                        RequestFocusCallback callback) {
   FX_DCHECK(focuser_);
   focuser_->RequestFocus(std::move(view_ref), std::move(callback));
 }

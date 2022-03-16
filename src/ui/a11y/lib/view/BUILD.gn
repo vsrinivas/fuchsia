@@ -4,10 +4,11 @@
 
 source_set("view") {
   sources = [
-    "a11y_view.cc",
-    "a11y_view.h",
     "a11y_view_semantics.cc",
     "a11y_view_semantics.h",
+    "accessibility_view.h",
+    "gfx_accessibility_view.cc",
+    "gfx_accessibility_view.h",
     "view_injector_factory.cc",
     "view_injector_factory.h",
     "view_manager.cc",

@@ -19,7 +19,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/gfx_accessibility_view.h"
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
@@ -242,7 +242,7 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
 
   // Add an a11y view.
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
 
   // Verify that nothing crashes during a11y view setup.
   RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
@@ -285,7 +285,7 @@ TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
   RunLoopUntilIdle();
 
   // Add an a11y view.
-  a11y::AccessibilityView a11y_view(context_provider_.context());
+  a11y::GfxAccessibilityView a11y_view(context_provider_.context());
   RunLoopUntilIdle();
 
   // Present a fake view.
@@ -738,7 +738,7 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
     focused_view_koid = ZX_KOID_INVALID;
     keyboard_focus_view_koid = ZX_KOID_INVALID;
 
-    a11y::AccessibilityView a11y_view(context_provider_.context());
+    a11y::GfxAccessibilityView a11y_view(context_provider_.context());
     RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
 
     RunLoopUntil([&focused_view_koid, &keyboard_focus_view_koid, child_view_koid]() {

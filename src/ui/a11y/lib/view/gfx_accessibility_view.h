@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_H_
-#define SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_H_
+#ifndef SRC_UI_A11Y_LIB_VIEW_GFX_ACCESSIBILITY_VIEW_H_
+#define SRC_UI_A11Y_LIB_VIEW_GFX_ACCESSIBILITY_VIEW_H_
 
 #include <fuchsia/ui/accessibility/view/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
@@ -17,56 +17,15 @@
 #include <memory>
 #include <optional>
 
+#include "src/ui/a11y/lib/view/accessibility_view.h"
+
 namespace a11y {
 
-// Interface for managing an accessibility view.
-//
-// // This view is used to vend capabilities to the accessibility manager
-// that a view confers, e.g. ability to request focus, consume and
-// respond to input events, annotate underlying views, and apply
-// coordinate transforms to its subtree.
-class AccessibilityViewInterface {
+// Implements AccessibilityViewInterface using the GFX graphics composition API.
+class GfxAccessibilityView : public AccessibilityViewInterface {
  public:
-  using ViewPropertiesChangedCallback = fit::function<bool(fuchsia::ui::gfx::ViewProperties)>;
-  using SceneReadyCallback = fit::function<bool()>;
-  using RequestFocusCallback = fit::function<void(fuchsia::ui::views::Focuser_RequestFocus_Result)>;
-
-  AccessibilityViewInterface() = default;
-  virtual ~AccessibilityViewInterface() = default;
-
-  // Returns the current a11y view properties if the a11y view is ready.
-  // If the a11y view is not yet ready, this method returns std::nullopt.
-  virtual std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() = 0;
-
-  // Adds a callback to be invoked when the view properties for the a11y view change. When
-  // registering this callback, if view properties are available this callback also gets invoked. If
-  // the callback returns false when invoked, it no longer will receive future updates.
-  virtual void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) = 0;
-
-  // Adds a callback to be invoked when the scene is ready. If the callback returns false when
-  // invoked, it no longer will receive future updates.
-  virtual void add_scene_ready_callback(SceneReadyCallback callback) = 0;
-
-  // Returns the view ref of the a11y view if the a11y view is ready.
-  // If the a11y view is not yet ready, this method returns std::nullopt.
-  virtual std::optional<fuchsia::ui::views::ViewRef> view_ref() = 0;
-
-  // Attempts to transfer focus to the view corresponding to |view_ref|.
-  virtual void RequestFocus(fuchsia::ui::views::ViewRef view_ref,
-                            RequestFocusCallback callback) = 0;
-};
-
-// The AccessibilityView class represents the accessibility-owned view
-// directly below the root view in the scene graph.
-//
-// This view is used to vend capabilities to the accessibility manager
-// that a view confers, e.g. ability to request focus, consume and
-// respond to input events, annotate underlying views, and apply
-// coordinate transforms to its subtree.
-class AccessibilityView : public AccessibilityViewInterface {
- public:
-  explicit AccessibilityView(sys::ComponentContext* component_context);
-  ~AccessibilityView() override = default;
+  explicit GfxAccessibilityView(sys::ComponentContext* component_context);
+  ~GfxAccessibilityView() override = default;
 
   // Connects to scenic services, and inserts a11y view into the scene.
   // This method may be called more than once, so it resets the a11y view object
@@ -74,9 +33,12 @@ class AccessibilityView : public AccessibilityViewInterface {
   void Initialize();
 
   // |AccessibilityViewInterface|
-  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
+  void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override;
+
+  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() {
     return a11y_view_properties_;
   }
+
   bool is_initialized() const {
     return proxy_view_holder_attached_ && proxy_view_connected_ &&
            proxy_view_holder_properties_set_;
@@ -84,9 +46,6 @@ class AccessibilityView : public AccessibilityViewInterface {
 
   // |AccessibilityViewInterface|
   std::optional<fuchsia::ui::views::ViewRef> view_ref() override;
-
-  // |AccessibilityViewInterface|
-  void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override;
 
   // |AccessibilityViewInterface|
   void add_scene_ready_callback(SceneReadyCallback callback) override;
@@ -152,4 +111,4 @@ class AccessibilityView : public AccessibilityViewInterface {
 
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_H_
+#endif  // SRC_UI_A11Y_LIB_VIEW_GFX_ACCESSIBILITY_VIEW_H_

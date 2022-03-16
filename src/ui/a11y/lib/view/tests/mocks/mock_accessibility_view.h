@@ -7,7 +7,7 @@
 
 #include <optional>
 
-#include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/accessibility_view.h"
 
 namespace accessibility_test {
 
@@ -15,11 +15,6 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
  public:
   MockAccessibilityView() = default;
   ~MockAccessibilityView() override = default;
-
-  // |AccessibilityViewInterface|
-  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
-    return a11y_view_properties_;
-  }
 
   void set_a11y_view_properties(
       std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties) {
