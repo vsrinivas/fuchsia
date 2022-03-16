@@ -14,7 +14,7 @@ remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
 # ../../ because this script lives in build/rbe.
 # The value is an absolute path.
-project_root="$(readlink -f "$script_dir"/../..)"
+default_project_root="$(readlink -f "$script_dir"/../..)"
 
 # This is where the working directory happens to be in remote execution.
 # This assumed constant is only needed for a few workarounds elsewhere
@@ -44,7 +44,7 @@ Options:
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
-      [default: inferred based on location of this script]
+      [default: $default_project_root]
 
   --source FILE: the Rust source root for the crate being built
       [default: inferred as the first .rs file in the rustc command]
@@ -82,8 +82,6 @@ The option argument is a comma-separated list of files, relative to
 Analogously, --remote-outputs=... will be interpreted as extra --output_files
 to download, and removed from the command prior to local and remote execution.
 
-Detected parameters:
-  project_root: $project_root
 EOF
 }
 
@@ -92,6 +90,7 @@ trace=0
 dry_run=0
 verbose=0
 compare=0
+project_root="$default_project_root"
 rewrapper_options=()
 check_determinism=0
 
@@ -864,6 +863,10 @@ test "$trace" = 0 || {
   remote_trace_flags=( --fsatrace-path="$fsatrace" )
 }
 
+exec_root_flag=()
+[[ "$project_root" == "$default_project_root" ]] || \
+  exec_root_flag=( "--exec_root=$project_root" )
+
 # Assemble the remote execution command.
 # During development, if you need to test a pre-release at top-of-tree,
 # symlink the bazel-built binaries into a single directory, e.g.:
@@ -878,7 +881,7 @@ test "$trace" = 0 || {
 #   build directories helps with caching.
 remote_rustc_command=(
   "$remote_action_wrapper"
-  --exec_root="$project_root"
+  "${exec_root_flag[@]}"
   --canonicalize_working_dir=true
   "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"

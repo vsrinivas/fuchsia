@@ -59,6 +59,9 @@ options:
       [This is the default.]
 
   All other options are forwarded to rewrapper until -- is encountered.
+
+Detected parameters:
+  exec_root=$project_root
 EOF
 }
 
@@ -195,6 +198,7 @@ rewrapper_options+=(
 rewrapped_command=(
   "$rewrapper"
   --cfg="$rewrapper_cfg"
+  --exec_root="$project_root"
   "${rewrapper_options[@]}"
 
   "${log_wrapper[@]}"
