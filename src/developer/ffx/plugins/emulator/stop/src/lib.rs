@@ -41,7 +41,10 @@ async fn get_instance_paths(
         return Ok(vec![get_instance_dir(&ffx_config, &name.unwrap(), false).await?]);
     }
 
-    let all_instances = get_all_instances(&ffx_config).await?;
+    let all_instances = match get_all_instances(&ffx_config).await {
+        Ok(list) => list,
+        Err(e) => ffx_bail!("Error encountered looking up emulator instances: {:?}", e),
+    };
     if all {
         return Ok(all_instances);
     } else {

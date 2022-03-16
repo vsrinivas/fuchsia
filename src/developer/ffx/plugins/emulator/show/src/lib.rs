@@ -35,7 +35,10 @@ async fn get_instance_name(
     ffx_config: &FfxConfigWrapper,
 ) -> Result<String> {
     if instance_name.is_none() {
-        let all_instances = get_all_instances(&ffx_config).await?;
+        let all_instances = match get_all_instances(&ffx_config).await {
+            Ok(list) => list,
+            Err(e) => ffx_bail!("Error encountered looking up emulator instances: {:?}", e),
+        };
         if all_instances.len() == 1 {
             if let Some(name) = all_instances[0].file_name() {
                 Ok(name.to_string_lossy().into_owned())

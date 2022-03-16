@@ -169,7 +169,11 @@ pub async fn get_instance_dir(
     instance_name: &str,
     create: bool,
 ) -> Result<PathBuf> {
-    let path = PathBuf::from(ffx_config.get(EMU_INSTANCE_ROOT_DIR).await?).join(&instance_name);
+    let root_dir = ffx_config
+        .get(EMU_INSTANCE_ROOT_DIR)
+        .await
+        .context("Error encountered accessing FFX config for the emulator instance root.")?;
+    let path = PathBuf::from(root_dir).join(&instance_name);
     if !path.exists() {
         if create {
             log::debug!("Creating {:?} for {}", path, instance_name);
@@ -199,7 +203,11 @@ pub async fn clean_up_instance_dir(path: &PathBuf) -> Result<()> {
 /// Retrieve a list of all of the names of instances currently present on the local system.
 pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<PathBuf>> {
     let mut result = Vec::new();
-    let buf = PathBuf::from(ffx_config.file(EMU_INSTANCE_ROOT_DIR).await?);
+    let root_dir = ffx_config
+        .get(EMU_INSTANCE_ROOT_DIR)
+        .await
+        .context("Error encountered accessing FFX config for the emulator instance root.")?;
+    let buf = PathBuf::from(root_dir);
     let root = buf.as_path();
     if root.is_dir() {
         for entry in root.read_dir()? {
