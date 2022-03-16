@@ -25,27 +25,6 @@
 
 namespace nelson {
 
-namespace {
-
-constexpr uint32_t kGpioBase = fbl::round_down<uint32_t, uint32_t>(S905D3_GPIO_BASE, PAGE_SIZE);
-constexpr uint32_t kGpioBaseOffset = S905D3_GPIO_BASE - kGpioBase;
-
-class PadDsReg2A : public hwreg::RegisterBase<PadDsReg2A, uint32_t> {
- public:
-  static constexpr uint32_t kDriveStrengthMax = 3;
-
-  static auto Get() { return hwreg::RegisterAddr<PadDsReg2A>((0xd2 * 4) + kGpioBaseOffset); }
-
-  DEF_FIELD(1, 0, gpiox_0_select);
-  DEF_FIELD(3, 2, gpiox_1_select);
-  DEF_FIELD(5, 4, gpiox_2_select);
-  DEF_FIELD(7, 6, gpiox_3_select);
-  DEF_FIELD(9, 8, gpiox_4_select);
-  DEF_FIELD(11, 10, gpiox_5_select);
-};
-
-}  // namespace
-
 static const pbus_boot_metadata_t wifi_boot_metadata[] = {
     {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
@@ -151,7 +130,9 @@ static const pbus_dev_t sd_emmc_dev = []() {
 
 // Composite binding rules for SDIO.
 
-zx_status_t Nelson::SdEmmcConfigurePortB() {
+zx_status_t Nelson::SdioInit() {
+  zx_status_t status;
+
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_D0, S905D3_WIFI_SDIO_D0_FN);
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_D1, S905D3_WIFI_SDIO_D1_FN);
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_D2, S905D3_WIFI_SDIO_D2_FN);
@@ -160,36 +141,12 @@ zx_status_t Nelson::SdEmmcConfigurePortB() {
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_CMD, S905D3_WIFI_SDIO_CMD_FN);
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_WAKE_HOST, 0);
 
-  zx_status_t status;
-  std::optional<ddk::MmioBuffer> gpio_base;
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  zx::unowned_resource resource(get_root_resource());
-
-  size_t aligned_size = ZX_ROUNDUP((S905D3_GPIO_BASE - kGpioBase) + S905D3_GPIO_LENGTH, PAGE_SIZE);
-
-  status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create(gpio) error: %d", __func__, status);
-  }
-
-  PadDsReg2A::Get()
-      .ReadFrom(&(*gpio_base))
-      .set_gpiox_0_select(PadDsReg2A::kDriveStrengthMax)
-      .set_gpiox_1_select(PadDsReg2A::kDriveStrengthMax)
-      .set_gpiox_2_select(PadDsReg2A::kDriveStrengthMax)
-      .set_gpiox_3_select(PadDsReg2A::kDriveStrengthMax)
-      .set_gpiox_4_select(PadDsReg2A::kDriveStrengthMax)
-      .set_gpiox_5_select(PadDsReg2A::kDriveStrengthMax)
-      .WriteTo(&(*gpio_base));
-
-  return status;
-}
-
-zx_status_t Nelson::SdioInit() {
-  zx_status_t status;
-
-  SdEmmcConfigurePortB();
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_D0, 4000, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_D1, 4000, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_D2, 4000, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_D3, 4000, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_CLK, 4000, nullptr);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_WIFI_SDIO_CMD, 4000, nullptr);
 
   status = pbus_.AddComposite(&sd_emmc_dev, reinterpret_cast<uint64_t>(aml_sdio_fragments),
                               std::size(aml_sdio_fragments), "pdev");
