@@ -74,11 +74,11 @@ is detached, then this edge can be created by any mix thread.
 
 We use a thread-safe [global task queue](common/global_task_queue.h), where each
 entry in the task queue is a pair of `(ThreadId, task)`. The ThreadId specifies
-which thread the task must be performed on (or uses `kAnyId` if the task can be
-performed on any thread). When a mix thread has time to spare, it runs all tasks
-at the head of the global task queue until it reaches a task that must be run by
-a different thread. The following example shows how FIDL calls generate tasks
-for this queue:
+which thread the task must be performed on (or uses `kAnyThreadId` if the task
+can be performed on any thread). When a mix thread has time to spare, it runs
+all tasks at the head of the global task queue until it reaches a task that must
+be run by a different thread. The following example shows how FIDL calls
+generate tasks for this queue:
 
 ```
 Suppose X is assigned to mix thread T1
