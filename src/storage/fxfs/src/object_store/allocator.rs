@@ -602,7 +602,7 @@ impl Allocator for SimpleAllocator {
 
         // Update reserved_allocations using dropped_allocations.
         for item in dropped_allocations {
-            self.reserved_allocations.erase(item.as_item_ref()).await;
+            self.reserved_allocations.erase(&item.key).await;
         }
 
         let result = {
@@ -815,12 +815,7 @@ impl Allocator for SimpleAllocator {
         let mut total = 0;
         for (_, device_range) in deallocs {
             total += device_range.length().unwrap();
-            self.reserved_allocations
-                .erase(
-                    Item::new(AllocatorKey { device_range }, AllocatorValue { delta: 0 })
-                        .as_item_ref(),
-                )
-                .await;
+            self.reserved_allocations.erase(&AllocatorKey { device_range }).await;
         }
         // This *must* come after we've removed the records from reserved reservations because the
         // allocator uses this value to decide whether or not a device-flush is required and it must
@@ -936,7 +931,7 @@ impl Mutations for SimpleAllocator {
                 self.tree.merge_into(item.clone(), &lower_bound).await;
                 if item.value.delta > 0 {
                     if context.mode.is_live() {
-                        self.reserved_allocations.erase(item.as_item_ref()).await;
+                        self.reserved_allocations.erase(&item.key).await;
                     }
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);

@@ -178,13 +178,13 @@ impl<K, V> SkipListLayer<K, V> {
 
 impl<K: Key, V: Value> SkipListLayer<K, V> {
     // Erases the given item. Does nothing if the item doesn't exist.
-    pub async fn erase(&self, item: ItemRef<'_, K, V>)
+    pub async fn erase(&self, key: &K)
     where
         K: std::cmp::Eq,
     {
-        let mut iter = SkipListLayerIterMut::new(self, Bound::Included(&item.key)).await;
-        if let Some(ItemRef { key, .. }) = iter.get() {
-            if key == item.key {
+        let mut iter = SkipListLayerIterMut::new(self, Bound::Included(key)).await;
+        if let Some(ItemRef { key: k, .. }) = iter.get() {
+            if k == key {
                 iter.erase();
             } else {
                 // TODO(csuter): Should this be something stronger?
@@ -780,7 +780,7 @@ mod tests {
 
         assert_eq!(skip_list.len(), 2);
 
-        skip_list.erase(items[1].as_item_ref()).await;
+        skip_list.erase(&items[1].key).await;
 
         assert_eq!(skip_list.len(), 1);
 
@@ -792,7 +792,7 @@ mod tests {
             assert!(iter.get().is_none());
         }
 
-        skip_list.erase(items[0].as_item_ref()).await;
+        skip_list.erase(&items[0].key).await;
 
         assert_eq!(skip_list.len(), 0);
 
