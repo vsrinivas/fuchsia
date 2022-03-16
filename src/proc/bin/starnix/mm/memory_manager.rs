@@ -740,7 +740,7 @@ impl MemoryManagerState {
     /// # Parameters
     /// - `addr`: The address to write to.
     /// - `bytes`: The bytes to write.
-    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
         let mut bytes_written = 0;
         for (mapping, len) in self.get_contiguous_mappings_at(addr, bytes.len())? {
             let next_offset = bytes_written + len;
@@ -751,7 +751,7 @@ impl MemoryManagerState {
         if bytes_written != bytes.len() {
             error!(EFAULT)
         } else {
-            Ok(())
+            Ok(bytes_written)
         }
     }
 }
@@ -1212,37 +1212,43 @@ impl MemoryManager {
         Ok(offset)
     }
 
-    pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+    pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<usize, Errno> {
         self.state.read().write_memory(addr, bytes)
     }
 
-    pub fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<(), Errno> {
+    pub fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<usize, Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
     }
 
-    pub fn write_objects<T: AsBytes>(&self, user: UserRef<T>, objects: &[T]) -> Result<(), Errno> {
+    pub fn write_objects<T: AsBytes>(
+        &self,
+        user: UserRef<T>,
+        objects: &[T],
+    ) -> Result<usize, Errno> {
+        let mut bytes_written = 0;
         for (index, object) in objects.iter().enumerate() {
-            self.write_object(user.at(index), object)?;
+            bytes_written += self.write_object(user.at(index), object)?;
         }
-        Ok(())
+        Ok(bytes_written)
     }
 
-    pub fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
+    pub fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<usize, Errno>
     where
         F: FnMut(&mut [u8]) -> Result<&[u8], Errno>,
     {
+        let mut bytes_written = 0;
         for buffer in data {
             if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
             let mut bytes = vec![0; buffer.length];
             let result = callback(&mut bytes)?;
-            self.write_memory(buffer.address, &result)?;
+            bytes_written += self.write_memory(buffer.address, &result)?;
             if result.len() != bytes.len() {
                 break;
             }
         }
-        Ok(())
+        Ok(bytes_written)
     }
 
     pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<usize, Errno> {
