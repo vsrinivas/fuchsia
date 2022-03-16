@@ -15,42 +15,42 @@
 namespace {
 
 TEST(CompletionWrapper, Wait) {
-  sync::Completion completion;
+  libsync::Completion completion;
   std::thread wait_thread([&] { completion.Wait(); });
   completion.Signal();
   wait_thread.join();
 }
 
 TEST(CompletionWrapper, WaitDurationTimeout) {
-  sync::Completion completion;
+  libsync::Completion completion;
   std::thread wait_thread(
       [&] { ASSERT_STATUS(ZX_ERR_TIMED_OUT, completion.Wait(zx::duration::infinite_past())); });
   wait_thread.join();
 }
 
 TEST(CompletionWrapper, WaitDuration) {
-  sync::Completion completion;
+  libsync::Completion completion;
   completion.Signal();
   std::thread wait_thread([&] { ASSERT_OK(completion.Wait(zx::duration::infinite_past())); });
   wait_thread.join();
 }
 
 TEST(CompletionWrapper, WaitDeadlineTimeout) {
-  sync::Completion completion;
+  libsync::Completion completion;
   std::thread wait_thread(
       [&] { ASSERT_STATUS(ZX_ERR_TIMED_OUT, completion.Wait(zx::time::infinite_past())); });
   wait_thread.join();
 }
 
 TEST(CompletionWrapper, WaitDeadline) {
-  sync::Completion completion;
+  libsync::Completion completion;
   completion.Signal();
   std::thread wait_thread([&] { ASSERT_OK(completion.Wait(zx::time::infinite_past())); });
   wait_thread.join();
 }
 
 TEST(CompletionWrapper, signaled) {
-  sync::Completion completion;
+  libsync::Completion completion;
   EXPECT_FALSE(completion.signaled());
   completion.Signal();
   EXPECT_TRUE(completion.signaled());

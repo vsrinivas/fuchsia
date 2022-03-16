@@ -305,7 +305,7 @@ TEST_F(ChannelTest, CloseSignalsPeerClosed) {
 
 // Tests closing the channel from the channel read callback is allowed.
 TEST_F(ChannelTest, CloseChannelInCallback) {
-  sync::Completion completion;
+  libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -586,8 +586,8 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
 
   // We will queue 2 channel reads, the first will block so we can test what happens
   // when we try to cancel in-flight callbacks.
-  sync::Completion read_entered;
-  sync::Completion read_block;
+  libsync::Completion read_entered;
+  libsync::Completion read_block;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -602,7 +602,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
   auto local2 = std::move(channels->end0);
   auto remote2 = std::move(channels->end1);
 
-  sync::Completion read_complete;
+  libsync::Completion read_complete;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote2.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {

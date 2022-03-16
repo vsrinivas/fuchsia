@@ -457,7 +457,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
   fidl::WireSharedClient<Example> client(std::move(client_end), loop.dispatcher());
   loop.StartThread("client-test");
 
-  sync::Completion error;
+  libsync::Completion error;
   ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                      fidl::Reason::kTransportError);
 
@@ -476,7 +476,7 @@ TEST(GenAPITestCase, AsyncNotifySendError) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ClientType client(std::move(local), loop.dispatcher());
 
-    sync::Completion error;
+    libsync::Completion error;
     ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                        fidl::Reason::kTransportError);
 
@@ -502,7 +502,7 @@ TEST(GenAPITestCase, AsyncNotifyTeardownError) {
   client.AsyncTeardown();
   loop.RunUntilIdle();
 
-  sync::Completion error;
+  libsync::Completion error;
   ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
 
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
@@ -522,7 +522,7 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ClientType client(std::move(local), loop.dispatcher());
 
-    sync::Completion error;
+    libsync::Completion error;
     // Note that the reason is |kUnbind| because shutting down the loop will
     // synchronously teardown the client. Once the internal bindings object is
     // destroyed, the client would forget what was the original reason for

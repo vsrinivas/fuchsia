@@ -90,7 +90,7 @@ struct Channel : public Object {
 
     // Set by the channel using |Deliver| once it receives a message that matches |txid_|.
     MessagePacketOwner msg_;
-    sync::Completion completion_;
+    libsync::Completion completion_;
   };
 
   explicit Channel(fbl::RefPtr<FdfChannelSharedState> shared_state)

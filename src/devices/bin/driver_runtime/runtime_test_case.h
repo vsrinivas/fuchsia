@@ -77,7 +77,7 @@ class RuntimeTestCase : public zxtest::Test {
    private:
     struct DestructedObserver {
       fdf_dispatcher_destructed_observer_t fdf_observer;
-      sync::Completion signal;
+      libsync::Completion signal;
     };
 
     static void DispatcherDestructedHandler(fdf_dispatcher_destructed_observer_t* fdf_observer) {

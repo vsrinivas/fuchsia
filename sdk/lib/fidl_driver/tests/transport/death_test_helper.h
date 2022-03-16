@@ -40,7 +40,7 @@ class CurrentThreadExceptionHandler {
     zx_exception_info_t info;
   };
 
-  sync::Completion monitoring_exception_;
+  libsync::Completion monitoring_exception_;
   zx::channel exception_channel_;
   Exception exception_ = {};
 };

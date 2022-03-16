@@ -22,7 +22,7 @@ namespace {
 
 struct TestServer : public fdf::WireServer<test_transport::SendZirconHandleTest> {
  public:
-  explicit TestServer(sync::Completion* destroyed) : destroyed_(destroyed) {}
+  explicit TestServer(libsync::Completion* destroyed) : destroyed_(destroyed) {}
   ~TestServer() override { destroyed_->Signal(); }
 
   void SendZirconHandle(SendZirconHandleRequestView request, fdf::Arena& arena,
@@ -31,7 +31,7 @@ struct TestServer : public fdf::WireServer<test_transport::SendZirconHandleTest>
   }
 
  private:
-  sync::Completion* destroyed_;
+  libsync::Completion* destroyed_;
 };
 
 TEST(DriverTransport, SendZirconHandleSync) {
@@ -49,7 +49,7 @@ TEST(DriverTransport, SendZirconHandleSync) {
   fdf::ServerEnd<test_transport::SendZirconHandleTest> server_end(std::move(channels->end0));
   fdf::ClientEnd<test_transport::SendZirconHandleTest> client_end(std::move(channels->end1));
 
-  sync::Completion server_destruction;
+  libsync::Completion server_destruction;
   auto server = std::make_shared<TestServer>(&server_destruction);
   fdf::ServerBindingRef binding_ref = fdf::BindServer(
       server_dispatcher->get(), std::move(server_end), server,

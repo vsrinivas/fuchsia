@@ -77,7 +77,7 @@ TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
   std::unique_ptr<fdf::WireClient<test_transport::TwoWayTest>> client;
 
   // Create on one.
-  sync::Completion created;
+  libsync::Completion created;
   async::PostTask(dispatcher1->async_dispatcher(), [&] {
     client = std::make_unique<fdf::WireClient<test_transport::TwoWayTest>>();
     client->Bind(std::move(endpoints->client), dispatcher1->get());
@@ -87,7 +87,7 @@ TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
 
   // Destroy on another.
   fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
-  sync::Completion destroyed;
+  libsync::Completion destroyed;
   async::PostTask(dispatcher2->async_dispatcher(), [&] {
     exception_handler.Try([&] { client.reset(); });
     destroyed.Signal();
@@ -109,7 +109,7 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   std::unique_ptr<fdf::WireClient<test_transport::TwoWayTest>> client;
 
   // Create on one.
-  sync::Completion created;
+  libsync::Completion created;
   async::PostTask(dispatcher1->async_dispatcher(), [&] {
     client = std::make_unique<fdf::WireClient<test_transport::TwoWayTest>>();
     client->Bind(std::move(endpoints->client), dispatcher1->get());
@@ -119,7 +119,7 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
 
   // Destroy on another.
   fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
-  sync::Completion destroyed;
+  libsync::Completion destroyed;
   std::thread thread([&] {
     exception_handler.Try([&] { client.reset(); });
     destroyed.Signal();
@@ -145,7 +145,7 @@ TEST(WireSharedClient, CanSendAcrossDispatcher) {
   std::unique_ptr<fdf::WireSharedClient<test_transport::TwoWayTest>> client;
 
   // Create on one.
-  sync::Completion created;
+  libsync::Completion created;
   async::PostTask(dispatcher1->async_dispatcher(), [&] {
     client = std::make_unique<fdf::WireSharedClient<test_transport::TwoWayTest>>();
     client->Bind(std::move(endpoints->client), dispatcher1->get());
@@ -154,7 +154,7 @@ TEST(WireSharedClient, CanSendAcrossDispatcher) {
   ASSERT_OK(created.Wait());
 
   // Destroy on another.
-  sync::Completion destroyed;
+  libsync::Completion destroyed;
   async::PostTask(dispatcher2->async_dispatcher(), [&] {
     client.reset();
     destroyed.Signal();
@@ -172,7 +172,7 @@ TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   ASSERT_OK(endpoints.status_value());
 
   fdf::WireClient<test_transport::TwoWayTest> client;
-  sync::Completion created;
+  libsync::Completion created;
   fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
   async::PostTask(dispatcher->async_dispatcher(), [&] {
     exception_handler.Try([&] { client.Bind(std::move(endpoints->client), dispatcher->get()); });
@@ -193,7 +193,7 @@ TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
   ASSERT_OK(endpoints.status_value());
 
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
-  sync::Completion created;
+  libsync::Completion created;
   async::PostTask(dispatcher->async_dispatcher(), [&] {
     client.Bind(std::move(endpoints->client), dispatcher->get());
     client = {};

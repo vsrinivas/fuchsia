@@ -8,7 +8,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
-namespace sync {
+namespace libsync {
 
 /// C++ wrapper for a completion object, |sync_completion_t|. A |Completion| is
 /// a synchronization primitive that allows for one or more threads to wait for
@@ -56,6 +56,6 @@ class Completion {
   sync_completion_t completion_;
 };
 
-}  // namespace sync
+}  // namespace libsync
 
 #endif  // LIB_SYNC_CPP_COMPLETION_H_

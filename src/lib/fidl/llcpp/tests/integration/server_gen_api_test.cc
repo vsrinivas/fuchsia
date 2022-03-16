@@ -993,7 +993,7 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
 //   at the point of teardown completion.
 TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
   struct LongOperationServer : fidl::WireServer<Simple> {
-    explicit LongOperationServer(sync::Completion* long_operation)
+    explicit LongOperationServer(libsync::Completion* long_operation)
         : long_operation_(long_operation) {}
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       if (!first_request_.test_and_set()) {
@@ -1008,7 +1008,7 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
 
    private:
     std::atomic_flag first_request_ = ATOMIC_FLAG_INIT;
-    sync::Completion* long_operation_;
+    libsync::Completion* long_operation_;
   };
 
   zx::status endpoints = fidl::CreateEndpoints<Simple>();
@@ -1016,13 +1016,13 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
   auto [local, remote] = std::move(*endpoints);
 
   // Launch server with 2 threads.
-  sync::Completion long_operation;
+  libsync::Completion long_operation;
   auto server = std::make_unique<LongOperationServer>(&long_operation);
   async::Loop server_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(server_loop.StartThread());
   ASSERT_OK(server_loop.StartThread());
 
-  sync::Completion unbound;
+  libsync::Completion unbound;
   fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get(),
                    [&unbound](LongOperationServer*, fidl::UnbindInfo, fidl::ServerEnd<Simple>) {
                      unbound.Signal();
@@ -1159,14 +1159,14 @@ class UnbindObserver {
     return on_unbound;
   }
 
-  sync::Completion& completion() { return completion_; }
+  libsync::Completion& completion() { return completion_; }
 
   bool DidUnbind() const { return completion_.signaled(); }
 
  private:
   fidl::Reason expected_reason_;
   zx_status_t expected_status_;
-  sync::Completion completion_;
+  libsync::Completion completion_;
 };
 
 TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling) {

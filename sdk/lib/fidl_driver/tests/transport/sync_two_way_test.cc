@@ -25,7 +25,7 @@ constexpr uint32_t kResponsePayload = 5678;
 
 struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
  public:
-  explicit TestServer(sync::Completion* destroyed) : destroyed_(destroyed) {}
+  explicit TestServer(libsync::Completion* destroyed) : destroyed_(destroyed) {}
   ~TestServer() override { destroyed_->Signal(); }
 
   void TwoWay(TwoWayRequestView request, fdf::Arena& in_request_arena,
@@ -43,7 +43,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   fdf_arena_t* fdf_response_arena;
 
  private:
-  sync::Completion* destroyed_;
+  libsync::Completion* destroyed_;
 };
 
 TEST(DriverTransport, TwoWaySync) {
@@ -61,7 +61,7 @@ TEST(DriverTransport, TwoWaySync) {
   fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
   fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
 
-  sync::Completion server_destruction;
+  libsync::Completion server_destruction;
   auto server = std::make_shared<TestServer>(&server_destruction);
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,

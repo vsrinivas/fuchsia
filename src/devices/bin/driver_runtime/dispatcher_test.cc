@@ -49,8 +49,8 @@ class DispatcherTest : public RuntimeTestCase {
   // Registers an async read, which on callback will signal |entered_callback| and block
   // until |complete_blocking_read| is signaled.
   static void RegisterAsyncReadBlock(fdf_handle_t ch, fdf_dispatcher_t* dispatcher,
-                                     sync::Completion* entered_callback,
-                                     sync::Completion* complete_blocking_read);
+                                     libsync::Completion* entered_callback,
+                                     libsync::Completion* complete_blocking_read);
 
   fdf_handle_t local_ch_;
   fdf_handle_t remote_ch_;
@@ -137,8 +137,8 @@ void DispatcherTest::RegisterAsyncReadReply(fdf_handle_t read_channel, fdf_dispa
 
 // static
 void DispatcherTest::RegisterAsyncReadBlock(fdf_handle_t ch, fdf_dispatcher_t* dispatcher,
-                                            sync::Completion* entered_callback,
-                                            sync::Completion* complete_blocking_read) {
+                                            libsync::Completion* entered_callback,
+                                            libsync::Completion* complete_blocking_read) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       ch, 0 /* options */,
       [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -224,8 +224,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
@@ -276,8 +276,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 
   struct ReadClient {
     fdf_handle_t channel;
-    sync::Completion entered_callback;
-    sync::Completion complete_blocking_read;
+    libsync::Completion entered_callback;
+    libsync::Completion complete_blocking_read;
   };
 
   std::vector<ReadClient> local(kNumClients);
@@ -478,8 +478,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
                                            blocking_driver, &blocking_dispatcher));
 
   // Queue a blocking request.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(remote_ch_, blocking_dispatcher, &entered_callback,
                                                  &complete_blocking_read));
 
@@ -518,8 +518,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &blocking_local_ch, &blocking_remote_ch));
 
   // Queue a blocking read.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(blocking_remote_ch, blocking_dispatcher,
                                                  &entered_callback, &complete_blocking_read));
 
@@ -763,7 +763,7 @@ TEST_F(DispatcherTest, EmptyCallStack) {
 // Tests destroying a synchronized dispatcher that has a pending channel read
 // that does not have a corresponding channel write.
 TEST_F(DispatcherTest, SyncDispatcherDestroyBeforeWrite) {
-  sync::Completion read_complete;
+  libsync::Completion read_complete;
   DispatcherDestructedObserver observer;
 
   {
@@ -795,8 +795,8 @@ TEST_F(DispatcherTest, SyncDispatcherDestroyBeforeWrite) {
 
 // Tests destroying an unsynchronized dispatcher.
 TEST_F(DispatcherTest, UnsyncDispatcherDestroy) {
-  sync::Completion complete_task;
-  sync::Completion read_complete;
+  libsync::Completion complete_task;
+  libsync::Completion read_complete;
 
   DispatcherDestructedObserver observer;
 
@@ -811,7 +811,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherDestroy) {
                   driver, &loop_, observer.fdf_observer(), &dispatcher));
 
     fdf::Dispatcher fdf_dispatcher(static_cast<fdf_dispatcher_t*>(dispatcher));
-    sync::Completion task_started;
+    libsync::Completion task_started;
     // Post a task that will block until we signal it.
     ASSERT_OK(async::PostTask(fdf_dispatcher.async_dispatcher(), [&] {
       task_started.Signal();
@@ -850,7 +850,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherDestroy) {
 // Tests destroying an unsynchronized dispatcher that has a pending channel read
 // that does not have a corresponding channel write.
 TEST_F(DispatcherTest, UnsyncDispatcherDestroyBeforeWrite) {
-  sync::Completion read_complete;
+  libsync::Completion read_complete;
   DispatcherDestructedObserver observer;
 
   {
@@ -894,7 +894,7 @@ TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
                        FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, scheduler_role, strlen(scheduler_role),
                        driver, &loop_, dispatcher_observer.fdf_observer(), &dispatcher));
 
-  sync::Completion completion;
+  libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -936,7 +936,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
                        FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, scheduler_role, strlen(scheduler_role),
                        driver, &loop_, observer.fdf_observer(), &dispatcher));
 
-  sync::Completion completion;
+  libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -946,7 +946,7 @@ TEST_F(DispatcherTest, DestroyDispatcherFromTwoCallbacks) {
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
 
-  sync::Completion completion2;
+  libsync::Completion completion2;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote_ch2_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -980,7 +980,7 @@ TEST_F(DispatcherTest, DestroyDispatcherQueueChannelReadCallback) {
   loop_.JoinThreads();
   loop_.ResetQuit();
 
-  sync::Completion read_complete;
+  libsync::Completion read_complete;
   DispatcherDestructedObserver observer;
 
   {
@@ -1024,7 +1024,7 @@ TEST_F(DispatcherTest, DestroyDispatcherQueueChannelReadCallback) {
 TEST_F(DispatcherTest, DestructedCallbackIsNotReentrant) {
   fbl::Mutex driver_lock;
 
-  sync::Completion completion;
+  libsync::Completion completion;
   auto destructed_handler = [&]() {
     { fbl::AutoLock lock(&driver_lock); }
     completion.Signal();
@@ -1115,7 +1115,7 @@ TEST_F(DispatcherTest, CancelTaskAlreadyRunning) {
   ASSERT_NOT_NULL(async_dispatcher);
 
   async::TaskClosure task;
-  sync::Completion completion;
+  libsync::Completion completion;
   task.set_handler([&] {
     ASSERT_EQ(task.Cancel(), ZX_ERR_NOT_FOUND);  // Task is already running.
     completion.Signal();
@@ -1143,8 +1143,8 @@ TEST_F(DispatcherTest, WaitUntilIdleWithDirectCall) {
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
@@ -1161,8 +1161,8 @@ TEST_F(DispatcherTest, WaitUntilIdleWithDirectCall) {
   ASSERT_FALSE(dispatcher->IsIdle());
 
   // Start a thread that blocks until the dispatcher is idle.
-  sync::Completion wait_started;
-  sync::Completion wait_complete;
+  libsync::Completion wait_started;
+  libsync::Completion wait_complete;
   std::thread t2 = std::thread([&] {
     wait_started.Signal();
     ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
@@ -1189,8 +1189,8 @@ TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoop) {
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
@@ -1248,8 +1248,8 @@ TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoopMultipleThreads) {
 
   struct ReadClient {
     fdf::Channel channel;
-    sync::Completion entered_callback;
-    sync::Completion complete_blocking_read;
+    libsync::Completion entered_callback;
+    libsync::Completion complete_blocking_read;
   };
 
   std::vector<ReadClient> local(kNumClients);
@@ -1302,8 +1302,8 @@ TEST_F(DispatcherTest, WaitUntilIdleMultipleDispatchers) {
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
-  sync::Completion entered_callback;
-  sync::Completion complete_blocking_read;
+  libsync::Completion entered_callback;
+  libsync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
@@ -1335,7 +1335,7 @@ TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
                        FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, scheduler_role, strlen(scheduler_role),
                        driver, &loop_, observer.fdf_observer(), &dispatcher));
 
-  sync::Completion entered_read;
+  libsync::Completion entered_read;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       local_ch_, 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
@@ -1377,8 +1377,8 @@ TEST_F(DispatcherTest, SyncDispatcherCancelRequestDuringDestroy) {
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
 
-  sync::Completion task_started;
-  sync::Completion dispatcher_destroy_started;
+  libsync::Completion task_started;
+  libsync::Completion dispatcher_destroy_started;
 
   ASSERT_OK(async::PostTask(dispatcher->GetAsyncDispatcher(), [&] {
     task_started.Signal();
@@ -1423,7 +1423,7 @@ TEST_F(DispatcherTest, GetCurrentDispatcher) {
       });
   ASSERT_OK(channel_read1->Begin(dispatcher1));
 
-  sync::Completion got_reply;
+  libsync::Completion got_reply;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {

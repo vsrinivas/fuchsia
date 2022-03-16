@@ -44,7 +44,7 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   loop.StartThread();
 
   fidl::WireClient<ProtocolType> client;
-  sync::Completion bound;
+  libsync::Completion bound;
   async::PostTask(loop.dispatcher(), [&]() {
     client.Bind(std::move(endpoints->client), loop.dispatcher());
     bound.Signal();
@@ -55,7 +55,7 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
 
-    sync::Completion completion;
+    libsync::Completion completion;
     async::PostTask(loop.dispatcher(), [&]() {
       state->NextStep();  // End: Setup. Begin: EchoCall.
 
@@ -70,7 +70,7 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     ZX_ASSERT(ZX_OK == completion.Wait());
   }
 
-  sync::Completion destroyed;
+  libsync::Completion destroyed;
   async::PostTask(loop.dispatcher(),
                   [client = std::move(client), &destroyed]() { destroyed.Signal(); });
   ZX_ASSERT(ZX_OK == destroyed.Wait());
