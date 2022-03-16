@@ -180,7 +180,7 @@ impl synthesizer::InputDevice for self::InputDevice {
         )
     }
 
-    async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+    async fn flush(self: Box<Self>) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -624,17 +624,14 @@ mod tests {
     }
 
     #[test]
-    fn serve_reports_resolves_immediately() -> Result<(), Error> {
+    fn flush_resolves_immediately() -> Result<(), Error> {
         let mut executor =
             fasync::TestExecutor::new().expect("internal error: failed to create executor");
         let (fidl_proxy, _request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
         let mut input_device = Box::new(InputDevice { fidl_proxy });
         input_device.multi_finger_tap(None, 900)?; // Sends `InputReport`.
-        assert_matches!(
-            executor.run_until_stalled(&mut input_device.serve_reports()),
-            Poll::Ready(Ok(()))
-        );
+        assert_matches!(executor.run_until_stalled(&mut input_device.flush()), Poll::Ready(Ok(())));
         Ok(())
     }
 }

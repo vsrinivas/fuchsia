@@ -257,7 +257,7 @@ mod tests {
             // Send a `GetDescriptor` request to `input_device`, and verify that the device
             // is as keyboard.
             let input_device_get_descriptor_fut = input_device_proxy.get_descriptor();
-            let input_device_server_fut = input_device.serve_reports();
+            let input_device_server_fut = input_device.flush();
             std::mem::drop(input_device_proxy); // Terminate stream served by `input_device_server_fut`.
 
             let (_server_result, get_descriptor_result) =

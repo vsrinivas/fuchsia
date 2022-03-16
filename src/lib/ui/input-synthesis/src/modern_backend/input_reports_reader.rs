@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_input_report::{
         InputReport, InputReportsReaderRequest, InputReportsReaderRequestStream,
     },
-    futures::{stream, StreamExt, TryStreamExt},
+    futures::{StreamExt, TryStreamExt},
     std::convert::TryFrom as _,
 };
 
@@ -19,7 +19,7 @@ pub(super) struct InputReportsReader {
     pub(super) request_stream: InputReportsReaderRequestStream,
     /// FIFO queue of reports to be consumed by calls to
     /// `fuchsia.input.report.InputReportsReader.ReadInputReports()`.
-    pub(super) reports: Vec<InputReport>,
+    pub(super) report_receiver: futures::channel::mpsc::UnboundedReceiver<InputReport>,
 }
 
 impl InputReportsReader {
@@ -50,7 +50,7 @@ impl InputReportsReader {
         //   `ReadInputReports` requests indefinitely.
         let chunk_size = usize::try_from(fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT)
             .context("converting MAX_DEVICE_REPORT_COUNT to usize")?;
-        let mut reports = stream::iter(self.reports).chunks(chunk_size).fuse();
+        let mut reports = self.report_receiver.ready_chunks(chunk_size).fuse();
         self.request_stream
             .zip(reports.by_ref())
             .map(|(request, reports)| match request {
@@ -99,11 +99,13 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
             let reports_fut = proxy.read_input_reports();
             std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
 
             let (_, reports_result) = future::join(reader_fut, reports_fut).await;
             let reports = reports_result
@@ -121,13 +123,17 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut = InputReportsReader {
-                request_stream,
-                reports: std::iter::repeat_with(|| InputReport::EMPTY).take(max_reports).collect(),
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            for _ in 0..max_reports {
+                report_sender
+                    .unbounded_send(InputReport::EMPTY)
+                    .expect("sending empty InputReport");
             }
-            .into_future();
             let reports_fut = proxy.read_input_reports();
             std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
 
             let (_, reports_result) = future::join(reader_fut, reports_fut).await;
             let reports = reports_result
@@ -146,13 +152,14 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut = InputReportsReader {
-                request_stream,
-                reports: std::iter::repeat_with(|| InputReport::EMPTY)
-                    .take(max_reports + 1)
-                    .collect(),
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            for _ in 0..max_reports + 1 {
+                report_sender
+                    .unbounded_send(InputReport::EMPTY)
+                    .expect("sending empty InputReport");
             }
-            .into_future();
             pin_mut!(reader_fut);
 
             // Note: this test deliberately serializes its FIDL requests. Concurrent requests
@@ -172,6 +179,7 @@ mod tests {
             }
 
             let reports_fut = proxy.read_input_reports();
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
             let _ = executor.run_until_stalled(&mut reader_fut);
             pin_mut!(reports_fut);
             match executor.run_until_stalled(&mut reports_fut) {
@@ -198,10 +206,12 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
             let _reports_fut = proxy.read_input_reports();
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
             assert_matches!(reader_fut.await, Ok(()));
             Ok(())
         }
@@ -212,9 +222,10 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
             std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
             assert_matches!(reader_fut.await, Err(_));
             Ok(())
@@ -225,14 +236,16 @@ mod tests {
             let (client_end, request_stream) =
                 endpoints::create_request_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader client_end and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
             client_end
                 .into_channel()
                 .write(b"not a valid FIDL message", /* handles */ &mut [])
                 .expect("internal error writing to channel");
-            assert_matches!(reader_fut.await, Err(_));
+            assert_matches!(reader_fut.await, Err(_)); // while reading reader request
             Ok(())
         }
 
@@ -241,13 +254,15 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
             let result_fut = proxy.read_input_reports(); // Send query.
             std::mem::drop(result_fut); // Close handle to channel.
             std::mem::drop(proxy); // Close other handle to channel.
-            assert_matches!(reader_fut.await, Err(_));
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
+            assert_matches!(reader_fut.await, Err(_)); // while sending reports
             Ok(())
         }
 
@@ -256,7 +271,10 @@ mod tests {
             let (_proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut = InputReportsReader { request_stream, reports: vec![] }.into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
             assert_matches!(reader_fut.await, Ok(()));
             Ok(())
         }
@@ -276,10 +294,12 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut =
-                InputReportsReader { request_stream, reports: vec![InputReport::EMPTY] }
-                    .into_future();
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            report_sender.unbounded_send(InputReport::EMPTY).expect("sending empty InputReport");
             let reports_fut = proxy.read_input_reports();
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
 
             // Process the first query. This should close the FIDL connection.
             let futures = future::join(reader_fut, reports_fut);
@@ -301,16 +321,18 @@ mod tests {
             let (proxy, request_stream) =
                 endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                     .context("creating InputReportsReader proxy and stream")?;
-            let reader_fut = InputReportsReader {
-                request_stream,
-                reports: std::iter::repeat_with(|| InputReport::EMPTY)
-                    .take(max_reports + 1)
-                    .collect(),
+            let (report_sender, report_receiver) =
+                futures::channel::mpsc::unbounded::<InputReport>();
+            let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+            for _ in 0..max_reports + 1 {
+                report_sender
+                    .unbounded_send(InputReport::EMPTY)
+                    .expect("sending empty InputReport");
             }
-            .into_future();
             let first_reports_fut = proxy.read_input_reports();
             let second_reports_fut = proxy.read_input_reports();
             std::mem::drop(proxy); // Drop `proxy` to terminate `request_stream`.
+            std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
 
             let (_, first_reports_result, second_reports_result) =
                 futures::join!(reader_fut, first_reports_fut, second_reports_fut);
@@ -333,15 +355,18 @@ mod tests {
         let (proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputReportsReaderMarker>()
                 .context("creating InputReportsReader proxy and stream")?;
-        let reader_fut = InputReportsReader {
-            request_stream,
-            reports: vec![
-                InputReport { event_time: Some(1), ..InputReport::EMPTY },
-                InputReport { event_time: Some(2), ..InputReport::EMPTY },
-            ],
-        }
-        .into_future();
+        let (report_sender, report_receiver) = futures::channel::mpsc::unbounded::<InputReport>();
+        let reader_fut = InputReportsReader { request_stream, report_receiver }.into_future();
+        report_sender
+            .unbounded_send(InputReport { event_time: Some(1), ..InputReport::EMPTY })
+            .expect("sending first InputReport");
+        report_sender
+            .unbounded_send(InputReport { event_time: Some(2), ..InputReport::EMPTY })
+            .expect("sending second InputReport");
+
         let reports_fut = proxy.read_input_reports();
+        std::mem::drop(report_sender); // Drop `report_sender` to terminate `report_receiver`.
+
         assert_eq!(
             future::join(reader_fut, reports_fut)
                 .await

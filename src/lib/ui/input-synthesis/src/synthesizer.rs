@@ -73,7 +73,7 @@ pub trait InputDevice {
     // # Note
     // When the future resolves, input reports may still be sitting unread in the
     // channel to the FIDL peer.
-    async fn serve_reports(self: Box<Self>) -> Result<(), Error>;
+    async fn flush(self: Box<Self>) -> Result<(), Error>;
 }
 
 /// The buttons supported by `media_button_event()`.
@@ -91,7 +91,7 @@ fn monotonic_nanos() -> Result<u64, Error> {
     u64::try_from(zx::Time::get_monotonic().into_nanos()).map_err(Into::into)
 }
 
-fn repeat_with_delay(
+async fn repeat_with_delay(
     times: usize,
     delay: Duration,
     device: &mut dyn InputDevice,
@@ -100,7 +100,7 @@ fn repeat_with_delay(
 ) -> Result<(), Error> {
     for i in 0..times {
         f1(i, device)?;
-        thread::sleep(delay);
+        fasync::Timer::new(fasync::Time::after(delay.into())).await;
         f2(i, device)?;
     }
 
@@ -114,7 +114,7 @@ pub async fn media_button_event<I: IntoIterator<Item = MediaButton>>(
 ) -> Result<(), Error> {
     let mut input_device = registry.add_media_buttons_device()?;
     input_device.media_buttons(pressed_buttons.into_iter().collect(), monotonic_nanos()?)?;
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 /// A single key event to be replayed by `dispatch_key_events_async`.
@@ -298,7 +298,8 @@ impl<'a> Replayer<'a> {
             }
             input_device.key_press_raw(self.make_input_report(), monotonic_nanos()?)?;
         }
-        input_device.serve_reports().await
+
+        input_device.flush().await
     }
 
     /// Creates a keyboard report based on the keys that are currently pressed.
@@ -339,9 +340,10 @@ pub(crate) async fn keyboard_event(
             // Key released.
             device.key_press_usage(None, monotonic_nanos()?)
         },
-    )?;
+    )
+    .await?;
 
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 /// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.
@@ -383,7 +385,7 @@ pub async fn text(
         }
     }
 
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 pub async fn tap_event(
@@ -410,9 +412,10 @@ pub async fn tap_event(
             // Touch up.
             device.tap(None, monotonic_nanos()?)
         },
-    )?;
+    )
+    .await?;
 
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 pub(crate) async fn multi_finger_tap_event(
@@ -438,9 +441,10 @@ pub(crate) async fn multi_finger_tap_event(
             // Touch up.
             device.multi_finger_tap(None, monotonic_nanos()?)
         },
-    )?;
+    )
+    .await?;
 
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 pub(crate) async fn swipe(
@@ -565,9 +569,10 @@ pub(crate) async fn multi_finger_swipe(
             }
         },
         |_, _| Ok(()),
-    )?;
+    )
+    .await?;
 
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 /// The buttons supported by `mouse_event()`.
@@ -583,7 +588,7 @@ pub async fn mouse_event<I: IntoIterator<Item = MouseButton>>(
 ) -> Result<(), Error> {
     let mut input_device = registry.add_mouse_device(width, height)?;
     input_device.mouse(movement, pressed_buttons.into_iter().collect(), monotonic_nanos()?)?;
-    input_device.serve_reports().await
+    input_device.flush().await
 }
 
 #[cfg(test)]
@@ -941,7 +946,7 @@ mod tests {
                     .map_err(Into::into)
             }
 
-            async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+            async fn flush(self: Box<Self>) -> Result<(), Error> {
                 Ok(())
             }
         }
@@ -1533,7 +1538,7 @@ mod tests {
                 Ok(())
             }
 
-            async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+            async fn flush(self: Box<Self>) -> Result<(), Error> {
                 Ok(())
             }
         }
@@ -1546,7 +1551,7 @@ mod tests {
             Ok(())
         }
 
-        #[fasync::run_until_stalled(test)]
+        #[fasync::run_singlethreaded(test)]
         async fn keyboard_event_registers_keyboard() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
             keyboard_event(40, Duration::from_millis(0), &mut registry).await?;
@@ -1562,7 +1567,7 @@ mod tests {
             Ok(())
         }
 
-        #[fasync::run_until_stalled(test)]
+        #[fasync::run_singlethreaded(test)]
         async fn multi_finger_tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
             multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut registry)
@@ -1571,7 +1576,7 @@ mod tests {
             Ok(())
         }
 
-        #[fasync::run_until_stalled(test)]
+        #[fasync::run_singlethreaded(test)]
         async fn tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
             tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut registry).await?;
@@ -1579,7 +1584,7 @@ mod tests {
             Ok(())
         }
 
-        #[fasync::run_until_stalled(test)]
+        #[fasync::run_singlethreaded(test)]
         async fn swipe_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
             swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut registry).await?;
@@ -1587,7 +1592,7 @@ mod tests {
             Ok(())
         }
 
-        #[fasync::run_until_stalled(test)]
+        #[fasync::run_singlethreaded(test)]
         async fn multi_finger_swipe_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
             multi_finger_swipe(
