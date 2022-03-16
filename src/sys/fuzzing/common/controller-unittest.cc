@@ -397,25 +397,28 @@ TEST_F(ControllerTest, Cleanse) {
 }
 
 TEST_F(ControllerTest, Fuzz) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  ::fuchsia::fuzzer::Controller_Fuzz_Result result;
-  Input fuzzed({0xde, 0xad, 0xbe, 0xef});
+  Artifact artifact(FuzzResult::CRASH, {0xde, 0xad, 0xbe, 0xef});
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
-  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
+  ZxBridge<FidlArtifact> bridge1;
+  controller->Fuzz(ZxBind<FidlArtifact>(std::move(bridge1.completer)));
+  FUZZING_EXPECT_ERROR(bridge1.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)),
+                       ZX_ERR_WRONG_TYPE);
+  RunUntilIdle();
 
   runner()->set_error(ZX_OK);
-  runner()->set_result(FuzzResult::CRASH);
-  runner()->set_result_input(fuzzed);
-  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
-  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  auto& response = result.response();
-  EXPECT_EQ(response.result, FuzzResult::CRASH);
-  auto received = Receive(std::move(response.error_input));
-  EXPECT_EQ(received.ToHex(), fuzzed.ToHex());
+  runner()->set_result(artifact.fuzz_result());
+  runner()->set_result_input(artifact.input());
+  ZxBridge<FidlArtifact> bridge2;
+  controller->Fuzz(ZxBind<FidlArtifact>(std::move(bridge2.completer)));
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED))
+                        .and_then([&](FidlArtifact& fidl_artifact) {
+                          return AsyncSocketRead(executor(), std::move(fidl_artifact));
+                        }),
+                    std::move(artifact));
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, Merge) {

@@ -15,6 +15,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/monitor-clients.h"
@@ -75,7 +76,7 @@ class Runner {
   ZxPromise<FuzzResult> Execute(Input input) FXL_LOCKS_EXCLUDED(mutex_);
   ZxPromise<Input> Minimize(Input input) FXL_LOCKS_EXCLUDED(mutex_);
   ZxPromise<Input> Cleanse(Input input) FXL_LOCKS_EXCLUDED(mutex_);
-  void Fuzz(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
+  ZxPromise<Artifact> Fuzz() FXL_LOCKS_EXCLUDED(mutex_);
   void Merge(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Adds a subscriber for status updates.
@@ -137,6 +138,7 @@ class Runner {
   void JoinImpl();
 
   ExecutorPtr executor_;
+  Scope scope_;
 
   std::mutex mutex_;
 

@@ -20,6 +20,7 @@ class AsyncTest : public ::testing::Test {
  protected:
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
   const ExecutorPtr& executor() const { return executor_; }
+  size_t active() const { return active_; }
 
   void SetUp() override { executor_ = MakeExecutor(dispatcher()); }
 

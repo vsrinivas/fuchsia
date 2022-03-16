@@ -67,6 +67,11 @@ class RunnerTest : public AsyncTest {
   // engine indicates it is idle. See also |HasStatus| below.
   void RunAllInputs();
 
+  // Like |RunAllInputs|, but infers when the engine is idle by checking if the test loop is idle.
+  // TODO(fxbug.dev/92490): This is a transitional method until the |Runner| is fully using its
+  // |ExecutorPtr|.
+  void RunAllInputsAsync();
+
   // Waits until the runner is started and producing test inputs, or until it stops without
   // providing any inputs. Useful when another thread is responsible for driving the runner, e.g.
   // via |RunUntilIdle|.
