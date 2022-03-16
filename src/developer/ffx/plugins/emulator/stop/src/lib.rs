@@ -60,7 +60,7 @@ async fn get_instance_paths(
     }
 }
 
-#[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn stop(cmd: StopCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
     match get_instance_paths(cmd.name, cmd.all, &ffx_config).await {

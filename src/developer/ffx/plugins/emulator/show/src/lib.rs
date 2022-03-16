@@ -63,7 +63,7 @@ async fn get_instance_name(
     }
 }
 
-#[ffx_plugin("emu.experimental")]
+#[ffx_plugin()]
 pub async fn show(cmd: ShowCommand) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
 
