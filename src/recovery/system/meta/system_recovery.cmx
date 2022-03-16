@@ -29,7 +29,9 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.tracking.provider.Registry"
+            "fuchsia.tracking.provider.Registry",
+            "fuchsia.wlan.policy.ClientListener",
+            "fuchsia.wlan.policy.ClientProvider"
         ]
     }
 }

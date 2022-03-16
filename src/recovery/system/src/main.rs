@@ -44,6 +44,8 @@ use fdr::{FactoryResetState, ResetEvent};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
+#[cfg(feature = "http_setup_server")]
+use fuchsia_async::DurationExt;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
@@ -107,6 +109,13 @@ enum RecoveryMessages {
     ResetMessage(FactoryResetState),
     CountdownTick(u8),
     ResetFailed,
+}
+
+#[derive(Clone, PartialEq)]
+#[cfg(feature = "http_setup_server")]
+enum WiFiMessages {
+    Connecting,
+    Connected(bool),
 }
 
 const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
@@ -207,9 +216,9 @@ impl RenderResources {
         heading: &str,
         body: Option<&str>,
         countdown_ticks: u8,
-        #[cfg(feature = "http_setup_server")] _focus_connect_button: bool,
         #[cfg(feature = "http_setup_server")] wifi_ssid: &Option<String>,
         #[cfg(feature = "http_setup_server")] wifi_password: &Option<String>,
+        #[cfg(feature = "http_setup_server")] wifi_connected: &WiFiMessages,
         face: &FontFace,
         is_counting_down: bool,
     ) -> Self {
@@ -380,7 +389,16 @@ impl RenderResources {
                     );
 
                     let button_text = WIFI_CONNECT;
-                    let info_text = "Not Connected";
+                    let info_text = match wifi_connected {
+                        WiFiMessages::Connecting => "Connecting",
+                        WiFiMessages::Connected(connected) => {
+                            if *connected {
+                                "Connected"
+                            } else {
+                                "Not Connected"
+                            }
+                        }
+                    };
                     RenderResources::build_button_group(
                         face,
                         body_text_size,
@@ -405,7 +423,10 @@ impl RenderResources {
             if buttons.len() >= 3 {
                 buttons[0].set_focused(&mut scene, true);
                 buttons[1].set_focused(&mut scene, true);
-                buttons[2].set_focused(&mut scene, wifi_ssid.is_some());
+                buttons[2].set_focused(
+                    &mut scene,
+                    wifi_ssid.is_some() && wifi_connected == &WiFiMessages::Connected(false),
+                );
             }
             Self { scene, buttons }
         }
@@ -470,6 +491,8 @@ struct RecoveryViewAssistant {
     wifi_ssid: Option<String>,
     #[cfg(feature = "http_setup_server")]
     wifi_password: Option<String>,
+    #[cfg(feature = "http_setup_server")]
+    connected: WiFiMessages,
 }
 
 impl RecoveryViewAssistant {
@@ -500,6 +523,8 @@ impl RecoveryViewAssistant {
             wifi_ssid: None,
             #[cfg(feature = "http_setup_server")]
             wifi_password: None,
+            #[cfg(feature = "http_setup_server")]
+            connected: WiFiMessages::Connected(false),
         })
     }
 
@@ -746,7 +771,43 @@ impl RecoveryViewAssistant {
                             entry_text = password.clone();
                         }
                     }
-                    WIFI_CONNECT => {}
+                    WIFI_CONNECT => {
+                        if let Some(ssid) = &self.wifi_ssid {
+                            // Allow empty passwords
+                            let mut password = "";
+                            if let Some(wifi_password) = &self.wifi_password {
+                                password = wifi_password;
+                            };
+                            let local_app_sender = self.app_sender.clone();
+                            local_app_sender.queue_message(
+                                MessageTarget::View(self.view_key),
+                                make_message(WiFiMessages::Connecting),
+                            );
+
+                            let ssid = ssid.clone();
+                            let password = password.to_string().clone();
+                            let view_key = self.view_key.clone();
+                            let f = async move {
+                                let connected = connect_to_wifi(ssid, password).await;
+
+                                if connected.is_err() {
+                                    // Let the "Connecting" message stay there for a second so the
+                                    // user can see that something was tried.
+                                    let sleep_time = Duration::from_seconds(1);
+                                    fuchsia_async::Timer::new(sleep_time.after_now()).await;
+                                    println!(
+                                        "Failed to connect: {}",
+                                        connected.as_ref().err().unwrap()
+                                    );
+                                }
+                                local_app_sender.queue_message(
+                                    MessageTarget::View(view_key),
+                                    make_message(WiFiMessages::Connected(connected.is_ok())),
+                                );
+                            };
+                            fasync::Task::local(f).detach();
+                        }
+                    }
                     _ => {}
                 }
                 if !field_text.is_empty() {
@@ -763,6 +824,12 @@ impl RecoveryViewAssistant {
                 }
             }
         }
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn handle_wifi_message(&mut self, message: &WiFiMessages) {
+        self.connected = message.clone();
+        self.render_resources = None;
     }
 }
 
@@ -790,11 +857,11 @@ impl ViewAssistant for RecoveryViewAssistant {
                 self.body.as_ref().map(Borrow::borrow),
                 self.countdown_ticks,
                 #[cfg(feature = "http_setup_server")]
-                self.wifi_ssid.is_some(),
-                #[cfg(feature = "http_setup_server")]
                 &self.wifi_ssid,
                 #[cfg(feature = "http_setup_server")]
                 &self.wifi_password,
+                #[cfg(feature = "http_setup_server")]
+                &self.connected,
                 &self.face,
                 self.reset_state_machine.is_counting_down(),
             ));
@@ -815,6 +882,8 @@ impl ViewAssistant for RecoveryViewAssistant {
                 self.handle_button_message(message);
             } else if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
                 self.handle_keyboard_message(message);
+            } else if let Some(message) = message.downcast_ref::<WiFiMessages>() {
+                self.handle_wifi_message(message);
             } else {
                 println!("Unknown message received: {:#?}", message);
             }
@@ -927,6 +996,17 @@ impl ViewAssistant for RecoveryViewAssistant {
 
         Ok(())
     }
+}
+
+/// Connects to WiFi, returns a future that will wait for a connection
+#[cfg(feature = "http_setup_server")]
+async fn connect_to_wifi(ssid: String, password: String) -> Result<(), Error> {
+    println!("Connecting to WiFi ");
+    use fidl_fuchsia_wlan_policy::SecurityType;
+    use recovery_util::wlan::{create_network_info, WifiConnect, WifiConnectImpl};
+    let wifi = WifiConnectImpl::new();
+    let network = create_network_info(&ssid, Some(&password), Some(SecurityType::Wpa2));
+    wifi.connect(network).await
 }
 
 /// Determines whether or not fdr is enabled.
