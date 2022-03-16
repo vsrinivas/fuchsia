@@ -67,7 +67,10 @@ declare_args() {
 
   # TODO(fxbug.dev/26814): Use DWARF 4 for the kernel proper and physboot
   # until the GDB used by kernel developers fully supports DWARF 5.
-  if (is_kernel) {
+  # TODO(fxbug.dev/87422): Use DWARF 4 on macOS to avoid the warning reported
+  # by lld. This matches the default DWARF version currently used by Clang:
+  # https://github.com/llvm/llvm-project/blob/89c94c2/clang/lib/Driver/ToolChains/Darwin.cpp#L1159
+  if (is_kernel || is_mac) {
     dwarf_version = 4
   }
 }
