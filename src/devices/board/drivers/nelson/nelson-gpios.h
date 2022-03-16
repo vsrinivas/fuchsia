@@ -109,7 +109,22 @@ namespace nelson {
 #define GPIO_SOC_VDDCPU_PWM      S905D3_GPIOE(1)
 
 // GPIOBOOT Banks
-#define GPIO_EMMC_RESET          S905D3_GPIOBOOT(12)
+#define SOC_EMMC_D0              S905D3_GPIOBOOT(0)
+#define SOC_EMMC_D1              S905D3_GPIOBOOT(1)
+#define SOC_EMMC_D2              S905D3_GPIOBOOT(2)
+#define SOC_EMMC_D3              S905D3_GPIOBOOT(3)
+#define SOC_EMMC_D4              S905D3_GPIOBOOT(4)
+#define SOC_EMMC_D5              S905D3_GPIOBOOT(5)
+#define SOC_EMMC_D6              S905D3_GPIOBOOT(6)
+#define SOC_EMMC_D7              S905D3_GPIOBOOT(7)
+#define SOC_EMMC_CLK             S905D3_GPIOBOOT(8)
+// GPIOBOOT(9)
+#define SOC_EMMC_CMD             S905D3_GPIOBOOT(10)
+// GPIOBOOT(11)
+#define SOC_EMMC_RST_L           S905D3_GPIOBOOT(12)
+#define SOC_EMMC_DS              S905D3_GPIOBOOT(13)
+// GPIOBOOT(14)
+// GPIOBOOT(15)
 
 // clang-format on
 

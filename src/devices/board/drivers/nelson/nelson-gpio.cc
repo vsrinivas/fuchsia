@@ -148,8 +148,18 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_AMBER_LED_PWM},
     {GPIO_SOC_VDDEE_PWM},
     {GPIO_SOC_VDDCPU_PWM},
-
-    {GPIO_EMMC_RESET},
+    {SOC_EMMC_D0},
+    {SOC_EMMC_D1},
+    {SOC_EMMC_D2},
+    {SOC_EMMC_D3},
+    {SOC_EMMC_D4},
+    {SOC_EMMC_D5},
+    {SOC_EMMC_D6},
+    {SOC_EMMC_D7},
+    {SOC_EMMC_CLK},
+    {SOC_EMMC_CMD},
+    {SOC_EMMC_RST_L},
+    {SOC_EMMC_DS},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
