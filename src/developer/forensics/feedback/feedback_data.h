@@ -44,7 +44,7 @@ class FeedbackData {
 
   FeedbackData(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
-               feedback::AnnotationManager* annotation_manager,
+               RedactorBase* redactor, feedback::AnnotationManager* annotation_manager,
                DeviceIdProvider* device_id_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request,

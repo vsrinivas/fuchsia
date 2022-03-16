@@ -29,7 +29,7 @@ namespace feedback_data {
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
-                     const AnnotationKeys& annotation_allowlist,
+                     RedactorBase* redactor, const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
                      feedback::AnnotationManager* annotation_manager,
                      feedback::DeviceIdProvider* device_id_provider,
@@ -37,7 +37,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
-      redactor_(feedback::RedactorFromConfig()),
+      redactor_(redactor),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
       annotation_manager_(annotation_manager),
@@ -68,6 +68,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // Somewhat risky, but the Cobalt's constructor sets up a bunch of stuff and this constructor
       // is intended for tests.
       cobalt_(nullptr),
+      redactor_(nullptr /*TODO*/),
       annotation_allowlist_({}),
       attachment_allowlist_({}),
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
@@ -181,7 +182,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher_, services_,
                             MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog, timeout),
-                            redactor_.get());
+                            redactor_);
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_,
                               MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout),

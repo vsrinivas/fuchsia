@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
@@ -40,12 +41,13 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       clock_(clock),
       inspect_root_(inspect_root),
       cobalt_(cobalt),
+      redactor_(RedactorFromConfig()),
       device_id_provider_(
           MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
       inspect_node_manager_(inspect_root),
       annotations_(dispatcher_, options.feedback_data_options.config.annotation_allowlist,
                    startup_annotations),
-      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_,
+      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, redactor_.get(),
                      annotations_.GetAnnotationManager(), device_id_provider_.get(),
                      options.feedback_data_options),
       crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),

@@ -26,6 +26,7 @@
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/timekeeper/clock.h"
 
 namespace forensics::feedback {
@@ -60,6 +61,7 @@ class MainService {
   timekeeper::Clock* clock_;
   inspect::Node* inspect_root_;
   cobalt::Logger* cobalt_;
+  std::unique_ptr<RedactorBase> redactor_;
   std::unique_ptr<DeviceIdProvider> device_id_provider_;
 
   InspectNodeManager inspect_node_manager_;

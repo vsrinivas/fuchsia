@@ -99,9 +99,10 @@ class DatastoreTest : public UnitTestFixture {
     }
     annotation_manager_ =
         std::make_unique<feedback::AnnotationManager>(allowlist, startup_annotations);
-    datastore_ = std::make_unique<Datastore>(
-        dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        annotation_manager_.get(), device_id_provider_.get(), inspect_data_budget_.get());
+    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
+                                             annotation_allowlist, attachment_allowlist,
+                                             annotation_manager_.get(), device_id_provider_.get(),
+                                             inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -183,6 +184,7 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
+  IdentityRedactor redactor_;
 
  protected:
   std::unique_ptr<Datastore> datastore_;

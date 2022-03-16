@@ -34,6 +34,7 @@ class FeedbackDataTest : public UnitTestFixture {
 
   timekeeper::Clock* Clock() { return &clock_; }
   cobalt::Logger* Cobalt() { return &cobalt_; }
+  RedactorBase* Redactor() { return &redactor_; }
   DeviceIdProvider* DeviceIdProvider() { return &device_id_provider_; }
 
   ~FeedbackDataTest() { FX_CHECK(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/true)); }
@@ -41,6 +42,7 @@ class FeedbackDataTest : public UnitTestFixture {
  private:
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
+  IdentityRedactor redactor_;
   RemoteDeviceIdProvider device_id_provider_;
 };
 
@@ -51,7 +53,7 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
   AnnotationManager annotation_manager({});
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               &annotation_manager, DeviceIdProvider(),
+                               Redactor(), &annotation_manager, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
@@ -67,7 +69,7 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
 
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               &annotation_manager, DeviceIdProvider(),
+                               Redactor(), &annotation_manager, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,

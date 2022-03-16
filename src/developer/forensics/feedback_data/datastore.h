@@ -45,8 +45,8 @@ namespace feedback_data {
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist,
+            cobalt::Logger* cobalt, RedactorBase* redactor,
+            const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist,
             feedback::AnnotationManager* annotation_manager,
             feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget);
 
@@ -73,7 +73,7 @@ class Datastore {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
-  std::unique_ptr<RedactorBase> redactor_;
+  RedactorBase* redactor_;
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
