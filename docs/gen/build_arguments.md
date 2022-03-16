@@ -13,7 +13,7 @@ From //zircon/system/ulib/acpica/acpica.gni:7
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:103
+From //build/images/args.gni:106
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -21,7 +21,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:109
+From //build/images/args.gni:112
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -31,7 +31,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:115
+From //build/images/args.gni:118
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -68,7 +68,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:130
+From //build/images/args.gni:133
 
 ### anv_enable_external_sync_fd
 TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
@@ -122,14 +122,38 @@ From //build/images/vbmeta.gni:41
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
 
-**Current value (from the default):** `""`
+**Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
+
+From //boards/arm64.gni:51
+
+**Overridden from the default:** `""`
+
+From //build/images/vbmeta.gni:20
+
+**Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
+
+From //boards/x64.gni:53
+
+**Overridden from the default:** `""`
 
 From //build/images/vbmeta.gni:20
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
-**Current value (from the default):** `""`
+**Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
+
+From //boards/arm64.gni:53
+
+**Overridden from the default:** `""`
+
+From //build/images/vbmeta.gni:17
+
+**Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
+
+From //boards/x64.gni:51
+
+**Overridden from the default:** `""`
 
 From //build/images/vbmeta.gni:17
 
@@ -189,7 +213,7 @@ The format blobfs should store blobs in.
 
 **Current value (from the default):** `"compact"`
 
-From //build/images/args.gni:127
+From //build/images/args.gni:130
 
 ### blobfs_board_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -399,7 +423,7 @@ From //build/board.gni:75
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:79
+From //boards/x64.gni:80
 
 **Overridden from the default:** `false`
 
@@ -596,7 +620,7 @@ Each entry in the list is a scope containing:
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:64
+From //build/images/args.gni:67
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -693,9 +717,21 @@ From //build/tracer/tracer.gni:12
 ### build_uefi_disk
 Generate a UEFI disk image
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `true`
 
-From //build/images/args.gni:26
+From //boards/arm64.gni:47
+
+**Overridden from the default:** `false`
+
+From //build/images/args.gni:29
+
+**Current value for `target_cpu = "x64"`:** `true`
+
+From //boards/x64.gni:48
+
+**Overridden from the default:** `false`
+
+From //build/images/args.gni:29
 
 ### build_usb_installer
 Generate installer disk image (ISO) to be flashed to a USB drive.
@@ -704,7 +740,7 @@ See https://fuchsia.dev/fuchsia-src/development/hardware/installer
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:31
+From //build/images/args.gni:34
 
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
@@ -793,7 +829,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:121
+From //build/images/args.gni:124
 
 ### check_repeatability
 If enabled, run each affected action twice (once with renamed outputs)
@@ -848,7 +884,7 @@ This is primarily meant to be used by the clang canary builders.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:83
 
 ### chromium_build_dir
 This variable specifies a fully qualified Chromium build output directory,
@@ -923,7 +959,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:124
+From //build/images/args.gni:127
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -1364,7 +1400,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:74
+From //build/images/args.gni:77
 
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
@@ -1520,7 +1556,7 @@ From //src/storage/f2fs/BUILD.gn:10
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:104
+From //build/images/args.gni:107
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -1540,7 +1576,7 @@ Each entry in the list is a scope containing:
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:45
+From //build/images/args.gni:48
 
 ### firmware_prebuilts_path_suffix
 Suffix to append to all `firmware_prebuilts` `path` variables.
@@ -1550,7 +1586,7 @@ that users can easily switch revisions using a single arg.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:51
+From //build/images/args.gni:54
 
 ### fit_promise_compat
 Enable backwards compatible fit namespace and include path.
@@ -1955,7 +1991,7 @@ From //build/images/fvm.gni:24
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:102
+From //build/images/args.gni:105
 
 ### fvm_reserved_slices
 Number of slices reserved by FVM for internal usage. A reservation
@@ -2036,7 +2072,7 @@ Typically useful for initially flashing a device from zero-state.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:72
 
 ### graphics_compute_generate_debug_shaders
 
@@ -2207,7 +2243,7 @@ Include an account partition in the FVM image if set to true.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:136
+From //build/images/args.gni:139
 
 ### include_bootsvc
 Include bootsvc in the bootfs image. Bootsvc is a legacy binary that used to be required for
@@ -2215,14 +2251,14 @@ system boot, but is in the process of being removed (see fxb/44784).
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:158
+From //build/images/args.gni:161
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:133
+From //build/images/args.gni:136
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -2237,7 +2273,7 @@ assemble_system().  See documentation there.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:154
+From //build/images/args.gni:157
 
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
@@ -2757,7 +2793,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:88
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -2765,7 +2801,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:88
 
 ### min_crashlog_size
 Controls minimum amount of space of persistent RAM to reserve for the
@@ -3473,7 +3509,7 @@ From //build/security/policies.gni:21
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:108
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -3586,7 +3622,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:145
+From //build/images/args.gni:148
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -4358,7 +4394,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:37
+From //build/images/args.gni:40
 
 ### use_cast_runner_canary
 Whether to use the most recent (canary) version of the CastRunner prebuilt.
@@ -4401,6 +4437,25 @@ If true, Flatland is the default graphics protocol in Scenic.
 **Current value (from the default):** `false`
 
 From //src/ui/scenic/build_args.gni:7
+
+### use_gigaboot
+Build the gigaboot bootloader.
+
+**Current value for `target_cpu = "arm64"`:** `true`
+
+From //boards/arm64.gni:48
+
+**Overridden from the default:** `false`
+
+From //build/images/args.gni:26
+
+**Current value for `target_cpu = "x64"`:** `true`
+
+From //boards/x64.gni:49
+
+**Overridden from the default:** `false`
+
+From //build/images/args.gni:26
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -4515,7 +4570,19 @@ From //build/config/lto/config.gni:10
 If true, then a vbmeta image will be generated for provided ZBI
 and the paving script will pave vbmeta images to the target device.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `true`
+
+From //boards/arm64.gni:49
+
+**Overridden from the default:** `false`
+
+From //build/images/vbmeta.gni:14
+
+**Current value for `target_cpu = "x64"`:** `true`
+
+From //boards/x64.gni:47
+
+**Overridden from the default:** `false`
 
 From //build/images/vbmeta.gni:14
 
@@ -4544,19 +4611,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:99
+From //build/images/args.gni:102
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:100
+From //build/images/args.gni:103
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:101
+From //build/images/args.gni:104
 
 ### vboot_keys
 vboot signing key directory. Must contain `kernel.keyblock` and
@@ -4587,7 +4654,7 @@ is meant solely for developer debugging.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:150
+From //build/images/args.gni:153
 
 ### virtcon_bold_font_path
 Path to file to use for bold font
@@ -4807,7 +4874,7 @@ doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:96
+From //build/images/args.gni:99
 
 ### zircon_asserts
 
@@ -4819,7 +4886,7 @@ From //build/config/fuchsia/BUILD.gn:137
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:97
+From //build/images/args.gni:100
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.
@@ -4854,7 +4921,7 @@ From //build/config/zircon/levels.gni:22
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:98
+From //build/images/args.gni:101
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
