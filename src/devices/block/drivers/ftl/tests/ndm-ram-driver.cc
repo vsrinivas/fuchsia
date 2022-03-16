@@ -255,7 +255,7 @@ uint32_t NdmRamDriver::PageSize() const { return options_.page_size; }
 uint8_t NdmRamDriver::SpareSize() const { return options_.eb_size; }
 
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
-  if (num_bad_blocks_ < options_.max_bad_blocks) {
+  if (num_bad_blocks_ < options_.max_bad_blocks && test_options_.bad_block_interval >= 0) {
     bad_block_interval_++;
     if (bad_block_interval_ > test_options_.bad_block_interval) {
       SetBadBlock(page_num, true);

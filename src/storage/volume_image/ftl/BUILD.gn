@@ -82,6 +82,7 @@ source_set("ftl-image") {
 }
 
 source_set("ftl-test-helper") {
+  testonly = true
   sources = [ "ftl_test_helper.cc" ]
   public = [ "ftl_test_helper.h" ]
 
@@ -121,9 +122,10 @@ executable("ftl-volume-extractor") {
   output_name = "ftl-volume-extractor"
   sources = [ "ftl_volume_extractor.cc" ]
   deps = [
-    ":ftl-test-helper",
+    "//src/devices/block/drivers/ftl/tests:shared",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl:ftl",
+    "//zircon/system/ulib/zxc:zxc",
   ]
 }
 
