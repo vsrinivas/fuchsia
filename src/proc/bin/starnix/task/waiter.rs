@@ -229,7 +229,7 @@ impl Waiter {
 
 impl std::fmt::Debug for Waiter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Waiter").finish_non_exhaustive()
+        f.debug_struct("Waiter").field("port", &self.port).finish_non_exhaustive()
     }
 }
 

@@ -30,29 +30,11 @@ pub struct MessageQueue {
 
     /// The maximum number of bytes that can be stored inside this pipe.
     capacity: usize,
-
-    /// Whether the queue is closed.
-    ///
-    /// When the queue is closed, writes generate errors and reads return
-    /// zero bytes unless peer_closed_with_unread_data is true, in which case
-    /// reads generate ECONNRESET errors.
-    closed: bool,
-
-    /// Whether the peer to this queue, if any, was closed with unread data.
-    ///
-    /// Controls whether read() returns ECONNRESET when the queue is closed.
-    peer_closed_with_unread_data: bool,
 }
 
 impl MessageQueue {
     pub fn new(capacity: usize) -> MessageQueue {
-        MessageQueue {
-            messages: VecDeque::default(),
-            length: 0,
-            capacity,
-            closed: false,
-            peer_closed_with_unread_data: false,
-        }
+        MessageQueue { messages: VecDeque::default(), length: 0, capacity }
     }
 
     /// Returns the number of bytes that can be written to the message queue before the buffer is
@@ -89,25 +71,6 @@ impl MessageQueue {
         self.length
     }
 
-    pub fn close(&mut self) {
-        self.closed = true;
-    }
-
-    pub fn is_closed(&self) -> bool {
-        self.closed
-    }
-
-    pub fn mark_peer_closed_with_unread_data(&mut self) {
-        self.peer_closed_with_unread_data = true;
-    }
-
-    fn is_closed_for_reading(&self) -> Result<bool, Errno> {
-        if self.closed && self.peer_closed_with_unread_data {
-            return error!(ECONNRESET);
-        }
-        Ok(self.closed)
-    }
-
     fn update_address(message: &Message, address: &mut Option<SocketAddress>) -> bool {
         if message.address.is_some() && *address != message.address {
             if address.is_some() {
@@ -134,10 +97,6 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<MessageReadInfo, Errno> {
-        if self.is_closed_for_reading()? {
-            return Ok(MessageReadInfo::default());
-        }
-
         let mut total_bytes_read = 0;
         let mut address = None;
         let mut ancillary_data = vec![];
@@ -197,10 +156,6 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<MessageReadInfo, Errno> {
-        if self.is_closed_for_reading()? {
-            return Ok(MessageReadInfo::default());
-        }
-
         let mut total_bytes_read = 0;
         let mut address = None;
         let mut ancillary_data = vec![];
@@ -244,7 +199,7 @@ impl MessageQueue {
                 ancillary_data: message.ancillary_data,
             })
         } else {
-            error!(EAGAIN)
+            Ok(MessageReadInfo::default())
         }
     }
 
@@ -261,15 +216,12 @@ impl MessageQueue {
                 ancillary_data: message.ancillary_data.clone(),
             })
         } else {
-            error!(EAGAIN)
+            Ok(MessageReadInfo::default())
         }
     }
 
     /// Reads the next message in the buffer, if such a message exists.
     fn read_message(&mut self) -> Option<Message> {
-        if self.closed {
-            return None;
-        }
         self.messages.pop_front().map(|message| {
             self.length -= message.len();
             message
@@ -278,13 +230,11 @@ impl MessageQueue {
 
     /// Peeks the next message in the buffer, if such a message exists.
     fn peek_message(&self) -> Option<&Message> {
-        if self.closed {
-            return None;
-        }
         self.messages.front()
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket.
+    /// Will return EAGAIN if not enough capacity is available.
     ///
     /// # Parameters
     /// - `task`: The task to read memory from.
@@ -298,17 +248,17 @@ impl MessageQueue {
         address: Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        if self.closed {
-            return error!(EPIPE);
-        }
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
+        if actual == 0 {
+            return error!(EAGAIN);
+        }
         let data = MessageData::copy_from_user(task, user_buffers, actual)?;
         self.write_message(Message::new(data, address, std::mem::take(ancillary_data)));
         Ok(actual)
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket as
-    /// single message.
+    /// single message. Will return EAGAIN if not enough capacity is available.
     ///
     /// # Parameters
     /// - `task`: The task to read memory from.
@@ -322,9 +272,6 @@ impl MessageQueue {
         address: Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        if self.closed {
-            return error!(EPIPE);
-        }
         let actual = user_buffers.remaining();
         if actual > self.capacity() {
             return error!(EMSGSIZE);

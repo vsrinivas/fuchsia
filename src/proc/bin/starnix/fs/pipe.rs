@@ -83,16 +83,12 @@ impl Pipe {
     }
 
     /// Increments the reader count for this pipe by 1.
-    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
-    // that without the pipe semantics.
     pub fn add_reader(&mut self) {
         self.reader_count += 1;
         self.had_reader = true;
     }
 
     /// Increments the writer count for this pipe by 1.
-    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
-    // that without the pipe semantics.
     pub fn add_writer(&mut self) {
         self.writer_count += 1;
         self.had_writer = true;
@@ -154,10 +150,6 @@ impl Pipe {
         if self.reader_count == 0 {
             send_signal(&current_task, SignalInfo::default(SIGPIPE));
             return error!(EPIPE);
-        }
-
-        if self.messages.available_capacity() == 0 {
-            return error!(EAGAIN);
         }
 
         self.messages.write_stream(&current_task, user_buffers, None, &mut vec![])

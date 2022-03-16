@@ -22,8 +22,13 @@ impl FileOps for SocketFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.recvmsg(current_task, file, data, SocketMessageFlags::empty(), None)
-            .map(|info| info.bytes_read)
+        // The behavior of recv differs from read: recv will block if given a zero-size buffer when
+        // there's no data available, but read will immediately return 0.
+        if UserBuffer::get_total_length(data)? == 0 {
+            return Ok(0);
+        }
+        let info = self.recvmsg(current_task, file, data, SocketMessageFlags::empty(), None)?;
+        Ok(info.bytes_read)
     }
 
     fn write(

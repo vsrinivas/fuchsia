@@ -55,7 +55,7 @@ enum SocketState {
 }
 
 pub struct SocketInner {
-    /// The `MessageQueue` that contains messages for this socket.
+    /// The `MessageQueue` that contains messages sent to this socket.
     messages: MessageQueue,
 
     /// This queue will be notified on reads, writes, disconnects etc.
@@ -63,6 +63,14 @@ pub struct SocketInner {
 
     /// The address that this socket has been bound to, if it has been bound.
     address: Option<SocketAddress>,
+
+    /// Whether this end of the socket has been shut down and can no longer receive message. It is
+    /// still possible to send messages to the peer, if it exists and hasn't also been shut down.
+    is_shutdown: bool,
+
+    /// Whether the peer had unread data when it was closed. In this case, reads should return
+    /// ECONNRESET instead of 0 (eof).
+    peer_closed_with_unread_data: bool,
 
     /// See SO_RCVTIMEO.
     receive_timeout: Option<zx::Duration>,
@@ -113,6 +121,8 @@ impl Socket {
                 messages: MessageQueue::new(SOCKET_DEFAULT_SIZE),
                 waiters: WaitQueue::default(),
                 address: None,
+                is_shutdown: false,
+                peer_closed_with_unread_data: false,
                 receive_timeout: None,
                 send_timeout: None,
                 linger: uapi::linger::default(),
@@ -415,13 +425,12 @@ impl Socket {
             let mut inner = self.lock();
             let peer = inner.peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
             if how.contains(SocketShutdownFlags::READ) {
-                inner.shutdown_read();
+                inner.shutdown_one_end();
             }
             peer
         };
         if how.contains(SocketShutdownFlags::WRITE) {
-            let mut peer_inner = peer.lock();
-            peer_inner.shutdown_write();
+            peer.lock().shutdown_one_end();
         }
         Ok(())
     }
@@ -440,7 +449,7 @@ impl Socket {
         let (maybe_peer, has_unread) = {
             let mut inner = self.lock();
             let maybe_peer = inner.peer().map(Arc::clone);
-            inner.shutdown_read();
+            inner.shutdown_one_end();
             (maybe_peer, !inner.messages.is_empty())
         };
         // If this is a connected socket type, also shut down the connected peer.
@@ -448,9 +457,9 @@ impl Socket {
             if let Some(peer) = maybe_peer {
                 let mut peer_inner = peer.lock();
                 if has_unread {
-                    peer_inner.messages.mark_peer_closed_with_unread_data();
+                    peer_inner.peer_closed_with_unread_data = true;
                 }
-                peer_inner.shutdown_write();
+                peer_inner.shutdown_one_end();
             }
         }
         self.lock().state = SocketState::Closed;
@@ -500,6 +509,12 @@ impl SocketInner {
         socket_type: SocketType,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
+        if self.peer_closed_with_unread_data {
+            return error!(ECONNRESET);
+        }
+        if self.is_shutdown {
+            return Ok(MessageReadInfo::default());
+        }
         let info = if socket_type == SocketType::Stream {
             if flags.contains(SocketMessageFlags::PEEK) {
                 self.messages.peek_stream(task, user_buffers)?
@@ -513,7 +528,7 @@ impl SocketInner {
                 self.messages.read_datagram(task, user_buffers)?
             }
         };
-        if info.bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
+        if info.message_length == 0 && !self.is_shutdown {
             return error!(EAGAIN);
         }
         if info.bytes_read > 0 {
@@ -527,6 +542,10 @@ impl SocketInner {
     ///
     /// If no data is available, or this socket is not readable, then an empty vector is returned.
     pub fn read_kernel(&mut self) -> Vec<Message> {
+        if self.is_shutdown {
+            return vec![];
+        }
+
         let bytes_read = self.messages.len();
         let messages = self.messages.take_messages();
 
@@ -554,6 +573,9 @@ impl SocketInner {
         ancillary_data: &mut Vec<AncillaryData>,
         socket_type: SocketType,
     ) -> Result<usize, Errno> {
+        if self.is_shutdown {
+            return error!(EPIPE);
+        }
         let bytes_written = if socket_type == SocketType::Stream {
             self.messages.write_stream(task, user_buffers, address, ancillary_data)?
         } else {
@@ -573,6 +595,10 @@ impl SocketInner {
     ///
     /// Returns an error if the socket is not connected.
     fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
+        if self.is_shutdown {
+            return error!(EPIPE);
+        }
+
         let bytes_written = message.data.len();
         self.messages.write_message(message);
 
@@ -583,13 +609,8 @@ impl SocketInner {
         Ok(())
     }
 
-    fn shutdown_read(&mut self) {
-        self.messages.close();
-        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
-    }
-
-    fn shutdown_write(&mut self) {
-        self.messages.close();
+    fn shutdown_one_end(&mut self) {
+        self.is_shutdown = true;
         self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
     }
 
@@ -799,10 +820,10 @@ mod tests {
         let message = Message::new(vec![1, 2, 3].into(), None, vec![]);
         server_socket.write_kernel(message.clone()).expect("Failed to write.");
 
+        assert_eq!(connecting_socket.read_kernel(), vec![message]);
+
         server_socket.close();
         assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
-
-        assert_eq!(connecting_socket.read_kernel(), vec![message]);
     }
 
     #[test]
