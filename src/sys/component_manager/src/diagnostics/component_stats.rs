@@ -9,13 +9,12 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_zircon::sys as zx_sys,
     futures::lock::Mutex,
-    injectable_time::MonotonicTime,
     std::{fmt::Debug, sync::Arc},
 };
 
 /// Tracks the tasks associated to some component and provides utilities for measuring them.
 pub struct ComponentStats<T: RuntimeStatsSource + Debug> {
-    tasks: Vec<Arc<Mutex<TaskInfo<T, MonotonicTime>>>>,
+    tasks: Vec<Arc<Mutex<TaskInfo<T>>>>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
@@ -25,7 +24,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
     }
 
     /// Associate a task with this component.
-    pub async fn add_task(&mut self, task: Arc<Mutex<TaskInfo<T, MonotonicTime>>>) {
+    pub async fn add_task(&mut self, task: Arc<Mutex<TaskInfo<T>>>) {
         self.tasks.push(task);
     }
 
@@ -93,7 +92,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
     }
 
     #[cfg(test)]
-    pub fn tasks_mut(&mut self) -> &mut [Arc<Mutex<TaskInfo<T, MonotonicTime>>>] {
+    pub fn tasks_mut(&mut self) -> &mut [Arc<Mutex<TaskInfo<T>>>] {
         &mut self.tasks
     }
 }

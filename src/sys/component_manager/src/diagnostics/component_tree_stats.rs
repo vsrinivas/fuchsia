@@ -28,10 +28,11 @@ use {
         lock::Mutex,
         FutureExt, StreamExt,
     },
-    injectable_time::MonotonicTime,
+    injectable_time::{MonotonicTime, TimeSource},
     log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
+        boxed::Box,
         collections::BTreeMap,
         fmt::Debug,
         sync::{Arc, Weak},
@@ -56,7 +57,7 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
 
     /// Stores all the tasks we know about. This provides direct access for updating a task's
     /// children.
-    tasks: Mutex<BTreeMap<zx_sys::zx_koid_t, Weak<Mutex<TaskInfo<T, MonotonicTime>>>>>,
+    tasks: Mutex<BTreeMap<zx_sys::zx_koid_t, Weak<Mutex<TaskInfo<T>>>>>,
 
     /// The root of the tree stats.
     node: inspect::Node,
@@ -76,10 +77,19 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
     _wait_diagnostics_drain: fasync::Task<()>,
 
     diagnostics_waiter_task_sender: mpsc::UnboundedSender<fasync::Task<()>>,
+
+    time_source_generator: TimeSourceGenerator,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
     pub async fn new(node: inspect::Node) -> Arc<Self> {
+        Self::new_with_time_generator(node, TimeSourceGenerator::default()).await
+    }
+
+    async fn new_with_time_generator(
+        node: inspect::Node,
+        time_source_generator: TimeSourceGenerator,
+    ) -> Arc<Self> {
         let processing_times = node.create_int_exponential_histogram(
             "processing_times_ns",
             inspect::ExponentialHistogramParams {
@@ -105,6 +115,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             _wait_diagnostics_drain: fasync::Task::spawn(async move {
                 rcv.for_each_concurrent(None, |rx| async move { rx.await }).await;
             }),
+            time_source_generator,
         });
 
         let weak_self = Arc::downgrade(&this);
@@ -143,7 +154,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
     /// Initializes a new component stats with the given task.
     async fn track_ready(&self, moniker: ExtendedMoniker, task: T) {
         let histogram = create_cpu_histogram(&self.histograms_node, &moniker);
-        if let Ok(task_info) = TaskInfo::try_from(task, Some(histogram)) {
+        if let Ok(task_info) =
+            TaskInfo::try_from(task, Some(histogram), self.time_source_generator.next())
+        {
             let koid = task_info.koid();
             let arc_task_info = Arc::new(Mutex::new(task_info));
             let mut stats = ComponentStats::new();
@@ -287,13 +300,17 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let stats =
             tree_lock.entry(moniker.clone()).or_insert(Arc::new(Mutex::new(ComponentStats::new())));
         let histogram = create_cpu_histogram(&this.histograms_node, &moniker);
-        let mut task_info = maybe_return!(source
-            .take_component_task()
-            .and_then(|task| TaskInfo::try_from(task, Some(histogram)).ok()));
+        let mut task_info =
+            maybe_return!(source.take_component_task().and_then(|task| TaskInfo::try_from(
+                task,
+                Some(histogram),
+                this.time_source_generator.next()
+            )
+            .ok()));
 
         let parent_koid = source
             .take_parent_task()
-            .and_then(|task| TaskInfo::try_from(task, None).ok())
+            .and_then(|task| TaskInfo::try_from(task, None, this.time_source_generator.next()).ok())
             .map(|task| task.koid());
         let koid = task_info.koid();
 
@@ -407,6 +424,15 @@ impl AggregatedStats {
             node.record_int("recent_queue_time", measurement.queue_time().into_nanos());
             node.record_int("recent_timestamp", measurement.timestamp().into_nanos());
         }
+    }
+}
+
+#[derive(Default)]
+struct TimeSourceGenerator {}
+
+impl TimeSourceGenerator {
+    fn next(&self) -> Box<dyn TimeSource + Send + Sync> {
+        Box::new(MonotonicTime::new())
     }
 }
 

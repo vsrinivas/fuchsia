@@ -13,10 +13,11 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::sys::{self as zx_sys, zx_system_get_num_cpus},
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
-    injectable_time::{MonotonicTime, TimeSource},
+    injectable_time::TimeSource,
     lazy_static::lazy_static,
     moniker::ExtendedMoniker,
     std::{
+        boxed::Box,
         fmt::Debug,
         sync::{Arc, Weak},
     },
@@ -61,10 +62,10 @@ where
 }
 
 #[derive(Debug)]
-pub struct TaskInfo<T: RuntimeStatsSource + Debug, U: TimeSource> {
+pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     koid: zx_sys::zx_koid_t,
     pub(crate) task: Arc<Mutex<TaskState<T>>>,
-    time_source: U,
+    time_source: Box<dyn TimeSource + Sync + Send>,
     pub(crate) has_parent_task: bool,
     measurements: MeasurementsQueue,
     histogram: Option<UintLinearHistogramProperty>,
@@ -72,38 +73,31 @@ pub struct TaskInfo<T: RuntimeStatsSource + Debug, U: TimeSource> {
     previous_histogram_timestamp: i64,
     cpu_cores: i64,
     sample_period: std::time::Duration,
-    children: Vec<Weak<Mutex<TaskInfo<T, MonotonicTime>>>>,
+    children: Vec<Weak<Mutex<TaskInfo<T>>>>,
     should_drop_old_measurements: bool,
     post_invalidation_measurements: usize,
     _terminated_task: fasync::Task<()>,
 }
 
-impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T, MonotonicTime> {
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     /// Creates a new `TaskInfo` from the given cpu stats provider.
     // Due to https://github.com/rust-lang/rust/issues/50133 we cannot just derive TryFrom on a
     // generic type given a collision with the blanket implementation.
     pub fn try_from(
         task: T,
         histogram: Option<UintLinearHistogramProperty>,
+        time_source: Box<dyn TimeSource + Sync + Send>,
     ) -> Result<Self, zx::Status> {
-        Self::try_from_internal(
-            task,
-            histogram,
-            MonotonicTime::new(),
-            CPU_SAMPLE_PERIOD,
-            num_cpus(),
-        )
+        Self::try_from_internal(task, histogram, time_source, CPU_SAMPLE_PERIOD, num_cpus())
     }
 }
 
-impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std::marker::Send>
-    TaskInfo<T, U>
-{
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     // Injects a couple of test dependencies
     fn try_from_internal(
         task: T,
         histogram: Option<UintLinearHistogramProperty>,
-        time_source: U,
+        time_source: Box<dyn TimeSource + Sync + Send>,
         sample_period: std::time::Duration,
         cpu_cores: i64,
     ) -> Result<Self, zx::Status> {
@@ -161,7 +155,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std:
     }
 
     /// Adds a weak pointer to a task for which this task is the parent.
-    pub fn add_child(&mut self, task: Weak<Mutex<TaskInfo<T, MonotonicTime>>>) {
+    pub fn add_child(&mut self, task: Weak<Mutex<TaskInfo<T>>>) {
         self.children.push(task);
     }
 
@@ -280,15 +274,19 @@ mod tests {
         assert_matches::assert_matches,
         diagnostics_hierarchy::ArrayContent,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
-        injectable_time::FakeTime,
+        injectable_time::{FakeTime, MonotonicTime},
         std::sync::Arc,
     };
 
     #[fuchsia::test]
     async fn rotates_measurements_per_task() {
         // Set up test
-        let mut task: TaskInfo<FakeTask, _> =
-            TaskInfo::try_from(FakeTask::default(), None /* histogram */).unwrap();
+        let mut task: TaskInfo<FakeTask> = TaskInfo::try_from(
+            FakeTask::default(),
+            None, /* histogram */
+            Box::new(MonotonicTime::new()),
+        )
+        .unwrap();
         assert!(task.is_alive().await);
 
         // Take three measurements.
@@ -350,6 +348,7 @@ mod tests {
                 ],
             ),
             None, /* histogram */
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
@@ -396,6 +395,7 @@ mod tests {
                 ],
             ),
             None, /* histogram */
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
@@ -436,6 +436,7 @@ mod tests {
                 ],
             ),
             None, /* histogram */
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
@@ -457,6 +458,7 @@ mod tests {
                     ],
                 ),
                 None, /* histogram */
+                Box::new(MonotonicTime::new()),
             )
             .unwrap(),
         ));
@@ -479,6 +481,7 @@ mod tests {
                     ],
                 ),
                 None, /* histogram */
+                Box::new(MonotonicTime::new()),
             )
             .unwrap(),
         ));
@@ -555,7 +558,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            clock.clone(),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             1, /* cores */
         )
@@ -615,7 +618,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            clock.clone(),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             1, /* cores */
         )
@@ -652,7 +655,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            clock.clone(),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             4, /* cores */
         )

@@ -14,7 +14,6 @@ use {
     fuchsia_zircon::sys as zx_sys,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{channel::oneshot, lock::Mutex},
-    injectable_time::TimeSource,
     std::{collections::VecDeque, sync::Arc},
 };
 
@@ -64,7 +63,7 @@ impl RuntimeStatsSource for FakeTask {
     }
 }
 
-impl<U: TimeSource + Send> TaskInfo<FakeTask, U> {
+impl TaskInfo<FakeTask> {
     pub async fn force_terminate(&mut self) {
         match &*self.task.lock().await {
             TaskState::Alive(t) | TaskState::Terminated(t) => t.terminate().await,
