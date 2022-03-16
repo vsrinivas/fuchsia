@@ -950,8 +950,8 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
-    // LLCPP and CPP do not store unknowns.
-    bindings_allowlist = [llcpp, cpp],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -996,8 +996,8 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 }
 
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
-    // LLCPP/CPP is tested in the ValueTableUnknownTrailingHandlesDropped test
-    bindings_denylist = [c, llcpp, cpp],
+    // LLCPP is tested in the ValueTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [c, llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

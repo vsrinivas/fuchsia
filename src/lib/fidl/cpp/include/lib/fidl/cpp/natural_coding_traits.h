@@ -39,6 +39,8 @@ extern const char* const kCodingErrorUnknownEnumValue;
 extern const char* const kCodingErrorUnknownUnionTag;
 extern const char* const kCodingErrorRecursionDepthExceeded;
 extern const char* const kCodingErrorInvalidPresenceIndicator;
+extern const char* const kCodingErrorNotAllBytesConsumed;
+extern const char* const kCodingErrorNotAllHandlesConsumed;
 
 struct NaturalCodingConstraintEmpty {};
 

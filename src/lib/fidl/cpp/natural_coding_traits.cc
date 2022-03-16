@@ -33,5 +33,7 @@ const char* const kCodingErrorUnknownEnumValue = "unknown enum value";
 const char* const kCodingErrorUnknownUnionTag = "unknown union tag";
 const char* const kCodingErrorRecursionDepthExceeded = "recursion depth exceeded";
 const char* const kCodingErrorInvalidPresenceIndicator = "invalid presence indicator";
+const char* const kCodingErrorNotAllBytesConsumed = "not all bytes consumed";
+const char* const kCodingErrorNotAllHandlesConsumed = "not all handles consumed";
 
 }  // namespace fidl::internal

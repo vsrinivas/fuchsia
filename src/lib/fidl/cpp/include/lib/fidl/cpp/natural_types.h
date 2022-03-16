@@ -144,6 +144,8 @@ template <typename FidlType>
     return ::fitx::error(::fidl::Error::DecodeError(status, err_msg));
   }
 
+  uint32_t message_byte_actual = message.byte_actual();
+  uint32_t message_handle_actual = message.handle_actual();
   ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());
   size_t offset;
   if (!decoder.Alloc(
@@ -152,11 +154,20 @@ template <typename FidlType>
           &offset)) {
     return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
   }
+
   FidlType value{};
   ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(
       &decoder, &value, offset, kRecursionDepthInitial);
   if (decoder.status() != ZX_OK) {
     return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
+  }
+  if (decoder.CurrentLength() != message_byte_actual) {
+    return ::fitx::error(
+        ::fidl::Error::DecodeError(ZX_ERR_INTERNAL, kCodingErrorNotAllBytesConsumed));
+  }
+  if (decoder.CurrentHandleCount() != message_handle_actual) {
+    return ::fitx::error(
+        ::fidl::Error::DecodeError(ZX_ERR_INTERNAL, kCodingErrorNotAllHandlesConsumed));
   }
   return ::fitx::ok(std::move(value));
 }
