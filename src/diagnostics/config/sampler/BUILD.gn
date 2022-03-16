@@ -19,6 +19,7 @@ sampler_files = [
   "fvm.json",
   "input.json",
   "netstack.json",
+  "radar.json",
   "sdmmc.json",
   "setui.json",
   "sysmem.json",
