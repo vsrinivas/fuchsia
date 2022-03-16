@@ -219,6 +219,7 @@ mod tests {
         };
     }
 
+    #[derive(Debug)]
     struct FakeTimeSource {
         now: Arc<RefCell<zx::Time>>,
     }

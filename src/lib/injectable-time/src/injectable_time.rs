@@ -11,13 +11,13 @@ use std::sync::Arc;
 /// A `&'a dyn TimeSource` can be injected into a data structure.
 /// TimeSource is implemented by UtcTime for wall-clock system time, and
 /// FakeTime for a clock that is explicitly set by testing code.
-pub trait TimeSource {
+pub trait TimeSource: std::fmt::Debug {
     fn now(&self) -> i64;
 }
 
 /// FakeTime instances return the last value that was configured by testing code via `set_ticks()`
 ///  or `add_ticks()`. Upon initialization, they return 0.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FakeTime {
     time: Arc<Mutex<i64>>,
 }
@@ -42,7 +42,31 @@ impl FakeTime {
     }
 }
 
+/// IncrementingFakeTime automatically increments itself by `increment_by`
+/// before each call to `self.now()`.
+#[derive(Debug)]
+pub struct IncrementingFakeTime {
+    time: FakeTime,
+    increment_by: std::time::Duration,
+}
+
+impl TimeSource for IncrementingFakeTime {
+    fn now(&self) -> i64 {
+        self.time.add_ticks(self.increment_by.as_nanos() as i64);
+        self.time.now()
+    }
+}
+
+impl IncrementingFakeTime {
+    pub fn new(start_time: i64, increment_by: std::time::Duration) -> Self {
+        let time = FakeTime::new();
+        time.set_ticks(start_time);
+        Self { time, increment_by }
+    }
+}
+
 /// UtcTime instances return the Rust system clock value each time now() is called.
+#[derive(Debug)]
 pub struct UtcTime {}
 
 impl UtcTime {
@@ -65,6 +89,7 @@ impl TimeSource for UtcTime {
 
 /// MonotonicTime instances provide a monotonic clock.
 /// On Fuchsia, MonotonicTime uses fuchsia_zircon::Time::get_monotonic().
+#[derive(Debug)]
 pub struct MonotonicTime {
     #[cfg(not(target_os = "fuchsia"))]
     starting_time: std::time::Instant,
@@ -156,5 +181,15 @@ mod test {
         assert_eq!(time_500, 500);
         assert_eq!(time_623, 623);
         assert_eq!(time_600, 600);
+    }
+
+    #[test]
+    fn test_incrementing_fake_time() {
+        let duration = std::time::Duration::from_nanos(1000);
+        let timer = IncrementingFakeTime::new(0, duration);
+
+        assert_eq!(duration.as_nanos() as i64, timer.now());
+        assert_eq!((2 * duration).as_nanos() as i64, timer.now());
+        assert_eq!((3 * duration).as_nanos() as i64, timer.now());
     }
 }
