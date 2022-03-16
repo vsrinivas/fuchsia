@@ -1,0 +1,110 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+using zx;
+
+/// Enables control and monitoring of audio gain. This interface is typically a
+/// tear-off of other interfaces.
+///
+/// ## Knobs
+///
+/// This interface exposes two orthogonal knobs:
+///
+/// * The *gain* knob controls a single value in "relative decibels". A value of
+///   0 applies no gain, positive values increase gain, and negative values
+///   decrease gain. Depending on context, gain may be applied relative to an
+///   input stream or relative to some absolute reference point, such as the
+///   maximum loudness of a speaker.
+///
+///   This knob has no defined maximum or minimum value. Individual
+///   implementations may clamp to an implementation-defined maximum value or
+///   treat all values below an implementation-defined minimum value equivalent
+///   to "muted", but this behavior is not required.
+///
+/// * The *mute* knob controls a single boolean value. When `true`, the
+///   GainControl is muted and the effective gain is negative infinity. When
+///   `false`, gain is controlled by the *gain* knob.
+///
+/// ## Scheduling
+///
+/// Changes to the *gain* and *mute* knobs can be scheduled for a time in the
+/// future. Scheduling happens on timestamps relative to a reference clock which
+/// must be established when this protocol is created.
+///
+/// TODO(fxbug.dev/94277): scheduling semantics are subject to change
+protocol GainControl {
+    /// Sets the gain knob.
+    ///
+    /// + `how` How to update the gain knob.
+    /// + `when` When to apply this update.
+    /// * error Reason for failure.
+    SetGain(struct {
+        how GainUpdateMethod;
+        when GainTimestamp;
+    }) -> (struct {}) error GainError;
+
+    /// Set the mute knob.
+    ///
+    /// + `muted` New value of the mute knob.
+    /// + `when` When to apply this update.
+    /// * error Reason for failure.
+    SetMute(struct {
+        muted bool;
+        when GainTimestamp;
+    }) -> (struct {}) error GainError;
+};
+
+/// Type of errors returned by `GainControl`.
+type GainError = flexible enum {};
+
+/// Timestamp of a gain command.
+type GainTimestamp = flexible union {
+    /// The command should be applied as soon as possible.
+    1: immediately struct {};
+    /// The command should be applied at the given timestamp, which is relative
+    /// to a reference clock. See discussion at [`GainControl`]. If the
+    /// timestamp occurs in the past, the command should be applied as soon as
+    /// possible.
+    2: timestamp zx.time;
+};
+
+/// Supported types of gain updates.
+type GainUpdateMethod = flexible union {
+    /// Immediately set the gain to this value.
+    1: gain_db float32;
+
+    /// Change the gain gradually using a ramp.
+    2: ramped RampedGain;
+};
+
+/// Describes a ramped gain command. When this command is applied, gain is
+/// ramped from its current value to the target value, over the specified
+/// duration, using the specified function.
+type RampedGain = table {
+    1: target_gain_db float32;
+    2: duration zx.duration;
+    3: function RampFunction;
+};
+
+/// Supported types of ramping functions.
+type RampFunction = flexible union {
+    1: linear_slope RampFunctionLinearSlope;
+};
+
+/// Gain follows a linear slope over a linear domain.
+///
+/// For example, a ramp from gain -2.3dB to -1.6dB is a ramp in the linear
+/// domain from 0.1 to 0.5. If this is applied over 4ms, then the sequence of
+/// gain updates is:
+///
+/// * At 0ms, gain = 0.1 = -2.3dB
+/// * At 1ms, gain = 0.2 = -2.0dB
+/// * At 2ms, gain = 0.3 = -1.8dB
+/// * At 3ms, gain = 0.4 = -1.7dB
+/// * At 4ms, gain = 0.5 = -1.6dB
+///
+/// Note that the changes in dB follow a logarithmic (not linear) curve.
+type RampFunctionLinearSlope = table {};

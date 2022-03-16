@@ -9,7 +9,9 @@ fidl("fuchsia.audio") {
     "consumer.fidl",
     "consumer_creator.fidl",
     "decoder.fidl",
+    "gain.fidl",
     "producer.fidl",
+    "ring_buffer.fidl",
   ]
 
   public_deps = [

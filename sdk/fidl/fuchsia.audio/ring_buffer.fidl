@@ -1,0 +1,175 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+using fuchsia.mediastreams;
+using zx;
+
+/// A ring buffer of audio data.
+///
+/// Each ring buffer has a producer (who writes to the buffer) and a consumer
+/// (who reads from the buffer). Additionally, each ring buffer is associated
+/// with a reference clock that keeps time for the buffer.
+///
+/// ## PCM Data
+///
+/// A ring buffer of PCM audio is a window into a potentially-infinite sequence
+/// of frames. Each frame is assigned a "frame number" where the first frame in
+/// the infinite sequence is numbered 0. Frame `X` can be found at ring buffer
+/// offset `(X % RingBufferFrames) * BytesPerFrame`, where `RingBufferFrames` is
+/// the size of the ring buffer in frames and `BytesPerFrame` is the size of a
+/// single frame.
+///
+/// ## Concurrency Protocol
+///
+/// Each ring buffer has a single producer and a single consumer which are
+/// synchronized by time. At each point in time T according to the ring buffer's
+/// reference clock, we define two functions:
+///
+///   * `SafeWritePos(T)` is the lowest (oldest) frame number the producer is
+///     allowed to write. The producer can write to this frame or to any
+///     higher-numbered frame.
+///
+///   * `SafeReadPos(T)` is the highest (youngest) frame number the consumer is
+///     allowed to read. The consumer can read this frame or any lower-numbered
+///     frame.
+///
+/// To prevent conflicts, we define these to be offset by one:
+///
+/// ```
+/// SafeWritePos(T) = SafeReadPos(T) + 1
+/// ```
+///
+/// To avoid races, there must be a single producer, but there may be multiple
+/// consumers. Additionally, since the producer and consumer(s) are synchronized
+/// by *time*, we require explicit fences to ensure cache coherency: the
+/// producer must insert an appropriate fence after each write (to flush CPU
+/// caches and prevent compiler reordering of stores) and the consumer(s) must
+/// insert an appropriate fence before each read (to invalidate CPU caches and
+/// prevent compiler reordering of loads).
+///
+/// Since the buffer has finite size, the producer/consumer cannot write/read
+/// infinitely in the future/past. We allocate `P` frames to the producer and
+/// `C` frames to the consumer(s), where `P + C <= RingBufferFrames` and `P` and
+/// `C` are both chosen by whoever creates the ring buffer.
+///
+/// ## Deciding on `P` and `C`
+///
+/// In practice, producers/consumers typically write/read batches of frames
+/// on regular periods. For example, a producer might wake every `Dp`
+/// milliseconds to write `Dp*FrameRate` frames, where `FrameRate` is the PCM
+/// stream's frame rate. If a producer wakes at time T, it will spend up to the
+/// next `Dp` period writing those frames. This means the lowest frame number it
+/// can safely write to is `SafeWritePos(T+Dp)`, which is equivalent to
+/// `SafeWritePos(T) + Dp*FrameRate`. The producer writes `Dp*FrameRate` frames
+/// from the position onwards. This entire region, from `SafeWritePos(T)`
+/// through `2*Dp*FrameRate` must be allocated to the producer at time T. Making
+/// a similar argument for consumers, we arrive at the following constraints:
+///
+/// ```
+/// P >= 2*Dp*FrameRate
+/// C >= 2*Dc*FrameRate
+/// RingBufferFrames >= P + C
+/// ```
+///
+/// Hence, in practice, `P` and `C` can be derived from the batch sizes used by
+/// the producer and consumer, where the maximum batch sizes are limited by the
+/// ring buffer size.
+///
+/// ## Computing `SafeWritePos`
+///
+/// By convention, we define `SafeWritePos` as follows:
+///
+/// ```
+/// SafeWritePos(T) = (RefTimeToPresentationTime(T) - PresentationOffset).nsec()
+///                 * FramesPerNs
+/// ```
+///
+/// This defines `SafeWritePos` as a function of the current *presentation
+/// timeline*. The presentation timeline is identical to ring buffer frame
+/// numbers, as described earlier, except in units time instead of units frames:
+/// frame number 0 corresponds to time 0 on the presentation timeline, frame 1
+/// corresponds to time `NsPerFrame`, and so on.
+///
+/// When the presentation timeline is established, we are given a function
+/// `RefTimeToPresentationTime(T)` which translates a reference time T to a
+/// presentation time TP. It is called the "presentation" timeline because T is
+/// the time at which TP's frame is "presented" at a hardware device. For output
+/// pipelines, this is the time the frame is played at the speaker. For input
+/// pipelines, this is the time the frame is heard by a microphone.
+///
+/// The `PresentationOffset` is defined as a field of this `RingBuffer` type.
+///
+/// TODO(fxbug.dev/87651): If the ring buffer is used by a client as part of an
+/// output pipeline, the presentation offset (aka "lead time") is variable as it
+/// depends on where the audio stream gets routed, which may change over time.
+/// It's unclear how this should be supported.
+///
+/// ## Non-PCM Data
+///
+/// Non-PCM data is handled similarly to PCM data, except positions are
+/// expressed as "byte offsets" instead of "frame numbers", where the infinite
+/// sequence starts at byte offset 0.
+type RingBuffer = resource table {
+    /// The buffer starts at the first byte in the VMO. The sum of producer_bytes and
+    /// consumer_bytes must be <= the VMO's ZX_PROP_VMO_CONTENT_SIZE.
+    ///
+    /// For PCM data, the VMO's CONTENT_SIZE must be an integer multiple of the number
+    /// of bytes-per-PCM-frame.
+    ///
+    /// For non-PCM data, there are no constraints. For constant bitrate encodings,
+    /// and for variable bitrate encodings with a maximum chunk size, the ring buffer
+    /// should usually be large enough to include at least two chunks of data (one for
+    /// the producer and one for the consumer), however this is not required.
+    /// Individual encodings may impose additional requirements.
+    ///
+    /// Required.
+    1: vmo zx.handle:VMO;
+
+    /// Encoding of audio data in the buffer.
+    /// Required.
+    2: format fuchsia.mediastreams.AudioFormat;
+
+    /// The number of bytes allocated to the producer.
+    ///
+    /// For PCM encodings, P = producer_bytes / BytesPerFrame(encoding), where
+    /// P must be integral.
+    ///
+    /// For non-PCM encodings, there are no constraints, however individual encodings
+    /// may impose stricter requirements.
+    ///
+    /// Required.
+    3: producer_bytes uint64;
+
+    /// The number of bytes allocated to the producer.
+    ///
+    /// For PCM encodings, C = consumer_bytes / BytesPerFrame(encoding), where
+    /// C must be integral.
+    ///
+    /// For non-PCM encodings, there are no constraints, however individual encodings
+    /// may impose stricter requirements.
+    ///
+    /// Required.
+    4: consumer_bytes uint64;
+
+    /// Reference clock for the ring buffer.
+    /// Required.
+    5: reference_clock zx.handle:CLOCK;
+
+    /// Offset between time T and the time when the frame at SafeWritePos(T) is
+    /// actually presented at an external device.
+    ///
+    /// For output pipelines, this number is positive: after the consumer reads a
+    /// frame from the ring buffer, it may perform some processing before presenting
+    /// that frame at an output device (e.g. speaker).
+    ///
+    /// For input pipelines, this number is negative: after the producer obtains a
+    /// frame from an input device (e.g. microphone), it may perform some processing
+    /// before writing the frame to the ring buffer.
+    ///
+    /// The presentation offset is unlikely to be zero because that would imply
+    /// instantaneous presentation.
+    6: presentation_offset zx.duration;
+};

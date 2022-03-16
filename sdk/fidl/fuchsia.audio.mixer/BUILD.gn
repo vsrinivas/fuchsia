@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.audio.mixer") {
+  sources = [
+    "create_edge_options.fidl",
+    "create_graph_options.fidl",
+    "create_node_options.fidl",
+    "create_thread_options.fidl",
+    "graph.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.audio",
+    "//sdk/fidl/fuchsia.audio.effects",
+    "//sdk/fidl/fuchsia.media2",
+    "//sdk/fidl/fuchsia.mediastreams",
+    "//zircon/vdso/zx",
+  ]
+}
