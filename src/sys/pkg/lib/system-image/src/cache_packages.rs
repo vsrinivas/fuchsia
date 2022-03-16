@@ -3,20 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        path_hash_mapping::{Cache, PathHashMapping},
-        CachePackagesInitError,
-    },
+    crate::CachePackagesInitError,
     fuchsia_hash::Hash,
-    fuchsia_url::{
-        errors::ParseError,
-        pkg_url::{PinnedPkgUrl, PkgUrl},
-    },
+    fuchsia_url::pkg_url::{PinnedPkgUrl, PkgUrl},
     serde::{Deserialize, Serialize},
-    std::convert::TryFrom,
 };
-
-const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CachePackages {
@@ -27,23 +18,6 @@ impl CachePackages {
     /// Create a new instance of `CachePackages` containing entries provided.
     pub fn from_entries(entries: Vec<PinnedPkgUrl>) -> Self {
         CachePackages { contents: entries }
-    }
-
-    pub(crate) fn from_path_hash_mapping(
-        mapping: PathHashMapping<Cache>,
-    ) -> Result<Self, ParseError> {
-        let contents = mapping
-            .into_contents()
-            .map(|(path, hash)| {
-                PkgUrl::new_package(
-                    DEFAULT_PACKAGE_DOMAIN.to_string(),
-                    format!("/{}", path),
-                    Some(hash),
-                )
-                .and_then(PinnedPkgUrl::try_from)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(CachePackages { contents })
     }
 
     pub(crate) fn from_json(file_contents: &[u8]) -> Result<Self, CachePackagesInitError> {
@@ -78,6 +52,11 @@ impl CachePackages {
             }
         })
     }
+
+    pub fn serialize(&self, writer: impl std::io::Write) -> Result<(), serde_json::Error> {
+        let content = Packages { version: "1".to_string(), content: self.contents.clone() };
+        serde_json::to_writer(writer, &content)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -96,21 +75,7 @@ fn parse_json(contents: &[u8]) -> Result<Vec<PinnedPkgUrl>, CachePackagesInitErr
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_pkg::PackagePath};
-
-    #[test]
-    fn populate_from_path_hash_mapping() {
-        let path_hash_packages = PathHashMapping::<Cache>::from_entries(vec![(
-            PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
-        )]);
-
-        let packages = CachePackages::from_path_hash_mapping(path_hash_packages).unwrap();
-        let expected = vec![
-            "fuchsia-pkg://fuchsia.com/name0/0?hash=0000000000000000000000000000000000000000000000000000000000000000"
-        ];
-        assert!(packages.into_contents().map(|u| u.to_string()).eq(expected.into_iter()));
-    }
+    use {super::*, std::convert::TryFrom};
 
     #[test]
     fn populate_from_valid_json() {
@@ -166,5 +131,31 @@ mod tests {
             .iter()
             .map(|u| packages.hash_for_package(u).unwrap())
             .eq(hashes.into_iter()));
+    }
+
+    #[test]
+    fn test_serialize() {
+        let packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
+            "foo.bar".to_string(),
+            "/qwe/0".to_string(),
+            fuchsia_hash::Hash::from([0; 32]),
+        )
+        .unwrap()]);
+        assert_eq!(
+            serde_json::to_value(Packages {
+                version: "1".to_string(),
+                content: packages.contents.clone()
+            })
+            .unwrap(),
+            serde_json::json!({
+                "version": "1",
+                "content": vec![
+                    "fuchsia-pkg://foo.bar/qwe/0?hash=0000000000000000000000000000000000000000000000000000000000000000"],
+            })
+        );
+
+        let mut bytes = vec![];
+        packages.serialize(&mut bytes).unwrap();
+        assert_eq!(CachePackages::from_json(&bytes).unwrap(), packages);
     }
 }
