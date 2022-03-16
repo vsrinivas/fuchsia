@@ -109,6 +109,246 @@ See [C-LINK](https://rust-lang.github.io/api-guidelines/documentation.html#c-lin
 #### Rustdoc does not show unhelpful implementation details
 See [C-HIDDEN](https://rust-lang.github.io/api-guidelines/documentation.html#c-hidden).
 
+#### Every `unsafe` block has an accompanying justification
+
+> This guideline pertains only to safety documentation when performing unsafe operations.
+>
+> See [C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure) for
+> guidelines on documenting function safety requirements.
+
+Safety justifications should begin with `// SAFETY: ` and explain why the unsafe block is sound.
+
+*DO*
+
+```rust
+// SAFETY: <why this unsafe operation's safety requirements are met>
+```
+
+*DON'T*
+
+```rust
+// Safety: <...>
+// [SAFETY] <...>
+// <...>
+// SAFETY: Trust me.
+```
+
+Unsafe code should explain why the unsafe block is necessary and why the code contained within the
+block is sound. If there are safe alternatives which may appear suitable but cannot be used, the
+reason why they cannot be used should be documented as well.
+
+*DO*
+
+```rust
+// SAFETY: The `bytes` returned from our string builder are guaranteed to be
+// valid UTF-8. We used to call `from_utf8`, but this caused performance issues
+// with large inputs.
+let s = unsafe { String::from_utf8_unchecked(bytes) };
+```
+
+*DON'T*
+
+```rust
+// SAFETY: We shouldn't have to validate `bytes`, and the safe version is slow.
+let s = unsafe { String::from_utf8_unchecked(bytes) };
+```
+
+Justifications should directly address the requirements for the operation. It's okay to summarize as
+long as all of the requirements are addressed.
+
+*DO*
+
+```rust
+// SAFETY: The caller has guaranteed that `ptr` is valid for reads, properly
+// aligned, and points to a properly-initialized `T`.
+unsafe {
+    let x = ptr.read();
+}
+```
+
+*DO*
+
+```rust
+// SAFETY: The caller has guaranteed that `ptr` points to a valid `T`.
+unsafe {
+    let x = ptr.read();
+}
+```
+
+*DON'T*
+
+```rust
+// SAFETY: `ptr` is safe to read.
+unsafe {
+    let x = ptr.read();
+}
+```
+
+Safety justifications should address *why* an operation is justified, not just *that* an operation
+is justified.
+
+*DO*
+
+```rust
+const BUFFER_LEN: usize = 1024;
+fn partially_init(n: usize) -> MaybeUninit<[i32; BUFFER_LEN]> {
+    // These asserts ensure our safety conditions are met later on
+    const _: () = assert!(BUFFER_LEN <= 1024);
+    assert!(n < BUFFER_LEN);
+
+    let mut buffer = MaybeUninit::<[i32; BUFFER_LEN]>::uninit();
+    let ptr = buffer.as_mut_ptr().cast::<i32>();
+    for i in 0..n {
+        // SAFETY:
+        // - `ptr` points to the first `i32` of `buffer`.
+        // - `buffer` has space for BUFFER_LEN elements and we asserted that
+        //   `n < BUFFER_LEN`.
+        // - We asserted that `BUFFER_LEN <= 1024`, so `size_of::<i32>() * i`
+        //   is at most 4096 which is less than `isize::MAX` and `usize::MAX`.
+        let element = unsafe { &mut *ptr.add(i) };
+        *element = i as i32;
+    }
+
+    buffer
+}
+```
+
+*DON'T*
+
+```rust
+const BUFFER_LEN: usize = 1024;
+fn partially_init(n: usize) -> MaybeUninit<[i32; BUFFER_LEN]> {
+    // Why are these asserts here?
+    const _: () = assert!(BUFFER_LEN <= 1024);
+    assert!(n < BUFFER_LEN);
+
+    let mut buffer = MaybeUninit::<[i32; BUFFER_LEN]>::uninit();
+    let ptr = buffer.as_mut_ptr().cast::<i32>();
+    for i in 0..n {
+        // SAFETY:
+        // - `ptr` is in bounds or one byte past the end of an allocated object.
+        // - `ptr + i` is also in bounds.
+        // - The computed offset, in bytes, doesn't overflow an `isize`.
+        // - The offset being in bounds does not rely on "wrapping around" the
+        //   address space.
+        let element = unsafe { &mut*ptr.add(i) };
+        *element = i as i32;
+    }
+
+    buffer
+}
+```
+
+#### Unsafe traits are documented, unsafe trait impls are justified
+
+Unsafe traits should be documented according to the same guidelines as unsafe functions.
+
+Unsafe trait definitions should document safety considerations (See [C-FAILURE][c-failure]), and
+unsafe trait implementations should be justified (See
+["Every `unsafe` block has an accompanying justification"][every-unsafe-block]))
+
+[c-failure]: https://rust-lang.github.io/api-guidelines/documentation.html#c-failure
+[every-unsafe-block]: #every-unsafe-block-has-an-accompanying-justification
+
+*DO*
+
+```rust
+/// A labeler that always returns unique labels.
+///
+/// # Safety
+///
+/// Every time `create_unique_label()` is called on the same labeler, it must
+/// return a distinct `u32`.
+unsafe trait UniqueLabeler {
+    /// Returns a new unique label.
+    fn create_unique_label(&mut self) -> u32;
+}
+
+struct SequentialLabeler {
+    next: Option<u32>,
+}
+
+// SAFETY: `create_unique_label()` will always return the next sequential label
+// or panic if all available labels are exhausted.
+unsafe impl UniqueLabeler for SequentialLabeler {
+    fn create_unique_label(&mut self) -> u32 {
+        if let Some(next) = self.next {
+            self.next = (next < u32::MAX).then(|| next + 1);
+            next
+        } else {
+            panic!("sequential unique labels exhausted");
+        }
+    }
+}
+```
+
+*DON'T*
+
+```rust
+/// A labeler that always returns unique labels.
+unsafe trait UniqueLabeler {
+    /// Returns a new unique label.
+    fn create_unique_label(&mut self) -> u32;
+}
+
+struct SequentialLabeler {
+    next: u32,
+}
+
+unsafe impl UniqueLabeler for SequentialLabeler {
+    fn create_unique_label(&mut self) -> u32 {
+        // This will have correct panicking behavior in debug builds because
+        // integer overflow is trapped. In a release build, this will still
+        // overflow but our labeler will not panic!
+        let result = self.next;
+        next += 1;
+        result
+    }
+}
+```
+
+#### Unsafe operations are always in an `unsafe` block
+
+> This guideline depends on a change to linting behavior and cannot yet be followed
+> ([tracking issue](https://fxbug.dev/94323)). Continue to adhere to other guidelines in this
+> section.
+
+`unsafe` functions are not considered unsafe contexts in Fuchsia. Unsafe operations must always be
+located inside an `unsafe` block, even if they are in an `unsafe` function body.
+
+*DO*
+
+```rust
+unsafe fn clear_slice(ptr: *mut i32, len: usize) {
+    assert!(len.checked_mul(mem::size_of::<i32>()).unwrap() < isize::MAX);
+
+    // SAFETY:
+    // - The caller has guaranteed that `ptr` points to `len` consecutive, valid
+    //   i32s and that the data at behind `ptr` is not simultaneously accessed
+    //   through any other pointer.
+    // - We asserted that the total size of the slice is less than isize::MAX.
+    let slice = unsafe { slice::from_raw_parts_mut(ptr, len) };
+    for x in slice.iter_mut() {
+        *x = 0;
+    }
+}
+```
+
+*DON'T*
+
+```rust
+unsafe fn clear_slice(ptr: *mut i32, len: usize) {
+    // We forgot to assert that the length of the slice is less than isize::MAX!
+    // If we justified our call to from_raw_parts_mut, we would have been much
+    // more likely to remember.
+
+    let slice = slice::from_raw_parts_mut(ptr, len);
+    for x in slice.iter_mut() {
+        *x = 0;
+    }
+}
+```
+
 
 
 ### Predictability
@@ -238,10 +478,14 @@ official guidelines are omitted:
 * [C-PERMISSIVE](https://rust-lang.github.io/api-guidelines/necessities.html#c-permissive) as all of
   Fuchsia's Rust code is under the Fuchsia license.
 
-<!--
 The following Fuchsia-specific guidelines are included:
 
-* TODO
--->
+* [Every `unsafe` block has an accompanying justification][safety-justification-guideline]
+* [Unsafe traits are documented, unsafe trait impls are justified][unsafe-traits-guideline]
+* [Unsafe operations are always in an `unsafe` block][unsafe-ops-in-unsafe-blocks-guideline]
+
+[safety-justification-guideline]: #every-unsafe-block-has-an-accompanying-justification
+[unsafe-traits-guideline]: #unsafe-traits-are-documented-unsafe-trait-impls-are-justified
+[unsafe-ops-in-unsafe-blocks-guideline]: #unsafe-operations-are-always-in-an-unsafe-block
 
 [rust-guidelines]: https://rust-lang.github.io/api-guidelines/about.html
