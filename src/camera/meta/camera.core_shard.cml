@@ -1,6 +1,47 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// Temporarily-empty core shard for components v2 migration.
-{}
+{
+    children: [
+        {
+            name: "camera_device_watcher",
+            url: "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    use: [
+        {
+            // Make camera device watcher available to v1 components
+            protocol: "fuchsia.camera3.DeviceWatcher",
+            from: "#camera_device_watcher",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: '#camera_device_watcher',
+        },
+        {
+            protocol: "fuchsia.camera3.DeviceWatcher",
+            from: "#camera_device_watcher",
+            to: [
+                "#session-manager",
+                "#setui_service",
+            ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-camera",
+            to: "#camera_device_watcher",
+            subdir: "class/camera",
+        },
+        {
+            protocol: [ "fuchsia.sys.Launcher" ],
+            from: "self",
+            to: "#camera_device_watcher",
+            dependency: "weak_for_migration",
+        },
+    ],
+}

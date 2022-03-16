@@ -10,12 +10,4 @@
             on_terminate: "reboot",
         },
     ],
-    offer: [
-        {
-            protocol: "fuchsia.camera3.DeviceWatcher",
-            from: "self",
-            to: "#setui_service",
-            dependency: "weak_for_migration",
-        },
-    ],
 }

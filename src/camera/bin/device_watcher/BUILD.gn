@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
+import("//build/testing/environments.gni")
 import("//src/camera/debug.gni")
 
 group("device_watcher") {
@@ -55,7 +56,7 @@ fidl("fuchsia.camera.test") {
 }
 
 fuchsia_package_with_single_component("camera_device_watcher") {
-  manifest = "meta/camera_device_watcher.cmx"
+  manifest = "meta/camera_device_watcher.cml"
   deps = [ ":camera_device_watcher_bin" ]
 }
 
@@ -73,8 +74,12 @@ executable("camera_device_watcher_unittest_bin") {
 }
 
 fuchsia_unittest_package("camera_device_watcher_unittest") {
-  package_deps_for_infra_only =
-      [ "//src/camera/bin/device_watcher:camera_device_watcher" ]
-  manifest = "meta/camera_device_watcher_unittest.cmx"
-  deps = [ ":camera_device_watcher_unittest_bin" ]
+  manifest = "meta/camera_device_watcher_unittest.cml"
+  deps = [
+    ":camera_device_watcher",
+    ":camera_device_watcher_unittest_bin",
+  ]
+  test_specs = {
+    environments = [ sherlock_env ]
+  }
 }
