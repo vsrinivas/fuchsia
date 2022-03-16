@@ -300,6 +300,12 @@ impl TryFrom<&str> for PkgUrl {
     }
 }
 
+impl From<PinnedPkgUrl> for PkgUrl {
+    fn from(url: PinnedPkgUrl) -> Self {
+        url.url
+    }
+}
+
 impl Serialize for PkgUrl {
     fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.to_string().serialize(ser)

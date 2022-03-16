@@ -41,7 +41,7 @@ pub use inspect::ResolverService as ResolverServiceInspectState;
 /// A clonable handle to the package fetch queue.  When all clones of
 /// [`PackageFetcher`] are dropped, the queue will resolve all remaining
 /// packages and terminate its output stream.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PackageFetcher(
     work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>,
 );
@@ -85,6 +85,19 @@ impl PackageFetcher {
         (package_fetch_queue.into_future(), PackageFetcher(package_fetcher))
     }
 
+    /// Creates a mocked PackageFetcher that resolves any url using the given callback.
+    #[cfg(test)]
+    pub fn new_mock<W, F>(callback: W) -> Self
+    where
+        W: Fn(PkgUrl) -> F + Send + 'static,
+        F: Future<Output = Result<PackageDirectory, pkg::ResolveError>> + Send,
+    {
+        let (package_fetch_queue, package_fetcher) =
+            work_queue::work_queue(1, move |url, _: ()| callback(url));
+        fuchsia_async::Task::spawn(package_fetch_queue.into_future()).detach();
+        Self(package_fetcher)
+    }
+
     /// Enqueue the given package to be resolved, or attach to an existing
     /// resolution of the same URL.
     pub fn push(
@@ -119,7 +132,7 @@ pub async fn run_resolver_service(
                         responder,
                     } => {
                         let start_time = Instant::now();
-                        let response = resolve(&package_fetcher, package_url.clone(), dir).await;
+                        let response = resolve_and_reopen(&package_fetcher, package_url.clone(), dir).await;
 
                         cobalt_sender.log_event_count(
                             metrics::RESOLVE_STATUS_METRIC_ID,
@@ -498,13 +511,11 @@ async fn get_hash(
     hash_or_status
 }
 
-async fn resolve(
+pub async fn resolve(
     package_fetcher: &PackageFetcher,
-    url: String,
-    dir_request: ServerEnd<fio::DirectoryMarker>,
-) -> Result<(), pkg::ResolveError> {
-    trace::duration_begin!("app", "resolve", "url" => url.as_str());
-    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
+    pkg_url: PkgUrl,
+) -> Result<PackageDirectory, pkg::ResolveError> {
+    trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
     if pkg_url.resource().is_some() {
@@ -512,14 +523,23 @@ async fn resolve(
         return Err(pkg::ResolveError::InvalidUrl);
     }
 
-    let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
+    let queued_fetch = package_fetcher.push(pkg_url, ());
     let pkg_or_status = queued_fetch.await.expect("expected queue to be open");
     let err_str = match pkg_or_status {
         Ok(_) => "no error".to_string(),
         Err(ref e) => e.to_string(),
     };
     trace::duration_end!("app", "resolve", "status" => err_str.as_str());
-    let pkg = pkg_or_status?;
+    pkg_or_status
+}
+
+async fn resolve_and_reopen(
+    package_fetcher: &PackageFetcher,
+    url: String,
+    dir_request: ServerEnd<fio::DirectoryMarker>,
+) -> Result<(), pkg::ResolveError> {
+    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
+    let pkg = resolve(package_fetcher, pkg_url.clone()).await?;
 
     pkg.reopen(dir_request).map_err(|clone_err| {
         fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
@@ -595,7 +615,7 @@ async fn resolve_font<'a>(
         1,
     );
     if is_font_package {
-        resolve(&package_fetcher, package_url, directory_request).await
+        resolve_and_reopen(&package_fetcher, package_url, directory_request).await
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
         Err(pkg::ResolveError::PackageNotFound)

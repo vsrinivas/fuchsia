@@ -313,6 +313,12 @@ impl<K, C, O> Clone for WorkSender<K, C, O> {
     }
 }
 
+impl<K, C, O> std::fmt::Debug for WorkSender<K, C, O> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WorkSender").finish()
+    }
+}
+
 impl<K, C, O> WorkSender<K, C, O>
 where
     K: Clone + Eq + Hash,
