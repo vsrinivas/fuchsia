@@ -35,7 +35,7 @@ zx::status<> Export(vfs::PseudoDir& out_dir, cpp20::span<ExportedFd> exported_fd
   for (const auto& [fd, export_as] : exported_fds) {
     // Get the underlying vmo of the fd.
     zx::vmo vmo;
-    if (auto res = fdio_get_vmo_clone(fd.get(), vmo.reset_and_get_address()); res != ZX_OK) {
+    if (auto res = fdio_get_vmo_exact(fd.get(), vmo.reset_and_get_address()); res != ZX_OK) {
       return zx::error(res);
     }
     size_t size = 0;
