@@ -29,9 +29,13 @@ struct CdfListTag {};
 struct CdfDeviceListTag {};
 }  // namespace internal
 
+using StrPropertyValue = std::variant<uint32_t, std::string, bool, std::string>;
+
+enum StrPropValueType { Integer = 0, String = 1, Bool = 2, Enum = 3 };
+
 struct StrProperty {
   std::string key;
-  std::variant<uint32_t, std::string, bool> value;
+  StrPropertyValue value;
 };
 
 // A single device that is part of a composite device.

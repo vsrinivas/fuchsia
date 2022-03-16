@@ -304,9 +304,9 @@ TEST_F(DeviceTest, AddChildWithStringProps) {
     prop = rv->args.properties()[3];
     ASSERT_EQ(
         strncmp(prop.key().string_value().data(), "enum_key", prop.key().string_value().size()), 0);
-    ASSERT_EQ(strncmp(prop.value().string_value().data(), "enum_value",
-                      prop.value().string_value().size()),
-              0);
+    ASSERT_EQ(
+        strncmp(prop.value().enum_value().data(), "enum_value", prop.value().enum_value().size()),
+        0);
   });
 
   // Add a child device.

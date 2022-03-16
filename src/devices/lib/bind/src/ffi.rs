@@ -15,6 +15,7 @@ enum ValueType {
     NumberVal = 0,
     StringVal = 1,
     BoolVal = 2,
+    EnumVal = 3,
 }
 
 #[repr(C)]
@@ -28,6 +29,7 @@ pub union value_t {
     num_value: u32,
     str_value: *const libc::c_char,
     bool_value: bool,
+    enum_value: *const libc::c_char,
 }
 
 #[repr(C)]
@@ -65,6 +67,10 @@ fn convert_to_symbol(prop_value: &property_value_t) -> Option<Symbol> {
                 val_type: ValueType::StringVal,
                 value: value_t { str_value: val },
             } => convert_str(*val).map(|str_val| Symbol::StringValue(str_val)),
+            property_value_t {
+                val_type: ValueType::EnumVal,
+                value: value_t { enum_value: val },
+            } => convert_str(*val).map(|enum_val| Symbol::EnumValue(enum_val)),
         }
     }
 }
@@ -107,6 +113,20 @@ pub extern "C" fn str_property_with_bool(
         value: property_value_t {
             val_type: ValueType::BoolVal,
             value: value_t { bool_value: value },
+        },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn str_property_with_enum(
+    key: *const libc::c_char,
+    value: *const libc::c_char,
+) -> device_str_property_t {
+    device_str_property_t {
+        key: key,
+        value: property_value_t {
+            val_type: ValueType::EnumVal,
+            value: value_t { enum_value: value },
         },
     }
 }

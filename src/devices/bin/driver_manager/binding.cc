@@ -7,6 +7,8 @@
 #include <lib/ddk/driver.h>
 #include <stdio.h>
 
+#include <optional>
+
 #include <fbl/array.h>
 
 #include "binding_internal.h"
@@ -133,7 +135,9 @@ bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
     ctx.name = drv->name.c_str();
     ctx.autobind = autobind ? 1 : 0;
     return internal::EvaluateBindProgram(&ctx);
-  } else if (drv->bytecode_version == 2) {
+  }
+
+  if (drv->bytecode_version == 2) {
     auto* bytecode = std::get_if<std::unique_ptr<uint8_t[]>>(&drv->binding);
     if (!bytecode && drv->binding_size > 0) {
       return false;
@@ -157,19 +161,39 @@ bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
         return false;
       }
 
-      if (std::holds_alternative<uint32_t>(str_props[i].value)) {
-        auto* prop_val = std::get_if<uint32_t>(&str_props[i].value);
-        str_properties[i] = str_property_with_int(str_props[i].key.c_str(), *prop_val);
-      } else if (std::holds_alternative<std::string>(str_props[i].value)) {
-        auto* prop_val = std::get_if<std::string>(&str_props[i].value);
-        if (prop_val && !fxl::IsStringUTF8(*prop_val)) {
-          LOGF(ERROR, "String property value is not in UTF-8 encoding");
+      switch (str_props[i].value.index()) {
+        case StrPropValueType::Integer: {
+          auto* prop_val = std::get_if<StrPropValueType::Integer>(&str_props[i].value);
+          str_properties[i] = str_property_with_int(str_props[i].key.c_str(), *prop_val);
+          break;
+        }
+        case StrPropValueType::String: {
+          auto* prop_val = std::get_if<StrPropValueType::String>(&str_props[i].value);
+          if (prop_val && !fxl::IsStringUTF8(*prop_val)) {
+            LOGF(ERROR, "String property value is not in UTF-8 encoding");
+            return false;
+          }
+          str_properties[i] = str_property_with_string(str_props[i].key.c_str(), prop_val->c_str());
+          break;
+        }
+        case StrPropValueType::Bool: {
+          auto* prop_val = std::get_if<StrPropValueType::Bool>(&str_props[i].value);
+          str_properties[i] = str_property_with_bool(str_props[i].key.c_str(), *prop_val);
+          break;
+        }
+        case StrPropValueType::Enum: {
+          auto* prop_val = std::get_if<StrPropValueType::Enum>(&str_props[i].value);
+          if (prop_val && !fxl::IsStringUTF8(*prop_val)) {
+            LOGF(ERROR, "Enum property value is not in UTF-8 encoding");
+            return false;
+          }
+          str_properties[i] = str_property_with_enum(str_props[i].key.c_str(), prop_val->c_str());
+          break;
+        }
+        default: {
+          LOGF(ERROR, "String property value type is invalid.");
           return false;
         }
-        str_properties[i] = str_property_with_string(str_props[i].key.c_str(), prop_val->c_str());
-      } else if (std::holds_alternative<bool>(str_props[i].value)) {
-        auto* prop_val = std::get_if<bool>(&str_props[i].value);
-        str_properties[i] = str_property_with_bool(str_props[i].key.c_str(), *prop_val);
       }
     }
 

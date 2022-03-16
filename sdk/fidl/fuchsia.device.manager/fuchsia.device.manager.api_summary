@@ -138,6 +138,7 @@ struct/member fuchsia.device.manager/NewProxyDevice.incoming_dir fuchsia.io/Dire
 resource struct fuchsia.device.manager/NewProxyDevice
 const fuchsia.device.manager/PROPERTIES_MAX uint32 256
 union/member fuchsia.device.manager/PropertyValue.bool_value bool
+union/member fuchsia.device.manager/PropertyValue.enum_value string:255
 union/member fuchsia.device.manager/PropertyValue.int_value uint32
 union/member fuchsia.device.manager/PropertyValue.str_value string:255
 strict union fuchsia.device.manager/PropertyValue

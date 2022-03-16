@@ -19,6 +19,7 @@ type PropertyValue = strict union {
     1: int_value uint32;
     2: str_value string:STR_LENGTH_MAX;
     3: bool_value bool;
+    4: enum_value string:STR_LENGTH_MAX;
 };
 
 type DeviceStrProperty = struct {

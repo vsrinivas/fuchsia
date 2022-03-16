@@ -144,7 +144,7 @@ TEST(BindingV2Test, NoDevicePropertiesWithMatchingAutobind) {
 TEST(BindingV2Test, MatchDeviceStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
-      0x53, 0x59, 0x4E, 0x42, 0x24, 0x0, 0x0,  0x0,                  // Symbol table header
+      0x53, 0x59, 0x4E, 0x42, 0x36, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
       0x02, 0x0,  0x0,  0x0,                                         // "ruff" symbol key (2)
@@ -153,18 +153,28 @@ TEST(BindingV2Test, MatchDeviceStringProperty) {
       0x63, 0x6F, 0x6F, 0x74, 0x0,                                   // "coot" string literal
       0x04, 0x0,  0x0,  0x0,                                         // "ibis" symbol key (4)
       0x69, 0x62, 0x69, 0x73, 0x0,                                   // "ibis" string literal
-      0x49, 0x4E, 0x53, 0x54, 0x21, 0x0, 0x0,  0x0,                  // Instruction header
+      0x05, 0x0,  0x0,  0x0,                                         // "crow" symbol key (5)
+      0x63, 0x72, 0x6F, 0x77, 0x0,                                   // "crow" string literal
+      0x06, 0x0,  0x0,  0x0,                                         // "hawk" symbol key (6)
+      0x68, 0x61, 0x77, 0x6B, 0x0,                                   // "hawk" string literal
+      0x49, 0x4E, 0x53, 0x54, 0x2C, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x0,  0x01, 0x0,  0x0,  0x0, 0x02, 0x02, 0x0, 0x0, 0x0,  // "rail" == "ruff"
       0x01, 0x0,  0x04, 0x0,  0x0,  0x0, 0x03, 0x01, 0x0, 0x0, 0x0,  // "ibis" == true
       0x01, 0x0,  0x03, 0x0,  0x0,  0x0, 0x01, 0x08, 0x0, 0x0, 0x0,  // "coot" == 8
+      0x01, 0x0,  0x05, 0x0,  0x0,  0x0, 0x04, 0x06, 0x0, 0x0, 0x0,  // "crow" == "hawk"
   };
 
   const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 2}};
   const StrProperty kStrProperties[] = {
-      StrProperty{.key = "woodpecker", .value = "sapsucker"},
-      StrProperty{.key = "rail", .value = "ruff"},
+      StrProperty{
+          .key = "woodpecker",
+          .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "sapsucker"}},
+      StrProperty{.key = "rail",
+                  .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "ruff"}},
       StrProperty{.key = "coot", .value = static_cast<uint32_t>(8)},
       StrProperty{.key = "ibis", .value = true},
+      StrProperty{.key = "crow",
+                  .value = StrPropertyValue{std::in_place_index<StrPropValueType::Enum>, "hawk"}},
   };
 
   ASSERT_TRUE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
@@ -184,7 +194,9 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWStringValue) {
   };
 
   const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 2}};
-  const StrProperty kStrProperties[] = {StrProperty{.key = "rail", .value = "coot"}};
+  const StrProperty kStrProperties[] = {StrProperty{
+      .key = "rail",
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "coot"}}};
 
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
                                 std::size(kProperties), std::size(kStrProperties), 5, false));
@@ -229,10 +241,31 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWBoolValue) {
                                 std::size(kProperties), std::size(kStrProperties), 5, false));
 }
 
+TEST(BindingV2Test, MismatchDeviceStringPropertyWEnumValue) {
+  const uint8_t kBytecode[] = {
+      0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
+      0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
+      0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
+      0x02, 0x0,  0x0,  0x0,                                         // "ruff" symbol key (2)
+      0x72, 0x75, 0x66, 0x66, 0x0,                                   // "ruff" string literal
+      0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
+      0x01, 0x0,  0x01, 0x0,  0x0,  0x0, 0x04, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
+  };
+
+  const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 2}};
+  const StrProperty kStrProperties[] = {
+      StrProperty{.key = "rail",
+                  .value = StrPropertyValue{std::in_place_index<StrPropValueType::Enum>, "coot"}}};
+
+  ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
+                                std::size(kProperties), std::size(kStrProperties), 5, false));
+}
+
 TEST(BindingV2Test, MatchDevicePropertyAndStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
-      0x53, 0x59, 0x4E, 0x42, 0x24, 0x0, 0x0,  0x0,                  // Symbol table header
+      0x53, 0x59, 0x4E, 0x42, 0x36, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
       0x02, 0x0,  0x0,  0x0,                                         // "ruff" symbol key (2)
@@ -241,19 +274,29 @@ TEST(BindingV2Test, MatchDevicePropertyAndStringProperty) {
       0x63, 0x6F, 0x6F, 0x74, 0x0,                                   // "coot" string literal
       0x04, 0x0,  0x0,  0x0,                                         // "ibis" symbol key (4)
       0x69, 0x62, 0x69, 0x73, 0x0,                                   // "ibis" string literal
-      0x49, 0x4E, 0x53, 0x54, 0x2C, 0x0, 0x0,  0x0,                  // Instruction header
+      0x05, 0x0,  0x0,  0x0,                                         // "crow" symbol key (5)
+      0x63, 0x72, 0x6F, 0x77, 0x0,                                   // "crow" string literal
+      0x06, 0x0,  0x0,  0x0,                                         // "hawk" symbol key (6)
+      0x68, 0x61, 0x77, 0x6B, 0x0,                                   // "hawk" string literal
+      0x49, 0x4E, 0x53, 0x54, 0x37, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x0,  0x01, 0x0,  0x0,  0x0, 0x02, 0x02, 0x0, 0x0, 0x0,  // "rail" == "ruff"
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // 5 == 2
       0x01, 0x0,  0x04, 0x0,  0x0,  0x0, 0x03, 0x01, 0x0, 0x0, 0x0,  // "ibis" == true
       0x01, 0x0,  0x03, 0x0,  0x0,  0x0, 0x01, 0x08, 0x0, 0x0, 0x0,  // "coot" == 8
+      0x01, 0x0,  0x05, 0x0,  0x0,  0x0, 0x04, 0x06, 0x0, 0x0, 0x0,  // "crow" == "hawk"
   };
 
   const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 2}};
   const StrProperty kStrProperties[] = {
-      StrProperty{.key = "woodpecker", .value = "sapsucker"},
-      StrProperty{.key = "rail", .value = "ruff"},
+      StrProperty{
+          .key = "woodpecker",
+          .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "sapsucker"}},
+      StrProperty{.key = "rail",
+                  .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "ruff"}},
       StrProperty{.key = "coot", .value = static_cast<uint32_t>(8)},
       StrProperty{.key = "ibis", .value = true},
+      StrProperty{.key = "crow",
+                  .value = StrPropertyValue{std::in_place_index<StrPropValueType::Enum>, "hawk"}},
   };
   ASSERT_TRUE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
                                std::size(kProperties), std::size(kStrProperties), 5, false));
@@ -273,7 +316,9 @@ TEST(BindingV2Test, MatchDevicePropertyMismatchStringProperty) {
   };
 
   const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 2}};
-  const StrProperty kStrProperties[] = {StrProperty{.key = "rail", .value = "coot"}};
+  const StrProperty kStrProperties[] = {StrProperty{
+      .key = "rail",
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "coot"}}};
 
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
                                 std::size(kProperties), std::size(kStrProperties), 5, false));
@@ -293,7 +338,9 @@ TEST(BindingV2Test, MismatchDevicePropertyMatchStringProperty) {
   };
 
   const zx_device_prop_t kProperties[] = {zx_device_prop_t{5, 0, 3}};
-  const StrProperty kStrProperties[] = {StrProperty{.key = "rail", .value = "ruff"}};
+  const StrProperty kStrProperties[] = {StrProperty{
+      .key = "rail",
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "ruff"}}};
 
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kStrProperties, std::size(kBytecode),
                                 std::size(kProperties), std::size(kStrProperties), 5, false));
@@ -312,23 +359,26 @@ TEST(BindingV2Test, StringPropertyNotInUnicode) {
 
   // String properties containing invalid unicode characters in the key.
   const char kInvalidKey[] = {static_cast<char>(0xC0), 0};
-  const StrProperty kInvalidStrProperties[] = {
-      StrProperty{.key = kInvalidKey, .value = "honeyeater"}};
+  const StrProperty kInvalidStrProperties[] = {StrProperty{
+      .key = kInvalidKey,
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, "honeyeater"}}};
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kInvalidStrProperties, std::size(kBytecode),
                                 std::size(kProperties), std::size(kInvalidStrProperties), 5,
                                 false));
 
   // String properties containing invalid unicode characters in the value.
   const char kInvalidValue[] = {static_cast<char>(0xFF), 0};
-  const StrProperty kInvalidStrProperties2[] = {
-      StrProperty{.key = "wattlebird", .value = kInvalidValue}};
+  const StrProperty kInvalidStrProperties2[] = {StrProperty{
+      .key = "wattlebird",
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, kInvalidValue}}};
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kInvalidStrProperties2,
                                 std::size(kBytecode), std::size(kProperties),
                                 std::size(kInvalidStrProperties2), 5, false));
 
   // String properties containing invalid unicode characters in the key and value.
-  const StrProperty kInvalidStrProperties3[] = {
-      StrProperty{.key = kInvalidKey, .value = kInvalidValue}};
+  const StrProperty kInvalidStrProperties3[] = {StrProperty{
+      .key = kInvalidKey,
+      .value = StrPropertyValue{std::in_place_index<StrPropValueType::String>, kInvalidValue}}};
   ASSERT_FALSE(match_bind_rules(kBytecode, kProperties, kInvalidStrProperties3,
                                 std::size(kBytecode), std::size(kProperties),
                                 std::size(kInvalidStrProperties3), 5, false));

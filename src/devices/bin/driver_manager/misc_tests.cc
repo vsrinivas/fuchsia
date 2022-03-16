@@ -329,17 +329,21 @@ void CompareStrProperty(const fuchsia_device_manager::wire::DeviceStrProperty ex
   ASSERT_STREQ(expected.key.get(), actual.key);
 
   if (expected.value.is_int_value()) {
-    auto* value = std::get_if<uint32_t>(&actual.value);
+    auto* value = std::get_if<StrPropValueType::Integer>(&actual.value);
     ASSERT_TRUE(value);
     ASSERT_EQ(expected.value.int_value(), *value);
   } else if (expected.value.is_str_value()) {
-    auto* value = std::get_if<std::string>(&actual.value);
+    auto* value = std::get_if<StrPropValueType::String>(&actual.value);
     ASSERT_TRUE(value);
     ASSERT_STREQ(expected.value.str_value(), *value);
   } else if (expected.value.is_bool_value()) {
-    auto* value = std::get_if<bool>(&actual.value);
+    auto* value = std::get_if<StrPropValueType::Bool>(&actual.value);
     ASSERT_TRUE(value);
     ASSERT_EQ(expected.value.bool_value(), *value);
+  } else if (expected.value.is_enum_value()) {
+    auto* value = std::get_if<StrPropValueType::Enum>(&actual.value);
+    ASSERT_TRUE(value);
+    ASSERT_STREQ(expected.value.enum_value(), *value);
   }
 }
 

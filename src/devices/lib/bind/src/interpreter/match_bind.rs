@@ -354,6 +354,11 @@ mod test {
             Symbol::StringValue("poorwill".to_string()),
         );
 
+        device_properties.insert(
+            PropertyKey::StringKey("poorwill".to_string()),
+            Symbol::EnumValue("nighthawk".to_string()),
+        );
+
         let mut symbol_table: HashMap<u32, String> = HashMap::new();
         symbol_table.insert(1, "nightjar".to_string());
         symbol_table.insert(2, "poorwill".to_string());
@@ -365,6 +370,11 @@ mod test {
             &mut instructions,
             EncodedValue { value_type: RawValueType::StringValue, value: 1 },
             EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+            EncodedValue { value_type: RawValueType::EnumValue, value: 3 },
         );
         verify_match_result(
             Ok(true),
@@ -389,7 +399,7 @@ mod test {
         let mut instructions: Vec<u8> = vec![];
         append_equal_cond(
             &mut instructions,
-            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 3 },
             EncodedValue { value_type: RawValueType::StringValue, value: 1 },
         );
         verify_match_result(

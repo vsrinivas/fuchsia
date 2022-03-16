@@ -8,3 +8,4 @@ using fuchsia.test;
 stringbind.lib.kinglet == "firecrest";
 fuchsia.BIND_PROTOCOL == 3;
 stringbind.lib.bobolink == 10;
+stringbind.lib.Moon == stringbind.lib.Moon.Half;

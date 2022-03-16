@@ -56,11 +56,17 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   for (size_t i = 0; i < comp_desc.str_props.count(); i++) {
     str_properties[i].key = comp_desc.str_props[i].key.get();
     if (comp_desc.str_props[i].value.is_int_value()) {
-      str_properties[i].value = comp_desc.str_props[i].value.int_value();
+      str_properties[i].value.emplace<StrPropValueType::Integer>(
+          comp_desc.str_props[i].value.int_value());
     } else if (comp_desc.str_props[i].value.is_str_value()) {
-      str_properties[i].value = std::string(comp_desc.str_props[i].value.str_value().get());
+      str_properties[i].value.emplace<StrPropValueType::String>(
+          std::string(comp_desc.str_props[i].value.str_value().get()));
     } else if (comp_desc.str_props[i].value.is_bool_value()) {
-      str_properties[i].value = comp_desc.str_props[i].value.bool_value();
+      str_properties[i].value.emplace<StrPropValueType::Bool>(
+          comp_desc.str_props[i].value.bool_value());
+    } else if (comp_desc.str_props[i].value.is_enum_value()) {
+      str_properties[i].value.emplace<StrPropValueType::Enum>(
+          std::string(comp_desc.str_props[i].value.enum_value().get()));
     }
   }
 

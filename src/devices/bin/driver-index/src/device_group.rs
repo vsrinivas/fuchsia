@@ -93,6 +93,11 @@ mod tests {
                 ..fdf::NodeProperty::EMPTY
             },
             fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("Moon".to_string())),
+                value: Some(fdf::NodePropertyValue::EnumValue("Moon.Half".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            },
+            fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue("yellowlegs".to_string())),
                 value: Some(fdf::NodePropertyValue::BoolValue(false)),
                 ..fdf::NodeProperty::EMPTY
@@ -141,6 +146,10 @@ mod tests {
         device_properties_2.insert(
             PropertyKey::StringKey("killdeer".to_string()),
             Symbol::StringValue("plover".to_string()),
+        );
+        device_properties_2.insert(
+            PropertyKey::StringKey("Moon".to_string()),
+            Symbol::EnumValue("Moon.Half".to_string()),
         );
         device_properties_2.insert(PropertyKey::NumberKey(3), Symbol::BoolValue(true));
 

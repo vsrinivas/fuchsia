@@ -284,18 +284,33 @@ const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
     auto prop = fdf::wire::NodeProperty(allocator).set_key(
         allocator,
         fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_props[i].key));
-    if (std::holds_alternative<uint32_t>(str_props[i].value)) {
-      prop.set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(
-                                    std::get<uint32_t>(str_props[i].value)));
-    } else if (std::holds_alternative<std::string>(str_props[i].value)) {
-      prop.set_value(allocator,
-                     fdf::wire::NodePropertyValue::WithStringValue(
-                         allocator, allocator, std::get<std::string>(str_props[i].value)));
-    } else if (std::holds_alternative<bool>(str_props[i].value)) {
-      prop.set_value(allocator, fdf::wire::NodePropertyValue::WithBoolValue(
-                                    std::get<bool>(str_props[i].value)));
+
+    switch (str_props[i].value.index()) {
+      case StrPropValueType::Integer: {
+        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(
+                                      std::get<StrPropValueType::Integer>(str_props[i].value)));
+        break;
+      }
+      case StrPropValueType::String: {
+        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithStringValue(
+                                      allocator, allocator,
+                                      std::get<StrPropValueType::String>(str_props[i].value)));
+        break;
+      }
+      case StrPropValueType::Bool: {
+        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithBoolValue(
+                                      std::get<StrPropValueType::Bool>(str_props[i].value)));
+        break;
+      }
+      case StrPropValueType::Enum: {
+        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithEnumValue(
+                                      allocator, allocator,
+                                      std::get<StrPropValueType::Enum>(str_props[i].value)));
+        break;
+      }
     }
-    fidl_props[index++] = std::move(prop);
+
+    fidl_props[index++] = prop;
   }
 
   return MatchPropertiesDriverIndex(fidl_props, config);

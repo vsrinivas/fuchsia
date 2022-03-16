@@ -6,3 +6,7 @@ library stringbind.lib;
 
 string kinglet;
 uint bobolink;
+enum Moon {
+    Half,
+    Full,
+};

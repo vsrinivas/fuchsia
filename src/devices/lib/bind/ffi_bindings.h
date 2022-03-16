@@ -12,6 +12,7 @@ enum class ValueType : uint32_t {
   NumberVal = 0,
   StringVal = 1,
   BoolVal = 2,
+  EnumVal = 3,
 };
 
 union value_t {
@@ -44,6 +45,7 @@ extern "C" {
 device_str_property_t str_property_with_string(const char *key, const char *value);
 device_str_property_t str_property_with_int(const char *key, uint32_t value);
 device_str_property_t str_property_with_bool(const char *key, bool value);
+device_str_property_t str_property_with_enum(const char *key, const char *value);
 
 bool match_bind_rules(const uint8_t *bytecode_c, size_t bytecode_sz,
                       const device_property_t *properties_c, size_t properties_sz,
