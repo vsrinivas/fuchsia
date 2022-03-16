@@ -1,0 +1,34 @@
+Signature: my signature
+
+UNUSED LICENSES:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+USED LICENSES:
+
+====================================================================================================
+LIBRARY: First Library Name
+ORIGIN: ../../../fuchsia/somewhere.txt
+TYPE: My license type
+FILE: ../../../fuchsia/file1.txt
+FILE: ../../../fuchsia/file2.txt
+FILE: ../../../fuchsia/file3.txt
+----------------------------------------------------------------------------------------------------
+First license text
+Lorum Ipsum Dolor
+
+====================================================================================================
+
+====================================================================================================
+LIBRARY: Second Library Name
+ORIGIN: ../../../fuchsia/somewhere/else.txt
+TYPE: My other license type
+FILE: ../../../fuchsia/file4.txt
+FILE: ../../../fuchsia/file5.txt
+FILE: ../../../fuchsia/file6.txt
+----------------------------------------------------------------------------------------------------
+/* More License Text
+ * All rights reserved.
+ */
+====================================================================================================
+Total license count: 407

@@ -1,0 +1,20 @@
+{
+    "file": {
+        "replacements": [
+            {
+                "replace": "\u201c",
+                "with": "\"",
+                "notes": [
+                    "Some part of the golang string processing is handling these characters incorrectly."
+                ]
+            },
+            {
+                "replace": "\u201d",
+                "with": "\"",
+                "notes": [
+                    "Some part of the golang string processing is handling these characters incorrectly."
+                ]
+            }
+        ]
+    }
+}
