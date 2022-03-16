@@ -295,7 +295,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
     }
 
     async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
-        self.saved_networks.lock().await.entry(id).or_default().iter().map(Clone::clone).collect()
+        self.saved_networks.lock().await.get(&id).cloned().unwrap_or_default()
     }
 
     async fn lookup_compatible(
@@ -303,19 +303,21 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         ssid: &types::Ssid,
         scan_security: types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig> {
-        let mut saved_networks_guard = self.saved_networks.lock().await;
+        let saved_networks_guard = self.saved_networks.lock().await;
         let mut matching_configs = Vec::new();
         for security in compatible_policy_securities(&scan_security) {
             let id = NetworkIdentifier::new(ssid.clone(), security.into());
-            // Check for conflicts; PSKs can't be used to connect to WPA3 networks.
-            let configs = saved_networks_guard
-                .entry(id)
-                .or_default()
-                .iter()
-                .filter(|config| security_is_compatible(&scan_security, &config.credential))
-                .into_iter()
-                .map(Clone::clone);
-            matching_configs.extend(configs);
+            let saved_configs = saved_networks_guard.get(&id);
+            if let Some(configs) = saved_configs {
+                matching_configs.extend(
+                    configs
+                        .iter()
+                        // Check for conflicts; PSKs can't be used to connect to WPA3 networks.
+                        .filter(|config| security_is_compatible(&scan_security, &config.credential))
+                        .into_iter()
+                        .map(Clone::clone),
+                );
+            }
         }
         matching_configs
     }
@@ -696,6 +698,7 @@ mod tests {
         let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.saved_networks.lock().await.len());
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
@@ -896,14 +899,22 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_for_test()
             .await
             .expect("Failed to create SavedNetworksManager");
-
-        // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
-        // network.
         let ssid = types::Ssid::try_from("foo").unwrap();
         let network_id_wpa2 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
         let network_id_wpa3 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_wpa2 = Credential::Password(b"password".to_vec());
         let credential_wpa3 = Credential::Password(b"wpa3-password".to_vec());
+
+        // Check that lookup_compatible does not modify the SavedNetworksManager and returns an
+        // empty vector if there is no matching config.
+        let results = saved_networks
+            .lookup_compatible(&ssid, types::SecurityTypeDetailed::Wpa2Wpa3Personal)
+            .await;
+        assert!(results.is_empty());
+        assert_eq!(saved_networks.known_network_count().await, 0);
+
+        // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
+        // network.
         assert!(saved_networks
             .store(network_id_wpa2.clone(), credential_wpa2.clone())
             .await
@@ -997,6 +1008,7 @@ mod tests {
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(saved_networks.saved_networks.lock().await.len(), 0);
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Save the network and record a successful connection.
@@ -1134,6 +1146,7 @@ mod tests {
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.saved_networks.lock().await.len());
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect failed.
@@ -1214,6 +1227,7 @@ mod tests {
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+        assert_eq!(saved_networks.saved_networks.lock().await.len(), 0);
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect was canceled.
@@ -1260,6 +1274,7 @@ mod tests {
 
         saved_networks.record_disconnect(&id, &credential, bssid, uptime, recording_time).await;
         // Verify that nothing happens if the network was not already saved.
+        assert_eq!(saved_networks.saved_networks.lock().await.len(), 0);
         assert_eq!(saved_networks.known_network_count().await, 0);
 
         // Save the network and record a disconnect.
@@ -1598,6 +1613,7 @@ mod tests {
         assert_eq!(1, saved_networks.known_network_count().await);
 
         saved_networks.clear().await.expect("clearing store failed");
+        assert_eq!(0, saved_networks.saved_networks.lock().await.len());
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Load store from stash to verify it is also gone from persistent storage
@@ -1711,6 +1727,7 @@ mod tests {
         let network_id_baz = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.saved_networks.lock().await.len());
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
