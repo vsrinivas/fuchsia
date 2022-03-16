@@ -118,6 +118,18 @@ fuchsia_package("omaha-client") {
   deps = [ ":component" ]
 }
 
+# TODO(fxbug.dev/92844): Remove these extra packages when migrating to
+# structured configuration.
+fuchsia_package("omaha-client-no-restart") {
+  deps = [ ":component" ]
+  package_name = "omaha-client"
+}
+
+fuchsia_package("omaha-client-delayed-start") {
+  deps = [ ":component" ]
+  package_name = "omaha-client"
+}
+
 fuchsia_component("omaha-client-service-bin-tests-test-driver") {
   testonly = true
   component_name = "test-driver"
