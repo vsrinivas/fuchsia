@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("mix") {
+  visibility = [ "//src/media/audio/mixer_service/fidl:*" ]
+
+  sources = [
+    "detached_thread.cc",
+    "detached_thread.h",
+    "mix_thread.cc",
+    "mix_thread.h",
+    "pipeline_stage.h",
+    "ptr_decls.h",
+    "thread.h",
+  ]
+
+  public_deps = [ "//src/media/audio/mixer_service/common" ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+  ]
+}
