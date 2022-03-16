@@ -5,6 +5,7 @@
 
 
 
+
 ## **STRUCTS**
 
 ### ExampleOfUseOfAliases [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ExampleOfUseOfAliases data-text="ExampleOfUseOfAliases"}
@@ -78,6 +79,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
@@ -98,6 +100,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 
 

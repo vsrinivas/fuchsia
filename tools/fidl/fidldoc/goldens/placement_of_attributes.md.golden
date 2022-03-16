@@ -4,6 +4,7 @@
 # test.placementofattributes
 
 
+
 ## **PROTOCOLS**
 
 ## ExampleProtocol {#ExampleProtocol}
@@ -25,6 +26,7 @@
 </table>
 
 
+
 ## **STRUCTS**
 
 ### ExampleStruct  {#ExampleStruct data-text="ExampleStruct"}
@@ -42,6 +44,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### ExampleEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleEnum data-text="ExampleEnum"}
@@ -57,6 +60,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **TABLES**
 
@@ -76,6 +80,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **UNIONS**
 
@@ -107,6 +112,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
+
 ## **BITS**
 
 ### ExampleBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleBits}
@@ -123,6 +129,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
+
 ## **CONSTANTS**
 
 <table>
@@ -136,6 +143,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 ## **TYPE ALIASES**
 
 <table>

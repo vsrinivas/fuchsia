@@ -6,6 +6,7 @@
 
 
 
+
 ## **ENUMS**
 
 ### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum data-text="MyEmptyFlexibleEnum"}

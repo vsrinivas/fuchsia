@@ -4,10 +4,12 @@
 # test.experimentalmaybefromtypealias
 
 
+
 ## **PROTOCOLS**
 
 ## MyProtocol {#MyProtocol}
 *Defined in [test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=3)*
+
 
 ## **STRUCTS**
 
@@ -241,6 +243,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 
 

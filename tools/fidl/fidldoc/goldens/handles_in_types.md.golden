@@ -5,6 +5,7 @@
 
 
 
+
 ## **STRUCTS**
 
 ### HandlesInTypes [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#HandlesInTypes data-text="HandlesInTypes"}
@@ -62,6 +63,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
@@ -83,6 +85,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
+
 ## **TABLES**
 
 ### TableWithHandle [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#TableWithHandle data-text="TableWithHandle"}
@@ -101,6 +104,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **UNIONS**
 

@@ -6,6 +6,7 @@
 
 
 
+
 ## **ENUMS**
 
 ### EnumType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EnumType data-text="EnumType"}
@@ -29,6 +30,7 @@ Type: <code>int32</code>
 
 
 
+
 ## **BITS**
 
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
@@ -49,6 +51,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **CONSTANTS**
 

@@ -6,6 +6,7 @@
 <p>library comment #1</p>
 <p>library comment #2</p>
 
+
 ## **PROTOCOLS**
 
 ## Interface {#Interface}
@@ -33,6 +34,7 @@
 
 &lt;EMPTY&gt;
 
+
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
@@ -53,6 +55,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 ## **ENUMS**
 
@@ -106,6 +109,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
+
 ## **TABLES**
 
 ### Table  {#Table data-text="Table"}
@@ -128,6 +132,7 @@ Type: <code>uint32</code>
 </td>
         </tr>
 </table>
+
 
 ## **UNIONS**
 
@@ -166,6 +171,7 @@ Type: <code>uint32</code>
 </td>
         </tr>
 </table>
+
 
 ## **BITS**
 
@@ -218,6 +224,7 @@ Type: <code>uint32</code>
 </td>
         </tr>
 </table>
+
 
 ## **CONSTANTS**
 

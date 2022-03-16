@@ -5,6 +5,7 @@
 
 
 
+
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
@@ -54,6 +55,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### Enum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum data-text="Enum"}
@@ -83,6 +85,7 @@ Type: <code>int32</code>
             <td></td>
         </tr>
 </table>
+
 
 
 
@@ -125,6 +128,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **CONSTANTS**
 

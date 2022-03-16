@@ -4,6 +4,7 @@
 # test.union
 
 
+
 ## **PROTOCOLS**
 
 ## TestProtocol {#TestProtocol}
@@ -48,6 +49,7 @@
             </td>
         </tr>
 </table>
+
 
 ## **STRUCTS**
 
@@ -146,6 +148,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 
 

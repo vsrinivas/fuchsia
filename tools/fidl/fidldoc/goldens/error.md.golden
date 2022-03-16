@@ -4,6 +4,7 @@
 # test.error
 
 
+
 ## **PROTOCOLS**
 
 ## Example {#Example}
@@ -37,6 +38,7 @@
         </tr>
 </table>
 
+
 ## **STRUCTS**
 
 ### Example_foo_Response  {#Example_foo_Response data-text="Example_foo_Response"}
@@ -53,6 +55,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 
 

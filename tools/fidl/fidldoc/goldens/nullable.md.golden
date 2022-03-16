@@ -4,6 +4,7 @@
 # test.nullable
 
 
+
 ## **PROTOCOLS**
 
 ## SimpleProtocol {#SimpleProtocol}
@@ -42,6 +43,7 @@
             </td>
         </tr>
 </table>
+
 
 ## **STRUCTS**
 
@@ -164,6 +166,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 
 

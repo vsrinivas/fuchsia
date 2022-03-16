@@ -4,6 +4,7 @@
 # test.emptystruct
 
 
+
 ## **PROTOCOLS**
 
 ## EmptyProtocol {#EmptyProtocol}
@@ -68,6 +69,7 @@
             </td>
         </tr>
 </table>
+
 
 ## **STRUCTS**
 

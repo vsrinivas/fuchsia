@@ -4,6 +4,7 @@
 # test.protocols
 
 
+
 ## **PROTOCOLS**
 
 ## ChannelProtocol {#ChannelProtocol}
@@ -720,6 +721,7 @@
         </tr>
 </table>
 
+
 ## **STRUCTS**
 
 ### ProtocolEnds [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ProtocolEnds data-text="ProtocolEnds"}
@@ -817,6 +819,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### ErrorEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ErrorEnum data-text="ErrorEnum"}
@@ -856,6 +859,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 
 ## **UNIONS**
@@ -961,6 +965,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **BITS**
 

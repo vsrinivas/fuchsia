@@ -4,6 +4,7 @@
 # test.errorsyntax
 
 
+
 ## **PROTOCOLS**
 
 ## ExampleUseOfErrorSyntax {#ExampleUseOfErrorSyntax}
@@ -65,6 +66,7 @@
         </tr>
 </table>
 
+
 ## **STRUCTS**
 
 ### ExampleUseOfErrorSyntax_CallWhichMayFail_Response  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Response data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Response"}
@@ -81,6 +83,7 @@
             <td>No default</td>
         </tr>
 </table>
+
 
 
 

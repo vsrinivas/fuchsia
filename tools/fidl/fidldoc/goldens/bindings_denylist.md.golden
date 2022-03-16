@@ -4,6 +4,7 @@
 # test.bindingsdenylist
 
 
+
 ## **PROTOCOLS**
 
 ## Allowed {#Allowed}
@@ -287,6 +288,7 @@
 
 &lt;EMPTY&gt;
 
+
 ## **STRUCTS**
 
 ### Allowed_Denied_Response  {#Allowed_Denied_Response data-text="Allowed_Denied_Response"}
@@ -521,6 +523,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### OnlyDart [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#OnlyDart data-text="OnlyDart"}
@@ -536,6 +539,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **TABLES**
 
@@ -598,6 +602,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **UNIONS**
 
@@ -811,6 +816,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
+
 ## **BITS**
 
 ### OnlySyzkaller [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#OnlySyzkaller}
@@ -826,6 +832,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **CONSTANTS**
 

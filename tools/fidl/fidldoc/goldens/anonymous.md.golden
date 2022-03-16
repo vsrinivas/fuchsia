@@ -4,6 +4,7 @@
 # test.anonymous
 
 
+
 ## **PROTOCOLS**
 
 ## SomeProtocol {#SomeProtocol}
@@ -42,6 +43,7 @@
             </td>
         </tr>
 </table>
+
 
 ## **STRUCTS**
 
@@ -106,6 +108,7 @@
         </tr>
 </table>
 
+
 ## **ENUMS**
 
 ### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op data-text="Op"}
@@ -150,6 +153,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **TABLES**
 
@@ -218,6 +222,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **UNIONS**
 
@@ -294,6 +299,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr>
 </table>
+
 
 ## **BITS**
 
