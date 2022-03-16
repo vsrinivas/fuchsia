@@ -1000,11 +1000,6 @@ foreach(target, archive_targets + paver_targets) {
   archive_deps += [ ":${target.name}" ]
 }
 
-uefi_disk_deps = []
-foreach(target, paver_targets) {
-  uefi_disk_deps += [ ":${target.name}" ]
-}
-
 foreach(target, archive_targets + fastboot_targets + paver_targets) {
   action(target.name) {
     deps = []
@@ -1329,10 +1324,16 @@ if (!bootfs_only) {
 compiled_action("uefi-disk") {
   no_output_dir_leaks = false
 
-  deps = uefi_disk_deps + [
-           mkfs_label,
-           "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",
-         ]
+  deps = [
+    "zedboot",
+    "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",
+    mkfs_label,
+  ]
+  if (bootfs_only) {
+    deps += [ "bringup" ]
+  } else {
+    deps += [ labels.images ]
+  }
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   inputs = [ mkfs_bin ]
