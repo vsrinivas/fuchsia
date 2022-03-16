@@ -21,12 +21,12 @@
 class CommandChannel {
  public:
   // |hcidev_path| is a path to the hci device (e.g. /dev/class/bt-hci/000)
-  CommandChannel(std::string hcidev_path);
+  explicit CommandChannel(const std::string& hcidev_path);
   ~CommandChannel();
 
   // Indicates whether this channel is valid.  This should be checked after
   // construction.
-  bool is_valid() { return valid_; }
+  bool is_valid() const { return valid_; }
 
   // Sets the event callback to be called when an HCI Event arrives on the
   // channel.

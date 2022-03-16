@@ -73,7 +73,8 @@ zx::channel GetAclChannel(int fd) {
 
 }  // namespace
 
-CommandChannel::CommandChannel(std::string hcidev_path) : valid_(false), event_callback_(nullptr) {
+CommandChannel::CommandChannel(const std::string& hcidev_path)
+    : valid_(false), event_callback_(nullptr) {
   hci_fd_.reset(open(hcidev_path.c_str(), O_RDWR));
   if (!bool(hci_fd_)) {
     return;
