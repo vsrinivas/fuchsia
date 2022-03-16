@@ -67,18 +67,6 @@ uint32_t JobDispatcher::LockOrder() const { return kRootJobMaxHeight - max_heigh
 template <typename T, typename Fn>
 JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx_status_t* result,
                                                                  Fn func) {
-  // Convert child raw pointers into RefPtrs. This is tricky and requires
-  // special logic on the RefPtr class to handle a ref count that can be
-  // zero.
-  //
-  // The main requirement is that |lock_| is both controlling child
-  // list lookup and also making sure that the child destructor cannot
-  // make progress when doing so. In other words, when inspecting the
-  // |children| list we can be sure that a given child process or child
-  // job is either
-  //   - alive, with refcount > 0
-  //   - in destruction process but blocked, refcount == 0
-
   const uint64_t count = ChildCountLocked<typename T::ValueType>();
 
   if (!count) {
@@ -95,25 +83,55 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx
 
   size_t ix = 0;
 
+  *result = TakeEachChildLocked(children, [&ix, &refs, &func](auto&& cref) {
+    zx_status_t result = func(cref);
+    // As part of our contract with ForEachChildKeepAliveInLocked we must not
+    // destroy the |cref| we were given, as it might be the last reference to
+    // the object. Therefore we keep the reference alive in the |refs| array
+    // and pass the responsibility of releasing them outside the lock to the
+    // caller.
+    refs[ix++] = ktl::move(cref);
+    return result;
+  });
+  return refs;
+}
+
+// Calls the provided |zx_status_t func(fbl::RefPtr<DISPATCHER_TYPE>)|
+// function on all live elements of |children|, which must be one of |jobs_|
+// or |procs_|. The callback must retain the RefPtr and not destroy it until
+// after this methods returns and the lock is dropped. Stops iterating early if
+// |func| returns a value other than ZX_OK, returning that value from this
+// method.
+template <typename T, typename Fn>
+zx_status_t JobDispatcher::TakeEachChildLocked(T& children, Fn func) {
+  // Convert child raw pointers into RefPtrs. This is tricky and requires
+  // special logic on the RefPtr class to handle a ref count that can be
+  // zero.
+  //
+  // The main requirement is that |lock_| is both controlling child
+  // list lookup and also making sure that the child destructor cannot
+  // make progress when doing so. In other words, when inspecting the
+  // |children| list we can be sure that a given child process or child
+  // job is either
+  //   - alive, with refcount > 0
+  //   - in destruction process but blocked, refcount == 0
+
   for (auto& craw : children) {
     auto cref = ::fbl::MakeRefPtrUpgradeFromRaw(&craw, get_lock());
     if (!cref)
       continue;
 
-    *result = func(cref);
     // |cref| might be the last reference at this point. If so,
     // when we drop it in the next iteration the object dtor
-    // would be called here with the |get_lock()| held. To avoid that
-    // we keep the reference alive in the |refs| array and pass
-    // the responsibility of releasing them outside the lock to
-    // the caller.
-    refs[ix++] = ktl::move(cref);
-
-    if (*result != ZX_OK)
-      break;
+    // would be called here with the |get_lock()| held. To avoid that we pass
+    // ownership of the refptr to the callback who is required to keep it alive.
+    zx_status_t result = func(ktl::move(cref));
+    if (result != ZX_OK) {
+      return result;
+    }
   }
 
-  return refs;
+  return ZX_OK;
 }
 
 fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
@@ -370,9 +388,6 @@ bool JobDispatcher::Kill(int64_t return_code) {
   JobList jobs_to_kill;
   ProcessList procs_to_kill;
 
-  LiveRefsArray jobs_refs;
-  LiveRefsArray proc_refs;
-
   bool should_die = false;
   {
     Guard<Mutex> guard{get_lock()};
@@ -381,17 +396,20 @@ bool JobDispatcher::Kill(int64_t return_code) {
 
     return_code_ = return_code;
     state_ = State::KILLING;
-    zx_status_t result;
+    __UNUSED zx_status_t result;
 
-    // Safely gather refs to the children.
-    jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
+    // Gather the refs for our children. We can use |ForEachChildKeepAliveInLocked| since we will be
+    // recording and keeping alive the RefPtrs in the callback in the *_to_kill lists.
+    result = TakeEachChildLocked(jobs_, [&jobs_to_kill](fbl::RefPtr<JobDispatcher>&& job) {
       jobs_to_kill.push_front(ktl::move(job));
       return ZX_OK;
     });
-    proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
+    DEBUG_ASSERT(result == ZX_OK);
+    result = TakeEachChildLocked(procs_, [&procs_to_kill](fbl::RefPtr<ProcessDispatcher>&& proc) {
       procs_to_kill.push_front(ktl::move(proc));
       return ZX_OK;
     });
+    DEBUG_ASSERT(result == ZX_OK);
 
     should_die = IsReadyForDeadTransitionLocked();
   }

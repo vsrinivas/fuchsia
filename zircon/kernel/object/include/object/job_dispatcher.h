@@ -203,6 +203,9 @@ class JobDispatcher final
                                                                          Fn func)
       TA_REQ(get_lock());
 
+  template <typename T, typename Fn>
+  zx_status_t TakeEachChildLocked(T& children, Fn func) TA_REQ(get_lock());
+
   template <typename T>
   uint64_t ChildCountLocked() const TA_REQ(get_lock());
 
