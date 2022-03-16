@@ -115,10 +115,11 @@ protocol ClientController {
 /// will be closed after the scan is complete and results are returned or fails due
 /// to an error.
 protocol ScanResultIterator {
-    /// Allows caller to request the next set of scan results.  When all scan results
-    /// have been handled, GetNext will return an empty vector and the channel will
-    /// be closed.  If an error is encountered during the scan, it will be returned
-    /// after all scan results have been retrieved.
+    /// Allows caller to request the next set of scan results.
+    /// After all scan results have been sent, the next call to GetNext will return
+    /// an empty vector and the channel will be closed.
+    /// If an error is encountered during the scan, the error will be returned and
+    /// the channel will be closed. No scan results will be provided.
     GetNext() -> (struct {
         scan_results vector<ScanResult>;
     }) error ScanErrorCode;
