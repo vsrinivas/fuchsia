@@ -7,8 +7,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/syslog/global.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
 #include <zircon/status.h>
 
 #include "driver_host.h"
@@ -30,7 +32,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  service::OutgoingDirectory outgoing(loop.dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
+
   auto serve = outgoing.ServeFromStartupInfo();
   if (serve.is_error()) {
     LOGF(ERROR, "Failed to serve outgoing directory: %s", serve.status_string());
@@ -44,23 +47,25 @@ int main(int argc, char** argv) {
     return ZX_ERR_NO_MEMORY;
   }
   auto tree_handler = inspect::MakeTreeHandler(&inspector, loop.dispatcher());
-  auto tree_service = fbl::MakeRefCounted<fs::Service>(
-      [tree_handler = std::move(tree_handler)](fidl::ServerEnd<fuchsia_inspect::Tree> request) {
-        tree_handler(fidl::InterfaceRequest<fi::Tree>(request.TakeChannel()));
-        return ZX_OK;
-      });
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  status = diagnostics_dir->AddEntry(fi::Tree::Name_, std::move(tree_service));
+  auto tree_service = std::make_unique<vfs::Service>(std::move(tree_handler));
+  vfs::PseudoDir diagnostics_dir;
+  status = diagnostics_dir.AddEntry(fi::Tree::Name_, std::move(tree_service));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s", fi::Tree::Name_,
          zx_status_get_string(status));
     return status;
   }
-  status = outgoing.root_dir()->AddEntry(kDiagnosticsDir, std::move(diagnostics_dir));
-  if (status != ZX_OK) {
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  diagnostics_dir.Serve(
+      fuchsia_io::wire::kOpenRightWritable | fuchsia_io::wire::kOpenRightReadable |
+          fuchsia_io::wire::kOpenRightExecutable | fuchsia_io::wire::kOpenFlagDirectory,
+      endpoints->server.TakeChannel(), loop.dispatcher());
+  zx::status<> status_result = outgoing.AddDirectory(std::move(endpoints->client), kDiagnosticsDir);
+  if (status_result.is_error()) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s", kDiagnosticsDir,
-         zx_status_get_string(status));
-    return status;
+         status_result.status_string());
+    return status_result.status_value();
   }
 
   // Setup driver loop.
@@ -75,7 +80,7 @@ int main(int argc, char** argv) {
   }
 
   DriverHost driver_host(inspector, loop, driver_loop.dispatcher());
-  auto init = driver_host.PublishDriverHost(outgoing.svc_dir());
+  auto init = driver_host.PublishDriverHost(outgoing);
   if (init.is_error()) {
     return init.error_value();
   }

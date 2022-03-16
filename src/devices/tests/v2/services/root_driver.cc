@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.services.test/cpp/wire.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
@@ -22,7 +22,7 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
   RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
              driver::Namespace ns, driver::Logger logger)
       : dispatcher_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(component::OutgoingDirectory::Create(dispatcher)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)) {}
@@ -45,7 +45,7 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
 
  private:
   zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    service::ServiceHandler handler;
+    component::ServiceHandler handler;
     ft::Device::Handler device(&handler);
 
     auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> zx::status<> {
@@ -88,7 +88,7 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
   }
 
   async_dispatcher_t* dispatcher_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;

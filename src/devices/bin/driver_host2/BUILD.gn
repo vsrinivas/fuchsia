@@ -25,6 +25,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/lib/sys/component/llcpp",
     "//src/devices/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//src/lib/storage/vfs/cpp",
@@ -51,6 +52,7 @@ fuchsia_driver("test_driver_driver") {
   deps = [
     ":bind",
     ":fuchsia.driverhost.test_llcpp",
+    "//sdk/lib/sys/component/llcpp",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
@@ -88,6 +90,7 @@ executable("unittests") {
     ":lib",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/component/llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -118,6 +121,7 @@ executable("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
     "//sdk/lib/inspect/service/cpp",
+    "//sdk/lib/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",

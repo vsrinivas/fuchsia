@@ -8,7 +8,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/fidl.h>
 
@@ -35,7 +35,7 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
              driver::Namespace ns, driver::Logger logger)
       : dispatcher_(dispatcher),
         executor_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(component::OutgoingDirectory::Create(dispatcher)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)) {}
@@ -61,13 +61,12 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
     // Setup the outgoing directory.
     auto service = [this](fidl::ServerEnd<ft::Handshake> server_end) {
       fidl::BindServer(dispatcher_, std::move(server_end), this);
-      return ZX_OK;
     };
-    zx_status_t status = outgoing_.svc_dir()->AddEntry(
-        fidl::DiscoverableProtocolName<ft::Handshake>, fbl::MakeRefCounted<fs::Service>(service));
-    if (status != ZX_OK) {
-      return zx::error(status);
+    zx::status<> status = outgoing_.AddProtocol<ft::Handshake>(std::move(service));
+    if (status.is_error()) {
+      return status;
     }
+
     auto serve = outgoing_.Serve(std::move(outgoing_dir));
     if (serve.is_error()) {
       return serve.take_error();
@@ -128,7 +127,7 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
 
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 
   fidl::WireSharedClient<fdf::Node> node_;
   fidl::WireSharedClient<fdf::NodeController> controller_;

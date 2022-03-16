@@ -203,6 +203,7 @@ test("driver_manager_test") {
     ":lib",
     "//sdk/lib/fdio",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//sdk/lib/sys/component/llcpp",
     "//src/devices/lib/bind:bind-lib",
     "//src/lib/storage/vfs/cpp:test_support",
     "//zircon/system/ulib/mock-boot-arguments",

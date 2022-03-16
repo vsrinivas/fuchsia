@@ -29,9 +29,9 @@ fuchsia_driver("root_driver") {
     ":fuchsia.services.test_llcpp",
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/lib/sys/component/llcpp",
     "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
     "//src/devices/lib/driver2:llcpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

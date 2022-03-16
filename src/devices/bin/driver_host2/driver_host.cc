@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/dlfcn.h>
 
 #include "src/devices/lib/driver2/start_args.h"
@@ -115,18 +116,17 @@ fpromise::promise<inspect::Inspector> DriverHost::Inspect() {
   return fpromise::make_ok_promise(std::move(inspector));
 }
 
-zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
+zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoing_directory) {
   const auto service = [this](fidl::ServerEnd<fdf::DriverHost> request) {
     fidl::BindServer(loop_.dispatcher(), std::move(request), this);
-    return ZX_OK;
   };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdf::DriverHost>,
-                                         fbl::MakeRefCounted<fs::Service>(service));
-  if (status != ZX_OK) {
+  auto status = outgoing_directory.AddProtocol<fdf::DriverHost>(std::move(service));
+  if (status.is_error()) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<fdf::DriverHost>, zx_status_get_string(status));
+         fidl::DiscoverableProtocolName<fdf::DriverHost>, status.status_string());
   }
-  return zx::make_status(status);
+
+  return status;
 }
 
 void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer) {

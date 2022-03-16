@@ -9,6 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/svc/outgoing.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <zxtest/zxtest.h>
 
@@ -151,19 +152,18 @@ TEST(Devfs, ExportWatcher_Export) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Create a fake service at svc/test.
-  service::OutgoingDirectory outgoing(loop.dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
   zx::channel service_channel;
-  auto vnode = fbl::MakeRefCounted<fs::Service>([&service_channel, &loop](zx::channel server) {
+  auto handler = [&service_channel, &loop](zx::channel server) {
     service_channel = std::move(server);
     loop.Quit();
-    return ZX_OK;
-  });
-  outgoing.svc_dir()->AddEntry("test", vnode);
+  };
+  ASSERT_EQ(outgoing.AddNamedProtocol(std::move(handler), "test").status_value(), ZX_OK);
 
   // Export the svc/test.
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(outgoing.Serve(std::move(endpoints->server)));
+  ASSERT_OK(outgoing.Serve(std::move(endpoints->server)).status_value());
 
   auto result = driver_manager::ExportWatcher::Create(loop.dispatcher(), &root_node,
                                                       std::move(endpoints->client), "svc/test",

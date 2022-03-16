@@ -6,6 +6,7 @@ libdriver.so
 libdriver_runtime.so
 libfdio.so
 libssl.so
+libsvc.so
 libsyslog.so
 libtrace-engine.so
 libbackend_fuchsia_globals.so

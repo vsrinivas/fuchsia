@@ -85,6 +85,7 @@ executable("llcpp_test") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/llcpp",
     "//src/diagnostics/lib/cpp-log-decoder:lib",
     "//src/lib/diagnostics/accessor2logger",
     "//src/lib/fsl",

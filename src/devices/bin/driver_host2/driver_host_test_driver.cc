@@ -5,8 +5,8 @@
 #include <fidl/fuchsia.driverhost.test/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include "src/devices/lib/driver2/record.h"
 #include "src/devices/lib/driver2/start_args.h"
@@ -17,7 +17,7 @@ namespace ftest = fuchsia_driverhost_test;
 class TestDriver {
  public:
   explicit TestDriver(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), outgoing_(dispatcher) {}
+      : dispatcher_(dispatcher), outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     auto error = driver::SymbolValue<zx_status_t*>(start_args->symbols(), "error");
@@ -49,20 +49,20 @@ class TestDriver {
     }
 
     // Setup the outgoing service.
-    zx_status_t status = outgoing_.svc_dir()->AddEntry(
-        fidl::DiscoverableProtocolName<ftest::Outgoing>,
-        fbl::MakeRefCounted<fs::Service>([](fidl::ServerEnd<ftest::Outgoing> request) {
-          return fidl_epitaph_write(request.channel().get(), ZX_ERR_STOP);
-        }));
-    if (status != ZX_OK) {
-      return zx::error(status);
+    auto status =
+        outgoing_.AddProtocol<ftest::Outgoing>([](fidl::ServerEnd<ftest::Outgoing> request) {
+          fidl_epitaph_write(request.channel().get(), ZX_ERR_STOP);
+        });
+    if (status.is_error()) {
+      return status;
     }
+
     return outgoing_.Serve(std::move(start_args->outgoing_dir()));
   }
 
  private:
   async_dispatcher_t* dispatcher_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 };
 
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,

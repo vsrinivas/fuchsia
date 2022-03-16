@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
@@ -50,7 +51,7 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
              async_dispatcher_t* driver_dispatcher);
 
   fpromise::promise<inspect::Inspector> Inspect();
-  zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  zx::status<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::DriverHost>

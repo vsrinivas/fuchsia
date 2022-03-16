@@ -5,9 +5,8 @@
 #include <fidl/fuchsia.examples/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/outgoing_directory.h>
-#include <lib/service/llcpp/service.h>
-#include <lib/service/llcpp/service_handler.h>
+#include <lib/sys/component/llcpp/handlers.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <iostream>
 
@@ -55,9 +54,9 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  service::OutgoingDirectory outgoing(loop.dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
 
-  service::ServiceHandler handler;
+  component::ServiceHandler handler;
   fuchsia_examples::EchoService::Handler my_service(&handler);
 
   // Example of serving members of a service instance.
