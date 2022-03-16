@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("wlan_drivers_fuzzing_lib_test") {
+  sources = [ "simple_randomness.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/lib/fuzzing/cpp",
+    "//src/connectivity/wlan/drivers/lib/log/cpp",
+    "//src/devices/testing/no_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("wlan-drivers-fuzzing-lib-tests") {
+  deps = [ ":wlan_drivers_fuzzing_lib_test" ]
+}

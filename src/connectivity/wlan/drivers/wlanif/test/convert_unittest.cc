@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
+#include <wlan/drivers/fuzzing.h>
 #include <wlan/drivers/log.h>
 
 #include "lib/fidl/cpp/encoder.h"
@@ -32,6 +33,7 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
+namespace fuzzing = wlan::drivers::fuzzing;
 
 using ::testing::_;
 using ::testing::ElementsAre;
@@ -55,20 +57,6 @@ zx_status_t ValidateMessage(T* msg) {
   // |fidl_decode_etc| performs validation as part of decode.
   return fidl_decode_etc(T::FidlType, msg_data.bytes().data(), msg_data.bytes().size(), nullptr, 0,
                          &err_msg);
-}
-
-// Tests should call `RAND64()` with a UniformRandomBitGenerator, such as the kind returned
-// by create_and_seed_rng(), when requiring a random 64-bit integer.
-static std::uniform_int_distribution<uint64_t> RAND64(0, UINT64_MAX);
-
-// Randomly generates an `unsigned int` to seed a `std::mt19937`, log the test name
-// and seed chosen, and returns the seeded `std::mt19937`.
-std::mt19937 create_and_seed_rng() {
-  const char* test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
-  std::random_device rd;
-  unsigned int seed = rd();
-  linfo("%s seed: %u", test_name, seed);
-  return std::mt19937(seed);
 }
 
 TEST(ConvertTest, ToFidlBssDescription) {
@@ -158,31 +146,38 @@ TEST(ConvertTest, ToFidlEapolConf) {
   EXPECT_EQ(fidl_resp.result_code, wlan_mlme::EapolResultCode::SUCCESS);
 }
 
-ht_capabilities_fields_t fake_ht_cap(std::mt19937& rng) {
+ht_capabilities_fields_t fake_ht_cap(std::default_random_engine& rng) {
   ht_capabilities_fields_t ht_caps = {
-      .ht_capability_info = static_cast<uint16_t>(RAND64(rng)),
-      .ampdu_params = static_cast<uint8_t>(RAND64(rng)),
-      .ht_ext_capabilities = static_cast<uint16_t>(RAND64(rng)),
-      .tx_beamforming_capabilities = static_cast<uint32_t>(RAND64(rng)),
-      .asel_capabilities = static_cast<uint8_t>(RAND64(rng)),
+      .ht_capability_info = fuzzing::rand16(rng),
+      .ampdu_params = fuzzing::rand8(rng),
+      .ht_ext_capabilities = fuzzing::rand16(rng),
+      .tx_beamforming_capabilities = fuzzing::rand32(rng),
+      .asel_capabilities = fuzzing::rand8(rng),
   };
 
   for (unsigned char& mcs : ht_caps.supported_mcs_set) {
-    mcs = RAND64(rng);
+    mcs = fuzzing::rand8(rng);
   }
 
   return ht_caps;
 }
 
-vht_capabilities_fields_t fake_vht_cap(std::mt19937& rng) {
+vht_capabilities_fields_t fake_vht_cap(std::default_random_engine& rng) {
   return {
-      .vht_capability_info = static_cast<uint32_t>(RAND64(rng)),
-      .supported_vht_mcs_and_nss_set = static_cast<uint64_t>(RAND64(rng)),
+      .vht_capability_info = fuzzing::rand32(rng),
+      .supported_vht_mcs_and_nss_set = fuzzing::rand64(rng),
   };
 }
 
+void log_seed(unsigned int seed) {
+  const char* test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
+  linfo("%s seed: %u", test_name, seed);
+}
+
 TEST(ConvertTest, ToFidlHtCapabilities) {
-  auto rng = create_and_seed_rng();
+  unsigned int seed;
+  auto rng = fuzzing::seeded_rng(&seed);
+  log_seed(seed);
 
   ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
   auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
@@ -194,7 +189,9 @@ TEST(ConvertTest, ToFidlHtCapabilities) {
 }
 
 TEST(ConvertTest, ToFidlVhtCapabilities) {
-  auto rng = create_and_seed_rng();
+  unsigned int seed;
+  auto rng = fuzzing::seeded_rng(&seed);
+  log_seed(seed);
 
   vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
   auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
@@ -206,7 +203,9 @@ TEST(ConvertTest, ToFidlVhtCapabilities) {
 }
 
 TEST(ConvertTest, ToFidlBandCapability) {
-  auto rng = create_and_seed_rng();
+  unsigned int seed;
+  auto rng = fuzzing::seeded_rng(&seed);
+  log_seed(seed);
 
   ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
   auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
@@ -262,7 +261,9 @@ TEST(ConvertTest, ToFidlBandCapability) {
 }
 
 TEST(ConvertTest, ToFidlDeviceInfo) {
-  auto rng = create_and_seed_rng();
+  unsigned int seed;
+  auto rng = fuzzing::seeded_rng(&seed);
+  log_seed(seed);
 
   wlan_mlme::DeviceInfo fidl_resp = {};
   const std::array<uint8_t, 6> expected_sta_addr{1, 2, 3, 4, 5, 6};
@@ -278,7 +279,7 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   wlan_fullmac_query_info_t query_info_some_driver_features = {
       .sta_addr = {1, 2, 3, 4, 5, 6},
       .role = WLAN_MAC_ROLE_CLIENT,
-      .features = static_cast<uint32_t>(RAND64(rng)),
+      .features = fuzzing::rand32(rng),
       .band_cap_list = {{
           .band = WLAN_BAND_TWO_GHZ,
           .basic_rate_count = 3,
@@ -316,7 +317,7 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   wlan_fullmac_query_info_t query_info_all_driver_features = {
       .sta_addr = {1, 2, 3, 4, 5, 6},
       .role = WLAN_MAC_ROLE_CLIENT,
-      .features = static_cast<uint32_t>(RAND64(rng)),
+      .features = fuzzing::rand32(rng),
       .band_cap_list = {{
           .band = WLAN_BAND_TWO_GHZ,
           .basic_rate_count = 3,

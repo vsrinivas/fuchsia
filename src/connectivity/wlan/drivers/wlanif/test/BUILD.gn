@@ -26,6 +26,8 @@ test("convert_unittest") {
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
+    "//src/connectivity/wlan/drivers/lib/fuzzing/cpp",
+    "//src/connectivity/wlan/drivers/lib/log/cpp",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl/test:gtest_main",
