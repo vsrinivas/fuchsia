@@ -9,7 +9,7 @@
 //! serialization, but this implementation is much less likely to cause security concerns due to the
 //! reduced functionality of the code.
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fidl_fuchsia_mem;
 use fidl_fuchsia_stash::{KeyValue, ListItem, Value, ValueType};
@@ -134,59 +134,37 @@ impl Store {
         Ok(res)
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     fn deserialize(bytes: Vec<u8>) -> Result<Store, Error> {
         let mut res = Store::default();
-        let bytes_len = bytes.len() as u64;
+        let bytes_len = bytes.len();
         let mut cursor = Cursor::new(bytes);
-        while cursor.position() < bytes_len {
-            let client_name_length = cursor.read_u64::<LittleEndian>()?;
-            let bytes_remaining = bytes_len - cursor.position();
-            if client_name_length > bytes_remaining {
-                return Err(format_err!(
-                    "client_name_length overflow: client_name_length={} bytes_remaining={}",
-                    client_name_length,
-                    bytes_remaining
-                ));
-            }
+        while cursor.position() < bytes_len as u64 {
+            let client_name_length =
+                cursor.read_u64::<LittleEndian>().context("reading name length")? as usize;
             let mut client_name = Vec::new();
-            client_name.resize(client_name_length as usize, 0);
-            cursor.read(&mut client_name[..])?;
+            client_name.resize(client_name_length, 0);
+            cursor.read_exact(&mut client_name[..]).context("reading name")?;
 
-            let client_entries = cursor.read_u64::<LittleEndian>()?;
+            let client_entries = cursor.read_u64::<LittleEndian>().context("reading # entries")?;
 
             let mut client_data = HashMap::new();
             for _ in 0..client_entries {
-                let key_length = cursor.read_u64::<LittleEndian>()?;
-                let bytes_remaining = bytes_len - cursor.position();
-                if key_length > bytes_remaining {
-                    return Err(format_err!(
-                        "key_length overflow: key_length={} bytes_remaining={}",
-                        key_length,
-                        bytes_remaining
-                    ));
-                }
+                let key_length =
+                    cursor.read_u64::<LittleEndian>().context("reading key length")? as usize;
                 let mut key_bytes = Vec::new();
-                key_bytes.resize(key_length as usize, 0);
-                cursor.read(&mut key_bytes[..])?;
+                key_bytes.resize(key_length, 0);
+                cursor.read_exact(&mut key_bytes[..]).context("reading key")?;
 
                 let mut val_type = [0; 1];
-                cursor.read(&mut val_type[..])?;
+                cursor.read_exact(&mut val_type[..]).context("reading value type")?;
                 let val_type = val_type[0];
 
-                let val_length = cursor.read_u64::<LittleEndian>()?;
-                let bytes_remaining = bytes_len - cursor.position();
-                if val_length > bytes_remaining {
-                    return Err(format_err!(
-                        "val_length overflow: val_length={} bytes_remaining={}",
-                        val_length,
-                        bytes_remaining
-                    ));
-                }
+                let val_length =
+                    cursor.read_u64::<LittleEndian>().context("reading value length")? as usize;
 
                 let mut val_bytes = Vec::new();
-                val_bytes.resize(val_length as usize, 0);
-                cursor.read(&mut val_bytes[..])?;
+                val_bytes.resize(val_length, 0);
+                cursor.read_exact(&mut val_bytes[..]).context("reading value")?;
 
                 client_data
                     .insert(String::from_utf8(key_bytes)?, value_from_bytes(val_type, val_bytes)?);
@@ -597,10 +575,7 @@ mod tests {
         let mut store_bytes = write_tmp_store("test", types)?;
         // Change structure name length to more than the bytes in the buffer
         store_bytes[0] = 255;
-        let result = Store::deserialize(store_bytes);
-        assert!(result.is_err());
-        let got = format!("{}", result.unwrap_err());
-        assert!(got.starts_with("client_name_length overflow"));
+        Store::deserialize(store_bytes).unwrap_err();
         Ok(())
     }
 
@@ -612,10 +587,7 @@ mod tests {
         let mut store_bytes = write_tmp_store("test", types)?;
         // Change key length to more than the bytes in the buffer
         store_bytes[20] = 255;
-        let result = Store::deserialize(store_bytes);
-        assert!(result.is_err());
-        let got = format!("{}", result.unwrap_err());
-        assert!(got.starts_with("key_length overflow"));
+        Store::deserialize(store_bytes).unwrap_err();
         Ok(())
     }
 
@@ -627,10 +599,7 @@ mod tests {
         let mut store_bytes = write_tmp_store("test", types)?;
         // Change value length to more than the bytes in the buffer
         store_bytes[36] = 255;
-        let result = Store::deserialize(store_bytes);
-        assert!(result.is_err());
-        let got = format!("{}", result.unwrap_err());
-        assert!(got.starts_with("val_length overflow"));
+        Store::deserialize(store_bytes).unwrap_err();
         Ok(())
     }
 
@@ -642,8 +611,7 @@ mod tests {
         let mut store_bytes = write_tmp_store("test", types)?;
         // Use exact length, this should be ok.
         store_bytes[36] = 8; // It's already 8 but it keeps it consistent with the other tests.
-        let result = Store::deserialize(store_bytes);
-        assert!(!result.is_err());
+        Store::deserialize(store_bytes).unwrap();
         Ok(())
     }
 
@@ -655,10 +623,7 @@ mod tests {
         let mut store_bytes = write_tmp_store("test", types)?;
         // Change value length to one more than the bytes in the buffer
         store_bytes[36] = 9;
-        let result = Store::deserialize(store_bytes);
-        assert!(result.is_err());
-        let got = format!("{}", result.unwrap_err());
-        assert!(got.starts_with("val_length overflow"));
+        Store::deserialize(store_bytes).unwrap_err();
         Ok(())
     }
 }
