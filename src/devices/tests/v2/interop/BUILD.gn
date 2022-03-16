@@ -68,7 +68,7 @@ fuchsia_driver("v1_driver") {
 
 fuchsia_driver_component("v1") {
   testonly = true
-  manifest = "meta/v1.cml"
+  colocate = true
   deps = [
     ":v1_driver",
     "//src/devices/misc/drivers/compat:driver",
@@ -110,6 +110,7 @@ rustc_test("bin") {
   deps = [
     ":fuchsia.interop.test-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

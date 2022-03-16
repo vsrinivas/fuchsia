@@ -13,6 +13,7 @@
 #include <zircon/errors.h>
 
 #include "src/devices/lib/compat/symbols.h"
+#include "src/devices/misc/drivers/compat/devfs_vnode.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace fcd = fuchsia_component_decl;
@@ -48,7 +49,8 @@ namespace compat {
 Device::Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
                const zx_protocol_device_t* ops, Driver* driver, std::optional<Device*> parent,
                driver::Logger& logger, async_dispatcher_t* dispatcher)
-    : name_(name),
+    : compat_child_(std::string(name), proto_ops.id, "", nullptr, MetadataMap()),
+      name_(name),
       context_(context),
       ops_(ops),
       logger_(logger),
@@ -59,10 +61,6 @@ Device::Device(std::string_view name, void* context, const compat_device_proto_o
       executor_(dispatcher) {}
 
 Device::~Device() {
-  if (vnode_teardown_callback_) {
-    (*vnode_teardown_callback_)();
-  }
-
   // We only shut down the devices that have a parent, since that means that *this* compat driver
   // owns the device. If the device does not have a parent, then ops_ belongs to another driver, and
   // it's that driver's responsibility to be shut down.
@@ -115,6 +113,10 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     device->topological_path_ += "/";
   }
   device->topological_path_ += device->name_;
+
+  auto vnode = fbl::MakeRefCounted<DevfsVnode>(device->ZxDevice());
+  device->compat_child_ = Child(std::string(zx_args->name), zx_args->proto_id,
+                                std::string(device->topological_path()), vnode, MetadataMap());
 
   auto device_ptr = device.get();
 
@@ -186,17 +188,7 @@ zx_status_t Device::CreateNode() {
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
 
-  fcd::wire::Ref ref;
-  ref.set_self(fcd::wire::SelfRef());
-  fcd::wire::OfferDirectory compat_dir(arena);
-  compat_dir.set_source_name(arena, "fuchsia.driver.compat.Service");
-  compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service-default");
-  compat_dir.set_rights(arena, fuchsia_io::wire::kRwStarDir);
-  compat_dir.set_subdir(arena, fidl::StringView::FromExternal(name_));
-  compat_dir.set_dependency_type(fcd::wire::DependencyType::kStrong);
-
-  fcd::wire::Offer offer;
-  offer.set_directory(arena, std::move(compat_dir));
+  auto offers = compat_child_.CreateOffers(arena);
 
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
@@ -216,7 +208,8 @@ zx_status_t Device::CreateNode() {
   auto valid_name = MakeValidName(name_);
   args.set_name(arena, fidl::StringView::FromExternal(valid_name))
       .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
-      .set_offers(arena, fidl::VectorView<fcd::wire::Offer>::FromExternal(&offer, 1))
+      .set_offers(arena,
+                  fidl::VectorView<fcd::wire::Offer>::FromExternal(offers.data(), offers.size()))
       .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(properties_));
 
   // Create NodeController, so we can control the device.
@@ -388,42 +381,15 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
 }
 
 zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {
-  Metadata metadata(size);
-  auto begin = static_cast<const uint8_t*>(data);
-  std::copy(begin, begin + size, metadata.begin());
-  auto [_, inserted] = metadata_.emplace(type, std::move(metadata));
-  if (!inserted) {
-    FDF_LOG(WARNING, "Metadata %#x for device '%s' already exists", type, Name());
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  return ZX_OK;
+  return compat_child_.compat_device().AddMetadata(type, data, size);
 }
 
 zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  auto it = metadata_.find(type);
-  if (it == metadata_.end()) {
-    FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
-    return ZX_ERR_NOT_FOUND;
-  }
-  auto& [_, metadata] = *it;
-
-  auto size = std::min(buflen, metadata.size());
-  auto begin = metadata.begin();
-  std::copy(begin, begin + size, static_cast<uint8_t*>(buf));
-
-  *actual = metadata.size();
-  return ZX_OK;
+  return compat_child_.compat_device().GetMetadata(type, buf, buflen, actual);
 }
 
 zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
-  auto it = metadata_.find(type);
-  if (it == metadata_.end()) {
-    FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
-    return ZX_ERR_NOT_FOUND;
-  }
-  auto& [_, metadata] = *it;
-  *out_size = metadata.size();
-  return ZX_OK;
+  return compat_child_.compat_device().GetMetadataSize(type, out_size);
 }
 
 zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -431,63 +397,6 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ops_->message(context_, msg, txn);
-}
-
-zx_status_t Device::StartCompatInstance(fbl::RefPtr<fs::PseudoDir>& compat_service) {
-  service::ServiceHandler handler;
-  fuchsia_driver_compat::Service::Handler compat_instance(&handler);
-  auto device = [this](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) -> zx::status<> {
-    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher_,
-                                                                      std::move(server_end), this);
-    return zx::ok();
-  };
-  zx::status<> status = compat_instance.add_device(std::move(device));
-  if (status.is_error()) {
-    return status.status_value();
-  }
-  auto instance = OwnedInstance::Create(compat_service, Name(), handler.TakeDirectory());
-  if (instance.is_error()) {
-    return instance.status_value();
-  }
-  compat_instance_ = std::move(instance.value());
-
-  return ZX_OK;
-}
-
-void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
-                                GetTopologicalPathCompleter::Sync& completer) {
-  completer.Reply(fidl::StringView::FromExternal(topological_path_));
-}
-
-void Device::GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) {
-  std::vector<fuchsia_driver_compat::wire::Metadata> metadata;
-  metadata.reserve(metadata_.size());
-  for (auto& [type, data] : metadata_) {
-    fuchsia_driver_compat::wire::Metadata new_metadata;
-    new_metadata.type = type;
-    zx::vmo vmo;
-
-    zx_status_t status = zx::vmo::create(data.size(), 0, &new_metadata.data);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    status = new_metadata.data.write(data.data(), 0, data.size());
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    size_t size = data.size();
-    status = new_metadata.data.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-
-    metadata.push_back(std::move(new_metadata));
-  }
-  completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
-      metadata.data(), metadata.size()));
 }
 
 constexpr char kCompatKey[] = "fuchsia.compat.LIBNAME";

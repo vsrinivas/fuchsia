@@ -123,6 +123,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
   auto driver =
       std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
                                start_args.url().get(), name, context, proto_ops, ops);
+
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {
     return result.take_error();
@@ -137,11 +138,14 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     return serve.take_error();
   }
 
-  compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  outgoing_.root_dir()->AddEntry("fuchsia.driver.compat.Service", compat_service_);
+  auto interop = Interop::Create(dispatcher_, &ns_, &outgoing_);
+  if (interop.is_error()) {
+    return interop.take_error();
+  }
+  interop_ = std::move(*interop);
 
   auto compat_connect =
-      ConnectToParentCompatService()
+      interop_.ConnectToParentCompatService()
           .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))
           .then([this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
             if (result.is_error()) {
@@ -415,28 +419,13 @@ result<> Driver::StopDriver(const zx_status_t& status) {
   return ok();
 }
 
-fpromise::promise<void, zx_status_t> Driver::ConnectToParentCompatService() {
-  auto result = ns_.OpenService<fuchsia_driver_compat::Service>("default");
-  if (result.is_error()) {
-    return fpromise::make_error_promise(result.status_value());
-  }
-  auto connection = result.value().connect_device();
-  if (connection.is_error()) {
-    return fpromise::make_error_promise(connection.status_value());
-  }
-  device_client_ = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
-      std::move(connection.value()), dispatcher_);
-
-  return fpromise::make_result_promise<void, zx_status_t>(ok());
-}
-
 promise<void, zx_status_t> Driver::GetDeviceInfo() {
-  if (!device_client_) {
+  if (!interop_.device_client()) {
     return fpromise::make_result_promise<void, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
   }
 
   bridge<void, zx_status_t> topo_bridge;
-  device_client_->GetTopologicalPath(
+  interop_.device_client()->GetTopologicalPath(
       [this, completer = std::move(topo_bridge.completer)](
           fidl::WireResponse<fuchsia_driver_compat::Device::GetTopologicalPath>* response) mutable {
         device_.set_topological_path(std::string(response->path.data(), response->path.size()));
@@ -444,7 +433,7 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
       });
 
   bridge<void, zx_status_t> metadata_bridge;
-  device_client_->GetMetadata(
+  interop_.device_client()->GetMetadata(
       [this, completer = std::move(metadata_bridge.completer)](
           fidl::WireResponse<fuchsia_driver_compat::Device::GetMetadata>* response) mutable {
         if (response->result.is_err()) {
@@ -531,54 +520,33 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   zx_device_t* child;
   zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Failed to add device %s: %s", args->name, zx_status_get_string(status));
     return status;
   }
-
-  status = child->StartCompatInstance(compat_service_);
-  if (status != ZX_OK) {
-    FDF_LOG(ERROR, "Device %s: failed to add device %s, creating Compat instance failed with: %s",
-            parent->Name(), args->name, zx_status_get_string(status));
-    return status;
-  }
-
-  std::string child_protocol = "device-" + std::to_string(next_device_id_);
-  next_device_id_++;
-
-  // Create a devfs entry for the new device.
-  auto vnode = fbl::MakeRefCounted<DevfsVnode>(child->ZxDevice());
-  outgoing_.svc_dir()->AddEntry(child_protocol, vnode);
 
   auto devfs_name = std::string(child->topological_path());
   // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print this.
   FDF_LOG(INFO, "Created /dev/%s", devfs_name.data());
 
-  // Export the devfs entry. Once the export is complete, put a callback on the
-  // Device so that when the Device is removed the Vnode will also be removed.
-  // This assumes that Driver will always outlive Device.
-  auto task =
-      exporter_.Export(child_protocol, devfs_name, args->proto_id)
-          .and_then([this, child_protocol, child, vnode = std::move(vnode)]() {
-            child->SetVnodeTeardownCallback([this, child_protocol, vnode = std::move(vnode)]() {
-              outgoing_.svc_dir()->RemoveEntry(child_protocol);
-              outgoing_.vfs().CloseAllConnectionsForVnode(*vnode, {});
-            });
-            // We have to create the node for the device after we've exported the
-            // /dev/ entry. Otherwise, we will race any child that's bound to us
-            // to see who can export to /dev/ first.
-            zx_status_t status = child->CreateNode();
-            if (status != ZX_OK) {
-              FDF_LOG(ERROR, "Failed to CreateNode for device: %s: %s", child->Name(),
-                      zx_status_get_string(status));
-              child->Remove();
-            }
-          })
-          .or_else([this, child](const zx_status_t& status) {
-            FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
-            child->Remove();
-            return ok();
-          })
-          .wrap_with(child->scope())
-          .wrap_with(scope_);
+  // Export the device's devfs entry.
+  auto task = interop_.ExportChild(&child->compat_child())
+                  .and_then([this, child]() {
+                    // We have to create the node for the device after we've exported the
+                    // /dev/ entry. Otherwise, we will race any child that's bound to us
+                    // to see who can export to /dev/ first.
+                    zx_status_t status = child->CreateNode();
+                    if (status != ZX_OK) {
+                      FDF_LOG(ERROR, "Failed to CreateNode for device: %s: %s", child->Name(),
+                              zx_status_get_string(status));
+                      child->Remove();
+                    }
+                  })
+                  .or_else([this](const zx_status_t& status) {
+                    FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
+                    return ok();
+                  })
+                  .wrap_with(child->scope())
+                  .wrap_with(scope_);
   executor_.schedule_task(std::move(task));
 
   if (out) {

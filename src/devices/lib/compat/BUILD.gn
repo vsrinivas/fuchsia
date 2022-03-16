@@ -3,5 +3,16 @@
 # found in the LICENSE file.
 
 source_set("compat") {
-  sources = [ "symbols.h" ]
+  sources = [
+    "compat.cc",
+    "compat.h",
+    "service.h",
+    "symbols.h",
+  ]
+  public_deps = [
+    "//src/devices/lib/driver2:devfs_exporter",
+    "//src/devices/lib/driver2:llcpp",
+    "//src/devices/misc/drivers/compat/fidl:fuchsia.driver.compat_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
 }

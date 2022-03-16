@@ -13,7 +13,7 @@
 
 #include <unordered_set>
 
-#include "src/devices/lib/compat/symbols.h"
+#include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
@@ -86,7 +86,6 @@ class Driver {
   fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
-  fidl::WireSharedClient<fuchsia_driver_compat::Device> device_client_;
   fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> profile_client_;
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;
@@ -100,9 +99,6 @@ class Driver {
   const std::string url_;
   Device device_;
 
-  // When this driver creates a new Device, that Device's protocol will get this id number.
-  uint32_t next_device_id_ = 0;
-
   void* library_ = nullptr;
   zx_driver_rec_t* record_ = nullptr;
   void* context_ = nullptr;
@@ -112,6 +108,8 @@ class Driver {
   zx::resource root_resource_;
 
   driver::DevfsExporter exporter_;
+
+  Interop interop_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

@@ -21,9 +21,10 @@
 
 #include <fbl/intrusive_double_list.h>
 
+#include "src/devices/lib/compat/compat.h"
+#include "src/devices/lib/compat/service.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/logger.h"
-#include "src/devices/misc/drivers/compat/service.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace compat {
@@ -31,8 +32,7 @@ namespace compat {
 class Driver;
 
 // Device is an implementation of a DFv1 device.
-class Device : public std::enable_shared_from_this<Device>,
-               public fidl::WireServer<fuchsia_driver_compat::Device> {
+class Device : public std::enable_shared_from_this<Device> {
  public:
   Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
          const zx_protocol_device_t* ops, Driver* driver, std::optional<Device*> parent,
@@ -61,15 +61,6 @@ class Device : public std::enable_shared_from_this<Device>,
 
   fpromise::promise<void, zx_status_t> RebindToLibname(std::string_view libname);
 
-  // Set a callback to tear down any Vnodes associated with the Device.
-  // This will be called in ~Device, so that the Device will always
-  // outlive the Vnode.
-  void SetVnodeTeardownCallback(fit::callback<void()> cb) {
-    vnode_teardown_callback_ = std::move(cb);
-  }
-
-  zx_status_t StartCompatInstance(fbl::RefPtr<fs::PseudoDir>& compat_service);
-
   zx_status_t CreateNode();
 
   std::string_view topological_path() const { return topological_path_; }
@@ -79,17 +70,11 @@ class Device : public std::enable_shared_from_this<Device>,
   fpromise::scope& scope() { return scope_; }
   driver::Logger& logger() { return logger_; }
   async::Executor& executor() { return executor_; }
+  Child& compat_child() { return compat_child_; }
 
  private:
-  using Metadata = std::vector<uint8_t>;
-
   Device(Device&&) = delete;
   Device& operator=(Device&&) = delete;
-
-  // fuchsia.driver.compat.Compat
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& completer) override;
-  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override;
 
   void RemoveChild(std::shared_ptr<Device>& child);
   void InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodePropertyKey key,
@@ -99,6 +84,8 @@ class Device : public std::enable_shared_from_this<Device>,
   // This should be declared before any objects it backs so it is destructed last.
   fidl::Arena<512> arena_;
   std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
+
+  Child compat_child_;
 
   std::string topological_path_;
   const std::string name_;
@@ -119,10 +106,6 @@ class Device : public std::enable_shared_from_this<Device>,
 
   std::optional<fpromise::promise<>> controller_teardown_finished_;
 
-  std::optional<fit::callback<void()>> vnode_teardown_callback_;
-
-  std::optional<OwnedInstance> compat_instance_;
-
   // The device's parent. If this field is set then the Device ptr is guaranteed
   // to be non-null. The parent is also guaranteed to outlive its child.
   //
@@ -135,7 +118,6 @@ class Device : public std::enable_shared_from_this<Device>,
 
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;
-  std::unordered_map<uint32_t, const Metadata> metadata_;
 
   // The Device's children. The Device has full ownership of the children,
   // but these are shared pointers so that the NodeController can get a weak
