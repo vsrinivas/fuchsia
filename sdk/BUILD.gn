@@ -400,6 +400,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/fdio:fdio_sdk",
     "//sdk/lib/fidl/cpp:cpp_sdk",
     "//sdk/lib/fit-promise:fit-promise_sdk",
+    "//sdk/lib/inspect",
     "//sdk/lib/inspect/service/cpp:cpp_sdk",
     "//sdk/lib/media/cpp:cpp_sdk",
     "//sdk/lib/modular/cpp:cpp_sdk",
