@@ -3,220 +3,127 @@
 // found in the LICENSE file.
 
 use {
-    component_events::{events::*, matcher::*},
     diagnostics_data::{Data, Logs, Severity},
-    diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
+    diagnostics_reader::ArchiveReader,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::Task,
+    fidl_fuchsia_io::DirectoryMarker,
+    fuchsia_async::{Duration, TestExecutor, Timer},
     fuchsia_component::client,
-    futures::StreamExt,
+    test_case::test_case,
 };
 
-const BASE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test";
 const COLLECTION_NAME: &str = "puppets";
-const EXPECTED_STDOUT_PAYLOAD: &str = "Hello Stdout!";
-const EXPECTED_STDERR_PAYLOAD: &str = "Hello Stderr!";
-const TESTED_LANGUAGUES: [&str; 3] = ["cpp", "rust", "go"];
 
-#[derive(Debug)]
-struct Component {
-    url: String,
-    moniker: String,
+/// Used to parameterize test cases by which log messages to expect.
+enum Expected {
+    Stdout,
+    Stderr,
+    Both,
 }
 
-#[derive(Clone, Debug)]
-struct MessageAssertion {
-    payload: &'static str,
-    severity: Severity,
-}
+impl Expected {
+    fn len(&self) -> usize {
+        self.stdout() as usize + self.stderr() as usize
+    }
 
-// TODO(fxbug.dev/87499): Fix flake.
-// TODO(fxbug.dev/69684): Refactor this to receive puppet components
-// through argv once ArchiveAccesor is exposed from Test Runner.
-#[fuchsia::test]
-#[ignore]
-async fn test_components_logs_to_stdout() {
-    let realm = client::realm().expect("failed to connect to fuchsia.component.Realm");
+    fn stdout(&self) -> bool {
+        matches!(self, Expected::Stdout | Expected::Both)
+    }
 
-    let event_source = EventSource::from_proxy(
-        client::connect_to_protocol::<fsys::EventSourceMarker>()
-            .expect("failed to connect to fuchsia.sys2.EventSource"),
-    );
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .expect("failed to create event stream");
-
-    let mut subscription = launch_embedded_archivist().await;
-
-    // Doing this in loop as opposed to separate test cases ensures linear
-    // execution for Archivist's log streams.
-    for (component, message_assertions) in get_all_test_components().iter() {
-        start_child_component(&realm, &component).await;
-        wait_for_stop(&mut event_stream, &component).await;
-
-        // Golang prints messages to stdout and stderr when it finds it's missing any of the stdio
-        // handles. Ignore messages that come from the runtime so we can match on our expectations.
-        // TODO(fxbug.dev/69588): Remove this workaround.
-        let is_go = component.moniker.ends_with("go");
-
-        let messages = subscription
-            .by_ref()
-            .filter(|log| {
-                futures::future::ready(
-                    !(is_go
-                        && log
-                            .msg()
-                            .map(|s| s.to_string())
-                            .map(|s| s.starts_with("runtime") || s.starts_with("syscall"))
-                            .unwrap_or(false)),
-                )
-            })
-            .take(message_assertions.len())
-            .collect::<Vec<_>>()
-            .await;
-        assert_all_have_attribution(&messages, &component);
-
-        for message_assertion in message_assertions.iter() {
-            assert_any_has_content(
-                &messages,
-                message_assertion.payload,
-                message_assertion.severity,
-            );
-        }
+    fn stderr(&self) -> bool {
+        matches!(self, Expected::Stderr | Expected::Both)
     }
 }
 
-fn get_all_test_components() -> Vec<(Component, Vec<MessageAssertion>)> {
-    let stdout_assertion =
-        MessageAssertion { payload: EXPECTED_STDOUT_PAYLOAD, severity: Severity::Info };
-
-    let stderr_assertion =
-        MessageAssertion { payload: EXPECTED_STDERR_PAYLOAD, severity: Severity::Warn };
-
-    TESTED_LANGUAGUES
-        .iter()
-        .flat_map(|language| {
-            vec![
-                (
-                    Component {
-                        url: format!(
-                            "{}#meta/logs-stdout-and-stderr-{}.cm",
-                            BASE_PACKAGE_URL, language
-                        ),
-                        moniker: format!("logs_stdout_and_stderr_{}", language),
-                    },
-                    vec![stdout_assertion.clone(), stderr_assertion.clone()],
-                ),
-                (
-                    Component {
-                        url: format!("{}#meta/logs-stdout-{}.cm", BASE_PACKAGE_URL, language),
-                        moniker: format!("logs_stdout_{}", language),
-                    },
-                    vec![stdout_assertion.clone()],
-                ),
-                (
-                    Component {
-                        url: format!("{}#meta/logs-stderr-{}.cm", BASE_PACKAGE_URL, language),
-                        moniker: format!("logs_stderr_{}", language),
-                    },
-                    vec![stderr_assertion.clone()],
-                ),
-            ]
-        })
-        .collect()
+#[test_case("#meta/logs-stdout-and-stderr-cpp.cm", "logs_stdout_and_stderr_cpp", Expected::Both; "cpp logs to both")]
+#[test_case("#meta/logs-stdout-cpp.cm", "logs_stdout_cpp", Expected::Stdout; "cpp logs to stdout")]
+#[test_case("#meta/logs-stderr-cpp.cm", "logs_stderr_cpp", Expected::Stderr; "cpp logs to stderr")]
+#[test_case("#meta/logs-stdout-and-stderr-go.cm", "logs_stdout_and_stderr_go", Expected::Both; "go logs to both")]
+#[test_case("#meta/logs-stdout-go.cm", "logs_stdout_go", Expected::Stdout; "go logs to stdout")]
+#[test_case("#meta/logs-stderr-go.cm", "logs_stderr_go", Expected::Stderr; "go logs to stderr")]
+#[test_case("#meta/logs-stdout-and-stderr-rust.cm", "logs_stdout_and_stderr_rust", Expected::Both; "rust logs to both")]
+#[test_case("#meta/logs-stdout-rust.cm", "logs_stdout_rust", Expected::Stdout; "rust logs to stdout")]
+#[test_case("#meta/logs-stderr-rust.cm", "logs_stderr_rust", Expected::Stderr; "rust logs to stderr")]
+#[fuchsia::test(add_test_attr = false)]
+fn launch_component_and_check_messages(url: &str, moniker: &str, expected_messages: Expected) {
+    // TODO(https://fxbug.dev/94784) inline `test_inner` once the fuchsia test macro supports it
+    TestExecutor::new().unwrap().run_singlethreaded(test_inner(url, moniker, expected_messages));
 }
 
-async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
-    let (subscription, mut errors) = ArchiveReader::new()
-        .with_minimum_schema_count(0) // we want this to return even when no log messages
-        .retry_if_empty(false)
-        .snapshot_then_subscribe::<Logs>()
-        .unwrap()
-        .split_streams();
+async fn test_inner(url: &str, moniker: &str, expected: Expected) {
+    // start the child in our collection
+    let realm = client::realm().expect("failed to connect to fuchsia.component.Realm");
 
-    Task::spawn(async move {
-        if let Some(error) = errors.next().await {
-            panic!("{:#?}", error);
-        }
-    })
-    .detach();
-
-    subscription
-}
-
-async fn start_child_component(realm: &fcomponent::RealmProxy, component: &Component) {
     let mut collection_ref = fdecl::CollectionRef { name: COLLECTION_NAME.to_owned() };
     let child_decl = fdecl::Child {
-        name: Some(component.moniker.to_owned()),
-        url: Some(component.url.to_owned()),
+        name: Some(moniker.to_owned()),
+        url: Some(url.to_owned()),
         startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
         ..fdecl::Child::EMPTY
     };
-
     realm
         .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
         .await
         .expect("Failed to make FIDL call")
         .expect("Failed to create child");
-
-    let mut child_ref = fdecl::ChildRef {
-        name: component.moniker.to_owned(),
-        collection: Some(COLLECTION_NAME.to_owned()),
-    };
-
-    let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+    let mut child_ref =
+        fdecl::ChildRef { name: moniker.to_owned(), collection: Some(COLLECTION_NAME.to_owned()) };
+    let (exposed_dir, server_end) = create_proxy::<DirectoryMarker>().unwrap();
     realm
         .open_exposed_dir(&mut child_ref, server_end)
         .await
         .expect("failed to make FIDL call")
         .expect("failed to open exposed dir of child");
-
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
-}
+    let full_moniker = &format!("{}:{}", COLLECTION_NAME, moniker);
 
-async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(component.moniker.to_owned())
-        .wait::<Stopped>(event_stream)
+    // wait a little to increase chances we detect extra messages we don't want
+    Timer::new(Duration::from_seconds(3)).await;
+
+    // Golang prints messages to stdout and stderr when it finds it's missing any of the stdio
+    // handles. Ignore messages that come from the runtime so we can match on our expectations.
+    // TODO(fxbug.dev/69588): Remove this workaround.
+    let num_expected = if moniker.ends_with("go") {
+        // wait for the expected number of additional messages from the go runtime
+        expected.len() + if expected.stderr() { 2 } else { 1 }
+    } else {
+        expected.len()
+    };
+    // read log messages
+    let mut messages = ArchiveReader::new()
+        .select_all_for_moniker(full_moniker) // only return logs for this puppet
+        .with_minimum_schema_count(num_expected) // retry until we have the expected number
+        .snapshot::<Logs>()
         .await
-        .expect("failed to observe events");
+        .unwrap()
+        .into_iter()
+        .filter(|log| {
+            // TODO(fxbug.dev/69588): Remove this workaround.
+            !log.msg()
+                .map(|m| m.starts_with("runtime") || m.starts_with("syscall"))
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>();
+    // stdout and stderr are not ordered w.r.t. each other, pick a stable order for assertions
+    messages.sort_by_key(|l| l.metadata.severity);
+    let mut messages = messages.into_iter();
+
+    // assert on the log messages we're reading
+    if expected.stdout() {
+        let observed = messages.next().unwrap();
+        assert_eq!(get_msg(&observed), "Hello Stdout!");
+        assert_eq!(observed.metadata.severity, Severity::Info);
+    }
+    if expected.stderr() {
+        let observed = messages.next().unwrap();
+        assert_eq!(get_msg(&observed), "Hello Stderr!");
+        assert_eq!(observed.metadata.severity, Severity::Warn);
+    }
+    assert_eq!(messages.next(), None, "no more messages expected from child");
 }
 
-#[track_caller]
-fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
-    let check_attribution = |msg: &Data<Logs>| {
-        msg.moniker == format!("{}:{}", COLLECTION_NAME, component.moniker)
-            && msg.metadata.component_url == Some(component.url.to_string())
-    };
-
-    assert!(
-        messages.iter().all(check_attribution),
-        "Messages found without attribution of moniker='{}' and url='{}' in log: {:?}",
-        component.moniker,
-        component.url,
-        messages
-    );
-}
-
-#[track_caller]
-fn assert_any_has_content(messages: &[Data<Logs>], payload: &str, severity: Severity) {
-    let check_content = |msg: &Data<Logs>| {
-        msg.metadata.severity == severity
-            && msg.payload_message().unwrap().get_property("value").unwrap().string().unwrap()
-                == payload
-    };
-
-    assert!(
-        messages.iter().any(check_content),
-        "Message with payload='{}' and severity={} not found in logs: {:?}",
-        payload,
-        severity,
-        messages
-    );
+fn get_msg(m: &Data<Logs>) -> String {
+    m.payload_message().unwrap().get_property("value").unwrap().string().unwrap().to_string()
 }
