@@ -147,7 +147,6 @@ impl FileOps for BinderDev {
 
 #[derive(Debug)]
 struct BinderProcess {
-    #[allow(unused)]
     pid: pid_t,
     /// The [`SharedMemory`] region mapped in both the driver and the binder process. Allows for
     /// transactions to copy data once from the sender process into the receiver process.
@@ -180,14 +179,13 @@ impl BinderProcess {
 #[derive(Debug)]
 struct SharedMemory {
     /// The address in kernel address space where the VMO is mapped.
-    #[allow(unused)]
     kernel_address: *mut u8,
     /// The address in user address space where the VMO is mapped.
-    #[allow(unused)]
     user_address: UserAddress,
     /// The length of the shared memory mapping.
-    #[allow(unused)]
     length: usize,
+    /// The next free address in our bump allocator.
+    next_free_offset: usize,
 }
 
 impl Drop for SharedMemory {
@@ -220,7 +218,49 @@ impl SharedMemory {
                 log::error!("failed to map shared binder region in kernel: {:?}", status);
                 errno!(ENOMEM)
             })?;
-        Ok(Self { kernel_address: kernel_address as *mut u8, user_address, length })
+        Ok(Self {
+            kernel_address: kernel_address as *mut u8,
+            user_address,
+            length,
+            next_free_offset: 0,
+        })
+    }
+
+    // This is a temporary implementation of an allocator and should be replaced by something
+    // more sophisticated. It currently implements a bump allocator strategy.
+    fn allocate_buffer<'a>(&'a mut self, length: usize) -> Result<SharedBuffer<'a>, Errno> {
+        if let Some(offset) = self.next_free_offset.checked_add(length) {
+            if offset <= self.length {
+                let this_offset = self.next_free_offset;
+                self.next_free_offset = offset;
+                return Ok(SharedBuffer { memory: self, offset: this_offset, length });
+            }
+        }
+        error!(ENOMEM)
+    }
+}
+
+/// A buffer of memory allocated from a binder process' [`SharedMemory`].
+#[derive(Debug)]
+struct SharedBuffer<'a> {
+    memory: &'a SharedMemory,
+    // Offset into the shared memory region where this buffer begins.
+    offset: usize,
+    // The length of the buffer.
+    length: usize,
+}
+
+impl<'a> SharedBuffer<'a> {
+    fn as_mut_bytes(&mut self) -> &mut [u8] {
+        // SAFETY: `offset + length` was bounds-checked by `allocate_buffer`, and the memory region
+        // pointed to was zero-allocated by mapping a new VMO.
+        unsafe {
+            std::slice::from_raw_parts_mut(self.memory.kernel_address.add(self.offset), self.length)
+        }
+    }
+
+    fn user_address(&self) -> UserAddress {
+        self.memory.user_address + self.offset
     }
 }
 
@@ -237,10 +277,31 @@ impl ThreadPool {
         self.0.write().entry(tid).or_insert_with(|| Arc::new(BinderThread::new(tid))).clone()
     }
 
+    fn find_thread(&self, tid: pid_t) -> Result<Arc<BinderThread>, Errno> {
+        self.0.read().get(&tid).cloned().ok_or_else(|| errno!(ENOENT))
+    }
+
     /// Finds the first available binder thread that has registered with the driver.
     fn find_available_thread(&self) -> Option<Arc<BinderThread>> {
         self.0.read().iter().find_map(|(_, thread)| {
             if thread.state.read().intersects(ThreadState::BINDER_THREAD) {
+                Some(thread.clone())
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Finds the first available binder thread that can handle a transaction. The thread must not
+    /// be in the middle of handling another transaction, and must be registered with the binder
+    /// driver. If a thread is found, its state is marked as [`ThreadState::HANDLING_TRANSACTION`].
+    fn find_thread_for_transaction(&self) -> Option<Arc<BinderThread>> {
+        self.0.read().iter().find_map(|(_, thread)| {
+            let mut state = thread.state.write();
+            if state.intersects(ThreadState::BINDER_THREAD)
+                && !state.contains(ThreadState::HANDLING_TRANSACTION)
+            {
+                state.insert(ThreadState::HANDLING_TRANSACTION);
                 Some(thread.clone())
             } else {
                 None
@@ -289,13 +350,14 @@ impl HandleTable {
 
 #[derive(Debug)]
 struct BinderThread {
-    #[allow(unused)]
     tid: pid_t,
     /// The state of the thread.
     state: RwLock<ThreadState>,
     /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
     /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
     command_queue: Mutex<VecDeque<Command>>,
+    /// The stack of transactions that are active for this thread.
+    transactions: RwLock<Vec<Transaction>>,
     /// When there are no commands in the command queue, the binder thread can register with this
     /// [`WaitQueue`] to be notified when commands are available.
     waiters: Mutex<WaitQueue>,
@@ -306,6 +368,7 @@ impl BinderThread {
         Self {
             tid,
             state: RwLock::new(ThreadState::empty()),
+            transactions: RwLock::new(Vec::new()),
             command_queue: Mutex::new(VecDeque::new()),
             waiters: Mutex::new(WaitQueue::default()),
         }
@@ -329,6 +392,9 @@ bitflags! {
 
         /// The thread is waiting for commands.
         const WAITING_FOR_COMMAND = 1 << 3;
+
+        /// The thread is currently handling a transaction.
+        const HANDLING_TRANSACTION = 1 << 4;
 
         /// The thread is a main or auxiliary binder thread.
         const BINDER_THREAD = Self::MAIN.bits | Self::REGISTERED.bits;
@@ -355,6 +421,13 @@ enum Command {
     AcquireRef(Ref, BinderObject),
     /// Commands a binder thread to decrement the ref-count (strong/weak) of a binder object.
     ReleaseRef(Ref, BinderObject),
+    /// Commands a binder thread to start processing an incoming transaction from another binder
+    /// process.
+    Transaction(Transaction),
+    /// Commands a binder thread to process an incoming reply to its transaction.
+    Reply(Transaction),
+    /// Notifies a binder thread that a transaction has completed.
+    TransactionComplete,
 }
 
 impl Command {
@@ -365,6 +438,9 @@ impl Command {
             Command::AcquireRef(Ref::Weak, ..) => binder_driver_return_protocol_BR_INCREFS,
             Command::ReleaseRef(Ref::Strong, ..) => binder_driver_return_protocol_BR_RELEASE,
             Command::ReleaseRef(Ref::Weak, ..) => binder_driver_return_protocol_BR_DECREFS,
+            Command::Transaction(..) => binder_driver_return_protocol_BR_TRANSACTION,
+            Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
+            Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
         }
     }
 
@@ -391,6 +467,30 @@ impl Command {
                     },
                 )
             }
+            Command::Transaction(transaction) | Command::Reply(transaction) => {
+                #[repr(C, packed)]
+                #[derive(AsBytes)]
+                struct TransactionData {
+                    command: binder_driver_return_protocol,
+                    transaction: [u8; std::mem::size_of::<binder_transaction_data>()],
+                }
+                if buffer.length < std::mem::size_of::<TransactionData>() {
+                    return error!(ENOMEM);
+                }
+                mm.write_object(
+                    UserRef::new(buffer.address),
+                    &TransactionData {
+                        command: self.driver_return_code(),
+                        transaction: transaction.as_bytes(),
+                    },
+                )
+            }
+            Command::TransactionComplete => {
+                if buffer.length < std::mem::size_of::<binder_driver_return_protocol>() {
+                    return error!(ENOMEM);
+                }
+                mm.write_object(UserRef::new(buffer.address), &self.driver_return_code())
+            }
         }
     }
 }
@@ -415,16 +515,65 @@ struct BinderObject {
     strong_ref_addr: UserAddress,
 }
 
+/// Non-union version of [`binder_transaction_data`].
+#[derive(Debug)]
+struct Transaction {
+    peer_pid: pid_t,
+    peer_tid: pid_t,
+    peer_euid: u32,
+
+    object: FlatBinderObject,
+    code: u32,
+    flags: u32,
+
+    data_buffer: UserBuffer,
+    offsets_buffer: UserBuffer,
+}
+
+impl Transaction {
+    fn as_bytes(&self) -> [u8; std::mem::size_of::<binder_transaction_data>()] {
+        match self.object {
+            FlatBinderObject::Remote { handle } => {
+                struct_with_union_into_bytes!(binder_transaction_data {
+                    target.handle: handle.into(),
+                    cookie: 0,
+                    code: self.code,
+                    flags: self.flags,
+                    sender_pid: self.peer_pid,
+                    sender_euid: self.peer_euid,
+                    data_size: self.data_buffer.length as u64,
+                    offsets_size: self.offsets_buffer.length as u64,
+                    data.ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: self.data_buffer.address.ptr() as u64,
+                        offsets: self.offsets_buffer.address.ptr() as u64,
+                    },
+                })
+            }
+            FlatBinderObject::Local { ref object } => {
+                struct_with_union_into_bytes!(binder_transaction_data {
+                    target.ptr: object.weak_ref_addr.ptr() as u64,
+                    cookie: object.strong_ref_addr.ptr() as u64,
+                    code: self.code,
+                    flags: self.flags,
+                    sender_pid: self.peer_pid,
+                    sender_euid: self.peer_euid,
+                    data_size: self.data_buffer.length as u64,
+                    offsets_size: self.offsets_buffer.length as u64,
+                    data.ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: self.data_buffer.address.ptr() as u64,
+                        offsets: self.offsets_buffer.address.ptr() as u64,
+                    },
+                })
+            }
+        }
+    }
+}
+
 /// Non-union version of [`flat_binder_object`].
 #[derive(Debug)]
 enum FlatBinderObject {
-    Local {
-        object: BinderObject,
-    },
-    Remote {
-        #[allow(unused)]
-        handle: Handle,
-    },
+    Local { object: BinderObject },
+    Remote { handle: Handle },
 }
 
 /// A handle to a binder object.
@@ -496,6 +645,10 @@ struct BinderDriver {
 impl BinderDriver {
     fn new() -> Self {
         Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) }
+    }
+
+    fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
+        self.procs.read().get(&pid).cloned().ok_or_else(|| errno!(ENOENT))
     }
 
     fn find_or_register_process(&self, pid: pid_t) -> Arc<BinderProcess> {
@@ -583,8 +736,8 @@ impl BinderDriver {
                         input.write_size,
                     );
 
-                    // Handle all the data the calling thread sent, which may include multiple work
-                    // items.
+                    // Handle all the data the calling thread sent, which may include multiple
+                    // commands.
                     while cursor.bytes_read() < input.write_size as usize {
                         self.handle_thread_write(
                             current_task,
@@ -631,7 +784,7 @@ impl BinderDriver {
     /// This method will never block.
     fn handle_thread_write<'a>(
         &self,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         cursor: &mut UserMemoryCursor<'a>,
@@ -651,6 +804,12 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_INCREFS_DONE
             | binder_driver_command_protocol_BC_ACQUIRE_DONE => {
                 self.handle_refcount_operation_done(command, binder_thread, cursor)
+            }
+            binder_driver_command_protocol_BC_TRANSACTION => {
+                self.handle_transaction(current_task, binder_proc, binder_thread, cursor)
+            }
+            binder_driver_command_protocol_BC_REPLY => {
+                self.handle_reply(current_task, binder_proc, binder_thread, cursor)
             }
             _ => {
                 log::error!("binder received unknown RW command: 0x{:08x}", command);
@@ -746,7 +905,116 @@ impl BinderDriver {
         Ok(())
     }
 
-    /// Dequeues work from the thread's work queue, or blocks until work is available.
+    /// A binder thread is starting a transaction on a remote binder object.
+    fn handle_transaction<'a>(
+        &self,
+        current_task: &CurrentTask,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
+        cursor: &mut UserMemoryCursor<'a>,
+    ) -> Result<(), Errno> {
+        let data = cursor.read_object::<binder_transaction_data>()?;
+
+        // SAFETY: Transactions can only refer to handles.
+        let handle = unsafe { data.target.handle }.into();
+
+        let (object, target_proc) = self.find_object_and_owner_for_handle(binder_proc, handle)?;
+
+        // Copy the transaction data to the target process.
+        let (data_buffer, offsets_buffer) =
+            self.copy_transaction_buffers(current_task, &target_proc, &data)?;
+
+        // Find a thread to handle the transaction.
+        // TODO: Deal with no threads available.
+        let target_thread = target_proc.thread_pool.find_thread_for_transaction().unwrap();
+
+        let target_euid = current_task
+            .kernel()
+            .pids
+            .read()
+            .get_task(target_thread.tid)
+            .map(|t| t.creds.read().euid)
+            .ok_or_else(|| errno!(ENOENT))?;
+
+        if data.flags & transaction_flags_TF_ONE_WAY != 0 {
+            // The caller is not expecting a reply.
+            binder_thread.enqueue_command(Command::TransactionComplete);
+        } else {
+            // Create a new transaction on the sender so that they can wait on a reply.
+            binder_thread.transactions.write().push(Transaction {
+                peer_pid: target_proc.pid,
+                peer_tid: target_thread.tid,
+                peer_euid: target_euid,
+
+                object: FlatBinderObject::Remote { handle },
+                code: data.code,
+                flags: data.flags,
+
+                data_buffer: UserBuffer::default(),
+                offsets_buffer: UserBuffer::default(),
+            });
+        }
+
+        // Write the transaction to the target process.
+        target_thread.enqueue_command(Command::Transaction(Transaction {
+            peer_pid: binder_proc.pid,
+            peer_tid: binder_thread.tid,
+            peer_euid: current_task.creds.read().euid,
+
+            object,
+            code: data.code,
+            flags: data.flags,
+
+            data_buffer,
+            offsets_buffer,
+        }));
+        Ok(())
+    }
+
+    /// A binder thread is sending a reply to a transaction.
+    fn handle_reply<'a>(
+        &self,
+        current_task: &CurrentTask,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
+        cursor: &mut UserMemoryCursor<'a>,
+    ) -> Result<(), Errno> {
+        let data = cursor.read_object::<binder_transaction_data>()?;
+
+        // Find the process and thread that initiated the transaction. This reply is for them.
+        let (target_proc, target_thread) = {
+            let mut transactions = binder_thread.transactions.write();
+            let transaction = transactions.last_mut().ok_or_else(|| errno!(EINVAL))?;
+            let target_proc = self.find_process(transaction.peer_pid)?;
+            let target_thread = target_proc.thread_pool.find_thread(transaction.peer_tid)?;
+            (target_proc, target_thread)
+        };
+
+        // Copy the transaction data to the target process.
+        let (data_buffer, offsets_buffer) =
+            self.copy_transaction_buffers(current_task, &target_proc, &data)?;
+
+        // Schedule the transaction on the target process' command queue.
+        target_thread.enqueue_command(Command::Reply(Transaction {
+            peer_pid: binder_proc.pid,
+            peer_tid: binder_thread.tid,
+            peer_euid: current_task.creds.read().euid,
+
+            object: FlatBinderObject::Remote { handle: Handle::SpecialServiceManager },
+            code: data.code,
+            flags: data.flags,
+
+            data_buffer,
+            offsets_buffer,
+        }));
+
+        // Schedule the transaction complete command on the caller's command queue.
+        binder_thread.enqueue_command(Command::TransactionComplete);
+
+        Ok(())
+    }
+
+    /// Dequeues a command from the thread's command queue, or blocks until commands are available.
     fn handle_thread_read(
         &self,
         current_task: &CurrentTask,
@@ -761,6 +1029,19 @@ impl BinderDriver {
 
                 // SAFETY: There is an item in the queue since we're in the `Some` branch.
                 match command_queue.pop_front().unwrap() {
+                    Command::Transaction(t) => {
+                        // A transaction has begun, push it onto the transaction stack.
+                        binder_thread.transactions.write().push(t);
+                    }
+                    Command::Reply(_) | Command::TransactionComplete => {
+                        // A transaction is complete, pop it from the transaction stack.
+                        let mut state = binder_thread.state.write();
+                        let mut transactions = binder_thread.transactions.write();
+                        transactions.pop();
+                        if transactions.is_empty() {
+                            state.remove(ThreadState::HANDLING_TRANSACTION);
+                        }
+                    }
                     Command::AcquireRef(_, _) | Command::ReleaseRef(_, _) => {}
                 }
 
@@ -783,6 +1064,44 @@ impl BinderDriver {
             binder_thread.state.write().insert(ThreadState::WAITING_FOR_COMMAND);
             waiter.wait(current_task)?;
         }
+    }
+
+    /// Copies transaction buffers from the source process' address space to a new buffer in the
+    /// target process' shared binder VMO.
+    /// Returns a pair of addresses, the first the address to the transaction data, the second the
+    /// address to the offset buffer.
+    fn copy_transaction_buffers(
+        &self,
+        current_task: &CurrentTask,
+        target_proc: &Arc<BinderProcess>,
+        data: &binder_transaction_data,
+    ) -> Result<(UserBuffer, UserBuffer), Errno> {
+        // Get the shared memory of the target process.
+        let mut shared_memory_lock = target_proc.shared_memory.lock();
+        let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
+
+        let data_size = data.data_size as usize;
+        let offsets_size = data.offsets_size as usize;
+
+        // The total buffer size we need to allocate is the data + offsets.
+        let total_size = data_size.checked_add(offsets_size).ok_or_else(|| errno!(EINVAL))?;
+
+        // Allocate a buffer from the target process' shared memory.
+        let mut shared_buffer = shared_memory.allocate_buffer(total_size)?;
+        let (data_buffer, offsets_buffer) = shared_buffer.as_mut_bytes().split_at_mut(data_size);
+
+        // SAFETY: `binder_transaction_data` was read from a userspace VMO, which means that all
+        // bytes are defined, making union access safe.
+        let userspace_addrs = unsafe { data.data.ptr };
+
+        // Copy the data straight into the target's buffer.
+        current_task.mm.read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer)?;
+        current_task.mm.read_memory(UserAddress::from(userspace_addrs.offsets), offsets_buffer)?;
+
+        let data_buffer = UserBuffer { address: shared_buffer.user_address(), length: data_size };
+        let offsets_buffer =
+            UserBuffer { address: shared_buffer.user_address() + data_size, length: offsets_size };
+        Ok((data_buffer, offsets_buffer))
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
@@ -894,6 +1213,8 @@ pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mm::PAGE_SIZE;
+    use crate::testing::*;
     use assert_matches::assert_matches;
 
     #[test]
@@ -959,5 +1280,138 @@ mod tests {
             .expect("failed to find handle");
         assert_matches!(object, FlatBinderObject::Local { object } if object == expected_object);
         assert!(Arc::ptr_eq(&proc_1, &owning_proc));
+    }
+
+    #[test]
+    fn shared_memory_allocates_multiple_buffers() {
+        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
+        const VMO_LENGTH: usize = 4096;
+
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        let mut shared_memory =
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
+
+        // Check that two buffers allocated from the same shared memory region don't overlap.
+        const BUF1_LEN: usize = 64;
+        let mut buf = shared_memory.allocate_buffer(BUF1_LEN).expect("allocate buffer 1");
+        assert_eq!(buf.user_address(), BASE_ADDR);
+        assert_eq!(buf.as_mut_bytes().len(), BUF1_LEN);
+        buf.as_mut_bytes().fill(0xff);
+
+        const BUF2_LEN: usize = 32;
+        let mut buf = shared_memory.allocate_buffer(BUF2_LEN).expect("allocate buffer 2");
+        assert_eq!(buf.user_address(), BASE_ADDR + BUF1_LEN);
+        assert_eq!(buf.as_mut_bytes().len(), BUF2_LEN);
+        buf.as_mut_bytes().fill(0xaa);
+
+        // Check that the correct bit patterns were written through to the underlying VMO.
+        let mut data = [0u8; BUF1_LEN];
+        vmo.read(&mut data, 0).expect("read VMO failed");
+        assert!(data.iter().all(|b| *b == 0xff));
+
+        let mut data = [0u8; BUF2_LEN];
+        vmo.read(&mut data, BUF1_LEN as u64).expect("read VMO failed");
+        assert!(data.iter().all(|b| *b == 0xaa));
+    }
+
+    #[test]
+    fn shared_memory_too_large_allocation_fails() {
+        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
+        const VMO_LENGTH: usize = 4096;
+
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        let mut shared_memory =
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
+
+        shared_memory.allocate_buffer(VMO_LENGTH + 1).expect_err("out-of-bounds allocation");
+
+        let _ = shared_memory.allocate_buffer(VMO_LENGTH).expect("allocate buffer");
+        shared_memory.allocate_buffer(1).expect_err("out-of-bounds allocation");
+    }
+
+    #[fuchsia::test]
+    async fn copy_transaction_data_between_processes() {
+        let (_kernel, task1) = create_kernel_and_task();
+        let driver = BinderDriver::new();
+
+        // Register a binder process that represents `task1`. This is the source process: data will
+        // be copied out of process ID 1 into process ID 2's shared memory.
+        let _ = driver.find_or_register_process(1);
+
+        // Initialize process 2 with shared memory in the driver.
+        let proc2 = driver.find_or_register_process(2);
+        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
+        const VMO_LENGTH: usize = 4096;
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        *proc2.shared_memory.lock() = Some(
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory"),
+        );
+
+        // Map some memory for process 1.
+        let data_addr = map_memory(&task1, UserAddress::default(), *PAGE_SIZE);
+
+        // Write transaction data in process 1.
+        const BINDER_DATA: &[u8; 8] = b"binder!!";
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(BINDER_DATA);
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_HANDLE },
+            flags: 0,
+            __bindgen_anon_1.handle: 0,
+            cookie: 0,
+        }));
+
+        let offsets_addr = data_addr
+            + task1
+                .mm
+                .write_memory(data_addr, &transaction_data)
+                .expect("failed to write transaction data");
+
+        // Write the offsets data (where in the data buffer `flat_binder_object`s are).
+        let offsets_data: u64 = BINDER_DATA.len() as u64;
+        task1
+            .mm
+            .write_object(UserRef::new(offsets_addr), &offsets_data)
+            .expect("failed to write offsets buffer");
+
+        // Construct the `binder_transaction_data` struct that contains pointers to the data and
+        // offsets buffers.
+        let transaction = binder_transaction_data {
+            code: 1,
+            flags: 0,
+            sender_pid: 1,
+            sender_euid: 0,
+            target: binder_transaction_data__bindgen_ty_1 { handle: 0 },
+            cookie: 0,
+            data_size: transaction_data.len() as u64,
+            offsets_size: std::mem::size_of::<u64>() as u64,
+            data: binder_transaction_data__bindgen_ty_2 {
+                ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                    buffer: data_addr.ptr() as u64,
+                    offsets: offsets_addr.ptr() as u64,
+                },
+            },
+        };
+
+        // Copy the data from process 1 to process 2
+        let (data_buffer, offsets_buffer) =
+            driver.copy_transaction_buffers(&task1, &proc2, &transaction).expect("copy data");
+
+        // Check that the returned buffers are in-bounds of process 2's shared memory.
+        assert!(data_buffer.address >= BASE_ADDR);
+        assert!(data_buffer.address < BASE_ADDR + VMO_LENGTH);
+        assert!(offsets_buffer.address >= BASE_ADDR);
+        assert!(offsets_buffer.address < BASE_ADDR + VMO_LENGTH);
+
+        // Verify the contents of the copied data in process 2's shared memory VMO.
+        let mut buffer = [0u8; BINDER_DATA.len() + std::mem::size_of::<flat_binder_object>()];
+        vmo.read(&mut buffer, (data_buffer.address - BASE_ADDR) as u64)
+            .expect("failed to read data");
+        assert_eq!(&buffer[..], &transaction_data);
+
+        let mut buffer = [0u8; std::mem::size_of::<u64>()];
+        vmo.read(&mut buffer, (offsets_buffer.address - BASE_ADDR) as u64)
+            .expect("failed to read offsets");
+        assert_eq!(&buffer[..], offsets_data.as_bytes());
     }
 }
