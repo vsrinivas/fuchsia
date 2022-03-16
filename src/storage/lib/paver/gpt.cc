@@ -107,7 +107,7 @@ zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_r
     return pauser.take_error();
   }
   auto result = fidl::WireCall<fuchsia_device::Controller>(std::move(chan))
-                    ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                    ->Rebind(fidl::StringView("gpt.so"));
   return zx::make_status(result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK)
                                      : result.status());
 }

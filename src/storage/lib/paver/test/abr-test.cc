@@ -183,7 +183,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
 
     fdio_cpp::UnownedFdioCaller caller(disk_->fd());
     auto result2 = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
-                       ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result2.ok());
     ASSERT_FALSE(result2->result.is_err());
   }
@@ -297,7 +297,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
 
     fdio_cpp::UnownedFdioCaller caller(disk_->fd());
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
-                      ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                      ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->result.is_err());
   }

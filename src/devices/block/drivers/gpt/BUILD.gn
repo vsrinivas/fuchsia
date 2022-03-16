@@ -16,12 +16,14 @@ group("tests") {
 }
 
 driver_bind_rules("gpt_bind") {
-  disable_autobind = true
   rules = "gpt.bind"
   header_output = "gpt_bind.h"
   bind_output = "gpt.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.hardware.block",
+  ]
 }
 
 fuchsia_driver("gpt-driver") {
