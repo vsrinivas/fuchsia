@@ -76,17 +76,22 @@ fuchsia_driver_component("zxcrypt") {
 }
 
 driver_bind_rules("bind") {
-  disable_autobind = true
   rules = "zxcrypt.bind"
   header_output = "zxcrypt-bind.h"
   bind_output = "zxcrypt.bindbc"
-  deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.hardware.block",
+  ]
 }
 
 bind_test("zxcrypt-bind-test") {
   rules = "zxcrypt.bind"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.hardware.block",
+  ]
 }
 
 test("device-manager-test-bin") {
