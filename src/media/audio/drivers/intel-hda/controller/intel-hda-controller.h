@@ -158,6 +158,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   void UpdateMiscbdcge(bool enable);
   void PreResetControllerHardware();
   void PostResetControllerHardware();
+  zx_status_t ResetControllerHardwareInternal();
 
   // VMAR for memory mapped registers.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;

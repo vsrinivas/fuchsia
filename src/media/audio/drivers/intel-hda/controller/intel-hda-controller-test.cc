@@ -36,21 +36,23 @@ class HdaControllerTest : public zxtest::Test {
                                          kHdaBar0Size, &vaddr));
     // We now fake part of the BAR 0 register values.
     // We fake at least those needed by the reset of the controller hardware.
-    auto regs = reinterpret_cast<hda_all_registers_t*>(vaddr);
-    regs->regs.vmaj = 0x01;
-    regs->regs.vmin = 0x00;
+    regs_ = reinterpret_cast<hda_all_registers_t*>(vaddr);
+    regs_->regs.vmaj = 0x01;
+    regs_->regs.vmin = 0x00;
     parent_ = MockDevice::FakeRootParent();
     parent_->AddProtocol(ZX_PROTOCOL_PCI, pci_.get_protocol().ops, pci_.get_protocol().ctx, "pci");
   }
 
   MockDevice* parent() const { return parent_.get(); }
   pci::FakePciProtocol& pci() { return pci_; }
+  hda_all_registers_t* regs() { return regs_; }
 
  private:
   static constexpr size_t kHdaBar0Size = 0x4000;
 
   pci::FakePciProtocol pci_;
   std::shared_ptr<MockDevice> parent_;
+  hda_all_registers_t* regs_;
 };
 
 TEST_F(HdaControllerTest, HardwareResetMiscellaneousBackboneDynamicClockGatingEnable) {
@@ -72,6 +74,43 @@ TEST_F(HdaControllerTest, HardwareResetMiscellaneousBackboneDynamicClockGatingEn
   // After resetting the controller HW the BDCGE bit is set.
   config->read(&val, kPciRegCgctl, sizeof(uint32_t));
   ASSERT_EQ(val, kPciRegCgctlBitMaskMiscbdcge);
+}
+
+TEST_F(HdaControllerTest, HardwareResetStateSts) {
+  acpi::mock::Device mock_acpi;
+  async::Loop acpi_async_loop(&kAsyncLoopConfigNeverAttachToThread);
+  auto acpi_client = mock_acpi.CreateClient(acpi_async_loop.dispatcher());
+  TestIntelHDAController controller(std::move(acpi_client.value()));
+
+  // We set the HW to initially not be in reset.
+  // During HW reset the driver will clear this bit and wait until it is cleared in the hardware.
+  // Similarly the driver will later set this bit to take the HW out of reset and wait until the
+  // bit is set in the HW.
+  // During this test the bit is changed in memory as the driver sets or clears it, so the wait is
+  // virtually gone.
+  regs()->regs.gctl = HDA_REG_GCTL_HWINIT;
+
+  // Before resetting the controller HW the STATUSSTS register is not cleared.
+  ASSERT_EQ(regs()->regs.statests, 0);
+
+  ASSERT_OK(controller.SetupPCIDevice(parent()));
+  ASSERT_OK(controller.ResetControllerHardware());
+
+  // After resetting the controller HW the STATUSSTS register is cleared.
+  ASSERT_EQ(regs()->regs.statests, HDA_REG_STATESTS_MASK);
+}
+
+TEST_F(HdaControllerTest, HardwareResetError) {
+  acpi::mock::Device mock_acpi;
+  async::Loop acpi_async_loop(&kAsyncLoopConfigNeverAttachToThread);
+  auto acpi_client = mock_acpi.CreateClient(acpi_async_loop.dispatcher());
+  TestIntelHDAController controller(std::move(acpi_client.value()));
+
+  // We set the HDA HW version to be incorrect such that reset fails even after retries.
+  regs()->regs.vmaj = 0x99;
+
+  ASSERT_OK(controller.SetupPCIDevice(parent()));
+  ASSERT_EQ(controller.ResetControllerHardware(), ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace audio::intel_hda

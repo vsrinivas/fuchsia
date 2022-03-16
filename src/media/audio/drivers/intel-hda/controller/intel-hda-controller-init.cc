@@ -74,11 +74,26 @@ IntelHDAController::HdaVersion IntelHDAController::GetHardwareVersion() {
 }
 
 zx_status_t IntelHDAController::ResetControllerHardware() {
+  PreResetControllerHardware();
+  auto cleanup = fit::defer([this]() { PostResetControllerHardware(); });
+
+  constexpr size_t kNumberOfRetries = 3;
+  size_t count = kNumberOfRetries;
+  zx_status_t status = ZX_OK;
+  while (count--) {
+    status = ResetControllerHardwareInternal();
+    if (status == ZX_OK) {
+      return ZX_OK;
+    } else {
+      LOG(ERROR, "Controller reset failed, count %zu", count);
+    }
+  }
+  return status;
+}
+
+zx_status_t IntelHDAController::ResetControllerHardwareInternal() {
   zx_status_t res;
 
-  PreResetControllerHardware();
-
-  auto cleanup = fit::defer([this]() { PostResetControllerHardware(); });
   // Are we currently being held in reset?  If not, try to make sure that all
   // of our DMA streams are stopped and have been reset (but are not being
   // held in reset) before cycling the controller.  Anecdotally, holding a
@@ -118,6 +133,9 @@ zx_status_t IntelHDAController::ResetControllerHardware() {
     // Explicitly shut down any CORB/RIRB DMA
     REG_WR(&regs()->corbctl, 0u);
     REG_WR(&regs()->rirbctl, 0u);
+
+    // If we are not in reset we clear STATESTS by setting all bits in its mask.
+    REG_SET_BITS(&regs()->statests, HDA_REG_STATESTS_MASK);
   }
 
   // Assert the reset signal and wait for the controller to ack.
@@ -603,7 +621,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     return res;
   }
 
-  // Completely reset the hardware
+  // Completely reset the hardware.
   res = ResetControllerHardware();
   if (res != ZX_OK) {
     return res;
