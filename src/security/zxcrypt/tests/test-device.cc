@@ -55,7 +55,7 @@ namespace {
 const zx::duration kTimeout = zx::sec(3);
 
 // FVM driver library
-const char* kFvmDriver = "/boot/driver/fvm.so";
+const char* kFvmDriver = "fvm.so";
 
 // Translates |result| into a zx_status_t.
 zx_status_t ToStatus(ssize_t result) {

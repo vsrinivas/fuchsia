@@ -8,12 +8,14 @@ import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("fvm_bind") {
-  disable_autobind = true
   rules = "fvm.bind"
   header_output = "fvm_bind.h"
   bind_output = "fvm.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.hardware.block",
+  ]
 }
 
 fuchsia_driver("fuchsia_driver") {

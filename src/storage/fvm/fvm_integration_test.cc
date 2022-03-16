@@ -66,7 +66,7 @@
 #include "src/storage/minfs/format.h"
 #include "zircon/errors.h"
 
-#define FVM_DRIVER_LIB "/boot/driver/fvm.so"
+#define FVM_DRIVER_LIB "fvm.so"
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 namespace {

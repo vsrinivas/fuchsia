@@ -203,7 +203,7 @@ class FactoryResetTest : public Test {
 
   void BindFvm() {
     fbl::unique_fd ramdisk_fd(ramdisk_get_block_fd(ramdisk_client_));
-    ASSERT_EQ(AttachDriver(ramdisk_fd, "/boot/driver/fvm.so"), ZX_OK);
+    ASSERT_EQ(AttachDriver(ramdisk_fd, "fvm.so"), ZX_OK);
   }
 
   void CreateFvmPartition() {

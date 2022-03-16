@@ -265,7 +265,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
   }
 
   fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
-  constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
+  constexpr char kFvmDriverLib[] = "fvm.so";
   auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                   ->Rebind(fidl::StringView(kFvmDriverLib));
   status = resp.status();
