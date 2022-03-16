@@ -56,6 +56,8 @@ the `--debug-mode` flag:
 run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --debug-mode
 ```
 
+If connecting to the agent via `ffx debug`, add `--debug-mode` to the `args` array in `//src/developer/debug/debug_agent/meta/debug_agent_channel.cmx`.
+
 It is also possible to attach the debugger to the debugger. The preferred way to do this is to make
 zxdb catch the debugger on launch using the filtering feature. This is done frequently by the
 debugger team.
