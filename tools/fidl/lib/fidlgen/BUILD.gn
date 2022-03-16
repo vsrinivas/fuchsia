@@ -18,6 +18,8 @@ go_library("fidlgen") {
     "reserved_names.go",
     "strings.go",
     "strings_test.go",
+    "struct.go",
+    "struct_test.go",
     "templates.go",
     "types.go",
     "types_test.go",

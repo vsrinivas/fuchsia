@@ -5,7 +5,6 @@
 package codegen
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -95,8 +94,8 @@ type Struct struct {
 	Derives                                              derives
 	Name                                                 string
 	Members                                              []StructMember
-	PaddingMarkersV1, PaddingMarkersV2                   []PaddingMarker
-	FlattenedPaddingMarkersV1, FlattenedPaddingMarkersV2 []PaddingMarker
+	PaddingMarkersV1, PaddingMarkersV2                   []rustPaddingMarker
+	FlattenedPaddingMarkersV1, FlattenedPaddingMarkersV2 []rustPaddingMarker
 	SizeV1, SizeV2                                       int
 	AlignmentV1, AlignmentV2                             int
 	HasPadding                                           bool
@@ -115,13 +114,6 @@ type StructMember struct {
 	HasHandleMetadata  bool
 	HandleRights       string
 	HandleSubtype      string
-}
-
-type PaddingMarker struct {
-	Type   string
-	Offset int
-	// Mask is a string so it can be in hex.
-	Mask string
 }
 
 type Table struct {
@@ -1107,121 +1099,6 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 }
 
-func getTypeShapeV1(s fidlgen.Struct) fidlgen.TypeShape {
-	return s.TypeShapeV1
-}
-func getTypeShapeV2(s fidlgen.Struct) fidlgen.TypeShape {
-	return s.TypeShapeV2
-}
-func getFieldShapeV1(m fidlgen.StructMember) fidlgen.FieldShape {
-	return m.FieldShapeV1
-}
-func getFieldShapeV2(m fidlgen.StructMember) fidlgen.FieldShape {
-	return m.FieldShapeV2
-}
-
-func (c *compiler) populateFullStructMaskForStruct(mask []byte, val fidlgen.Struct, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) {
-	paddingEnd := getTypeShape(val).InlineSize - 1
-	for i := len(val.Members) - 1; i >= 0; i-- {
-		member := val.Members[i]
-		fieldShape := getFieldShape(member)
-		if flatten {
-			c.populateFullStructMaskForType(mask[fieldShape.Offset:paddingEnd+1], &member.Type, flatten, getTypeShape, getFieldShape)
-		}
-		for j := 0; j < fieldShape.Padding; j++ {
-			mask[paddingEnd-j] = 0xff
-		}
-		paddingEnd = fieldShape.Offset - 1
-	}
-}
-
-func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) {
-	if typ.Nullable {
-		return
-	}
-	switch typ.Kind {
-	case fidlgen.ArrayType:
-		elemByteSize := len(mask) / *typ.ElementCount
-		for i := 0; i < *typ.ElementCount; i++ {
-			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten, getTypeShape, getFieldShape)
-		}
-	case fidlgen.IdentifierType:
-		if c.inExternalLibrary(typ.Identifier.Parse()) {
-			// This behavior is matched by computeUseFullStructCopy.
-			return
-		}
-		declType := c.decls[typ.Identifier].Type
-		if declType == fidlgen.StructDeclType {
-			st, ok := c.structs[typ.Identifier]
-			if !ok {
-				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
-			}
-			c.populateFullStructMaskForStruct(mask, st, flatten, getTypeShape, getFieldShape)
-		}
-	}
-}
-
-func (c *compiler) buildPaddingMarkers(val fidlgen.Struct, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) []PaddingMarker {
-	var paddingMarkers []PaddingMarker
-
-	// Construct a mask across the whole struct with 0xff bytes where there is padding.
-	fullStructMask := make([]byte, getTypeShape(val).InlineSize)
-	c.populateFullStructMaskForStruct(fullStructMask, val, flatten, getTypeShape, getFieldShape)
-
-	// Split up the mask into aligned integer mask segments that can be outputted in the
-	// fidl_struct! macro.
-	// Only the sections needing padding are outputted.
-	// e.g. 00ffff0000ffff000000000000000000 -> 00ffff0000ffff00, 0000000000000000
-	//                                       -> []PaddingMarker{"u64", 0, "0x00ffff0000ffff00u64"}
-	extractNonzeroSliceOffsets := func(stride int) []int {
-		var offsets []int
-		for endi := stride - 1; endi < len(fullStructMask); endi += stride {
-			i := endi - (stride - 1)
-			if bytes.Contains(fullStructMask[i:i+stride], []byte{0xff}) {
-				offsets = append(offsets, i)
-			}
-		}
-		return offsets
-	}
-	zeroSlice := func(s []byte) {
-		for i := range s {
-			s[i] = 0
-		}
-	}
-	for _, i := range extractNonzeroSliceOffsets(8) {
-		s := fullStructMask[i : i+8]
-		paddingMarkers = append(paddingMarkers, PaddingMarker{
-			Type:   "u64",
-			Offset: i,
-			Mask:   fmt.Sprintf("0x%016xu64", binary.LittleEndian.Uint64(s)),
-		})
-		zeroSlice(s) // Reset the buffer for the next iteration.
-	}
-	for _, i := range extractNonzeroSliceOffsets(4) {
-		s := fullStructMask[i : i+4]
-		paddingMarkers = append(paddingMarkers, PaddingMarker{
-			Type:   "u32",
-			Offset: i,
-			Mask:   fmt.Sprintf("0x%08xu32", binary.LittleEndian.Uint32(s)),
-		})
-		zeroSlice(s) // Reset the buffer for the next iteration.
-	}
-	for _, i := range extractNonzeroSliceOffsets(2) {
-		s := fullStructMask[i : i+2]
-		paddingMarkers = append(paddingMarkers, PaddingMarker{
-			Type:   "u16",
-			Offset: i,
-			Mask:   fmt.Sprintf("0x%04xu16", binary.LittleEndian.Uint16(s)),
-		})
-		zeroSlice(s) // Reset the buffer for the next iteration.
-	}
-	if bytes.Contains(fullStructMask, []byte{0xff}) {
-		// This shouldn't be possible because it requires an alignment 1 struct to have padding.
-		panic(fmt.Sprintf("expected mask to be zero, was %v", fullStructMask))
-	}
-	return paddingMarkers
-}
-
 func (c *compiler) computeUseFidlStructCopyForStruct(st fidlgen.Struct) bool {
 	for _, member := range st.Members {
 		if !c.computeUseFidlStructCopy(&member.Type) {
@@ -1268,6 +1145,62 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 	}
 }
 
+func (c *compiler) resolveStruct(identifier fidlgen.EncodedCompoundIdentifier) *fidlgen.Struct {
+	if c.inExternalLibrary(identifier.Parse()) {
+		// This behavior is matched by computeUseFullStructCopy.
+		return nil
+	}
+	declType := c.decls[identifier].Type
+	if declType == fidlgen.StructDeclType {
+		st, ok := c.structs[identifier]
+		if !ok {
+			panic(fmt.Sprintf("struct not found: %v", identifier))
+		}
+		return &st
+	}
+	return nil
+}
+
+type rustPaddingMarker struct {
+	Type   string
+	Offset int
+	// Mask is a string so it can be in hex.
+	Mask string
+}
+
+func toRustPaddingMarker(in fidlgen.PaddingMarker) rustPaddingMarker {
+	switch len(in.Mask) {
+	case 2:
+		return rustPaddingMarker{
+			Type:   "u16",
+			Offset: in.Offset,
+			Mask:   fmt.Sprintf("0x%04xu16", binary.LittleEndian.Uint16(in.Mask)),
+		}
+	case 4:
+		return rustPaddingMarker{
+			Type:   "u32",
+			Offset: in.Offset,
+			Mask:   fmt.Sprintf("0x%08xu32", binary.LittleEndian.Uint32(in.Mask)),
+		}
+	case 8:
+		return rustPaddingMarker{
+			Type:   "u64",
+			Offset: in.Offset,
+			Mask:   fmt.Sprintf("0x%016xu64", binary.LittleEndian.Uint64(in.Mask)),
+		}
+	default:
+		panic("unexpected mask size")
+	}
+}
+
+func toRustPaddingMarkers(in []fidlgen.PaddingMarker) []rustPaddingMarker {
+	var out []rustPaddingMarker
+	for _, m := range in {
+		out = append(out, toRustPaddingMarker(m))
+	}
+	return out
+}
+
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
@@ -1279,10 +1212,10 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		SizeV2:                    val.TypeShapeV2.InlineSize,
 		AlignmentV1:               val.TypeShapeV1.Alignment,
 		AlignmentV2:               val.TypeShapeV2.Alignment,
-		PaddingMarkersV1:          c.buildPaddingMarkers(val, false, getTypeShapeV1, getFieldShapeV1),
-		PaddingMarkersV2:          c.buildPaddingMarkers(val, false, getTypeShapeV2, getFieldShapeV2),
-		FlattenedPaddingMarkersV1: c.buildPaddingMarkers(val, true, getTypeShapeV1, getFieldShapeV1),
-		FlattenedPaddingMarkersV2: c.buildPaddingMarkers(val, true, getTypeShapeV2, getFieldShapeV2),
+		PaddingMarkersV1:          toRustPaddingMarkers(val.BuildPaddingMarkers(fidlgen.WireFormatVersionV1)),
+		PaddingMarkersV2:          toRustPaddingMarkers(val.BuildPaddingMarkers(fidlgen.WireFormatVersionV2)),
+		FlattenedPaddingMarkersV1: toRustPaddingMarkers(val.BuildFlattenedPaddingMarkers(fidlgen.WireFormatVersionV1, c.resolveStruct)),
+		FlattenedPaddingMarkersV2: toRustPaddingMarkers(val.BuildFlattenedPaddingMarkers(fidlgen.WireFormatVersionV2, c.resolveStruct)),
 	}
 
 	for _, v := range val.Members {
