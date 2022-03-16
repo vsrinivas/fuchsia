@@ -259,6 +259,52 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   }
 }
 
+TEST_F(VirtioBlockTest, UnderflowOnWrite) {
+  virtio_blk_req_t header = {
+      .type = VIRTIO_BLK_T_OUT,
+      .sector = 0,
+  };
+  std::vector<uint8_t> sector((kNumSectors + 1) * kBlockSectorSize, UINT8_MAX);
+  uint8_t* blk_status;
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(sector.data(), static_cast<uint32_t>(sector.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
+  ASSERT_EQ(ZX_OK, status);
+
+  status = block_->NotifyQueue(0);
+  ASSERT_EQ(ZX_OK, status);
+  status = WaitOnInterrupt();
+  ASSERT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
+}
+
+TEST_F(VirtioBlockTest, BadWriteOffset) {
+  virtio_blk_req_t header = {
+      .type = VIRTIO_BLK_T_OUT,
+      .sector = kNumSectors,
+  };
+  std::vector<uint8_t> sector(kBlockSectorSize, UINT8_MAX);
+  uint8_t* blk_status;
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(sector.data(), static_cast<uint32_t>(sector.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
+  ASSERT_EQ(ZX_OK, status);
+
+  status = block_->NotifyQueue(0);
+  ASSERT_EQ(ZX_OK, status);
+  status = WaitOnInterrupt();
+  ASSERT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
+}
+
 TEST_F(VirtioBlockTest, Write) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
@@ -279,6 +325,39 @@ TEST_F(VirtioBlockTest, Write) {
   ASSERT_EQ(ZX_OK, status);
 
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
+}
+
+TEST_F(VirtioBlockTest, WriteGoodAndBadSectors) {
+  virtio_blk_req_t header = {
+      .type = VIRTIO_BLK_T_OUT,
+      .sector = 1,
+  };
+
+  std::vector<uint8_t> block_1(kBlockSectorSize, 0xff);
+  std::vector<uint8_t> block_2(kBlockSectorSize, 0xaa);
+
+  uint8_t* blk_status;
+  zx_status_t status =
+      DescriptorChainBuilder(request_queue_)
+          .AppendReadableDescriptor(&header, sizeof(header))
+          .AppendReadableDescriptor(block_1.data(), static_cast<uint32_t>(block_1.size()))
+          .AppendReadableDescriptor(block_2.data(), static_cast<uint32_t>(block_2.size()))
+          .AppendWritableDescriptor(&blk_status, sizeof(*blk_status))
+          .Build();
+  ASSERT_EQ(ZX_OK, status);
+
+  status = block_->NotifyQueue(0);
+  ASSERT_EQ(ZX_OK, status);
+  status = WaitOnInterrupt();
+  ASSERT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
+
+  // Check sector 2 to ensure we didn't overwrite it
+  std::vector<uint8_t> result(2 * kBlockSectorSize, 0);
+  ASSERT_EQ(pread(fd_.get(), result.data(), result.size(), kBlockSectorSize),
+            static_cast<const long>(kBlockSectorSize));
+  ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
 }
 
 TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {

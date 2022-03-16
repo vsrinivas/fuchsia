@@ -14,6 +14,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <safemath/checked_math.h>
 #include <virtio/block.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
@@ -137,10 +138,11 @@ class RequestStream : public StreamBase {
       : watchdog_(dispatcher), executor_(executor) {}
 
   void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id, const PhysMem& phys_mem,
-            VirtioQueue::InterruptFn interrupt) {
+            VirtioQueue::InterruptFn interrupt, uint64_t disp_capacity) {
     dispatcher_ = std::move(disp);
     id_ = id;
     StreamBase::Init(phys_mem, std::move(interrupt));
+    capacity_ = disp_capacity;
   }
 
   void DoRequest(bool read_only) {
@@ -206,6 +208,7 @@ class RequestStream : public StreamBase {
  private:
   std::unique_ptr<BlockDispatcher> dispatcher_;
   std::string id_;
+  uint64_t capacity_ = 0;
 
   // Retain a buffer here that will be used to store the set of requests sent to the
   // BlockDispatcher for fulfillment. This is simply to avoid constant reallocations.
@@ -251,6 +254,13 @@ class RequestStream : public StreamBase {
     while (request->NextDescriptor(&desc_, false /* writable */)) {
       const uint32_t size = desc_.len;
       if (size % kBlockSectorSize != 0) {
+        request->SetStatus(VIRTIO_BLK_S_IOERR);
+        continue;
+      }
+
+      uint64_t capacity_difference;
+      if (!safemath::CheckSub(capacity_, size).AssignIfValid(&capacity_difference) ||
+          capacity_difference < off) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
@@ -340,18 +350,19 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     read_only_ = mode == fuchsia::virtualization::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
-    NestedBlockDispatcherCallback nested =
-        [this, id = std::move(id), callback = std::move(callback), format, mode](
-            uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher> disp) {
-          request_stream_.Init(
-              std::move(disp), id, phys_mem_,
-              fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt));
-          callback(capacity, block_size);
+    NestedBlockDispatcherCallback nested = [this, id = std::move(id),
+                                            callback = std::move(callback), format,
+                                            mode](uint64_t capacity, uint32_t block_size,
+                                                  std::unique_ptr<BlockDispatcher> disp) {
+      request_stream_.Init(
+          std::move(disp), id, phys_mem_,
+          fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt), capacity);
+      callback(capacity, block_size);
 
-          FX_LOGS(INFO) << "Started block device '" << id << "' with capacity " << capacity
-                        << " and block size " << block_size << " format "
-                        << block_format_string(format) << " mode " << block_mode_string(mode);
-        };
+      FX_LOGS(INFO) << "Started block device '" << id << "' with capacity " << capacity
+                    << " and block size " << block_size << " format " << block_format_string(format)
+                    << " mode " << block_mode_string(mode);
+    };
 
     if (format == fuchsia::virtualization::BlockFormat::BLOCK) {
       CreateRemoteBlockDispatcher(std::move(client), phys_mem_, std::move(nested));
