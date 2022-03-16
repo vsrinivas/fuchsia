@@ -574,8 +574,9 @@ action("flash_script") {
   }
 }
 
-fastboot_credentials = []
-archive_fastboot_credentials = []
+fastboot_credential_deps = []
+fastboot_credential_paths = []
+fastboot_credential_archive_paths = []
 
 foreach(cred_path, board_fastboot_unlock_credentials) {
   name = get_path_info(cred_path, "name")
@@ -601,10 +602,15 @@ foreach(cred_path, board_fastboot_unlock_credentials) {
     }
   }
 
-  default_image_deps += [ ":${target_name}" ]
-  fastboot_credentials += [ out_path ]
-  archive_fastboot_credentials += [ get_path_info(out_path, "file") ]
+  fastboot_credential_deps += [ ":${target_name}" ]
+  fastboot_credential_paths += [ out_path ]
+  fastboot_credential_archive_paths += [ get_path_info(out_path, "file") ]
 }
+
+group("fastboot_credentials") {
+  deps = fastboot_credential_deps
+}
+default_image_deps += [ ":fastboot_credentials" ]
 
 fuchsia_bootloader_partitions = bootloader_parts
 fuchsia_requires_unlock = false
@@ -651,7 +657,7 @@ if (bootstrap_parts != []) {
 
 flash_manifest_content = {
   hw_revision = "${board_name}"
-  credentials = fastboot_credentials
+  credentials = fastboot_credential_paths
   products = flash_manifest_products
 }
 
@@ -662,6 +668,7 @@ generated_file("fastboot_manifest") {
   output_conversion = "json"
   deps = [
     ":board_tools",
+    ":fastboot_credentials",
     ":flash_script",
   ]
 
@@ -803,7 +810,7 @@ if (archive_bootstrap_parts != []) {
 
 archive_flash_manifest_content = {
   hw_revision = "${board_name}"
-  credentials = archive_fastboot_credentials
+  credentials = fastboot_credential_archive_paths
   products = archive_flash_manifest_products
 }
 
