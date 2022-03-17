@@ -1012,24 +1012,15 @@ mod tests {
                 next_hop: dst_ip,
                 proto: IpProto::Udp.into(),
                 ttl: None,
+                mtu: None,
             };
             #[ipv4addr]
-            crate::ip::send_ipv4_packet_from_device(
-                ctx,
-                meta,
-                Buf::new(vec![1, 2, 3, 4], ..),
-                None,
-            )
-            .unwrap();
+            crate::ip::send_ipv4_packet_from_device(ctx, meta, Buf::new(vec![1, 2, 3, 4], ..))
+                .unwrap();
 
             #[ipv6addr]
-            crate::ip::send_ipv6_packet_from_device(
-                ctx,
-                meta,
-                Buf::new(vec![1, 2, 3, 4], ..),
-                None,
-            )
-            .unwrap();
+            crate::ip::send_ipv6_packet_from_device(ctx, meta, Buf::new(vec![1, 2, 3, 4], ..))
+                .unwrap();
         }
 
         let device_builder_id = 0;

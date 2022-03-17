@@ -163,6 +163,7 @@ fn send_ndp_packet<
             next_hop: dst_ip,
             ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
             proto: Ipv6Proto::Icmpv6,
+            mtu: None,
         },
         body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             src_ip,
@@ -170,7 +171,6 @@ fn send_ndp_packet<
             code,
             message,
         )),
-        None,
     )
     .map_err(|s| s.into_inner())
 }

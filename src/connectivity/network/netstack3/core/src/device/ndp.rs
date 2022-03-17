@@ -3073,9 +3073,9 @@ mod tests {
                 next_hop: remote_ip().into_specified(),
                 proto: Ipv6Proto::Icmpv6,
                 ttl: None,
+                mtu: None,
             },
             body,
-            None,
         )
         .unwrap();
         // This should've triggered a neighbor solicitation to come out of
@@ -4134,9 +4134,9 @@ mod tests {
                     next_hop: config.remote_ip,
                     proto: IpProto::Tcp.into(),
                     ttl: None,
+                    mtu: None,
                 },
                 Buf::new(vec![0; 10], ..),
-                None,
             )
             .unwrap();
             let (buf, _, _, _) =

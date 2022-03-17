@@ -1485,7 +1485,8 @@ mod tests {
             SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
             Vec<u8>,
         )| {
-            let SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ } = meta;
+            let SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _, mtu: _ } =
+                meta;
             assert_eq!(next_hop, &remote_ip);
             assert_eq!(src_ip, &local_ip);
             assert_eq!(dst_ip, &remote_ip);
@@ -1577,8 +1578,10 @@ mod tests {
         assert_eq!(frames.len(), 1);
 
         // Check first frame.
-        let (SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ }, frame_body) =
-            &frames[0];
+        let (
+            SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _, mtu: _ },
+            frame_body,
+        ) = &frames[0];
         assert_eq!(next_hop, &remote_ip);
         assert_eq!(src_ip, &local_ip);
         assert_eq!(dst_ip, &remote_ip);
@@ -1768,8 +1771,10 @@ mod tests {
         assert_eq!(frames.len(), 1);
 
         // Check first frame.
-        let (SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ }, frame_body) =
-            &frames[0];
+        let (
+            SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _, mtu: _ },
+            frame_body,
+        ) = &frames[0];
         assert_eq!(next_hop, &remote_ip);
         assert_eq!(src_ip, &local_ip);
         assert_eq!(dst_ip, &remote_ip);

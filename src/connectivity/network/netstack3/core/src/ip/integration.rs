@@ -72,7 +72,7 @@ impl<B: BufferMut, C: BufferIpLayerContext<Ipv4, B> + IpDeviceContext<Ipv4>>
         meta: SendIpPacketMeta<Ipv4, C::DeviceId, SpecifiedAddr<Ipv4Addr>>,
         body: S,
     ) -> Result<(), S> {
-        send_ipv4_packet_from_device(self, meta.into(), body, None)
+        send_ipv4_packet_from_device(self, meta.into(), body)
     }
 }
 
@@ -84,6 +84,6 @@ impl<B: BufferMut, C: BufferIpLayerContext<Ipv6, B> + IpDeviceContext<Ipv6>>
         meta: SendIpPacketMeta<Ipv6, C::DeviceId, SpecifiedAddr<Ipv6Addr>>,
         body: S,
     ) -> Result<(), S> {
-        send_ipv6_packet_from_device(self, meta.into(), body, None)
+        send_ipv6_packet_from_device(self, meta.into(), body)
     }
 }

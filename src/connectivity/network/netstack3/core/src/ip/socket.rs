@@ -522,6 +522,7 @@ impl<
                         next_hop: *next_hop,
                         ttl: *hop_limit,
                         proto: *proto,
+                        mtu: None,
                     },
                     body,
                 )
@@ -558,6 +559,7 @@ impl<
                         next_hop: *next_hop,
                         ttl: *hop_limit,
                         proto: *proto,
+                        mtu: None,
                     },
                     body,
                 )

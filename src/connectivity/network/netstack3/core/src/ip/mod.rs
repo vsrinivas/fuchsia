@@ -2022,54 +2022,64 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 
 /// The metadata associated with an outgoing IP packet.
 pub(crate) struct SendIpPacketMeta<I: packet_formats::ip::IpExt, D, Src> {
+    /// The outgoing device.
     pub(crate) device: D,
+
+    /// The source address of the packet.
     pub(crate) src_ip: Src,
+
+    /// The destination address of the packet.
     pub(crate) dst_ip: SpecifiedAddr<I::Addr>,
+
+    /// The next-hop node that the packet should be sent to.
     pub(crate) next_hop: SpecifiedAddr<I::Addr>,
+
+    /// The upper-layer protocol held in the packet's payload.
     pub(crate) proto: I::Proto,
+
+    /// The time-to-live (IPv4) or hop limit (IPv6) for the packet.
+    ///
+    /// If not set, a default TTL may be used.
     pub(crate) ttl: Option<NonZeroU8>,
+
+    /// An MTU to artificially impose on the whole IP packet.
+    ///
+    /// Note that the device's MTU will still be imposed on the packet.
+    pub(crate) mtu: Option<u32>,
 }
 
 impl<I: packet_formats::ip::IpExt, D> From<SendIpPacketMeta<I, D, SpecifiedAddr<I::Addr>>>
     for SendIpPacketMeta<I, D, Option<SpecifiedAddr<I::Addr>>>
 {
     fn from(
-        SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+        SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<
             I,
             D,
             SpecifiedAddr<I::Addr>,
         >,
     ) -> SendIpPacketMeta<I, D, Option<SpecifiedAddr<I::Addr>>> {
-        SendIpPacketMeta { device, src_ip: Some(src_ip), dst_ip, next_hop, proto, ttl }
+        SendIpPacketMeta { device, src_ip: Some(src_ip), dst_ip, next_hop, proto, ttl, mtu }
     }
 }
 
-/// Send an IP packet to a remote host over a specific device.
-///
-/// `send_ip_packet_from_device` accepts a device, a source and destination IP
-/// address, a next hop IP address, and a serializer. It computes
-/// the routing information and serializes the request in a new IP packet and
-/// sends it. `mtu` will optionally impose an MTU constraint on the whole IP
-/// packet. This is useful for cases where some packets are being sent out
-/// which must not exceed some size (ICMPv6 Error Responses).
+/// Sends an IPv4 packet with the specified metadata.
 ///
 /// # Panics
 ///
-/// Panics if either `src_ip` or `dst_ip` is the loopback address and the device
-/// is a non-loopback device.
+/// Panics if either the source or destination address is the loopback address
+/// and the device is a non-loopback device.
 pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
     C: BufferIpLayerContext<Ipv4, B>,
     S: Serializer<Buffer = B>,
 >(
     ctx: &mut C,
-    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<
         Ipv4,
         C::DeviceId,
         Option<SpecifiedAddr<Ipv4Addr>>,
     >,
     body: S,
-    mtu: Option<u32>,
 ) -> Result<(), S> {
     let src_ip = src_ip.map_or(Ipv4::UNSPECIFIED_ADDRESS, |a| a.get());
     let builder = {
@@ -2096,19 +2106,24 @@ pub(crate) fn send_ipv4_packet_from_device<
     }
 }
 
+/// Sends an IPv6 packet with the specified metadata.
+///
+/// # Panics
+///
+/// Panics if either the source or destination address is the loopback address
+/// and the device is a non-loopback device.
 pub(crate) fn send_ipv6_packet_from_device<
     B: BufferMut,
     C: BufferIpDeviceContext<Ipv6, B>,
     S: Serializer<Buffer = B>,
 >(
     ctx: &mut C,
-    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<
         Ipv6,
         C::DeviceId,
         Option<SpecifiedAddr<Ipv6Addr>>,
     >,
     body: S,
-    mtu: Option<u32>,
 ) -> Result<(), S> {
     let src_ip = src_ip.map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get());
     let builder = {
@@ -2234,14 +2249,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
         original_src_ip: SpecifiedAddr<Ipv4Addr>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         get_body_from_src_ip: F,
-        ip_mtu: Option<u32>,
+        mtu: Option<u32>,
     ) -> Result<(), S> {
         trace!(
             "send_icmp_error_message({}, {}, {}, {:?})",
             device,
             original_src_ip,
             original_dst_ip,
-            ip_mtu
+            mtu
         );
         self.increment_counter("send_icmp_error_message");
 
@@ -2261,9 +2276,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
                     next_hop,
                     ttl: None,
                     proto: Ipv4Proto::Icmp,
+                    mtu,
                 },
                 get_body_from_src_ip(local_ip),
-                ip_mtu,
             )?;
         }
 
@@ -2325,9 +2340,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
         src_ip: SpecifiedAddr<Ipv6Addr>,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         get_body: F,
-        ip_mtu: Option<u32>,
+        mtu: Option<u32>,
     ) -> Result<(), S> {
-        trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
+        trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, mtu);
         self.increment_counter("send_icmp_error_message");
 
         if let Some((device, local_ip, next_hop)) =
@@ -2344,9 +2359,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
                     next_hop,
                     ttl: None,
                     proto: Ipv6Proto::Icmpv6,
+                    mtu,
                 },
                 get_body(local_ip),
-                ip_mtu,
             )?;
         }
 
