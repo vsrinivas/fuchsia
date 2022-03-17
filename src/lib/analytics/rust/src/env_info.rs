@@ -46,6 +46,7 @@ const BOT_ENV_VARS: &'static [&'static str] = &[
     "CIRCLECI",           // Circle
     "CIRRUS_CI",          // Cirrus
     "CODEBUILD_BUILD_ID", // Codebuild
+    "UNITTEST_ON_BORG",   // Borg
     "UNITTEST_ON_FORGE",  // Forge
     "SWARMING_BOT_ID",    // Fuchsia
     "GITHUB_ACTIONS",     // GitHub Actions
