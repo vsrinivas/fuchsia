@@ -15,6 +15,7 @@ if (is_fuchsia) {
       "fvm.h",
       "launch.h",
       "mount.h",
+      "options.h",
     ]
     configs += [ "//build/config:all_source" ]
     sources = [
@@ -26,6 +27,7 @@ if (is_fuchsia) {
       "launch.cc",
       "mkfs.cc",
       "mount.cc",
+      "options.cc",
       "path.cc",
     ]
     public_deps = [
@@ -76,6 +78,7 @@ test("fs-management-unittest") {
   sources = [
     "fvm.cc",
     "fvm_test.cc",
+    "options_test.cc",
   ]
   deps = [
     ":fs-management",

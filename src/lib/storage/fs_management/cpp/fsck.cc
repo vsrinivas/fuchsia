@@ -28,7 +28,7 @@ namespace fs_management {
 namespace {
 
 zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, LaunchCallback cb,
-                         const char* cmd_path) {
+                         const char* binary) {
   zx::channel crypt_client(options.crypt_client);
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
@@ -43,41 +43,31 @@ zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, La
     return status;
   }
 
-  fbl::Vector<const char*> argv;
-  argv.push_back(cmd_path);
-  if (options.verbose) {
-    argv.push_back("-v");
+  std::vector<std::string> argv_strings = options.as_argv(binary);
+  int argc = static_cast<int>(argv_strings.size());
+  std::vector<const char*> argv;
+  argv.reserve(argv_strings.size());
+  for (const std::string& arg : argv_strings) {
+    argv.push_back(arg.c_str());
   }
-  // TODO(smklein): Add support for modify, force flags. Without them,
-  // we have "never_modify=true" and "force=true" effectively on by default.
-  argv.push_back("fsck");
   argv.push_back(nullptr);
 
   zx_handle_t handles[] = {block_device.release(), crypt_client.release()};
   uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
-  auto argc = static_cast<int>(argv.size() - 1);
-  status = static_cast<zx_status_t>(
-      cb(argc, argv.data(), handles, ids, handles[1] == ZX_HANDLE_INVALID ? 1 : 2));
-  return status;
+  return cb(argc, argv.data(), handles, ids, handles[1] == ZX_HANDLE_INVALID ? 1 : 2);
 }
 
 zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchCallback cb) {
-  fbl::Vector<const char*> argv;
-  const std::string tool_path = GetBinaryPath("fsck-msdosfs");
-  argv.push_back(tool_path.c_str());
-  if (options.never_modify) {
-    argv.push_back("-n");
-  } else if (options.always_modify) {
-    argv.push_back("-y");
+  const std::string binary = GetBinaryPath("fsck-msdosfs");
+  std::vector<std::string> argv_strings = options.as_argv_fat32(binary.c_str(), device_path);
+  int argc = static_cast<int>(argv_strings.size());
+  std::vector<const char*> argv;
+  argv.reserve(argv_strings.size());
+  for (const std::string& arg : argv_strings) {
+    argv.push_back(arg.c_str());
   }
-  if (options.force) {
-    argv.push_back("-f");
-  }
-  argv.push_back(device_path);
   argv.push_back(nullptr);
-  auto argc = static_cast<int>(argv.size() - 1);
-  zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.data(), nullptr, nullptr, 0));
-  return status;
+  return cb(argc, argv.data(), nullptr, nullptr, 0);
 }
 
 }  // namespace
@@ -95,6 +85,8 @@ zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions&
     case kDiskFormatFxfs:
       return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("fxfs").c_str());
     case kDiskFormatFat:
+      if (options.crypt_client != ZX_HANDLE_INVALID)
+        zx_handle_close(options.crypt_client);
       return FsckFat(device_path_str.c_str(), options, cb);
     case kDiskFormatBlobfs:
       return FsckNativeFs(device_path_str.c_str(), options, cb, GetBinaryPath("blobfs").c_str());

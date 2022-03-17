@@ -13,39 +13,9 @@
 
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 
 namespace fs_management {
-
-struct MountOptions {
-  bool readonly = false;
-  bool verbose_mount = false;
-  bool collect_metrics = false;
-
-  // Ensures that requests to the mountpoint will be propagated to the underlying FS
-  bool wait_until_ready = true;
-
-  // An optional compression algorithm specifier for the filesystem to use when storing files (if
-  // the filesystem supports it).
-  const char* write_compression_algorithm = nullptr;
-
-  // An optional compression level for the filesystem to use when storing files (if the filesystem
-  // and the configured |write_compression_algorithm| supports it).
-  // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
-  int write_compression_level = -1;
-
-  // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
-  // the filesystem supports it).
-  const char* cache_eviction_policy = nullptr;
-
-  // If set, run fsck after every transaction.
-  bool fsck_after_every_transaction = false;
-
-  // If true, puts decompression in a sandboxed process.
-  bool sandbox_decompression = false;
-
-  // If set, handle to the crypt client. The handle is *always* consumed, even on error.
-  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
-};
 
 class __EXPORT MountedFilesystem {
  public:

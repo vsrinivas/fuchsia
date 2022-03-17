@@ -58,43 +58,14 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   std::array<uint32_t, 3> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST,
                                  PA_HND(PA_USER0, 2)};
 
-  // |compression_level| should outlive |argv|.
-  std::string compression_level;
+  std::vector<std::string> argv_strings = options.as_argv(binary);
+  int argc = static_cast<int>(argv_strings.size());
   std::vector<const char*> argv;
-  argv.push_back(binary);
-  if (options.verbose_mount) {
-    argv.push_back("--verbose");
-  }
-
-  argv.push_back("mount");
-
-  if (options.readonly) {
-    argv.push_back("--readonly");
-  }
-  if (options.collect_metrics) {
-    argv.push_back("--metrics");
-  }
-  if (options.write_compression_algorithm) {
-    argv.push_back("--compression");
-    argv.push_back(options.write_compression_algorithm);
-  }
-  if (options.write_compression_level >= 0) {
-    compression_level = std::to_string(options.write_compression_level);
-    argv.push_back("--compression_level");
-    argv.push_back(compression_level.c_str());
-  }
-  if (options.cache_eviction_policy) {
-    argv.push_back("--eviction_policy");
-    argv.push_back(options.cache_eviction_policy);
-  }
-  if (options.fsck_after_every_transaction) {
-    argv.push_back("--fsck_after_every_transaction");
-  }
-  if (options.sandbox_decompression) {
-    argv.push_back("--sandbox_decompression");
+  argv.reserve(argv_strings.size());
+  for (const std::string& arg : argv_strings) {
+    argv.push_back(arg.c_str());
   }
   argv.push_back(nullptr);
-  int argc = static_cast<int>(argv.size() - 1);
 
   if ((status = cb(argc, argv.data(), handles.data(), ids.data(),
                    handles[2] == ZX_HANDLE_INVALID ? 2 : 3)) != ZX_OK) {

@@ -46,42 +46,18 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   if (status != ZX_OK) {
     return status;
   }
-  fbl::Vector<const char*> argv;
-  argv.push_back(binary);
-  if (options.verbose) {
-    argv.push_back("-v");
+  std::vector<std::string> argv_strings = options.as_argv(binary);
+  int argc = static_cast<int>(argv_strings.size());
+  std::vector<const char*> argv;
+  argv.reserve(argv_strings.size());
+  for (const std::string& arg : argv_strings) {
+    argv.push_back(arg.c_str());
   }
-
-  fbl::StringBuffer<20> fvm_data_slices;
-  // TODO(manalib) restructure this code to do something more sensible instead of support_fvm bool.
-  if (support_fvm) {
-    MkfsOptions default_options;  // Use to get the default value.
-    if (options.fvm_data_slices > default_options.fvm_data_slices) {
-      argv.push_back("--fvm_data_slices");
-      fvm_data_slices.AppendPrintf("%u", options.fvm_data_slices);
-      argv.push_back(fvm_data_slices.c_str());
-    }
-  }
-
-  if (options.deprecated_padded_blobfs_format) {
-    argv.push_back("--deprecated_padded_format");
-  }
-
-  std::string inodes_str;
-  if (options.num_inodes > 0) {
-    argv.push_back("--num_inodes");
-    inodes_str = std::to_string(options.num_inodes);
-    argv.push_back(inodes_str.c_str());
-  }
-
-  argv.push_back("mkfs");
   argv.push_back(nullptr);
 
   zx_handle_t handles[] = {block_device.release(), crypt_client.release()};
   uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
-  status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.data(), handles, ids,
-                                       handles[1] == ZX_HANDLE_INVALID ? 1 : 2));
-  return status;
+  return cb(argc, argv.data(), handles, ids, handles[1] == ZX_HANDLE_INVALID ? 1 : 2);
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOptions& options) {
