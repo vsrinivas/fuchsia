@@ -13,7 +13,6 @@
 #include <optional>
 #include <string>
 
-#include "src/media/audio/mixer_service/common/global_work_queue.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
 namespace media_audio_mixer_service {

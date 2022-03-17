@@ -33,9 +33,13 @@ class TA_CAP("thread") ThreadChecker final {
   bool IsValid() const { return !id_ || std::this_thread::get_id() == *id_; }
 
   // Crashes if not running on the correct thread.
-  void Check() const { FX_CHECK(IsValid()); }
+  void Check() const TA_ACQ() { FX_CHECK(IsValid()); }
 
  private:
+  // This is needed to make thread analysis happy.
+  friend class ScopedThreadChecker;
+  void Release() const TA_REL() {}
+
   const std::optional<std::thread::id> id_;
 };
 
@@ -56,7 +60,7 @@ class TA_SCOPED_CAP ScopedThreadChecker final {
   explicit ScopedThreadChecker(const ThreadChecker& checker) TA_ACQ(checker) : checker_(checker) {
     checker_.Check();
   }
-  ~ScopedThreadChecker() TA_REL() = default;
+  ~ScopedThreadChecker() TA_REL() { checker_.Release(); }
 
  private:
   const ThreadChecker& checker_;

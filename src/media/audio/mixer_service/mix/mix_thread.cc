@@ -13,17 +13,17 @@
 namespace media_audio_mixer_service {
 
 MixThreadPtr MixThread::Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
-                               std::shared_ptr<GlobalWorkQueue> global_work_queue,
+                               std::shared_ptr<GlobalTaskQueue> global_task_queue,
                                std::shared_ptr<Timer> timer) {
   // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
   struct WithPublicCtor : public MixThread {
     WithPublicCtor(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
-                   std::shared_ptr<GlobalWorkQueue> global_work_queue, std::shared_ptr<Timer> timer)
-        : MixThread(id, options, std::move(global_work_queue), std::move(timer)) {}
+                   std::shared_ptr<GlobalTaskQueue> global_task_queue, std::shared_ptr<Timer> timer)
+        : MixThread(id, options, std::move(global_task_queue), std::move(timer)) {}
   };
 
   MixThreadPtr thread =
-      std::make_shared<WithPublicCtor>(id, options, std::move(global_work_queue), std::move(timer));
+      std::make_shared<WithPublicCtor>(id, options, std::move(global_task_queue), std::move(timer));
 
   // Force MixThread::Run to wait until private fields are fully initialized.
   std::lock_guard<std::mutex> startup_lock(thread->startup_mutex_);
@@ -42,13 +42,13 @@ MixThreadPtr MixThread::Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThr
 }
 
 MixThread::MixThread(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
-                     std::shared_ptr<GlobalWorkQueue> global_work_queue,
+                     std::shared_ptr<GlobalTaskQueue> global_task_queue,
                      std::shared_ptr<Timer> timer)
     : id_(id),
       name_(options.has_name() ? options.name().get() : ""),
       deadline_profile_(options.has_deadline_profile() ? std::move(options.deadline_profile())
                                                        : zx::profile()),
-      global_work_queue_(std::move(global_work_queue)),
+      global_task_queue_(std::move(global_task_queue)),
       timer_(std::move(timer)) {}
 
 // static
@@ -65,11 +65,11 @@ void MixThread::Run(MixThreadPtr thread) {  // NOLINT(performance-unnecessary-va
   std::lock_guard<std::mutex> startup_lock(thread->startup_mutex_);
 
   FX_LOGS(INFO) << "MixThread starting: '" << thread->name() << "' (" << thread.get() << ")";
-  thread->global_work_queue_->RegisterTimer(thread->id_, thread->timer_);
+  thread->global_task_queue_->RegisterTimer(thread->id_, thread->timer_);
 
   auto cleanup = fit::defer([thread]() {
     FX_LOGS(INFO) << "MixThread stopping: '" << thread->name() << "' (" << thread.get() << ")";
-    thread->global_work_queue_->UnregisterTimer(thread->id_);
+    thread->global_task_queue_->UnregisterTimer(thread->id_);
   });
 
   thread->RunLoop();
@@ -83,8 +83,8 @@ void MixThread::RunLoop() {
       return;
     }
     if (wake_reason.event_set) {
-      // An "event" means tasks are available in the global work queue.
-      global_work_queue_->RunForThread(id());
+      // An "event" means tasks are available in the global task queue.
+      global_task_queue_->RunForThread(id());
     }
 
     // TODO(fxbug.dev/87651): handle wake_reason.deadline_expired

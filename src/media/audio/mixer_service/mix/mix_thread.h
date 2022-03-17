@@ -12,7 +12,7 @@
 #include <string>
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
-#include "src/media/audio/mixer_service/common/global_work_queue.h"
+#include "src/media/audio/mixer_service/common/global_task_queue.h"
 #include "src/media/audio/mixer_service/common/timer.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
@@ -24,13 +24,13 @@ namespace media_audio_mixer_service {
 //
 // This class is not thread safe: with the exception of a few const methods, all methods
 // on this class must be called from the kernel thread owned by this thread. This is
-// usually done by posting a closure to the GlobalWorkQueue.
+// usually done by posting a closure to the GlobalTaskQueue.
 class MixThread : public Thread {
  public:
   // Caller must ensure that `id` is a unique identifier for this thread.
   // The thread takes ownership of all handles in `options`.
   static MixThreadPtr Create(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
-                             std::shared_ptr<GlobalWorkQueue> global_work_queue,
+                             std::shared_ptr<GlobalTaskQueue> global_task_queue,
                              std::shared_ptr<Timer> timer);
 
   // Returns the thread's ID.
@@ -60,7 +60,7 @@ class MixThread : public Thread {
 
  private:
   MixThread(ThreadId id, fuchsia_audio_mixer::wire::CreateThreadOptions& options,
-            std::shared_ptr<GlobalWorkQueue> global_work_queue, std::shared_ptr<Timer> timer);
+            std::shared_ptr<GlobalTaskQueue> global_task_queue, std::shared_ptr<Timer> timer);
 
   static void Run(MixThreadPtr thread);
   void RunLoop();
@@ -68,7 +68,7 @@ class MixThread : public Thread {
   const ThreadId id_;
   const std::string name_;
   const zx::profile deadline_profile_;
-  const std::shared_ptr<GlobalWorkQueue> global_work_queue_;
+  const std::shared_ptr<GlobalTaskQueue> global_task_queue_;
   const std::shared_ptr<Timer> timer_;
 
   // Logically const, but cannot be created until after we've created the std::thread,
