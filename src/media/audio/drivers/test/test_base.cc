@@ -102,19 +102,17 @@ void TestBase::ConnectToDevice(const DeviceEntry& device_entry) {
   }
 
   // Obtain the stream channel
-  auto device =
-      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfigConnector>(std::move(dev_channel))
-          .Bind();
-  device.set_error_handler([this](zx_status_t status) {
+  auto dev =
+      fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).BindSync();
+  fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config_handle = {};
+
+  status = dev->GetChannel(&stream_config_handle);
+  if (status != ZX_OK) {
     FAIL() << status << "Err " << status << ", failed to open channel to audio "
            << (device_type() == DeviceType::Input ? "input" : "output");
-  });
-  fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config_client;
-  fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config_server =
-      stream_config_client.NewRequest();
-  device->Connect(std::move(stream_config_server));
+  }
 
-  auto channel = stream_config_client.TakeChannel();
+  auto channel = stream_config_handle.TakeChannel();
   FX_LOGS(TRACE) << "Successfully opened devnode '" << device_entry.filename << "' for audio "
                  << ((device_type() == DeviceType::Input) ? "input" : "output");
 

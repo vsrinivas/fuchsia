@@ -21,8 +21,8 @@ protocol/member fuchsia.hardware.audio/Codec.Stop() -> (int64 start_time)
 protocol/member fuchsia.hardware.audio/Codec.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
 protocol/member fuchsia.hardware.audio/Codec.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
 protocol fuchsia.hardware.audio/Codec
-protocol/member fuchsia.hardware.audio/CodecConnector.Connect(server_end:fuchsia.hardware.audio/Codec codec_protocol)
-protocol fuchsia.hardware.audio/CodecConnector
+protocol/member fuchsia.hardware.audio/CodecConnect.Connect(server_end:fuchsia.hardware.audio/Codec codec_protocol)
+protocol fuchsia.hardware.audio/CodecConnect
 table/member fuchsia.hardware.audio/CodecFormatInfo.external_delay int64
 table/member fuchsia.hardware.audio/CodecFormatInfo.turn_off_delay int64
 table/member fuchsia.hardware.audio/CodecFormatInfo.turn_on_delay int64
@@ -49,8 +49,8 @@ protocol/member fuchsia.hardware.audio/Dai.GetRingBufferFormats() -> (fuchsia.ha
 protocol/member fuchsia.hardware.audio/Dai.Reset() -> ()
 protocol/member fuchsia.hardware.audio/Dai.SignalProcessingConnect(server_end:fuchsia.hardware.audio.signalprocessing/SignalProcessing protocol)
 protocol fuchsia.hardware.audio/Dai
-protocol/member fuchsia.hardware.audio/DaiConnector.Connect(server_end:fuchsia.hardware.audio/Dai dai_protocol)
-protocol fuchsia.hardware.audio/DaiConnector
+protocol/member fuchsia.hardware.audio/DaiConnect.Connect(server_end:fuchsia.hardware.audio/Dai dai_protocol)
+protocol fuchsia.hardware.audio/DaiConnect
 struct/member fuchsia.hardware.audio/DaiFormat.bits_per_sample uint8
 struct/member fuchsia.hardware.audio/DaiFormat.bits_per_slot uint8
 struct/member fuchsia.hardware.audio/DaiFormat.channels_to_use_bitmask uint64
@@ -99,6 +99,8 @@ struct fuchsia.hardware.audio/Dai_GetRingBufferFormats_Response
 union/member fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result.err int32
 union/member fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result.response fuchsia.hardware.audio/Dai_GetRingBufferFormats_Response
 strict union fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result
+protocol/member fuchsia.hardware.audio/Device.GetChannel() -> (client_end:fuchsia.hardware.audio/StreamConfig channel)
+protocol fuchsia.hardware.audio/Device
 table/member fuchsia.hardware.audio/Format.pcm_format fuchsia.hardware.audio/PcmFormat
 table fuchsia.hardware.audio/Format
 table/member fuchsia.hardware.audio/GainFormat.can_agc bool
@@ -196,8 +198,6 @@ protocol/member fuchsia.hardware.audio/StreamConfig.SignalProcessingConnect(serv
 protocol/member fuchsia.hardware.audio/StreamConfig.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
 protocol/member fuchsia.hardware.audio/StreamConfig.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
 protocol fuchsia.hardware.audio/StreamConfig
-protocol/member fuchsia.hardware.audio/StreamConfigConnector.Connect(server_end:fuchsia.hardware.audio/StreamConfig protocol)
-protocol fuchsia.hardware.audio/StreamConfigConnector
 table/member fuchsia.hardware.audio/StreamProperties.can_agc bool
 table/member fuchsia.hardware.audio/StreamProperties.can_mute bool
 table/member fuchsia.hardware.audio/StreamProperties.clock_domain uint32

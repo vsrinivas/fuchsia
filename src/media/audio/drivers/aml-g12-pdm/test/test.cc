@@ -22,18 +22,13 @@ namespace audio::aml_g12 {
 namespace audio_fidl = fuchsia_hardware_audio;
 
 fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
-    fidl::ClientEnd<audio_fidl::StreamConfigConnector> client) {
+    fidl::ClientEnd<audio_fidl::Device> client) {
   auto client_wrap = fidl::BindSyncClient(std::move(client));
-  if (!client_wrap.is_valid()) {
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
+  if (channel_wrap.status() != ZX_OK) {
     return {};
   }
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
-  if (!endpoints.is_ok()) {
-    return {};
-  }
-  auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client_wrap->Connect(std::move(stream_channel_remote));
-  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
+  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(channel_wrap->channel));
 }
 
 class FakeMmio {
@@ -104,7 +99,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
-    auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::StreamConfigConnector>());
+    auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::Device>());
     ASSERT_TRUE(stream_client.is_valid());
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
@@ -156,7 +151,7 @@ TEST_F(AudioStreamInTest, Inspect) {
   auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
   ASSERT_NOT_NULL(server);
 
-  auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::StreamConfigConnector>());
+  auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::Device>());
   ASSERT_TRUE(stream_client.is_valid());
 
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();

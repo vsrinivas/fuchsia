@@ -70,8 +70,14 @@ void DaiTest::GetProperties(GetPropertiesCallback callback) {
   callback(std::move(prop));
 }
 
-void DaiTest::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
-  stream_config_binding_.emplace(this, request->protocol.TakeChannel(), loop_.dispatcher());
+void DaiTest::GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) {
+  ::fidl::InterfaceHandle<::fuchsia::hardware::audio::StreamConfig> client;
+  ::fidl::InterfaceRequest<::fuchsia::hardware::audio::StreamConfig> server = client.NewRequest();
+
+  stream_config_binding_.emplace(this, std::move(server), loop_.dispatcher());
+  ::fidl::ClientEnd<::fuchsia_hardware_audio::StreamConfig> client2;
+  client2.channel() = client.TakeChannel();
+  completer.Reply(std::move(client2));
 }
 
 void DaiTest::GetSupportedFormats(GetSupportedFormatsCallback callback) {

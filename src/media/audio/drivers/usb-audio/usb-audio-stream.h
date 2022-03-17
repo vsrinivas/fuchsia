@@ -43,8 +43,7 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 
 class UsbAudioStream;
 using UsbAudioStreamBase =
-    ddk::Device<UsbAudioStream,
-                ddk::Messageable<fuchsia_hardware_audio::StreamConfigConnector>::Mixin,
+    ddk::Device<UsbAudioStream, ddk::Messageable<fuchsia_hardware_audio::Device>::Mixin,
                 ddk::Unbindable>;
 
 // UsbAudioStream implements WireServer<Device> and WireServer<RingBuffer>.
@@ -206,7 +205,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
   // Device FIDL implementation
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesRequestView request,

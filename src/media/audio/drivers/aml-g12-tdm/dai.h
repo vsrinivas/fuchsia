@@ -33,7 +33,7 @@ namespace audio::aml_g12 {
 
 class AmlG12TdmDai;
 using AmlG12TdmDaiDeviceType =
-    ddk::Device<AmlG12TdmDai, ddk::Messageable<fuchsia_hardware_audio::DaiConnector>::Mixin>;
+    ddk::Device<AmlG12TdmDai, ddk::Messageable<fuchsia_hardware_audio::DaiConnect>::Mixin>;
 
 class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
@@ -52,7 +52,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void Stop(StopCallback callback) override;  // Protected for unit test.
 
  private:
-  // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnector.
+  // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnect.
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   // FIDL HLCPP methods for fuchsia.hardware.audio.Dai.

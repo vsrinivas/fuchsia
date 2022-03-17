@@ -55,7 +55,7 @@ class IntelHDAStreamBase;
 // All this is serialized in the single threaded IntelHdaStreamStream's dispatcher() in loop_.
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
-                           public fidl::WireServer<fuchsia_hardware_audio::StreamConfigConnector> {
+                           public fidl::WireServer<fuchsia_hardware_audio::Device> {
  public:
   // StreamChannel (thread compatible) implements fidl::WireServer<StreamConfig> so the server
   // for a StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case
@@ -249,8 +249,8 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   zx_status_t AllocateUnsolTagLocked(uint8_t* out_tag) __TA_REQUIRES(obj_lock_);
   void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
-  // fuchsia.hardware.audio.StreamConfigConnector.
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  // fuchsia.hardware.audio.Device
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   // All require obj_lock since they take StreamConfig's address and use it.

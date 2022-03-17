@@ -106,18 +106,17 @@ class PlugDetectorImpl : public PlugDetector {
     }
 
     // Obtain the stream channel
-    auto device = fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfigConnector>(
-                      std::move(dev_channel))
-                      .Bind();
+    auto device =
+        fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).Bind();
     device.set_error_handler([name, is_input](zx_status_t res) {
       Reporter::Singleton().FailedToObtainStreamChannel(name, is_input, res);
       FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
     });
-    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config_client;
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config_server =
-        stream_config_client.NewRequest();
-    device->Connect(std::move(stream_config_server));
-    observer_(name, is_input, std::move(stream_config_client));
+    device->GetChannel(
+        [d = std::move(device), this, is_input,
+         name](::fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
+          observer_(name, is_input, std::move(stream_config));
+        });
   }
   Observer observer_;
   std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers_;

@@ -55,7 +55,7 @@ for communication, we define a way to get a channel through
 [fuchsia.hardware.audio](/sdk/banjo/fuchsia.hardware.audio/audio.fidl).
 
 Direct connection to a DAI protocol server is provided by
-[dai_connector.fidl](/sdk/fidl/fuchsia.hardware.audio/dai_connector.fidl).
+[dai_connect.fidl](/sdk/fidl/fuchsia.hardware.audio/dai_connect.fidl).
 
 ### Reset {#reset}
 

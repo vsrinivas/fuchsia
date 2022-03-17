@@ -205,7 +205,8 @@ void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void SimpleAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+void SimpleAudioStream::GetChannel(GetChannelRequestView request,
+                                   GetChannelCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   if (shutting_down_) {
     return completer.Close(ZX_ERR_BAD_STATE);
@@ -216,6 +217,14 @@ void SimpleAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sy
   // connection (The connection which is allowed to do things like change
   // formats).
   bool privileged = (stream_channel_ == nullptr);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+  if (!endpoints.is_ok()) {
+    zxlogf(ERROR, "Could not create channel");
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
+  auto [stream_channel_remote, stream_channel_local] = *std::move(endpoints);
 
   auto stream_channel = StreamChannel::Create<StreamChannel>(this);
   // We keep alive all channels in stream_channels_ (protected by channel_lock_).
@@ -230,12 +239,13 @@ void SimpleAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sy
       };
 
   fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      dispatcher(), std::move(request->protocol), stream_channel.get(), std::move(on_unbound));
+      dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
     stream_channel_ = stream_channel;
   }
+  completer.Reply(std::move(stream_channel_remote));
 }
 
 void SimpleAudioStream::DeactivateStreamChannel(StreamChannel* channel) {

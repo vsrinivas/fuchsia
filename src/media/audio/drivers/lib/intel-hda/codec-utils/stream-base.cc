@@ -34,7 +34,7 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
   sdt.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     IntelHDAStreamBase* thiz = static_cast<IntelHDAStreamBase*>(ctx);
     DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_audio::StreamConfigConnector>(
+    fidl::WireDispatch<fuchsia_hardware_audio::Device>(
         thiz, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   };
@@ -298,7 +298,8 @@ zx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
   return ZX_OK;
 }
 
-void IntelHDAStreamBase::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+void IntelHDAStreamBase::GetChannel(GetChannelRequestView request,
+                                    GetChannelCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
 
   // Do not allow any new connections if we are in the process of shutting down
@@ -335,6 +336,13 @@ void IntelHDAStreamBase::Connect(ConnectRequestView request, ConnectCompleter::S
   // already have a stream_channel_, flag this channel is the privileged
   // connection (The connection which is allowed to do things like change
   // formats).
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+  if (!endpoints.is_ok()) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
+  auto [stream_channel_remote, stream_channel_local] = *std::move(endpoints);
+
   fbl::RefPtr<StreamChannel> stream_channel = StreamChannel::Create(this);
   if (stream_channel == nullptr) {
     completer.Close(ZX_ERR_NO_MEMORY);
@@ -350,12 +358,14 @@ void IntelHDAStreamBase::Connect(ConnectRequestView request, ConnectCompleter::S
       };
 
   fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      loop_.dispatcher(), std::move(request->protocol), stream_channel.get(),
+      loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound));
 
   if (privileged) {
     stream_channel_ = stream_channel;
   }
+
+  completer.Reply(std::move(stream_channel_remote));
 }
 
 void IntelHDAStreamBase::GetSupportedFormats(

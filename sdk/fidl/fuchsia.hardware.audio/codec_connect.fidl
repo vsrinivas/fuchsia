@@ -5,7 +5,7 @@ library fuchsia.hardware.audio;
 
 /// For an overview of the Codec protocols see
 /// [Codec Interface](//docs/concepts/drivers/driver_architectures/audio_drivers/audio_codec.md)
-protocol CodecConnector {
+protocol CodecConnect {
     /// Connect to a Codec protocol server.
     /// This indirection into the Codec protocol allows us to support independent codec client
     /// connections.

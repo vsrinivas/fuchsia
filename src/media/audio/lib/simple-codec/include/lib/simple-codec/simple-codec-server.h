@@ -26,7 +26,7 @@ namespace audio {
 
 class SimpleCodecServer;
 using SimpleCodecServerDeviceType =
-    ddk::Device<SimpleCodecServer, ddk::Messageable<fuchsia_hardware_audio::CodecConnector>::Mixin>;
+    ddk::Device<SimpleCodecServer, ddk::Messageable<fuchsia_hardware_audio::CodecConnect>::Mixin>;
 
 // This class provides an implementation of the audio codec protocol to be subclassed by codec
 // drivers. The subclass must implement all the virtual methods and use Create() for construction.
@@ -65,7 +65,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
     delete this;
   }
 
-  // |fuchsia.hardware.audio.CodecConnector| implementation.
+  // |fuchsia.hardware.audio.CodecConnect| implementation.
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
     BindClient(request->codec_protocol.TakeChannel(), loop_->dispatcher());
     ZX_DEBUG_ASSERT(!completer.is_reply_needed());

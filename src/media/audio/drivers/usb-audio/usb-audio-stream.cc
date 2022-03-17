@@ -218,7 +218,8 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
   ring_buffer_vmo_.reset();
 }
 
-void UsbAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+void UsbAudioStream::GetChannel(GetChannelRequestView request,
+                                GetChannelCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
   if (shutting_down_) {
     return completer.Close(ZX_ERR_BAD_STATE);
@@ -229,6 +230,14 @@ void UsbAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync&
   // connection (The connection which is allowed to do things like change
   // formats).
   bool privileged = (stream_channel_ == nullptr);
+
+  zx::channel stream_channel_local;
+  zx::channel stream_channel_remote;
+  auto status = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
+  if (status != ZX_OK) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
 
   auto stream_channel = StreamChannel::Create<StreamChannel>(this);
   if (stream_channel == nullptr) {
@@ -244,13 +253,14 @@ void UsbAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync&
       };
 
   stream_channel->BindServer(fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      loop_.dispatcher(), std::move(request->protocol), stream_channel.get(),
+      loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound)));
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
     stream_channel_ = stream_channel;
   }
+  completer.Reply(std::move(stream_channel_remote));
 }
 
 void UsbAudioStream::DdkUnbind(ddk::UnbindTxn txn) {

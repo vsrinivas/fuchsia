@@ -21,7 +21,7 @@ namespace audio::daitest {
 
 class DaiTest;
 using DaiTestDeviceType =
-    ddk::Device<DaiTest, ddk::Messageable<fuchsia_hardware_audio::StreamConfigConnector>::Mixin>;
+    ddk::Device<DaiTest, ddk::Messageable<fuchsia_hardware_audio::Device>::Mixin>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
@@ -33,8 +33,8 @@ class DaiTest : public DaiTestDeviceType,
   zx_status_t InitPDev();
 
  private:
-  // FIDL LLCPP methods for fuchsia.hardware.audio.StreamConfigConnector.
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  // FIDL LLCPP methods for fuchsia.hardware.audio.Device.
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // FIDL HLCPP methods for fuchsia.hardware.audio.StreamConfig.
   void GetProperties(GetPropertiesCallback callback) override;
