@@ -63,6 +63,8 @@ template("merged_sdk") {
 
         outputs = _outputs
 
+        depfile = merged_stamp + ".d"
+
         args = [
           "--first-directory",
           rebase_path(latest_dir, root_build_dir),
@@ -72,6 +74,8 @@ template("merged_sdk") {
           rebase_path(merged, root_build_dir),
           "--stamp-file",
           rebase_path(merged_stamp, root_build_dir),
+          "--depfile",
+          rebase_path(depfile, root_build_dir),
         ]
 
         if (index == 1) {

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -14,6 +14,19 @@ import tarfile
 import tempfile
 
 from functools import total_ordering
+
+all_outputs = []
+all_inputs = []
+follow_symlinks = False
+has_hermetic_inputs_file = False
+
+
+def _add_output(path):
+    all_outputs.append(os.path.relpath(path))
+
+
+def _add_input(path):
+    all_inputs.append(os.path.relpath(path))
 
 
 @total_ordering
@@ -70,8 +83,9 @@ def _open_output(archive, directory):
         try:
             yield temp_dir
             # Write the archive file.
-            with tarfile.open(archive, "w:gz") as archive_file:
-                archive_file.add(temp_dir, arcname='')
+            if not has_hermetic_inputs_file:
+                with tarfile.open(archive, "w:gz") as archive_file:
+                    archive_file.add(temp_dir, arcname='')
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
     else:
@@ -79,14 +93,18 @@ def _open_output(archive, directory):
 
 
 def _get_manifest(sdk_dir):
+    manifest_path = os.path.join(sdk_dir, 'meta', 'manifest.json')
+    _add_input(manifest_path)
     '''Returns the set of elements in the given SDK.'''
-    with open(os.path.join(sdk_dir, 'meta', 'manifest.json'), 'r') as manifest:
+    with open(manifest_path, 'r') as manifest:
         return json.load(manifest)
 
 
 def _get_meta(element, sdk_dir):
     '''Returns the contents of the given element's manifest in a given SDK.'''
-    with open(os.path.join(sdk_dir, element), 'r') as meta:
+    meta_path = os.path.join(sdk_dir, element)
+    _add_input(meta_path)
+    with open(meta_path, 'r') as meta:
         return json.load(meta)
 
 
@@ -166,24 +184,26 @@ def _ensure_directory(path):
             raise
 
 
-def _copy_file(file, source_dir, dest_dir, follow_symlinks):
+def _copy_file(file, source_dir, dest_dir):
     '''Copies a file to a given path, taking care of creating directories if
     needed.
     '''
     source = os.path.join(source_dir, file)
     destination = os.path.join(dest_dir, file)
-    _ensure_directory(destination)
-    shutil.copy2(source, destination, follow_symlinks=follow_symlinks)
+    if not has_hermetic_inputs_file:
+        _ensure_directory(destination)
+        shutil.copy2(source, destination, follow_symlinks=follow_symlinks)
+    _add_input(source)
+    _add_output(destination)
 
 
-def _copy_files(files, source_dir, dest_dir, follow_symlinks):
+def _copy_files(files, source_dir, dest_dir):
     '''Copies a set of files to a given directory.'''
     for file in files:
-        _copy_file(file, source_dir, dest_dir, follow_symlinks)
+        _copy_file(file, source_dir, dest_dir)
 
 
-def _copy_identical_files(
-        set_one, source_dir_one, set_two, dest_dir, follow_symlinks):
+def _copy_identical_files(set_one, source_dir_one, set_two, dest_dir):
     '''Verifies that two sets of files are absolutely identical and then copies
     them to the output directory.
     '''
@@ -191,20 +211,20 @@ def _copy_identical_files(
         return False
     # Not verifying that the contents of the files are the same, as builds are
     # not exactly stable at the moment.
-    _copy_files(set_one, source_dir_one, dest_dir, follow_symlinks)
+    _copy_files(set_one, source_dir_one, dest_dir)
     return True
 
 
-def _copy_element(element, source_dir, dest_dir, follow_symlinks):
+def _copy_element(element, source_dir, dest_dir):
     '''Copy an entire SDK element to a given directory.'''
     meta = _get_meta(element, source_dir)
     common_files, arch_files = _get_files(meta)
     files = common_files
     for more_files in arch_files.values():
         files.update(more_files)
-    _copy_files(files, source_dir, dest_dir, follow_symlinks)
+    _copy_files(files, source_dir, dest_dir)
     # Copy the metadata file as well.
-    _copy_file(element, source_dir, dest_dir, follow_symlinks)
+    _copy_file(element, source_dir, dest_dir)
 
 
 def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
@@ -238,10 +258,16 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     else:
         raise Exception('Unknown element type: ' + type)
     meta_path = os.path.join(dest_dir, element)
-    _ensure_directory(meta_path)
-    with open(meta_path, 'w') as meta_file:
-        json.dump(
-            meta, meta_file, indent=2, sort_keys=True, separators=(',', ': '))
+    if not has_hermetic_inputs_file:
+        _ensure_directory(meta_path)
+        with open(meta_path, 'w') as meta_file:
+            json.dump(
+                meta,
+                meta_file,
+                indent=2,
+                sort_keys=True,
+                separators=(',', ': '))
+    _add_output(meta_path)
     return True
 
 
@@ -306,14 +332,16 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
 
     manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
-    _ensure_directory(manifest_path)
-    with open(manifest_path, 'w') as manifest_file:
-        json.dump(
-            manifest,
-            manifest_file,
-            indent=2,
-            sort_keys=True,
-            separators=(',', ': '))
+    if not has_hermetic_inputs_file:
+        _ensure_directory(manifest_path)
+        with open(manifest_path, 'w') as manifest_file:
+            json.dump(
+                manifest,
+                manifest_file,
+                indent=2,
+                sort_keys=True,
+                separators=(',', ': '))
+    _add_output(manifest_path)
     return True
 
 
@@ -348,10 +376,18 @@ def main():
         help='Path to the merged SDK - as a directory',
         default='')
     parser.add_argument('--stamp-file', help='Path to the stamp file')
+    hermetic_group = parser.add_mutually_exclusive_group()
+    hermetic_group.add_argument('--depfile', help='Path to the stamp file')
+    hermetic_group.add_argument(
+        '--hermetic-inputs-file', help='Path to the hermetic inputs file')
     args = parser.parse_args()
 
     # When producing an archive, we need to copy the symlink targets, not the symlinks themselves.
+    global follow_symlinks
     follow_symlinks = bool(args.output_archive)
+
+    global has_hermetic_inputs_file
+    has_hermetic_inputs_file = bool(args.hermetic_inputs_file)
 
     has_errors = False
 
@@ -367,9 +403,9 @@ def main():
 
         # Copy elements that appear in a single SDK.
         for element in sorted(first_elements - common_elements):
-            _copy_element(element.meta, first_dir, out_dir, follow_symlinks)
+            _copy_element(element.meta, first_dir, out_dir)
         for element in (second_elements - common_elements):
-            _copy_element(element.meta, second_dir, out_dir, follow_symlinks)
+            _copy_element(element.meta, second_dir, out_dir)
 
         # Verify and merge elements which are common to both SDKs.
         for raw_element in sorted(common_elements):
@@ -381,7 +417,7 @@ def main():
 
             # Common files should not vary.
             if not _copy_identical_files(first_common, first_dir, second_common,
-                                         out_dir, follow_symlinks):
+                                         out_dir):
                 print('Error: different common files for %s' % (element))
                 has_errors = True
                 continue
@@ -391,19 +427,16 @@ def main():
             for arch in all_arches:
                 if arch in first_arch and arch in second_arch:
                     if not _copy_identical_files(first_arch[arch], first_dir,
-                                                 second_arch[arch], out_dir,
-                                                 follow_symlinks):
+                                                 second_arch[arch], out_dir):
                         print(
                             'Error: different %s files for %s' %
                             (arch, element))
                         has_errors = True
                         continue
                 elif arch in first_arch:
-                    _copy_files(
-                        first_arch[arch], first_dir, out_dir, follow_symlinks)
+                    _copy_files(first_arch[arch], first_dir, out_dir)
                 elif arch in second_arch:
-                    _copy_files(
-                        second_arch[arch], second_dir, out_dir, follow_symlinks)
+                    _copy_files(second_arch[arch], second_dir, out_dir)
 
             if not _write_meta(element, first_dir, second_dir, out_dir):
                 print('Error: unable to merge meta for %s' % (element))
@@ -415,9 +448,20 @@ def main():
 
         # TODO(fxbug.dev/5362): verify that metadata files are valid.
 
-    if (args.stamp_file):
+    if args.stamp_file and not has_hermetic_inputs_file:
         with open(args.stamp_file, 'w') as stamp_file:
             stamp_file.write('')
+
+    if args.hermetic_inputs_file:
+        with open(args.hermetic_inputs_file, 'w') as hermetic_inputs_file:
+            hermetic_inputs_file.write('\n'.join(all_inputs))
+
+    if args.depfile:
+        with open(args.depfile, 'w') as depfile:
+            depfile.write(
+                '{} {}: {}'.format(
+                    args.stamp_file, ' '.join(all_outputs),
+                    ' '.join(all_inputs)))
 
     return 1 if has_errors else 0
 
