@@ -37,8 +37,13 @@ void ProcessUpdateAction::Run(GestureContext gesture_context) {
   }
 
   const zx::time now = async::Now(async_get_default_dispatcher());
-  if (now - last_spoken_feedback_ <= zx::msec(1000)) {
+  const zx::duration speak_interval = now - last_spoken_feedback_;
+  const zx::duration interaction_interval = now - screen_reader_context_->last_interaction();
+  if (speak_interval <= zx::msec(1000) || interaction_interval > zx::min(5)) {
     // Some nodes update too frequently. Avoid repeating them too often.
+    // TODO(fxbug.dev/95647): Use activity service to detect when user is using a fuchsia device.
+    // If the user is more than 5 minuts without interacting with the device, does not produce
+    // speech output.
     return;
   }
 

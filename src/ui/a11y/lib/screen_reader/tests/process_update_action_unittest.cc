@@ -5,6 +5,8 @@
 #include "src/ui/a11y/lib/screen_reader/process_update_action.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <lib/async/cpp/time.h>
+#include <lib/async/default.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -63,6 +65,7 @@ TEST_F(ProcessUpdateActionTest, HasRegisteredOnNodeUpdateCallback) {
 }
 
 TEST_F(ProcessUpdateActionTest, ChangeInDescribableContentOfFocusedNodeCausesNodeToBeSpoken) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
                                           [](bool result) { EXPECT_TRUE(result); });
   mock_screen_reader_context()->set_describable_content_changed(true);
@@ -75,6 +78,7 @@ TEST_F(ProcessUpdateActionTest, ChangeInDescribableContentOfFocusedNodeCausesNod
 }
 
 TEST_F(ProcessUpdateActionTest, NoChangeInDescribableContentOfFocusedNodeCausesNoOutput) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
                                           [](bool result) { EXPECT_TRUE(result); });
   mock_screen_reader_context()->set_describable_content_changed(false);
@@ -85,6 +89,7 @@ TEST_F(ProcessUpdateActionTest, NoChangeInDescribableContentOfFocusedNodeCausesN
 }
 
 TEST_F(ProcessUpdateActionTest, FrequentNodeUpdatesRespectDelayOfOutputs) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
                                           [](bool result) { EXPECT_TRUE(result); });
   mock_screen_reader_context()->set_describable_content_changed(true);
@@ -106,6 +111,7 @@ TEST_F(ProcessUpdateActionTest, FrequentNodeUpdatesRespectDelayOfOutputs) {
 }
 
 TEST_F(ProcessUpdateActionTest, FocusedNodeIsNotDescribable) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 2u,
                                           [](bool result) { EXPECT_TRUE(result); });
   mock_screen_reader_context()->set_describable_content_changed(true);
@@ -113,6 +119,24 @@ TEST_F(ProcessUpdateActionTest, FocusedNodeIsNotDescribable) {
   action.Run({});
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
+}
+
+TEST_F(ProcessUpdateActionTest, AvoidsSpeakingWhenuserIsNotActive) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
+                                          [](bool result) { EXPECT_TRUE(result); });
+  mock_screen_reader_context()->set_describable_content_changed(true);
+  a11y::ProcessUpdateAction action(action_context(), mock_screen_reader_context());
+  action.Run({});
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  RunLoopFor(zx::min(6));
+  action.Run({});
+  RunLoopUntilIdle();
+  // No extra output should be spoken at this point.
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
 }
 
 }  // namespace

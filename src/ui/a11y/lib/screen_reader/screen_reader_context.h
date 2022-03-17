@@ -149,6 +149,9 @@ class ScreenReaderContext {
   NavigationContext current_navigation_context() { return current_navigation_context_; }
   NavigationContext previous_navigation_context() { return previous_navigation_context_; }
 
+  void set_last_interaction(zx::time last_interaction) { last_interaction_ = last_interaction; }
+  zx::time last_interaction() const { return last_interaction_; }
+
  protected:
   // For mocks.
   ScreenReaderContext();
@@ -197,6 +200,9 @@ class ScreenReaderContext {
   // updated slider value when the tree update setting the new value is
   // received.
   OnNodeUpdateCallback on_node_update_callback_ = {};
+
+  // Saves the last time an user interacted with the device.
+  zx::time last_interaction_;
 };
 
 class ScreenReaderContextFactory {
