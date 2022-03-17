@@ -182,17 +182,6 @@ pub async fn handle_scene_manager_request_stream(
                     }
                 }
             }
-            SceneManagerRequest::RequestFocus { mut view_ref, responder } => {
-                let scene_manager = scene_manager.lock().await;
-                match scene_manager.request_focus(&mut view_ref).await {
-                    Ok(mut response) => {
-                        let _ = responder.send(&mut response);
-                    }
-                    Err(e) => {
-                        fx_log_err!("RequestFocus FIDL error: {}", e);
-                    }
-                }
-            }
         };
     }
 }
