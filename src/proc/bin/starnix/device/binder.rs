@@ -11,6 +11,7 @@ use crate::fs::{
     NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
 use crate::logging::not_implemented;
+use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::{CurrentTask, EventHandler, Kernel, WaitKey, WaitQueue, Waiter};
@@ -228,12 +229,31 @@ impl SharedMemory {
 
     // This is a temporary implementation of an allocator and should be replaced by something
     // more sophisticated. It currently implements a bump allocator strategy.
-    fn allocate_buffer<'a>(&'a mut self, length: usize) -> Result<SharedBuffer<'a>, Errno> {
-        if let Some(offset) = self.next_free_offset.checked_add(length) {
+    fn allocate_buffer<'a>(
+        &'a mut self,
+        data_length: usize,
+        offsets_length: usize,
+    ) -> Result<SharedBuffer<'a>, Errno> {
+        // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
+        // aligned when we pack it next to the data buffer.
+        let data_cap = round_up_to_increment(data_length, std::mem::size_of::<binder_uintptr_t>())?;
+        // Ensure that the offsets length is valid.
+        if offsets_length % std::mem::size_of::<binder_uintptr_t>() != 0 {
+            return error!(EINVAL);
+        }
+        let total_length = data_cap.checked_add(offsets_length).ok_or_else(|| errno!(EINVAL))?;
+        if let Some(offset) = self.next_free_offset.checked_add(total_length) {
             if offset <= self.length {
                 let this_offset = self.next_free_offset;
                 self.next_free_offset = offset;
-                return Ok(SharedBuffer { memory: self, offset: this_offset, length });
+
+                return Ok(SharedBuffer {
+                    memory: self,
+                    data_offset: this_offset,
+                    data_length,
+                    offsets_offset: this_offset + data_cap,
+                    offsets_length,
+                });
             }
         }
         error!(ENOMEM)
@@ -244,23 +264,50 @@ impl SharedMemory {
 #[derive(Debug)]
 struct SharedBuffer<'a> {
     memory: &'a SharedMemory,
-    // Offset into the shared memory region where this buffer begins.
-    offset: usize,
-    // The length of the buffer.
-    length: usize,
+    // Offset into the shared memory region where the data buffer begins.
+    data_offset: usize,
+    // The length of the data buffer.
+    data_length: usize,
+    // Offset into the shared memory region where the offsets buffer begins.
+    offsets_offset: usize,
+    // The length of the offsets buffer.
+    offsets_length: usize,
 }
 
 impl<'a> SharedBuffer<'a> {
-    fn as_mut_bytes(&mut self) -> &mut [u8] {
-        // SAFETY: `offset + length` was bounds-checked by `allocate_buffer`, and the memory region
-        // pointed to was zero-allocated by mapping a new VMO.
-        unsafe {
-            std::slice::from_raw_parts_mut(self.memory.kernel_address.add(self.offset), self.length)
+    fn as_mut_bytes(&mut self) -> (&mut [u8], &mut [binder_uintptr_t]) {
+        // SAFETY: `data_offset + data_length` was bounds-checked by `allocate_buffer`, and the
+        // memory region pointed to was zero-allocated by mapping a new VMO.
+        let data = unsafe {
+            std::slice::from_raw_parts_mut(
+                self.memory.kernel_address.add(self.data_offset),
+                self.data_length,
+            )
+        };
+        // SAFETY: `offsets_offset + offsets_length` was bounds-checked by `allocate_buffer`, the
+        // size of `offsets_length` was checked to be a multiple of `binder_uintptr_t`, and the
+        // memory region pointed to was zero-allocated by mapping a new VMO.
+        let offsets = unsafe {
+            std::slice::from_raw_parts_mut(
+                self.memory.kernel_address.add(self.offsets_offset) as *mut binder_uintptr_t,
+                self.offsets_length / std::mem::size_of::<binder_uintptr_t>(),
+            )
+        };
+        (data, offsets)
+    }
+
+    fn data_user_buffer(&self) -> UserBuffer {
+        UserBuffer {
+            address: self.memory.user_address + self.data_offset,
+            length: self.data_length,
         }
     }
 
-    fn user_address(&self) -> UserAddress {
-        self.memory.user_address + self.offset
+    fn offsets_user_buffer(&self) -> UserBuffer {
+        UserBuffer {
+            address: self.memory.user_address + self.offsets_offset,
+            length: self.offsets_length,
+        }
     }
 }
 
@@ -320,7 +367,6 @@ impl HandleTable {
     }
 
     /// Inserts a new proxy to a remote binder object and retrieves a handle to it.
-    #[cfg(test)]
     fn insert(&mut self, object: BinderObjectProxy) -> Handle {
         Handle::Object { index: self.0.insert(object) }
     }
@@ -780,7 +826,7 @@ impl BinderDriver {
         }
     }
 
-    /// Consumes one work item from the userspace binder_write_read buffer and handles it.
+    /// Consumes one command from the userspace binder_write_read buffer and handles it.
     /// This method will never block.
     fn handle_thread_write<'a>(
         &self,
@@ -922,7 +968,7 @@ impl BinderDriver {
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer) =
-            self.copy_transaction_buffers(current_task, &target_proc, &data)?;
+            self.copy_transaction_buffers(current_task, binder_proc, &target_proc, &data)?;
 
         // Find a thread to handle the transaction.
         // TODO: Deal with no threads available.
@@ -992,7 +1038,7 @@ impl BinderDriver {
 
         // Copy the transaction data to the target process.
         let (data_buffer, offsets_buffer) =
-            self.copy_transaction_buffers(current_task, &target_proc, &data)?;
+            self.copy_transaction_buffers(current_task, binder_proc, &target_proc, &data)?;
 
         // Schedule the transaction on the target process' command queue.
         target_thread.enqueue_command(Command::Reply(Transaction {
@@ -1073,6 +1119,7 @@ impl BinderDriver {
     fn copy_transaction_buffers(
         &self,
         current_task: &CurrentTask,
+        source_proc: &Arc<BinderProcess>,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data,
     ) -> Result<(UserBuffer, UserBuffer), Errno> {
@@ -1080,28 +1127,155 @@ impl BinderDriver {
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
 
-        let data_size = data.data_size as usize;
-        let offsets_size = data.offsets_size as usize;
-
-        // The total buffer size we need to allocate is the data + offsets.
-        let total_size = data_size.checked_add(offsets_size).ok_or_else(|| errno!(EINVAL))?;
-
         // Allocate a buffer from the target process' shared memory.
-        let mut shared_buffer = shared_memory.allocate_buffer(total_size)?;
-        let (data_buffer, offsets_buffer) = shared_buffer.as_mut_bytes().split_at_mut(data_size);
+        let mut shared_buffer =
+            shared_memory.allocate_buffer(data.data_size as usize, data.offsets_size as usize)?;
+        let (data_buffer, offsets_buffer) = shared_buffer.as_mut_bytes();
 
         // SAFETY: `binder_transaction_data` was read from a userspace VMO, which means that all
-        // bytes are defined, making union access safe.
+        // bytes are defined, making union access safe (even if the value is garbage).
         let userspace_addrs = unsafe { data.data.ptr };
 
         // Copy the data straight into the target's buffer.
         current_task.mm.read_memory(UserAddress::from(userspace_addrs.buffer), data_buffer)?;
-        current_task.mm.read_memory(UserAddress::from(userspace_addrs.offsets), offsets_buffer)?;
+        current_task.mm.read_objects(
+            UserRef::new(UserAddress::from(userspace_addrs.offsets)),
+            offsets_buffer,
+        )?;
 
-        let data_buffer = UserBuffer { address: shared_buffer.user_address(), length: data_size };
-        let offsets_buffer =
-            UserBuffer { address: shared_buffer.user_address() + data_size, length: offsets_size };
-        Ok((data_buffer, offsets_buffer))
+        // Fix up binder objects.
+        if !offsets_buffer.is_empty() {
+            // Translate any handles/fds from the source process' handle table to the target
+            // process' handle table.
+            self.translate_handles(source_proc, target_proc, &offsets_buffer, data_buffer)?;
+        }
+
+        Ok((shared_buffer.data_user_buffer(), shared_buffer.offsets_user_buffer()))
+    }
+
+    /// Translates binder object handles from the sending process to the receiver process, patching
+    /// the transaction data as needed.
+    ///
+    /// When a binder object is sent from one process to another, it must be added to the receiving
+    /// process' handle table. Conversely, a handle being sent to the process that owns the
+    /// underling binder object should receive the actual pointers to the object.
+    fn translate_handles(
+        &self,
+        source_proc: &Arc<BinderProcess>,
+        target_proc: &Arc<BinderProcess>,
+        offsets: &[binder_uintptr_t],
+        transaction_data: &mut [u8],
+    ) -> Result<(), Errno> {
+        for offset in offsets {
+            // Bounds-check the offset.
+            let object_end = offset
+                .checked_add(std::mem::size_of::<flat_binder_object>() as u64)
+                .ok_or_else(|| errno!(EINVAL))? as usize;
+            if object_end > transaction_data.len() {
+                return error!(EINVAL);
+            }
+            // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice.
+            let object_ptr = unsafe {
+                transaction_data.as_mut_ptr().add(*offset as usize) as *mut flat_binder_object
+            };
+            // SAFETY: The object may not be aligned, so read a copy.
+            let object = unsafe { object_ptr.read_unaligned() };
+            match object.hdr.type_ {
+                BINDER_TYPE_HANDLE => {
+                    // The `flat_binder_object` is a binder handle.
+                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
+                    let handle = unsafe { object.__bindgen_anon_1.handle }.into();
+                    match handle {
+                        Handle::SpecialServiceManager => {
+                            // The special handle 0 does not need to be translated. It is universal.
+                        }
+                        Handle::Object { .. } => {
+                            let proxy = source_proc.handles.lock().get(handle)?.clone();
+                            let patched = if std::ptr::eq(
+                                Arc::as_ptr(target_proc),
+                                proxy.owner.as_ptr(),
+                            ) {
+                                // The binder object belongs to the receiving process, so convert it
+                                // from a handle to a local object.
+                                struct_with_union_into_bytes!(flat_binder_object {
+                                    hdr.type_: BINDER_TYPE_BINDER,
+                                    __bindgen_anon_1.binder: proxy.object.weak_ref_addr.ptr() as u64,
+                                    flags: object.flags,
+                                    cookie: proxy.object.strong_ref_addr.ptr() as u64,
+                                })
+                            } else {
+                                // The binder object does not belong to the receiving process, so
+                                // dup the handle in the receiving process' handle table.
+                                let mut handles = target_proc.handles.lock();
+                                let new_handle = handles.insert(proxy);
+                                struct_with_union_into_bytes!(flat_binder_object {
+                                    hdr.type_: BINDER_TYPE_HANDLE,
+                                    __bindgen_anon_1.handle: new_handle.into(),
+                                    flags: object.flags,
+                                    cookie: object.cookie,
+                                })
+                            };
+
+                            // Write the translated `flat_binder_object` back to the buffer.
+                            // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
+                            // no uninitialized fields. The result of this is a byte slice, so we
+                            // operate below on a byte slice instead of a pointer to
+                            // `flat_binder_object`.
+                            unsafe {
+                                std::slice::from_raw_parts_mut(
+                                    object_ptr as *mut u8,
+                                    std::mem::size_of::<flat_binder_object>(),
+                                )
+                                .copy_from_slice(&patched[..]);
+                            };
+                        }
+                    }
+                }
+                BINDER_TYPE_BINDER => {
+                    // We are passing a binder object across process boundaries. We need
+                    // to translate this address to some handle.
+
+                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
+                    let weak_ref_addr =
+                        UserAddress::from(unsafe { object.__bindgen_anon_1.binder });
+                    let strong_ref_addr = UserAddress::from(object.cookie);
+
+                    // Create a handle in the receiving process that references the binder object
+                    // in the sender's process.
+                    let mut handles = target_proc.handles.lock();
+                    let handle = handles.insert(BinderObjectProxy {
+                        owner: Arc::downgrade(source_proc),
+                        object: BinderObject { weak_ref_addr, strong_ref_addr },
+                    });
+
+                    // Translate the `flat_binder_object` to refer to the handle.
+                    let patched = struct_with_union_into_bytes!(flat_binder_object {
+                        hdr.type_: BINDER_TYPE_HANDLE,
+                        __bindgen_anon_1.handle: handle.into(),
+                        flags: object.flags,
+                        cookie: 0,
+                    });
+
+                    // Write the translated `flat_binder_object` back to the buffer.
+                    // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
+                    // no uninitialized fields. The result of this is a byte slice, so we
+                    // operate below on a byte slice instead of a pointer to
+                    // `flat_binder_object`.
+                    unsafe {
+                        std::slice::from_raw_parts_mut(
+                            object_ptr as *mut u8,
+                            std::mem::size_of::<flat_binder_object>(),
+                        )
+                        .copy_from_slice(&patched[..]);
+                    };
+                }
+                _ => {
+                    log::error!("unknown object type {}", object.hdr.type_);
+                    return error!(EINVAL);
+                }
+            }
+        }
+        Ok(())
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
@@ -1217,6 +1391,9 @@ mod tests {
     use crate::testing::*;
     use assert_matches::assert_matches;
 
+    const BASE_ADDR: UserAddress = UserAddress::from(0x0000000000000100);
+    const VMO_LENGTH: usize = 4096;
+
     #[test]
     fn handle_tests() {
         assert_matches!(Handle::from(0), Handle::SpecialServiceManager);
@@ -1283,50 +1460,118 @@ mod tests {
     }
 
     #[test]
-    fn shared_memory_allocates_multiple_buffers() {
-        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
-        const VMO_LENGTH: usize = 4096;
+    fn shared_memory_allocation_fails_with_invalid_offsets_length() {
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        let mut shared_memory =
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
+        shared_memory.allocate_buffer(3, 1).expect_err("offsets_length should be multiple of 8");
+    }
 
+    #[test]
+    fn shared_memory_allocation_aligns_offsets_buffer() {
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        let mut shared_memory =
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
+
+        const DATA_LEN: usize = 3;
+        const OFFSETS_COUNT: usize = 1;
+        const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
+        let mut buf =
+            shared_memory.allocate_buffer(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
+        assert_eq!(buf.data_user_buffer(), UserBuffer { address: BASE_ADDR, length: DATA_LEN });
+        assert_eq!(
+            buf.offsets_user_buffer(),
+            UserBuffer { address: BASE_ADDR + 8usize, length: OFFSETS_LEN }
+        );
+        let (data_buf, offsets_buf) = buf.as_mut_bytes();
+        assert_eq!(data_buf.len(), DATA_LEN);
+        assert_eq!(offsets_buf.len(), OFFSETS_COUNT);
+    }
+
+    #[test]
+    fn shared_memory_allocation_buffers_correctly_write_through() {
+        let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
+        let mut shared_memory =
+            SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
+
+        const DATA_LEN: usize = 256;
+        const OFFSETS_COUNT: usize = 4;
+        const OFFSETS_LEN: usize = std::mem::size_of::<binder_uintptr_t>() * OFFSETS_COUNT;
+        let mut buf =
+            shared_memory.allocate_buffer(DATA_LEN, OFFSETS_LEN).expect("allocate buffer");
+        let (data_buf, offsets_buf) = buf.as_mut_bytes();
+
+        // Write data to the allocated buffers.
+        const DATA_FILL: u8 = 0xff;
+        data_buf.fill(0xff);
+
+        const OFFSETS_FILL: binder_uintptr_t = 0xDEADBEEFDEADBEEF;
+        offsets_buf.fill(OFFSETS_FILL);
+
+        // Check that the correct bit patterns were written through to the underlying VMO.
+        let mut data = [0u8; DATA_LEN];
+        vmo.read(&mut data, 0).expect("read VMO failed");
+        assert!(data.iter().all(|b| *b == DATA_FILL));
+
+        let mut data = [0u64; OFFSETS_COUNT];
+        vmo.read(data.as_bytes_mut(), DATA_LEN as u64).expect("read VMO failed");
+        assert!(data.iter().all(|b| *b == OFFSETS_FILL));
+    }
+
+    #[test]
+    fn shared_memory_allocates_multiple_buffers() {
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
 
         // Check that two buffers allocated from the same shared memory region don't overlap.
-        const BUF1_LEN: usize = 64;
-        let mut buf = shared_memory.allocate_buffer(BUF1_LEN).expect("allocate buffer 1");
-        assert_eq!(buf.user_address(), BASE_ADDR);
-        assert_eq!(buf.as_mut_bytes().len(), BUF1_LEN);
-        buf.as_mut_bytes().fill(0xff);
+        const BUF1_DATA_LEN: usize = 64;
+        const BUF1_OFFSETS_LEN: usize = 8;
+        let buf = shared_memory
+            .allocate_buffer(BUF1_DATA_LEN, BUF1_OFFSETS_LEN)
+            .expect("allocate buffer 1");
+        assert_eq!(
+            buf.data_user_buffer(),
+            UserBuffer { address: BASE_ADDR, length: BUF1_DATA_LEN }
+        );
+        assert_eq!(
+            buf.offsets_user_buffer(),
+            UserBuffer { address: BASE_ADDR + BUF1_DATA_LEN, length: BUF1_OFFSETS_LEN }
+        );
 
-        const BUF2_LEN: usize = 32;
-        let mut buf = shared_memory.allocate_buffer(BUF2_LEN).expect("allocate buffer 2");
-        assert_eq!(buf.user_address(), BASE_ADDR + BUF1_LEN);
-        assert_eq!(buf.as_mut_bytes().len(), BUF2_LEN);
-        buf.as_mut_bytes().fill(0xaa);
-
-        // Check that the correct bit patterns were written through to the underlying VMO.
-        let mut data = [0u8; BUF1_LEN];
-        vmo.read(&mut data, 0).expect("read VMO failed");
-        assert!(data.iter().all(|b| *b == 0xff));
-
-        let mut data = [0u8; BUF2_LEN];
-        vmo.read(&mut data, BUF1_LEN as u64).expect("read VMO failed");
-        assert!(data.iter().all(|b| *b == 0xaa));
+        const BUF2_DATA_LEN: usize = 32;
+        const BUF2_OFFSETS_LEN: usize = 0;
+        let buf = shared_memory
+            .allocate_buffer(BUF2_DATA_LEN, BUF2_OFFSETS_LEN)
+            .expect("allocate buffer 2");
+        assert_eq!(
+            buf.data_user_buffer(),
+            UserBuffer {
+                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN,
+                length: BUF2_DATA_LEN
+            }
+        );
+        assert_eq!(
+            buf.offsets_user_buffer(),
+            UserBuffer {
+                address: BASE_ADDR + BUF1_DATA_LEN + BUF1_OFFSETS_LEN + BUF2_DATA_LEN,
+                length: BUF2_OFFSETS_LEN
+            }
+        );
     }
 
     #[test]
     fn shared_memory_too_large_allocation_fails() {
-        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
-        const VMO_LENGTH: usize = 4096;
-
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         let mut shared_memory =
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory");
 
-        shared_memory.allocate_buffer(VMO_LENGTH + 1).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffer(VMO_LENGTH + 1, 0).expect_err("out-of-bounds allocation");
+        shared_memory.allocate_buffer(VMO_LENGTH, 1).expect_err("out-of-bounds allocation");
 
-        let _ = shared_memory.allocate_buffer(VMO_LENGTH).expect("allocate buffer");
-        shared_memory.allocate_buffer(1).expect_err("out-of-bounds allocation");
+        let _ = shared_memory.allocate_buffer(VMO_LENGTH, 0).expect("allocate buffer");
+
+        shared_memory.allocate_buffer(1, 0).expect_err("out-of-bounds allocation");
     }
 
     #[fuchsia::test]
@@ -1336,12 +1581,10 @@ mod tests {
 
         // Register a binder process that represents `task1`. This is the source process: data will
         // be copied out of process ID 1 into process ID 2's shared memory.
-        let _ = driver.find_or_register_process(1);
+        let proc1 = driver.find_or_register_process(1);
 
         // Initialize process 2 with shared memory in the driver.
         let proc2 = driver.find_or_register_process(2);
-        const BASE_ADDR: UserAddress = UserAddress::from(0x000000000000000f);
-        const VMO_LENGTH: usize = 4096;
         let vmo = zx::Vmo::create(VMO_LENGTH as u64).expect("failed to create VMO");
         *proc2.shared_memory.lock() = Some(
             SharedMemory::map(&vmo, BASE_ADDR, VMO_LENGTH).expect("failed to map shared memory"),
@@ -1394,8 +1637,9 @@ mod tests {
         };
 
         // Copy the data from process 1 to process 2
-        let (data_buffer, offsets_buffer) =
-            driver.copy_transaction_buffers(&task1, &proc2, &transaction).expect("copy data");
+        let (data_buffer, offsets_buffer) = driver
+            .copy_transaction_buffers(&task1, &proc1, &proc2, &transaction)
+            .expect("copy data");
 
         // Check that the returned buffers are in-bounds of process 2's shared memory.
         assert!(data_buffer.address >= BASE_ADDR);
@@ -1413,5 +1657,171 @@ mod tests {
         vmo.read(&mut buffer, (offsets_buffer.address - BASE_ADDR) as u64)
             .expect("failed to read offsets");
         assert_eq!(&buffer[..], offsets_data.as_bytes());
+    }
+
+    #[test]
+    fn transaction_translate_binder_leaving_process() {
+        let driver = BinderDriver::new();
+        let sender = driver.find_or_register_process(1);
+        let receiver = driver.find_or_register_process(2);
+
+        let binder_object = BinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000010),
+            strong_ref_addr: UserAddress::from(0x0000000000000100),
+        };
+
+        const DATA_PREAMBLE: &[u8; 5] = b"stuff";
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(DATA_PREAMBLE);
+        let offsets = [transaction_data.len() as binder_uintptr_t];
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_BINDER,
+            flags: 0,
+            cookie: binder_object.strong_ref_addr.ptr() as u64,
+            __bindgen_anon_1.binder: binder_object.weak_ref_addr.ptr() as u64,
+        }));
+
+        driver
+            .translate_handles(&sender, &receiver, &offsets, &mut transaction_data)
+            .expect("failed to translate handles");
+
+        const EXPECTED_HANDLE: u32 = 1;
+
+        // Verify that the transaction data was mutated.
+        let mut expected_transaction_data = Vec::new();
+        expected_transaction_data.extend(DATA_PREAMBLE);
+        expected_transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: EXPECTED_HANDLE,
+        }));
+        assert_eq!(&expected_transaction_data, &transaction_data);
+
+        // Verify that a handle was created in the receiver.
+        let proxy = receiver
+            .handles
+            .lock()
+            .get(EXPECTED_HANDLE.into())
+            .cloned()
+            .expect("expected handle not present");
+        assert!(std::ptr::eq(proxy.owner.as_ptr(), Arc::as_ptr(&sender)));
+        assert_eq!(proxy.object, binder_object);
+    }
+
+    #[test]
+    fn transaction_translate_binder_handle_entering_owning_process() {
+        let driver = BinderDriver::new();
+        let sender = driver.find_or_register_process(1);
+        let receiver = driver.find_or_register_process(2);
+
+        let binder_object = BinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000010),
+            strong_ref_addr: UserAddress::from(0x0000000000000100),
+        };
+
+        // Pretend the binder object was given to the sender earlier, so it can be sent back.
+        let handle = sender.handles.lock().insert(BinderObjectProxy {
+            owner: Arc::downgrade(&receiver),
+            object: binder_object.clone(),
+        });
+
+        const DATA_PREAMBLE: &[u8; 5] = b"stuff";
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(DATA_PREAMBLE);
+        let offsets = [transaction_data.len() as binder_uintptr_t];
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: handle.into(),
+        }));
+
+        driver
+            .translate_handles(&sender, &receiver, &offsets, &mut transaction_data)
+            .expect("failed to translate handles");
+
+        // Verify that the transaction data was mutated.
+        let mut expected_transaction_data = Vec::new();
+        expected_transaction_data.extend(DATA_PREAMBLE);
+        expected_transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_BINDER,
+            flags: 0,
+            cookie: binder_object.strong_ref_addr.ptr() as u64,
+            __bindgen_anon_1.binder: binder_object.weak_ref_addr.ptr() as u64,
+        }));
+        assert_eq!(&expected_transaction_data, &transaction_data);
+    }
+
+    #[test]
+    fn transaction_translate_binder_handle_passed_between_non_owning_processes() {
+        let driver = BinderDriver::new();
+        let sender = driver.find_or_register_process(1);
+        let receiver = driver.find_or_register_process(2);
+        let owner = driver.find_or_register_process(3);
+
+        let binder_object = BinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000010),
+            strong_ref_addr: UserAddress::from(0x0000000000000100),
+        };
+
+        const SENDING_HANDLE: u32 = 1;
+        const RECEIVING_HANDLE: u32 = 2;
+
+        // Pretend the binder object was given to the sender earlier.
+        let handle = sender.handles.lock().insert(BinderObjectProxy {
+            owner: Arc::downgrade(&owner),
+            object: binder_object.clone(),
+        });
+        assert_eq!(SENDING_HANDLE, u32::from(handle));
+
+        // Give the receiver another handle so that the input handle number and output handle
+        // number aren't the same.
+        receiver.handles.lock().insert(BinderObjectProxy {
+            owner: Arc::downgrade(&owner),
+            object: BinderObject {
+                strong_ref_addr: UserAddress::default(),
+                weak_ref_addr: UserAddress::default(),
+            },
+        });
+
+        const DATA_PREAMBLE: &[u8; 5] = b"stuff";
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(DATA_PREAMBLE);
+        let offsets = [transaction_data.len() as binder_uintptr_t];
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: SENDING_HANDLE,
+        }));
+
+        driver
+            .translate_handles(&sender, &receiver, &offsets, &mut transaction_data)
+            .expect("failed to translate handles");
+
+        // Verify that the transaction data was mutated.
+        let mut expected_transaction_data = Vec::new();
+        expected_transaction_data.extend(DATA_PREAMBLE);
+        expected_transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: RECEIVING_HANDLE,
+        }));
+        assert_eq!(&expected_transaction_data, &transaction_data);
+
+        // Verify that a handle was created in the receiver.
+        let proxy = receiver
+            .handles
+            .lock()
+            .get(RECEIVING_HANDLE.into())
+            .cloned()
+            .expect("expected handle not present");
+        assert!(std::ptr::eq(proxy.owner.as_ptr(), Arc::as_ptr(&owner)));
+        assert_eq!(proxy.object, binder_object);
     }
 }
