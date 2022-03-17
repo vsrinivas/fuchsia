@@ -69,8 +69,6 @@ zx_status_t Imx227Device::CameraSensor2GetAvailableModes(operating_mode_t* out_m
 zx_status_t Imx227Device::CameraSensor2SetMode(uint32_t mode) {
   std::lock_guard guard(lock_);
 
-  HwInit();
-
   if (mode >= available_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -103,7 +101,6 @@ void Imx227Device::CameraSensor2StopStreaming() {
   std::lock_guard guard(lock_);
   is_streaming_ = false;
   Write8(kModeSelectReg, 0x00);
-  HwDeInit();
 }
 
 zx_status_t Imx227Device::CameraSensor2GetAnalogGain(float* out_gain) {
