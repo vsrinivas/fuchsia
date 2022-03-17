@@ -29,6 +29,7 @@ group("packages") {
     ":virtio_input",
     ":virtio_magma",
     ":virtio_wl",
+    "virtio_block_rs",
     "virtio_net",
     "virtio_rng",
     "virtio_sound",
