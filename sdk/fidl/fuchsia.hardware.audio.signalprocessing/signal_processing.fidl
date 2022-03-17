@@ -341,11 +341,8 @@ type Topology = table {
 /// For an overview see
 /// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
 protocol SignalProcessing {
-    /// Returns a vector of supported processing elements.
-    /// Must return one or more processing elements, or ZX_ERR_NOT_SUPORTED.
-    GetElements() -> (struct {
-        processing_elements vector<Element>:MAX_COUNT_PROCESSING_ELEMENTS;
-    }) error zx.status;
+    /// Exposes read-only signal processing properties.
+    compose Reader;
 
     /// Controls a processing element using a unique id returned by `GetElements`.
     /// Returns `ZX_ERR_INVALID_ARGS` if the `processing_element_id` does not match an id returned
@@ -365,7 +362,7 @@ protocol SignalProcessing {
     /// may not require renegotiation of the `Dai` state because changing a gain parameter usually
     /// does not change the set of supported audio formats.
     /// By contrast, if `SetElementState` changes the parameters of a `CONNECTION_POINT`
-    /// element, the change may require renegotiation becuase it may invalidate the set of
+    /// element, the change may require renegotiation because it may invalidate the set of
     /// supported formats returned in a previous `GetDaiFormats` `Dai` protocol call.
     ///
     /// It is the driver's job to determine when renegotiation is required. If renegotiation is
@@ -377,6 +374,29 @@ protocol SignalProcessing {
         processing_element_id uint64;
         state ElementState;
     }) -> (struct {}) error zx.status;
+
+    /// Sets the topology to be used using an id to the vector returned by `GetTopologies`.
+    /// If `GetTopologies` returns more than one `Topology`, `SetTopology` must be called to put the
+    /// driver in an initialized state. If `GetTopologies` returns only one `Topology`,
+    /// `SetTopology` is optional and has no effect.
+    ///
+    /// `SetTopology` may be called before or after non-`SignalProcessing` protocol calls.
+    /// If called after non-`SignalProcessing` protocol calls, then `SetTopology` may return
+    /// ZX_ERR_BAD_STATE to indicate that the operation can not proceed without renegotiation of the
+    /// driver state. See `SetElementState` for further discussion.
+    SetTopology(struct {
+        topology_id uint64;
+    }) -> (struct {}) error zx.status;
+};
+
+/// For an overview see
+/// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
+protocol Reader {
+    /// Returns a vector of supported processing elements.
+    /// Must return one or more processing elements, or ZX_ERR_NOT_SUPORTED.
+    GetElements() -> (struct {
+        processing_elements vector<Element>:MAX_COUNT_PROCESSING_ELEMENTS;
+    }) error zx.status;
 
     /// Get the processing element state via a hanging get. For a given `processing_element_id`,
     /// the driver will reply to the first `WatchElement` sent by the client.
@@ -400,17 +420,4 @@ protocol SignalProcessing {
     GetTopologies() -> (struct {
         topologies vector<Topology>:MAX_COUNT_TOPOLOGIES;
     }) error zx.status;
-
-    /// Sets the topology to be used using an id to the vector returned by `GetTopologies`.
-    /// If `GetTopologies` returns more than one `Topology`, `SetTopology` must be called to put the
-    /// driver in an initialized state. If `GetTopologies` returns only one `Topology`,
-    /// `SetTopology` is optional and has no effect.
-    ///
-    /// `SetTopology` may be called before or after non-`SignalProcessing` protocol calls.
-    /// If called after non-`SignalProcessing` protocol calls, then `SetTopology` may return
-    /// ZX_ERR_BAD_STATE to indicate that the operation can not proceed without renegotiation of the
-    /// driver state. See `SetElementState` for further discussion.
-    SetTopology(struct {
-        topology_id uint64;
-    }) -> (struct {}) error zx.status;
 };

@@ -53,8 +53,8 @@ class TestCodec : public SimpleCodecServer, public signal_fidl::SignalProcessing
 
     std::vector<signal_fidl::Element> pes;
     pes.emplace_back(std::move(pe));
-    signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
-    signal_fidl::SignalProcessing_GetElements_Result result;
+    signal_fidl::Reader_GetElements_Response response(std::move(pes));
+    signal_fidl::Reader_GetElements_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
@@ -83,8 +83,8 @@ class TestCodec : public SimpleCodecServer, public signal_fidl::SignalProcessing
     std::vector<signal_fidl::Topology> topologies;
     topologies.emplace_back(std::move(topology));
 
-    signal_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
-    signal_fidl::SignalProcessing_GetTopologies_Result result;
+    signal_fidl::Reader_GetTopologies_Response response(std::move(topologies));
+    signal_fidl::Reader_GetTopologies_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
@@ -243,7 +243,7 @@ TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get one PE with AGL support.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 1);
@@ -284,7 +284,7 @@ TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
   struct TestCodecNoAgl : public TestCodec {
     explicit TestCodecNoAgl(zx_device_t* parent) : TestCodec(parent) {}
     void GetElements(GetElementsCallback callback) override {
-      callback(signal_fidl::SignalProcessing_GetElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+      callback(signal_fidl::Reader_GetElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
     }
   };
 

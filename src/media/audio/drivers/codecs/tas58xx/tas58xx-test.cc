@@ -447,7 +447,7 @@ TEST(Tas58xxTest, GetTopologySignalProcessing) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get one topology with an AGL processing element.
-  signal_fidl::SignalProcessing_GetTopologies_Result result;
+  signal_fidl::Reader_GetTopologies_Result result;
   ASSERT_OK(signal_processing_client->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().topologies.size(), 1);
@@ -502,7 +502,7 @@ TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
       signal_processing_handle.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-  signal_fidl::SignalProcessing_GetTopologies_Result result;
+  signal_fidl::Reader_GetTopologies_Result result;
   ASSERT_OK(signal_processing_client->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
 
@@ -512,7 +512,7 @@ TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
       signal_processing_handle2.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request2)));
   fidl::SynchronousInterfacePtr signal_processing_client2 = signal_processing_handle2.BindSync();
-  signal_fidl::SignalProcessing_GetTopologies_Result result2;
+  signal_fidl::Reader_GetTopologies_Result result2;
   ASSERT_EQ(signal_processing_client2->GetTopologies(&result2), ZX_ERR_PEER_CLOSED);
 
   mock_i2c.VerifyAndClear();
@@ -550,7 +550,7 @@ TEST(Tas58xxTest, WatchAgl) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs one AGL and one EQUALIZER.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -639,7 +639,7 @@ TEST(Tas58xxTest, WatchAglUpdates) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs one AGL and one EQUALIZER.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -761,7 +761,7 @@ TEST(Tas58xxTest, WatchEqualizer) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs one AGL and one EQUALIZER.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -856,7 +856,7 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs one AGL and one EQUALIZER.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -949,7 +949,7 @@ TEST(Tas58xxTest, SetEqualizerBandDisabled) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -1044,7 +1044,7 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -1175,7 +1175,7 @@ TEST(Tas58xxTest, SetEqualizerBandEnabledWithCodecStarted) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -1272,7 +1272,7 @@ TEST(Tas58xxTest, SetEqualizer2BandsEnabled) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -1409,7 +1409,7 @@ TEST(Tas58xxTest, SetEqualizerOverflows) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
@@ -1493,7 +1493,7 @@ TEST(Tas58xxTest, SetEqualizerElementDisabled) {
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);

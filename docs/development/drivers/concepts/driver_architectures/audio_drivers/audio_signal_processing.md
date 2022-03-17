@@ -4,18 +4,28 @@
 
 The signal processing interface is available to be potentially used by audio hardware codecs (from
 here on referred to as 'codecs') , DAIs and glue drivers. This interface `SignalProcessing` is a
-FIDL protocol used by the `Codec`, `Dai` and `StreamConf` protocols to provide audio signal
+FIDL protocol used by the `Codec`, `Dai` and `StreamConfig` protocols to provide audio signal
 processing capabilities.
 
-The `SignalProcessing` interface is defined to control signal processing hardware and their
+The `SignalProcessing` protocol is defined to control signal processing hardware and their
 topologies. We define processing elements (PEs) as a logical unit of audio data processing provided
 by an audio driver, and we define topologies as the arrangement of PEs in [pipelines][pipeline] and
 controls associated with them.
 
-The `SignalProcessing` interface allows hardware vendors to implement drivers with stable
+The `SignalProcessing` protocol allows hardware vendors to implement drivers with stable
 application binary interfaces (ABIs), and allow system integrators to configure drivers to perform
 differently based on system or product requirements using these interfaces for run-time
 configurations.
+
+The `SignalProcessing` protocol composes the `Reader` signal processing protocol. Signal processing
+methods that only retrieve information are part of the `Reader` protocol, the rest are part of the
+`SignalProcessing` protocol itself. This separation allows clients of this interface to compose the
+`Reader` signal processing protocol into their own protocol if they require providing a read only
+subset of functionality to their own clients.
+
+The `SignalProcessing` protocol and associated definitions are part of the
+[fuchsia.hardware.audio.signalprocessing](/sdk/fidl/fuchsia.hardware.audio.signalprocessing)
+FIDL library.
 
 ### Topologies
 
@@ -33,15 +43,15 @@ specific business logic.
 
 ### Processing Elements
 
-A PE (defined in the `SignalProcessing` protocol as `Element`) is expected to be hardware-provided
-functionality managed by a particular driver (but it could be emulated in software, as any other
-driver functionality). A pipeline is composed of one or more PEs and a topology is composed of one
-or more pipelines.
+A PE (defined in the `fuchsia.hardware.audio.signalprocessing` FIDL library as `Element`) is
+expected to be hardware-provided functionality managed by a particular driver (but it could be
+emulated in software, as any other driver functionality). A pipeline is composed of one or more PEs
+and a topology is composed of one or more pipelines.
 
 A codec or DAI driver can expose their topology by implementing the `SignalProcessing` protocol.
 A glue driver can use `Codec` and `Dai` protocols signal processing functionality on the
-particular product or system. Finally a `StreamConf` user like `audio_core` can use a `StreamConf`
-protocol `SignalProcessing` functionality.
+particular product or system. Finally a `StreamConfig` user like `audio_core` can use a
+`StreamConfig` protocol `SignalProcessing` functionality.
 
 We refer to the server as the driver that is providing the signal processing protocol, e.g. a codec
 or DAI driver. We refer to the client as the user of the functionality, e.g. a glue driver or an

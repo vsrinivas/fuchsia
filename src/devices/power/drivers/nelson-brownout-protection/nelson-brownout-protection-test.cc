@@ -57,8 +57,8 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
 
     std::vector<signal_fidl::Element> pes;
     pes.emplace_back(std::move(pe));
-    signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
-    signal_fidl::SignalProcessing_GetElements_Result result;
+    signal_fidl::Reader_GetElements_Response response(std::move(pes));
+    signal_fidl::Reader_GetElements_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
@@ -73,7 +73,7 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
   void WatchElementState(uint64_t processing_element_id,
                          WatchElementStateCallback callback) override {}
   void GetTopologies(GetTopologiesCallback callback) override {
-    callback(signal_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+    callback(signal_fidl::Reader_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
   void SetTopology(uint64_t topology_id, SetTopologyCallback callback) override {
     callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_NOT_SUPPORTED));

@@ -84,22 +84,26 @@ const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS uint
 const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 64
 const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_TOPOLOGIES uint32 64
 const fuchsia.hardware.audio.signalprocessing/MAX_STRING_SIZE uint32 256
-protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetElements() -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result result)
-protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetTopologies() -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/Reader.GetElements() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/Reader.GetTopologies() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/Reader.WatchElementState(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)
+protocol fuchsia.hardware.audio.signalprocessing/Reader
+struct/member fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response.processing_elements vector<fuchsia.hardware.audio.signalprocessing/Element>:64
+struct fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response
+union/member fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.response fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response
+strict union fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result
+struct/member fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response.topologies vector<fuchsia.hardware.audio.signalprocessing/Topology>:64
+struct fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response
+union/member fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.response fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response
+strict union fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetElements() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetTopologies() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)
 protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetElementState(uint64 processing_element_id,fuchsia.hardware.audio.signalprocessing/ElementState state) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result result)
 protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetTopology(uint64 topology_id) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result result)
 protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.WatchElementState(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)
 protocol fuchsia.hardware.audio.signalprocessing/SignalProcessing
-struct/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response.processing_elements vector<fuchsia.hardware.audio.signalprocessing/Element>:64
-struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response
-union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result.err int32
-union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response
-strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result
-struct/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response.topologies vector<fuchsia.hardware.audio.signalprocessing/Topology>:64
-struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response
-union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result.err int32
-union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response
-strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result
 struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response
 union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.err int32
 union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response

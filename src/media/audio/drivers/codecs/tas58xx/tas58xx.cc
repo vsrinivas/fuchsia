@@ -264,8 +264,8 @@ void Tas58xx::GetElements(signal_fidl::SignalProcessing::GetElementsCallback cal
   if (number_of_channels_ == 1 || metadata_.bridged) {
     pes.emplace_back(std::move(pe2));
   }
-  signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
-  signal_fidl::SignalProcessing_GetElements_Result result;
+  signal_fidl::Reader_GetElements_Response response(std::move(pes));
+  signal_fidl::Reader_GetElements_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
@@ -495,8 +495,8 @@ void Tas58xx::GetTopologies(signal_fidl::SignalProcessing::GetTopologiesCallback
   std::vector<signal_fidl::Topology> topologies;
   topologies.emplace_back(std::move(topology));
 
-  signal_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
-  signal_fidl::SignalProcessing_GetTopologies_Result result;
+  signal_fidl::Reader_GetTopologies_Response response(std::move(topologies));
+  signal_fidl::Reader_GetTopologies_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
