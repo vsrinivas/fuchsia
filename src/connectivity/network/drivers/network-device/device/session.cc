@@ -9,18 +9,17 @@
 #include <lib/fit/defer.h>
 #include <zircon/device/network.h>
 
+#include <optional>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 
 #include "device_interface.h"
+#include "lib/stdcompat/span.h"
 #include "log.h"
 #include "tx_queue.h"
 
 namespace network::internal {
-
-constexpr uint32_t kKillTxKey = 0;
-constexpr uint32_t kResumeTxKey = 1;
-constexpr uint32_t kTxAvailKey = 2;
 
 bool Session::IsListen() const {
   return static_cast<bool>(flags_ & netdev::wire::SessionFlags::kListenTx);
@@ -102,9 +101,8 @@ Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info
       parent_(parent) {}
 
 Session::~Session() {
-  // Stop the Tx thread if it hasn't been stopped already. We need to do this on destruction in case
-  // binding the control channel to the dispatcher fails.
-  StopTxThread();
+  // Ensure session has removed itself from the tx queue.
+  ZX_ASSERT(!tx_ticket_.has_value());
   ZX_ASSERT(in_flight_rx_ == 0);
   ZX_ASSERT(in_flight_tx_ == 0);
   ZX_ASSERT(vmo_id_ == MAX_VMOS);
@@ -152,10 +150,6 @@ zx::status<netdev::wire::Fifos> Session::Init() {
     LOGF_ERROR("network-device(%s): failed to create tx FIFO", name());
     return zx::error(status);
   }
-  if (zx_status_t status = zx::port::create(0, &tx_port_); status != ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to create tx port", name());
-    return zx::error(status);
-  }
 
   {
     zx_status_t status = [this, &ac]() {
@@ -182,16 +176,6 @@ zx::status<netdev::wire::Fifos> Session::Init() {
     }
   }
 
-  thrd_t thread;
-  if (int result = thrd_create_with_name(
-          &thread, [](void* ctx) { return reinterpret_cast<Session*>(ctx)->Thread(); },
-          reinterpret_cast<void*>(this), "netdevice:session");
-      result != thrd_success) {
-    LOGF_ERROR("network-device(%s): session failed to create thread: %d", name(), result);
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-  thread_ = thread;
-
   LOGF_TRACE(
       "network-device(%s): starting session:"
       " descriptor_count: %d,"
@@ -213,125 +197,57 @@ void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
 void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> channel) {
   LOGF_TRACE("network-device(%s): session unbound, info: %s", name(),
              info.FormatDescription().c_str());
+  {
+    fbl::AutoLock lock(&parent_->tx_lock());
+    // Remove ourselves from the Tx thread worker so we stop fetching buffers
+    // from the client.
+    UninstallTx();
+  }
 
-  // Stop the Tx thread immediately, so we stop fetching more tx buffers from the client.
-  StopTxThread();
-
-  // The session may linger around for a short while still if the device implementation is holding
-  // on to buffers on the session's VMO. When the session is destroyed, it'll attempt to send an
-  // epitaph message over the channel if it's still open. The Rx FIFO is not closed here since it's
-  // possible it's currently shared with the Rx Queue. The session will drop its reference to the Rx
-  // FIFO upon destruction.
+  // The session may linger around for a short while still if the device
+  // implementation is holding on to buffers on the session's VMO. When the
+  // session is destroyed, it'll attempt to send an epitaph message over the
+  // channel if it's still open. The Rx FIFO is not closed here since it's
+  // possible it's currently shared with the Rx Queue. The session will drop its
+  // reference to the Rx FIFO upon destruction.
   if (!info.is_peer_closed() && !info.did_send_epitaph()) {
     // Store the channel to send an epitaph once the session is destroyed.
     control_channel_ = std::move(channel);
   }
 
-  // When the session is unbound we can just detach all the ports from it.
   {
     fbl::AutoLock lock(&parent_->control_lock());
+    // When the session is unbound we can just detach all the ports from it.
     for (uint8_t i = 0; i < MAX_PORTS; i++) {
-      // We can ignore the return from detaching, this port is about to get destroyed.
+      // We can ignore the return from detaching, this port is about to get
+      // destroyed.
       zx::status<bool> __UNUSED result = DetachPortLocked(i, std::nullopt);
     }
     dying_ = true;
   }
 
-  // NOTE: the parent may destroy the session synchronously in NotifyDeadSession, this is the
-  // last thing we can do safely with this session object.
+  // NOTE: the parent may destroy the session synchronously in
+  // NotifyDeadSession, this is the last thing we can do safely with this
+  // session object.
   parent_->NotifyDeadSession(*this);
 }
 
-void Session::StopTxThread() {
-  if (thread_.has_value()) {
-    zx_port_packet_t packet;
-    packet.type = ZX_PKT_TYPE_USER;
-    packet.key = kKillTxKey;
-    packet.status = ZX_OK;
-    zx_status_t status = tx_port_.queue(&packet);
-    if (status != ZX_OK) {
-      LOGF_ERROR("network-device(%s): Failed to send kill tx signal: %s", name(),
-                 zx_status_get_string(status));
-    }
-    thrd_join(*thread_, nullptr);
-    thread_.reset();
+void Session::InstallTx() {
+  ZX_ASSERT(!tx_ticket_.has_value());
+  TxQueue& tx_queue = parent_->tx_queue();
+  tx_queue.AssertParentTxLocked(*parent_);
+  tx_ticket_ = tx_queue.AddSession(this);
+}
+
+void Session::UninstallTx() {
+  if (tx_ticket_.has_value()) {
+    TxQueue& tx_queue = parent_->tx_queue();
+    tx_queue.AssertParentTxLocked(*parent_);
+    tx_queue.RemoveSession(std::exchange(tx_ticket_, std::nullopt).value());
   }
 }
 
-int Session::Thread() {
-  zx_status_t result = [this]() {
-    for (;;) {
-      zx_port_packet_t packet;
-      zx_status_t status = tx_port_.wait(zx::time::infinite(), &packet);
-      if (status != ZX_OK) {
-        LOGF_ERROR("network-device(%s): tx thread port wait failed: %s", name(),
-                   zx_status_get_string(status));
-        return status;
-      }
-      bool fifo_readable = false;
-      bool watch_tx = false;
-      switch (packet.key) {
-        case kKillTxKey:
-          return ZX_OK;
-        case kResumeTxKey:
-          watch_tx = true;
-          break;
-        case kTxAvailKey:
-          if (packet.signal.observed & ZX_FIFO_PEER_CLOSED) {
-            // Kill the session, tx FIFO was closed.
-            return ZX_ERR_PEER_CLOSED;
-          }
-          if (packet.signal.observed & ZX_FIFO_READABLE) {
-            fifo_readable = true;
-          }
-          break;
-      }
-
-      if (fifo_readable && !paused_.load()) {
-        auto fetch_result = FetchTx();
-        switch (fetch_result) {
-          case ZX_OK:
-          case ZX_ERR_SHOULD_WAIT:
-            watch_tx = true;
-            break;
-          case ZX_ERR_IO_OVERRUN:
-            // Don't set watch_tx to true, we need to wait for a new TxResume signal before waiting
-            // on FIFO again, the device's Tx buffers are full.
-            break;
-          default:
-            // Stop operating the tx FIFO and kill the session.
-            return fetch_result;
-        }
-      }
-
-      if (watch_tx) {
-        status =
-            fifo_tx_.wait_async(tx_port_, kTxAvailKey, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, 0);
-        if (status != ZX_OK) {
-          LOGF_ERROR("network-device(%s): Failed to install async wait for tx fifo: %s", name(),
-                     zx_status_get_string(status));
-          return status;
-        }
-      }
-    }
-  }();
-
-  // Only kill the session if it wasn't a clean break from the loop.
-  if (result != ZX_OK) {
-    // Peer closed is an expected error, don't log it.
-    if (result != ZX_ERR_PEER_CLOSED) {
-      LOGF_ERROR("network-device(%s): TxThread finished with error %s", name(),
-                 zx_status_get_string(result));
-    }
-    Kill();
-  }
-
-  return 0;
-}
-
-zx_status_t Session::FetchTx() {
-  TxQueue::SessionTransaction transaction(&parent_->tx_queue(), this);
-
+zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
   if (transaction.overrun()) {
     return ZX_ERR_IO_OVERRUN;
   }
@@ -556,17 +472,6 @@ cpp20::span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
   return mapped.subspan(offset, len);
 }
 
-void Session::ResumeTx() {
-  zx_port_packet_t packet;
-  packet.type = ZX_PKT_TYPE_USER;
-  packet.key = kResumeTxKey;
-  packet.status = ZX_OK;
-  zx_status_t status = tx_port_.queue(&packet);
-  if (status != ZX_OK) {
-    LOGF_ERROR("network-device(%s): ResumeTx failed: %s", name(), zx_status_get_string(status));
-  }
-}
-
 zx_status_t Session::AttachPort(netdev::wire::PortId port_id,
                                 cpp20::span<const netdev::wire::FrameType> frame_types) {
   size_t attached_count;
@@ -601,7 +506,7 @@ zx_status_t Session::AttachPort(netdev::wire::PortId port_id,
   if (attached_count == 1) {
     paused_.store(false);
     parent_->SessionStarted(*this);
-    ResumeTx();
+    parent_->tx_queue().Resume();
   }
 
   return ZX_OK;

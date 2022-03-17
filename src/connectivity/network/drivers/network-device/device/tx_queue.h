@@ -6,7 +6,9 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_TX_QUEUE_H_
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
-#include <lib/zx/event.h>
+#include <lib/zx/port.h>
+#include <threads.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -15,6 +17,7 @@
 #include "data_structs.h"
 #include "definitions.h"
 #include "device_interface.h"
+#include "src/lib/vmo_store/growable_slab.h"
 
 namespace network::internal {
 
@@ -22,10 +25,15 @@ class Session;
 
 class TxQueue {
  public:
-  class SessionTransaction;
-
   static zx::status<std::unique_ptr<TxQueue>> Create(DeviceInterface* parent);
-  ~TxQueue() = default;
+  using SessionKey = size_t;
+
+  ~TxQueue();
+  // Terminates and join the |TxQueue| worker thread.
+  void JoinThread();
+
+  // Notifies the worker thread that new tx buffers are available.
+  void Resume();
 
   // Helper functions with TA annotations that bridges the gap between parent's locks and local
   // locking requirements; TA is not otherwise able to tell that the |parent| and |parent_| are the
@@ -34,30 +42,34 @@ class TxQueue {
       __TA_ASSERT(parent_->tx_lock()) {
     ZX_DEBUG_ASSERT(parent_ == &parent);
   }
-  void AssertParentTxBuffersLocked(DeviceInterface& parent) __TA_REQUIRES(parent.tx_buffers_lock())
-      __TA_ASSERT(parent_->tx_buffers_lock()) {
-    ZX_DEBUG_ASSERT(parent_ == &parent);
-  }
+
+  // Adds a session to the Tx queue. The session's tx fifo will be observed and
+  // the session is notified when data is available to be fetched and sent to
+  // the device through |Session::FetchTx|.
+  SessionKey AddSession(Session* session) __TA_REQUIRES(parent_->tx_lock());
+  // Removes a session with previously assigned |key|. Panics if |key| is
+  // invalid or points to a not installed session.
+  void RemoveSession(SessionKey key) __TA_REQUIRES(parent_->tx_lock());
 
   // Helper class to handle Tx transactions from sessions.
   class SessionTransaction {
    public:
-    SessionTransaction(TxQueue* parent, Session* session)
-        __TA_ACQUIRE(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
-    ~SessionTransaction()
-        __TA_RELEASE(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
+    SessionTransaction(cpp20::span<tx_buffer_t> buffers, TxQueue* parent, Session* session)
+        __TA_REQUIRES(parent->parent_->tx_lock());
+    void Commit() __TA_EXCLUDES(queue_->parent_->tx_lock());
 
     uint32_t available() const { return available_; }
     bool overrun() const { return available_ == 0; }
-    tx_buffer_t* GetBuffer() __TA_REQUIRES(queue_->parent_->tx_buffers_lock());
-    void Push(uint16_t descriptor)
-        __TA_REQUIRES(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
+    tx_buffer_t* GetBuffer();
+    void Push(uint16_t descriptor) __TA_REQUIRES(queue_->parent_->tx_lock());
 
-    void AssertParentTxLock(DeviceInterface& parent) __TA_ASSERT(parent.tx_lock()) {
+    void AssertParentTxLock(DeviceInterface& parent) __TA_ASSERT(queue_->parent_->tx_lock())
+        __TA_REQUIRES(parent.tx_lock()) {
       ZX_DEBUG_ASSERT(&parent == queue_->parent_);
     }
 
    private:
+    cpp20::span<tx_buffer_t> buffers_;
     // Pointer to queue over which transaction is opened, not owned.
     TxQueue* const queue_;
     // Pointer to session that opened the transaction, not owned.
@@ -72,6 +84,12 @@ class TxQueue {
 
  private:
   explicit TxQueue(DeviceInterface* parent) : parent_(parent) {}
+
+  void Thread(cpp20::span<tx_buffer_t> buffers);
+  zx_status_t EnqueueUserPacket(uint64_t key);
+  zx_status_t UpdateFifoWatches();
+  zx_status_t HandleFifoSignal(cpp20::span<tx_buffer_t> buffers, SessionKey session,
+                               zx_signals_t signals);
 
   struct InFlightBuffer {
     InFlightBuffer() = default;
@@ -89,17 +107,19 @@ class TxQueue {
   // Returns true if device buffers were full and sessions should be notified.
   [[nodiscard]] bool ReturnBuffers() __TA_REQUIRES(parent_->tx_lock());
 
+  static constexpr uint64_t kResumeKey = 1;
+  static constexpr uint64_t kQuitKey = 2;
+
   // pointer to parent device, not owned.
   DeviceInterface* const parent_;
 
   std::unique_ptr<RingQueue<uint32_t>> return_queue_ __TA_GUARDED(parent_->tx_lock());
   std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(parent_->tx_lock());
+  vmo_store::GrowableSlab<Session*, SessionKey> sessions_ __TA_GUARDED(parent_->tx_lock());
 
-  // pre-allocated buffers that are locked to only allow a single session thread to send tx buffers
-  // to the device at once.
-  std::unique_ptr<tx_buffer_t[]> tx_buffers_ __TA_GUARDED(parent_->tx_buffers_lock());
-  std::unique_ptr<BufferParts<buffer_region_t>[]> buffer_parts_
-      __TA_GUARDED(parent_->tx_buffers_lock());
+  zx::port port_;
+  std::optional<thrd_t> thread_{};
+  std::atomic<bool> running_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(TxQueue);
 };

@@ -147,7 +147,7 @@ class GrowableSlab {
     explicit Iterator(const GrowableSlab* parent)
         : parent_(parent), index_(parent->used_list_.head) {}
 
-    Iterator(const Iterator& other) : parent_(other.parent), index_(other.index) {}
+    Iterator(const Iterator& other) : parent_(other.parent_), index_(other.index_) {}
 
     Iterator& operator=(const Iterator& other) {
       parent_ = other.parent_;
@@ -186,6 +186,8 @@ class GrowableSlab {
       ZX_DEBUG_ASSERT(IsValid());
       return &parent_->slots_[index_].value.value();
     }
+
+    KeyType key() const { return index_; }
 
    private:
     Iterator(GrowableSlab* parent, size_t index) : parent_(parent), index_(index) {}

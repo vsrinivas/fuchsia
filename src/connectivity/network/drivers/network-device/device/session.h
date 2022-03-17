@@ -14,7 +14,6 @@
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <threads.h>
 #include <zircon/device/network.h>
 
 #include <fbl/array.h>
@@ -27,6 +26,7 @@
 #include "device_port.h"
 #include "public/locks.h"
 #include "rx_queue.h"
+#include "tx_queue.h"
 
 namespace network::internal {
 
@@ -111,6 +111,12 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // `current_primary` can be null, meaning there's no current primary session.
   bool ShouldTakeOverPrimary(const Session* current_primary) const;
 
+  // Installs session tx listeners. Panics if called twice.
+  void InstallTx() __TA_REQUIRES(parent_->tx_lock());
+  // Uninstalls session tx listeners. Must be called before destroying if
+  // |InstallTx| was called. No-op if |InstallTx| was not called.
+  void UninstallTx() __TA_REQUIRES(parent_->tx_lock());
+
   // Helper functions with TA annotations that bridges the gap between parent's locks and local
   // locking requirements; TA is not otherwise able to tell that the |parent| and |parent_| are the
   // same entity.
@@ -124,6 +130,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   }
   void AssertParentRxLock(DeviceInterface& parent) __TA_ASSERT(parent_->rx_lock())
       __TA_REQUIRES(parent.rx_lock()) {
+    ZX_DEBUG_ASSERT(parent_ == &parent);
+  }
+  void AssertParentTxLock(DeviceInterface& parent) __TA_ASSERT(parent_->tx_lock())
+      __TA_REQUIRES(parent.tx_lock()) {
     ZX_DEBUG_ASSERT(parent_ == &parent);
   }
 
@@ -140,8 +150,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   void MarkTxReturnResult(uint16_t descriptor, zx_status_t status);
   // Returns tx descriptors to the session client.
   void ReturnTxDescriptors(const uint16_t* descriptors, size_t count);
-  // Signals the session thread to observe the tx FIFO object.
-  void ResumeTx();
   // Signals the session thread to stop servicing the session channel and FIFOs.
   // When the session thread is finished, it notifies the DeviceInterface parent through
   // `NotifyDeadSession`.
@@ -191,6 +199,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   }
 
   const fbl::RefPtr<RefCountedFifo>& rx_fifo() { return fifo_rx_; }
+  const zx::fifo& tx_fifo() const { return fifo_tx_; }
   const char* name() const { return name_.data(); }
 
   bool IsDying() const __TA_REQUIRES_SHARED(parent_->control_lock()) { return dying_; }
@@ -207,6 +216,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // session.
   uint8_t ClearDataVmo();
 
+  // Fetch tx descriptors from the FIFO and queue them in the parent |DeviceInterface|'s TxQueue.
+  zx_status_t FetchTx(TxQueue::SessionTransaction& transaction)
+      __TA_EXCLUDES(parent_->control_lock(), parent_->rx_lock()) __TA_REQUIRES(parent_->tx_lock());
+
  private:
   inline void RxReturned(size_t count) { ZX_ASSERT(in_flight_rx_.fetch_sub(count) >= count); }
   inline void TxReturned(size_t count) { ZX_ASSERT(in_flight_tx_.fetch_sub(count) >= count); }
@@ -215,9 +228,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
           DeviceInterface* parent);
   zx::status<netdev::wire::Fifos> Init();
   void Bind(fidl::ServerEnd<netdev::Session> channel);
-  void StopTxThread();
   void OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> channel);
-  int Thread();
 
   // Detaches a port from the session.
   //
@@ -233,9 +244,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx::status<bool> DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt)
       __TA_REQUIRES(parent_->control_lock());
 
-  // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
-  zx_status_t FetchTx()
-      __TA_EXCLUDES(parent_->control_lock(), parent_->rx_lock(), parent_->tx_lock());
   buffer_descriptor_t* checked_descriptor(uint16_t index);
   const buffer_descriptor_t* checked_descriptor(uint16_t index) const;
   buffer_descriptor_t& descriptor(uint16_t index);
@@ -257,7 +265,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Unowned pointer to data VMO stored in DeviceInterface.
   // Set by Session::Create.
   DataVmoStore::StoredVmo* data_vmo_ = nullptr;
-  zx::port tx_port_;
   std::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
@@ -278,19 +285,19 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
       __TA_GUARDED(parent_->control_lock());
   // Pointer to parent network device, not owned.
   DeviceInterface* const parent_;
-  std::optional<thrd_t> thread_;
   std::unique_ptr<uint16_t[]> rx_return_queue_ __TA_GUARDED(parent_->rx_lock());
   size_t rx_return_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
   std::unique_ptr<uint16_t[]> rx_avail_queue_ __TA_GUARDED(parent_->rx_lock());
   size_t rx_avail_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
   bool rx_valid_ __TA_GUARDED(parent_->rx_lock()) = true;
-  // True if the session is currently being destroyed, i.e. tx thread is stopped and session is
-  // waiting for its buffers to be returned from the device.
+  // True if the session is currently being destroyed, i.e. session is unbound
+  // and waiting for its buffers to be returned from the device.
   bool dying_ __TA_GUARDED(parent_->control_lock()) = false;
 
   std::atomic<size_t> in_flight_tx_ = 0;
   std::atomic<size_t> in_flight_rx_ = 0;
   std::atomic<bool> scheduled_destruction_ = false;
+  std::optional<TxQueue::SessionKey> tx_ticket_ __TA_GUARDED(parent_->tx_lock());
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Session);
 };

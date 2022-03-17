@@ -191,6 +191,7 @@ zx_status_t DeviceInterface::Init() {
 void DeviceInterface::Teardown(fit::callback<void()> teardown_callback) {
   // stop all rx queue operation immediately.
   rx_queue_->JoinThread();
+  tx_queue_->JoinThread();
   LOGF_TRACE("network-device: %s", __FUNCTION__);
 
   control_lock_.Acquire();
@@ -382,6 +383,7 @@ void DeviceInterface::OpenSession(OpenSessionRequestView request,
                                   OpenSessionCompleter::Sync& completer) {
   zx::status sync_result = [this, &request]()
       -> zx::status<std::tuple<netdev::wire::DeviceOpenSessionResponse, uint8_t, zx::vmo>> {
+    fbl::AutoLock tx_lock(&tx_lock_);
     fbl::AutoLock lock(&control_lock_);
     // We're currently tearing down and can't open any new sessions.
     if (teardown_state_ != TeardownState::RUNNING) {
@@ -424,6 +426,8 @@ void DeviceInterface::OpenSession(OpenSessionRequestView request,
     }
     const uint8_t vmo_id = registration.value();
     session->SetDataVmo(vmo_id, vmo_store_.GetVmo(vmo_id));
+    session->AssertParentTxLock(*this);
+    session->InstallTx();
 
     if (session->ShouldTakeOverPrimary(primary_session_.get())) {
       // Set this new session as the primary session.
@@ -971,14 +975,7 @@ fbl::RefPtr<RefCountedFifo> DeviceInterface::primary_rx_fifo() {
   return nullptr;
 }
 
-void DeviceInterface::NotifyTxQueueAvailable() {
-  if (primary_session_) {
-    primary_session_->ResumeTx();
-  }
-  for (auto& session : sessions_) {
-    session.ResumeTx();
-  }
-}
+void DeviceInterface::NotifyTxQueueAvailable() { tx_queue_->Resume(); }
 
 void DeviceInterface::NotifyTxReturned(bool was_full) {
   SharedAutoLock lock(&control_lock_);

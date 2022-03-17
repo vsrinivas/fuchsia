@@ -94,10 +94,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   SharedLock& control_lock() __TA_RETURN_CAPABILITY(control_lock_) { return control_lock_; }
   fbl::Mutex& rx_lock() __TA_RETURN_CAPABILITY(rx_lock_) { return rx_lock_; }
   fbl::Mutex& tx_lock() __TA_RETURN_CAPABILITY(tx_lock_) { return tx_lock_; }
-  fbl::Mutex& tx_buffers_lock() __TA_RETURN_CAPABILITY(tx_buffers_lock_) {
-    return tx_buffers_lock_;
-  }
-
   const device_info_t& info() { return device_info_; }
 
   // Loads rx path descriptors from the primary session into a session transaction.
@@ -245,7 +241,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // ContinueTeardown is marked with many thread analysis lock exclusions so it can acquire those
   // locks internally and evaluate the teardown progress.
   bool ContinueTeardown(TeardownState state) __TA_RELEASE(control_lock_)
-      __TA_EXCLUDES(tx_lock_, tx_buffers_lock_, rx_lock_);
+      __TA_EXCLUDES(tx_lock_, rx_lock_);
 
   // Calls f with a const std::unique_ptr<DevicePort>& to the DevicePort referenced by port_id
   // or nullptr if no ports with that id are installed.
@@ -307,8 +303,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
 
   fbl::Mutex rx_lock_;
   fbl::Mutex tx_lock_ __TA_ACQUIRED_AFTER(rx_lock_);
-  fbl::Mutex tx_buffers_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
-  SharedLock control_lock_ __TA_ACQUIRED_AFTER(tx_lock_, tx_buffers_lock_, rx_lock_);
+  SharedLock control_lock_ __TA_ACQUIRED_AFTER(tx_lock_, rx_lock_);
 
   // Event hooks used in tests:
   fit::function<void(const char*)> evt_session_started_;
