@@ -71,6 +71,7 @@ firmware_prebuilts = [
   },
 ]
 
+use_gigaboot = false
 use_vbmeta = true
 avb_key = "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_devkey_atx_psk.pem"
 avb_algorithm = "SHA512_RSA4096"
