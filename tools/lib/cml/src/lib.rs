@@ -1759,17 +1759,16 @@ impl FromStr for ConfigKey {
             return Err(ParseError::InvalidLength);
         }
 
-        for (i, c) in s.char_indices() {
-            // Follows the FIDL specification: identifiers must start with a letter, can contain
-            // letters, numbers, and underscores, but cannot end with an underscore
-            #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95050)
-            if (i == 0) && !c.is_ascii_lowercase() {
-                return Err(ParseError::InvalidValue);
-            } else if (i == length - 1) && !c.is_ascii_lowercase() && !c.is_ascii_digit() {
-                return Err(ParseError::InvalidValue);
-            } else if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '_' {
-                return Err(ParseError::InvalidValue);
-            }
+        // identifiers must start with a letter
+        let first_is_letter = s.chars().next().expect("non-empty string").is_ascii_lowercase();
+        // can contain letters, numbers, and underscores
+        let contains_invalid_chars =
+            s.chars().any(|c| !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'));
+        // cannot end with an underscore
+        let last_is_underscore = s.chars().next_back().expect("non-empty string") == '_';
+
+        if !first_is_letter || contains_invalid_chars || last_is_underscore {
+            return Err(ParseError::InvalidValue);
         }
 
         Ok(Self(s.to_string()))
