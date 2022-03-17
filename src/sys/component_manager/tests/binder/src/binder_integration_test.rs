@@ -21,10 +21,7 @@ async fn binder() {
     );
 
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Stopped::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
         .await
         .expect("failed to create event stream");
 

@@ -26,10 +26,8 @@ async fn base_resolver_appmgr_bridge_test() {
 
     let event_source = EventSource::from_proxy(proxy);
 
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
 
     instance.start_component_tree().await.unwrap();
 
@@ -57,10 +55,7 @@ async fn base_resolver_disabled_test() {
     let event_source = EventSource::from_proxy(proxy);
 
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Resolved::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Resolved::NAME])])
         .await
         .unwrap();
 

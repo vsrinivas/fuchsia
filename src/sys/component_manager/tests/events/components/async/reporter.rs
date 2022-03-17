@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Purged, Started},
+        events::{Event, EventSource, EventSubscription, Purged, Started},
         matcher::EventMatcher,
     },
     fuchsia_component_test::ScopedInstance,
@@ -15,10 +15,7 @@ async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Purged::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Purged::NAME])])
         .await
         .unwrap();
 

@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Purged, Started, Stopped},
+        events::{Event, EventSource, EventSubscription, Purged, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -19,29 +19,18 @@ use {
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
 
-    let event_stream_start = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let event_stream_start =
+        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
     let event_stream_1 = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, Purged::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
         .await
         .unwrap();
     let event_stream_2 = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, Purged::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
         .await
         .unwrap();
     let event_stream_3 = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, Purged::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
         .await
         .unwrap();
     let collection_name = String::from("test-collection");

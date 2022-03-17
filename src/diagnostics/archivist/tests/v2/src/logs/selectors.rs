@@ -35,10 +35,8 @@ async fn component_selectors_filter_logs() {
 
     let event_source =
         EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     // Start a few components.
     let mut child_ref_a = ChildRef { name: "a".to_string(), collection: None };

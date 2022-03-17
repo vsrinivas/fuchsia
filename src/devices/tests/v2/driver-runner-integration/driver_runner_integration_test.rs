@@ -36,10 +36,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
     // Set up our expected events.
     let event_source = events::EventSource::new()?;
     let mut started_stream = event_source
-        .subscribe(vec![events::EventSubscription::new(
-            vec![events::Started::NAME],
-            events::EventMode::Async,
-        )])
+        .subscribe(vec![events::EventSubscription::new(vec![events::Started::NAME])])
         .await?;
 
     let builder = RealmBuilder::new().await?;

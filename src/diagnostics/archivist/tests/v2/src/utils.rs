@@ -13,10 +13,8 @@ pub async fn wait_for_component_stopped(
 ) {
     let event_source =
         EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
     wait_for_component_stopped_event(
         instance_child_name,
         component,

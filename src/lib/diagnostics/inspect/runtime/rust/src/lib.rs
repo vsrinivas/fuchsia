@@ -90,7 +90,7 @@ pub fn create_diagnostics_dir(inspector: Inspector) -> Arc<dyn DirectoryEntry> {
 mod tests {
     use super::*;
     use component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Started},
+        events::{Event, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     };
     use fdio;
@@ -119,7 +119,7 @@ mod tests {
         // app.start_with_binder_sync during post-migration cleanup.
         let event_source = EventSource::new().expect("failed to create EventSource");
         let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+            .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
             .await
             .expect("failed to subscribe to EventSource");
 

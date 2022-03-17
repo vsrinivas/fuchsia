@@ -4,7 +4,7 @@
 
 use crate::{constants::*, logs::utils::Listener, test_topology};
 use component_events::{
-    events::{Event, EventMode, EventSource, EventSubscription, Started},
+    events::{Event, EventSource, EventSubscription, Started},
     matcher::EventMatcher,
 };
 use diagnostics_hierarchy::assert_data_tree;
@@ -64,10 +64,8 @@ async fn log_unattributed_stream() {
     // a race condition in which the instance is started before the proper
     // event matcher is ready.
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
 
     let instance = builder.build().await.expect("create instance");
 

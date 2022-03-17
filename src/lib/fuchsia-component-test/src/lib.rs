@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _},
     cm_rust,
     component_events::{
-        events::{Event as CeEvent, EventMode, EventSource, EventSubscription, Started},
+        events::{Event as CeEvent, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
     fidl::endpoints::{self, DiscoverableProtocolMarker, ServerEnd},
@@ -276,7 +276,7 @@ impl ScopedInstance {
     pub async fn start_with_binder_sync(&self) -> Result<(), anyhow::Error> {
         let event_source = EventSource::new().context("failed to create EventSource")?;
         let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+            .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
             .await
             .context("failed to subscribe to EventSource")?;
 

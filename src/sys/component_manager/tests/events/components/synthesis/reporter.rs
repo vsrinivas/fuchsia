@@ -5,8 +5,7 @@
 use {
     assert_matches::assert_matches,
     component_events::events::{
-        Destroyed, DirectoryReady, Event, EventMode, EventSource, EventSubscription, Running,
-        Started,
+        Destroyed, DirectoryReady, Event, EventSource, EventSubscription, Running, Started,
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::ScopedInstance,
@@ -18,10 +17,8 @@ use {
 #[fuchsia::component]
 async fn main() {
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
 
     // Make 4 components: 1 directory ready child and 3 stub children
     let mut instances = vec![];
@@ -61,10 +58,11 @@ async fn main() {
     // Subscribe to events.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Running::NAME, Destroyed::NAME, DirectoryReady::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![
+            Running::NAME,
+            Destroyed::NAME,
+            DirectoryReady::NAME,
+        ])])
         .await
         .unwrap();
 

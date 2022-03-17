@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
+        events::{Event, EventSource, EventSubscription, Resolved, Started},
         matcher::EventMatcher,
     },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
@@ -17,10 +17,7 @@ async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Resolved::NAME, Started::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Resolved::NAME, Started::NAME])])
         .await
         .unwrap();
 

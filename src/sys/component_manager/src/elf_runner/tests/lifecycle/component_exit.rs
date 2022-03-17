@@ -6,8 +6,8 @@ use {
     anyhow::Error,
     component_events::{
         events::{
-            self as events, CapabilityRequested, Event, EventMode, EventSource, EventStream,
-            EventStreamError, EventSubscription,
+            self as events, CapabilityRequested, Event, EventSource, EventStream, EventStreamError,
+            EventSubscription,
         },
         matcher::EventMatcher,
         sequence::EventSequence,
@@ -23,7 +23,7 @@ use {
 async fn test_exit_detection() {
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME])])
         .await
         .unwrap();
 
@@ -55,10 +55,7 @@ async fn test_exit_after_rendezvous() {
     // component tree.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![events::Started::NAME, events::Stopped::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![events::Started::NAME, events::Stopped::NAME])])
         .await
         .unwrap();
 

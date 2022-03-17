@@ -97,10 +97,7 @@ async fn destroy_and_recreate() {
     let event_source = EventSource::from_proxy(proxy);
 
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Destroyed::NAME, Purged::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME, Purged::NAME])])
         .await
         .unwrap();
 

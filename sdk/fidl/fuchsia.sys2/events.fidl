@@ -15,16 +15,6 @@ const MAX_CAPABILITY_ID_LENGTH uint64 = 50;
 /// The maximum string length of an error description.
 const MAX_ERROR_DESCRIPTION_LENGTH uint64 = 100;
 
-/// Describes the consumption mode of an event.
-type EventMode = strict enum {
-    /// The event source dispatches the event and doesn't wait for the listener
-    /// to handle it.
-    ASYNC = 0;
-
-    /// The event source awaits the listener to notify it that it's done handling the event.
-    SYNC = 1;
-};
-
 /// These EventTypes are used for the EventStream protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
@@ -280,18 +270,12 @@ type Event = resource table {
 
     /// Optional payload for some event types
     2: event_result EventResult;
-
-    /// Handler for resuming from event
-    /// This will be absent if this is an async event.
-    3: handler client_end:Handler;
 };
 
 /// Indicates the event name to subscribe to with a given event mode.
 type EventSubscription = table {
     // The event names to subscribe to.
     1: event_name fuchsia.component.name;
-    /// The event mode with which to subscribe to the event names above.
-    2: mode EventMode;
 };
 
 /// Subscribe to events in component manager.
@@ -330,10 +314,4 @@ protocol EventStream {
     OnEvent(resource struct {
         event Event;
     });
-};
-
-/// Every Event supports this basic handler to allow resumption.
-protocol Handler {
-    /// Resumes/unblocks from an event.
-    Resume() -> ();
 };

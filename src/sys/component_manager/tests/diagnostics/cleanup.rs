@@ -43,10 +43,8 @@ async fn main() {
     });
 
     let event_source = EventSource::new().expect("conenct to event source");
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Purged::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Purged::NAME])]).await.unwrap();
 
     // Destroy the parent component.
     let mut child_ref =

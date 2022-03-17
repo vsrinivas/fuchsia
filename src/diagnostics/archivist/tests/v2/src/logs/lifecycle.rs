@@ -190,10 +190,8 @@ async fn test_logs_lifecycle() {
 
     let event_source =
         EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
     let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
     for i in 1..50 {

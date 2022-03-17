@@ -50,7 +50,7 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
     // Subscribe to stopped events for child components
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
         .await
         .context("failed to subscribe to EventSource")?;
 

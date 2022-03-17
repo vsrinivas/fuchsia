@@ -35,10 +35,8 @@ async fn wait_for_clean_stop(cm: RealmInstance, moniker_to_wait_on: &str) {
 
     let event_source = EventSource::from_proxy(proxy);
 
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     cm.start_component_tree().await.unwrap();
 

@@ -28,10 +28,8 @@ async fn run_single_test(url: &str) {
 
     let event_source = EventSource::from_proxy(proxy);
 
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     instance.start_component_tree().await.unwrap();
 

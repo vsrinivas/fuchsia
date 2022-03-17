@@ -1209,10 +1209,6 @@ pub mod capability_util {
         let subscribe_future = event_source_proxy.subscribe(
             &mut vec![fsys::EventSubscription {
                 event_name: Some(event.event_name.to_string()),
-                mode: Some(match event.mode {
-                    EventMode::Sync => fsys::EventMode::Sync,
-                    _ => fsys::EventMode::Async,
-                }),
                 ..fsys::EventSubscription::EMPTY
             }]
             .into_iter(),

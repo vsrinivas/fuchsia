@@ -13,10 +13,7 @@ async fn launch_realm_components() -> Result<(), Error> {
     // Subscribe to started events for child components
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Stopped::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
         .await
         .context("failed to subscribe to EventSource")?;
 

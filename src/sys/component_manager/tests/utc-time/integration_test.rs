@@ -60,10 +60,8 @@ async fn builtin_time_service_and_clock_routed() {
         .await
         .expect("failed to connect to the EventSource protocol");
 
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     // Unblock the component_manager.
     debug!("starting component tree");

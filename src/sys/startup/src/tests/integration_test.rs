@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{CapabilityRouted, Event, EventMode, EventSubscription},
+        events::{CapabilityRouted, Event, EventSubscription},
         matcher::EventMatcher,
     },
     fuchsia_async as fasync,
@@ -24,7 +24,7 @@ async fn integration_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![CapabilityRouted::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![CapabilityRouted::NAME])])
         .await
         .unwrap();
     test.start_component_tree().await.unwrap();

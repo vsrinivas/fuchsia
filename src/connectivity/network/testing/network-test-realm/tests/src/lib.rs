@@ -707,10 +707,10 @@ async fn start_stub_with_existing_stub() {
         component_events::events::EventSource::new().expect("failed to create event source");
 
     let mut event_stream = event_source
-        .subscribe(vec![component_events::events::EventSubscription::new(
-            vec![component_events::events::Started::NAME, component_events::events::Stopped::NAME],
-            component_events::events::EventMode::Async,
-        )])
+        .subscribe(vec![component_events::events::EventSubscription::new(vec![
+            component_events::events::Started::NAME,
+            component_events::events::Stopped::NAME,
+        ])])
         .await
         .expect("failed to subscribe to EventSource");
 

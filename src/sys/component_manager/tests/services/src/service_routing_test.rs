@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     component_events::{
-        events::{Discovered, Event, EventMode, EventSource, EventSubscription, Started},
+        events::{Discovered, Event, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
         sequence::*,
     },
@@ -103,7 +103,7 @@ async fn connect_to_instances_test() {
 async fn start_branch() -> Result<ScopedInstance, Error> {
     let event_source = EventSource::new()?;
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Discovered::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![Discovered::NAME])])
         .await
         .context("failed to subscribe to EventSource")?;
 
@@ -151,7 +151,7 @@ async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(),
 
     let event_source = EventSource::new()?;
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
         .await
         .context("failed to subscribe to EventSource")?;
 

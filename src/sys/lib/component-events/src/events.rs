@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    async_trait::async_trait,
     fidl::endpoints::{create_endpoints, ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_channel_to_protocol,
@@ -45,23 +44,18 @@ pub struct EventSource {
     proxy: fsys::EventSourceProxy,
 }
 
-pub enum EventMode {
-    Async,
-}
-
 pub struct EventSubscription {
     names: Vec<String>,
-    mode: EventMode,
 }
 
 impl EventSubscription {
-    pub fn new(names: Vec<impl ToString>, mode: EventMode) -> Self {
-        Self { names: names.into_iter().map(|name| name.to_string()).collect(), mode }
+    pub fn new(names: Vec<impl ToString>) -> Self {
+        Self { names: names.into_iter().map(|name| name.to_string()).collect() }
     }
 }
 impl From<Vec<String>> for EventSubscription {
     fn from(event_names: Vec<String>) -> Self {
-        Self { names: event_names, mode: EventMode::Async }
+        Self { names: event_names }
     }
 }
 
@@ -96,9 +90,6 @@ impl EventSource {
                     .iter()
                     .map(|name| fsys::EventSubscription {
                         event_name: Some(name.to_string()),
-                        mode: Some(match &request.mode {
-                            EventMode::Async => fsys::EventMode::Async,
-                        }),
                         ..fsys::EventSubscription::EMPTY
                     })
                     .collect(),
@@ -156,7 +147,7 @@ impl EventStream {
 }
 
 /// Common features of any event - event type, target moniker, conversion function
-pub trait Event: Handler + TryFrom<fsys::Event, Error = anyhow::Error> {
+pub trait Event: TryFrom<fsys::Event, Error = anyhow::Error> {
     const TYPE: fsys::EventType;
     const NAME: &'static str;
 
@@ -165,34 +156,6 @@ pub trait Event: Handler + TryFrom<fsys::Event, Error = anyhow::Error> {
     fn timestamp(&self) -> zx::Time;
     fn is_ok(&self) -> bool;
     fn is_err(&self) -> bool;
-}
-
-/// Basic handler that resumes/unblocks from an Event
-#[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
-#[async_trait]
-pub trait Handler: Sized + Send {
-    /// Returns a proxy to unblock the associated component manager task.
-    /// If this is an asynchronous event, then this will return none.
-    fn handler_proxy(self) -> Option<fsys::HandlerProxy>;
-
-    #[must_use = "futures do nothing unless you await on them!"]
-    async fn resume<'a>(self) -> Result<(), fidl::Error> {
-        if let Some(proxy) = self.handler_proxy() {
-            return proxy.resume().await;
-        }
-        Ok(())
-    }
-}
-
-/// Implemented on fsys::Event for resuming a generic event
-impl Handler for fsys::Event {
-    fn handler_proxy(self) -> Option<fsys::HandlerProxy> {
-        if let Some(handler) = self.handler {
-            handler.into_proxy().ok()
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Ord, PartialOrd)]
@@ -311,7 +274,6 @@ macro_rules! create_event {
             pub struct $event_type {
                 header: EventHeader,
                 result: Result<[<$event_type Payload>], [<$event_type Error>]>,
-                handler: Option<fsys::HandlerProxy>,
             }
 
             impl $event_type {
@@ -446,17 +408,9 @@ macro_rules! create_event {
                             return Err(format_err!("Incorrect event type"));
                         }
 
-                        let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
-
-                        $event_type { header,  handler, result }
+                        $event_type { header, result }
                     };
                     Ok(event)
-                }
-            }
-
-            impl Handler for $event_type {
-                fn handler_proxy(self) -> Option<fsys::HandlerProxy> {
-                    self.handler
                 }
             }
         }

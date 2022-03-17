@@ -299,10 +299,8 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
 
     // Register for stopped events
     let event_source = EventSource::new().unwrap();
-    let mut exit_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut exit_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     // Start the component tree
     let realm_instance = builder.build().await.unwrap();

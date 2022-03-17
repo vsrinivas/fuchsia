@@ -538,14 +538,10 @@ async fn observes_stop_events<M: Manager>(name: &str) {
         .expect("create netstack realm");
     let event_source = events::EventSource::new().expect("create event source");
     let mut event_stream = event_source
-        .subscribe(vec![events::EventSubscription::new(
-            vec![events::Started::NAME, events::Stopped::NAME],
-            // Event mode async means the framework doesn't wait for us to
-            // observe and acknowledge the event to move forward. We don't need
-            // for the framework to wait for us to acknowledge events, it is
-            // sufficient for this test that we're passive observers.
-            events::EventMode::Async,
-        )])
+        .subscribe(vec![events::EventSubscription::new(vec![
+            events::Started::NAME,
+            events::Stopped::NAME,
+        ])])
         .await
         .expect("subscribe to events");
 

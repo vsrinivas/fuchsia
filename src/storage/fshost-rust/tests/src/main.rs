@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Stopped},
+        events::{Event, EventSource, EventSubscription, Stopped},
         matcher::EventMatcher,
     },
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
@@ -64,10 +64,8 @@ async fn admin_shutdown_shuts_down_fshost() {
     let realm = new_realm().await.unwrap();
 
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
 
     let admin = realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     admin.shutdown().await.unwrap();

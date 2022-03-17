@@ -111,14 +111,14 @@ pub async fn write_ndp_message<
 
 /// Gets a component event stream yielding component stopped events.
 pub async fn get_component_stopped_event_stream() -> Result<component_events::events::EventStream> {
-    use component_events::events::{self, Event as _, EventMode, EventSource, EventSubscription};
+    use component_events::events::{self, Event as _, EventSource, EventSubscription};
 
     let event_source = EventSource::from_proxy(
         fuchsia_component::client::connect_to_protocol::<fsys2::EventSourceMarker>()
             .context("failed to connect to event source protocol")?,
     );
     event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME])])
         .await
         .context("failed to subscribe to `Stopped` events")
 }

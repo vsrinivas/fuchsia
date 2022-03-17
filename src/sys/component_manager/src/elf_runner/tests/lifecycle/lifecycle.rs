@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Started, Stopped},
+        events::{Event, EventSource, EventSubscription, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::EventSequence,
     },
@@ -15,10 +15,7 @@ use {
 async fn test_normal_behavior() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Stopped::NAME],
-            EventMode::Async,
-        )])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
         .await
         .unwrap();
     let collection_name = String::from("test-collection");
