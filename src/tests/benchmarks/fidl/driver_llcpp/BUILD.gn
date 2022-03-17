@@ -13,7 +13,7 @@ foreach(suite, benchmark_suites) {
   suite_target = "benchmark_suite__${suite.name}"
   gidl_deps += [ ":" + suite_target ]
 
-  gidl_driver_cpp_benchmarks(suite_target) {
+  gidl_driver_llcpp_benchmarks(suite_target) {
     testonly = true
     inputs = suite.gidl
     fidl = suite.fidl_target
@@ -36,7 +36,7 @@ foreach(suite, benchmark_suites) {
 }
 
 executable("bin") {
-  output_name = "driver_cpp_fidl_microbenchmarks"
+  output_name = "driver_llcpp_fidl_microbenchmarks"
   testonly = true
   sources = [ "main.cc" ]
   deps = [
@@ -50,7 +50,7 @@ executable("bin") {
          ] + gidl_deps
 }
 
-fuchsia_shell_package("driver_cpp") {
+fuchsia_shell_package("driver_llcpp") {
   testonly = true
   deps = [ ":bin" ]
 }

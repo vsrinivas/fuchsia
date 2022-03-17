@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,7 +7,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -39,20 +42,38 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   EchoServerImpl<ProtocolType, FidlType> server;
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &server);
   loop.StartThread();
-  typename fidl::WireSyncClient<ProtocolType> client(std::move(endpoints->client));
+
+  fidl::WireClient<ProtocolType> client;
+  libsync::Completion bound;
+  async::PostTask(loop.dispatcher(), [&]() {
+    client.Bind(std::move(endpoints->client), loop.dispatcher());
+    bound.Signal();
+  });
+  ZX_ASSERT(ZX_OK == bound.Wait());
 
   while (state->KeepRunning()) {
     fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
 
-    state->NextStep();  // End: Setup. Begin: EchoCall.
+    libsync::Completion completion;
+    async::PostTask(loop.dispatcher(), [&]() {
+      state->NextStep();  // End: Setup. Begin: EchoCall.
 
-    auto result = client->Echo(std::move(aligned_value));
-
-    state->NextStep();  // End: EchoCall. Begin: Teardown
-
-    ZX_ASSERT(result.ok());
+      client->Echo(
+          std::move(aligned_value),
+          [&state, &completion](fidl::WireUnownedResult<typename ProtocolType::Echo>& result) {
+            state->NextStep();  // End: EchoCall. Begin: Teardown
+            ZX_ASSERT(result.ok());
+            completion.Signal();
+          });
+    });
+    ZX_ASSERT(ZX_OK == completion.Wait());
   }
+
+  libsync::Completion destroyed;
+  async::PostTask(loop.dispatcher(),
+                  [client = std::move(client), &destroyed]() { destroyed.Signal(); });
+  ZX_ASSERT(ZX_OK == destroyed.Wait());
 
   loop.Quit();
 

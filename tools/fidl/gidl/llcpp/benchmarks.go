@@ -29,7 +29,7 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/llcpp/decode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/echo_call_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/echo_call_async_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/llcpp/echo_call_sync_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/send_event_benchmark_util.h"
 
 namespace {
@@ -90,8 +90,8 @@ bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
-bool BenchmarkEchoCallAsync{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallAsyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+bool BenchmarkEchoCallSync{{ .Name }}(perftest::RepeatState* state) {
+	return llcpp_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ end }}
@@ -106,7 +106,7 @@ void RegisterTests() {
 	{{- end -}}
 	{{ if .EnableEchoCallBenchmark }}
 	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	perftest::RegisterTest("LLCPP/EchoCallAsync/{{ .Path }}/Steps", BenchmarkEchoCallAsync{{ .Name }});
+	perftest::RegisterTest("LLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
 	{{- end -}}
 	{{ end }}
 }

@@ -210,10 +210,10 @@ template("gidl_reference_benchmarks") {
   }
 }
 
-template("gidl_driver_cpp_benchmarks") {
+template("gidl_driver_llcpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
-    language = "driver_cpp"
+    language = "driver_llcpp"
     bindings_suffix = "_driver"
     forward_variables_from(invoker, "*")
   }

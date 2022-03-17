@@ -7,7 +7,7 @@ group("benchmarks") {
   deps = [
     "cpp",
     "dart",
-    "driver_cpp",
+    "driver_llcpp",
     "fidlc:fidlc_microbenchmarks",
     "go",
     "hlcpp",

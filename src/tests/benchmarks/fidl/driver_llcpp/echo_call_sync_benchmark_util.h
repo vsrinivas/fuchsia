@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_BENCHMARK_UTIL_H_
-#define SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_BENCHMARK_UTIL_H_
+#ifndef SRC_TESTS_BENCHMARKS_FIDL_DRIVER_LLCPP_ECHO_CALL_SYNC_BENCHMARK_UTIL_H_
+#define SRC_TESTS_BENCHMARKS_FIDL_DRIVER_LLCPP_ECHO_CALL_SYNC_BENCHMARK_UTIL_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
@@ -21,7 +21,7 @@
 namespace driver_benchmarks {
 
 template <typename ProtocolType, typename FidlType>
-class EchoServerImpl : public fdf::WireServer<ProtocolType> {
+class EchoServerSyncImpl : public fdf::WireServer<ProtocolType> {
   void Echo(typename fdf::WireServer<ProtocolType>::EchoRequestView request, fdf::Arena& arena,
             typename fdf::WireServer<ProtocolType>::EchoCompleter::Sync& completer) override {
     completer.buffer(arena).Reply(std::move(request->val));
@@ -29,7 +29,7 @@ class EchoServerImpl : public fdf::WireServer<ProtocolType> {
 };
 
 template <typename ProtocolType, typename BuilderFunc>
-bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+bool EchoCallSyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyArena&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
@@ -53,7 +53,7 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   fdf::ServerEnd<ProtocolType> server_end(std::move(channels->end0));
   fdf::ClientEnd<ProtocolType> client_end(std::move(channels->end1));
 
-  EchoServerImpl<ProtocolType, FidlType> server;
+  EchoServerSyncImpl<ProtocolType, FidlType> server;
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), &server);
   typename fdf::WireSyncClient<ProtocolType> client(std::move(client_end));
@@ -91,4 +91,4 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
 }  // namespace driver_benchmarks
 
-#endif  // SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_BENCHMARK_UTIL_H_
+#endif  // SRC_TESTS_BENCHMARKS_FIDL_DRIVER_LLCPP_ECHO_CALL_SYNC_BENCHMARK_UTIL_H_

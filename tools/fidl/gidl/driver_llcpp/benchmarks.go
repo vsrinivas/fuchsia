@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package driver_cpp
+package driver_llcpp
 
 import (
 	"bytes"
@@ -25,8 +25,8 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 #include <vector>
 
-#include "src/tests/benchmarks/fidl/driver_cpp/echo_call_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/driver_cpp/echo_call_async_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/driver_llcpp/echo_call_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/driver_llcpp/echo_call_sync_benchmark_util.h"
 
 namespace {
 
@@ -58,15 +58,15 @@ bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 	return driver_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 
-bool BenchmarkEchoCallAsync{{ .Name }}(perftest::RepeatState* state) {
-	return driver_benchmarks::EchoCallAsyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+bool BenchmarkEchoCallSync{{ .Name }}(perftest::RepeatState* state) {
+	return driver_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 
 void RegisterTests() {
 	{{ range .Benchmarks }}
-	perftest::RegisterTest("DriverCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	perftest::RegisterTest("DriverCPP/EchoCallAsync/{{ .Path }}/Steps", BenchmarkEchoCallAsync{{ .Name }});
+	perftest::RegisterTest("DriverLLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+	perftest::RegisterTest("DriverLLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
 	{{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
