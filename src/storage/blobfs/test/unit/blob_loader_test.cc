@@ -30,6 +30,7 @@
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/test_scoped_vnode_open.h"
+#include "src/storage/blobfs/test/unit/local_decompressor_creator.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -59,9 +60,14 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     FilesystemOptions fs_options{
         .blob_layout_format = blob_layout_format_,
     };
-    options_ = {.compression_settings = {
-                    .compression_algorithm = compression_algorithm,
-                }};
+    auto connector_or = LocalDecompressorCreator::Create();
+    ASSERT_TRUE(connector_or.is_ok());
+    decompressor_creator_ = std::move(connector_or.value());
+    options_ = {
+        .compression_settings = {.compression_algorithm = compression_algorithm},
+        .sandbox_decompression = true,
+        .decompression_connector = decompressor_creator_->GetDecompressorConnector(),
+    };
     ASSERT_EQ(ZX_OK, setup_.CreateFormatMount(kNumBlocks, kTestBlockSize, fs_options, options_));
 
     // Pre-seed with some random blobs.
@@ -176,6 +182,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
  protected:
+  std::unique_ptr<LocalDecompressorCreator> decompressor_creator_;
   BlobfsTestSetup setup_;
 
   MountOptions options_;

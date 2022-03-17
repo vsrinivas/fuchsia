@@ -8,6 +8,7 @@
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/test/unit/local_decompressor_creator.h"
 
 namespace blobfs {
 
@@ -30,7 +31,20 @@ zx_status_t BlobfsTestSetupBase::Mount(std::unique_ptr<BlockDevice> device,
     return status.error_value();
   }
 
-  auto blobfs_or = Blobfs::Create(dispatcher(), std::move(device), vfs_.get(), options);
+  MountOptions options_copy = options;
+  // Override default decompression sandbox connector to be a local threaded version.
+  if (options.decompression_connector == nullptr) {
+    if (!decompressor_connector_) {
+      auto connector_or = LocalDecompressorCreator::Create();
+      if (!connector_or.is_ok()) {
+        return connector_or.error_value();
+      }
+      decompressor_connector_ = std::move(connector_or.value());
+    }
+    options_copy.decompression_connector = decompressor_connector_->GetDecompressorConnector();
+  }
+
+  auto blobfs_or = Blobfs::Create(dispatcher(), std::move(device), vfs_.get(), options_copy);
   if (blobfs_or.is_error())
     return blobfs_or.error_value();
   blobfs_ = std::move(blobfs_or.value());

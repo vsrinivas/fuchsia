@@ -9,10 +9,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.blobfs.internal.DecompressorCreator",
-                "fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
     ],
 }

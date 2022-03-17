@@ -10,6 +10,7 @@
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/test/unit/local_decompressor_creator.h"
 
 namespace blobfs {
 
@@ -58,6 +59,7 @@ class BlobfsTestSetupBase {
   // Should be called in the derived class' destructor.
   void DestroyBlobfs();
 
+  std::unique_ptr<LocalDecompressorCreator> decompressor_connector_;
   std::unique_ptr<fs::PagedVfs> vfs_;
   std::unique_ptr<Blobfs> blobfs_;
 };

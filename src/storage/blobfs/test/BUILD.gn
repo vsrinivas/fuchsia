@@ -38,6 +38,8 @@ source_set("test_utils") {
     "blobfs_test_setup.cc",
     "blobfs_test_setup.h",
     "test_scoped_vnode_open.h",
+    "unit/local_decompressor_creator.cc",
+    "unit/local_decompressor_creator.h",
     "unit/utils.cc",
     "unit/utils.h",
   ]
@@ -52,6 +54,7 @@ source_set("test_utils") {
   public_deps = [
     "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/blobfs",
+    "//src/storage/blobfs:decompressor_impl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -122,20 +125,11 @@ test("blobfs_unittest") {
       [ "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS" ]
 }
 
-fuchsia_unittest_component("blobfs-unittest-worker") {
-  manifest = "meta/blobfs_unittest_worker.cml"
+fuchsia_unittest_component("blobfs-unittest") {
+  manifest = "meta/blobfs_unittest.cml"
   deps = [
     ":blobfs_unittest",
     ":test_binary_resource",
-  ]
-}
-
-wrap_with_decompressor("blobfs-unittest") {
-  test_url =
-      "fuchsia-pkg://fuchsia.com/blobfs-unittest#meta/blobfs-unittest-worker.cm"
-  forwarded_protocols = [
-    "fuchsia.logger.LogSink",
-    "fuchsia.process.Launcher",
   ]
 }
 
@@ -147,11 +141,6 @@ fuchsia_test_package("blobfs-unittest-package") {
   }
   package_name = "blobfs-unittest"
   test_components = [ ":blobfs-unittest" ]
-
-  deps = [
-    ":blobfs-unittest-worker",
-    "//src/storage/blobfs:decompressor-sandbox",
-  ]
 }
 
 test("blobfs_host") {
