@@ -194,14 +194,9 @@ void ControllerImpl::Cleanse(FidlInput fidl_input, CleanseCallback callback) {
 }
 
 void ControllerImpl::Fuzz(FuzzCallback callback) {
-  auto task = runner_->Fuzz()
-                  .and_then([executor = executor_](Artifact& artifact) {
-                    return fpromise::ok(AsyncSocketWrite(executor, std::move(artifact)));
-                  })
-                  .then([callback = std::move(callback)](ZxResult<FidlArtifact>& result) {
-                    callback(std::move(result));
-                  });
-  executor_->schedule_task(std::move(task));
+  runner_->Fuzz([this, response = NewResponse(std::move(callback))](zx_status_t status) mutable {
+    response.Send(status, runner_->result(), runner_->result_input());
+  });
 }
 
 void ControllerImpl::Merge(MergeCallback callback) {

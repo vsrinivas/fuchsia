@@ -87,28 +87,24 @@ ZxPromise<> Runner::PendAsync(uint8_t action, Input&& input) {
 }
 
 ZxPromise<FuzzResult> Runner::Execute(Input input) {
-  return PendAsync(kExecute, std::move(input))
-      .and_then([this]() { return fpromise::ok(result_); })
-      .wrap_with(scope_);
+  return PendAsync(kExecute, std::move(input)).and_then([this]() { return fpromise::ok(result_); });
 }
 
 ZxPromise<Input> Runner::Minimize(Input input) {
-  return PendAsync(kMinimize, std::move(input))
-      .and_then([this]() { return fpromise::ok(result_input_.Duplicate()); })
-      .wrap_with(scope_);
+  return PendAsync(kMinimize, std::move(input)).and_then([this]() {
+    return fpromise::ok(result_input_.Duplicate());
+  });
 }
 
 ZxPromise<Input> Runner::Cleanse(Input input) {
-  return PendAsync(kCleanse, std::move(input))
-      .and_then([this]() { return fpromise::ok(result_input_.Duplicate()); })
-      .wrap_with(scope_);
+  return PendAsync(kCleanse, std::move(input)).and_then([this]() {
+    return fpromise::ok(result_input_.Duplicate());
+  });
 }
 
-ZxPromise<Artifact> Runner::Fuzz() {
+void Runner::Fuzz(fit::function<void(zx_status_t)> callback) {
   Input input;
-  return PendAsync(kFuzz, std::move(input))
-      .and_then([this]() { return fpromise::ok(Artifact(result_, result_input_.Duplicate())); })
-      .wrap_with(scope_);
+  Pend(kFuzz, std::move(input), std::move(callback));
 }
 
 void Runner::Merge(fit::function<void(zx_status_t)> callback) {

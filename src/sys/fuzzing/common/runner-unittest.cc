@@ -79,33 +79,12 @@ void RunnerTest::RunAllInputs() {
     auto input = GetTestInput();
     SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
   }
-  RunUntilIdle();
-}
-
-void RunnerTest::RunAllInputsAsync() {
-  while (true) {
-    // Periodically check if all scheduled tasks have completed and active count has dropped zero.
-    // In that case, the engine will not produce additional test inputs. Make sure to keep driving
-    // the test loop.
-    Waiter waiter = [this](zx::time deadline) {
-      RunOnce();
-      return (HasTestInput(deadline) || active() == 0) ? ZX_OK : ZX_ERR_TIMED_OUT;
-    };
-    auto status = PollFor("engine to produce test input or status", &waiter, zx::msec(100));
-    ASSERT_EQ(status, ZX_OK);
-    if (active() == 0) {
-      break;
-    }
-    auto input = GetTestInput();
-    SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
-  }
 }
 
 bool RunnerTest::HasTestInput() {
   // Periodically check if the engine has produced a final status; and therefore will not produce
-  // additional test inputs. Make sure to keep driving the test loop.
+  // additional test inputs.
   Waiter waiter = [this](zx::time deadline) {
-    RunOnce();
     return (HasTestInput(deadline) || HasStatus()) ? ZX_OK : ZX_ERR_TIMED_OUT;
   };
   auto status = PollFor("engine to produce test input or status", &waiter, zx::msec(100));
@@ -294,16 +273,13 @@ void RunnerTest::FuzzUntilError(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_detect_exits(true);
   Configure(runner, options);
-
-  Artifact artifact;
-  FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
   RunOne();
   RunOne();
   RunOne();
   RunOne(FuzzResult::EXIT);
-
-  RunUntilIdle();
-  EXPECT_EQ(artifact.fuzz_result(), FuzzResult::EXIT);
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), FuzzResult::EXIT);
 }
 
 void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
@@ -331,9 +307,7 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   runner->AddMonitor(monitor.NewBinding());
 
   // Fuzz for exactly |kNumRuns|.
-  Artifact artifact;
-  FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
-
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
   std::vector<std::string> actual;
   for (size_t i = 0; i < kNumRuns; ++i) {
     actual.push_back(RunOne({{i, i}}).ToHex());
@@ -388,8 +362,11 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   ASSERT_TRUE(status.has_covered_pcs());
   EXPECT_GE(status.covered_pcs(), covered_pcs);
 
-  // All done. Every corpus inputs should have been run.
-  EXPECT_EQ(artifact.fuzz_result(), FuzzResult::NO_ERRORS);
+  // All done.
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
+
+  // All corpus inputs should have been run.
   std::sort(expected.begin(), expected.end());
   std::sort(actual.begin(), actual.end());
   std::vector<std::string> missing;
@@ -405,14 +382,14 @@ void RunnerTest::FuzzUntilTime(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_max_total_time(zx::msec(100).get());
   Configure(runner, options);
+
   auto start = zx::clock::get_monotonic();
-
-  Artifact artifact;
-  FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
-  RunAllInputsAsync();
-  EXPECT_EQ(artifact.fuzz_result(), FuzzResult::NO_ERRORS);
-
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  RunAllInputs();
   auto elapsed = zx::clock::get_monotonic() - start;
+
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
   EXPECT_GE(elapsed, zx::msec(100));
 }
 
@@ -501,21 +478,19 @@ void RunnerTest::Merge(const RunnerPtr& runner, bool keeps_errors, uint64_t oom_
 
 void RunnerTest::Stop(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
-  Artifact artifact;
-  FUZZING_EXPECT_OK(runner->Fuzz(), &artifact);
-  std::thread t([runner]() {
-    zx::nanosleep(zx::deadline_after(zx::msec(100)));
-    // Each stage of stopping should be idempotent.
-    runner->Close();
-    runner->Close();
-    runner->Interrupt();
-    runner->Interrupt();
-    runner->Join();
-    runner->Join();
-  });
-  RunAllInputsAsync();
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  std::thread t([this]() { RunAllInputs(); });
+  AwaitStarted();
+  // Each stage of stopping should be idempotent.
+  runner->Close();
+  runner->Close();
+  runner->Interrupt();
+  runner->Interrupt();
+  runner->Join();
+  runner->Join();
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
   t.join();
-  EXPECT_EQ(artifact.fuzz_result(), FuzzResult::NO_ERRORS);
 }
 
 }  // namespace fuzzing
