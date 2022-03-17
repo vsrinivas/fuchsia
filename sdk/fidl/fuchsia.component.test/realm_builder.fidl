@@ -5,6 +5,7 @@
 library fuchsia.component.test;
 
 using fuchsia.component;
+using fuchsia.component.config;
 using fuchsia.component.decl;
 using fuchsia.component.runner;
 using fuchsia.component.types;
@@ -114,6 +115,17 @@ type RealmBuilderError2 = strict enum : uint32 {
     /// The handle the client provided for the test's pkg directory is not
     /// usable.
     INVALID_PKG_DIR_HANDLE = 17;
+
+    /// The component does not have a config schema defined. Attempting to
+    /// set a config value is not allowed.
+    NO_CONFIG_SCHEMA = 18;
+
+    /// The component's config schema does not have a field with that name.
+    NO_SUCH_CONFIG_FIELD = 19;
+
+    /// A config value is invalid. This may mean a type mismatch or an issue
+    /// with constraints like string/vector length.
+    CONFIG_VALUE_INVALID = 20;
 };
 
 protocol Builder {
@@ -448,5 +460,24 @@ protocol Realm {
 
         /// The contents of the directory.
         directory_contents DirectoryContents;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Replaces the configuration value for a field specified by `key`.
+    /// The component specified should have a config schema with this field.
+    /// The value must conform to all constraints as defined by the schema.
+    ///
+    /// Errors:
+    /// - `NO_CONFIG_SCHEMA`: component does not have a config schema
+    /// - `NO_SUCH_CONFIG_FIELD`: `key` could not be found in component's config schema
+    /// - `CONFIG_VALUE_INVALID`: `value` does not meet config schema constraints
+    ReplaceConfigValue(struct {
+        /// The name of the component whose config value is being replaced.
+        name fuchsia.component.name;
+
+        /// The key of the config field whose value is being replaced.
+        key fuchsia.component.decl.ConfigKey;
+
+        /// The config value being replaced.
+        value fuchsia.component.config.ValueSpec;
     }) -> (struct {}) error RealmBuilderError2;
 };

@@ -148,7 +148,12 @@ pub struct ConfigField {
 }
 
 impl ConfigField {
-    fn resolve(spec_field: ValueSpec, decl_field: &ConfigFieldDecl) -> Result<Self, ValueError> {
+    /// Reconciles a config field schema from the manifest with a value from the value file.
+    /// If the types and constraints don't match, an error is returned.
+    pub fn resolve(
+        spec_field: ValueSpec,
+        decl_field: &ConfigFieldDecl,
+    ) -> Result<Self, ValueError> {
         let key = decl_field.key.clone();
 
         match (&spec_field.value, &decl_field.type_) {

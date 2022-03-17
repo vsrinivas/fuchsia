@@ -773,11 +773,125 @@ async fn echo_client_structured_config() -> Result<(), Error> {
         .add_local_child(
             "echo_server",
             move |handles| {
-                echo_server_mock("Hello Fuchsia!", send_echo_server_called.clone(), handles).boxed()
+                echo_server_mock(
+                    "Hello Fuchsia!, Hi, There, false, 100",
+                    send_echo_server_called.clone(),
+                    handles,
+                )
+                .boxed()
             },
             ChildOptions::new(),
         )
         .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fecho::EchoMarker>())
+                .from(&echo_server)
+                .to(&echo_client),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_client),
+        )
+        .await?;
+
+    let _instance = builder.build().await?;
+
+    assert!(receive_echo_server_called.next().await.is_some());
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn echo_client_structured_config_replace() -> Result<(), Error> {
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
+
+    let builder = RealmBuilder::new().await?;
+    let echo_client = builder
+        .add_child(
+            "echo_client",
+            V2_ECHO_CLIENT_STRUCTURED_CONFIG_RELATIVE_URL,
+            ChildOptions::new().eager(),
+        )
+        .await?;
+
+    let echo_server = builder
+        .add_local_child(
+            "echo_server",
+            move |handles| {
+                echo_server_mock(
+                    "Foobar!, Hey, Folks, true, 42",
+                    send_echo_server_called.clone(),
+                    handles,
+                )
+                .boxed()
+            },
+            ChildOptions::new(),
+        )
+        .await?;
+
+    // fail to replace a config field in a component that doesn't have a config schema
+    assert_matches!(
+        builder.replace_config_value_bool(&echo_server, "echo_bool", false).await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::NoConfigSchema))
+    );
+
+    // fail to replace a field that doesn't exist
+    assert_matches!(
+        builder.replace_config_value_string(&echo_client, "doesnt_exist", "test").await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::NoSuchConfigField))
+    );
+
+    // fail to replace a field with the wrong type
+    assert_matches!(
+        builder.replace_config_value_string(&echo_client, "echo_bool", "test").await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+    );
+
+    // fail to replace a string that violates max_len
+    let long_string = String::from_utf8(vec![b'F'; 20]).unwrap();
+    assert_matches!(
+        builder.replace_config_value_string(&echo_client, "echo_string", long_string.clone()).await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+    );
+
+    // fail to replace a vector whose string element violates max_len
+    assert_matches!(
+        builder
+            .replace_config_value_string_vector(
+                &echo_client,
+                "echo_string_vector",
+                vec![long_string]
+            )
+            .await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+    );
+
+    // fail to replace a vector that violates max_count
+    assert_matches!(
+        builder
+            .replace_config_value_string_vector(
+                &echo_client,
+                "echo_string_vector",
+                vec!["a", "b", "c", "d"],
+            )
+            .await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+    );
+
+    // succeed at replacing all fields with proper constraints
+    builder.replace_config_value_string(&echo_client, "echo_string", "Foobar!").await.unwrap();
+    builder
+        .replace_config_value_string_vector(&echo_client, "echo_string_vector", ["Hey", "Folks"])
+        .await
+        .unwrap();
+    builder.replace_config_value_bool(&echo_client, "echo_bool", true).await.unwrap();
+    builder.replace_config_value_uint64(&echo_client, "echo_num", 42).await.unwrap();
     builder
         .add_route(
             Route::new()

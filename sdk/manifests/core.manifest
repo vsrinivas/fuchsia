@@ -34,6 +34,7 @@ sdk://fidl/fuchsia.castsysteminfo
 sdk://fidl/fuchsia.castwindow
 sdk://fidl/fuchsia.cobalt
 sdk://fidl/fuchsia.component
+sdk://fidl/fuchsia.component.config
 sdk://fidl/fuchsia.component.decl
 sdk://fidl/fuchsia.component.resolution
 sdk://fidl/fuchsia.component.runner

@@ -1,5 +1,6 @@
 sdk://docs/metadata_schemas
 sdk://fidl/fuchsia.component
+sdk://fidl/fuchsia.component.config
 sdk://fidl/fuchsia.component.decl
 sdk://fidl/fuchsia.component.runner
 sdk://fidl/fuchsia.component.test

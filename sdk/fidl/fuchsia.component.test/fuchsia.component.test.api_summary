@@ -48,6 +48,7 @@ protocol/member fuchsia.component.test/Realm.GetComponentDecl(string:100 name) -
 protocol/member fuchsia.component.test/Realm.GetRealmDecl() -> (fuchsia.component.test/Realm_GetRealmDecl_Result result)
 protocol/member fuchsia.component.test/Realm.ReadOnlyDirectory(string:100 name,vector<fuchsia.component.decl/Ref> to,fuchsia.component.test/DirectoryContents directory_contents) -> (fuchsia.component.test/Realm_ReadOnlyDirectory_Result result)
 protocol/member fuchsia.component.test/Realm.ReplaceComponentDecl(string:100 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)
+protocol/member fuchsia.component.test/Realm.ReplaceConfigValue(string:100 name,string:64 key,fuchsia.component.config/ValueSpec value) -> (fuchsia.component.test/Realm_ReplaceConfigValue_Result result)
 protocol/member fuchsia.component.test/Realm.ReplaceRealmDecl(fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceRealmDecl_Result result)
 protocol fuchsia.component.test/Realm
 enum/member fuchsia.component.test/RealmBuilderError2.BUILD_ALREADY_CALLED 12
@@ -55,6 +56,7 @@ enum/member fuchsia.component.test/RealmBuilderError2.CAPABILITIES_EMPTY 7
 enum/member fuchsia.component.test/RealmBuilderError2.CAPABILITY_INVALID 13
 enum/member fuchsia.component.test/RealmBuilderError2.CHILD_ALREADY_EXISTS 0
 enum/member fuchsia.component.test/RealmBuilderError2.CHILD_DECL_NOT_VISIBLE 4
+enum/member fuchsia.component.test/RealmBuilderError2.CONFIG_VALUE_INVALID 20
 enum/member fuchsia.component.test/RealmBuilderError2.DECL_NOT_FOUND 10
 enum/member fuchsia.component.test/RealmBuilderError2.DECL_READ_ERROR 11
 enum/member fuchsia.component.test/RealmBuilderError2.IMMUTABLE_PROGRAM 15
@@ -62,7 +64,9 @@ enum/member fuchsia.component.test/RealmBuilderError2.INVALID_CHILD_REALM_HANDLE
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_COMPONENT_DECL 2
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_MANIFEST_EXTENSION 1
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_PKG_DIR_HANDLE 17
+enum/member fuchsia.component.test/RealmBuilderError2.NO_CONFIG_SCHEMA 18
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_CHILD 3
+enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_CONFIG_FIELD 19
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_SOURCE 5
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_TARGET 6
 enum/member fuchsia.component.test/RealmBuilderError2.SOURCE_AND_TARGET_MATCH 9
@@ -118,6 +122,10 @@ struct fuchsia.component.test/Realm_ReplaceComponentDecl_Response
 union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err fuchsia.component.test/RealmBuilderError2
 union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.response fuchsia.component.test/Realm_ReplaceComponentDecl_Response
 strict union fuchsia.component.test/Realm_ReplaceComponentDecl_Result
+struct fuchsia.component.test/Realm_ReplaceConfigValue_Response
+union/member fuchsia.component.test/Realm_ReplaceConfigValue_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_ReplaceConfigValue_Result.response fuchsia.component.test/Realm_ReplaceConfigValue_Response
+strict union fuchsia.component.test/Realm_ReplaceConfigValue_Result
 struct fuchsia.component.test/Realm_ReplaceRealmDecl_Response
 union/member fuchsia.component.test/Realm_ReplaceRealmDecl_Result.err fuchsia.component.test/RealmBuilderError2
 union/member fuchsia.component.test/Realm_ReplaceRealmDecl_Result.response fuchsia.component.test/Realm_ReplaceRealmDecl_Response

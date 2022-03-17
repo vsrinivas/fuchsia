@@ -3,4 +3,10 @@
 // found in the LICENSE file.
 {
     echo_string: "Hello Fuchsia!",
+    echo_string_vector: [
+        "Hi",
+        "There",
+    ],
+    echo_bool: false,
+    echo_num: 100,
 }

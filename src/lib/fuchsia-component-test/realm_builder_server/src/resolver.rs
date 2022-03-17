@@ -5,9 +5,11 @@
 use {
     anyhow::{anyhow, Context, Error},
     cm_fidl_validator,
+    cm_rust::{FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fcdecl,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     futures::{
         lock::{Mutex, MutexGuard},
         TryStreamExt,
@@ -17,15 +19,13 @@ use {
     url::Url,
 };
 
-#[cfg(test)]
-use cm_rust::{self, FidlIntoNative};
-
 const RESOLVER_SCHEME: &'static str = "realm-builder";
 
 #[derive(Clone)]
 struct ResolveableComponent {
     decl: fcdecl::Component,
     package_dir: Option<fio::DirectoryProxy>,
+    config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
 }
 
 #[derive(Debug)]
@@ -56,6 +56,7 @@ impl Registry {
         decl: &fcdecl::Component,
         name: String,
         package_dir: Option<fio::DirectoryProxy>,
+        config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
     ) -> Result<String, cm_fidl_validator::error::ErrorList> {
         cm_fidl_validator::validate(decl)?;
 
@@ -66,7 +67,7 @@ impl Registry {
         *next_unique_component_id_guard += 1;
         component_decls_guard.insert(
             Url::parse(&url).expect("generated invalid URL"),
-            ResolveableComponent { decl: decl.clone(), package_dir },
+            ResolveableComponent { decl: decl.clone(), package_dir, config_value_replacements },
         );
         Ok(url)
     }
@@ -84,11 +85,16 @@ impl Registry {
     async fn get_config_data(
         decl: &fcdecl::Component,
         package_dir: &Option<fio::DirectoryProxy>,
+        config_value_replacements: &HashMap<usize, cm_rust::ValueSpec>,
     ) -> Result<Option<fmem::Data>, Error> {
         if let Some(fcdecl::ConfigSchema { value_source, .. }) = &decl.config {
             if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source {
                 if let Some(p) = package_dir {
-                    Ok(Some(mem_util::open_file_data(p, path).await?))
+                    let data = mem_util::open_file_data(p, path).await?;
+                    let data =
+                        Self::verify_and_replace_config_values(data, config_value_replacements)
+                            .await?;
+                    Ok(Some(data))
                 } else {
                     return Err(anyhow!(
                         "Expected package directory for opening config values at {:?}, but none was provided",
@@ -106,6 +112,31 @@ impl Registry {
         }
     }
 
+    async fn verify_and_replace_config_values(
+        values_data: fmem::Data,
+        config_value_replacements: &HashMap<usize, cm_rust::ValueSpec>,
+    ) -> Result<fmem::Data, Error> {
+        let bytes = mem_util::bytes_from_data(&values_data)?;
+        let values_data = fidl::encoding::decode_persistent(&bytes)?;
+        cm_fidl_validator::validate_values_data(&values_data)?;
+        let mut values_data: cm_rust::ValuesData = values_data.fidl_into_native();
+
+        for (index, replacement) in config_value_replacements {
+            let value = values_data
+                .values
+                .get_mut(*index)
+                .expect("Config Value File and Schema should have the same number of fields!");
+            *value = replacement.clone();
+        }
+
+        let mut values_data: fconfig::ValuesData = values_data.native_into_fidl();
+        cm_fidl_validator::validate_values_data(&values_data)?;
+
+        let data = fidl::encoding::encode_persistent(&mut values_data)?;
+        let data = fmem::Data::Bytes(data);
+        return Ok(data);
+    }
+
     async fn handle_resolver_request_stream(
         self: &Arc<Self>,
         mut stream: fsys::ComponentResolverRequestStream,
@@ -121,8 +152,11 @@ impl Registry {
                         }
                     };
                     let component_decls_guard = self.component_decls.lock().await;
-                    if let Some(ResolveableComponent { decl, package_dir }) =
-                        component_decls_guard.get(&parsed_url).cloned()
+                    if let Some(ResolveableComponent {
+                        decl,
+                        package_dir,
+                        config_value_replacements,
+                    }) = component_decls_guard.get(&parsed_url).cloned()
                     {
                         let package = if let Some(p) = &package_dir {
                             let (client_end, server_end) =
@@ -140,7 +174,9 @@ impl Registry {
                             None
                         };
 
-                        let config_values = Self::get_config_data(&decl, &package_dir).await?;
+                        let config_values =
+                            Self::get_config_data(&decl, &package_dir, &config_value_replacements)
+                                .await?;
 
                         responder.send(&mut Ok(fsys::Component {
                             resolved_url: Some(component_url),
@@ -179,11 +215,9 @@ impl Registry {
         };
 
         parsed_url.set_fragment(None);
-        let package_dir = component_decls_guard
-            .get(&parsed_url)
-            .ok_or(fsys::ResolverError::ManifestNotFound)?
-            .package_dir
-            .clone();
+        let component =
+            component_decls_guard.get(&parsed_url).ok_or(fsys::ResolverError::ManifestNotFound)?;
+        let package_dir = component.package_dir.clone();
         let package_dir = package_dir.ok_or(fsys::ResolverError::PackageNotFound)?;
         let manifest_file =
             io_util::open_file(&package_dir, Path::new(&fragment), fio::OPEN_RIGHT_READABLE)
@@ -198,9 +232,13 @@ impl Registry {
         package_dir
             .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
             .map_err(|_| fsys::ResolverError::Io)?;
-        let config_values = Self::get_config_data(&component_decl, &Some(package_dir))
-            .await
-            .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?;
+        let config_values = Self::get_config_data(
+            &component_decl,
+            &Some(package_dir),
+            &component.config_value_replacements,
+        )
+        .await
+        .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?;
         Ok(fsys::Component {
             resolved_url: Some(component_url.clone()),
             decl: Some(encode(component_decl).map_err(|_| fsys::ResolverError::Internal)?),

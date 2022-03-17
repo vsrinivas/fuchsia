@@ -6,9 +6,9 @@ use {
     anyhow::{self, Context},
     cm_rust::{FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
+    fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -430,6 +430,21 @@ impl Realm {
                         }
                     }
                 }
+                ftest::RealmRequest::ReplaceConfigValue { name, key, value, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
+                    match self.replace_config_value(name, key, value).await {
+                        Ok(()) => {
+                            responder.send(&mut Ok(()))?;
+                        }
+                        Err(e) => {
+                            warn!("unable to set config value: {:?}", e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -578,6 +593,32 @@ impl Realm {
         self.realm_node.replace_decl_with_untrusted(component_decl).await
     }
 
+    async fn replace_config_value(
+        &self,
+        name: String,
+        key: String,
+        value_spec: fconfig::ValueSpec,
+    ) -> Result<(), RealmBuilderError> {
+        let child_node = self.realm_node.get_sub_realm(&name).await?;
+        let decl = child_node.get_decl().await;
+        let config = decl.config.ok_or(RealmBuilderError::NoConfigSchema)?;
+        cm_fidl_validator::validate_value_spec(&value_spec).map_err(|e| {
+            error!("Error validating value spec for {}: {}", key, e);
+            RealmBuilderError::ConfigValueInvalid
+        })?;
+        let value_spec = value_spec.fidl_into_native();
+        for (index, field) in config.fields.iter().enumerate() {
+            if field.key == key {
+                config_encoder::ConfigField::resolve(value_spec.clone(), &field)
+                    .map_err(|_| RealmBuilderError::ConfigValueInvalid)?;
+                let mut state_guard = child_node.state.lock().await;
+                state_guard.config_value_replacements.insert(index, value_spec);
+                return Ok(());
+            }
+        }
+        Err(RealmBuilderError::NoSuchConfigField(key))
+    }
+
     async fn read_only_directory(
         &self,
         directory_name: String,
@@ -654,6 +695,10 @@ fn new_decl_with_program_entries(entries: Vec<(String, String)>) -> cm_rust::Com
 #[derive(Debug, Clone, Default)]
 struct RealmNodeState {
     decl: cm_rust::ComponentDecl,
+
+    /// Stores indices to configuration values that must be replaced when the config value file
+    /// of a component is read in from the package directory during resolve.
+    config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
 
     /// Children stored in this HashMap can be mutated. Children stored in `decl.children` can not.
     /// Any children stored in `mutable_children` do NOT have a corresponding `ChildDecl` stored in
@@ -979,8 +1024,14 @@ impl RealmNode2 {
             let name =
                 if walked_path.is_empty() { "root".to_string() } else { walked_path.join("-") };
             let decl = state_guard.decl.clone().native_into_fidl();
+            let config_value_replacements = state_guard.config_value_replacements.clone();
             match registry
-                .validate_and_register(&decl, name, Some(Clone::clone(&package_dir)))
+                .validate_and_register(
+                    &decl,
+                    name,
+                    Some(Clone::clone(&package_dir)),
+                    config_value_replacements,
+                )
                 .await
             {
                 Ok(url) => Ok(url),
@@ -1527,6 +1578,20 @@ enum RealmBuilderError {
         "the program section of the manifest for a legacy or local component cannot be changed"
     )]
     ImmutableProgram,
+
+    /// The component does not have a config schema defined. Attempting to
+    /// set a config value is not allowed.
+    #[error("component decl does not have a config schema defined")]
+    NoConfigSchema,
+
+    /// The component's config schema does not have a field with that name.
+    #[error("could not find config field in config schema: {0:?}")]
+    NoSuchConfigField(String),
+
+    /// A config value is invalid. This may mean a type mismatch or an issue
+    /// with constraints like string/vector length.
+    #[error("config value is invalid")]
+    ConfigValueInvalid,
 }
 
 impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
@@ -1549,6 +1614,9 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
             RealmBuilderError::CapabilityInvalid(_) => Self::CapabilityInvalid,
             RealmBuilderError::InvalidChildRealmHandle(_) => Self::InvalidChildRealmHandle,
             RealmBuilderError::ImmutableProgram => Self::ImmutableProgram,
+            RealmBuilderError::NoConfigSchema => Self::NoConfigSchema,
+            RealmBuilderError::NoSuchConfigField(_) => Self::NoSuchConfigField,
+            RealmBuilderError::ConfigValueInvalid => Self::ConfigValueInvalid,
         }
     }
 }
