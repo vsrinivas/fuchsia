@@ -344,6 +344,8 @@ class LogState {
   // Allowed to be const because descriptor_ is mutable
   cpp17::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
+  void HandleInterest();
+
   void Connect();
   void ConnectAsync();
   struct Task : public async_task_t {
@@ -433,6 +435,20 @@ static syslog::LogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severi
   }
 }
 
+void LogState::HandleInterest() {
+  log_sink_->WaitForInterestChange(
+      [=](fuchsia::logger::LogSink_WaitForInterestChange_Result interest_result) {
+        auto interest = std::move(interest_result.response().data);
+        if (!interest.has_min_severity()) {
+          min_severity_ = default_severity_;
+        } else {
+          min_severity_ = IntoLogSeverity(interest.min_severity());
+        }
+        handler_(handler_context_, min_severity_);
+        HandleInterest();
+      });
+}
+
 void LogState::ConnectAsync() {
   zx::channel logger, logger_request;
   if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
@@ -454,14 +470,7 @@ void LogState::ConnectAsync() {
   if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
     return;
   }
-  log_sink_.events().OnRegisterInterest = [=](::fuchsia::diagnostics::Interest interest) {
-    if (!interest.has_min_severity()) {
-      min_severity_ = default_severity_;
-    } else {
-      min_severity_ = IntoLogSeverity(interest.min_severity());
-    }
-    handler_(handler_context_, min_severity_);
-  };
+  HandleInterest();
   log_sink_->ConnectStructured(std::move(remote));
   descriptor_ = std::move(local);
 }

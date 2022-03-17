@@ -31,7 +31,7 @@ pub(crate) struct Sink {
 }
 
 impl Sink {
-    pub fn new(log_sink: LogSinkProxy) -> Result<Self, PublishError> {
+    pub fn new(log_sink: &LogSinkProxy) -> Result<Self, PublishError> {
         let (socket, remote_socket) =
             zx::Socket::create(zx::SocketOpts::DATAGRAM).map_err(PublishError::MakeSocket)?;
         log_sink.connect_structured(remote_socket).map_err(PublishError::SendSocket)?;
@@ -115,7 +115,7 @@ mod tests {
 
     async fn init_sink(tags: Option<&[&str]>) -> fidl::Socket {
         let (proxy, mut requests) = create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let mut sink = Sink::new(proxy).unwrap();
+        let mut sink = Sink::new(&proxy).unwrap();
         if let Some(tags) = tags {
             sink.set_tags(tags);
         }

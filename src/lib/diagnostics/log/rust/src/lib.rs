@@ -122,13 +122,11 @@ impl Publisher {
             .map_err(|e| e.to_string())
             .map_err(PublishError::LogSinkConnect)?;
 
-        let events = log_sink.take_event_stream();
-        let (filter, on_change) = InterestFilter::new(events, options.interest);
-
-        let mut sink = Sink::new(log_sink)?;
+        let mut sink = Sink::new(&log_sink)?;
         if let Some(tags) = options.tags {
             sink.set_tags(&tags);
         }
+        let (filter, on_change) = InterestFilter::new(log_sink, options.interest);
 
         Ok((Self { inner: Registry::default().with(sink).with(filter) }, on_change))
     }

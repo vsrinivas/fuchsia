@@ -19,7 +19,7 @@ use diagnostics_data::{BuilderArgs, Data, LogError, Logs, LogsData, LogsDataBuil
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest as FidlInterest, LogInterestSelector, StreamMode};
 use fidl_fuchsia_logger::{
-    InterestChangeError, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
+    InterestChangeError, LogSinkRequest, LogSinkRequestStream,
     LogSinkWaitForInterestChangeResponder,
 };
 use fuchsia_async::Task;
@@ -87,9 +87,6 @@ struct ContainerState {
     /// Current interest for this component.
     interests: BTreeMap<Interest, usize>,
 
-    /// Control handles for connected clients.
-    control_handles: Vec<LogSinkControlHandle>,
-
     /// Hanging gets
     hanging_gets: BTreeMap<usize, Arc<Mutex<Option<InterestSender>>>>,
 }
@@ -109,7 +106,6 @@ impl LogsArtifactsContainer {
                 is_live: true,
                 num_active_channels: 0,
                 num_active_sockets: 0,
-                control_handles: vec![],
                 interests: BTreeMap::new(),
                 hanging_gets: BTreeMap::new(),
             })),
@@ -212,12 +208,6 @@ impl LogsArtifactsContainer {
         let mut interest_listener = None;
         let previous_interest_sent = Arc::new(Mutex::new(None));
         debug!(%self.identity, "Draining LogSink channel.");
-        {
-            let control = stream.control_handle();
-            let mut state = self.state.lock();
-            control.send_on_register_interest(state.min_interest()).ok();
-            state.control_handles.push(control);
-        }
 
         macro_rules! handle_socket {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
@@ -528,9 +518,6 @@ impl ContainerState {
             || compare_fidl_interest(&new_min_interest, &prev_min_interest) != Ordering::Equal
         {
             debug!(%identity, ?new_min_interest, "Updating interest.");
-            self.control_handles.retain(|handle| {
-                handle.send_on_register_interest(new_min_interest.clone()).is_ok()
-            });
             for value in self.hanging_gets.values_mut() {
                 let locked = value.lock().take();
                 if let Some(value) = locked {
@@ -620,12 +607,13 @@ mod tests {
         events::types::{ComponentIdentifier, MonikerSegment},
         logs::budget::BudgetManager,
     };
-    use assert_matches::assert_matches;
     use fidl_fuchsia_diagnostics::{ComponentSelector, Severity, StringSelector};
-    use fidl_fuchsia_logger::{LogSinkEventStream, LogSinkMarker, LogSinkProxy};
+    use fidl_fuchsia_logger::{LogSinkMarker, LogSinkProxy};
     use fuchsia_async::Duration;
+    use futures::channel::mpsc::UnboundedReceiver;
 
-    async fn initialize_container() -> (Arc<LogsArtifactsContainer>, LogSinkEventStream) {
+    async fn initialize_container(
+    ) -> (Arc<LogsArtifactsContainer>, LogSinkProxy, UnboundedReceiver<Task<()>>) {
         // Initialize container
         let budget_manager = BudgetManager::new(0);
         let container = Arc::new(LogsArtifactsContainer::new(
@@ -640,56 +628,18 @@ mod tests {
             LogStreamStats::default(),
             budget_manager.handle(),
         ));
-        let container_for_task = container.clone();
-
         // Connect out LogSink under test and take its events channel.
         let (sender, _recv) = mpsc::unbounded();
-        let (log_sink, stream) =
+        let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-        container_for_task.handle_log_sink(stream, sender);
-
-        // Verify we get the initial empty interest.
-        let mut event_stream = log_sink.take_event_stream();
-        assert_eq!(
-            event_stream.next().await.unwrap().unwrap().into_on_register_interest().unwrap(),
-            FidlInterest::EMPTY,
-        );
-
-        (container, event_stream)
+        container.handle_log_sink(stream, sender);
+        (container, proxy, _recv)
     }
 
     #[fuchsia::test]
     async fn update_interest() {
-        let (container, mut event_stream) = initialize_container().await;
-
-        let (log_sink, stream) =
-            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-
-        let (sender, _recv) = mpsc::unbounded();
-        container.handle_log_sink(stream, sender);
-
-        // We shouldn't see this interest update since it doesn't match the
-        // moniker.
-        container.update_interest(&[interest(&["foo"], Some(Severity::Info))], &[]);
-
-        assert_matches!(event_stream.next().now_or_never(), None);
-
-        // We should see this interest update.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
-
-        // Verify we see the last interest we set.
-        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
-    }
-
-    #[fuchsia::test]
-    async fn update_interest_hanging_get() {
         // Sync path test (initial interest)
-        let (container, _event_stream) = initialize_container().await;
-        let (log_sink, stream) =
-            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-
-        let (sender, _recv) = mpsc::unbounded();
-        container.handle_log_sink(stream, sender);
+        let (container, log_sink, _sender) = initialize_container().await;
         // Get initial interest
         let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
         {
@@ -746,30 +696,22 @@ mod tests {
 
     #[fuchsia::test]
     async fn interest_serverity_semantics() {
-        let (container, mut event_stream) = initialize_container().await;
-        let (log_sink, stream) =
-            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-
-        let (sender, _recv) = mpsc::unbounded();
-        container.handle_log_sink(stream, sender);
+        let (container, log_sink, _sender) = initialize_container().await;
         let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
         assert_eq!(initial_interest.min_severity, None);
-
         // Set some interest.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
-        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
-        assert_matches!(event_stream.next().now_or_never(), None);
+        assert_severity(&log_sink, Severity::Info).await;
         assert_interests(&container, [(Severity::Info, 1)]);
 
         // Sending a higher interest (WARN > INFO) has no visible effect, even if the new interest
         // (WARN) will be tracked internally until reset.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))], &[]);
-        assert_matches!(event_stream.next().now_or_never(), None);
         assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
 
         // Sending a lower interest (DEBUG < INFO) updates the previous one.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
-        assert_severity(&mut event_stream, &log_sink, Severity::Debug).await;
+        assert_severity(&log_sink, Severity::Debug).await;
         assert_interests(
             &container,
             [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
@@ -778,7 +720,6 @@ mod tests {
         // Sending the same interest leads to tracking it twice, but no updates are sent since it's
         // the same minimum interest.
         container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
-        assert_matches!(event_stream.next().now_or_never(), None);
         assert_interests(
             &container,
             [(Severity::Debug, 2), (Severity::Info, 1), (Severity::Warn, 1)],
@@ -787,7 +728,6 @@ mod tests {
         // The first reset does nothing, since the new minimum interest remains the same (we had
         // inserted twice, therefore we need to reset twice).
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
-        assert_matches!(event_stream.next().now_or_never(), None);
         assert_interests(
             &container,
             [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
@@ -795,7 +735,7 @@ mod tests {
 
         // The second reset causes a change in minimum interest -> now INFO.
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
-        assert_severity(&mut event_stream, &log_sink, Severity::Info).await;
+        assert_severity(&log_sink, Severity::Info).await;
         assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
 
         // If we pass a previous severity (INFO), then we undo it and set the new one (ERROR).
@@ -804,21 +744,22 @@ mod tests {
             &[interest(&["foo", "bar"], Some(Severity::Error))],
             &[interest(&["foo", "bar"], Some(Severity::Info))],
         );
-        assert_severity(&mut event_stream, &log_sink, Severity::Warn).await;
+        assert_severity(&log_sink, Severity::Warn).await;
         assert_interests(&container, [(Severity::Error, 1), (Severity::Warn, 1)]);
 
         // When we reset warn, now we get ERROR since that's the minimum severity in the set.
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))]);
-        assert_severity(&mut event_stream, &log_sink, Severity::Error).await;
+        assert_severity(&log_sink, Severity::Error).await;
         assert_interests(&container, [(Severity::Error, 1)]);
 
         // When we reset ERROR , we get back to EMPTY since we have removed all interests from the
         // set.
         container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Error))]);
         assert_eq!(
-            event_stream.next().await.unwrap().unwrap().into_on_register_interest().unwrap(),
-            FidlInterest::EMPTY,
+            log_sink.wait_for_interest_change().await.unwrap().unwrap(),
+            FidlInterest::EMPTY
         );
+
         assert_interests(&container, []);
     }
 
@@ -837,23 +778,7 @@ mod tests {
         }
     }
 
-    async fn assert_severity(
-        event_stream: &mut LogSinkEventStream,
-        proxy: &LogSinkProxy,
-        severity: Severity,
-    ) {
-        assert_eq!(
-            event_stream
-                .next()
-                .await
-                .unwrap()
-                .unwrap()
-                .into_on_register_interest()
-                .unwrap()
-                .min_severity
-                .unwrap(),
-            severity
-        );
+    async fn assert_severity(proxy: &LogSinkProxy, severity: Severity) {
         assert_eq!(
             proxy.wait_for_interest_change().await.unwrap().unwrap().min_severity.unwrap(),
             severity

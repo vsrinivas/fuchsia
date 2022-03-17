@@ -24,19 +24,26 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
  public:
   explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
     context_->outgoing()->AddPublicService(sink_bindings_.GetHandler(this));
-    log_sink_.events().OnRegisterInterest = [=](::fuchsia::diagnostics::Interest interest) {
-      if (!interest.has_min_severity()) {
-        min_log_level_ = FUCHSIA_LOG_INFO;
-      } else {
-        min_log_level_ = IntoLogSeverity(interest.min_severity());
-      }
-      fuchsia_syslog::LogBuffer buffer;
-
-      BeginRecord(&buffer, min_log_level_, __FILE__, __LINE__, "Changed severity");
-      buffer.FlushRecord();
-    };
     ConnectAsync();
   }
+
+  void HandleInterest() {
+    log_sink_->WaitForInterestChange(
+        [=](fuchsia::logger::LogSink_WaitForInterestChange_Result interest_result) {
+          auto interest = std::move(interest_result.response().data);
+          if (!interest.has_min_severity()) {
+            min_log_level_ = FUCHSIA_LOG_INFO;
+          } else {
+            min_log_level_ = IntoLogSeverity(interest.min_severity());
+          }
+          fuchsia_syslog::LogBuffer buffer;
+
+          BeginRecord(&buffer, min_log_level_, __FILE__, __LINE__, "Changed severity");
+          buffer.FlushRecord();
+          HandleInterest();
+        });
+  }
+
   void EmitPuppetStarted() {
     fuchsia_syslog::LogBuffer buffer;
 
@@ -93,6 +100,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     }
     log_sink_->ConnectStructured(std::move(remote));
     socket_ = std::move(local);
+    HandleInterest();
   }
 
   void StopInterestListener(StopInterestListenerCallback callback) override {

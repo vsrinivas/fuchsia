@@ -4,8 +4,7 @@
 use diagnostics_log_encoding::{Severity, SeverityExt};
 use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::Record;
-use fidl_fuchsia_logger::{LogSinkEvent, LogSinkEventStream};
-use futures::StreamExt;
+use fidl_fuchsia_logger::LogSinkProxy;
 use parking_lot::{Mutex, RwLock};
 use std::{future::Future, sync::Arc};
 use tracing::{subscriber::Subscriber, Metadata};
@@ -21,11 +20,11 @@ pub(crate) struct InterestFilter {
 impl InterestFilter {
     /// Constructs a new `InterestFilter` and a future which should be polled to listen
     /// to changes in the LogSink's interest.
-    pub fn new(events: LogSinkEventStream, interest: Interest) -> (Self, impl Future<Output = ()>) {
+    pub fn new(proxy: LogSinkProxy, interest: Interest) -> (Self, impl Future<Output = ()>) {
         let min_severity = Arc::new(RwLock::new(interest.min_severity.unwrap_or(Severity::Info)));
         let listener = Arc::new(Mutex::new(None));
         let filter = Self { min_severity: min_severity.clone(), listener: listener.clone() };
-        (filter, Self::listen_to_interest_changes(listener, min_severity, events))
+        (filter, Self::listen_to_interest_changes(listener, min_severity, proxy))
     }
 
     /// Sets the interest listener.
@@ -39,9 +38,9 @@ impl InterestFilter {
     async fn listen_to_interest_changes(
         listener: Arc<Mutex<Option<Box<dyn OnInterestChanged + Send + Sync>>>>,
         min_severity: Arc<RwLock<Severity>>,
-        mut events: LogSinkEventStream,
+        proxy: LogSinkProxy,
     ) {
-        while let Some(Ok(LogSinkEvent::OnRegisterInterest { interest })) = events.next().await {
+        while let Ok(Ok(interest)) = proxy.wait_for_interest_change().await {
             *min_severity.write() = interest.min_severity.unwrap_or(Severity::Info);
             if let Some(callback) = &*listener.lock() {
                 callback.on_changed(&*min_severity.read());
@@ -109,7 +108,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn default_filter_is_info() {
         let (proxy, _requests) = create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let (filter, _on_changes) = InterestFilter::new(proxy.take_event_stream(), Interest::EMPTY);
+        let (filter, _on_changes) = InterestFilter::new(proxy, Interest::EMPTY);
         let observed = Arc::new(Mutex::new(SeverityCount::default()));
         tracing::subscriber::set_global_default(
             Registry::default().with(SeverityTracker { counts: observed.clone() }).with(filter),
