@@ -5,11 +5,11 @@
     children: [
         {
             name: "integration-tests",
-            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-tests#meta/integration-tests.cm",
+            url: "#meta/integration-tests.cm",
         },
         {
             name: "fuzz-registry",
-            url: "fuchsia-pkg://fuchsia.com/fuzz-registry#meta/fuzz-registry.cm",
+            url: "#meta/fuzz-registry.cm",
         },
     ],
     offer: [

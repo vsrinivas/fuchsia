@@ -12,6 +12,7 @@ fuchsia_test_component("echo_test") {
 }
 
 fuchsia_test_package("tier_2_test") {
+  package_deps_for_infra_only = [ ":tier_2_echo_server" ]
   test_components = [ ":echo_test" ]
 }
 

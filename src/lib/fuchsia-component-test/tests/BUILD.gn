@@ -148,6 +148,7 @@ fuchsia_test_package("fuchsia-component-test-tests") {
 fuchsia_test_package("scoped-instance-tests") {
   test_components = [ ":scoped_instance_test_component" ]
   deps = [
+    ":echo_server_component",
     ":realm_component",
     ":realm_with_wait_component",
     "//examples/components/routing/echo_server:echo_server_component",

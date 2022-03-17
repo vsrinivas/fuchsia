@@ -82,9 +82,8 @@ async fn main() {
 }
 
 async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
-    let url =
-        "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cm".to_string();
-    // Create 4 scoped instances, and confirm that each is funcitoning correctly by using a FIDL
+    let url = "#meta/echo_server.cm".to_string();
+    // Create 4 scoped instances, and confirm that each is functioning correctly by using a FIDL
     // service from it
     let instances = vec![
         ScopedInstance::new("coll".to_string(), url.clone())

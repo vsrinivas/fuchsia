@@ -1522,7 +1522,6 @@ fn get_global_non_hermetic_pkg_allowlist() -> HashSet<String> {
         "archivist-with-legacy-metrics".to_string(),
         "archivist-with-feedback-filtering-disabled".to_string(),
         "battery-manager".to_string(),
-        "fuzz-registry".to_string(),
         "test_manager".to_string(),
     }
 }

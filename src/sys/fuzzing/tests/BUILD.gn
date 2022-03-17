@@ -47,4 +47,5 @@ fuchsia_test_component("test-realm") {
 
 fuchsia_test_package("component-fuzzing-tests") {
   test_components = [ ":test-realm" ]
+  deps = [ "//src/sys/fuzzing/registry:fuzz-registry" ]
 }

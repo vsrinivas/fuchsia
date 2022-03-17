@@ -287,6 +287,7 @@ fuchsia_unittest_package("gfx_viewstate_apptests") {
     "//src/ui/bin/root_presenter:root_presenter",
     "//src/ui/examples/bouncing_ball:bouncing_ball",
     "//src/ui/scenic:scenic_pkg",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]
   manifest = "meta/gfx_viewstate_apptests.cmx"
   deps = [ "lib/gfx/tests:viewstate_apptests" ] + scenic_test_deps

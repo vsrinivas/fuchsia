@@ -74,6 +74,9 @@ fuchsia_unittest_package("modular_testing_cpp_tests") {
   package_deps_for_infra_only = [
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+    "//src/modular/bin/basemgr",
+    "//src/modular/bin/modular_test_harness",
+    "//src/modular/bin/sessionmgr",
   ]
   manifest = "meta/modular_testing_cpp_tests_bin.cmx"
   deps = [ ":modular_testing_cpp_tests_bin" ]
