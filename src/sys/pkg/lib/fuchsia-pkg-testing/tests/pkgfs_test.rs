@@ -788,6 +788,171 @@ async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_with_cache_index() {
+    let pkg = example_package().await;
+    let system_image_package = SystemImageBuilder::new()
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
+        .build()
+        .await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    verify_contents(&system_image_package, subdir_proxy(&d, "system"))
+        .await
+        .expect("valid system_image");
+
+    assert_eq!(sorted(ls(&pkgfs, "packages").unwrap()), ["example", "system_image"]);
+
+    verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("valid example package");
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
+    let pkg = example_package().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    verify_contents(&system_image_package, subdir_proxy(&d, "system"))
+        .await
+        .expect("valid system_image");
+
+    assert_eq!(ls(&pkgfs, "packages").unwrap(), ["system_image"]);
+
+    assert_error_kind!(d.open_file("packages/example/0/meta"), io::ErrorKind::NotFound);
+
+    assert_error_kind!(
+        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root())),
+        io::ErrorKind::NotFound
+    );
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
+    let pkg = example_package().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    blobfs.add_blob_from(&pkg.meta_far_merkle_root(), pkg.meta_far().unwrap()).unwrap();
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    verify_contents(&system_image_package, subdir_proxy(&d, "system"))
+        .await
+        .expect("valid system_image");
+
+    assert_eq!(ls(&pkgfs, "packages").unwrap(), ["system_image"]);
+
+    assert_error_kind!(d.open_file("packages/example/0/meta"), io::ErrorKind::NotFound);
+
+    assert_error_kind!(
+        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root())),
+        io::ErrorKind::NotFound,
+    );
+
+    assert_eq!(ls_simple(d.list_dir("needs/packages").unwrap()).unwrap(), Vec::<&str>::new());
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
+    let pkg = example_package().await;
+    let system_image_package = SystemImageBuilder::new()
+        .cache_packages(&[&pkg])
+        .pkgfs_non_static_packages_allowlist(&["example"])
+        .build()
+        .await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    let pkg2 = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world 2!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+    install(&pkgfs, &pkg2);
+
+    verify_contents(&pkg2, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("pkg2 replaced pkg");
+
+    // cache version is inaccessible
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    drop(d);
+    let pkgfs = pkgfs.restart().unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    // cache version is accessible again.
+    verify_contents(&pkg, subdir_proxy(&d, "packages/example/0")).await.unwrap();
+    verify_contents(&pkg, subdir_proxy(&d, &format!("versions/{}", pkg.meta_far_merkle_root())))
+        .await
+        .unwrap();
+
+    // updated version is gone
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg2.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_pkgfs() {
     let pkgfs = PkgfsRamdisk::builder()
         .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
@@ -946,7 +1111,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
         .start()
         .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     // We've put the 'example' package on the allowlist, so we should be
     // able to read files from it through pkgfs/packages
@@ -986,7 +1150,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
         .start()
         .unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     // Test the 'Open' path - we shouldn't be able to open a file in our
     // package through /packages.
@@ -1041,7 +1204,6 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
         .enforce_packages_non_static_allowlist(false) // turn off allowlist enforcement
         .start()
         .unwrap();
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let mut file_contents = String::new();
@@ -1179,7 +1341,6 @@ async fn executability_enforcement_blocks_cache_package() {
         .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     verify_executable_package_rights(&pkgfs, &pkg, Executability::BlockExecute).await;
 
@@ -1200,7 +1361,6 @@ async fn executability_enforcement_defaults_to_on() {
         .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     verify_executable_package_rights(&pkgfs, &pkg, Executability::BlockExecute).await;
 
@@ -1224,8 +1384,6 @@ async fn executability_enforcement_allows_allowlisted_package() {
         .enforce_non_base_executability_restrictions(true)
         .start()
         .unwrap();
-
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
 
@@ -1332,7 +1490,6 @@ async fn open_executable_allowed_when_statically_disabled() {
         .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
 
     let pkgfs = pkgfs
@@ -1342,7 +1499,6 @@ async fn open_executable_allowed_when_statically_disabled() {
         .enforce_packages_non_static_allowlist(false)
         .start()
         .unwrap();
-    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
     verify_executable_package_rights(&pkgfs, &pkg, Executability::AllowExecute).await;
 
     pkgfs.stop().await.expect("shutting down pkgfs");
