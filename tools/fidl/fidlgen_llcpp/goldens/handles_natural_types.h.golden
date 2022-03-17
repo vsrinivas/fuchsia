@@ -48,7 +48,7 @@ class Handles;
 
 extern "C" const fidl_type_t test_handles_HandlesTable;
 
-class Handles final {
+class Handles {
  private:
   struct Storage_;
 

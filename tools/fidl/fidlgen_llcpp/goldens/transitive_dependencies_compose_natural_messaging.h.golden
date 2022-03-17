@@ -38,26 +38,11 @@ __LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 
 template <>
 class ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>> {
+    : public ::test_bottom::BottomGetFooTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_bottom::BottomGetFooTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_bottom::BottomGetFooTopResponse* operator->() { return &payload_; }
-  const ::test_bottom::BottomGetFooTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_bottom::BottomGetFooTopResponse& operator*() { return payload_; }
-  const ::test_bottom::BottomGetFooTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_bottom::BottomGetFooTopResponse payload_;
+  using ::test_bottom::BottomGetFooTopResponse::BottomGetFooTopResponse;
+  Response(::test_bottom::BottomGetFooTopResponse v)
+      : BottomGetFooTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -154,16 +139,8 @@ class ::fidl::internal::NaturalEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>> {
+class ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -180,7 +157,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_transitivedependenciescompose::Top::GetFoo>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_bottom::BottomGetFooTopResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

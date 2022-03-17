@@ -368,7 +368,7 @@ class UnifiedClientToWireServerWithEventHandler : public UnifiedClientToWireServ
     }
 
     void OnNode(fidl::Event<fidl_cpp_wire_interop_test::Interop::OnNode>& event) final {
-      CheckNaturalDir(event->node());
+      CheckNaturalDir(event.node());
       num_events_++;
     }
 
@@ -476,9 +476,9 @@ TEST_F(WireClientToNaturalServer, RoundTrip) {
   class Server : public NaturalTestBase {
    public:
     void RoundTrip(RoundTripRequest& request, RoundTripCompleter::Sync& completer) final {
-      CheckNaturalFile(request->node());
+      CheckNaturalFile(request.node());
       num_calls++;
-      completer.Reply(std::move(request->node()));
+      completer.Reply(std::move(request.node()));
     }
 
     int num_calls = 0;
@@ -505,16 +505,13 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
   class Server : public NaturalTestBase {
    public:
     void TryRoundTrip(TryRoundTripRequest& request, TryRoundTripCompleter::Sync& completer) final {
-      CheckNaturalDir(request->node());
+      CheckNaturalDir(request.node());
       num_calls++;
-      // TODO(fxbug.dev/90111): Translate error syntax to `::fitx::result`.
       // TODO(fxbug.dev/91363): ReplySuccess/ReplyError.
       if (reply_with_error) {
-        completer.Reply(
-            fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result::WithErr(ZX_ERR_INVALID_ARGS));
+        completer.Reply(fitx::error(ZX_ERR_INVALID_ARGS));
       } else {
-        completer.Reply(fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Result::WithResponse(
-            fidl_cpp_wire_interop_test::Interop_TryRoundTrip_Response{std::move(request->node())}));
+        completer.Reply(fitx::ok(std::move(request.node())));
       }
     }
 
@@ -565,7 +562,7 @@ TEST_F(WireClientToNaturalServer, OneWay) {
   class Server : public NaturalTestBase {
    public:
     void OneWay(OneWayRequest& request, OneWayCompleter::Sync& completer) override {
-      CheckNaturalFile(request->node());
+      CheckNaturalFile(request.node());
       num_calls++;
     }
 

@@ -29,7 +29,7 @@ class UnionLargeArray;
 
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
-class UnionSmallArray final {
+class UnionSmallArray {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 2>>;
 
@@ -113,7 +113,7 @@ class UnionSmallArray final {
 
 extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
-class UnionLargeArray final {
+class UnionLargeArray {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 100>>;
@@ -198,7 +198,7 @@ class UnionLargeArray final {
 
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
-class TableSmallArray final {
+class TableSmallArray {
  private:
   struct Storage_;
 
@@ -248,7 +248,7 @@ class TableSmallArray final {
 
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
-class TableLargeArray final {
+class TableLargeArray {
  private:
   struct Storage_;
 
@@ -298,7 +298,7 @@ class TableLargeArray final {
 
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
-class StructSmallArray final {
+class StructSmallArray {
  private:
   struct Storage_;
 
@@ -350,7 +350,7 @@ class StructSmallArray final {
 
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
-class StructLargeArray final {
+class StructLargeArray {
  private:
   struct Storage_;
 

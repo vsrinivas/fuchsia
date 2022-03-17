@@ -485,26 +485,25 @@ served by ergonomic but less performant natural domain objects.
 
 ### Event handling
 
-We define the type alias `fidl::Event<FooMethod>` to represent an event:
+We define `fidl::Event<FooMethod>` to represent an event:
 
 ```c++
 template <typename Method>
-fidl::Event<Method> = ...;
+class fidl::Event<Method> { ... };
 ```
 
 * When the event does not use the error syntax:
-  - When the event has a body, `fidl::Event<FooMethod>` is an alias to
+  - When the event has a body, `fidl::Event<FooMethod>` inherits
     `FooMethodPayload`, i.e. the domain object type representing the event body.
     See [fxbug.dev/90118](fxbug.dev/90118).
-  - When the event has no body, `fidl::Event<FooMethod>` is an alias to a
-    private empty type in the FIDL runtime.
+  - When the event has no body, `fidl::Event<FooMethod>` is empty.
 * When the event uses the error syntax:
-  - When the success payload is not an empty struct, `fidl::Event<FooMethod>` is
-    an alias to `fitx::result<ApplicationError, FooMethodPayload>`, where
+  - When the success payload is not an empty struct, `fidl::Event<FooMethod>`
+    inherits `fitx::result<ApplicationError, FooMethodPayload>`, where
     `ApplicationError` is the corresponding application error type for that
     event.
-  - When the success payload is an empty struct, `fidl::Event<FooMethod>` is an
-    alias to `fitx::result<ApplicationError>`.
+  - When the success payload is an empty struct, `fidl::Event<FooMethod>`
+    inherits `fitx::result<ApplicationError>`.
 
 Note: an alternative to the second bullet is to simply omit the corresponding
 `fidl::Event<FooMethod>` in case of events with absent bodies. Here we choose to
@@ -545,19 +544,18 @@ class fidl::AsyncEventHandler<fuchsia_example::Speak> : public
 
 ### Server
 
-We define the type alias `fidl::Request<FooMethod>` to represent the request of
-method `FooMethod`:
+We define `fidl::Request<FooMethod>` to represent the request of method
+`FooMethod`:
 
 ```c++
 template <typename Method>
-fidl::Request<Method> = ...;
+class fidl::Request<Method> { ... };
 ```
 
-* When the method request has a body, `fidl::Request<FooMethod>` is an alias to
+* When the method request has a body, `fidl::Request<FooMethod>` inherits
   `FooMethodRequest`, i.e. the domain object type representing the request body.
 * When the method has a request but the request has no body,
-  `fidl::Request<FooMethod>` is an alias to a private empty type in the FIDL
-  runtime.
+  `fidl::Request<FooMethod>` is empty.
 
 We'll generate interface classes like the following:
 

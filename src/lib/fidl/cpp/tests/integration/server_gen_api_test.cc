@@ -27,7 +27,7 @@ TEST(Server, SyncReply) {
     }
     void Echo(EchoRequest& request, EchoCompleter::Sync& completer) override {
       EXPECT_TRUE(completer.is_reply_needed());
-      completer.Reply(request->request());
+      completer.Reply(request.request());
       EXPECT_FALSE(completer.is_reply_needed());
     }
   };
@@ -57,7 +57,7 @@ TEST(Server, AsyncReply) {
     void Echo(EchoRequest& request, EchoCompleter::Sync& completer) override {
       worker_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
       async::PostTask(worker_loop_->dispatcher(),
-                      [request = request->request(), completer = completer.ToAsync()]() mutable {
+                      [request = request.request(), completer = completer.ToAsync()]() mutable {
                         EXPECT_TRUE(completer.is_reply_needed());
                         completer.Reply(request);
                         EXPECT_FALSE(completer.is_reply_needed());

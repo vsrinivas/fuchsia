@@ -30,15 +30,14 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fitx::result<::fidl::Error,
-                     ::fidl::Event<::test_doccomments::Interface::OnEvent>>
-          decoded = ::fidl::Event<::test_doccomments::Interface::OnEvent>::
-              DecodeTransactional(std::move(msg));
+      ::fitx::result decoded =
+          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        event_handler()->OnEvent(decoded.value());
+        ::fidl::Event<::test_doccomments::Interface::OnEvent> event;
+        event_handler()->OnEvent(event);
       }
       return std::nullopt;
     }
@@ -80,17 +79,16 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<::fidl::Error,
-                         ::fidl::Request<::test_doccomments::Interface::Method>>
-              decoded = ::fidl::Request<::test_doccomments::Interface::Method>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_doccomments::Interface::Method> request;
           ::fidl::internal::NaturalCompleter<
               ::test_doccomments::Interface::Method>::Sync completer(txn);
           static_cast<::fidl::Server<::test_doccomments::Interface>*>(interface)
-              ->Method(decoded.value(), completer);
+              ->Method(request, completer);
           return ZX_OK;
         },
     },

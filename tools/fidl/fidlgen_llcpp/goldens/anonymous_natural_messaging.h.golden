@@ -26,6 +26,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 namespace test_anonymous {
 __LOCAL extern "C" const fidl_type_t
@@ -38,31 +40,18 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> {
+    : public ::fitx::result<
+          ::test_anonymous::SomeProtocol_SomeMethod_Error,
+          ::test_anonymous::SomeProtocol_SomeMethod_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_anonymous::SomeProtocolSomeMethodTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_anonymous::SomeProtocolSomeMethodTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_anonymous::SomeProtocolSomeMethodTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_anonymous::SomeProtocolSomeMethodTopResponse payload_;
+  using ::fitx::result<
+      ::test_anonymous::SomeProtocol_SomeMethod_Error,
+      ::test_anonymous::SomeProtocol_SomeMethod_Response>::result;
+  Response(::fitx::result<::test_anonymous::SomeProtocol_SomeMethod_Error,
+                          ::test_anonymous::SomeProtocol_SomeMethod_Response>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -72,6 +61,36 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> {
+  using DomainObject = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
+
+ public:
+  static ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_anonymous::SomeProtocol_SomeMethod_Result::WithErr(
+               m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result =
+               ::test_anonymous::SomeProtocol_SomeMethod_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
 };
 namespace test_anonymous {}  // namespace test_anonymous
 template <>
@@ -91,7 +110,7 @@ class ::fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol> final
  public:
   using NaturalClientBase::NaturalClientBase;
   void SomeMethod(
-      ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+      ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request,
       ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
           _callback) const;
 };
@@ -156,30 +175,12 @@ class ::fidl::internal::NaturalEventSender<::test_anonymous::SomeProtocol>
 
 template <>
 class ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>> {
+    : public ::test_anonymous::SomeProtocolSomeMethodRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_anonymous::SomeProtocolSomeMethodRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_anonymous::SomeProtocolSomeMethodRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_anonymous::SomeProtocolSomeMethodRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_anonymous::SomeProtocolSomeMethodRequest& operator*() {
-    return payload_;
-  }
-  const ::test_anonymous::SomeProtocolSomeMethodRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_anonymous::SomeProtocolSomeMethodRequest payload_;
+  using ::test_anonymous::SomeProtocolSomeMethodRequest::
+      SomeProtocolSomeMethodRequest;
+  Request(::test_anonymous::SomeProtocolSomeMethodRequest v)
+      : ::test_anonymous::SomeProtocolSomeMethodRequest(std::move(v)) {}
 };
 
 template <>
@@ -196,7 +197,8 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_anonymous::SomeProtocol::SomeMethod> : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_anonymous::SomeProtocolSomeMethodTopResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

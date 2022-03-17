@@ -25,6 +25,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 namespace test_error {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
@@ -35,26 +37,12 @@ __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 template <>
 class ::fidl::Response<::test_error::Example::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_error::Example::Foo>> {
+    : public ::fitx::result<uint32_t, ::test_error::Example_foo_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_error::ExampleFooTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_error::ExampleFooTopResponse* operator->() { return &payload_; }
-  const ::test_error::ExampleFooTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_error::ExampleFooTopResponse& operator*() { return payload_; }
-  const ::test_error::ExampleFooTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_error::ExampleFooTopResponse payload_;
+  using ::fitx::result<uint32_t, ::test_error::Example_foo_Response>::result;
+  Response(::fitx::result<uint32_t, ::test_error::Example_foo_Response> v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -64,6 +52,34 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_error::ExampleFooTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_error::Example::Foo>> {
+  using DomainObject = ::test_error::ExampleFooTopResponse;
+
+ public:
+  static ::fidl::Response<::test_error::Example::Foo> FromDomainObject(
+      DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_error::Example::Foo>&& m) {
+    if (m.is_error()) {
+      return DomainObject{{.result = ::test_error::Example_foo_Result::WithErr(
+                               m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_error::Example_foo_Result::WithResponse(
+               std::move(m.value()))}};
+    }
+  }
 };
 namespace test_error {}  // namespace test_error
 template <>
@@ -81,7 +97,7 @@ class ::fidl::internal::NaturalClientImpl<::test_error::Example> final
  public:
   using NaturalClientBase::NaturalClientBase;
   void Foo(
-      ::test_error::ExampleFooRequest&& payload,
+      ::fidl::Request<::test_error::Example::Foo> request,
       ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const;
 };
 namespace test_error {
@@ -143,24 +159,11 @@ class ::fidl::internal::NaturalEventSender<::test_error::Example>
 
 template <>
 class ::fidl::Request<::test_error::Example::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_error::Example::Foo>> {
+    : public ::test_error::ExampleFooRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_error::ExampleFooRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_error::ExampleFooRequest* operator->() { return &payload_; }
-  const ::test_error::ExampleFooRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_error::ExampleFooRequest& operator*() { return payload_; }
-  const ::test_error::ExampleFooRequest& operator*() const { return payload_; }
-
- private:
-  ::test_error::ExampleFooRequest payload_;
+  using ::test_error::ExampleFooRequest::ExampleFooRequest;
+  Request(::test_error::ExampleFooRequest v)
+      : ::test_error::ExampleFooRequest(std::move(v)) {}
 };
 
 template <>
@@ -177,7 +180,7 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_error::ExampleFooTopResponse&& payload);
+  void Reply(::fidl::Response<::test_error::Example::Foo>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

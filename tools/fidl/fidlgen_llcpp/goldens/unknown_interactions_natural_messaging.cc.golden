@@ -75,32 +75,26 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_unknowninteractions::kExample_StrictEvent_Ordinal: {
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>>
-          decoded =
-              ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>::
-                  DecodeTransactional(std::move(msg));
+      ::fitx::result decoded =
+          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        event_handler()->StrictEvent(decoded.value());
+        ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> event;
+        event_handler()->StrictEvent(event);
       }
       return std::nullopt;
     }
     case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>>
-          decoded = ::fidl::Event<
-              ::test_unknowninteractions::Example::FlexibleEvent>::
-              DecodeTransactional(std::move(msg));
+      ::fitx::result decoded =
+          ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        event_handler()->FlexibleEvent(decoded.value());
+        ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> event;
+        event_handler()->FlexibleEvent(event);
       }
       return std::nullopt;
     }
@@ -161,13 +155,16 @@ void fidl::internal::NaturalCompleterBase<
 
 void fidl::internal::NaturalCompleterBase<
     ::test_unknowninteractions::Example::FlexibleTwoWay>::
-    Reply(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&&
-              payload) {
+    Reply(
+        ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&&
+            response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                    ::test_unknowninteractions::Example::FlexibleTwoWay>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -179,21 +176,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<::fidl::Error,
-                         ::fidl::Request<
-                             ::test_unknowninteractions::Example::StrictOneWay>>
-              decoded = ::fidl::Request<
-                  ::test_unknowninteractions::Example::StrictOneWay>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_unknowninteractions::Example::StrictOneWay>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
               interface)
-              ->StrictOneWay(decoded.value(), completer);
+              ->StrictOneWay(request, completer);
           return ZX_OK;
         },
     },
@@ -202,22 +197,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_unknowninteractions::Example::FlexibleOneWay>>
-              decoded = ::fidl::Request<
-                  ::test_unknowninteractions::Example::FlexibleOneWay>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_unknowninteractions::Example::FlexibleOneWay>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
               interface)
-              ->FlexibleOneWay(decoded.value(), completer);
+              ->FlexibleOneWay(request, completer);
           return ZX_OK;
         },
     },
@@ -226,21 +218,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<::fidl::Error,
-                         ::fidl::Request<
-                             ::test_unknowninteractions::Example::StrictTwoWay>>
-              decoded = ::fidl::Request<
-                  ::test_unknowninteractions::Example::StrictTwoWay>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_unknowninteractions::Example::StrictTwoWay>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
               interface)
-              ->StrictTwoWay(decoded.value(), completer);
+              ->StrictTwoWay(request, completer);
           return ZX_OK;
         },
     },
@@ -249,22 +239,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_unknowninteractions::Example::FlexibleTwoWay>>
-              decoded = ::fidl::Request<
-                  ::test_unknowninteractions::Example::FlexibleTwoWay>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_unknowninteractions::Example::FlexibleTwoWay>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_unknowninteractions::Example>*>(
               interface)
-              ->FlexibleTwoWay(decoded.value(), completer);
+              ->FlexibleTwoWay(request, completer);
           return ZX_OK;
         },
     },

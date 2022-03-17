@@ -64,7 +64,7 @@ class MainProtocol_OnLocalWithError_Result;
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_TwoWayImportWithError_ResultTable;
 
-class MainProtocol_TwoWayImportWithError_Result final {
+class MainProtocol_TwoWayImportWithError_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -190,7 +190,7 @@ class MainProtocol_TwoWayImportWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
-class MainProtocolTwoWayImportWithErrorTopResponse final {
+class MainProtocolTwoWayImportWithErrorTopResponse {
  private:
   struct Storage_;
 
@@ -263,7 +263,7 @@ class MainProtocolTwoWayImportWithErrorTopResponse final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_TwoWayAnonWithError_ResponseTable;
 
-class MainProtocol_TwoWayAnonWithError_Response final {
+class MainProtocol_TwoWayAnonWithError_Response {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, bool>;
 
@@ -368,7 +368,7 @@ class MainProtocol_TwoWayAnonWithError_Response final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_TwoWayAnonWithError_ResultTable;
 
-class MainProtocol_TwoWayAnonWithError_Result final {
+class MainProtocol_TwoWayAnonWithError_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -493,7 +493,7 @@ class MainProtocol_TwoWayAnonWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
-class MainProtocolTwoWayAnonWithErrorTopResponse final {
+class MainProtocolTwoWayAnonWithErrorTopResponse {
  private:
   struct Storage_;
 
@@ -566,7 +566,7 @@ class MainProtocolTwoWayAnonWithErrorTopResponse final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnImportWithError_ResultTable;
 
-class MainProtocol_OnImportWithError_Result final {
+class MainProtocol_OnImportWithError_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -689,7 +689,7 @@ class MainProtocol_OnImportWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
 
-class MainProtocolOnImportWithErrorRequest final {
+class MainProtocolOnImportWithErrorRequest {
  private:
   struct Storage_;
 
@@ -761,7 +761,7 @@ class MainProtocolOnImportWithErrorRequest final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnAnonWithError_ResponseTable;
 
-class MainProtocol_OnAnonWithError_Response final {
+class MainProtocol_OnAnonWithError_Response {
  private:
   struct Storage_;
 
@@ -820,7 +820,7 @@ class MainProtocol_OnAnonWithError_Response final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnAnonWithError_ResultTable;
 
-class MainProtocol_OnAnonWithError_Result final {
+class MainProtocol_OnAnonWithError_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -942,7 +942,7 @@ class MainProtocol_OnAnonWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
 
-class MainProtocolOnAnonWithErrorRequest final {
+class MainProtocolOnAnonWithErrorRequest {
  private:
   struct Storage_;
 
@@ -1013,7 +1013,7 @@ class MainProtocolOnAnonWithErrorRequest final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 
-class MainProtocolTwoWayAnonWithErrorRequest final {
+class MainProtocolTwoWayAnonWithErrorRequest {
  private:
   struct Storage_;
 
@@ -1072,7 +1072,7 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 
-class MainProtocolTwoWayAnonResponse final {
+class MainProtocolTwoWayAnonResponse {
  private:
   struct Storage_;
 
@@ -1129,7 +1129,7 @@ class MainProtocolTwoWayAnonResponse final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
 
-class MainProtocolTwoWayAnonRequest final {
+class MainProtocolTwoWayAnonRequest {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, bool>;
 
@@ -1223,7 +1223,7 @@ class MainProtocolTwoWayAnonRequest final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
-class MainProtocolOneWayAnonRequest final {
+class MainProtocolOneWayAnonRequest {
  private:
   struct Storage_;
 
@@ -1280,7 +1280,7 @@ class MainProtocolOneWayAnonRequest final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonRequestTable;
 
-class MainProtocolOnAnonRequest final {
+class MainProtocolOnAnonRequest {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, bool>;
 
@@ -1370,7 +1370,7 @@ class MainProtocolOnAnonRequest final {
 
 extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
 
-class LocalUnionPayload final {
+class LocalUnionPayload {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, bool>;
 
@@ -1458,7 +1458,7 @@ class LocalUnionPayload final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_TwoWayLocalWithError_ResultTable;
 
-class MainProtocol_TwoWayLocalWithError_Result final {
+class MainProtocol_TwoWayLocalWithError_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -1583,7 +1583,7 @@ class MainProtocol_TwoWayLocalWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
-class MainProtocolTwoWayLocalWithErrorTopResponse final {
+class MainProtocolTwoWayLocalWithErrorTopResponse {
  private:
   struct Storage_;
 
@@ -1655,7 +1655,7 @@ class MainProtocolTwoWayLocalWithErrorTopResponse final {
 
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
-class LocalTablePayload final {
+class LocalTablePayload {
  private:
   struct Storage_;
 
@@ -1705,7 +1705,7 @@ class LocalTablePayload final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnLocalWithError_ResultTable;
 
-class MainProtocol_OnLocalWithError_Result final {
+class MainProtocol_OnLocalWithError_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -1827,7 +1827,7 @@ class MainProtocol_OnLocalWithError_Result final {
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
 
-class MainProtocolOnLocalWithErrorRequest final {
+class MainProtocolOnLocalWithErrorRequest {
  private:
   struct Storage_;
 

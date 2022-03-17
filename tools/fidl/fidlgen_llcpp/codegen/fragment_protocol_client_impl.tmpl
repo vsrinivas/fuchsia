@@ -93,12 +93,12 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
 
 
 {{- define "Method:ClientAsyncRequestArgumentsWithResult:Helper" -}}
-{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload, {{ end }}
+{{ if .HasRequestPayload }}{{ .NaturalRequest }} request, {{ end }}
 {{ printf "%s&& _callback" .CallbackType }}
 {{- end }}
 
 {{- define "Method:ClientRequestArgumentsOneWay:Helper" -}}
-{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload{{ end }}
+{{ if .HasRequestPayload }}{{ .NaturalRequest }} request{{ end }}
 {{- end }}
 
 
@@ -163,7 +163,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
       ::fidl::internal::EncodeTransactionalMessage(
-          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+          _encoder {{- if .HasRequestPayload }},
+          {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }}),
       ::fidl::internal::MakeResponseContext<{{ .Marker }}>({{ .OrdinalName }}, std::move(_callback))
   );
 }
@@ -178,7 +179,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   ::fidl::Status status = messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-    _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
+      _encoder {{- if .HasRequestPayload }},
+      {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)){{ end }}));
   return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}

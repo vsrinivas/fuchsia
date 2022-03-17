@@ -87,17 +87,16 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<::fidl::Error,
-                         ::fidl::Request<::test_versions::Protocol::Foo>>
-              decoded = ::fidl::Request<::test_versions::Protocol::Foo>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_versions::Protocol::Foo> request;
           ::fidl::internal::NaturalCompleter<
               ::test_versions::Protocol::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_versions::Protocol>*>(interface)
-              ->Foo(decoded.value(), completer);
+              ->Foo(request, completer);
           return ZX_OK;
         },
     },

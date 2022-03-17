@@ -30,7 +30,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
-class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
+class ExampleUseOfErrorSyntax_CallWhichMayFail_Response {
  private:
   struct Storage_;
 
@@ -95,7 +95,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
 
-class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
+class ExampleUseOfErrorSyntax_CallWhichMayFail_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -223,7 +223,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final {
+class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
  private:
   struct Storage_;
 
@@ -300,7 +300,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final {
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
  private:
   struct Storage_;
 

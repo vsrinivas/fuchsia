@@ -30,7 +30,7 @@ class ParentGetChildRequestTopResponse;
 extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestRequestTable;
 
-class ParentTakeChildRequestRequest final {
+class ParentTakeChildRequestRequest {
  private:
   struct Storage_;
 
@@ -78,7 +78,7 @@ class ParentTakeChildRequestRequest final {
 
 extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
-class ParentTakeChildRequest final {
+class ParentTakeChildRequest {
  private:
   struct Storage_;
 
@@ -126,7 +126,7 @@ class ParentTakeChildRequest final {
 extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildTopResponseTable;
 
-class ParentGetChildTopResponse final {
+class ParentGetChildTopResponse {
  private:
   struct Storage_;
 
@@ -174,7 +174,7 @@ class ParentGetChildTopResponse final {
 extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestTopResponseTable;
 
-class ParentGetChildRequestTopResponse final {
+class ParentGetChildRequestTopResponse {
  private:
   struct Storage_;
 

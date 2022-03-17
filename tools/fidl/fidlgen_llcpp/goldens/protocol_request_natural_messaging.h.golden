@@ -59,32 +59,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
+    : public ::test_protocolrequest::ParentGetChildTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocolrequest::ParentGetChildTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocolrequest::ParentGetChildTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocolrequest::ParentGetChildTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_protocolrequest::ParentGetChildTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocolrequest::ParentGetChildTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocolrequest::ParentGetChildTopResponse payload_;
+  using ::test_protocolrequest::ParentGetChildTopResponse::
+      ParentGetChildTopResponse;
+  Response(::test_protocolrequest::ParentGetChildTopResponse v)
+      : ParentGetChildTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -107,34 +87,12 @@ class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final
 
 template <>
 class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
+    : public ::test_protocolrequest::ParentGetChildRequestTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocolrequest::ParentGetChildRequestTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocolrequest::ParentGetChildRequestTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocolrequest::ParentGetChildRequestTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocolrequest::ParentGetChildRequestTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocolrequest::ParentGetChildRequestTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocolrequest::ParentGetChildRequestTopResponse payload_;
+  using ::test_protocolrequest::ParentGetChildRequestTopResponse::
+      ParentGetChildRequestTopResponse;
+  Response(::test_protocolrequest::ParentGetChildRequestTopResponse v)
+      : ParentGetChildRequestTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -170,10 +128,11 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final
           _callback) const;
 
   ::fitx::result<::fidl::Error> TakeChild(
-      ::test_protocolrequest::ParentTakeChildRequest&& payload) const;
+      ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const;
 
   ::fitx::result<::fidl::Error> TakeChildRequest(
-      ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const;
+      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request)
+      const;
 };
 namespace test_protocolrequest {
 #endif  // __Fuchsia__
@@ -235,16 +194,8 @@ class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Parent>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocolrequest::Parent::GetChild> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocolrequest::Parent::GetChild>> {
+class ::fidl::Request<::test_protocolrequest::Parent::GetChild> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -259,16 +210,8 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> {
+class ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -284,32 +227,11 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocolrequest::Parent::TakeChild> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
+    : public ::test_protocolrequest::ParentTakeChildRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocolrequest::ParentTakeChildRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocolrequest::ParentTakeChildRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocolrequest::ParentTakeChildRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocolrequest::ParentTakeChildRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocolrequest::ParentTakeChildRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocolrequest::ParentTakeChildRequest payload_;
+  using ::test_protocolrequest::ParentTakeChildRequest::ParentTakeChildRequest;
+  Request(::test_protocolrequest::ParentTakeChildRequest v)
+      : ::test_protocolrequest::ParentTakeChildRequest(std::move(v)) {}
 };
 
 template <>
@@ -326,34 +248,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
+    : public ::test_protocolrequest::ParentTakeChildRequestRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocolrequest::ParentTakeChildRequestRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocolrequest::ParentTakeChildRequestRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocolrequest::ParentTakeChildRequestRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocolrequest::ParentTakeChildRequestRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocolrequest::ParentTakeChildRequestRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocolrequest::ParentTakeChildRequestRequest payload_;
+  using ::test_protocolrequest::ParentTakeChildRequestRequest::
+      ParentTakeChildRequestRequest;
+  Request(::test_protocolrequest::ParentTakeChildRequestRequest v)
+      : ::test_protocolrequest::ParentTakeChildRequestRequest(std::move(v)) {}
 };
 
 template <>
@@ -370,7 +270,8 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocolrequest::ParentGetChildTopResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -381,8 +282,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChildRequest>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocolrequest::ParentGetChildRequestTopResponse&& payload);
+  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

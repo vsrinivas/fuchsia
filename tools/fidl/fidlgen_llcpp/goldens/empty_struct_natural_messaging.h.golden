@@ -43,30 +43,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
+    : public ::test_emptystruct::EmptyProtocolReceiveRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_emptystruct::EmptyProtocolReceiveRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_emptystruct::EmptyProtocolReceiveRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolReceiveRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_emptystruct::EmptyProtocolReceiveRequest& operator*() {
-    return payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolReceiveRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_emptystruct::EmptyProtocolReceiveRequest payload_;
+  using ::test_emptystruct::EmptyProtocolReceiveRequest::
+      EmptyProtocolReceiveRequest;
+  Event(::test_emptystruct::EmptyProtocolReceiveRequest v)
+      : EmptyProtocolReceiveRequest(std::move(v)) {}
 };
 
 template <>
@@ -81,32 +63,12 @@ namespace test_emptystruct {}  // namespace test_emptystruct
 
 template <>
 class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+    : public ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload_;
+  using ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::
+      EmptyProtocolSendAndReceiveTopResponse;
+  Response(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse v)
+      : EmptyProtocolSendAndReceiveTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -135,12 +97,13 @@ class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>
  public:
   using NaturalClientBase::NaturalClientBase;
   void SendAndReceive(
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
+      ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
+          request,
       ::fidl::ClientCallback<
           ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback) const;
 
   ::fitx::result<::fidl::Error> Send(
-      ::test_emptystruct::EmptyProtocolSendRequest&& payload) const;
+      ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const;
 };
 namespace test_emptystruct {
 #endif  // __Fuchsia__
@@ -214,28 +177,11 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
 
 template <>
 class ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
+    : public ::test_emptystruct::EmptyProtocolSendRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_emptystruct::EmptyProtocolSendRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_emptystruct::EmptyProtocolSendRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolSendRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_emptystruct::EmptyProtocolSendRequest& operator*() { return payload_; }
-  const ::test_emptystruct::EmptyProtocolSendRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_emptystruct::EmptyProtocolSendRequest payload_;
+  using ::test_emptystruct::EmptyProtocolSendRequest::EmptyProtocolSendRequest;
+  Request(::test_emptystruct::EmptyProtocolSendRequest v)
+      : ::test_emptystruct::EmptyProtocolSendRequest(std::move(v)) {}
 };
 
 template <>
@@ -252,32 +198,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
+    : public ::test_emptystruct::EmptyProtocolSendAndReceiveRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_emptystruct::EmptyProtocolSendAndReceiveRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& operator*() {
-    return payload_;
-  }
-  const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_emptystruct::EmptyProtocolSendAndReceiveRequest payload_;
+  using ::test_emptystruct::EmptyProtocolSendAndReceiveRequest::
+      EmptyProtocolSendAndReceiveRequest;
+  Request(::test_emptystruct::EmptyProtocolSendAndReceiveRequest v)
+      : ::test_emptystruct::EmptyProtocolSendAndReceiveRequest(std::move(v)) {}
 };
 
 template <>
@@ -296,7 +222,8 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&& payload);
+      ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

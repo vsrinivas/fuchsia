@@ -112,7 +112,7 @@ class WithErrorSyntax_ErrorAsEnum_Result;
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
 
-class WithErrorSyntax_HandleInResult_Response final {
+class WithErrorSyntax_HandleInResult_Response {
  private:
   struct Storage_;
 
@@ -158,7 +158,7 @@ class WithErrorSyntax_HandleInResult_Response final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
 
-class WithErrorSyntax_HandleInResult_Result final {
+class WithErrorSyntax_HandleInResult_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -265,7 +265,7 @@ class WithErrorSyntax_HandleInResult_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
-class WithErrorSyntaxHandleInResultTopResponse final {
+class WithErrorSyntaxHandleInResultTopResponse {
  private:
   struct Storage_;
 
@@ -317,7 +317,7 @@ class WithErrorSyntaxHandleInResultTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
-class HandleRightsProtocolResponseMethodTopResponse final {
+class HandleRightsProtocolResponseMethodTopResponse {
  private:
   struct Storage_;
 
@@ -363,7 +363,7 @@ class HandleRightsProtocolResponseMethodTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
-class HandleRightsProtocolResponseMethodRequest final {
+class HandleRightsProtocolResponseMethodRequest {
  private:
   struct Storage_;
 
@@ -409,7 +409,7 @@ class HandleRightsProtocolResponseMethodRequest final {
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
-class HandleRightsProtocolNoResponseMethodRequest final {
+class HandleRightsProtocolNoResponseMethodRequest {
  private:
   struct Storage_;
 
@@ -455,7 +455,7 @@ class HandleRightsProtocolNoResponseMethodRequest final {
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolAnEventRequestTable;
 
-class HandleRightsProtocolAnEventRequest final {
+class HandleRightsProtocolAnEventRequest {
  private:
   struct Storage_;
 
@@ -501,7 +501,7 @@ class HandleRightsProtocolAnEventRequest final {
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolTakeHandleRequestTable;
 
-class ChannelProtocolTakeHandleRequest final {
+class ChannelProtocolTakeHandleRequest {
  private:
   struct Storage_;
 
@@ -547,7 +547,7 @@ class ChannelProtocolTakeHandleRequest final {
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
-class ChannelProtocolMutateSocketTopResponse final {
+class ChannelProtocolMutateSocketTopResponse {
  private:
   struct Storage_;
 
@@ -593,7 +593,7 @@ class ChannelProtocolMutateSocketTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketRequestTable;
 
-class ChannelProtocolMutateSocketRequest final {
+class ChannelProtocolMutateSocketRequest {
  private:
   struct Storage_;
 
@@ -639,7 +639,7 @@ class ChannelProtocolMutateSocketRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 
-class WithProtocolEndsServerEndsTopResponse final {
+class WithProtocolEndsServerEndsTopResponse {
  private:
   struct Storage_;
 
@@ -691,7 +691,7 @@ class WithProtocolEndsServerEndsTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsRequestTable;
 
-class WithProtocolEndsServerEndsRequest final {
+class WithProtocolEndsServerEndsRequest {
  private:
   struct Storage_;
 
@@ -743,7 +743,7 @@ class WithProtocolEndsServerEndsRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 
-class WithProtocolEndsClientEndsTopResponse final {
+class WithProtocolEndsClientEndsTopResponse {
  private:
   struct Storage_;
 
@@ -795,7 +795,7 @@ class WithProtocolEndsClientEndsTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsRequestTable;
 
-class WithProtocolEndsClientEndsRequest final {
+class WithProtocolEndsClientEndsRequest {
  private:
   struct Storage_;
 
@@ -845,7 +845,7 @@ class WithProtocolEndsClientEndsRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
-class WithErrorSyntax_ResponseAsStruct_Response final {
+class WithErrorSyntax_ResponseAsStruct_Response {
  private:
   struct Storage_;
 
@@ -925,7 +925,7 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
-class WithErrorSyntax_ResponseAsStruct_Result final {
+class WithErrorSyntax_ResponseAsStruct_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -1047,7 +1047,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
-class WithErrorSyntaxResponseAsStructTopResponse final {
+class WithErrorSyntaxResponseAsStructTopResponse {
  private:
   struct Storage_;
 
@@ -1117,7 +1117,7 @@ class WithErrorSyntaxResponseAsStructTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
-class WithErrorSyntax_ErrorAsPrimitive_Response final {
+class WithErrorSyntax_ErrorAsPrimitive_Response {
  private:
   struct Storage_;
 
@@ -1180,7 +1180,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
-class WithErrorSyntax_ErrorAsPrimitive_Result final {
+class WithErrorSyntax_ErrorAsPrimitive_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -1302,7 +1302,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
-class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
+class WithErrorSyntaxErrorAsPrimitiveTopResponse {
  private:
   struct Storage_;
 
@@ -1372,7 +1372,7 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
-class WithErrorSyntax_ErrorAsEnum_Response final {
+class WithErrorSyntax_ErrorAsEnum_Response {
  private:
   struct Storage_;
 
@@ -1435,7 +1435,7 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
+class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
  private:
   struct Storage_;
 
@@ -1514,7 +1514,7 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
+class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
  private:
   struct Storage_;
 
@@ -1593,7 +1593,7 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
+class WithAndWithoutRequestResponseWithRequestNoResponseRequest {
  private:
   struct Storage_;
 
@@ -1671,7 +1671,7 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
+class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
  private:
   struct Storage_;
 
@@ -1750,7 +1750,7 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
-class WithAndWithoutRequestResponseOnWithResponseRequest final {
+class WithAndWithoutRequestResponseOnWithResponseRequest {
  private:
   struct Storage_;
 
@@ -1817,7 +1817,7 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
+class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
  private:
   struct Storage_;
 
@@ -1895,7 +1895,7 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
 
-class TransitionalRequestTopResponse final {
+class TransitionalRequestTopResponse {
  private:
   struct Storage_;
 
@@ -1955,7 +1955,7 @@ class TransitionalRequestTopResponse final {
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
-class TransitionalRequestRequest final {
+class TransitionalRequestRequest {
  private:
   struct Storage_;
 
@@ -2012,7 +2012,7 @@ class TransitionalRequestRequest final {
 
 extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
-class TransitionalOneWayRequest final {
+class TransitionalOneWayRequest {
  private:
   struct Storage_;
 
@@ -2067,7 +2067,7 @@ class TransitionalOneWayRequest final {
 
 extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
-class TransitionalEventRequest final {
+class TransitionalEventRequest {
  private:
   struct Storage_;
 
@@ -2122,7 +2122,7 @@ class TransitionalEventRequest final {
 
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
 
-class TheUnion final {
+class TheUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
 
@@ -2207,7 +2207,7 @@ class TheUnion final {
 extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestTable;
 
-class MethodWithUnionUnionMethodRequest final {
+class MethodWithUnionUnionMethodRequest {
  private:
   struct Storage_;
 
@@ -2269,7 +2269,7 @@ class MethodWithUnionUnionMethodRequest final {
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 
-class SyscallProtocolMethodCRequest final {
+class SyscallProtocolMethodCRequest {
  private:
   struct Storage_;
 
@@ -2338,7 +2338,7 @@ class SyscallProtocolMethodCRequest final {
 
 extern "C" const fidl_type_t test_protocols_ProtocolEndsTable;
 
-class ProtocolEnds final {
+class ProtocolEnds {
  private:
   struct Storage_;
 
@@ -2438,7 +2438,7 @@ class ProtocolEnds final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
-class WithProtocolEndsStructContainingEndsTopResponse final {
+class WithProtocolEndsStructContainingEndsTopResponse {
  private:
   struct Storage_;
 
@@ -2485,7 +2485,7 @@ class WithProtocolEndsStructContainingEndsTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
-class WithProtocolEndsStructContainingEndsRequest final {
+class WithProtocolEndsStructContainingEndsRequest {
  private:
   struct Storage_;
 
@@ -2528,7 +2528,7 @@ class WithProtocolEndsStructContainingEndsRequest final {
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
-class ManyParametersFifteenRequest final {
+class ManyParametersFifteenRequest {
  private:
   struct Storage_;
 
@@ -2717,7 +2717,7 @@ class ManyParametersFifteenRequest final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
-class WithErrorSyntax_ErrorAsEnum_Result final {
+class WithErrorSyntax_ErrorAsEnum_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -2836,7 +2836,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
-class WithErrorSyntaxErrorAsEnumTopResponse final {
+class WithErrorSyntaxErrorAsEnumTopResponse {
  private:
   struct Storage_;
 
@@ -2905,7 +2905,7 @@ class WithErrorSyntaxErrorAsEnumTopResponse final {
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
 
-class ChannelProtocolMethodBTopResponse final {
+class ChannelProtocolMethodBTopResponse {
  private:
   struct Storage_;
 
@@ -2967,7 +2967,7 @@ class ChannelProtocolMethodBTopResponse final {
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
-class ChannelProtocolMethodBRequest final {
+class ChannelProtocolMethodBRequest {
  private:
   struct Storage_;
 
@@ -3034,7 +3034,7 @@ class ChannelProtocolMethodBRequest final {
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
-class ChannelProtocolMethodARequest final {
+class ChannelProtocolMethodARequest {
  private:
   struct Storage_;
 
@@ -3101,7 +3101,7 @@ class ChannelProtocolMethodARequest final {
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
 
-class ChannelProtocolEventARequest final {
+class ChannelProtocolEventARequest {
  private:
   struct Storage_;
 

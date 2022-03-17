@@ -13,8 +13,9 @@ namespace test_requestflexibleenvelope {
 void fidl::internal::NaturalClientImpl<
     ::test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexible(
-        ::test_requestflexibleenvelope::
-            ProtocolRequestStrictResponseFlexibleRequest&& payload,
+        ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+            request,
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>&& _callback)
         const {
@@ -22,8 +23,12 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                  RequestStrictResponseFlexible>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_requestflexibleenvelope::Protocol::
               RequestStrictResponseFlexible>(
@@ -35,8 +40,9 @@ void fidl::internal::NaturalClientImpl<
 void fidl::internal::NaturalClientImpl<
     ::test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
-        ::test_requestflexibleenvelope::
-            ProtocolRequestFlexibleResponseStrictRequest&& payload,
+        ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+            request,
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>&& _callback)
         const {
@@ -44,8 +50,12 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                  RequestFlexibleResponseStrict>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_requestflexibleenvelope::Protocol::
               RequestFlexibleResponseStrict>(
@@ -75,26 +85,32 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
-    Reply(::test_requestflexibleenvelope::
-              ProtocolRequestStrictResponseFlexibleTopResponse&& payload) {
+    Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<
+                    ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                         RequestStrictResponseFlexible>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
-    Reply(::test_requestflexibleenvelope::
-              ProtocolRequestFlexibleResponseStrictTopResponse&& payload) {
+    Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<
+                    ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                         RequestFlexibleResponseStrict>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -107,24 +123,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                  RequestStrictResponseFlexible>>
-              decoded =
-                  ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>::
-                      DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_requestflexibleenvelope::
+                  ProtocolRequestStrictResponseFlexibleRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                              RequestStrictResponseFlexible>
+              request = ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                      RequestStrictResponseFlexible>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_requestflexibleenvelope::Protocol::
                   RequestStrictResponseFlexible>::Sync completer(txn);
           static_cast<
               ::fidl::Server<::test_requestflexibleenvelope::Protocol>*>(
               interface)
-              ->RequestStrictResponseFlexible(decoded.value(), completer);
+              ->RequestStrictResponseFlexible(request, completer);
           return ZX_OK;
         },
     },
@@ -134,24 +151,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                  RequestFlexibleResponseStrict>>
-              decoded =
-                  ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>::
-                      DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_requestflexibleenvelope::
+                  ProtocolRequestFlexibleResponseStrictRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                              RequestFlexibleResponseStrict>
+              request = ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                      RequestFlexibleResponseStrict>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_requestflexibleenvelope::Protocol::
                   RequestFlexibleResponseStrict>::Sync completer(txn);
           static_cast<
               ::fidl::Server<::test_requestflexibleenvelope::Protocol>*>(
               interface)
-              ->RequestFlexibleResponseStrict(decoded.value(), completer);
+              ->RequestFlexibleResponseStrict(request, completer);
           return ZX_OK;
         },
     },

@@ -49,7 +49,7 @@ class Padding1ByteEnd;
 
 extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 
-class Padding7ByteMiddle final {
+class Padding7ByteMiddle {
  private:
   struct Storage_;
 
@@ -110,7 +110,7 @@ class Padding7ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
-class Padding7ByteEnd final {
+class Padding7ByteEnd {
  private:
   struct Storage_;
 
@@ -170,7 +170,7 @@ class Padding7ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
-class Padding6ByteMiddle final {
+class Padding6ByteMiddle {
  private:
   struct Storage_;
 
@@ -231,7 +231,7 @@ class Padding6ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
-class Padding6ByteEnd final {
+class Padding6ByteEnd {
  private:
   struct Storage_;
 
@@ -291,7 +291,7 @@ class Padding6ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
-class Padding5ByteMiddle final {
+class Padding5ByteMiddle {
  private:
   struct Storage_;
 
@@ -360,7 +360,7 @@ class Padding5ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
-class Padding5ByteEnd final {
+class Padding5ByteEnd {
  private:
   struct Storage_;
 
@@ -428,7 +428,7 @@ class Padding5ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
-class Padding4ByteMiddle final {
+class Padding4ByteMiddle {
  private:
   struct Storage_;
 
@@ -489,7 +489,7 @@ class Padding4ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
-class Padding4ByteEnd final {
+class Padding4ByteEnd {
  private:
   struct Storage_;
 
@@ -549,7 +549,7 @@ class Padding4ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
-class Padding4ByteAlignmentLength12 final {
+class Padding4ByteAlignmentLength12 {
  private:
   struct Storage_;
 
@@ -636,7 +636,7 @@ class Padding4ByteAlignmentLength12 final {
 
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
-class Padding3ByteMiddle final {
+class Padding3ByteMiddle {
  private:
   struct Storage_;
 
@@ -697,7 +697,7 @@ class Padding3ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
-class Padding3ByteEnd final {
+class Padding3ByteEnd {
  private:
   struct Storage_;
 
@@ -757,7 +757,7 @@ class Padding3ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
-class Padding2ByteMiddle final {
+class Padding2ByteMiddle {
  private:
   struct Storage_;
 
@@ -818,7 +818,7 @@ class Padding2ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
-class Padding2ByteEnd final {
+class Padding2ByteEnd {
  private:
   struct Storage_;
 
@@ -878,7 +878,7 @@ class Padding2ByteEnd final {
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
-class Padding2ByteAlignmentLength6 final {
+class Padding2ByteAlignmentLength6 {
  private:
   struct Storage_;
 
@@ -953,7 +953,7 @@ class Padding2ByteAlignmentLength6 final {
 
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
-class Padding1ByteMiddle final {
+class Padding1ByteMiddle {
  private:
   struct Storage_;
 
@@ -1014,7 +1014,7 @@ class Padding1ByteMiddle final {
 
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
-class Padding1ByteEnd final {
+class Padding1ByteEnd {
  private:
   struct Storage_;
 

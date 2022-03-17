@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
     explicit EventHandler(async::Loop& loop) : loop_(loop) {}
 
     void OnString(fidl::Event<::fuchsia_examples::Echo::OnString>& event) override {
-      std::cout << "(Natural types) got event: " << event->response() << std::endl;
+      std::cout << "(Natural types) got event: " << event.response() << std::endl;
       loop_.Quit();
     }
 

@@ -17,13 +17,10 @@ namespace fidl {
 // |Request| represents the request of a FIDL method call, using natural
 // types. See |WireRequest| for the equivalent using wire types.
 //
-// When |Method| request has a payload, |Request| will expose the following
-// operators for the user to access the payload:
+// When |Method| request has a payload, |Request| inherits from the payload
+// type, exposing the operations of that type.
 //
-//     MethodRequest& operator*();
-//     MethodRequest* operator->();
-//
-// When |Method| request has no payload, those operators will be absent.
+// When |Method| request has no payload, those operations will be absent.
 //
 // When |Method| has no request (event), this class will be undefined.
 template <typename Method>
@@ -32,13 +29,14 @@ class Request;
 // |Response| represents the response of a FIDL method call, using natural
 // types. See |WireResponse| for the equivalent using wire types.
 //
-// When |Method| response has a payload, |Response| will expose the following
-// operators for the user to access the payload:
+// When |Method| response has a payload, |Response| inherits from:
 //
-//     MethodResponse& operator*();
-//     MethodResponse* operator->();
+// - If |Method| uses the error syntax:
+//     - If the success value is empty: `fitx::result<AppError>`.
+//     - Otherwise: `fitx::result<AppError, SuccessValue>`.
+// - If |Method| does not use the error syntax: the payload type.
 //
-// When |Method| response has no payload, those operators will be absent.
+// When |Method| response has no payload, those operations will be absent.
 //
 // When |Method| has no response (one-way), this class will be undefined.
 template <typename Method>
@@ -47,13 +45,16 @@ class Response;
 // |Event| represents an incoming FIDL event using natural types. See
 // |WireEvent| for the equivalent using wire types.
 //
-// When |Method| has a payload, |Event| will expose the following operators for
-// the user to access the payload:
+// When |Method| event has a payload, |Event| inherits from:
 //
-//     EventPayload& operator*();
-//     EventPayload* operator->();
+// - If |Method| uses the error syntax:
+//     - If the success value is empty: `fitx::result<AppError>`.
+//     - Otherwise: `fitx::result<AppError, SuccessValue>`.
+// - If |Method| does not use the error syntax: the payload type.
 //
-// When |Method| has no payload, those operators will be absent.
+// When |Method| has no payload, those operations will be absent.
+//
+// When |Method| is not an event, this class will be undefined.
 template <typename Method>
 class Event;
 
@@ -122,11 +123,10 @@ class NaturalClientImpl;
 // - |Completer|: the completer type associated with a particular method.
 // - if two-way:
 //     - |ResultCallback|: the client callback taking a |fidl::Result| type.
+//     - |IsAbsentBody|: whether the response has no body.
 //     - |HasApplicationError|: whether the method uses the error syntax.
 //     - if using the error syntax:
 //         - |IsEmptyStructPayload|: whether the success payload is an empty struct.
-//     - otherwise:
-//         - |IsAbsentBody|: whether the response has no body.
 template <typename FidlMethod>
 struct NaturalMethodTypes;
 

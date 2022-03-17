@@ -42,7 +42,7 @@ class SimpleUnion;
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
-class StructWithNullableVector final {
+class StructWithNullableVector {
  private:
   struct Storage_;
 
@@ -102,7 +102,7 @@ class StructWithNullableVector final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
-class StructWithNullableUnion final {
+class StructWithNullableUnion {
  private:
   struct Storage_;
 
@@ -162,7 +162,7 @@ class StructWithNullableUnion final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
-class StructWithNullableStruct final {
+class StructWithNullableStruct {
  private:
   struct Storage_;
 
@@ -222,7 +222,7 @@ class StructWithNullableStruct final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
-class StructWithNullableString final {
+class StructWithNullableString {
  private:
   struct Storage_;
 
@@ -280,7 +280,7 @@ class StructWithNullableString final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 
-class StructWithNullableRequest final {
+class StructWithNullableRequest {
  private:
   struct Storage_;
 
@@ -329,7 +329,7 @@ class StructWithNullableRequest final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 
-class StructWithNullableProtocol final {
+class StructWithNullableProtocol {
  private:
   struct Storage_;
 
@@ -378,7 +378,7 @@ class StructWithNullableProtocol final {
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 
-class StructWithNullableHandle final {
+class StructWithNullableHandle {
  private:
   struct Storage_;
 
@@ -419,7 +419,7 @@ class StructWithNullableHandle final {
 
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 
-class SimpleUnion final {
+class SimpleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t, float>;
 
@@ -520,7 +520,7 @@ class SimpleUnion final {
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
-class SimpleProtocolAddTopResponse final {
+class SimpleProtocolAddTopResponse {
  private:
   struct Storage_;
 
@@ -579,7 +579,7 @@ class SimpleProtocolAddTopResponse final {
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
-class SimpleProtocolAddRequest final {
+class SimpleProtocolAddRequest {
  private:
   struct Storage_;
 
@@ -642,7 +642,7 @@ class SimpleProtocolAddRequest final {
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
-class Int32Wrapper final {
+class Int32Wrapper {
  private:
   struct Storage_;
 

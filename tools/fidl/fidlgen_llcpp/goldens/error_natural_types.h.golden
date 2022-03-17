@@ -27,7 +27,7 @@ class Example_foo_Result;
 
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
-class Example_foo_Response final {
+class Example_foo_Response {
  private:
   struct Storage_;
 
@@ -79,7 +79,7 @@ class Example_foo_Response final {
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
-class Example_foo_Result final {
+class Example_foo_Result {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate,
                                   ::test_error::Example_foo_Response, uint32_t>;
@@ -184,7 +184,7 @@ class Example_foo_Result final {
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
-class ExampleFooTopResponse final {
+class ExampleFooTopResponse {
  private:
   struct Storage_;
 
@@ -241,7 +241,7 @@ class ExampleFooTopResponse final {
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
-class ExampleFooRequest final {
+class ExampleFooRequest {
  private:
   struct Storage_;
 

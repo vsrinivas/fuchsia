@@ -21,7 +21,7 @@ class Baz;
 
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
-class Baz final {
+class Baz {
  private:
   struct Storage_;
 

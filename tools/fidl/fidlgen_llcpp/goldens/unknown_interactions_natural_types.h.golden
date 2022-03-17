@@ -26,7 +26,7 @@ class Example_FlexibleTwoWay_Result;
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
 
-class Example_FlexibleTwoWay_Response final {
+class Example_FlexibleTwoWay_Response {
  private:
   struct Storage_;
 
@@ -87,7 +87,7 @@ class Example_FlexibleTwoWay_Response final {
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
 
-class Example_FlexibleTwoWay_Result final {
+class Example_FlexibleTwoWay_Result {
  private:
   using Storage_ = cpp17::variant<
       cpp17::monostate,
@@ -205,7 +205,7 @@ class Example_FlexibleTwoWay_Result final {
 extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
 
-class ExampleFlexibleTwoWayTopResponse final {
+class ExampleFlexibleTwoWayTopResponse {
  private:
   struct Storage_;
 

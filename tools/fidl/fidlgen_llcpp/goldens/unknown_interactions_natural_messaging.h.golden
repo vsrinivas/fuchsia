@@ -50,16 +50,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace test_unknowninteractions
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>> {
+class ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> final {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -72,16 +64,8 @@ struct ::fidl::internal::MessageTraits<
 namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>> {
+class ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> final {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -94,16 +78,9 @@ struct ::fidl::internal::MessageTraits<
 namespace test_unknowninteractions {}  // namespace test_unknowninteractions
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>> {
+class ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>
+    final {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -123,32 +100,13 @@ class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final
 
 template <>
 class ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_unknowninteractions::Example::FlexibleTwoWay>> {
+    final
+    : public ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse payload_;
+  using ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse::
+      ExampleFlexibleTwoWayTopResponse;
+  Response(::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse v)
+      : ExampleFlexibleTwoWayTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -263,16 +221,8 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::Example>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>> {
+class ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -287,16 +237,9 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay> final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_unknowninteractions::Example::FlexibleOneWay>> {
+class ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -311,16 +254,8 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>> {
+class ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -335,16 +270,9 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay> final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_unknowninteractions::Example::FlexibleTwoWay>> {
+class ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -373,7 +301,8 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse&& payload);
+      ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

@@ -35,26 +35,11 @@ __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 template <>
 class ::fidl::Response<::test_inheritance::Super::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_inheritance::Super::Foo>> {
+    : public ::test_inheritance::SuperFooTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_inheritance::SuperFooTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_inheritance::SuperFooTopResponse* operator->() { return &payload_; }
-  const ::test_inheritance::SuperFooTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_inheritance::SuperFooTopResponse& operator*() { return payload_; }
-  const ::test_inheritance::SuperFooTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritance::SuperFooTopResponse payload_;
+  using ::test_inheritance::SuperFooTopResponse::SuperFooTopResponse;
+  Response(::test_inheritance::SuperFooTopResponse v)
+      : SuperFooTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -81,7 +66,7 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Super> final
  public:
   using NaturalClientBase::NaturalClientBase;
   void Foo(
-      ::test_inheritance::SuperFooRequest&& payload,
+      ::fidl::Request<::test_inheritance::Super::Foo> request,
       ::fidl::ClientCallback<::test_inheritance::Super::Foo>&& _callback) const;
 };
 namespace test_inheritance {
@@ -144,26 +129,11 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Super>
 
 template <>
 class ::fidl::Request<::test_inheritance::Super::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_inheritance::Super::Foo>> {
+    : public ::test_inheritance::SuperFooRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_inheritance::SuperFooRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_inheritance::SuperFooRequest* operator->() { return &payload_; }
-  const ::test_inheritance::SuperFooRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_inheritance::SuperFooRequest& operator*() { return payload_; }
-  const ::test_inheritance::SuperFooRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritance::SuperFooRequest payload_;
+  using ::test_inheritance::SuperFooRequest::SuperFooRequest;
+  Request(::test_inheritance::SuperFooRequest v)
+      : ::test_inheritance::SuperFooRequest(std::move(v)) {}
 };
 
 template <>
@@ -180,7 +150,7 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_inheritance::SuperFooTopResponse&& payload);
+  void Reply(::fidl::Response<::test_inheritance::Super::Foo>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -242,26 +212,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Sub::Foo> {
 
 template <>
 class ::fidl::Response<::test_inheritance::Sub::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_inheritance::Sub::Foo>> {
+    : public ::test_inheritance::SuperFooTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_inheritance::SuperFooTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_inheritance::SuperFooTopResponse* operator->() { return &payload_; }
-  const ::test_inheritance::SuperFooTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_inheritance::SuperFooTopResponse& operator*() { return payload_; }
-  const ::test_inheritance::SuperFooTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritance::SuperFooTopResponse payload_;
+  using ::test_inheritance::SuperFooTopResponse::SuperFooTopResponse;
+  Response(::test_inheritance::SuperFooTopResponse v)
+      : SuperFooTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -287,7 +242,7 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final
  public:
   using NaturalClientBase::NaturalClientBase;
   void Foo(
-      ::test_inheritance::SuperFooRequest&& payload,
+      ::fidl::Request<::test_inheritance::Sub::Foo> request,
       ::fidl::ClientCallback<::test_inheritance::Sub::Foo>&& _callback) const;
 };
 #endif  // __Fuchsia__
@@ -347,26 +302,11 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Sub>
 
 template <>
 class ::fidl::Request<::test_inheritance::Sub::Foo> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_inheritance::Sub::Foo>> {
+    : public ::test_inheritance::SuperFooRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_inheritance::SuperFooRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_inheritance::SuperFooRequest* operator->() { return &payload_; }
-  const ::test_inheritance::SuperFooRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_inheritance::SuperFooRequest& operator*() { return payload_; }
-  const ::test_inheritance::SuperFooRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritance::SuperFooRequest payload_;
+  using ::test_inheritance::SuperFooRequest::SuperFooRequest;
+  Request(::test_inheritance::SuperFooRequest v)
+      : ::test_inheritance::SuperFooRequest(std::move(v)) {}
 };
 
 template <>
@@ -383,7 +323,7 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_inheritance::SuperFooTopResponse&& payload);
+  void Reply(::fidl::Response<::test_inheritance::Sub::Foo>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

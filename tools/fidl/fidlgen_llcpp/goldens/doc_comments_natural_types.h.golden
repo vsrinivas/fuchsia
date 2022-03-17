@@ -30,7 +30,7 @@ extern "C" const fidl_type_t test_doccomments_TableTable;
 /// table comment #1
 ///
 /// table comment #3
-class Table final {
+class Table {
  private:
   struct Storage_;
 
@@ -89,7 +89,7 @@ extern "C" const fidl_type_t test_doccomments_StructTable;
 /// struct comment #1
 ///
 /// struct comment #3
-class Struct final {
+class Struct {
  private:
   struct Storage_;
 
@@ -150,7 +150,7 @@ extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
 /// strict union comment #1
 ///
 /// strict union comment #3
-class StrictUnion final {
+class StrictUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
 
@@ -237,7 +237,7 @@ extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 /// flexible union comment #1
 ///
 /// flexible union comment #3
-class FlexibleUnion final {
+class FlexibleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
 

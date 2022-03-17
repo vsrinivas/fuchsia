@@ -43,6 +43,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -73,6 +75,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -102,6 +106,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -131,6 +137,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -160,6 +168,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 namespace test_protocollayouts {
 __LOCAL extern "C" const fidl_type_t
@@ -230,36 +240,14 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>> {
+    : public ::test_protocollayouts_imported::
+          ComposedProtocolOnAnonComposedRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest
-            payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest
-      payload_;
+  using ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest::
+      ComposedProtocolOnAnonComposedRequest;
+  Event(
+      ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest v)
+      : ComposedProtocolOnAnonComposedRequest(std::move(v)) {}
 };
 
 template <>
@@ -277,40 +265,19 @@ template <>
 class ::fidl::Event<
     ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
     final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
+    : public ::fitx::result<
+          uint32_t, ::test_protocollayouts_imported::
+                        ComposedProtocol_OnAnonComposedWithError_Response> {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts_imported::
-            ComposedProtocolOnAnonComposedWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnAnonComposedWithErrorRequest*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOnAnonComposedWithErrorRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnAnonComposedWithErrorRequest&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOnAnonComposedWithErrorRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnAnonComposedWithErrorRequest payload_;
+  using ::fitx::result<
+      uint32_t, ::test_protocollayouts_imported::
+                    ComposedProtocol_OnAnonComposedWithError_Response>::result;
+  Event(::fitx::result<uint32_t,
+                       ::test_protocollayouts_imported::
+                           ComposedProtocol_OnAnonComposedWithError_Response>
+            v)
+      : result(std::move(v)) {}
+  Event() = delete;
 };
 
 template <>
@@ -322,35 +289,49 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<
   using Payload = ::test_protocollayouts_imported::
       ComposedProtocolOnAnonComposedWithErrorRequest;
 };
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<
+    ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>> {
+  using DomainObject = ::test_protocollayouts_imported::
+      ComposedProtocolOnAnonComposedWithErrorRequest;
+
+ public:
+  static ::fidl::Event<
+      ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_OnAnonComposedWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_OnAnonComposedWithError_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
+};
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnNamedComposed>> {
+    : public ::test_protocollayouts_imported::ImportUnionPayload {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts_imported::ImportUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportUnionPayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportUnionPayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportUnionPayload payload_;
+  using ::test_protocollayouts_imported::ImportUnionPayload::ImportUnionPayload;
+  Event(::test_protocollayouts_imported::ImportUnionPayload v)
+      : ImportUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -366,41 +347,16 @@ namespace test_protocollayouts {}  // namespace test_protocollayouts
 template <>
 class ::fidl::Event<
     ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
+    final : public ::fitx::result<
+                uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts_imported::
-            ComposedProtocolOnNamedComposedWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnNamedComposedWithErrorRequest*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOnNamedComposedWithErrorRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnNamedComposedWithErrorRequest&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOnNamedComposedWithErrorRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::
-      ComposedProtocolOnNamedComposedWithErrorRequest payload_;
+  using ::fitx::result<
+      uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  Event(::fitx::result<uint32_t,
+                       ::test_protocollayouts_imported::ImportTablePayload>
+            v)
+      : result(std::move(v)) {}
+  Event() = delete;
 };
 
 template <>
@@ -412,35 +368,49 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<
   using Payload = ::test_protocollayouts_imported::
       ComposedProtocolOnNamedComposedWithErrorRequest;
 };
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<
+    ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>> {
+  using DomainObject = ::test_protocollayouts_imported::
+      ComposedProtocolOnNamedComposedWithErrorRequest;
+
+ public:
+  static ::fidl::Event<
+      ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_OnNamedComposedWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_OnNamedComposedWithError_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
+};
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>> {
+    : public ::test_protocollayouts_imported::ImportUnionPayload {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts_imported::ImportUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportUnionPayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportUnionPayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportUnionPayload payload_;
+  using ::test_protocollayouts_imported::ImportUnionPayload::ImportUnionPayload;
+  Event(::test_protocollayouts_imported::ImportUnionPayload v)
+      : ImportUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -455,32 +425,16 @@ namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Event<
-                ::test_protocollayouts::MainProtocol::OnImportWithError>> {
+    final : public ::fitx::result<
+                uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts::MainProtocolOnImportWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolOnImportWithErrorRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnImportWithErrorRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolOnImportWithErrorRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnImportWithErrorRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolOnImportWithErrorRequest payload_;
+  using ::fitx::result<
+      uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  Event(::fitx::result<uint32_t,
+                       ::test_protocollayouts_imported::ImportTablePayload>
+            v)
+      : result(std::move(v)) {}
+  Event() = delete;
 };
 
 template <>
@@ -491,30 +445,47 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolOnImportWithErrorRequest;
 };
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolOnImportWithErrorRequest;
+
+ public:
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{{.result = ::test_protocollayouts::
+                               MainProtocol_OnImportWithError_Result::WithErr(
+                                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result =
+               ::test_protocollayouts::MainProtocol_OnImportWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
+};
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>> {
+    : public ::test_protocollayouts::LocalUnionPayload {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts::LocalUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::LocalUnionPayload* operator->() { return &payload_; }
-  const ::test_protocollayouts::LocalUnionPayload* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::LocalUnionPayload& operator*() { return payload_; }
-  const ::test_protocollayouts::LocalUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::LocalUnionPayload payload_;
+  using ::test_protocollayouts::LocalUnionPayload::LocalUnionPayload;
+  Event(::test_protocollayouts::LocalUnionPayload v)
+      : LocalUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -529,32 +500,14 @@ namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Event<
-                ::test_protocollayouts::MainProtocol::OnLocalWithError>> {
+    final : public ::fitx::result<uint32_t,
+                                  ::test_protocollayouts::LocalTablePayload> {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts::MainProtocolOnLocalWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest payload_;
+  using ::fitx::result<uint32_t,
+                       ::test_protocollayouts::LocalTablePayload>::result;
+  Event(::fitx::result<uint32_t, ::test_protocollayouts::LocalTablePayload> v)
+      : result(std::move(v)) {}
+  Event() = delete;
 };
 
 template <>
@@ -565,34 +518,48 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest;
 };
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest;
+
+ public:
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_OnLocalWithError_Result::WithErr(m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result =
+               ::test_protocollayouts::MainProtocol_OnLocalWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
+};
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>> {
+    : public ::test_protocollayouts::MainProtocolOnAnonRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts::MainProtocolOnAnonRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolOnAnonRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnAnonRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolOnAnonRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnAnonRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolOnAnonRequest payload_;
+  using ::test_protocollayouts::MainProtocolOnAnonRequest::
+      MainProtocolOnAnonRequest;
+  Event(::test_protocollayouts::MainProtocolOnAnonRequest v)
+      : MainProtocolOnAnonRequest(std::move(v)) {}
 };
 
 template <>
@@ -607,32 +574,18 @@ namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnAnonWithError>> {
+    : public ::fitx::result<
+          uint32_t,
+          ::test_protocollayouts::MainProtocol_OnAnonWithError_Response> {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocollayouts::MainProtocolOnAnonWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest payload_;
+  using ::fitx::result<
+      uint32_t,
+      ::test_protocollayouts::MainProtocol_OnAnonWithError_Response>::result;
+  Event(::fitx::result<
+        uint32_t, ::test_protocollayouts::MainProtocol_OnAnonWithError_Response>
+            v)
+      : result(std::move(v)) {}
+  Event() = delete;
 };
 
 template <>
@@ -643,42 +596,51 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest;
 };
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest;
+
+ public:
+  static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_OnAnonWithError_Result::WithErr(m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result =
+               ::test_protocollayouts::MainProtocol_OnAnonWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
+};
 namespace test_protocollayouts {}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+    final : public ::test_protocollayouts_imported::
+                ComposedProtocolTwoWayAnonComposedResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::test_protocollayouts_imported::
+      ComposedProtocolTwoWayAnonComposedResponse::
+          ComposedProtocolTwoWayAnonComposedResponse;
   Response(::test_protocollayouts_imported::
-               ComposedProtocolTwoWayAnonComposedResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse
-      payload_;
+               ComposedProtocolTwoWayAnonComposedResponse v)
+      : ComposedProtocolTwoWayAnonComposedResponse(std::move(v)) {}
 };
 
 template <>
@@ -707,40 +669,20 @@ template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
     final
-    : public ::fidl::internal::MessageBase<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+    : public ::fitx::result<
+          uint32_t, ::test_protocollayouts_imported::
+                        ComposedProtocol_TwoWayAnonComposedWithError_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts_imported::
-               ComposedProtocolTwoWayAnonComposedWithErrorTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse payload_;
+  using ::fitx::result<
+      uint32_t,
+      ::test_protocollayouts_imported::
+          ComposedProtocol_TwoWayAnonComposedWithError_Response>::result;
+  Response(::fitx::result<
+           uint32_t, ::test_protocollayouts_imported::
+                         ComposedProtocol_TwoWayAnonComposedWithError_Response>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -751,6 +693,41 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::
       ComposedProtocolTwoWayAnonComposedWithErrorTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+  using DomainObject = ::test_protocollayouts_imported::
+      ComposedProtocolTwoWayAnonComposedWithErrorTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_TwoWayAnonComposedWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_TwoWayAnonComposedWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<
@@ -771,31 +748,11 @@ class ::fidl::Result<
 template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+    final : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Response(::test_protocollayouts_imported::ImportTablePayload v)
+      : ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -820,41 +777,16 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
 template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+    final : public ::fitx::result<
+                uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts_imported::
-               ComposedProtocolTwoWayNamedComposedWithErrorTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse payload_;
+  using ::fitx::result<
+      uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  Response(::fitx::result<uint32_t,
+                          ::test_protocollayouts_imported::ImportUnionPayload>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -865,6 +797,41 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::
       ComposedProtocolTwoWayNamedComposedWithErrorTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+  using DomainObject = ::test_protocollayouts_imported::
+      ComposedProtocolTwoWayNamedComposedWithErrorTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_TwoWayNamedComposedWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts_imported::
+               ComposedProtocol_TwoWayNamedComposedWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<
@@ -882,31 +849,11 @@ class ::fidl::Result<
 
 template <>
 class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport> final
-    : public ::fidl::internal::MessageBase<::fidl::Response<
-          ::test_protocollayouts::MainProtocol::TwoWayImport>> {
+    : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Response(::test_protocollayouts_imported::ImportTablePayload v)
+      : ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -930,35 +877,16 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport> final
 template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+    final : public ::fitx::result<
+                uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse
-               payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse payload_;
+  using ::fitx::result<
+      uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  Response(::fitx::result<uint32_t,
+                          ::test_protocollayouts_imported::ImportUnionPayload>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -969,6 +897,40 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload =
       ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_TwoWayImportWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_TwoWayImportWithError_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<
@@ -987,26 +949,11 @@ class ::fidl::Result<
 
 template <>
 class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+    : public ::test_protocollayouts::LocalTablePayload {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::LocalTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::LocalTablePayload* operator->() { return &payload_; }
-  const ::test_protocollayouts::LocalTablePayload* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::LocalTablePayload& operator*() { return payload_; }
-  const ::test_protocollayouts::LocalTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::LocalTablePayload payload_;
+  using ::test_protocollayouts::LocalTablePayload::LocalTablePayload;
+  Response(::test_protocollayouts::LocalTablePayload v)
+      : LocalTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1029,35 +976,15 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> final
 template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+    final : public ::fitx::result<uint32_t,
+                                  ::test_protocollayouts::LocalUnionPayload> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse
-               payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse payload_;
+  using ::fitx::result<uint32_t,
+                       ::test_protocollayouts::LocalUnionPayload>::result;
+  Response(
+      ::fitx::result<uint32_t, ::test_protocollayouts::LocalUnionPayload> v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -1068,6 +995,40 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload =
       ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_TwoWayLocalWithError_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocollayouts::
+               MainProtocol_TwoWayLocalWithError_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
@@ -1084,32 +1045,12 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
 
 template <>
 class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+    : public ::test_protocollayouts::MainProtocolTwoWayAnonResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::MainProtocolTwoWayAnonResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayAnonResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayAnonResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayAnonResponse payload_;
+  using ::test_protocollayouts::MainProtocolTwoWayAnonResponse::
+      MainProtocolTwoWayAnonResponse;
+  Response(::test_protocollayouts::MainProtocolTwoWayAnonResponse v)
+      : MainProtocolTwoWayAnonResponse(std::move(v)) {}
 };
 
 template <>
@@ -1134,35 +1075,20 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> final
 template <>
 class ::fidl::Response<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+    final
+    : public ::fitx::result<
+          uint32_t,
+          ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse
-               payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse payload_;
+  using ::fitx::result<uint32_t,
+                       ::test_protocollayouts::
+                           MainProtocol_TwoWayAnonWithError_Response>::result;
+  Response(::fitx::result<
+           uint32_t,
+           ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -1173,6 +1099,39 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload =
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+  using DomainObject =
+      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&& m) {
+    if (m.is_error()) {
+      return DomainObject{{.result = ::test_protocollayouts::
+                               MainProtocol_TwoWayAnonWithError_Result::WithErr(
+                                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result =
+               ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
@@ -1195,80 +1154,95 @@ class ::fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>
  public:
   using NaturalClientBase::NaturalClientBase;
   void TwoWayAnonComposed(
-      ::test_protocollayouts_imported::
-          ComposedProtocolTwoWayAnonComposedRequest&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&& _callback)
       const;
 
   void TwoWayAnonComposedWithError(
-      ::test_protocollayouts_imported::
-          ComposedProtocolTwoWayAnonComposedWithErrorRequest&& payload,
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&&
           _callback) const;
 
   void TwoWayNamedComposed(
-      ::test_protocollayouts_imported::ImportUnionPayload&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&&
           _callback) const;
 
   void TwoWayNamedComposedWithError(
-      ::test_protocollayouts_imported::ImportTablePayload&& payload,
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&&
           _callback) const;
 
   void TwoWayImport(
-      ::test_protocollayouts_imported::ImportUnionPayload&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayImport>&& _callback)
       const;
 
   void TwoWayImportWithError(
-      ::test_protocollayouts_imported::ImportTablePayload&& payload,
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&&
           _callback) const;
 
   void TwoWayLocal(
-      ::test_protocollayouts::LocalUnionPayload&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayLocal>&& _callback) const;
 
   void TwoWayLocalWithError(
-      ::test_protocollayouts::LocalTablePayload&& payload,
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&&
           _callback) const;
 
   void TwoWayAnon(
-      ::test_protocollayouts::MainProtocolTwoWayAnonRequest&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> request,
       ::fidl::ClientCallback<::test_protocollayouts::MainProtocol::TwoWayAnon>&&
           _callback) const;
 
   void TwoWayAnonWithError(
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest&& payload,
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+          request,
       ::fidl::ClientCallback<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&&
           _callback) const;
 
   ::fitx::result<::fidl::Error> OneWayAnonComposed(
-      ::test_protocollayouts_imported::
-          ComposedProtocolOneWayAnonComposedRequest&& payload) const;
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayNamedComposed(
-      ::test_protocollayouts_imported::ImportTablePayload&& payload) const;
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayImport(
-      ::test_protocollayouts_imported::ImportTablePayload&& payload) const;
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayLocal(
-      ::test_protocollayouts::LocalTablePayload&& payload) const;
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>
+          request) const;
 
   ::fitx::result<::fidl::Error> OneWayAnon(
-      ::test_protocollayouts::MainProtocolOneWayAnonRequest&& payload) const;
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon> request)
+      const;
 };
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -1424,39 +1398,17 @@ class ::fidl::internal::NaturalEventSender<::test_protocollayouts::MainProtocol>
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
+    final : public ::test_protocollayouts_imported::
+                ComposedProtocolOneWayAnonComposedRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_protocollayouts_imported::
+      ComposedProtocolOneWayAnonComposedRequest::
+          ComposedProtocolOneWayAnonComposedRequest;
   Request(
       ::test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest
-          payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOneWayAnonComposedRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolOneWayAnonComposedRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest
-      payload_;
+          v)
+      : ::test_protocollayouts_imported::
+            ComposedProtocolOneWayAnonComposedRequest(std::move(v)) {}
 };
 
 template <>
@@ -1474,39 +1426,17 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
+    final : public ::test_protocollayouts_imported::
+                ComposedProtocolTwoWayAnonComposedRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_protocollayouts_imported::
+      ComposedProtocolTwoWayAnonComposedRequest::
+          ComposedProtocolTwoWayAnonComposedRequest;
   Request(
       ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedRequest
-          payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedRequest
-      payload_;
+          v)
+      : ::test_protocollayouts_imported::
+            ComposedProtocolTwoWayAnonComposedRequest(std::move(v)) {}
 };
 
 template <>
@@ -1525,41 +1455,16 @@ struct ::fidl::internal::MessageTraits<
 template <>
 class ::fidl::Request<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
+    final : public ::test_protocollayouts_imported::
+                ComposedProtocolTwoWayAnonComposedWithErrorRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_protocollayouts_imported::
+      ComposedProtocolTwoWayAnonComposedWithErrorRequest::
+          ComposedProtocolTwoWayAnonComposedWithErrorRequest;
   Request(::test_protocollayouts_imported::
-              ComposedProtocolTwoWayAnonComposedWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorRequest*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorRequest&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::
-      ComposedProtocolTwoWayAnonComposedWithErrorRequest payload_;
+              ComposedProtocolTwoWayAnonComposedWithErrorRequest v)
+      : ::test_protocollayouts_imported::
+            ComposedProtocolTwoWayAnonComposedWithErrorRequest(std::move(v)) {}
 };
 
 template <>
@@ -1577,31 +1482,11 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
+    final : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Request(::test_protocollayouts_imported::ImportTablePayload v)
+      : ::test_protocollayouts_imported::ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1618,31 +1503,11 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
+    final : public ::test_protocollayouts_imported::ImportUnionPayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportUnionPayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportUnionPayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportUnionPayload payload_;
+  using ::test_protocollayouts_imported::ImportUnionPayload::ImportUnionPayload;
+  Request(::test_protocollayouts_imported::ImportUnionPayload v)
+      : ::test_protocollayouts_imported::ImportUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -1660,32 +1525,11 @@ struct ::fidl::internal::MessageTraits<
 template <>
 class ::fidl::Request<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
+    final : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Request(::test_protocollayouts_imported::ImportTablePayload v)
+      : ::test_protocollayouts_imported::ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1702,31 +1546,11 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>> {
+    : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Request(::test_protocollayouts_imported::ImportTablePayload v)
+      : ::test_protocollayouts_imported::ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1743,31 +1567,11 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>> {
+    : public ::test_protocollayouts_imported::ImportUnionPayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportUnionPayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportUnionPayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportUnionPayload payload_;
+  using ::test_protocollayouts_imported::ImportUnionPayload::ImportUnionPayload;
+  Request(::test_protocollayouts_imported::ImportUnionPayload v)
+      : ::test_protocollayouts_imported::ImportUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -1785,31 +1589,11 @@ struct ::fidl::internal::MessageTraits<
 template <>
 class ::fidl::Request<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
+    final : public ::test_protocollayouts_imported::ImportTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts_imported::ImportTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts_imported::ImportTablePayload* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts_imported::ImportTablePayload& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts_imported::ImportTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts_imported::ImportTablePayload payload_;
+  using ::test_protocollayouts_imported::ImportTablePayload::ImportTablePayload;
+  Request(::test_protocollayouts_imported::ImportTablePayload v)
+      : ::test_protocollayouts_imported::ImportTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1826,26 +1610,11 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>> {
+    : public ::test_protocollayouts::LocalTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts::LocalTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::LocalTablePayload* operator->() { return &payload_; }
-  const ::test_protocollayouts::LocalTablePayload* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::LocalTablePayload& operator*() { return payload_; }
-  const ::test_protocollayouts::LocalTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::LocalTablePayload payload_;
+  using ::test_protocollayouts::LocalTablePayload::LocalTablePayload;
+  Request(::test_protocollayouts::LocalTablePayload v)
+      : ::test_protocollayouts::LocalTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1862,26 +1631,11 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
+    : public ::test_protocollayouts::LocalUnionPayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts::LocalUnionPayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::LocalUnionPayload* operator->() { return &payload_; }
-  const ::test_protocollayouts::LocalUnionPayload* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::LocalUnionPayload& operator*() { return payload_; }
-  const ::test_protocollayouts::LocalUnionPayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::LocalUnionPayload payload_;
+  using ::test_protocollayouts::LocalUnionPayload::LocalUnionPayload;
+  Request(::test_protocollayouts::LocalUnionPayload v)
+      : ::test_protocollayouts::LocalUnionPayload(std::move(v)) {}
 };
 
 template <>
@@ -1899,26 +1653,11 @@ struct ::fidl::internal::MessageTraits<
 template <>
 class ::fidl::Request<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
+    final : public ::test_protocollayouts::LocalTablePayload {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts::LocalTablePayload payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::LocalTablePayload* operator->() { return &payload_; }
-  const ::test_protocollayouts::LocalTablePayload* operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::LocalTablePayload& operator*() { return payload_; }
-  const ::test_protocollayouts::LocalTablePayload& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::LocalTablePayload payload_;
+  using ::test_protocollayouts::LocalTablePayload::LocalTablePayload;
+  Request(::test_protocollayouts::LocalTablePayload v)
+      : ::test_protocollayouts::LocalTablePayload(std::move(v)) {}
 };
 
 template <>
@@ -1935,32 +1674,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>> {
+    : public ::test_protocollayouts::MainProtocolOneWayAnonRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts::MainProtocolOneWayAnonRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolOneWayAnonRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOneWayAnonRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolOneWayAnonRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolOneWayAnonRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolOneWayAnonRequest payload_;
+  using ::test_protocollayouts::MainProtocolOneWayAnonRequest::
+      MainProtocolOneWayAnonRequest;
+  Request(::test_protocollayouts::MainProtocolOneWayAnonRequest v)
+      : ::test_protocollayouts::MainProtocolOneWayAnonRequest(std::move(v)) {}
 };
 
 template <>
@@ -1977,32 +1696,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
+    : public ::test_protocollayouts::MainProtocolTwoWayAnonRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocollayouts::MainProtocolTwoWayAnonRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayAnonRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayAnonRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayAnonRequest payload_;
+  using ::test_protocollayouts::MainProtocolTwoWayAnonRequest::
+      MainProtocolTwoWayAnonRequest;
+  Request(::test_protocollayouts::MainProtocolTwoWayAnonRequest v)
+      : ::test_protocollayouts::MainProtocolTwoWayAnonRequest(std::move(v)) {}
 };
 
 template <>
@@ -2019,33 +1718,14 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
+    final
+    : public ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest payload_;
+  using ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest::
+      MainProtocolTwoWayAnonWithErrorRequest;
+  Request(::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest v)
+      : ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest(
+            std::move(v)) {}
 };
 
 template <>
@@ -2064,8 +1744,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocollayouts_imported::
-                 ComposedProtocolTwoWayAnonComposedResponse&& payload);
+  void Reply(
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2077,8 +1758,9 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_protocollayouts_imported::
-          ComposedProtocolTwoWayAnonComposedWithErrorTopResponse&& payload);
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2089,7 +1771,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocollayouts_imported::ImportTablePayload&& payload);
+  void
+  Reply(::fidl::Response<
+        ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2101,8 +1785,9 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_protocollayouts_imported::
-          ComposedProtocolTwoWayNamedComposedWithErrorTopResponse&& payload);
+      ::fidl::Response<
+          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2113,7 +1798,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayImport>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocollayouts_imported::ImportTablePayload&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImport>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2124,9 +1811,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse&&
-          payload);
+  void Reply(::fidl::Response<
+             ::test_protocollayouts::MainProtocol::TwoWayImportWithError>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2137,7 +1824,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocollayouts::LocalTablePayload&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocal>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2148,9 +1837,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse&&
-          payload);
+  void
+  Reply(::fidl::Response<
+        ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2161,7 +1850,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocollayouts::MainProtocolTwoWayAnonResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnon>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2172,9 +1863,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse&&
-          payload);
+  void
+  Reply(::fidl::Response<
+        ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

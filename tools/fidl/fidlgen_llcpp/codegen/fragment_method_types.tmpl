@@ -56,11 +56,12 @@ struct {{ .NaturalMethodTypes }} {
     {{ end }}
   {{ else }}
     static constexpr bool HasApplicationError = false;
-    {{ if .ResponseArgs }}
-      static constexpr bool IsAbsentBody = false;
-    {{ else }}
-      static constexpr bool IsAbsentBody = true;
-    {{ end }}
+  {{ end }}
+
+  {{ if .ResponseArgs }}
+    static constexpr bool IsAbsentBody = false;
+  {{ else }}
+    static constexpr bool IsAbsentBody = true;
   {{ end }}
 };
 

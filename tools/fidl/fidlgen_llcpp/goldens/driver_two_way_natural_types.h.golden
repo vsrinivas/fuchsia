@@ -23,7 +23,7 @@ class TwoWayAddRequest;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 
-class TwoWayAddTopResponse final {
+class TwoWayAddTopResponse {
  private:
   struct Storage_;
 
@@ -76,7 +76,7 @@ class TwoWayAddTopResponse final {
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
-class TwoWayAddRequest final {
+class TwoWayAddRequest {
  private:
   struct Storage_;
 

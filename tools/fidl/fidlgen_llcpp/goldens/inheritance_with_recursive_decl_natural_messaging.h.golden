@@ -27,7 +27,8 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> First(
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload) const;
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>
+          request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -95,34 +96,12 @@ class ::fidl::internal::NaturalEventSender<
 
 template <>
 class ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>> {
+    : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*() {
-    return payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest payload_;
+  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::
+      ParentFirstRequest;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v)
+      : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
 };
 
 template <>
@@ -191,10 +170,12 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> First(
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload) const;
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>
+          request) const;
 
   ::fitx::result<::fidl::Error> Second(
-      ::test_inheritancewithrecursivedecl::ChildSecondRequest&& payload) const;
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>
+          request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -262,34 +243,12 @@ class ::fidl::internal::NaturalEventSender<
 
 template <>
 class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>> {
+    : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ParentFirstRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*() {
-    return payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ParentFirstRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritancewithrecursivedecl::ParentFirstRequest payload_;
+  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::
+      ParentFirstRequest;
+  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v)
+      : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
 };
 
 template <>
@@ -306,34 +265,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>> {
+    : public ::test_inheritancewithrecursivedecl::ChildSecondRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_inheritancewithrecursivedecl::ChildSecondRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ChildSecondRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_inheritancewithrecursivedecl::ChildSecondRequest& operator*() {
-    return payload_;
-  }
-  const ::test_inheritancewithrecursivedecl::ChildSecondRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_inheritancewithrecursivedecl::ChildSecondRequest payload_;
+  using ::test_inheritancewithrecursivedecl::ChildSecondRequest::
+      ChildSecondRequest;
+  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest v)
+      : ::test_inheritancewithrecursivedecl::ChildSecondRequest(std::move(v)) {}
 };
 
 template <>

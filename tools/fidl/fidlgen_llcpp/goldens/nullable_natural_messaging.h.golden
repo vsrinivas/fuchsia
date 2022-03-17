@@ -38,30 +38,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_nullable::SimpleProtocol::Add> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
+    : public ::test_nullable::SimpleProtocolAddTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_nullable::SimpleProtocolAddTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_nullable::SimpleProtocolAddTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_nullable::SimpleProtocolAddTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_nullable::SimpleProtocolAddTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_nullable::SimpleProtocolAddTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_nullable::SimpleProtocolAddTopResponse payload_;
+  using ::test_nullable::SimpleProtocolAddTopResponse::
+      SimpleProtocolAddTopResponse;
+  Response(::test_nullable::SimpleProtocolAddTopResponse v)
+      : SimpleProtocolAddTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -87,7 +69,7 @@ class ::fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void Add(::test_nullable::SimpleProtocolAddRequest&& payload,
+  void Add(::fidl::Request<::test_nullable::SimpleProtocol::Add> request,
            ::fidl::ClientCallback<::test_nullable::SimpleProtocol::Add>&&
                _callback) const;
 };
@@ -152,26 +134,11 @@ class ::fidl::internal::NaturalEventSender<::test_nullable::SimpleProtocol>
 
 template <>
 class ::fidl::Request<::test_nullable::SimpleProtocol::Add> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
+    : public ::test_nullable::SimpleProtocolAddRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_nullable::SimpleProtocolAddRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_nullable::SimpleProtocolAddRequest* operator->() { return &payload_; }
-  const ::test_nullable::SimpleProtocolAddRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_nullable::SimpleProtocolAddRequest& operator*() { return payload_; }
-  const ::test_nullable::SimpleProtocolAddRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_nullable::SimpleProtocolAddRequest payload_;
+  using ::test_nullable::SimpleProtocolAddRequest::SimpleProtocolAddRequest;
+  Request(::test_nullable::SimpleProtocolAddRequest v)
+      : ::test_nullable::SimpleProtocolAddRequest(std::move(v)) {}
 };
 
 template <>
@@ -188,7 +155,7 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_nullable::SimpleProtocol::Add> : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_nullable::SimpleProtocolAddTopResponse&& payload);
+  void Reply(::fidl::Response<::test_nullable::SimpleProtocol::Add>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

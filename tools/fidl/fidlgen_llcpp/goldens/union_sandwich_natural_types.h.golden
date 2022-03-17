@@ -35,7 +35,7 @@ class UnionSize24Alignment8;
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 
-class UnionSize8Alignment4 final {
+class UnionSize8Alignment4 {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
 
@@ -121,7 +121,7 @@ class UnionSize8Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
-class SandwichUnionSize8Alignment4 final {
+class SandwichUnionSize8Alignment4 {
  private:
   struct Storage_;
 
@@ -205,7 +205,7 @@ class SandwichUnionSize8Alignment4 final {
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
-class UnionSize36Alignment4 final {
+class UnionSize36Alignment4 {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 32>>;
 
@@ -292,7 +292,7 @@ class UnionSize36Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
-class SandwichUnionSize36Alignment4 final {
+class SandwichUnionSize36Alignment4 {
  private:
   struct Storage_;
 
@@ -376,7 +376,7 @@ class SandwichUnionSize36Alignment4 final {
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
-class UnionSize12Alignment4 final {
+class UnionSize12Alignment4 {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 6>>;
 
@@ -463,7 +463,7 @@ class UnionSize12Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
-class SandwichUnionSize12Alignment4 final {
+class SandwichUnionSize12Alignment4 {
  private:
   struct Storage_;
 
@@ -547,7 +547,7 @@ class SandwichUnionSize12Alignment4 final {
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
 
-class StructSize16Alignment8 final {
+class StructSize16Alignment8 {
  private:
   struct Storage_;
 
@@ -612,7 +612,7 @@ class StructSize16Alignment8 final {
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
-class UnionSize24Alignment8 final {
+class UnionSize24Alignment8 {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate,
                                   ::test_unionsandwich::StructSize16Alignment8>;
@@ -701,7 +701,7 @@ class UnionSize24Alignment8 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
-class SandwichUnionSize24Alignment8 final {
+class SandwichUnionSize24Alignment8 {
  private:
   struct Storage_;
 

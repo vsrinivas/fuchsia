@@ -77,7 +77,7 @@ class XUnionContainingEmptyStruct;
 
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 
-class UnionWithAttributes final {
+class UnionWithAttributes {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int64_t>;
 
@@ -164,7 +164,7 @@ class UnionWithAttributes final {
 
 extern "C" const fidl_type_t test_union_UnionTable;
 
-class Union final {
+class Union {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
                                   ::std::vector<::std::string>>;
@@ -287,7 +287,7 @@ class Union final {
 
 extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 
-class StructWithNullableXUnion final {
+class StructWithNullableXUnion {
  private:
   struct Storage_;
 
@@ -347,7 +347,7 @@ class StructWithNullableXUnion final {
 
 extern "C" const fidl_type_t test_union_StrictUnionTable;
 
-class StrictUnion final {
+class StrictUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
                                   ::std::vector<::std::string>>;
@@ -473,7 +473,7 @@ class StrictUnion final {
 
 extern "C" const fidl_type_t test_union_StrictSimpleXUnionTable;
 
-class StrictSimpleXUnion final {
+class StrictSimpleXUnion {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate, int32_t, float, ::std::string>;
@@ -595,7 +595,7 @@ class StrictSimpleXUnion final {
 
 extern "C" const fidl_type_t test_union_StrictFooTable;
 
-class StrictFoo final {
+class StrictFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -696,7 +696,7 @@ class StrictFoo final {
 
 extern "C" const fidl_type_t test_union_StrictBoundedXUnionTable;
 
-class StrictBoundedXUnion final {
+class StrictBoundedXUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::vector<uint8_t>>;
 
@@ -783,8 +783,7 @@ class StrictBoundedXUnion final {
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
-class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
-    final {
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
  private:
   struct Storage_;
 
@@ -863,7 +862,7 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
 
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
 
-class ReverseOrdinalUnion final {
+class ReverseOrdinalUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t, uint32_t>;
 
@@ -966,7 +965,7 @@ class ReverseOrdinalUnion final {
 
 extern "C" const fidl_type_t test_union_PizzaTable;
 
-class Pizza final {
+class Pizza {
  private:
   struct Storage_;
 
@@ -1021,7 +1020,7 @@ class Pizza final {
 
 extern "C" const fidl_type_t test_union_PastaTable;
 
-class Pasta final {
+class Pasta {
  private:
   struct Storage_;
 
@@ -1072,7 +1071,7 @@ class Pasta final {
 
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
 
-class StrictPizzaOrPasta final {
+class StrictPizzaOrPasta {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
                                   ::test_union::Pasta>;
@@ -1176,7 +1175,7 @@ class StrictPizzaOrPasta final {
 
 extern "C" const fidl_type_t test_union_PizzaOrPastaTable;
 
-class PizzaOrPasta final {
+class PizzaOrPasta {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
                                   ::test_union::Pasta>;
@@ -1278,7 +1277,7 @@ class PizzaOrPasta final {
 
 extern "C" const fidl_type_t test_union_FlexiblePizzaOrPastaTable;
 
-class FlexiblePizzaOrPasta final {
+class FlexiblePizzaOrPasta {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
                                   ::test_union::Pasta>;
@@ -1384,7 +1383,7 @@ class FlexiblePizzaOrPasta final {
 
 extern "C" const fidl_type_t test_union_ExplicitPizzaOrPastaTable;
 
-class ExplicitPizzaOrPasta final {
+class ExplicitPizzaOrPasta {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
                                   ::test_union::Pasta>;
@@ -1488,7 +1487,7 @@ class ExplicitPizzaOrPasta final {
 
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
-class OlderSimpleUnion final {
+class OlderSimpleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
 
@@ -1593,8 +1592,7 @@ class OlderSimpleUnion final {
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
-class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
-    final {
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
  private:
   struct Storage_;
 
@@ -1673,7 +1671,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
-class NullableUnionStruct final {
+class NullableUnionStruct {
  private:
   struct Storage_;
 
@@ -1731,7 +1729,7 @@ class NullableUnionStruct final {
 
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
 
-class NewerSimpleUnion final {
+class NewerSimpleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int64_t, ::std::string,
                                   ::std::vector<::std::string>>;
@@ -1855,7 +1853,7 @@ class NewerSimpleUnion final {
 
 extern "C" const fidl_type_t test_union_FlexibleUnionTable;
 
-class FlexibleUnion final {
+class FlexibleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
                                   ::std::vector<::std::string>>;
@@ -1983,7 +1981,7 @@ class FlexibleUnion final {
 
 extern "C" const fidl_type_t test_union_FlexibleFooTable;
 
-class FlexibleFoo final {
+class FlexibleFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -2086,7 +2084,7 @@ class FlexibleFoo final {
 
 extern "C" const fidl_type_t test_union_FieldCollisionTable;
 
-class FieldCollision final {
+class FieldCollision {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
 
@@ -2170,7 +2168,7 @@ class FieldCollision final {
 
 extern "C" const fidl_type_t test_union_ExplicitXUnionTable;
 
-class ExplicitXUnion final {
+class ExplicitXUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
 
@@ -2273,7 +2271,7 @@ class ExplicitXUnion final {
 
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
-class UnionSandwich final {
+class UnionSandwich {
  private:
   struct Storage_;
 
@@ -2340,7 +2338,7 @@ class UnionSandwich final {
 
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
 
-class ExplicitUnion final {
+class ExplicitUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string>;
 
@@ -2442,7 +2440,7 @@ class ExplicitUnion final {
 
 extern "C" const fidl_type_t test_union_ExplicitStrictFooTable;
 
-class ExplicitStrictFoo final {
+class ExplicitStrictFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -2544,7 +2542,7 @@ class ExplicitStrictFoo final {
 
 extern "C" const fidl_type_t test_union_ExplicitFooTable;
 
-class ExplicitFoo final {
+class ExplicitFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -2647,7 +2645,7 @@ class ExplicitFoo final {
 
 extern "C" const fidl_type_t test_union_EmptyTable;
 
-class Empty final {
+class Empty {
  private:
   struct Storage_;
 
@@ -2697,7 +2695,7 @@ class Empty final {
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
 
-class XUnionContainingEmptyStruct final {
+class XUnionContainingEmptyStruct {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Empty>;
 

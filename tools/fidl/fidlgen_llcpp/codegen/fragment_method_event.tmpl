@@ -94,38 +94,18 @@
 {{- EnsureNamespace "" }}
 
 template <>
-class {{ .NaturalEvent }} final : public {{ .EventMessageBase }} {
+class {{ .NaturalEvent }} final
+    {{- if .EventMessageBase }} : public {{ .EventMessageBase }} {{ end }} {
  public:
-  {{- with .NaturalEvent }}
-  {{ .Self }}() = default;
-  ~{{ .Self }}() = default;
-  {{ .Self }}({{ .Self }}&&) noexcept = default;
-  {{ .Self }}& operator=({{ .Self }}&&) noexcept = default;
-  {{- end }}
-
   {{- if .HasResponsePayload }}
-  {{ .NaturalEvent.Self }}({{ .ResponsePayload }} payload) : payload_(std::move(payload)) {}
-  {{- end }}
-
-  {{- if .Response.IsResource }}
-    {{- with .NaturalEvent }}
-  {{ .Self }}(const {{ .Self }}&) noexcept = delete;
-  {{ .Self }}& operator=(const {{ .Self }}&) noexcept = delete;
+    {{- if .Result }}
+      using {{ .EventMessageBase }}::result;
+      {{ .NaturalEvent.Self }}({{ .EventMessageBase }} v) : result(std::move(v)) {}
+      {{ .NaturalEvent.Self }}() = delete;
+    {{- else }}
+      using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
+      {{ .NaturalEvent.Self }}({{ .EventMessageBase }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
     {{- end }}
-  {{- else }}
-    {{- /* TODO(fxbug.dev/82189): Generate copy constructors */}}
-  {{- end }}
-
-  {{- if .HasResponsePayload }}
-  {{ .ResponsePayload }}* operator->() { return &payload_; }
-  const {{ .ResponsePayload }}* operator->() const { return &payload_; }
-  {{ .ResponsePayload }}& operator*() { return payload_; }
-  const {{ .ResponsePayload }}& operator*() const { return payload_; }
-  {{- end }}
-
- private:
-  {{- if .HasResponsePayload }}
-  {{ .ResponsePayload }} payload_;
   {{- end }}
 };
 
@@ -137,6 +117,39 @@ struct {{ .EventMessageTraits }} final {
   using Payload = {{ .ResponsePayload }};
   {{- end }}
 };
+
+{{- if .Result }}
+template <>
+class {{ .NaturalEventConverter }} {
+  using DomainObject = {{ .ResponsePayload }};
+
+ public:
+  static {{ .NaturalEvent }} FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      {{- if .Result.ValueParameters }}
+        return ::fitx::ok(std::move(*o.result().response().take()));
+      {{- else }}
+        return ::fitx::ok();
+      {{- end }}
+    }
+  }
+
+  static DomainObject  IntoDomainObject({{ .NaturalEvent }}&& m) {
+    if (m.is_error()) {
+      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithErr(m.error_value()) } };
+    } else {
+      {{- if .Result.ValueParameters }}
+        return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse(std::move(m.value())) } };
+      {{- else }}
+        return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse({}) } };
+      {{- end }}
+    }
+  }
+};
+{{- end }}
 
 
 {{- EndifFuchsia -}}

@@ -19,7 +19,7 @@ class ByteAndBytes;
 
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
-class ByteAndBytes final {
+class ByteAndBytes {
  private:
   struct Storage_;
 

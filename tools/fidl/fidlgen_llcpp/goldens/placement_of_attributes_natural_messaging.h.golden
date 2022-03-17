@@ -28,8 +28,8 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Method(
-      ::test_placementofattributes::ExampleProtocolMethodRequest&& payload)
-      const;
+      ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+          request) const;
 };
 namespace test_placementofattributes {
 #endif  // __Fuchsia__
@@ -97,32 +97,13 @@ class ::fidl::internal::NaturalEventSender<
 
 template <>
 class ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_placementofattributes::ExampleProtocol::Method>> {
+    final : public ::test_placementofattributes::ExampleProtocolMethodRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_placementofattributes::ExampleProtocolMethodRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_placementofattributes::ExampleProtocolMethodRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_placementofattributes::ExampleProtocolMethodRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_placementofattributes::ExampleProtocolMethodRequest& operator*() {
-    return payload_;
-  }
-  const ::test_placementofattributes::ExampleProtocolMethodRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_placementofattributes::ExampleProtocolMethodRequest payload_;
+  using ::test_placementofattributes::ExampleProtocolMethodRequest::
+      ExampleProtocolMethodRequest;
+  Request(::test_placementofattributes::ExampleProtocolMethodRequest v)
+      : ::test_placementofattributes::ExampleProtocolMethodRequest(
+            std::move(v)) {}
 };
 
 template <>

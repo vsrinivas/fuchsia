@@ -43,23 +43,29 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
 
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
-    ::test_protocolrequest::ParentTakeChildRequest&& payload) const {
+    ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChild_Ordinal};
   ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder, std::move(payload)));
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
+              IntoDomainObject(std::move(request))));
   return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
-        ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const {
+        ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
+            request) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
   ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder, std::move(payload)));
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                        ::test_protocolrequest::Parent::TakeChildRequest>>::
+                        IntoDomainObject(std::move(request))));
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocolrequest {
@@ -82,22 +88,29 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 void fidl::internal::
     NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
-        ::test_protocolrequest::ParentGetChildTopResponse&& payload) {
+        ::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
+          IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChildRequest>::
-    Reply(::test_protocolrequest::ParentGetChildRequestTopResponse&& payload) {
+    Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&&
+              response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::
+          IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -109,20 +122,17 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_protocolrequest::Parent::GetChild>>
-              decoded =
-                  ::fidl::Request<::test_protocolrequest::Parent::GetChild>::
-                      DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_protocolrequest::Parent::GetChild> request;
           ::fidl::internal::NaturalCompleter<
               ::test_protocolrequest::Parent::GetChild>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(
               interface)
-              ->GetChild(decoded.value(), completer);
+              ->GetChild(request, completer);
           return ZX_OK;
         },
     },
@@ -131,21 +141,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>>
-              decoded = ::fidl::Request<
-                  ::test_protocolrequest::Parent::GetChildRequest>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_protocolrequest::Parent::GetChildRequest>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(
               interface)
-              ->GetChildRequest(decoded.value(), completer);
+              ->GetChildRequest(request, completer);
           return ZX_OK;
         },
     },
@@ -154,20 +162,20 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>
-              decoded =
-                  ::fidl::Request<::test_protocolrequest::Parent::TakeChild>::
-                      DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_protocolrequest::ParentTakeChildRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request =
+              ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_protocolrequest::Parent::TakeChild>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(
               interface)
-              ->TakeChild(decoded.value(), completer);
+              ->TakeChild(request, completer);
           return ZX_OK;
         },
     },
@@ -176,21 +184,23 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>
-              decoded = ::fidl::Request<
-                  ::test_protocolrequest::Parent::TakeChildRequest>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_protocolrequest::ParentTakeChildRequestRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_protocolrequest::Parent::TakeChildRequest>>::
+                      FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_protocolrequest::Parent::TakeChildRequest>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(
               interface)
-              ->TakeChildRequest(decoded.value(), completer);
+              ->TakeChildRequest(request, completer);
           return ZX_OK;
         },
     },

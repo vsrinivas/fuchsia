@@ -23,7 +23,7 @@ class OneWaySendRequest;
 
 extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 
-class Payload final {
+class Payload {
  private:
   struct Storage_;
 
@@ -72,7 +72,7 @@ class Payload final {
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
-class OneWaySendRequest final {
+class OneWaySendRequest {
  private:
   struct Storage_;
 

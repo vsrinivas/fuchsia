@@ -10,13 +10,16 @@ namespace test_placementofattributes {
 }  // namespace test_placementofattributes
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
-        ::test_placementofattributes::ExampleProtocolMethodRequest&& payload)
-        const {
+        ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+            request) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_placementofattributes::kExampleProtocol_Method_Ordinal};
   ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
-          _encoder, std::move(payload)));
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_placementofattributes::ExampleProtocol::Method>>::
+              IntoDomainObject(std::move(request))));
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_placementofattributes {
@@ -47,23 +50,24 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_placementofattributes::ExampleProtocol::Method>>
-              decoded = ::fidl::Request<
-                  ::test_placementofattributes::ExampleProtocol::Method>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_placementofattributes::ExampleProtocolMethodRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_placementofattributes::ExampleProtocol::Method>>::
+                      FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_placementofattributes::ExampleProtocol::Method>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_placementofattributes::ExampleProtocol>*>(
               interface)
-              ->Method(decoded.value(), completer);
+              ->Method(request, completer);
           return ZX_OK;
         },
     },

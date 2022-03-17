@@ -28,6 +28,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -43,6 +45,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 namespace test_errorsyntax {
 __LOCAL extern "C" const fidl_type_t
@@ -60,41 +64,22 @@ __LOCAL extern "C" const fidl_type_t
 template <>
 class ::fidl::Response<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                     ComposedCallWhichMayFail>> {
+    final : public ::fitx::result<
+                uint32_t,
+                ::test_errorsyntax_parent::
+                    ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_errorsyntax_parent::
-               ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload_;
+  using ::fitx::result<
+      uint32_t,
+      ::test_errorsyntax_parent::
+          ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response>::result;
+  Response(
+      ::fitx::result<
+          uint32_t, ::test_errorsyntax_parent::
+                        ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response>
+          v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -105,6 +90,40 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
+  using DomainObject = ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                           ComposedCallWhichMayFail>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_errorsyntax_parent::
+               ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_errorsyntax_parent::
+               ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result::
+                   WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 namespace test_errorsyntax {}  // namespace test_errorsyntax
 template <>
@@ -127,37 +146,20 @@ template <>
 class ::fidl::Response<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final
-    : public ::fidl::internal::MessageBase<::fidl::Response<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+    : public ::fitx::result<
+          uint32_t, ::test_errorsyntax::
+                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::fitx::result<
+      uint32_t, ::test_errorsyntax::
+                    ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::result;
   Response(
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
-          payload)
-      : payload_(std::move(payload)) {}
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
-      payload_;
+      ::fitx::result<
+          uint32_t,
+          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+          v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -168,6 +170,40 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload =
       ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+  using DomainObject =
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+
+ public:
+  static ::fidl::Response<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_errorsyntax::
+               ExampleUseOfErrorSyntax_CallWhichMayFail_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_errorsyntax::
+               ExampleUseOfErrorSyntax_CallWhichMayFail_Result::WithResponse(
+                   std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<
@@ -193,14 +229,16 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   void ComposedCallWhichMayFail(
-      ::test_errorsyntax_parent::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
+      ::fidl::Request<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+          request,
       ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                  ComposedCallWhichMayFail>&& _callback) const;
 
   void CallWhichMayFail(
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
-          payload,
+      ::fidl::Request<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+          request,
       ::fidl::ClientCallback<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
           _callback) const;
@@ -272,41 +310,17 @@ class ::fidl::internal::NaturalEventSender<
 template <>
 class ::fidl::Request<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                    ComposedCallWhichMayFail>> {
+    final : public ::test_errorsyntax_parent::
+                ParentUsesErrorSyntaxComposedCallWhichMayFailRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
   Request(::test_errorsyntax_parent::
-              ParentUsesErrorSyntaxComposedCallWhichMayFailRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest*
-      operator->() {
-    return &payload_;
+              ParentUsesErrorSyntaxComposedCallWhichMayFailRequest v)
+      : ::test_errorsyntax_parent::
+            ParentUsesErrorSyntaxComposedCallWhichMayFailRequest(std::move(v)) {
   }
-  const ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&
-      operator*() {
-    return payload_;
-  }
-  const ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_errorsyntax_parent::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailRequest payload_;
 };
 
 template <>
@@ -325,36 +339,14 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+    final : public ::test_errorsyntax::
+                ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest
-              payload)
-      : payload_(std::move(payload)) {}
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest payload_;
+  using ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+  Request(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest v)
+      : ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+            std::move(v)) {}
 };
 
 template <>
@@ -373,9 +365,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_errorsyntax_parent::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&& payload);
+  void Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                  ComposedCallWhichMayFail>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -386,9 +377,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&
-          payload);
+  void Reply(::fidl::Response<
+             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

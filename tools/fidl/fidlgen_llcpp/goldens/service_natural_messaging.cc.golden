@@ -43,21 +43,19 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>>
-              decoded = ::fidl::Request<
-                  ::test_service::SecondProtocol::MethodOnSecond>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_service::SecondProtocol::MethodOnSecond>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_service::SecondProtocol>*>(
               interface)
-              ->MethodOnSecond(decoded.value(), completer);
+              ->MethodOnSecond(request, completer);
           return ZX_OK;
         },
     },
@@ -125,20 +123,17 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>>
-              decoded = ::fidl::Request<
-                  ::test_service::FirstProtocol::MethodOnFirst>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> request;
           ::fidl::internal::NaturalCompleter<
               ::test_service::FirstProtocol::MethodOnFirst>::Sync
               completer(txn);
           static_cast<::fidl::Server<::test_service::FirstProtocol>*>(interface)
-              ->MethodOnFirst(decoded.value(), completer);
+              ->MethodOnFirst(request, completer);
           return ZX_OK;
         },
     },

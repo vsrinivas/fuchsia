@@ -113,24 +113,21 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                  LibfuzzerNeedsNonemptyProtocol>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                      LibfuzzerNeedsNonemptyProtocol>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                   LibfuzzerNeedsNonemptyProtocol>::Sync completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(
               interface)
-              ->LibfuzzerNeedsNonemptyProtocol(decoded.value(), completer);
+              ->LibfuzzerNeedsNonemptyProtocol(request, completer);
           return ZX_OK;
         },
     },
@@ -264,23 +261,21 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
-                                  Unattributed>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::ImportsSameNameContext::
-                      Unattributed>::DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<
+              ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::
               Sync completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(
               interface)
-              ->Unattributed(decoded.value(), completer);
+              ->Unattributed(request, completer);
           return ZX_OK;
         },
     },
@@ -290,24 +285,21 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
-                                  AlwaysAppearsInImportingLibrary>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::ImportsSameNameContext::
-                      AlwaysAppearsInImportingLibrary>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::ImportsSameNameContext::
                   AlwaysAppearsInImportingLibrary>::Sync completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(
               interface)
-              ->AlwaysAppearsInImportingLibrary(decoded.value(), completer);
+              ->AlwaysAppearsInImportingLibrary(request, completer);
           return ZX_OK;
         },
     },
@@ -353,15 +345,19 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 void fidl::internal::
     NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest&& payload,
+        ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+            request,
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& _callback)
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
@@ -370,15 +366,18 @@ void fidl::internal::
 
 void fidl::internal::
     NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyGo(
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest&& payload,
+        ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+            request,
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& _callback)
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::
+                        IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
@@ -388,8 +387,9 @@ void fidl::internal::
 void fidl::internal::NaturalClientImpl<
     ::test_bindingsdenylist::DenyEachBinding>::
     OnlyDenyLibfuzzer(
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest&&
-            payload,
+        ::fidl::Request<
+            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+            request,
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&&
             _callback) const {
@@ -397,8 +397,11 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
@@ -407,15 +410,19 @@ void fidl::internal::NaturalClientImpl<
 
 void fidl::internal::
     NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyRust(
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest&& payload,
+        ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+            request,
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& _callback)
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
@@ -425,8 +432,9 @@ void fidl::internal::
 void fidl::internal::NaturalClientImpl<
     ::test_bindingsdenylist::DenyEachBinding>::
     OnlyDenySyzkaller(
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest&&
-            payload,
+        ::fidl::Request<
+            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+            request,
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&&
             _callback) const {
@@ -434,8 +442,11 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
@@ -463,59 +474,74 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-    Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse&&
-              payload) {
+    Reply(::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
-    Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse&&
-              payload) {
+    Reply(
+        ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&&
+            response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-    Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse&&
-              payload) {
+    Reply(::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&&
+              response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::
+          IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-    Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse&&
-              payload) {
+    Reply(::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder, ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+                    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::
+                    IntoDomainObject(std::move(response))));
 }
 
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-    Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse&&
-              payload) {
+    Reply(::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&&
+              response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::
+          IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -527,23 +553,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::
+                      FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
-              ->OnlyDenyDart(decoded.value(), completer);
+              ->OnlyDenyDart(request, completer);
           return ZX_OK;
         },
     },
@@ -552,23 +580,24 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::
+                      FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
-              ->OnlyDenyGo(decoded.value(), completer);
+              ->OnlyDenyGo(request, completer);
           return ZX_OK;
         },
     },
@@ -577,23 +606,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+              request = ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::
+                                      OnlyDenyLibfuzzer>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
-              ->OnlyDenyLibfuzzer(decoded.value(), completer);
+              ->OnlyDenyLibfuzzer(request, completer);
           return ZX_OK;
         },
     },
@@ -602,23 +633,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+              request =
+                  ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+                      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::
+                      FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
-              ->OnlyDenyRust(decoded.value(), completer);
+              ->OnlyDenyRust(request, completer);
           return ZX_OK;
         },
     },
@@ -627,23 +660,25 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
-              decoded = ::fidl::Request<
-                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>(
+              std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+              request = ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::
+                                      OnlyDenySyzkaller>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
-              ->OnlyDenySyzkaller(decoded.value(), completer);
+              ->OnlyDenySyzkaller(request, completer);
           return ZX_OK;
         },
     },

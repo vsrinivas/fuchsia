@@ -22,7 +22,7 @@ class Foo;
 extern "C" const fidl_type_t
     test_structdefaultvalueenumlibraryreference_FooTable;
 
-class Foo final {
+class Foo {
  private:
   struct Storage_;
 

@@ -21,7 +21,7 @@ class BasicStruct;
 
 extern "C" const fidl_type_t test_struct_SimpleTable;
 
-class Simple final {
+class Simple {
  private:
   struct Storage_;
 
@@ -80,7 +80,7 @@ class Simple final {
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
 
-class BasicStruct final {
+class BasicStruct {
  private:
   struct Storage_;
 

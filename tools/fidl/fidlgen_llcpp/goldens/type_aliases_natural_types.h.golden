@@ -25,7 +25,7 @@ class ExampleOfUseOfAliases;
 
 extern "C" const fidl_type_t test_typealiases_ExampleOfUseOfAliasesTable;
 
-class ExampleOfUseOfAliases final {
+class ExampleOfUseOfAliases {
  private:
   struct Storage_;
 

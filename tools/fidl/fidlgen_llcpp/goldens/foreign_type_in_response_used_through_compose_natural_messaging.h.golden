@@ -40,26 +40,11 @@ __LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 template <>
 class ::fidl::Response<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
+    final : public ::test_middle::MiddleGetFooTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_middle::MiddleGetFooTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_middle::MiddleGetFooTopResponse* operator->() { return &payload_; }
-  const ::test_middle::MiddleGetFooTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_middle::MiddleGetFooTopResponse& operator*() { return payload_; }
-  const ::test_middle::MiddleGetFooTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_middle::MiddleGetFooTopResponse payload_;
+  using ::test_middle::MiddleGetFooTopResponse::MiddleGetFooTopResponse;
+  Response(::test_middle::MiddleGetFooTopResponse v)
+      : MiddleGetFooTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -160,15 +145,8 @@ class ::fidl::internal::NaturalEventSender<
 template <>
 class ::fidl::Request<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -185,7 +163,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_middle::MiddleGetFooTopResponse&& payload);
+  void Reply(::fidl::Response<
+             ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

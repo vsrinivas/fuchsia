@@ -44,34 +44,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
+    : public ::test_protocols::HandleRightsProtocolAnEventRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocols::HandleRightsProtocolAnEventRequest payload)
-      : payload_(std::move(payload)) {}
-  Event(const Event&) noexcept = delete;
-  Event& operator=(const Event&) noexcept = delete;
-  ::test_protocols::HandleRightsProtocolAnEventRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolAnEventRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::HandleRightsProtocolAnEventRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolAnEventRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::HandleRightsProtocolAnEventRequest payload_;
+  using ::test_protocols::HandleRightsProtocolAnEventRequest::
+      HandleRightsProtocolAnEventRequest;
+  Event(::test_protocols::HandleRightsProtocolAnEventRequest v)
+      : HandleRightsProtocolAnEventRequest(std::move(v)) {}
 };
 
 template <>
@@ -86,36 +64,13 @@ namespace test_protocols {}  // namespace test_protocols
 
 template <>
 class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+    final
+    : public ::test_protocols::HandleRightsProtocolResponseMethodTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::HandleRightsProtocolResponseMethodTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolResponseMethodTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::HandleRightsProtocolResponseMethodTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolResponseMethodTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::HandleRightsProtocolResponseMethodTopResponse payload_;
+  using ::test_protocols::HandleRightsProtocolResponseMethodTopResponse::
+      HandleRightsProtocolResponseMethodTopResponse;
+  Response(::test_protocols::HandleRightsProtocolResponseMethodTopResponse v)
+      : HandleRightsProtocolResponseMethodTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -147,14 +102,15 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   void ResponseMethod(
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest&& payload,
+      ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
+          request,
       ::fidl::ClientCallback<
           ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
       const;
 
   ::fitx::result<::fidl::Error> NoResponseMethod(
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest&& payload)
-      const;
+      ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>
+          request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -230,34 +186,14 @@ class ::fidl::internal::NaturalEventSender<
 
 template <>
 class ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
+    final
+    : public ::test_protocols::HandleRightsProtocolNoResponseMethodRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::HandleRightsProtocolNoResponseMethodRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::HandleRightsProtocolNoResponseMethodRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolNoResponseMethodRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::HandleRightsProtocolNoResponseMethodRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolNoResponseMethodRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::HandleRightsProtocolNoResponseMethodRequest payload_;
+  using ::test_protocols::HandleRightsProtocolNoResponseMethodRequest::
+      HandleRightsProtocolNoResponseMethodRequest;
+  Request(::test_protocols::HandleRightsProtocolNoResponseMethodRequest v)
+      : ::test_protocols::HandleRightsProtocolNoResponseMethodRequest(
+            std::move(v)) {}
 };
 
 template <>
@@ -274,34 +210,13 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocols::HandleRightsProtocol::ResponseMethod>> {
+    final : public ::test_protocols::HandleRightsProtocolResponseMethodRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::HandleRightsProtocolResponseMethodRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::HandleRightsProtocolResponseMethodRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolResponseMethodRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::HandleRightsProtocolResponseMethodRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::HandleRightsProtocolResponseMethodRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::HandleRightsProtocolResponseMethodRequest payload_;
+  using ::test_protocols::HandleRightsProtocolResponseMethodRequest::
+      HandleRightsProtocolResponseMethodRequest;
+  Request(::test_protocols::HandleRightsProtocolResponseMethodRequest v)
+      : ::test_protocols::HandleRightsProtocolResponseMethodRequest(
+            std::move(v)) {}
 };
 
 template <>
@@ -319,8 +234,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&&
-                 payload);
+  void Reply(
+      ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -462,16 +378,8 @@ __LOCAL extern "C" const fidl_type_t
 template <>
 class ::fidl::Event<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
+    final {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -486,36 +394,13 @@ namespace test_protocols {}  // namespace test_protocols
 template <>
 class ::fidl::Event<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-    final
-    : public ::fidl::internal::MessageBase<::fidl::Event<
-          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
+    final : public ::test_protocols::
+                WithAndWithoutRequestResponseOnWithResponseRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
-            payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest payload_;
+  using ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
+      WithAndWithoutRequestResponseOnWithResponseRequest;
+  Event(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest v)
+      : WithAndWithoutRequestResponseOnWithResponseRequest(std::move(v)) {}
 };
 
 template <>
@@ -532,17 +417,8 @@ namespace test_protocols {}  // namespace test_protocols
 template <>
 class ::fidl::Response<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                               NoRequestEmptyResponse>> {
+    final {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -564,43 +440,16 @@ class ::fidl::Result<
 template <>
 class ::fidl::Response<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                               NoRequestWithResponse>> {
+    final : public ::test_protocols::
+                WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(
-      ::test_protocols::
-          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse payload_;
+  using ::test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+  Response(::test_protocols::
+               WithAndWithoutRequestResponseNoRequestWithResponseTopResponse v)
+      : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+            std::move(v)) {}
 };
 
 template <>
@@ -631,17 +480,8 @@ class ::fidl::Result<
 template <>
 class ::fidl::Response<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                               WithRequestEmptyResponse>> {
+    final {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -663,42 +503,17 @@ template <>
 class ::fidl::Response<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
-                               WithRequestWithResponse>> {
+    : public ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::
-               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
-                   payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse payload_;
+  using ::test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+  Response(
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse v)
+      : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+            std::move(v)) {}
 };
 
 template <>
@@ -741,24 +556,25 @@ class ::fidl::internal::NaturalClientImpl<
                                  NoRequestWithResponse>&& _callback) const;
 
   void WithRequestEmptyResponse(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&
-              payload,
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestEmptyResponse>
+          request,
       ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                  WithRequestEmptyResponse>&& _callback) const;
 
   void WithRequestWithResponse(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseRequest&& payload,
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestWithResponse>
+          request,
       ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                  WithRequestWithResponse>&& _callback) const;
 
   ::fitx::result<::fidl::Error> NoRequestNoResponse() const;
 
   ::fitx::result<::fidl::Error> WithRequestNoResponse(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestNoResponseRequest&& payload)
-      const;
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestNoResponse>
+          request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -845,17 +661,8 @@ class ::fidl::internal::NaturalEventSender<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestNoResponse>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -872,17 +679,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestEmptyResponse>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -899,17 +697,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponse>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -926,40 +715,17 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestNoResponse>> {
+    final : public ::test_protocols::
+                WithAndWithoutRequestResponseWithRequestNoResponseRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_protocols::
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest;
   Request(::test_protocols::
-              WithAndWithoutRequestResponseWithRequestNoResponseRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest
-      payload_;
+              WithAndWithoutRequestResponseWithRequestNoResponseRequest v)
+      : ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+                std::move(v)) {}
 };
 
 template <>
@@ -978,43 +744,17 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>> {
+    final : public ::test_protocols::
+                WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
-      operator*() {
-    return payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest
-      payload_;
+  using ::test_protocols::
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+  Request(::test_protocols::
+              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest v)
+      : ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+                std::move(v)) {}
 };
 
 template <>
@@ -1033,41 +773,17 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>> {
+    final : public ::test_protocols::
+                WithAndWithoutRequestResponseWithRequestWithResponseRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocols::
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest
-      payload_;
+  using ::test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+  Request(::test_protocols::
+              WithAndWithoutRequestResponseWithRequestWithResponseRequest v)
+      : ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+                std::move(v)) {}
 };
 
 template <>
@@ -1097,9 +813,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::
-                 WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&
-                     payload);
+  void Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
+                                  NoRequestWithResponse>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1121,10 +836,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&
-              payload);
+  void Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
+                                  WithRequestWithResponse>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1250,26 +963,11 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Event<::test_protocols::Transitional::Event> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocols::Transitional::Event>> {
+    : public ::test_protocols::TransitionalEventRequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocols::TransitionalEventRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::TransitionalEventRequest* operator->() { return &payload_; }
-  const ::test_protocols::TransitionalEventRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::TransitionalEventRequest& operator*() { return payload_; }
-  const ::test_protocols::TransitionalEventRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::TransitionalEventRequest payload_;
+  using ::test_protocols::TransitionalEventRequest::TransitionalEventRequest;
+  Event(::test_protocols::TransitionalEventRequest v)
+      : TransitionalEventRequest(std::move(v)) {}
 };
 
 template <>
@@ -1284,30 +982,12 @@ namespace test_protocols {}  // namespace test_protocols
 
 template <>
 class ::fidl::Response<::test_protocols::Transitional::Request> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::Transitional::Request>> {
+    : public ::test_protocols::TransitionalRequestTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::TransitionalRequestTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::TransitionalRequestTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::TransitionalRequestTopResponse* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::TransitionalRequestTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::TransitionalRequestTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::TransitionalRequestTopResponse payload_;
+  using ::test_protocols::TransitionalRequestTopResponse::
+      TransitionalRequestTopResponse;
+  Response(::test_protocols::TransitionalRequestTopResponse v)
+      : TransitionalRequestTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -1333,12 +1013,12 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  void Request(::test_protocols::TransitionalRequestRequest&& payload,
+  void Request(::fidl::Request<::test_protocols::Transitional::Request> request,
                ::fidl::ClientCallback<::test_protocols::Transitional::Request>&&
                    _callback) const;
 
   ::fitx::result<::fidl::Error> OneWay(
-      ::test_protocols::TransitionalOneWayRequest&& payload) const;
+      ::fidl::Request<::test_protocols::Transitional::OneWay> request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1408,28 +1088,12 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
 
 template <>
 class ::fidl::Request<::test_protocols::Transitional::Request> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::Transitional::Request>> {
+    : public ::test_protocols::TransitionalRequestRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::TransitionalRequestRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::TransitionalRequestRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::TransitionalRequestRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::TransitionalRequestRequest& operator*() { return payload_; }
-  const ::test_protocols::TransitionalRequestRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::TransitionalRequestRequest payload_;
+  using ::test_protocols::TransitionalRequestRequest::
+      TransitionalRequestRequest;
+  Request(::test_protocols::TransitionalRequestRequest v)
+      : ::test_protocols::TransitionalRequestRequest(std::move(v)) {}
 };
 
 template <>
@@ -1446,28 +1110,11 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::Transitional::OneWay> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::Transitional::OneWay>> {
+    : public ::test_protocols::TransitionalOneWayRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::TransitionalOneWayRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::TransitionalOneWayRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::TransitionalOneWayRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::TransitionalOneWayRequest& operator*() { return payload_; }
-  const ::test_protocols::TransitionalOneWayRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::TransitionalOneWayRequest payload_;
+  using ::test_protocols::TransitionalOneWayRequest::TransitionalOneWayRequest;
+  Request(::test_protocols::TransitionalOneWayRequest v)
+      : ::test_protocols::TransitionalOneWayRequest(std::move(v)) {}
 };
 
 template <>
@@ -1484,7 +1131,8 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::Transitional::Request> : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::TransitionalRequestTopResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocols::Transitional::Request>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1554,7 +1202,8 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> UnionMethod(
-      ::test_protocols::MethodWithUnionUnionMethodRequest&& payload) const;
+      ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request)
+      const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1620,31 +1269,12 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
 
 template <>
 class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> {
+    : public ::test_protocols::MethodWithUnionUnionMethodRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::MethodWithUnionUnionMethodRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::MethodWithUnionUnionMethodRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::MethodWithUnionUnionMethodRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::MethodWithUnionUnionMethodRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::MethodWithUnionUnionMethodRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::MethodWithUnionUnionMethodRequest payload_;
+  using ::test_protocols::MethodWithUnionUnionMethodRequest::
+      MethodWithUnionUnionMethodRequest;
+  Request(::test_protocols::MethodWithUnionUnionMethodRequest v)
+      : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
 };
 
 template <>
@@ -1760,34 +1390,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> {
+    : public ::test_protocols::WithProtocolEndsClientEndsTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithProtocolEndsClientEndsTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsClientEndsTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsClientEndsTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsClientEndsTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsClientEndsTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsClientEndsTopResponse payload_;
+  using ::test_protocols::WithProtocolEndsClientEndsTopResponse::
+      WithProtocolEndsClientEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsClientEndsTopResponse v)
+      : WithProtocolEndsClientEndsTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -1812,34 +1420,12 @@ class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final
 
 template <>
 class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> {
+    : public ::test_protocols::WithProtocolEndsServerEndsTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithProtocolEndsServerEndsTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsServerEndsTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsServerEndsTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsServerEndsTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsServerEndsTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsServerEndsTopResponse payload_;
+  using ::test_protocols::WithProtocolEndsServerEndsTopResponse::
+      WithProtocolEndsServerEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsServerEndsTopResponse v)
+      : WithProtocolEndsServerEndsTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -1863,37 +1449,13 @@ class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final
 
 template <>
 class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+    final
+    : public ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(
-      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&
-  operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse payload_;
+  using ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse::
+      WithProtocolEndsStructContainingEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse v)
+      : WithProtocolEndsStructContainingEndsTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -1924,17 +1486,18 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>
  public:
   using NaturalClientBase::NaturalClientBase;
   void ClientEnds(
-      ::test_protocols::WithProtocolEndsClientEndsRequest&& payload,
+      ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request,
       ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ClientEnds>&&
           _callback) const;
 
   void ServerEnds(
-      ::test_protocols::WithProtocolEndsServerEndsRequest&& payload,
+      ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request,
       ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ServerEnds>&&
           _callback) const;
 
   void StructContainingEnds(
-      ::test_protocols::WithProtocolEndsStructContainingEndsRequest&& payload,
+      ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>
+          request,
       ::fidl::ClientCallback<
           ::test_protocols::WithProtocolEnds::StructContainingEnds>&& _callback)
       const;
@@ -2003,33 +1566,12 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>
 
 template <>
 class ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> {
+    : public ::test_protocols::WithProtocolEndsClientEndsRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::WithProtocolEndsClientEndsRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsClientEndsRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsClientEndsRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsClientEndsRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsClientEndsRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsClientEndsRequest payload_;
+  using ::test_protocols::WithProtocolEndsClientEndsRequest::
+      WithProtocolEndsClientEndsRequest;
+  Request(::test_protocols::WithProtocolEndsClientEndsRequest v)
+      : ::test_protocols::WithProtocolEndsClientEndsRequest(std::move(v)) {}
 };
 
 template <>
@@ -2046,33 +1588,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> {
+    : public ::test_protocols::WithProtocolEndsServerEndsRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::WithProtocolEndsServerEndsRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsServerEndsRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsServerEndsRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsServerEndsRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsServerEndsRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsServerEndsRequest payload_;
+  using ::test_protocols::WithProtocolEndsServerEndsRequest::
+      WithProtocolEndsServerEndsRequest;
+  Request(::test_protocols::WithProtocolEndsServerEndsRequest v)
+      : ::test_protocols::WithProtocolEndsServerEndsRequest(std::move(v)) {}
 };
 
 template <>
@@ -2089,34 +1610,14 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>
-    final : public ::fidl::internal::MessageBase<::fidl::Request<
-                ::test_protocols::WithProtocolEnds::StructContainingEnds>> {
+    final
+    : public ::test_protocols::WithProtocolEndsStructContainingEndsRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::WithProtocolEndsStructContainingEndsRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::WithProtocolEndsStructContainingEndsRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithProtocolEndsStructContainingEndsRequest*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithProtocolEndsStructContainingEndsRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithProtocolEndsStructContainingEndsRequest&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithProtocolEndsStructContainingEndsRequest payload_;
+  using ::test_protocols::WithProtocolEndsStructContainingEndsRequest::
+      WithProtocolEndsStructContainingEndsRequest;
+  Request(::test_protocols::WithProtocolEndsStructContainingEndsRequest v)
+      : ::test_protocols::WithProtocolEndsStructContainingEndsRequest(
+            std::move(v)) {}
 };
 
 template <>
@@ -2134,7 +1635,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithProtocolEnds::ClientEnds>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::WithProtocolEndsClientEndsTopResponse&& payload);
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2145,7 +1647,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithProtocolEnds::ServerEnds>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::WithProtocolEndsServerEndsTopResponse&& payload);
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2156,8 +1659,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&&
-                 payload);
+  void Reply(
+      ::fidl::Response<
+          ::test_protocols::WithProtocolEnds::StructContainingEnds>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2234,7 +1738,7 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Fifteen(
-      ::test_protocols::ManyParametersFifteenRequest&& payload) const;
+      ::fidl::Request<::test_protocols::ManyParameters::Fifteen> request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2298,30 +1802,12 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>
 
 template <>
 class ::fidl::Request<::test_protocols::ManyParameters::Fifteen> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::ManyParameters::Fifteen>> {
+    : public ::test_protocols::ManyParametersFifteenRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::ManyParametersFifteenRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::ManyParametersFifteenRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ManyParametersFifteenRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::ManyParametersFifteenRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ManyParametersFifteenRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ManyParametersFifteenRequest payload_;
+  using ::test_protocols::ManyParametersFifteenRequest::
+      ManyParametersFifteenRequest;
+  Request(::test_protocols::ManyParametersFifteenRequest v)
+      : ::test_protocols::ManyParametersFifteenRequest(std::move(v)) {}
 };
 
 template <>
@@ -2388,6 +1874,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -2402,6 +1890,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = true;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -2416,6 +1906,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = true;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
@@ -2430,6 +1922,8 @@ struct ::fidl::internal::NaturalMethodTypes<
   static constexpr bool HasApplicationError = true;
 
   static constexpr bool IsEmptyStructPayload = false;
+
+  static constexpr bool IsAbsentBody = false;
 };
 
 namespace test_protocols {
@@ -2450,32 +1944,19 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+    final : public ::fitx::result<
+                uint32_t,
+                ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithErrorSyntaxResponseAsStructTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse payload_;
+  using ::fitx::result<
+      uint32_t,
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>::result;
+  Response(
+      ::fitx::result<
+          uint32_t, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+          v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -2485,6 +1966,37 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+  using DomainObject =
+      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
+
+ public:
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::
+               WithErr(m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::
+               WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 namespace test_protocols {}  // namespace test_protocols
 template <>
@@ -2501,32 +2013,11 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+    final : public ::fitx::result<uint32_t> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse*
-  operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&
-  operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse payload_;
+  using ::fitx::result<uint32_t>::result;
+  Response(::fitx::result<uint32_t> v) : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -2536,6 +2027,37 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+  using DomainObject =
+      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
+
+ public:
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok();
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
+          m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+               WithErr(m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+               WithResponse({})}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final
@@ -2548,32 +2070,12 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+    : public ::fitx::result<::test_protocols::ErrorEnum> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse payload_;
+  using ::fitx::result<::test_protocols::ErrorEnum>::result;
+  Response(::fitx::result<::test_protocols::ErrorEnum> v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -2583,6 +2085,36 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+  using DomainObject = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
+
+ public:
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok();
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result =
+               ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::
+               WithResponse({})}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
@@ -2595,34 +2127,17 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
+    : public ::fitx::result<
+          uint32_t, ::test_protocols::WithErrorSyntax_HandleInResult_Response> {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::WithErrorSyntaxHandleInResultTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::WithErrorSyntaxHandleInResultTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxHandleInResultTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::WithErrorSyntaxHandleInResultTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::WithErrorSyntaxHandleInResultTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::WithErrorSyntaxHandleInResultTopResponse payload_;
+  using ::fitx::result<
+      uint32_t,
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response>::result;
+  Response(::fitx::result<
+           uint32_t, ::test_protocols::WithErrorSyntax_HandleInResult_Response>
+               v)
+      : result(std::move(v)) {}
+  Response() = delete;
 };
 
 template <>
@@ -2632,6 +2147,37 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
+};
+template <>
+class ::fidl::internal::NaturalMessageConverter<
+    ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
+  using DomainObject =
+      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
+
+ public:
+  static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>
+  FromDomainObject(DomainObject o) {
+    if (o.result().err().has_value()) {
+      return ::fitx::error(std::move(*o.result().err().take()));
+    } else {
+      ZX_DEBUG_ASSERT(o.result().response().has_value());
+      return ::fitx::ok(std::move(*o.result().response().take()));
+    }
+  }
+
+  static DomainObject IntoDomainObject(
+      ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>&& m) {
+    if (m.is_error()) {
+      return DomainObject{
+          {.result =
+               ::test_protocols::WithErrorSyntax_HandleInResult_Result::WithErr(
+                   m.error_value())}};
+    } else {
+      return DomainObject{
+          {.result = ::test_protocols::WithErrorSyntax_HandleInResult_Result::
+               WithResponse(std::move(m.value()))}};
+    }
+  }
 };
 template <>
 class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final
@@ -2728,16 +2274,9 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithErrorSyntax>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+class ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -2752,16 +2291,9 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final
-    : public ::fidl::internal::MessageBase<::fidl::Request<
-          ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -2776,16 +2308,8 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -2800,16 +2324,8 @@ struct ::fidl::internal::MessageTraits<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> {
+class ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -2827,7 +2343,8 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&& payload);
+      ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2839,7 +2356,8 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&& payload);
+      ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2850,7 +2368,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse&& payload);
+  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2862,7 +2381,8 @@ class ::fidl::internal::NaturalCompleterBase<
     : public ::fidl::CompleterBase {
  public:
   void Reply(
-      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse&& payload);
+      ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>&&
+          response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -3007,16 +2527,8 @@ class ::fidl::internal::NaturalEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> {
+class ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -3135,30 +2647,12 @@ __LOCAL extern "C" const fidl_type_t
 
 template <>
 class ::fidl::Event<::test_protocols::ChannelProtocol::EventA> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
+    : public ::test_protocols::ChannelProtocolEventARequest {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-  Event(::test_protocols::ChannelProtocolEventARequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::ChannelProtocolEventARequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolEventARequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolEventARequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolEventARequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolEventARequest payload_;
+  using ::test_protocols::ChannelProtocolEventARequest::
+      ChannelProtocolEventARequest;
+  Event(::test_protocols::ChannelProtocolEventARequest v)
+      : ChannelProtocolEventARequest(std::move(v)) {}
 };
 
 template <>
@@ -3173,31 +2667,12 @@ namespace test_protocols {}  // namespace test_protocols
 
 template <>
 class ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> {
+    : public ::test_protocols::ChannelProtocolMethodBTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::ChannelProtocolMethodBTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::ChannelProtocolMethodBTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodBTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolMethodBTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodBTopResponse& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolMethodBTopResponse payload_;
+  using ::test_protocols::ChannelProtocolMethodBTopResponse::
+      ChannelProtocolMethodBTopResponse;
+  Response(::test_protocols::ChannelProtocolMethodBTopResponse v)
+      : ChannelProtocolMethodBTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -3220,16 +2695,8 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final
 };
 
 template <>
-class ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> {
+class ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> final {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -3248,34 +2715,12 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final
 
 template <>
 class ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> {
+    : public ::test_protocols::ChannelProtocolMutateSocketTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
-  Response(::test_protocols::ChannelProtocolMutateSocketTopResponse payload)
-      : payload_(std::move(payload)) {}
-  Response(const Response&) noexcept = delete;
-  Response& operator=(const Response&) noexcept = delete;
-  ::test_protocols::ChannelProtocolMutateSocketTopResponse* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolMutateSocketTopResponse* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolMutateSocketTopResponse& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolMutateSocketTopResponse& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolMutateSocketTopResponse payload_;
+  using ::test_protocols::ChannelProtocolMutateSocketTopResponse::
+      ChannelProtocolMutateSocketTopResponse;
+  Response(::test_protocols::ChannelProtocolMutateSocketTopResponse v)
+      : ChannelProtocolMutateSocketTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -3303,22 +2748,23 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>
  public:
   using NaturalClientBase::NaturalClientBase;
   void MethodB(
-      ::test_protocols::ChannelProtocolMethodBRequest&& payload,
+      ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request,
       ::fidl::ClientCallback<::test_protocols::ChannelProtocol::MethodB>&&
           _callback) const;
 
   void TakeHandle(
-      ::test_protocols::ChannelProtocolTakeHandleRequest&& payload,
+      ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request,
       ::fidl::ClientCallback<::test_protocols::ChannelProtocol::TakeHandle>&&
           _callback) const;
 
   void MutateSocket(
-      ::test_protocols::ChannelProtocolMutateSocketRequest&& payload,
+      ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request,
       ::fidl::ClientCallback<::test_protocols::ChannelProtocol::MutateSocket>&&
           _callback) const;
 
   ::fitx::result<::fidl::Error> MethodA(
-      ::test_protocols::ChannelProtocolMethodARequest&& payload) const;
+      ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request)
+      const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3392,30 +2838,12 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
 
 template <>
 class ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> {
+    : public ::test_protocols::ChannelProtocolMethodARequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::ChannelProtocolMethodARequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::ChannelProtocolMethodARequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodARequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolMethodARequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodARequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolMethodARequest payload_;
+  using ::test_protocols::ChannelProtocolMethodARequest::
+      ChannelProtocolMethodARequest;
+  Request(::test_protocols::ChannelProtocolMethodARequest v)
+      : ::test_protocols::ChannelProtocolMethodARequest(std::move(v)) {}
 };
 
 template <>
@@ -3432,30 +2860,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> {
+    : public ::test_protocols::ChannelProtocolMethodBRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::ChannelProtocolMethodBRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_protocols::ChannelProtocolMethodBRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodBRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolMethodBRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolMethodBRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolMethodBRequest payload_;
+  using ::test_protocols::ChannelProtocolMethodBRequest::
+      ChannelProtocolMethodBRequest;
+  Request(::test_protocols::ChannelProtocolMethodBRequest v)
+      : ::test_protocols::ChannelProtocolMethodBRequest(std::move(v)) {}
 };
 
 template <>
@@ -3472,32 +2882,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> {
+    : public ::test_protocols::ChannelProtocolTakeHandleRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::ChannelProtocolTakeHandleRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::ChannelProtocolTakeHandleRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolTakeHandleRequest* operator->() const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolTakeHandleRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolTakeHandleRequest& operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolTakeHandleRequest payload_;
+  using ::test_protocols::ChannelProtocolTakeHandleRequest::
+      ChannelProtocolTakeHandleRequest;
+  Request(::test_protocols::ChannelProtocolTakeHandleRequest v)
+      : ::test_protocols::ChannelProtocolTakeHandleRequest(std::move(v)) {}
 };
 
 template <>
@@ -3514,34 +2904,12 @@ struct ::fidl::internal::MessageTraits<
 
 template <>
 class ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> {
+    : public ::test_protocols::ChannelProtocolMutateSocketRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-  Request(::test_protocols::ChannelProtocolMutateSocketRequest payload)
-      : payload_(std::move(payload)) {}
-  Request(const Request&) noexcept = delete;
-  Request& operator=(const Request&) noexcept = delete;
-  ::test_protocols::ChannelProtocolMutateSocketRequest* operator->() {
-    return &payload_;
-  }
-  const ::test_protocols::ChannelProtocolMutateSocketRequest* operator->()
-      const {
-    return &payload_;
-  }
-  ::test_protocols::ChannelProtocolMutateSocketRequest& operator*() {
-    return payload_;
-  }
-  const ::test_protocols::ChannelProtocolMutateSocketRequest& operator*()
-      const {
-    return payload_;
-  }
-
- private:
-  ::test_protocols::ChannelProtocolMutateSocketRequest payload_;
+  using ::test_protocols::ChannelProtocolMutateSocketRequest::
+      ChannelProtocolMutateSocketRequest;
+  Request(::test_protocols::ChannelProtocolMutateSocketRequest v)
+      : ::test_protocols::ChannelProtocolMutateSocketRequest(std::move(v)) {}
 };
 
 template <>
@@ -3558,7 +2926,8 @@ template <>
 class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::MethodB> : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_protocols::ChannelProtocolMethodBTopResponse&& payload);
+  void Reply(
+      ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -3580,8 +2949,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::MutateSocket>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse&& payload);
+  void Reply(::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>&&
+                 response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

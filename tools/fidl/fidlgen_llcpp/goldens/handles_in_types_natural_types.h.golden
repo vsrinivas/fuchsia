@@ -27,7 +27,7 @@ class UnionWithHandle;
 
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
-class UnionWithHandle final {
+class UnionWithHandle {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::zx::vmo>;
 
@@ -105,7 +105,7 @@ class UnionWithHandle final {
 
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
-class TableWithHandle final {
+class TableWithHandle {
  private:
   struct Storage_;
 
@@ -144,7 +144,7 @@ class TableWithHandle final {
 
 extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 
-class HandlesInTypes final {
+class HandlesInTypes {
  private:
   struct Storage_;
 

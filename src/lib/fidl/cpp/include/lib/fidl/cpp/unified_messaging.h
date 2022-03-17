@@ -38,36 +38,68 @@ template <typename FidlMethod>
 using NaturalApplicationError =
     typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
 
-// |MessageBase| is a mixin with common functionalities for transactional
-// message wrappers.
+// |NaturalMessageConverter| extends transactional message wrappers with the
+// ability to convert to and from domain object types. In particular, result
+// unions in methods using the error syntax will be converted to
+// |fitx::result<ApplicationError, Payload>| when receiving, and vice versa
+// when sending.
 //
-// |Message| is either a |fidl::Request<Foo>| or |fidl::Response<Foo>|.
+// |Message| is either a |fidl::Request<Foo>|, |fidl::Response<Foo>|, or
+// |fidl::Event<Foo>|.
+//
+// It should only be used when |Message| has a body.
+//
+// The default implementation passes through the domain object without any
+// transformation.
 template <typename Message>
-class MessageBase {
+class NaturalMessageConverter {
+  using DomainObject = typename MessageTraits<Message>::Payload;
+
  public:
-  // |DecodeTransactional| decodes a transactional incoming message to a
-  // |Message| containing natural types.
-  //
-  // |message| is always consumed.
-  static ::fitx::result<Error, Message> DecodeTransactional(::fidl::IncomingMessage&& message) {
-    ZX_DEBUG_ASSERT(message.is_transactional());
-    using Traits = MessageTraits<Message>;
+  static Message FromDomainObject(DomainObject&& o) { return static_cast<Message>(std::move(o)); }
 
-    if constexpr (Traits::kHasPayload) {
-      // Delegate into the decode logic of the payload.
-      const fidl_message_header& header = *message.header();
-      auto metadata = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
-      ::fitx::result decode_result = DecodeFrom<typename Traits::Payload>(
-          ::fidl::internal::SkipTransactionHeader(std::move(message)), metadata);
-      if (decode_result.is_error()) {
-        return decode_result.take_error();
-      }
-      return ::fitx::ok(Message{std::move(decode_result.value())});
-    }
-
-    return ::fitx::ok(Message{});
-  }
+  static DomainObject IntoDomainObject(Message&& m) { return DomainObject{std::move(m)}; }
 };
+
+// |DecodeTransactionalMessage| decodes a transactional incoming message to an
+// instance of |Payload| containing natural types.
+//
+// To reducing branching in generated code, |payload| may be |std::nullopt|, in
+// which case the message will be decoded without a payload (header-only
+// messages).
+//
+// |message| is always consumed.
+template <typename Payload = cpp17::nullopt_t>
+static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
+    -> std::conditional_t<std::is_same_v<Payload, cpp17::nullopt_t>, ::fitx::result<::fidl::Error>,
+                          ::fitx::result<::fidl::Error, Payload>> {
+  ZX_DEBUG_ASSERT(message.is_transactional());
+  constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
+  const fidl_message_header& header = *message.header();
+  auto metadata = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
+  fidl::IncomingMessage body_message = ::fidl::internal::SkipTransactionHeader(std::move(message));
+
+  if constexpr (kHasPayload) {
+    // Delegate into the decode logic of the payload.
+    ::fitx::result decode_result = DecodeFrom<Payload>(std::move(body_message), metadata);
+    if (decode_result.is_error()) {
+      return ::fitx::result<::fidl::Error, Payload>(decode_result.take_error());
+    }
+    return ::fitx::result<::fidl::Error, Payload>(::fitx::ok(std::move(decode_result.value())));
+  }
+
+  if constexpr (!kHasPayload) {
+    if (body_message.byte_actual() > 0) {
+      return ::fitx::result<::fidl::Error>(::fitx::error(
+          ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllBytesConsumed)));
+    }
+    if (body_message.handle_actual() > 0) {
+      return ::fitx::result<::fidl::Error>(::fitx::error(
+          ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllHandlesConsumed)));
+    }
+    return ::fitx::result<::fidl::Error>(::fitx::ok());
+  }
+}
 
 // Encode |payload| as part of a request/response message without validating.
 //
@@ -77,14 +109,6 @@ class MessageBase {
 // To reducing branching in generated code, |payload| may be |std::nullopt|, in
 // which case the message will be encoded without a payload (header-only
 // messages).
-//
-// Implementation notes: validation is currently performed later in
-// |NaturalClientMessenger| because this mirrors the existing flow in HLCPP,
-// simplifying initial work. TODO(fxbug.dev/82189): As part of designing the
-// encoding/decoding of natural objects, we should decouple them from
-// |fidl::HLCPPOutgoingMessage| and perform validation as part of encoding.
-// This helper function may then be removed, since we could use the public
-// encoding API of the domain object instead of |EncodeWithoutValidating|.
 template <typename Payload = const cpp17::nullopt_t&>
 fidl::OutgoingMessage EncodeTransactionalMessage(
     ::fidl::internal::NaturalMessageEncoder<fidl::internal::ChannelTransport>& encoder,

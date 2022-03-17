@@ -59,41 +59,15 @@ __LOCAL extern "C" const fidl_type_t
 template <>
 class ::fidl::Response<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Response<::test_requestflexibleenvelope::Protocol::
-                                     RequestStrictResponseFlexible>> {
+    final : public ::test_requestflexibleenvelope::
+                ProtocolRequestStrictResponseFlexibleTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleTopResponse::
+          ProtocolRequestStrictResponseFlexibleTopResponse;
   Response(::test_requestflexibleenvelope::
-               ProtocolRequestStrictResponseFlexibleTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleTopResponse payload_;
+               ProtocolRequestStrictResponseFlexibleTopResponse v)
+      : ProtocolRequestStrictResponseFlexibleTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -124,41 +98,15 @@ class ::fidl::Result<
 template <>
 class ::fidl::Response<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Response<::test_requestflexibleenvelope::Protocol::
-                                     RequestFlexibleResponseStrict>> {
+    final : public ::test_requestflexibleenvelope::
+                ProtocolRequestFlexibleResponseStrictTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::test_requestflexibleenvelope::
+      ProtocolRequestFlexibleResponseStrictTopResponse::
+          ProtocolRequestFlexibleResponseStrictTopResponse;
   Response(::test_requestflexibleenvelope::
-               ProtocolRequestFlexibleResponseStrictTopResponse payload)
-      : payload_(std::move(payload)) {}
-  ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictTopResponse payload_;
+               ProtocolRequestFlexibleResponseStrictTopResponse v)
+      : ProtocolRequestFlexibleResponseStrictTopResponse(std::move(v)) {}
 };
 
 template <>
@@ -191,15 +139,17 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   void RequestStrictResponseFlexible(
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleRequest&& payload,
+      ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                          RequestStrictResponseFlexible>
+          request,
       ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>&& _callback)
       const;
 
   void RequestFlexibleResponseStrict(
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictRequest&& payload,
+      ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                          RequestFlexibleResponseStrict>
+          request,
       ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>&& _callback)
       const;
@@ -271,39 +221,16 @@ class ::fidl::internal::NaturalEventSender<
 template <>
 class ::fidl::Request<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                    RequestStrictResponseFlexible>> {
+    final : public ::test_requestflexibleenvelope::
+                ProtocolRequestStrictResponseFlexibleRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleRequest::
+          ProtocolRequestStrictResponseFlexibleRequest;
   Request(::test_requestflexibleenvelope::
-              ProtocolRequestStrictResponseFlexibleRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestStrictResponseFlexibleRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest
-      payload_;
+              ProtocolRequestStrictResponseFlexibleRequest v)
+      : ::test_requestflexibleenvelope::
+            ProtocolRequestStrictResponseFlexibleRequest(std::move(v)) {}
 };
 
 template <>
@@ -322,39 +249,16 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-    final : public ::fidl::internal::MessageBase<
-                ::fidl::Request<::test_requestflexibleenvelope::Protocol::
-                                    RequestFlexibleResponseStrict>> {
+    final : public ::test_requestflexibleenvelope::
+                ProtocolRequestFlexibleResponseStrictRequest {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
+  using ::test_requestflexibleenvelope::
+      ProtocolRequestFlexibleResponseStrictRequest::
+          ProtocolRequestFlexibleResponseStrictRequest;
   Request(::test_requestflexibleenvelope::
-              ProtocolRequestFlexibleResponseStrictRequest payload)
-      : payload_(std::move(payload)) {}
-  ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest*
-  operator->() {
-    return &payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictRequest*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest&
-  operator*() {
-    return payload_;
-  }
-  const ::test_requestflexibleenvelope::
-      ProtocolRequestFlexibleResponseStrictRequest&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest
-      payload_;
+              ProtocolRequestFlexibleResponseStrictRequest v)
+      : ::test_requestflexibleenvelope::
+            ProtocolRequestFlexibleResponseStrictRequest(std::move(v)) {}
 };
 
 template <>
@@ -373,8 +277,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_requestflexibleenvelope::
-                 ProtocolRequestStrictResponseFlexibleTopResponse&& payload);
+  void Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                  RequestStrictResponseFlexible>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -385,8 +289,8 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(::test_requestflexibleenvelope::
-                 ProtocolRequestFlexibleResponseStrictTopResponse&& payload);
+  void Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                  RequestFlexibleResponseStrict>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

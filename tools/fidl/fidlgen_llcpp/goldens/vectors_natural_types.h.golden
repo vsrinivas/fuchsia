@@ -19,7 +19,7 @@ class ExampleUseOfVectors;
 
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 
-class ExampleUseOfVectors final {
+class ExampleUseOfVectors {
  private:
   struct Storage_;
 

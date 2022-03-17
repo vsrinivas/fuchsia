@@ -84,16 +84,8 @@ class ::fidl::internal::NaturalEventSender<::test_service::SecondProtocol>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> {
+class ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -212,16 +204,8 @@ class ::fidl::internal::NaturalEventSender<::test_service::FirstProtocol>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>> {
+class ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>

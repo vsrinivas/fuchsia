@@ -44,12 +44,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 void fidl::internal::NaturalCompleterBase<
     ::test_transitivedependenciescompose::Top::GetFoo>::
-    Reply(::test_bottom::BottomGetFooTopResponse&& payload) {
+    Reply(::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>&&
+              response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::
+          IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -61,22 +65,20 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<::fidl::Error,
-                         ::fidl::Request<
-                             ::test_transitivedependenciescompose::Top::GetFoo>>
-              decoded = ::fidl::Request<
-                  ::test_transitivedependenciescompose::Top::GetFoo>::
-                  DecodeTransactional(std::move(msg));
+          ::fitx::result decoded =
+              ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>
+              request;
           ::fidl::internal::NaturalCompleter<
               ::test_transitivedependenciescompose::Top::GetFoo>::Sync
               completer(txn);
           static_cast<
               ::fidl::Server<::test_transitivedependenciescompose::Top>*>(
               interface)
-              ->GetFoo(decoded.value(), completer);
+              ->GetFoo(request, completer);
           return ZX_OK;
         },
     },

@@ -10,14 +10,17 @@ namespace test_anonymous {
 }  // namespace test_anonymous
 void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
     SomeMethod(
-        ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+        ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request,
         ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
             _callback) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      ::fidl::internal::EncodeTransactionalMessage(_encoder,
-                                                   std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(
+          _encoder,
+          ::fidl::internal::NaturalMessageConverter<
+              ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
+              IntoDomainObject(std::move(request))),
       ::fidl::internal::MakeResponseContext<
           ::test_anonymous::SomeProtocol::SomeMethod>(
           ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
@@ -44,12 +47,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 void fidl::internal::
     NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
-        ::test_anonymous::SomeProtocolSomeMethodTopResponse&& payload) {
+        ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&&
+            response) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-      _encoder, std::move(payload)));
+      _encoder,
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::
+          IntoDomainObject(std::move(response))));
 }
 
 #ifdef __Fuchsia__
@@ -61,20 +68,20 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fitx::result<
-              ::fidl::Error,
-              ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>
-              decoded =
-                  ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>::
-                      DecodeTransactional(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
+              ::test_anonymous::SomeProtocolSomeMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
             return decoded.error_value().status();
           }
+          ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request =
+              ::fidl::internal::NaturalMessageConverter<
+                  ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::
+                  FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<
               ::test_anonymous::SomeProtocol::SomeMethod>::Sync completer(txn);
           static_cast<::fidl::Server<::test_anonymous::SomeProtocol>*>(
               interface)
-              ->SomeMethod(decoded.value(), completer);
+              ->SomeMethod(request, completer);
           return ZX_OK;
         },
     },

@@ -31,7 +31,7 @@ class ExampleUnion;
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
-class ExampleXUnion final {
+class ExampleXUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
 
@@ -118,7 +118,7 @@ class ExampleXUnion final {
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
-class ExampleUnion final {
+class ExampleUnion {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
 
@@ -203,7 +203,7 @@ class ExampleUnion final {
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 
-class ExampleTable final {
+class ExampleTable {
  private:
   struct Storage_;
 
@@ -252,7 +252,7 @@ class ExampleTable final {
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
-class ExampleStruct final {
+class ExampleStruct {
  private:
   struct Storage_;
 
@@ -305,7 +305,7 @@ class ExampleStruct final {
 extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestTable;
 
-class ExampleProtocolMethodRequest final {
+class ExampleProtocolMethodRequest {
  private:
   struct Storage_;
 

@@ -34,7 +34,7 @@ class EmptyTable;
 
 extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 
-class TableWithAttributes final {
+class TableWithAttributes {
  private:
   struct Storage_;
 
@@ -84,7 +84,7 @@ class TableWithAttributes final {
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 
-class SimpleTable final {
+class SimpleTable {
  private:
   struct Storage_;
 
@@ -141,7 +141,7 @@ class SimpleTable final {
 
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 
-class ReverseOrdinalTable final {
+class ReverseOrdinalTable {
  private:
   struct Storage_;
 
@@ -208,7 +208,7 @@ class ReverseOrdinalTable final {
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 
-class OlderSimpleTable final {
+class OlderSimpleTable {
  private:
   struct Storage_;
 
@@ -256,7 +256,7 @@ class OlderSimpleTable final {
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 
-class NewerSimpleTable final {
+class NewerSimpleTable {
  private:
   struct Storage_;
 
@@ -321,7 +321,7 @@ class NewerSimpleTable final {
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
-class ExtensionTable final {
+class ExtensionTable {
  private:
   struct Storage_;
 
@@ -361,7 +361,7 @@ class ExtensionTable final {
 
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 
-class SixtyFourOrdinalTable final {
+class SixtyFourOrdinalTable {
  private:
   struct Storage_;
 
@@ -890,7 +890,7 @@ class SixtyFourOrdinalTable final {
 
 extern "C" const fidl_type_t test_table_EmptyTableTable;
 
-class EmptyTable final {
+class EmptyTable {
  private:
   struct Storage_;
 

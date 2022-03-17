@@ -143,7 +143,7 @@ void
 
 {{- define "Method:NaturalReplySignature:Helper" -}}
 {{- /* TODO(fxbug.dev/60240): Use `const T&` for value types. */}}
-{{- if .HasResponsePayload }}{{ .ResponsePayload }}&& payload{{ end }}
+{{- if .HasResponsePayload }}{{ .NaturalResponse }}&& response{{ end }}
 {{- end }}
 
 
@@ -170,6 +170,7 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply(
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
-    _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}));
+    _encoder {{- if .HasResponsePayload }},
+    {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)){{ end }}));
 }
 {{- end }}

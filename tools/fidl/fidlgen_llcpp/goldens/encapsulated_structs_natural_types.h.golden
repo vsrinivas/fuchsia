@@ -34,7 +34,7 @@ class TopLevelStruct;
 extern "C" const fidl_type_t
     test_encapsulatedstructs_NonInlineStructTestStructTable;
 
-class NonInlineStructTestStruct final {
+class NonInlineStructTestStruct {
  private:
   struct Storage_;
 
@@ -92,7 +92,7 @@ class NonInlineStructTestStruct final {
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
-class Int8Int32 final {
+class Int8Int32 {
  private:
   struct Storage_;
 
@@ -152,7 +152,7 @@ class Int8Int32 final {
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
-class Int16Int8 final {
+class Int16Int8 {
  private:
   struct Storage_;
 
@@ -212,7 +212,7 @@ class Int16Int8 final {
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
-class ArrayInt16Int8 final {
+class ArrayInt16Int8 {
  private:
   struct Storage_;
 
@@ -272,7 +272,7 @@ class ArrayInt16Int8 final {
 extern "C" const fidl_type_t
     test_encapsulatedstructs_StructPaddingTestStructTable;
 
-class StructPaddingTestStruct final {
+class StructPaddingTestStruct {
  private:
   struct Storage_;
 
@@ -362,7 +362,7 @@ class StructPaddingTestStruct final {
 
 extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
-class TopLevelStruct final {
+class TopLevelStruct {
  private:
   struct Storage_;
 

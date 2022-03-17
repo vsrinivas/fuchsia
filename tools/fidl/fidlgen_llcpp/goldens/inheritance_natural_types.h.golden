@@ -23,7 +23,7 @@ class SuperFooRequest;
 
 extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
-class SuperFooTopResponse final {
+class SuperFooTopResponse {
  private:
   struct Storage_;
 
@@ -75,7 +75,7 @@ class SuperFooTopResponse final {
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-class SuperFooRequest final {
+class SuperFooRequest {
  private:
   struct Storage_;
 

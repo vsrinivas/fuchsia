@@ -89,12 +89,17 @@ type FooResponse = struct {
     bar int32;
 };
 
+type FooEvent = struct {
+    bar int32;
+};
+
 protocol Baz {
     Foo(struct {
         req FooRequest;
     }) -> (struct {
         res FooResponse;
     });
+    -> FooEvent(FooEvent);
 };
 
 type TableWithSubTables = table {
@@ -190,4 +195,11 @@ protocol UsesAnonymous {
     }) -> (struct {}) error enum {
         FOO = 1;
     };
+};
+
+protocol ErrorSyntax {
+    EmptyPayload() -> (struct {}) error int32;
+    FooPayload() -> (FooResponse) error int32;
+    -> EventEmptyPayload(struct {}) error int32;
+    -> EventFooPayload(FooEvent) error int32;
 };

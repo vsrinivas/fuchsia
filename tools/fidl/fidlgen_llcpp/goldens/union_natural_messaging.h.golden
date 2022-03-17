@@ -61,44 +61,17 @@ template <>
 class ::fidl::Response<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
     final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::test_union::TestProtocol::
-                               StrictXUnionHenceResponseMayBeStackAllocated>> {
+    : public ::test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
   Response(
       ::test_union::
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
-              payload)
-      : payload_(std::move(payload)) {}
-  ::test_union::
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_union::
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_union::
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_union::
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_union::
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
-          payload_;
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse v)
+      : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+            std::move(v)) {}
 };
 
 template <>
@@ -130,44 +103,19 @@ class ::fidl::Result<
 template <>
 class ::fidl::Response<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::test_union::TestProtocol::
-                    FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
+    final
+    : public ::test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
  public:
-  Response() = default;
-  ~Response() = default;
-  Response(Response&&) noexcept = default;
-  Response& operator=(Response&&) noexcept = default;
+  using ::test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
   Response(
       ::test_union::
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
-              payload)
-      : payload_(std::move(payload)) {}
-  ::test_union::
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
-      operator->() {
-    return &payload_;
-  }
-  const ::test_union::
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
-      operator->() const {
-    return &payload_;
-  }
-  ::test_union::
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
-      operator*() {
-    return payload_;
-  }
-  const ::test_union::
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
-      operator*() const {
-    return payload_;
-  }
-
- private:
-  ::test_union::
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
-          payload_;
+              v)
+      : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+            std::move(v)) {}
 };
 
 template <>
@@ -272,17 +220,8 @@ class ::fidl::internal::NaturalEventSender<::test_union::TestProtocol>
 template <>
 class ::fidl::Request<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_union::TestProtocol::
-                              StrictXUnionHenceResponseMayBeStackAllocated>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -299,17 +238,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<
 template <>
 class ::fidl::Request<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
+    final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -326,10 +256,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_union::
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&
-              payload);
+  void Reply(::fidl::Response<
+             ::test_union::TestProtocol::
+                 StrictXUnionHenceResponseMayBeStackAllocated>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -340,10 +269,9 @@ class ::fidl::internal::NaturalCompleterBase<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
     : public ::fidl::CompleterBase {
  public:
-  void Reply(
-      ::test_union::
-          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&
-              payload);
+  void Reply(::fidl::Response<
+             ::test_union::TestProtocol::
+                 FlexibleXUnionHenceResponseMustBeHeapAllocated>&& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

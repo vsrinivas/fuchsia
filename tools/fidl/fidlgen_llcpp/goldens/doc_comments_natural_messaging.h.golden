@@ -19,16 +19,8 @@ namespace fidl {
 }  // namespace fidl
 
 template <>
-class ::fidl::Event<::test_doccomments::Interface::OnEvent> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
+class ::fidl::Event<::test_doccomments::Interface::OnEvent> final {
  public:
-  Event() = default;
-  ~Event() = default;
-  Event(Event&&) noexcept = default;
-  Event& operator=(Event&&) noexcept = default;
-
- private:
 };
 
 template <>
@@ -123,16 +115,8 @@ class ::fidl::internal::NaturalEventSender<::test_doccomments::Interface>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Request<::test_doccomments::Interface::Method> final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Request<::test_doccomments::Interface::Method>> {
+class ::fidl::Request<::test_doccomments::Interface::Method> final {
  public:
-  Request() = default;
-  ~Request() = default;
-  Request(Request&&) noexcept = default;
-  Request& operator=(Request&&) noexcept = default;
-
- private:
 };
 
 template <>

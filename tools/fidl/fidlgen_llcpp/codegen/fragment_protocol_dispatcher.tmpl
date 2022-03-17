@@ -117,14 +117,18 @@ constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}
     { {{ .OrdinalName }},
       [](void* interface, ::fidl::IncomingMessage&& msg,
         internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
-        ::fitx::result<::fidl::Error, {{ .NaturalRequest }}> decoded =
-            {{ .NaturalRequest }}::DecodeTransactional(std::move(msg));
+        ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
+            {{- if .HasRequestPayload }}<{{ .RequestPayload }}>{{ end }}(std::move(msg));
         if (decoded.is_error()) {
           return decoded.error_value().status();
         }
+        {{ .NaturalRequest }} request
+        {{- if .HasRequestPayload }}
+            = {{ .NaturalRequestConverter }}::FromDomainObject(std::move(decoded.value()))
+        {{- end }};
         {{ .NaturalCompleter }}::Sync completer(txn);
         static_cast<{{ $.NaturalServer }}*>(interface)->{{ .Name }}(
-            decoded.value(), completer);
+            request, completer);
         return ZX_OK;
       },
     },

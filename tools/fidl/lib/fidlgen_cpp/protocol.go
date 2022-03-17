@@ -90,14 +90,15 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 // These correspond to templated classes and functions forward-declared in
 // /src/lib/fidl/cpp/include/lib/fidl/cpp/unified_messaging.h
 var (
-	NaturalRequest     = fidlNs.member("Request")
-	NaturalResponse    = fidlNs.member("Response")
-	NaturalEvent       = fidlNs.member("Event")
-	NaturalAnyErrorIn  = fidlNs.member("AnyErrorIn")
-	NaturalResult      = fidlNs.member("Result")
-	MessageTraits      = internalNs.member("MessageTraits")
-	MessageBase        = internalNs.member("MessageBase")
-	NaturalMethodTypes = internalNs.member("NaturalMethodTypes")
+	NaturalRequest          = fidlNs.member("Request")
+	NaturalResponse         = fidlNs.member("Response")
+	NaturalEvent            = fidlNs.member("Event")
+	NaturalAnyErrorIn       = fidlNs.member("AnyErrorIn")
+	NaturalResult           = fidlNs.member("Result")
+	MessageTraits           = internalNs.member("MessageTraits")
+	MessageBase             = internalNs.member("MessageBase")
+	NaturalMessageConverter = internalNs.member("NaturalMessageConverter ")
+	NaturalMethodTypes      = internalNs.member("NaturalMethodTypes")
 
 	// Client types
 	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
@@ -489,16 +490,16 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 
 type unifiedMethod struct {
 	NaturalRequest             name
+	NaturalRequestConverter    name
 	RequestMessageTraits       name
-	RequestMessageBase         name
 	NaturalResponse            name
+	NaturalResponseConverter   name
 	NaturalResult              name
 	NaturalAnyErrorIn          name
 	ResponseMessageTraits      name
-	ResponseMessageBase        name
 	NaturalEvent               name
+	NaturalEventConverter      name
 	EventMessageTraits         name
-	EventMessageBase           name
 	ClientCallbackTraits       name
 	ClientResponseCallbackType name
 	NaturalMethodTypes         name
@@ -517,16 +518,16 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
 		NaturalRequest:             naturalRequest,
+		NaturalRequestConverter:    NaturalMessageConverter.template(naturalRequest),
 		RequestMessageTraits:       MessageTraits.template(naturalRequest),
-		RequestMessageBase:         MessageBase.template(naturalRequest),
 		NaturalResponse:            naturalResponse,
+		NaturalResponseConverter:   NaturalMessageConverter.template(naturalResponse),
 		NaturalResult:              naturalResult,
 		NaturalAnyErrorIn:          naturalAnyErrorIn,
 		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
-		ResponseMessageBase:        MessageBase.template(naturalResponse),
 		NaturalEvent:               naturalEvent,
+		NaturalEventConverter:      NaturalMessageConverter.template(naturalEvent),
 		EventMessageTraits:         MessageTraits.template(naturalEvent),
-		EventMessageBase:           MessageBase.template(naturalEvent),
 		ClientCallbackTraits:       NaturalClientCallbackTraits.template(methodMarker),
 		ClientResponseCallbackType: NaturalClientResponseCallback.template(methodMarker),
 		NaturalMethodTypes:         NaturalMethodTypes.template(methodMarker),
@@ -618,6 +619,33 @@ func (m Method) NaturalResultBase() string {
 			return "::fitx::result<::fidl::Error>"
 		}
 	}
+}
+
+func (m Method) RequestMessageBase() string {
+	if m.HasRequestPayload {
+		return m.RequestPayload.String()
+	}
+	return ""
+}
+
+func (m Method) ResponseMessageBase() string {
+	if m.Result != nil {
+		if len(m.Result.ValueParameters) > 0 {
+			return fmt.Sprintf("::fitx::result<%s, %s>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+		} else {
+			return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+		}
+	} else {
+		if len(m.ResponseArgs) > 0 {
+			return m.ResponsePayload.String()
+		} else {
+			return ""
+		}
+	}
+}
+
+func (m Method) EventMessageBase() string {
+	return m.ResponseMessageBase()
 }
 
 // CtsMethodAnnotation generates a comment containing information about the FIDL

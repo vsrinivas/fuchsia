@@ -25,7 +25,7 @@ class Union;
 
 extern "C" const fidl_type_t test_versions_UnionTable;
 
-class Union final {
+class Union {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
 
@@ -109,7 +109,7 @@ class Union final {
 
 extern "C" const fidl_type_t test_versions_TableTable;
 
-class Table final {
+class Table {
  private:
   struct Storage_;
 
@@ -156,7 +156,7 @@ class Table final {
 
 extern "C" const fidl_type_t test_versions_StructTable;
 
-class Struct final {
+class Struct {
  private:
   struct Storage_;
 

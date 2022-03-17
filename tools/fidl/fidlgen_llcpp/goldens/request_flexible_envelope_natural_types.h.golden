@@ -31,7 +31,7 @@ class FlexibleFoo;
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
-class StrictFoo final {
+class StrictFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -135,7 +135,7 @@ class StrictFoo final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-class ProtocolRequestStrictResponseFlexibleRequest final {
+class ProtocolRequestStrictResponseFlexibleRequest {
  private:
   struct Storage_;
 
@@ -206,7 +206,7 @@ class ProtocolRequestStrictResponseFlexibleRequest final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse final {
+class ProtocolRequestFlexibleResponseStrictTopResponse {
  private:
   struct Storage_;
 
@@ -277,7 +277,7 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final {
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
-class FlexibleFoo final {
+class FlexibleFoo {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
 
@@ -383,7 +383,7 @@ class FlexibleFoo final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse final {
+class ProtocolRequestStrictResponseFlexibleTopResponse {
  private:
   struct Storage_;
 
@@ -455,7 +455,7 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-class ProtocolRequestFlexibleResponseStrictRequest final {
+class ProtocolRequestFlexibleResponseStrictRequest {
  private:
   struct Storage_;
 

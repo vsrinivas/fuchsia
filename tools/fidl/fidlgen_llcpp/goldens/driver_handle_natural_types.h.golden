@@ -26,7 +26,7 @@ class ClientEndWrapper;
 
 extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
 
-class ServerEndWrapper final {
+class ServerEndWrapper {
  private:
   struct Storage_;
 
@@ -73,7 +73,7 @@ class ServerEndWrapper final {
 
 extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 
-class ClientEndWrapper final {
+class ClientEndWrapper {
  private:
   struct Storage_;
 

@@ -32,6 +32,7 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
       using NaturalResponse = ::fidl::Response<FidlMethod>;
       constexpr bool HasApplicationError =
           ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
+      constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
 
       struct DeleteSelf {
         ResponseContext* c;
@@ -45,8 +46,14 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
         return cpp17::nullopt;
       }
 
-      ::fitx::result<::fidl::Error, NaturalResponse> decoded =
-          NaturalResponse::DecodeTransactional(std::move(result));
+      ::fitx::result decoded = [&] {
+        if constexpr (IsAbsentBody) {
+          return DecodeTransactionalMessage(std::move(result));
+        } else {
+          using Body = typename MessageTraits<NaturalResponse>::Payload;
+          return DecodeTransactionalMessage<Body>(std::move(result));
+        }
+      }();
 
       // Check decoding error.
       if (decoded.is_error()) {
@@ -56,30 +63,31 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
         return unbind_info;
       }
 
-      if constexpr (HasApplicationError) {
-        // Fold application error.
-        if (decoded.value()->result().err().has_value()) {
-          ::fidl::Result<FidlMethod> error = ::fitx::error(decoded.value()->result().err().value());
-          callback_(error);
-        } else {
-          ZX_DEBUG_ASSERT(decoded.value()->result().response().has_value());
-          if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
-            // Omit empty structs.
-            ::fidl::Result<FidlMethod> value = ::fitx::success();
-            callback_(value);
-          } else {
-            ::fidl::Result<FidlMethod> value =
-                ::fitx::ok(std::move(*decoded.value()->result().response().take()));
-            callback_(value);
-          }
-        }
+      if constexpr (IsAbsentBody) {
+        // Absent body.
+        ::fidl::Result<FidlMethod> value = ::fitx::success();
+        callback_(value);
       } else {
-        if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody) {
-          // Absent body.
-          ::fidl::Result<FidlMethod> value = ::fitx::success();
-          callback_(value);
+        NaturalResponse response =
+            NaturalMessageConverter<NaturalResponse>::FromDomainObject(std::move(decoded.value()));
+        if constexpr (HasApplicationError) {
+          // Fold application error.
+          if (response.is_error()) {
+            ::fidl::Result<FidlMethod> error = response.take_error();
+            callback_(error);
+          } else {
+            ZX_DEBUG_ASSERT(response.is_ok());
+            if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
+              // Omit empty structs.
+              ::fidl::Result<FidlMethod> value = ::fitx::success();
+              callback_(value);
+            } else {
+              ::fidl::Result<FidlMethod> value = response.take_value();
+              callback_(value);
+            }
+          }
         } else {
-          ::fidl::Result<FidlMethod> value = ::fitx::ok(std::move(*decoded.value()));
+          ::fidl::Result<FidlMethod> value = ::fitx::ok(std::move(response));
           callback_(value);
         }
       }

@@ -21,7 +21,7 @@ class MyStruct;
 
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
-class MyStruct final {
+class MyStruct {
  private:
   struct Storage_;
 

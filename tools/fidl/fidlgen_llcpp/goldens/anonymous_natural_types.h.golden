@@ -39,7 +39,7 @@ class SomeProtocol_SomeMethod_Result;
 
 extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
-class UnionMember final {
+class UnionMember {
  private:
   using Storage_ = cpp17::variant<cpp17::monostate, uint8_t>;
 
@@ -124,7 +124,7 @@ class UnionMember final {
 
 extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
-class TableData final {
+class TableData {
  private:
   struct Storage_;
 
@@ -174,7 +174,7 @@ class TableData final {
 
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
-class TableMember final {
+class TableMember {
  private:
   struct Storage_;
 
@@ -229,7 +229,7 @@ class TableMember final {
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
-class SomeProtocolSomeMethodRequest final {
+class SomeProtocolSomeMethodRequest {
  private:
   struct Storage_;
 
@@ -309,7 +309,7 @@ class SomeProtocolSomeMethodRequest final {
 
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
-class OverrideTest final {
+class OverrideTest {
  private:
   struct Storage_;
 
@@ -389,7 +389,7 @@ class OverrideTest final {
 
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
-class FunctionApplication final {
+class FunctionApplication {
  private:
   struct Storage_;
 
@@ -472,7 +472,7 @@ class FunctionApplication final {
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
-class Expression final {
+class Expression {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate, uint64_t, ::test_anonymous::OverrideTest,
@@ -598,7 +598,7 @@ class Expression final {
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
-class SomeProtocol_SomeMethod_Response final {
+class SomeProtocol_SomeMethod_Response {
  private:
   struct Storage_;
 
@@ -664,7 +664,7 @@ class SomeProtocol_SomeMethod_Response final {
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
-class SomeProtocol_SomeMethod_Result final {
+class SomeProtocol_SomeMethod_Result {
  private:
   using Storage_ =
       cpp17::variant<cpp17::monostate,
@@ -778,7 +778,7 @@ class SomeProtocol_SomeMethod_Result final {
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
-class SomeProtocolSomeMethodTopResponse final {
+class SomeProtocolSomeMethodTopResponse {
  private:
   struct Storage_;
 

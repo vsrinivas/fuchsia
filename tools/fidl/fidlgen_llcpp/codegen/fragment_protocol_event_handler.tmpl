@@ -225,13 +225,17 @@ std::optional<::fidl::UnbindInfo>
   {{- range .Events }}
     case {{ .OrdinalName }}:
     {
-      ::fitx::result<::fidl::Error, {{ .NaturalEvent }}> decoded =
-          {{ .NaturalEvent }}::DecodeTransactional(std::move(msg));
+      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
+            {{- if .HasResponsePayload }}<{{ .ResponsePayload }}>{{ end -}}(std::move(msg));
       if (decoded.is_error()) {
         return ::fidl::UnbindInfo(decoded.error_value());
       }
       if (event_handler()) {
-        event_handler()->{{ .Name }}(decoded.value());
+        {{ .NaturalEvent }} event
+        {{- if .HasResponsePayload }}
+            = {{ .NaturalEventConverter }}::FromDomainObject(std::move(decoded.value()))
+        {{- end }};
+        event_handler()->{{ .Name }}(event);
       }
       return std::nullopt;
     }
