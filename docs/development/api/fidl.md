@@ -492,7 +492,7 @@ two returns, an optional value and an error code. See for instance:
 However, this pattern is now deprecated in favor of the [error
 syntax](#error-syntax): the performance benefits which existed have been
 obsoleted by [inlining small values in envelopes][rfc-0114], and low-level
-support for extensible unions is now prevalent.
+support for unions is now prevalent.
 
 #### Avoid messages and descriptions in errors
 

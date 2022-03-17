@@ -98,8 +98,8 @@ versioning metadata.
   once the property is removed.
 
 Different elements of an interface may be annotated differently. For instance
-different methods in a protocol or fields in an extensible union may have been
-added, deprecated, or removed at different versions.
+different methods in a protocol or fields in an union may have been added,
+deprecated, or removed at different versions.
 
 FIDL being the common language for interface definition on Fuchsia
 [supports versioning annotations][rfc-0083]. To help developers who are making

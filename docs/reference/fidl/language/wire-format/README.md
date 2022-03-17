@@ -426,9 +426,8 @@ to do that in order to simplify [ABI compatibility changes][abi-api-compat].
 
 ### Envelopes {#envelopes}
 
-An envelope is a container for data, used internally by tables
-and extensible unions. It is not exposed to the FIDL language.
-It has a fixed, 8 byte format.
+An envelope is a container for data, used internally by tables and unions. It is
+not exposed to the FIDL language. It has a fixed, 8 byte format.
 
 An envelope header that is all zeros is referred to as the "zero envelope". It
 is used to represent an absent envelope. Otherwise, the envelope is present and
