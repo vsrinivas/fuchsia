@@ -53,14 +53,26 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                          &block_size);
   if (status != ZX_OK) {
     return status;
-  } else if (capacity % block_size != 0) {
-    FX_LOGS(ERROR) << "Virtio block device capacity must be aligned to block size: " << id
+  }
+
+  // Capacity is expressed in terms fixed size sectors (512 bytes) and not the devices preferred
+  // block size.
+  //
+  // Virtio 1.0, Section 5.2.4: The capacity of the device (expressed in 512-byte sectors) is
+  // always present.
+  //
+  // Virtio 1.0, Section 2.5.2: If the VIRTIO_BLK_F_BLK_SIZE feature is negotiated, blk_size can be
+  // read to determine the optimal sector size for the driver to use. This does not affect the units
+  // used in the protocol (always 512 bytes), but awareness of the correct value can affect
+  // performance.
+  if (capacity % kBlockSectorSize != 0) {
+    FX_LOGS(ERROR) << "Virtio block device capacity must be aligned to 512 byte sectors: " << id
                    << " has capacity " << capacity << " and block size " << block_size;
     return ZX_ERR_INVALID_ARGS;
   }
 
   std::lock_guard<std::mutex> lock(device_config_.mutex);
-  config_.capacity = capacity / block_size;
+  config_.capacity = capacity / kBlockSectorSize;
   config_.blk_size = block_size;
   return ZX_OK;
 }

@@ -504,6 +504,11 @@ void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
   fuchsia_hardware_block_BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   FX_CHECK(status == ZX_OK) << "Failed to get FIFO for block device";
+  // The block protocol must read full blocks at a time. As implemented, it will pass the requests
+  // directly to the remote block server, so if this does not hold we won't be able to fulfill
+  // requests without some intermediate buffering (which is not implemented).
+  FX_CHECK(block_info.block_size % kBlockSectorSize == 0)
+      << "Unsupported block size " << block_info.block_size;
 
   uint64_t capacity = block_info.block_count * block_info.block_size;
   auto disp = std::make_unique<RemoteBlockDispatcher>(std::move(device), std::move(id),
