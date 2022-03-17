@@ -99,7 +99,6 @@ template("fidl_config_client_lib_source") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "metadata",
                              "testonly",
                              "visibility",
                            ])
@@ -140,6 +139,13 @@ template("fidl_config_client_lib_source") {
     ]
 
     outputs = [ source_file_path ]
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }
 
@@ -172,7 +178,6 @@ template("rust_config_client_lib_source") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "metadata",
                              "name",
                              "testonly",
                              "visibility",
@@ -213,6 +218,13 @@ template("rust_config_client_lib_source") {
     deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
 
     outputs = [ source_file_path ]
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }
 
@@ -254,7 +266,6 @@ template("cpp_elf_config_client_lib_source") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "metadata",
                              "name",
                              "testonly",
                              "visibility",
@@ -296,5 +307,12 @@ template("cpp_elf_config_client_lib_source") {
       cc_source_file_path,
       h_source_file_path,
     ]
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }
