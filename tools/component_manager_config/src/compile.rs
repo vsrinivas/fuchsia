@@ -509,7 +509,7 @@ fn compile(args: Args) -> Result<(), Error> {
 
     let mut config_fidl: component_internal::Config = config_json.try_into()?;
     let bytes = encode_persistent_with_context(
-        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
         &mut config_fidl,
     )
     .map_err(|e| Error::FidlEncoding(e))?;
