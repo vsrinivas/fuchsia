@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/clock/audio_clock_coefficients.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
@@ -21,9 +22,13 @@ namespace media::audio {
 
 // Enable logging of sync-related clock adjustments.
 constexpr bool kLogClockTuning = true;
-// (if enabled) log all source position errors that are equal to or greater than this threshold.
+
+// The following are enabled only if kLogClockTuning is true
+// Also log PID coefficients/contributions
+constexpr bool kLogPidCoefficientsWithClockTuning = false;
+// Log all source position errors equal to or greater than this threshold.
 constexpr zx::duration kLogClockTuningPositionErrorThreshold = zx::nsec(500);
-// (if enabled) otherwise, log the first of every ~100 errors (in practice this is approx 1/sec).
+// Log the first of every ~100 errors (in practice, approx 1/sec), regardless of error.
 constexpr int64_t kClockTuneLoggingStride = 97;  // make strides prime, to avoid periodicity
 
 //
@@ -112,11 +117,9 @@ void AudioClock::ResetRateAdjustments(AudioClock& source_clock, AudioClock& dest
   auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
   if (sync_mode == SyncMode::AdjustSourceClock) {
     source_clock.ResetRateAdjustment(reset_time);
-  }
-  if (sync_mode == SyncMode::AdjustDestClock) {
+  } else if (sync_mode == SyncMode::AdjustDestClock) {
     dest_clock.ResetRateAdjustment(reset_time);
-  }
-  if (sync_mode == SyncMode::MicroSrc) {
+  } else if (sync_mode == SyncMode::MicroSrc) {
     auto& client_clock = source_clock.is_client_clock() ? source_clock : dest_clock;
     client_clock.ResetRateAdjustment(reset_time);
   }
@@ -367,17 +370,22 @@ void AudioClock::LogClockAdjustments(zx::duration source_pos_error, int32_t rate
       log_count = 0;
     }
     if (log_count == 0) {
+      std::string clock_info = fxl::StringPrintf("%zx %s%s", reinterpret_cast<uintptr_t>(this),
+                                                 (is_client_clock() ? " Client" : " Device"),
+                                                 (is_adjustable() ? "Adjustable" : "Fixed     "));
+      std::string err_str = fxl::StringPrintf("; src_pos_err %zd ns", source_pos_error.to_nsecs());
+
       if (rate_adjust_ppm != current_adjustment_ppm_) {
-        FX_LOGS(INFO) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
-                      << (is_adjustable() ? "Adjustable" : "Fixed     ") << " change from (ppm) "
-                      << std::setw(4) << current_adjustment_ppm_ << " to " << std::setw(4)
-                      << rate_adjust_ppm << "; src_pos_err " << std::setw(7)
-                      << source_pos_error.to_nsecs() << " ns";
+        FX_LOGS(INFO) << clock_info << " change from (ppm) " << std::setw(4)
+                      << current_adjustment_ppm_ << " to " << std::setw(4) << rate_adjust_ppm
+                      << err_str;
       } else {
-        FX_LOGS(INFO) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
-                      << (is_adjustable() ? "Adjustable" : "Fixed     ")
-                      << " adjust_ppm remains  (ppm) " << std::setw(4) << current_adjustment_ppm_
-                      << "; src_pos_err " << std::setw(7) << source_pos_error.to_nsecs() << " ns";
+        std::stringstream pid_status;
+        if constexpr (kLogPidCoefficientsWithClockTuning) {
+          pid_status << "; PID " << feedback_control_;
+        }
+        FX_LOGS(INFO) << clock_info << " adjust_ppm remains  (ppm) " << std::setw(4)
+                      << current_adjustment_ppm_ << err_str << pid_status.str();
       }
     }
     log_count = (++log_count) % kClockTuneLoggingStride;

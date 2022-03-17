@@ -12,7 +12,6 @@
 #include <gtest/gtest.h>
 
 namespace media::audio::clock {
-namespace {
 
 class PidControlTest : public testing::Test {
  protected:
@@ -171,16 +170,60 @@ class PidControlTest : public testing::Test {
   }
 };
 
-// Validate default ctor sends parameters of 0
-TEST_F(PidControlTest, Static) {
+// Validate default ctor sends PID coefficients of 0
+TEST_F(PidControlTest, DefaultCoefficients) {
   auto control = PidControl();
   EXPECT_EQ(control.Read(), 0);
 
   control.Start(zx::time(100));
   EXPECT_EQ(control.Read(), 0);
 
+  // Even after injecting an error, the PID should return an error of zero.
   control.TuneForError(zx::time(125), 500);
   EXPECT_EQ(control.Read(), 0);
+}
+
+// By default, all error and time factors are zero.
+// Reset clears any error values and unsets the control's last-tuned time.
+TEST_F(PidControlTest, DefaultAndReset) {
+  auto control = PidControl({.derivative_factor = 1.0});
+
+  // start_time is unset, so the PID will not be tuned.
+  control.TuneForError(zx::time(50), 100);
+  EXPECT_EQ(control.Read(), 0);
+
+  // Expect (200-100)/(100-50) = 2
+  control.TuneForError(zx::time(100), 200);
+  EXPECT_EQ(control.Read(), 2);
+
+  // Reset clears error factors and last-tuned time. The next tune only establishes tune_time.
+  control.Reset();
+  control.TuneForError(zx::time(150), 200);
+  // Without Reset this would be (200-100)/(150-100) = 2. Instead only tune_time is set (to 150).
+  EXPECT_EQ(control.Read(), 0);
+
+  // Expect (350-200)/(200-150) = 3
+  control.TuneForError(zx::time(200), 350);
+  EXPECT_EQ(control.Read(), 3);
+}
+
+// Start resets error values to zero and sets the control's last-tuned time.
+TEST_F(PidControlTest, Start) {
+  auto control = PidControl({.derivative_factor = 1.0});
+
+  // start_time is 0, so control.Read will base its value on an error of 150 and a time
+  // delta of 150, thus control.Read() == (150-0)/(150-0) == 1.
+  control.Start(zx::time(0));
+  control.TuneForError(zx::time(150), 150);
+  EXPECT_EQ(control.Read(), 1);
+
+  // This clears any error factors and sets the last-tuned time to 100.
+  control.Start(zx::time(100));
+
+  // start_time is 100, so control.Read will base its value on an error of 150 and a time delta of
+  // 50, thus control.Read() == (150-0)/(150-100) == 3.
+  control.TuneForError(zx::time(150), 150);
+  EXPECT_EQ(control.Read(), 3);
 }
 
 // If only Proportional, after each Tune we predict exactly that that error.
@@ -202,25 +245,6 @@ TEST_F(PidControlTest, Derivative) {
   VerifyDerivativeOnly(1.0);
   VerifyDerivativeOnly(4.0);
   VerifyDerivativeOnly(0.0001);
-}
-
-// By default, all error and time factors are zero.
-// Start resets error values to zero and sets the control's last-tuned time.
-TEST_F(PidControlTest, DefaultAndStart) {
-  auto control = PidControl({.derivative_factor = 1.0});
-
-  // start_time is implicitly 0, so control.Read will base its value on an error of 150 and a time
-  // delta of 150, thus control.Read() == (150-0)/(150-0) == 1.
-  control.TuneForError(zx::time(150), 150);
-  EXPECT_EQ(control.Read(), 1);
-
-  // This clears any error factors and sets the last-tuned time to 100.
-  control.Start(zx::time(100));
-
-  // start_time is 100, so control.Read will base its value on an error of 150 and a time delta of
-  // 50, thus control.Read() == (150-0)/(150-100) == 3.
-  control.TuneForError(zx::time(150), 150);
-  EXPECT_EQ(control.Read(), 3);
 }
 
 // Briefly validate PI with literal values
@@ -312,5 +336,4 @@ TEST_F(PidControlTest, PastTimestampsAreIgnored) {
   EXPECT_EQ(control.Read(), 222);
 }
 
-}  // namespace
 }  // namespace media::audio::clock
