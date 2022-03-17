@@ -7,7 +7,12 @@
 //! libraries.
 
 use anyhow::{anyhow, Result};
-use std::process::Command;
+use std::{
+    fs::File,
+    io::{BufRead, Write},
+    path::PathBuf,
+    process::Command,
+};
 
 // Provides access to ffx_config properties.
 pub mod config;
@@ -39,6 +44,22 @@ pub fn tap_available() -> bool {
     // TODO(fxbug.dev/87464): Check for the expected interface name, to make sure we have the right
     // one if there are multiple taps possible (i.e. for supporting multiple emu instances).
     return output.is_ok() && output.unwrap().stdout.len() > 0;
+}
+
+/// A utility function to dump the contents of a file to the terminal.
+pub fn dump_log_to_out<W: Write>(log: &PathBuf, out: &mut W) -> Result<()> {
+    let mut out_handle = std::io::BufWriter::new(out);
+    let mut buf = Vec::with_capacity(64);
+    let mut buf_reader = std::io::BufReader::new(File::open(log)?);
+    while let Ok(len) = buf_reader.read_until(b'\n', &mut buf) {
+        if len == 0 {
+            break;
+        }
+        out_handle.write_all(&buf)?;
+        buf.clear();
+        out_handle.flush()?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -8,10 +8,11 @@
 use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
+use errors::ffx_bail;
 use ffx_emulator_common::{
     config,
     config::FfxConfigWrapper,
-    process, tap_available,
+    dump_log_to_out, process, tap_available,
     target::{add_target, is_active, remove_target},
 };
 use ffx_emulator_config::{
@@ -268,7 +269,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             stop_error
                         );
                     }
-                    bail!("Emulator launcher did not terminate properly, error: {}", e)
+                    ffx_bail!("Emulator launcher did not terminate properly, error: {}", e)
                 }
             }
         } else if !self.emu_config().runtime.startup_timeout.is_zero() {
@@ -279,7 +280,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             let name = &self.emu_config().runtime.name;
             while !time_left.is_zero() {
                 if is_active(proxy, name).await {
-                    println!("Emulator is ready.");
+                    println!("\nEmulator is ready.");
                     log::debug!("Emulator is ready.");
                     break;
                 } else {
@@ -289,9 +290,30 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     print!(".");
                     std::io::stdout().flush().ok();
 
+                    // Perform a check to make sure the process is still alive, otherwise report
+                    // failure to launch.
+                    if !self.is_running() {
+                        log::error!(
+                            "Emulator process failed to launch, but we don't know the cause. \
+                            Check the emulator log, or look for a crash log."
+                        );
+                        println!("");
+                        eprintln!(
+                            "Emulator process failed to launch, but we don't know the cause. \
+                            Printing the contents of the emulator log...\n"
+                        );
+                        match dump_log_to_out(&self.emu_config().host.log, &mut std::io::stderr()) {
+                            Ok(_) => (),
+                            Err(e) => eprintln!("Couldn't print the log: {:?}", e),
+                        };
+                        return Ok(1);
+                    }
+
                     time_left = time_left.sub(Duration::from_secs(1));
                     if time_left.is_zero() {
-                        eprintln!("Emulator did not respond to a health check before timing out.");
+                        eprintln!(
+                            "\nEmulator did not respond to a health check before timing out."
+                        );
                         log::warn!("Emulator did not respond to a health check before timing out.");
                     }
                 }

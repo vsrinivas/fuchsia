@@ -36,6 +36,11 @@ pub fn monitored_child_process(child_arc: &Arc<SharedChild>) -> Result<()> {
 /// Returns true if the process identified by the pid is running.
 pub fn is_running(pid: u32) -> bool {
     if pid != 0 {
+        // First do a no-hang wait to collect the process if it's defunct.
+        let _ = nix::sys::wait::waitpid(
+            nix::unistd::Pid::from_raw(pid.try_into().unwrap()),
+            Some(nix::sys::wait::WaitPidFlag::WNOHANG),
+        );
         // Check to see if it is running by sending signal 0. If there is no error,
         // the process is running.
         return nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid.try_into().unwrap()), None)
@@ -49,7 +54,7 @@ pub fn terminate(pid: u32) -> Result<()> {
     if pid != 0 && is_running(pid) {
         match nix::sys::signal::kill(
             nix::unistd::Pid::from_raw(pid.try_into().unwrap()),
-            Some(nix::sys::signal::Signal::SIGTERM),
+            Some(nix::sys::signal::Signal::SIGKILL),
         ) {
             Ok(_) => return Ok(()),
             Err(e) => bail!("Terminate error: {}", e),
