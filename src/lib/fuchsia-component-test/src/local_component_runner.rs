@@ -312,34 +312,26 @@ impl LocalComponentRunner {
                     self.execution_scope.spawn(async move {
                         let mut local_component_implementation_fut =
                             (*local_component_implementation)(component_handles).fuse();
-                        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95072)
-                        loop {
-                            let mut controller_request_fut =
-                                controller_request_stream.try_next().fuse();
-                            select! {
-                                res = local_component_implementation_fut => {
-                                    if let Err(e) = res {
-                                        error!(
-                                            "the local component {:?} returned an error: {:?}",
-                                            local_component_name,
-                                            e,
-                                        );
-                                    }
-                                    break;
+                        let mut controller_request_fut =
+                            controller_request_stream.try_next().fuse();
+                        select! {
+                            res = local_component_implementation_fut => {
+                                if let Err(e) = res {
+                                    error!(
+                                        "the local component {:?} returned an error: {:?}",
+                                        local_component_name,
+                                        e,
+                                    );
                                 }
-                                req_res = controller_request_fut => {
-                                    match req_res.expect("invalid controller request") {
-                                        Some(fcrunner::ComponentControllerRequest::Stop { .. })
-                                        | Some(fcrunner::ComponentControllerRequest::Kill { .. })
-                                        | None => {
-                                            // TODO: support notifying the component implementation
-                                            // on stop
-                                            break;
-                                        }
-                                    }
+                            }
+                            req_res = controller_request_fut => {
+                                match req_res.expect("invalid controller request") {
+                                    // TODO(https://fxbug.dev/82021): notify impl on stop
+                                    Some(fcrunner::ComponentControllerRequest::Stop { .. }) => (),
+                                    _ => (),
                                 }
-                            };
-                        }
+                            }
+                        };
                     });
                 }
             }

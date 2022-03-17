@@ -284,8 +284,7 @@ async fn run_builtin_controller(
     mut stream: fcrunner::ComponentControllerRequestStream,
     builtin_task: fasync::Task<()>,
 ) {
-    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95072)
-    while let Some(req) =
+    if let Some(req) =
         stream.try_next().await.expect("invalid controller request from component manager")
     {
         match req {
@@ -295,7 +294,6 @@ async fn run_builtin_controller(
                 // convey to the reader that the whole point here is that the task stops running
                 // when a stop or kill command is received.
                 drop(builtin_task);
-                return;
             }
         }
     }
