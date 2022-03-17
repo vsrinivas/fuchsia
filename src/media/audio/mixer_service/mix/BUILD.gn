@@ -4,14 +4,24 @@
 
 import("//build/components.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":audio_mixer_service_mix_unittests" ]
+}
+
 source_set("mix") {
-  visibility = [ "//src/media/audio/mixer_service/fidl:*" ]
+  visibility = [
+    ":*",
+    "//src/media/audio/mixer_service/fidl:*",
+  ]
 
   sources = [
     "detached_thread.cc",
     "detached_thread.h",
     "mix_thread.cc",
     "mix_thread.h",
+    "packet.cc",
+    "packet.h",
     "pipeline_stage.h",
     "ptr_decls.h",
     "thread.h",
@@ -23,4 +33,20 @@ source_set("mix") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
   ]
+}
+
+executable("mix_unittests") {
+  testonly = true
+
+  sources = [ "packet_unittest.cc" ]
+
+  deps = [
+    ":mix",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_package("audio_mixer_service_mix_unittests") {
+  deps = [ ":mix_unittests" ]
 }

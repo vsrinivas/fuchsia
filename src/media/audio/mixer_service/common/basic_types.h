@@ -9,6 +9,9 @@
 
 #include <limits>
 
+#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/format.h"
+
 namespace media_audio_mixer_service {
 
 // FIDL IDs.
@@ -22,6 +25,10 @@ constexpr uint64_t kInvalidId = fuchsia_audio_mixer::INVALID_ID;
 // This ID is used by the GlobalTaskQueue to mean "any thread allowed".
 constexpr uint64_t kAnyThreadId = std::numeric_limits<uint64_t>::max();
 static_assert(kAnyThreadId != kInvalidId);
+
+// Alias common types into this namespace.
+using Format = ::media_audio::Format;
+using Fixed = ::media::audio::Fixed;
 
 }  // namespace media_audio_mixer_service
 
