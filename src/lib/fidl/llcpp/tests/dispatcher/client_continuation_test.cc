@@ -26,193 +26,14 @@ struct Receiver {
 constexpr int kCanceledAnswer = 0;
 constexpr int kSuccessAnswer = 42;
 
-TEST(ClientContinuation, MemberFnActiveWeakPtr) {
-  // Client is alive -> called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    cb.Run(result);
-
-    EXPECT_EQ(kSuccessAnswer, answer);
-  }
-
-  // Client is destroyed -> still called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    fake_client.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kSuccessAnswer, answer);
-  }
-}
-
-TEST(ClientContinuation, MemberFnExpiredWeakPtr) {
-  // Client is alive -> canceled.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    receiver.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kCanceledAnswer, answer);
-  }
-
-  // Client is destroyed -> still canceled.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    fake_client.reset();
-    receiver.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kCanceledAnswer, answer);
-  }
-}
-
-TEST(ClientContinuation, LambdaActiveWeakPtr) {
-  // Client is alive -> called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* receiver, int& answer) { receiver->Speak(answer); }, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    cb.Run(result);
-
-    EXPECT_EQ(kSuccessAnswer, answer);
-  }
-
-  // Client is destroyed -> still called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* receiver, int& answer) { receiver->Speak(answer); }, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    fake_client.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kSuccessAnswer, answer);
-  }
-}
-
-TEST(ClientContinuation, LambdaExpiredWeakPtr) {
-  // Client is alive -> canceled.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* receiver, int& answer) { receiver->Speak(answer); }, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    receiver.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kCanceledAnswer, answer);
-  }
-
-  // Client is destroyed -> still canceled.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* receiver, int& answer) { receiver->Speak(answer); }, std::weak_ptr(receiver));
-    int result = kSuccessAnswer;
-
-    fake_client.reset();
-    receiver.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kCanceledAnswer, answer);
-  }
-}
-
-TEST(ClientContinuation, SharedPtr) {
-  std::shared_ptr fake_client = GetFakeClient();
-  int answer = kCanceledAnswer;
-  std::shared_ptr receiver = std::make_shared<Receiver>(Receiver{&answer});
-  auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::shared_ptr(receiver));
-  int result = kSuccessAnswer;
-
-  receiver.reset();
-  cb.Run(result);
-
-  EXPECT_EQ(kSuccessAnswer, answer);
-}
-
-TEST(ClientContinuation, UniquePtr) {
-  std::shared_ptr fake_client = GetFakeClient();
-  int answer = kCanceledAnswer;
-  std::unique_ptr receiver = std::make_unique<Receiver>(Receiver{&answer});
-  auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, std::move(receiver));
-  int result = kSuccessAnswer;
-
-  cb.Run(result);
-
-  EXPECT_NULL(receiver);
-  EXPECT_EQ(kSuccessAnswer, answer);
-}
-
-TEST(ClientContinuation, MemberFnRawPtr) {
-  // Client is alive -> called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    Receiver receiver{&answer};
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, &receiver);
-    int result = kSuccessAnswer;
-
-    cb.Run(result);
-
-    EXPECT_EQ(kSuccessAnswer, answer);
-  }
-
-  // Client is destroyed -> not called.
-  {
-    std::shared_ptr fake_client = GetFakeClient();
-    int answer = kCanceledAnswer;
-    Receiver receiver{&answer};
-    auto cb = WeakCallbackFactory<int>{fake_client}.Then(&Receiver::Speak, &receiver);
-    int result = kSuccessAnswer;
-
-    fake_client.reset();
-    cb.Run(result);
-
-    EXPECT_EQ(kCanceledAnswer, answer);
-  }
-}
-
-TEST(ClientContinuation, LambdaRawPtr) {
+TEST(ClientContinuation, PassivateCallback) {
   // Client is alive -> called.
   {
     std::shared_ptr fake_client = GetFakeClient();
     int answer = kCanceledAnswer;
     Receiver receiver{&answer};
     auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* self, int& answer) { self->Speak(answer); }, &receiver);
+        [&receiver](int& answer) { receiver.Speak(answer); });
     int result = kSuccessAnswer;
 
     cb.Run(result);
@@ -226,7 +47,7 @@ TEST(ClientContinuation, LambdaRawPtr) {
     int answer = kCanceledAnswer;
     Receiver receiver{&answer};
     auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-        [](Receiver* self, int& answer) { self->Speak(answer); }, &receiver);
+        [&receiver](int& answer) { receiver.Speak(answer); });
     int result = kSuccessAnswer;
 
     fake_client.reset();
@@ -236,27 +57,12 @@ TEST(ClientContinuation, LambdaRawPtr) {
   }
 }
 
-TEST(ClientContinuation, CurryArguments) {
+TEST(ClientContinuation, SupportGenericLambda) {
   std::shared_ptr fake_client = GetFakeClient();
   int answer = kCanceledAnswer;
   std::unique_ptr receiver = std::make_unique<Receiver>(Receiver{&answer});
   auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-      [](Receiver* receiver, const std::string& arg, int& answer) {
-        EXPECT_EQ("hello", arg);
-        receiver->Speak(answer);
-      },
-      std::move(receiver), "hello");
-  int result = kSuccessAnswer;
-  cb.Run(result);
-  EXPECT_EQ(kSuccessAnswer, answer);
-}
-
-TEST(ClientContinuation, GenericLambda) {
-  std::shared_ptr fake_client = GetFakeClient();
-  int answer = kCanceledAnswer;
-  std::unique_ptr receiver = std::make_unique<Receiver>(Receiver{&answer});
-  auto cb = WeakCallbackFactory<int>{fake_client}.Then(
-      [](Receiver* receiver, auto&& answer) { receiver->Speak(answer); }, std::move(receiver));
+      [receiver = std::move(receiver)](auto&& answer) { receiver->Speak(answer); });
   int result = kSuccessAnswer;
 
   cb.Run(result);

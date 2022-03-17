@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/zx/channel.h>
 
 #include <sanitizer/lsan_interface.h>

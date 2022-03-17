@@ -185,6 +185,8 @@ var (
 	WireCompleterBase       = internalNs.member("WireCompleterBase")
 	WireMethodTypes         = internalNs.member("WireMethodTypes")
 	WireOrdinal             = internalNs.member("WireOrdinal")
+	WireThenable            = internalNs.member("WireThenable")
+	WireBufferThenable      = internalNs.member("WireBufferThenable")
 )
 
 type wireTypeNames struct {
@@ -455,6 +457,8 @@ type wireMethod struct {
 	WireTransactionalResponse name
 	WireResult                name
 	WireUnownedResult         name
+	WireThenable              name
+	WireBufferThenable        name
 }
 
 func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, methodMarker name) wireMethod {
@@ -478,6 +482,8 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 		WireTransactionalResponse: TransactionalResponse.template(methodMarker),
 		WireResult:                WireResult.template(methodMarker),
 		WireUnownedResult:         WireUnownedResult.template(methodMarker),
+		WireThenable:              WireThenable.template(methodMarker),
+		WireBufferThenable:        WireBufferThenable.template(methodMarker),
 	}
 }
 

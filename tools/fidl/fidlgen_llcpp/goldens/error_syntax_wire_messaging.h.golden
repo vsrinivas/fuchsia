@@ -236,6 +236,22 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                  ComposedCallWhichMayFail>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                  ComposedCallWhichMayFail>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -249,6 +265,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1223,6 +1253,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                                    ComposedCallWhichMayFail>* response)>
           _cb);
   // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(::fidl::StringView s);
+  // The request and callback are allocated on the heap.
   void CallWhichMayFail(
       ::fidl::StringView s,
       ::fidl::WireClientCallback<
@@ -1234,6 +1268,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    CallWhichMayFail>* response)>
           _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(::fidl::StringView s);
 };
 
 template <>
@@ -1259,11 +1297,21 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                                       ComposedCallWhichMayFail>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(::fidl::StringView s);
+
+  // Caller provides the backing storage for FIDL message.
   void CallWhichMayFail(
       ::fidl::StringView s,
       ::fidl::WireResponseContext<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
           _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(::fidl::StringView s);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

@@ -14,6 +14,7 @@
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/time.h>
 #include <string.h>
 #include <zircon/types.h>
 
@@ -65,15 +66,54 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  client->TwoWay(fidl::StringView(data), [&done](fidl::WireUnownedResult<Example::TwoWay>& result) {
-    ASSERT_OK(result.status());
-    ASSERT_EQ(strlen(data), result->out.size());
-    EXPECT_EQ(0, strncmp(result->out.data(), data, strlen(data)));
-    sync_completion_signal(&done);
-  });
+  client->TwoWay(fidl::StringView(data))
+      .ThenExactlyOnce([&done](fidl::WireUnownedResult<Example::TwoWay>& result) {
+        ASSERT_OK(result.status());
+        ASSERT_EQ(strlen(data), result->out.size());
+        EXPECT_EQ(0, strncmp(result->out.data(), data, strlen(data)));
+        sync_completion_signal(&done);
+      });
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
+}
+
+TEST(GenAPITestCase, TwoWayAsyncResponseContext) {
+  class ResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+   public:
+    ResponseContext(libsync::Completion* done, const char* data, size_t size)
+        : done_(done), data_(data), size_(size) {}
+
+    void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
+      ASSERT_OK(result.status());
+      auto& out = result->out;
+      ASSERT_EQ(size_, out.size());
+      EXPECT_EQ(0, strncmp(out.data(), data_, size_));
+      done_->Signal();
+    }
+
+   private:
+    libsync::Completion* done_;
+    const char* data_;
+    size_t size_;
+  };
+
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+
+  static constexpr char kData[] = "TwoWay() sync response context";
+  fidl::BindServer(loop.dispatcher(), std::move(remote),
+                   std::make_unique<Server>(kData, strlen(kData)));
+
+  libsync::Completion done;
+  ResponseContext context(&done, kData, strlen(kData));
+  client->TwoWay(fidl::StringView(kData)).ThenExactlyOnce(&context);
+  ASSERT_OK(done.Wait(zx::duration::infinite()));
 }
 
 TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
@@ -111,7 +151,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   sync_completion_t done;
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
   ResponseContext context(&done, data, strlen(data));
-  client.buffer(buffer.view())->TwoWay(fidl::StringView(data), &context);
+  client.buffer(buffer.view())->TwoWay(fidl::StringView(data)).ThenExactlyOnce(&context);
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
@@ -462,7 +502,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
                                      fidl::Reason::kTransportError);
 
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client.buffer(buffer.view())->TwoWay("foo", &context);
+  client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
   ASSERT_OK(error.Wait());
 }
 
@@ -481,7 +521,7 @@ TEST(GenAPITestCase, AsyncNotifySendError) {
                                        fidl::Reason::kTransportError);
 
     fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client.buffer(buffer.view())->TwoWay("foo", &context);
+    client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
     // The context should be asynchronously notified.
     EXPECT_FALSE(error.signaled());
     loop.RunUntilIdle();
@@ -506,7 +546,7 @@ TEST(GenAPITestCase, AsyncNotifyTeardownError) {
   ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
 
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client.buffer(buffer.view())->TwoWay("foo", &context);
+  client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
   EXPECT_FALSE(error.signaled());
   loop.RunUntilIdle();
   EXPECT_TRUE(error.signaled());
@@ -536,7 +576,7 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
     EXPECT_FALSE(error.signaled());
 
     fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client.buffer(buffer.view())->TwoWay("foo", &context);
+    client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
     // If the loop was shutdown, |context| should still be notified, although
     // it has to happen on the current stack frame.
     EXPECT_TRUE(error.signaled());
@@ -547,26 +587,29 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
 }
 
 // An integration-style test that verifies that user-supplied async callbacks
-// that takes |fidl::WireResponse| are not invoked when the binding is torn down
-// by the user (i.e. explicit cancellation) instead of due to errors.
-TEST(GenAPITestCase, SkipCallingInFlightResponseCallbacksDuringCancellation) {
+// attached using |Then| with client lifetime are not invoked when the client is
+// destroyed by the user (i.e. explicit cancellation) instead of due to errors.
+TEST(GenAPITestCase, ThenWithClientLifetime) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
     auto endpoints = fidl::CreateEndpoints<Example>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
-
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ClientType client(std::move(local), loop.dispatcher());
-    bool destroyed = false;
-    auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
-    client->TwoWay("foo", [observer = std::move(callback_destruction_observer)](
-                              fidl::WireResponse<Example::TwoWay>* response) {
+    struct Receiver {
+      ClientType client;
+    };
+    Receiver receiver{ClientType(std::move(local), loop.dispatcher())};
+
+    bool destroyed = false;
+    receiver.client->TwoWay("foo").Then([observer = fit::defer([&] { destroyed = true; })](
+                                            fidl::WireUnownedResult<Example::TwoWay>& result) {
       ADD_FATAL_FAILURE("Should not be invoked");
     });
     // Immediately start cancellation.
-    client = {};
+    receiver = {};
+    ASSERT_FALSE(destroyed);
     loop.RunUntilIdle();
 
     // The callback should be destroyed without being called.
@@ -580,7 +623,7 @@ TEST(GenAPITestCase, SkipCallingInFlightResponseCallbacksDuringCancellation) {
 // An integration-style test that verifies that user-supplied async callbacks
 // that takes |fidl::WireUnownedResult| are correctly notified when the binding
 // is torn down by the user (i.e. explicit cancellation).
-TEST(GenAPITestCase, NotifyInFlightResultCallbacksDuringCancellation) {
+TEST(GenAPITestCase, ThenExactlyOnce) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
     auto endpoints = fidl::CreateEndpoints<Example>();
@@ -593,12 +636,13 @@ TEST(GenAPITestCase, NotifyInFlightResultCallbacksDuringCancellation) {
     bool destroyed = false;
     auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
-    client->TwoWay("foo", [observer = std::move(callback_destruction_observer),
-                           &called](fidl::WireUnownedResult<Example::TwoWay>& result) {
-      called = true;
-      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
-      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
-    });
+    client->TwoWay("foo").ThenExactlyOnce(
+        [observer = std::move(callback_destruction_observer),
+         &called](fidl::WireUnownedResult<Example::TwoWay>& result) {
+          called = true;
+          EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+          EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+        });
     // Immediately start cancellation.
     client = {};
     loop.RunUntilIdle();
@@ -696,16 +740,17 @@ TEST(AllClients, SendErrorLeadsToBindingTeardown) {
     ClientType client(std::move(local), loop.dispatcher(), &event_handler);
 
     EXPECT_FALSE(event_handler.errored());
-    client->TwoWay("foo", [](fidl::WireResponse<Example::TwoWay>*) {});
+    client->TwoWay("foo").ThenExactlyOnce([](fidl::WireUnownedResult<Example::TwoWay>&) {});
     loop.RunUntilIdle();
     EXPECT_TRUE(event_handler.errored());
 
     bool called = false;
-    client->TwoWay("foo", [&called](fidl::WireUnownedResult<Example::TwoWay>& result) {
-      called = true;
-      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
-      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
-    });
+    client->TwoWay("foo").ThenExactlyOnce(
+        [&called](fidl::WireUnownedResult<Example::TwoWay>& result) {
+          called = true;
+          EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+          EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+        });
     loop.RunUntilIdle();
     EXPECT_TRUE(called);
   };

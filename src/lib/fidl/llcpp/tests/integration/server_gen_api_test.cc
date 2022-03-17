@@ -1351,7 +1351,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
   {
     async::Loop client_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     fidl::WireClient client(std::move(local), client_loop.dispatcher());
-    client->TwoWay(kData, [](fidl::WireResponse<Example::TwoWay>*) {});
+    client->TwoWay(kData).ThenExactlyOnce([](fidl::WireUnownedResult<Example::TwoWay>&) {});
     ASSERT_OK(client->OneWay(kData).status());
     ASSERT_OK(client_loop.RunUntilIdle());
   }

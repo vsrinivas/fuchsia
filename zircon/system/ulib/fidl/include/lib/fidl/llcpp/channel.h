@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/zx/status.h>
 
 namespace fidl {

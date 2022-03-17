@@ -56,28 +56,15 @@ int main(int argc, const char** argv) {
 
   // Make an EchoString call, passing it a lambda to handle the result asynchronously.
   // |result| contains the method response or a transport error if applicable.
-  client->EchoString("hello",
-                     [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
-                       ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
-                                     result.error().FormatDescription().c_str());
-                       auto* response = result.Unwrap();
-                       std::string reply(response->response.data(), response->response.size());
-                       std::cout << "Got response (result callback): " << reply << std::endl;
-                       loop.Quit();
-                     });
-  loop.Run();
-  loop.ResetQuit();
-
-  // Make an EchoString call and handle the response asynchronously.
-  // This overload will only invoke the callback when the client successfully
-  // receives and decodes the reply. It is suitable when all transport errors can
-  // be handled in the |on_fidl_error| handler.
-  client->EchoString("hello",
-                     [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
-                       std::string reply(response->response.data(), response->response.size());
-                       std::cout << "Got response (response callback): " << reply << std::endl;
-                       loop.Quit();
-                     });
+  client->EchoString("hello").Then(
+      [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+        ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
+                      result.error().FormatDescription().c_str());
+        auto* response = result.Unwrap();
+        std::string reply(response->response.data(), response->response.size());
+        std::cout << "Got response (result callback): " << reply << std::endl;
+        loop.Quit();
+      });
   loop.Run();
   loop.ResetQuit();
 

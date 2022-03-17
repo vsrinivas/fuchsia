@@ -392,6 +392,17 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<::test_protocolrequest::Parent::GetChild>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolrequest::Parent>::GetChild() {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolrequest::Parent::GetChild>
+      _request{};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolrequest::Parent::GetChild>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::WireClientCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>
@@ -467,6 +478,17 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<::test_protocolrequest::Parent::GetChildRequest>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolrequest::Parent>::GetChildRequest() {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolrequest::Parent::GetChildRequest>
+      _request{};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolrequest::Parent::GetChildRequest>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 ::fidl::Status fidl::internal::
     WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::TakeChild(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
@@ -533,6 +555,20 @@ void fidl::internal::
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireBufferThenable<::test_protocolrequest::Parent::GetChild>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolrequest::Parent>::GetChild() {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::GetChild>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolrequest::Parent::GetChild>
+      _request{};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolrequest::Parent::GetChild>{_client_base(), _allocator(),
+                                                _buffer_size, &_request};
+}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolrequest::Parent>::
     GetChildRequest(
@@ -557,6 +593,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocolrequest::Parent::GetChildRequest>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolrequest::Parent::GetChildRequest>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolrequest::Parent>::GetChildRequest() {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::GetChildRequest>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolrequest::Parent::GetChildRequest>
+      _request{};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolrequest::Parent::GetChildRequest>{
+      _client_base(), _allocator(), _buffer_size, &_request};
 }
 
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> fidl::internal::

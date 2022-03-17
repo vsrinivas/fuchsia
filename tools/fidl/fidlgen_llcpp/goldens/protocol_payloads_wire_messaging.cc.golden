@@ -1179,6 +1179,18 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayComposed(int32_t a) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+      _request{a};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayComposedWithError(
@@ -1262,6 +1274,18 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayComposedWithError(int32_t a) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+      _request{a};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::
     WireWeakAsyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayLocal(
         uint32_t a, uint32_t b,
@@ -1340,6 +1364,19 @@ void fidl::internal::
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayLocal(uint32_t a,
+                                                        uint32_t b) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+      _request{a, b};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -1422,6 +1459,19 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayLocalWithError(uint32_t a,
+                                                                 uint32_t b) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+      _request{a, b};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayImport(int32_t a,
@@ -1501,6 +1551,18 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayImport(int32_t a) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>
+      _request{a};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -1583,6 +1645,18 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayImportWithError(int32_t a) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+      _request{a};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::
     WireWeakAsyncClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayAnon(
         uint32_t a, uint32_t b,
@@ -1660,6 +1734,18 @@ void fidl::internal::
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayAnon(uint32_t a, uint32_t b) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+      _request{a, b};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -1741,6 +1827,19 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+fidl::internal::WireWeakAsyncClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayAnonWithError(uint32_t a,
+                                                                uint32_t b) {
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+      _request{a, b};
+  return ::fidl::internal::WireThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayComposed(int32_t a) {
@@ -1849,6 +1948,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayComposed(int32_t a) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposed>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+      _request{a};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>{
+      _client_base(), _allocator(), _buffer_size, &_request};
+}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayComposedWithError(
@@ -1876,6 +1990,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayComposedWithError(int32_t a) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+      _request{a};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>{
+      _client_base(), _allocator(), _buffer_size, &_request};
+}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayLocal(
@@ -1901,6 +2030,22 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayLocal(uint32_t a,
+                                                        uint32_t b) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+      _request{a, b};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>{
+      _client_base(), _allocator(), _buffer_size, &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -1929,6 +2074,22 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayLocalWithError(uint32_t a,
+                                                                 uint32_t b) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+      _request{a, b};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>{
+      _client_base(), _allocator(), _buffer_size, &_request};
+}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayImport(
@@ -1954,6 +2115,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocolpayloads::MainProtocol::TwoWayImport>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayImport(int32_t a) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>
+      _request{a};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>{
+      _client_base(), _allocator(), _buffer_size, &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -1982,6 +2158,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayImportWithError(int32_t a) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+      _request{a};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>{
+      _client_base(), _allocator(), _buffer_size, &_request};
+}
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
     TwoWayAnon(
@@ -2007,6 +2198,21 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayAnon(uint32_t a, uint32_t b) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+      _request{a, b};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>{
+      _client_base(), _allocator(), _buffer_size, &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::
@@ -2034,6 +2240,22 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolpayloads::MainProtocol>::TwoWayAnonWithError(uint32_t a,
+                                                                uint32_t b) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>();
+  ::fidl::internal::TransactionalRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+      _request{a, b};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>{
+      _client_base(), _allocator(), _buffer_size, &_request};
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>

@@ -164,7 +164,7 @@ TEST_F(WireClientTest, TwoWayCallerAllocateBufferSpan) {
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
 
   GrobResponseContext context;
-  client.buffer(buffer.view())->Grob("test", &context);
+  client.buffer(buffer.view())->Grob("test").ThenExactlyOnce(&context);
   loop()->RunUntilIdle();
 
   EXPECT_TRUE(context.got_result);
@@ -176,7 +176,7 @@ TEST_F(WireClientTest, TwoWayCallerAllocateArena) {
 
   EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
   GrobResponseContext context;
-  client.buffer(arena)->Grob("test", &context);
+  client.buffer(arena)->Grob("test").ThenExactlyOnce(&context);
   loop()->RunUntilIdle();
 
   EXPECT_TRUE(context.got_result);
@@ -208,7 +208,7 @@ TEST_F(WireSharedClientTest, TwoWayCallerAllocateBufferSpan) {
   fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
 
   GrobResponseContext context;
-  client.buffer(buffer.view())->Grob("test", &context);
+  client.buffer(buffer.view())->Grob("test").ThenExactlyOnce(&context);
   loop()->RunUntilIdle();
 
   EXPECT_TRUE(context.got_result);
@@ -220,7 +220,7 @@ TEST_F(WireSharedClientTest, TwoWayCallerAllocateArena) {
 
   EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
   GrobResponseContext context;
-  client.buffer(arena)->Grob("test", &context);
+  client.buffer(arena)->Grob("test").ThenExactlyOnce(&context);
   loop()->RunUntilIdle();
 
   EXPECT_TRUE(context.got_result);

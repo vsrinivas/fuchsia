@@ -270,6 +270,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_unknowninteractions::Example::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_unknowninteractions::Example::StrictTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::Example::StrictTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::StrictTwoWay>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::Example::StrictTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::StrictTwoWay>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -281,6 +295,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_unknowninteractions::Example::FlexibleTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_unknowninteractions::Example::FlexibleTwoWay>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::Example::FlexibleTwoWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::FlexibleTwoWay>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::Example::FlexibleTwoWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::FlexibleTwoWay>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1409,6 +1437,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   void StrictTwoWay(::fit::callback<void()> _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_unknowninteractions::Example::StrictTwoWay>
+  StrictTwoWay();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void FlexibleTwoWay(::fidl::WireClientCallback<
                       ::test_unknowninteractions::Example::FlexibleTwoWay>
                           _cb);
@@ -1417,6 +1450,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<
                ::test_unknowninteractions::Example::FlexibleTwoWay>* response)>
           _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>
+  FlexibleTwoWay();
 };
 
 template <>
@@ -1447,9 +1485,19 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_unknowninteractions::Example::StrictTwoWay>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_unknowninteractions::Example::StrictTwoWay>
+  StrictTwoWay();
+
+  // Caller provides the backing storage for FIDL message.
   void FlexibleTwoWay(
       ::fidl::WireResponseContext<
           ::test_unknowninteractions::Example::FlexibleTwoWay>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>
+  FlexibleTwoWay();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

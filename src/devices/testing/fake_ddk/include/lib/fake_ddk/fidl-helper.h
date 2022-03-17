@@ -6,7 +6,7 @@
 #define SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FIDL_HELPER_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/zx/channel.h>

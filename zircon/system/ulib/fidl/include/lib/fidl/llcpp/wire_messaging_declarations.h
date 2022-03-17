@@ -176,6 +176,7 @@ class WireCompleterBase;
 // - the completer type associated with a particular method.
 // - if two-way and uses the error syntax: the application error type in the
 //   error syntax.
+// - if two-way: the thenable type associated with a particular method.
 template <typename FidlMethod>
 struct WireMethodTypes;
 

@@ -4,6 +4,8 @@
 
 #include "lib/fake_ddk/fidl-helper.h"
 
+#include <lib/fidl/llcpp/channel.h>
+
 namespace fake_ddk {
 namespace {
 // We are using lowest bit of transaction as a flag. The static assert assures us that this bit will

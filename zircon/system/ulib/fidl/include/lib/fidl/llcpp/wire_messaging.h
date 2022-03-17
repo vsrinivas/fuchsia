@@ -9,7 +9,6 @@
 #include <lib/fit/function.h>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/soft_migration.h>
@@ -51,6 +50,12 @@ using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Comp
 
 template <typename FidlMethod>
 using WireApplicationError = typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
+
+template <typename FidlMethod>
+using WireThenable = typename fidl::internal::WireMethodTypes<FidlMethod>::Thenable;
+
+template <typename FidlMethod>
+using WireBufferThenable = typename fidl::internal::WireMethodTypes<FidlMethod>::BufferThenable;
 
 }  // namespace internal
 

@@ -260,6 +260,24 @@ struct ::fidl::internal::WireMethodTypes<
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
           LibfuzzerNeedsNonemptyProtocol>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1758,6 +1776,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1771,6 +1803,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1784,6 +1830,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1797,6 +1857,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1810,6 +1884,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -3997,6 +4085,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                                      LibfuzzerNeedsNonemptyProtocol>
           _cb);
   void LibfuzzerNeedsNonemptyProtocol(::fit::callback<void()> _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                     LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol();
 };
 
 template <>
@@ -4020,6 +4113,12 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::fidl::WireResponseContext<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -4285,6 +4384,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(bool a);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void OnlyDenyGo(bool a,
                   ::fidl::WireClientCallback<
                       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
@@ -4295,6 +4399,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<
                ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(bool a);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void OnlyDenyLibfuzzer(
@@ -4309,6 +4418,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(bool a);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void OnlyDenyRust(bool a,
                     ::fidl::WireClientCallback<
                         ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
@@ -4321,6 +4435,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(bool a);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void OnlyDenySyzkaller(
       bool a, ::fidl::WireClientCallback<
                   ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
@@ -4331,6 +4450,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::
                                         OnlyDenySyzkaller>* response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(bool a);
 };
 
 template <>
@@ -4356,10 +4480,20 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  OnlyDenyDart(bool a);
+
+  // Caller provides the backing storage for FIDL message.
   void OnlyDenyGo(
       bool a,
       ::fidl::WireResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  OnlyDenyGo(bool a);
 
   // Caller provides the backing storage for FIDL message.
   void OnlyDenyLibfuzzer(
@@ -4368,16 +4502,31 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                   _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  OnlyDenyLibfuzzer(bool a);
+
+  // Caller provides the backing storage for FIDL message.
   void OnlyDenyRust(
       bool a,
       ::fidl::WireResponseContext<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  OnlyDenyRust(bool a);
+
+  // Caller provides the backing storage for FIDL message.
   void OnlyDenySyzkaller(
       bool a, ::fidl::WireResponseContext<
                   ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
                   _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  OnlyDenySyzkaller(bool a);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

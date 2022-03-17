@@ -120,6 +120,20 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
   using Completer = fidl::Completer<
       ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_drivertwoway::TwoWay::Add,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_drivertwoway::TwoWay::Add>,
+          ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_drivertwoway::TwoWay::Add,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_drivertwoway::TwoWay::Add>,
+          ::fidl::internal::DriverTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -516,6 +530,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   void Add(
       uint16_t addend1, uint16_t addend2,
       ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add> Add(
+      uint16_t addend1, uint16_t addend2);
 };
 namespace fidl {
 #endif  // __Fuchsia__

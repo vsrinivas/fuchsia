@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
+#include <lib/fitx/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
@@ -688,25 +689,48 @@ class UnownedEncodedMessage final {
                         uint32_t backing_buffer_size, FidlType* response)
       : UnownedEncodedMessage(fidl::internal::kLLCPPWireFormatVersion, iovec_capacity,
                               backing_buffer, backing_buffer_size, response) {}
+
+  // Encodes |value| by allocating a backing buffer from |backing_buffer_allocator|.
+  UnownedEncodedMessage(fidl::internal::AnyBufferAllocator& backing_buffer_allocator,
+                        uint32_t backing_buffer_size, FidlType* value)
+      : UnownedEncodedMessage(::fidl::internal::kLLCPPWireFormatVersion,
+                              ::fidl::internal::IovecBufferSize,
+                              backing_buffer_allocator.TryAllocate(backing_buffer_size), value) {}
+
+  // Encodes |value| using an existing |backing_buffer|.
   UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
                         uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size, FidlType* response)
-      : message_(::fidl::OutgoingMessage::Create_InternalMayBreak(
-            ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
-                .transport_vtable = &Transport::VTable,
-                .iovecs = iovecs_,
-                .iovec_capacity = iovec_capacity,
-                .handles = handle_storage_.data(),
-                .handle_metadata =
-                    reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_storage_.data()),
-                .handle_capacity = kNumHandles,
-                .backing_buffer = backing_buffer,
-                .backing_buffer_capacity = backing_buffer_size,
-            })),
+                        uint32_t backing_buffer_size, FidlType* value)
+      : UnownedEncodedMessage(wire_format_version, iovec_capacity,
+                              ::fitx::ok(::fidl::BufferSpan(backing_buffer, backing_buffer_size)),
+                              value) {}
+
+  // Core implementation which other constructors delegate to.
+  UnownedEncodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                        uint32_t iovec_capacity,
+                        ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
+                        FidlType* value)
+      : message_(backing_buffer.is_ok()
+                     ? ::fidl::OutgoingMessage::Create_InternalMayBreak(
+                           ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
+                               .transport_vtable = &Transport::VTable,
+                               .iovecs = iovecs_,
+                               .iovec_capacity = iovec_capacity,
+                               .handles = handle_storage_.data(),
+                               .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(
+                                   handle_metadata_storage_.data()),
+                               .handle_capacity = kNumHandles,
+                               .backing_buffer = backing_buffer->data,
+                               .backing_buffer_capacity = backing_buffer->capacity,
+                           })
+                     : ::fidl::OutgoingMessage{backing_buffer.error_value()}),
         wire_format_version_(wire_format_version) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<FidlType>(wire_format_version, response);
+    if (message_.ok()) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+      message_.Encode<FidlType>(wire_format_version, value);
+    }
   }
+
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
   UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
   UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;

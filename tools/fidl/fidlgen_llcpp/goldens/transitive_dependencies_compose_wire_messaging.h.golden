@@ -121,6 +121,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_transitivedependenciescompose::Top::GetFoo> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_transitivedependenciescompose::Top::GetFoo>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_transitivedependenciescompose::Top::GetFoo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_transitivedependenciescompose::Top::GetFoo>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_transitivedependenciescompose::Top::GetFoo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_transitivedependenciescompose::Top::GetFoo>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -618,6 +632,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<
                ::test_transitivedependenciescompose::Top::GetFoo>* response)>
           _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_transitivedependenciescompose::Top::GetFoo>
+  GetFoo();
 };
 
 template <>
@@ -639,6 +658,11 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   // Caller provides the backing storage for FIDL message.
   void GetFoo(::fidl::WireResponseContext<
               ::test_transitivedependenciescompose::Top::GetFoo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_transitivedependenciescompose::Top::GetFoo>
+  GetFoo();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

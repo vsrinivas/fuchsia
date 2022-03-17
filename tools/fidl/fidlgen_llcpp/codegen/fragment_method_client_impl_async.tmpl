@@ -5,6 +5,7 @@
 */}}
 
 {{- define "Method:WireWeakAsyncClientImpl:WireMessagingHeader" }}
+  {{- /* TODO(fxbug.dev/94402): Remove this overload. */}}
   {{- .Docs }}
   {{- if .DocComments }}
     //
@@ -17,6 +18,7 @@
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
 
+  {{- /* TODO(fxbug.dev/94402): Remove this overload. */}}
   {{- if .ResponseArgs }}
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
@@ -24,6 +26,17 @@
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void ()> _cb") }});
   {{- end -}}
+
+  {{- .Docs }}
+  {{- if .DocComments }}
+    //
+  {{- end }}
+  {{- if .Request.ClientAllocationV2.IsStack }}
+    // Allocates {{ .Request.ClientAllocationV2.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
+  {{- else }}
+    // The request and callback are allocated on the heap.
+  {{- end }}
+  {{ .WireThenable }} {{ .Name }}({{ RenderParams .RequestArgs }});
 
 {{- end }}
 
@@ -92,6 +105,12 @@
     ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
     _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+  }
+
+  {{ .WireThenable }} {{ .Protocol.WireWeakAsyncClientImpl.NoLeading }}::{{ .Name }}(
+        {{- RenderParams .RequestArgs }}) {
+    {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+    return {{ .WireThenable }}{_client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
   }
 
 {{- end }}

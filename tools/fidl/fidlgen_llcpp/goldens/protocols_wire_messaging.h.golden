@@ -252,6 +252,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::HandleRightsProtocol::ResponseMethod> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::HandleRightsProtocol::ResponseMethod,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::HandleRightsProtocol::ResponseMethod,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::HandleRightsProtocol::ResponseMethod>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1457,6 +1471,22 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestEmptyResponse>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestEmptyResponse>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1468,6 +1498,22 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestWithResponse>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  NoRequestWithResponse>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1480,6 +1526,22 @@ struct ::fidl::internal::WireMethodTypes<
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithAndWithoutRequestResponse::
           WithRequestEmptyResponse>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestEmptyResponse>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestEmptyResponse>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1492,6 +1554,22 @@ struct ::fidl::internal::WireMethodTypes<
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithAndWithoutRequestResponse::
           WithRequestWithResponse>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestWithResponse>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  WithRequestWithResponse>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -3581,6 +3659,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::Transitional::Request> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::Transitional::Request>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::Transitional::Request,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::Transitional::Request>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::Transitional::Request,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::Transitional::Request>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -4839,6 +4931,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::WithProtocolEnds::ClientEnds> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithProtocolEnds::ClientEnds>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::ClientEnds,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::ClientEnds>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::ClientEnds,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::ClientEnds>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -4850,6 +4956,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::WithProtocolEnds::ServerEnds> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithProtocolEnds::ServerEnds>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::ServerEnds,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::ServerEnds>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::ServerEnds,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::ServerEnds>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -4861,6 +4981,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::WithProtocolEnds::StructContainingEnds> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::WithProtocolEnds::StructContainingEnds>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::StructContainingEnds,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::StructContainingEnds>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithProtocolEnds::StructContainingEnds,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithProtocolEnds::StructContainingEnds>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -6837,6 +6971,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ResponseAsStruct,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ResponseAsStruct>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ResponseAsStruct,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ResponseAsStruct>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -6850,6 +6998,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -6863,6 +7025,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
 
   using ApplicationError = ::test_protocols::wire::ErrorEnum;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ErrorAsEnum,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ErrorAsEnum>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::ErrorAsEnum,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::ErrorAsEnum>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -6876,6 +7052,20 @@ struct ::fidl::internal::WireMethodTypes<
       ::test_protocols::WithErrorSyntax::HandleInResult>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::HandleInResult,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::HandleInResult>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithErrorSyntax::HandleInResult,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::WithErrorSyntax::HandleInResult>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -9038,6 +9228,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::ChannelProtocol::MethodB> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::ChannelProtocol::MethodB>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MethodB,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::MethodB>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MethodB,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::MethodB>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -9049,6 +9253,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::ChannelProtocol::TakeHandle> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::ChannelProtocol::TakeHandle>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::TakeHandle,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::TakeHandle>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::TakeHandle,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::TakeHandle>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -9060,6 +9278,20 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_protocols::ChannelProtocol::MutateSocket> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_protocols::ChannelProtocol::MutateSocket>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MutateSocket,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::MutateSocket>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MutateSocket,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_protocols::ChannelProtocol::MutateSocket>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -10409,6 +10641,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::
                                         ResponseMethod>* response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::HandleRightsProtocol::ResponseMethod>
+  ResponseMethod(::zx::socket&& h);
 };
 
 template <>
@@ -10435,6 +10672,11 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       ::zx::socket&& h,
       ::fidl::WireResponseContext<
           ::test_protocols::HandleRightsProtocol::ResponseMethod>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::HandleRightsProtocol::ResponseMethod>
+  ResponseMethod(::zx::socket&& h);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -10532,6 +10774,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   void NoRequestEmptyResponse(::fit::callback<void()> _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
+  NoRequestEmptyResponse();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void NoRequestWithResponse(::fidl::WireClientCallback<
                              ::test_protocols::WithAndWithoutRequestResponse::
                                  NoRequestWithResponse>
@@ -10541,6 +10788,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestWithResponse>* response)>
           _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+  NoRequestWithResponse();
   // The request and callback are allocated on the heap.
   void WithRequestEmptyResponse(
       ::fidl::StringView arg,
@@ -10550,6 +10802,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   void WithRequestEmptyResponse(::fidl::StringView arg,
                                 ::fit::callback<void()> _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
+  WithRequestEmptyResponse(::fidl::StringView arg);
   // The request and callback are allocated on the heap.
   void WithRequestWithResponse(
       ::fidl::StringView arg,
@@ -10563,6 +10819,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>* response)>
           _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
+  WithRequestWithResponse(::fidl::StringView arg);
 };
 
 template <>
@@ -10593,9 +10853,19 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                                   NoRequestEmptyResponse>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
+  NoRequestEmptyResponse();
+
+  // Caller provides the backing storage for FIDL message.
   void NoRequestWithResponse(::fidl::WireResponseContext<
                              ::test_protocols::WithAndWithoutRequestResponse::
                                  NoRequestWithResponse>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+  NoRequestWithResponse();
 
   // Caller provides the backing storage for FIDL message.
   void WithRequestEmptyResponse(
@@ -10605,11 +10875,21 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
               WithRequestEmptyResponse>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
+  WithRequestEmptyResponse(::fidl::StringView arg);
+
+  // Caller provides the backing storage for FIDL message.
   void WithRequestWithResponse(
       ::fidl::StringView arg,
       ::fidl::WireResponseContext<
           ::test_protocols::WithAndWithoutRequestResponse::
               WithRequestWithResponse>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
+  WithRequestWithResponse(::fidl::StringView arg);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -10727,6 +11007,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocols::Transitional>
       ::fit::callback<void(::fidl::WireResponse<
                            ::test_protocols::Transitional::Request>* response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::Transitional::Request>
+  Request(int64_t x);
 };
 
 template <>
@@ -10753,6 +11037,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
       int64_t x,
       ::fidl::WireResponseContext<::test_protocols::Transitional::Request>*
           _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_protocols::Transitional::Request>
+  Request(int64_t x);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::Transitional>
@@ -10928,6 +11216,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::WithProtocolEnds::ClientEnds>
+  ClientEnds(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void ServerEnds(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
       ::fidl::WireClientCallback<::test_protocols::WithProtocolEnds::ServerEnds>
@@ -10938,6 +11230,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>*
               response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::WithProtocolEnds::ServerEnds>
+  ServerEnds(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in);
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void StructContainingEnds(
@@ -10951,6 +11247,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
                                         StructContainingEnds>* response)>
           _cb);
+  // Allocates 32 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithProtocolEnds::StructContainingEnds>
+  StructContainingEnds(::test_protocols::wire::ProtocolEnds&& in);
 };
 
 template <>
@@ -10976,16 +11277,31 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocols::WithProtocolEnds::ClientEnds>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithProtocolEnds::ClientEnds>
+  ClientEnds(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in);
+
+  // Caller provides the backing storage for FIDL message.
   void ServerEnds(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
       ::fidl::WireResponseContext<
           ::test_protocols::WithProtocolEnds::ServerEnds>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithProtocolEnds::ServerEnds>
+  ServerEnds(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in);
+
+  // Caller provides the backing storage for FIDL message.
   void StructContainingEnds(
       ::test_protocols::wire::ProtocolEnds&& in,
       ::fidl::WireResponseContext<
           ::test_protocols::WithProtocolEnds::StructContainingEnds>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithProtocolEnds::StructContainingEnds>
+  StructContainingEnds(::test_protocols::wire::ProtocolEnds&& in);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -11166,6 +11482,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithErrorSyntax::ResponseAsStruct>
+  ResponseAsStruct();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void ErrorAsPrimitive(::fidl::WireClientCallback<
                         ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
                             _cb);
@@ -11174,6 +11495,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<
                ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* response)>
           _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  ErrorAsPrimitive();
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void ErrorAsEnum(
@@ -11186,6 +11512,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           _cb);
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::WithErrorSyntax::ErrorAsEnum>
+  ErrorAsEnum();
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   void HandleInResult(::fidl::WireClientCallback<
                       ::test_protocols::WithErrorSyntax::HandleInResult>
                           _cb);
@@ -11194,6 +11524,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           void(::fidl::WireResponse<
                ::test_protocols::WithErrorSyntax::HandleInResult>* response)>
           _cb);
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::WithErrorSyntax::HandleInResult>
+  HandleInResult();
 };
 
 template <>
@@ -11218,18 +11553,38 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           ::test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithErrorSyntax::ResponseAsStruct>
+  ResponseAsStruct();
+
+  // Caller provides the backing storage for FIDL message.
   void ErrorAsPrimitive(
       ::fidl::WireResponseContext<
           ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  ErrorAsPrimitive();
 
   // Caller provides the backing storage for FIDL message.
   void ErrorAsEnum(::fidl::WireResponseContext<
                    ::test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithErrorSyntax::ErrorAsEnum>
+  ErrorAsEnum();
+
+  // Caller provides the backing storage for FIDL message.
   void HandleInResult(
       ::fidl::WireResponseContext<
           ::test_protocols::WithErrorSyntax::HandleInResult>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::WithErrorSyntax::HandleInResult>
+  HandleInResult();
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<
@@ -11417,6 +11772,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                    void(::fidl::WireResponse<
                         ::test_protocols::ChannelProtocol::MethodB>* response)>
                    _cb);
+  // Allocates 32 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::ChannelProtocol::MethodB>
+  MethodB(int64_t a, int64_t b);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void TakeHandle(
@@ -11424,6 +11783,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::WireClientCallback<::test_protocols::ChannelProtocol::TakeHandle>
           _cb);
   void TakeHandle(::zx::handle&& h, ::fit::callback<void()> _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<::test_protocols::ChannelProtocol::TakeHandle>
+  TakeHandle(::zx::handle&& h);
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void MutateSocket(::zx::socket&& a,
@@ -11436,6 +11799,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>*
               response)>
           _cb);
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_protocols::ChannelProtocol::MutateSocket>
+  MutateSocket(::zx::socket&& a);
 };
 
 template <>
@@ -11464,15 +11832,30 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
           _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::ChannelProtocol::MethodB>
+  MethodB(int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message.
   void TakeHandle(::zx::handle&& h,
                   ::fidl::WireResponseContext<
                       ::test_protocols::ChannelProtocol::TakeHandle>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::ChannelProtocol::TakeHandle>
+  TakeHandle(::zx::handle&& h);
 
   // Caller provides the backing storage for FIDL message.
   void MutateSocket(
       ::zx::socket&& a,
       ::fidl::WireResponseContext<
           ::test_protocols::ChannelProtocol::MutateSocket>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_protocols::ChannelProtocol::MutateSocket>
+  MutateSocket(::zx::socket&& a);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

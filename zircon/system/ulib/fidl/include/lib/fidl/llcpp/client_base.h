@@ -9,9 +9,11 @@
 #include <lib/async/time.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/internal/client_continuation.h>
 #include <lib/fidl/llcpp/internal/client_details.h>
 #include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/traits.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
@@ -30,6 +32,8 @@ class ClientChecker;
 
 namespace fidl {
 namespace internal {
+
+class ClientControlBlock;
 
 // A mixin into |ResponseContext| to handle the asynchronous error delivery
 // aspects.
@@ -255,11 +259,10 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
  public:
   // Creates a |ClientBase| by binding to a transport. Notifies
   // |teardown_observer| on binding teardown.
-  static std::shared_ptr<ClientBase> Create(AnyTransport&& transport,
-                                            async_dispatcher_t* dispatcher,
-                                            AnyIncomingEventDispatcher&& event_dispatcher,
-                                            fidl::AnyTeardownObserver&& teardown_observer,
-                                            ThreadingPolicy threading_policy);
+  static std::shared_ptr<ClientBase> Create(
+      AnyTransport&& transport, async_dispatcher_t* dispatcher,
+      AnyIncomingEventDispatcher&& event_dispatcher, fidl::AnyTeardownObserver&& teardown_observer,
+      ThreadingPolicy threading_policy, std::weak_ptr<ClientControlBlock> client_object_lifetime);
 
   // Creates an unbound ClientBase. Only use it with |std::make_shared|.
   ClientBase() = default;
@@ -356,10 +359,20 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
                                      internal::IncomingTransportContext transport_context);
 
+  // Returns a weak pointer representing the lifetime of client objects exposed
+  // to the user, e.g. |fidl::WireClient|.
+  //
+  // When the weak pointer is expired, it indicates that the corresponding
+  // client objects have destructed.
+  const std::weak_ptr<ClientControlBlock>& client_object_lifetime() const {
+    return client_object_lifetime_;
+  }
+
  private:
   void Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
             AnyIncomingEventDispatcher&& event_dispatcher,
-            fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
+            fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
+            std::weak_ptr<ClientControlBlock> client_object_lifetime);
 
   // Handles errors in sending one-way or two-way FIDL requests. This may lead
   // to binding teardown.
@@ -381,6 +394,8 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncClientBinding> binding_;
+
+  std::weak_ptr<ClientControlBlock> client_object_lifetime_;
 
   // The dispatcher that is monitoring FIDL messages.
   async_dispatcher_t* dispatcher_ = nullptr;

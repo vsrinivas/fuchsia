@@ -225,6 +225,22 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_requestflexibleenvelope::Protocol::
+                  RequestStrictResponseFlexible>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_requestflexibleenvelope::Protocol::
+                  RequestStrictResponseFlexible>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -236,6 +252,22 @@ struct ::fidl::internal::WireMethodTypes<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_requestflexibleenvelope::Protocol::
+                  RequestFlexibleResponseStrict>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_requestflexibleenvelope::Protocol::
+                  RequestFlexibleResponseStrict>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1200,6 +1232,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                                    RequestStrictResponseFlexible>* response)>
           _cb);
   // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(
+      ::test_requestflexibleenvelope::wire::StrictFoo s);
+  // The request and callback are allocated on the heap.
   void RequestFlexibleResponseStrict(
       ::test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::WireClientCallback<::test_requestflexibleenvelope::Protocol::
@@ -1211,6 +1248,11 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
           ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
           _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
 };
 
 template <>
@@ -1236,10 +1278,22 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
                                       RequestStrictResponseFlexible>* _context);
 
   // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(
+      ::test_requestflexibleenvelope::wire::StrictFoo s);
+
+  // Caller provides the backing storage for FIDL message.
   void RequestFlexibleResponseStrict(
       ::test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
                                       RequestFlexibleResponseStrict>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<

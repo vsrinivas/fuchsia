@@ -163,6 +163,15 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
+
+::fidl::internal::WireThenable<::test_nullable::SimpleProtocol::Add>
+fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>::Add(
+    int32_t a, int32_t b) {
+  ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>
+      _request{a, b};
+  return ::fidl::internal::WireThenable<::test_nullable::SimpleProtocol::Add>{
+      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+}
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_nullable::SimpleProtocol>::Add(
         int32_t a, int32_t b,
@@ -186,6 +195,19 @@ void fidl::internal::
           ::test_nullable::SimpleProtocol::Add>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+
+::fidl::internal::WireBufferThenable<::test_nullable::SimpleProtocol::Add>
+fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_nullable::SimpleProtocol>::Add(int32_t a, int32_t b) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_nullable::SimpleProtocol::Add>();
+  ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>
+      _request{a, b};
+  return ::fidl::internal::WireBufferThenable<
+      ::test_nullable::SimpleProtocol::Add>{_client_base(), _allocator(),
+                                            _buffer_size, &_request};
 }
 
 ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>

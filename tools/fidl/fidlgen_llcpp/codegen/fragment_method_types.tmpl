@@ -16,6 +16,20 @@ struct {{ .WireMethodTypes }} {
   {{ if .Result }}
   using ApplicationError = {{ .Result.ErrorDecl }};
   {{ end }}
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      {{ .Marker }},
+      ::fidl::unstable::OwnedEncodedMessage<
+          {{ .WireTransactionalRequest }}, {{ .Transport.Type }}
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      {{ .Marker }},
+      ::fidl::unstable::UnownedEncodedMessage<
+          {{ .WireTransactionalRequest }}, {{ .Transport.Type }}
+      >
+  >;
 };
 
 {{ EndifFuchsia }}

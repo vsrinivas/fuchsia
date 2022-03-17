@@ -99,10 +99,11 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
 
   // Test the managed overload.
   {
-    client->GetResource([&](fidl::WireUnownedResult<test::Protocol::GetResource>& result) {
-      ASSERT_TRUE(result.ok());
-      // The handles in |r| should be closed by the bindings runtime after we return.
-    });
+    client->GetResource().ThenExactlyOnce(
+        [&](fidl::WireUnownedResult<test::Protocol::GetResource>& result) {
+          ASSERT_TRUE(result.ok());
+          // The handles in |r| should be closed by the bindings runtime after we return.
+        });
 
     ASSERT_OK(loop.RunUntilIdle());
     zx_signals_t signals;
@@ -121,7 +122,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
     };
     ResponseContext context;
     fidl::AsyncClientBuffer<test::Protocol::GetResource> buffer;
-    client.buffer(buffer.view())->GetResource(&context);
+    client.buffer(buffer.view())->GetResource().ThenExactlyOnce(&context);
 
     ASSERT_OK(loop.RunUntilIdle());
     zx_signals_t signals;

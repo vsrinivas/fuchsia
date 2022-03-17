@@ -14,26 +14,28 @@ namespace internal {
 // TODO(madhaviyengar): Move this constant to zircon/fidl.h
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
-std::shared_ptr<ClientBase> ClientBase::Create(AnyTransport&& transport,
-                                               async_dispatcher_t* dispatcher,
-                                               AnyIncomingEventDispatcher&& event_dispatcher,
-                                               fidl::AnyTeardownObserver&& teardown_observer,
-                                               ThreadingPolicy threading_policy) {
+std::shared_ptr<ClientBase> ClientBase::Create(
+    AnyTransport&& transport, async_dispatcher_t* dispatcher,
+    AnyIncomingEventDispatcher&& event_dispatcher, fidl::AnyTeardownObserver&& teardown_observer,
+    ThreadingPolicy threading_policy, std::weak_ptr<ClientControlBlock> client_object_lifetime) {
   std::shared_ptr client_base = std::make_shared<ClientBase>();
   client_base->Bind(std::move(transport), dispatcher, std::move(event_dispatcher),
-                    std::move(teardown_observer), threading_policy);
+                    std::move(teardown_observer), threading_policy,
+                    std::move(client_object_lifetime));
   return client_base;
 }
 
 void ClientBase::Bind(AnyTransport&& transport, async_dispatcher_t* dispatcher,
                       AnyIncomingEventDispatcher&& event_dispatcher,
-                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
+                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy,
+                      std::weak_ptr<ClientControlBlock> client_object_lifetime) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   auto binding = AsyncClientBinding::Create(
       dispatcher, std::make_shared<fidl::internal::AnyTransport>(std::move(transport)),
       shared_from_this(), event_dispatcher->event_handler(), std::move(teardown_observer),
       threading_policy);
   binding_ = binding;
+  client_object_lifetime_ = std::move(client_object_lifetime);
   dispatcher_ = dispatcher;
   event_dispatcher_ = std::move(event_dispatcher);
   binding->BeginFirstWait();
@@ -185,9 +187,15 @@ void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatc
                             AnyTeardownObserver&& teardown_observer,
                             ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);
+  // This three step dance is to setup a circular reference where |ClientBase|
+  // weakly references |ClientControlBlock| and |ClientControlBlock| strongly
+  // references |ClientBase|.
+  control_ = std::make_shared<ClientControlBlock>(nullptr);
   client_impl_ = ClientBase::Create(std::move(client_end), dispatcher, std::move(event_dispatcher),
-                                    std::move(teardown_observer), threading_policy);
-  control_ = std::make_shared<ClientControlBlock>(client_impl_);
+                                    std::move(teardown_observer), threading_policy,
+                                    control_->weak_from_this());
+  // Actually fill in the |client_impl_|.
+  *control_ = ClientControlBlock{client_impl_};
 }
 
 void ClientController::Unbind() {

@@ -116,6 +116,20 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_inheritance::Super::Foo> {
   using Completer = fidl::Completer<
       ::fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_inheritance::Super::Foo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_inheritance::Super::Foo>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_inheritance::Super::Foo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<
+              ::test_inheritance::Super::Foo>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -644,6 +658,18 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_inheritance::Sub::Foo> {
   using Completer = fidl::Completer<
       ::fidl::internal::WireCompleterBase<::test_inheritance::Sub::Foo>>;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_inheritance::Sub::Foo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_inheritance::Sub::Foo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -1098,6 +1124,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super> final
            ::fit::callback<void(
                ::fidl::WireResponse<::test_inheritance::Super::Foo>* response)>
                _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<::test_inheritance::Super::Foo> Foo(
+      ::fidl::StringView s);
 };
 
 template <>
@@ -1118,6 +1147,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>
   void Foo(
       ::fidl::StringView s,
       ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_inheritance::Super::Foo> Foo(
+      ::fidl::StringView s);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super> final
@@ -1188,6 +1221,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub> final
            ::fit::callback<void(
                ::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)>
                _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<::test_inheritance::Sub::Foo> Foo(
+      ::fidl::StringView s);
 };
 
 template <>
@@ -1207,6 +1243,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>
   // Caller provides the backing storage for FIDL message.
   void Foo(::fidl::StringView s,
            ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_inheritance::Sub::Foo> Foo(
+      ::fidl::StringView s);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub> final

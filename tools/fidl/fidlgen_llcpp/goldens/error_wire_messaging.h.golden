@@ -119,6 +119,18 @@ struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
       ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
 
   using ApplicationError = uint32_t;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_error::Example::Foo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
+          ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_error::Example::Foo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>,
+          ::fidl::internal::ChannelTransport>>;
 };
 
 #endif  // __Fuchsia__
@@ -571,6 +583,9 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_error::Example> final
            ::fit::callback<
                void(::fidl::WireResponse<::test_error::Example::Foo>* response)>
                _cb);
+  // The request and callback are allocated on the heap.
+  ::fidl::internal::WireThenable<::test_error::Example::Foo> Foo(
+      ::fidl::StringView s);
 };
 
 template <>
@@ -590,6 +605,10 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
   // Caller provides the backing storage for FIDL message.
   void Foo(::fidl::StringView s,
            ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::internal::WireBufferThenable<::test_error::Example::Foo> Foo(
+      ::fidl::StringView s);
 };
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final
