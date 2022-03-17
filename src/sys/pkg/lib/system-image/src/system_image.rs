@@ -4,8 +4,10 @@
 
 use {
     crate::{
-        get_system_image_hash, CachePackages, CachePackagesInitError, NonStaticAllowList,
-        StaticPackages, StaticPackagesInitError,
+        get_system_image_hash,
+        path_hash_mapping::{Cache, PathHashMapping},
+        CachePackages, CachePackagesInitError, NonStaticAllowList, StaticPackages,
+        StaticPackagesInitError,
     },
     anyhow::Context as _,
     fuchsia_hash::Hash,
@@ -55,13 +57,29 @@ impl SystemImage {
         &self.root_dir.hash()
     }
 
-    /// Load `data/cache_packages.json`.
+    /// Load `data/cache_packages.json`, and fallback to `data/cache_packages` if not found.
     pub async fn cache_packages(&self) -> Result<CachePackages, CachePackagesInitError> {
-        self.root_dir
-            .read_file("data/cache_packages.json")
-            .await
-            .map_err(CachePackagesInitError::ReadCachePackagesJson)
-            .and_then(|content| CachePackages::from_json(content.as_slice()))
+        // Attempt to read data/cache_packages.json.
+        let cache_packages_json = self.root_dir.read_file("data/cache_packages.json").await;
+
+        match cache_packages_json {
+            Ok(content) => return CachePackages::from_json(content.as_slice()).map_err(Into::into),
+            // data/cache_packages.json not found, fall through to attempt reading data/cache_packages.
+            Err(package_directory::ReadFileError::NoFileAtPath { .. }) => {}
+            Err(e) => {
+                return Err(CachePackagesInitError::ReadCachePackagesJson(e));
+            }
+        }
+
+        // Attempt to read data/cache_packages.
+        CachePackages::from_path_hash_mapping(PathHashMapping::<Cache>::deserialize(
+            self.root_dir
+                .read_file("data/cache_packages")
+                .await
+                .map_err(CachePackagesInitError::ReadCachePackages)?
+                .as_slice(),
+        )?)
+        .map_err(Into::into)
     }
 
     /// Load `data/static_packages`.
@@ -129,7 +147,7 @@ mod tests {
         let (_env, system_image) = TestEnv::new(SystemImageBuilder::new()).await;
         assert_matches!(
             system_image.cache_packages().await,
-            Err(CachePackagesInitError::ReadCachePackagesJson(
+            Err(CachePackagesInitError::ReadCachePackages(
                 package_directory::ReadFileError::NoFileAtPath { .. }
             ))
         );
@@ -147,6 +165,34 @@ mod tests {
             system_image.cache_packages().await.unwrap(),
             CachePackages::from_entries(
                 vec!["fuchsia-pkg://fuchsia.com/name/variant?hash=0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap()
+                ]
+            )
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn cache_packages_deserialize_valid_json() {
+        let cache_packages_json = br#"
+        {
+            "version": "1",
+            "content": [
+                "fuchsia-pkg://foo.bar/from-json/1?hash=0101010101010101010101010101010101010101010101010101010101010101"
+            ]
+        }"#;
+
+        let (_env, system_image) = TestEnv::new(
+            SystemImageBuilder::new()
+                .cache_package("from-line/0".parse().unwrap(), [0; 32].into())
+                .cache_packages_json(cache_packages_json.to_vec()),
+        )
+        .await;
+
+        assert_eq!(
+            system_image.cache_packages().await.unwrap(),
+            CachePackages::from_entries(
+                vec!["fuchsia-pkg://foo.bar/from-json/1?hash=0101010101010101010101010101010101010101010101010101010101010101"
                     .parse()
                     .unwrap()
                 ]

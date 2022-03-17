@@ -8,8 +8,7 @@ use {
     fuchsia_pkg::PackagePath,
     fuchsia_url::pkg_url::PinnedPkgUrl,
     std::future::Future,
-    system_image::CachePackages,
-    system_image::StaticPackages,
+    system_image::{CachePackages, StaticPackages},
 };
 
 const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
@@ -19,6 +18,7 @@ const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 pub struct SystemImageBuilder<'a> {
     static_packages: Option<Vec<(PackagePath, Hash)>>,
     cache_packages: Option<Vec<PinnedPkgUrl>>,
+    cache_packages_json: Option<Vec<u8>>,
     pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
@@ -58,6 +58,15 @@ impl<'a> SystemImageBuilder<'a> {
     pub fn cache_packages(mut self, cache_packages: &[&Package]) -> Self {
         assert_eq!(self.cache_packages, None);
         self.cache_packages = Some(Self::packages_to_urls(cache_packages));
+        self
+    }
+
+    /// The raw byte content for the json formatted cache packages manifest. Call at most once.
+    /// TODO(fxbug.dev/90762) Remove this method and have the other cache packages methods
+    /// just make the json file when the line oriented file is removed.
+    pub fn cache_packages_json(mut self, cache_packages_json: Vec<u8>) -> Self {
+        assert_eq!(self.cache_packages_json, None);
+        self.cache_packages_json = Some(cache_packages_json);
         self
     }
 
@@ -112,8 +121,14 @@ impl<'a> SystemImageBuilder<'a> {
 
         if let Some(cache_packages) = &self.cache_packages {
             bytes.clear();
-            let cache_packages = CachePackages::from_entries(cache_packages.clone());
-            cache_packages.serialize(&mut bytes).unwrap();
+            serlialize_cache_packages(
+                CachePackages::from_entries(cache_packages.to_vec()),
+                &mut bytes,
+            );
+            builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
+        }
+
+        if let Some(bytes) = &self.cache_packages_json {
             builder = builder.add_resource_at("data/cache_packages.json", bytes.as_slice());
         }
 
@@ -131,5 +146,16 @@ impl<'a> SystemImageBuilder<'a> {
         }
 
         async move { builder.build().await.unwrap() }
+    }
+}
+
+fn serlialize_cache_packages(cache_packages: CachePackages, mut writer: impl std::io::Write) {
+    for url in cache_packages.contents() {
+        let package_hash = url.package_hash();
+        let path = fuchsia_pkg::PackagePath::from_name_and_variant(
+            url.name().clone(),
+            url.variant().unwrap_or(&fuchsia_pkg::PackageVariant::zero()).clone(),
+        );
+        writeln!(&mut writer, "{}={}", path, package_hash).unwrap();
     }
 }
