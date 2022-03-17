@@ -516,6 +516,9 @@ they often accompany other incompatible changes:
 
 ### Constraints {#constraints}
 
+For more information on what a constraint is in FIDL, see
+[Type, layout, constraint][lexicon-type].
+
 **ABI**
 
 Relaxing or tightening constraints is binary-compatible. However, when evolving
@@ -579,6 +582,7 @@ languages that do not support ADTs like C++.
 [example-union-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/union_strict_flexible.md
 [rfc-0057-motivation]: /docs/contribute/governance/rfcs/0057_default_no_handles.md#motivation
 [lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
+[lexicon-type]: /docs/reference/fidl/language/lexicon.md#type-terms
 [Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 [rust-bindings-tables]: /docs/reference/fidl/bindings/rust-bindings.md#types-tables
 [rust-enum-macro]: /docs/reference/fidl/bindings/rust-bindings.md#types-enums
