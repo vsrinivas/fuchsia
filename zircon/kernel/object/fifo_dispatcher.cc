@@ -98,19 +98,18 @@ void FifoDispatcher::OnPeerZeroHandlesLocked() {
 }
 
 zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const uint8_t> ptr,
-                                          size_t count,
-                                          size_t* actual) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                          size_t count, size_t* actual) {
   canary_.Assert();
 
   Guard<Mutex> guard{get_lock()};
   if (!peer_)
     return ZX_ERR_PEER_CLOSED;
+  AssertHeld(*peer_->get_lock());
   return peer_->WriteSelfLocked(elem_size, ptr, count, actual);
 }
 
 zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr,
-                                            size_t count,
-                                            size_t* actual) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                            size_t count, size_t* actual) {
   canary_.Assert();
 
   if (elem_size != elem_size_)
@@ -160,15 +159,17 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
     UpdateStateLocked(0u, ZX_FIFO_READABLE);
 
   // if now full, we're no longer writable
-  if (elem_count_ == (head_ - tail_))
+  if (elem_count_ == (head_ - tail_)) {
+    AssertHeld(*peer_->get_lock());
     peer_->UpdateStateLocked(ZX_FIFO_WRITABLE, 0u);
+  }
 
   *actual = (head_ - old_head);
   return ZX_OK;
 }
 
 zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> ptr, size_t count,
-                                       size_t* actual) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                       size_t* actual) {
   canary_.Assert();
 
   if (elem_size != elem_size_)
@@ -215,8 +216,10 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   }
 
   // if we were full, we have become writable
-  if (was_full && peer_)
+  if (was_full && peer_) {
+    AssertHeld(*peer_->get_lock());
     peer_->UpdateStateLocked(0u, ZX_FIFO_WRITABLE);
+  }
 
   // if we've become empty, we're no longer readable
   if ((head_ - tail_) == 0)
