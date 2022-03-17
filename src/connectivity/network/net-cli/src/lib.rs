@@ -353,13 +353,14 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     })
                     .context("get configuration")?;
 
-                info!(
+                writeln!(
+                    out,
                     "IP forwarding for {:?} is {} on interface {}",
                     ip_version,
                     extract_ip_forwarding(configuration, ip_version)
                         .context("extract IP forwarding configuration")?,
                     id
-                );
+                )?;
             }
             opts::IfIpForwardEnum::Set(opts::IfIpForwardSet { interface, ip_version, enable }) => {
                 let id = interface.find_nicid(connector).await.context("find nicid")?;
@@ -1487,7 +1488,6 @@ mod tests {
             }),
             &connector,
         );
-        // TODO(https://fxbug.dev/94575): Assert tool output.
         let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
             .await
             .expect("setting interface ip forwarding should succeed");
@@ -1516,8 +1516,9 @@ mod tests {
                 .expect("responder.send should succeed");
             Ok(())
         };
+        let mut output_buf = Vec::new();
         let do_if_fut = do_if(
-            std::io::sink(),
+            &mut output_buf,
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Show(opts::IfIpForwardShow {
                     interface: interface1.identifier(false /* use_ifname */),
@@ -1526,10 +1527,17 @@ mod tests {
             }),
             &connector,
         );
-        // TODO(https://fxbug.dev/94575): Assert tool output.
         let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
             .await
             .expect("getting interface ip forwarding should succeed");
+        let got_output: &str = std::str::from_utf8(&output_buf).unwrap();
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&format!(
+                "IP forwarding for {:?} is {} on interface {}",
+                ip_version, enable, interface1.nicid
+            )),
+        )
     }
 
     async fn always_answer_with_interfaces(
