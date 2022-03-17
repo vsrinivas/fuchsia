@@ -74,89 +74,96 @@ impl RemoteControlService {
         return Self { id_allocator, ids: Default::default(), maps };
     }
 
-    pub async fn serve_stream(
-        self: Rc<Self>,
-        stream: rcs::RemoteControlRequestStream,
-    ) -> Result<()> {
+    async fn handle(self: &Rc<Self>, request: rcs::RemoteControlRequest) -> Result<()> {
+        match request {
+            rcs::RemoteControlRequest::EchoString { value, responder } => {
+                log::info!("Received echo string {}", value);
+                responder.send(&value)?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::AddId { id, responder } => {
+                self.ids.borrow_mut().push(id);
+                responder.send()?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::IdentifyHost { responder } => {
+                self.clone().identify_host(responder).await?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::Connect { selector, service_chan, responder } => {
+                responder
+                    .send(&mut self.clone().connect_to_service(selector, service_chan).await)?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::Select { selector, responder } => {
+                responder.send(&mut self.clone().select(selector).await)?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::OpenHub { server, responder } => {
+                responder.send(
+                    &mut io_util::connect_in_namespace(
+                        HUB_ROOT,
+                        server.into_channel(),
+                        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
+                let addr: SocketAddressExt = addr.into();
+                let addr = addr.0;
+                let mut result = match fasync::Socket::from_socket(socket) {
+                    Ok(socket) => match self.connect_forwarded_port(addr, socket).await {
+                        Ok(()) => Ok(()),
+                        Err(e) => {
+                            log::error!("Port forward connection failed: {:?}", e);
+                            Err(rcs::TunnelError::ConnectFailed)
+                        }
+                    },
+                    Err(e) => {
+                        log::error!("Could not use socket asynchronously: {:?}", e);
+                        Err(rcs::TunnelError::SocketFailed)
+                    }
+                };
+                responder.send(&mut result)?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::ReverseTcp { addr, client, responder } => {
+                let addr: SocketAddressExt = addr.into();
+                let addr = addr.0;
+                let client = match client.into_proxy() {
+                    Ok(proxy) => proxy,
+                    Err(e) => {
+                        log::error!("Could not communicate with callback: {:?}", e);
+                        responder.send(&mut Err(rcs::TunnelError::CallbackError))?;
+                        return Ok(());
+                    }
+                };
+                let mut result = match self.listen_reversed_port(addr, client).await {
+                    Ok(()) => Ok(()),
+                    Err(e) => {
+                        log::error!("Port forward connection failed: {:?}", e);
+                        Err(rcs::TunnelError::ConnectFailed)
+                    }
+                };
+                responder.send(&mut result)?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn serve_stream(self: Rc<Self>, stream: rcs::RemoteControlRequestStream) {
         stream
-            .map_err(|err| anyhow::Error::new(err).context("RemoteControl stream"))
-            .try_for_each_concurrent(None, |request| async {
+            .for_each_concurrent(None, |request| async {
                 match request {
-                    rcs::RemoteControlRequest::EchoString { value, responder } => {
-                        log::info!("Received echo string {}", value);
-                        responder.send(&value)?;
-                        Ok(())
+                    Ok(request) => {
+                        let _ = self
+                            .handle(request)
+                            .await
+                            .map_err(|e| log::warn!("stream request handling error: {:?}", e));
                     }
-                    rcs::RemoteControlRequest::AddId { id, responder } => {
-                        self.ids.borrow_mut().push(id);
-                        responder.send()?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::IdentifyHost { responder } => {
-                        self.clone().identify_host(responder).await?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::Connect { selector, service_chan, responder } => {
-                        responder.send(
-                            &mut self.clone().connect_to_service(selector, service_chan).await,
-                        )?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::Select { selector, responder } => {
-                        responder.send(&mut self.clone().select(selector).await)?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::OpenHub { server, responder } => {
-                        responder.send(
-                            &mut io_util::connect_in_namespace(
-                                HUB_ROOT,
-                                server.into_channel(),
-                                io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
-                            )
-                            .map_err(|i| i.into_raw()),
-                        )?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
-                        let addr: SocketAddressExt = addr.into();
-                        let addr = addr.0;
-                        let mut result = match fasync::Socket::from_socket(socket) {
-                            Ok(socket) => match self.connect_forwarded_port(addr, socket).await {
-                                Ok(()) => Ok(()),
-                                Err(e) => {
-                                    log::error!("Port forward connection failed: {:?}", e);
-                                    Err(rcs::TunnelError::ConnectFailed)
-                                }
-                            },
-                            Err(e) => {
-                                log::error!("Could not use socket asynchronously: {:?}", e);
-                                Err(rcs::TunnelError::SocketFailed)
-                            }
-                        };
-                        responder.send(&mut result)?;
-                        Ok(())
-                    }
-                    rcs::RemoteControlRequest::ReverseTcp { addr, client, responder } => {
-                        let addr: SocketAddressExt = addr.into();
-                        let addr = addr.0;
-                        let client = match client.into_proxy() {
-                            Ok(proxy) => proxy,
-                            Err(e) => {
-                                log::error!("Could not communicate with callback: {:?}", e);
-                                responder.send(&mut Err(rcs::TunnelError::CallbackError))?;
-                                return Ok(());
-                            }
-                        };
-                        let mut result = match self.listen_reversed_port(addr, client).await {
-                            Ok(()) => Ok(()),
-                            Err(e) => {
-                                log::error!("Port forward connection failed: {:?}", e);
-                                Err(rcs::TunnelError::ConnectFailed)
-                            }
-                        };
-                        responder.send(&mut result)?;
-                        Ok(())
-                    }
+                    Err(e) => log::warn!("stream error: {:?}", e),
                 }
             })
             .await
@@ -654,7 +661,7 @@ mod tests {
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
         fasync::Task::local(async move {
-            service.serve_stream(stream).await.unwrap();
+            service.serve_stream(stream).await;
         })
         .detach();
 

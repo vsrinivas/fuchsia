@@ -33,12 +33,11 @@ async fn exec_server() -> Result<(), Error> {
     let sc1 = service.clone();
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |req| {
-        fasync::Task::local(sc1.clone().serve_stream(req).map(|_| ())).detach();
+        fasync::Task::local(sc1.clone().serve_stream(req)).detach();
     });
 
     fs.take_and_serve_directory_handle()?;
     let fidl_fut = fs.collect::<()>();
-
     let sc = service.clone();
     let onet_fut = stream.for_each_concurrent(None, move |svc| {
         let ServiceProviderRequest::ConnectToService {
@@ -49,7 +48,7 @@ async fn exec_server() -> Result<(), Error> {
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel").unwrap();
 
-        sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan)).map(|_| ())
+        sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan))
     });
     info!("published remote control service to overnet");
 
