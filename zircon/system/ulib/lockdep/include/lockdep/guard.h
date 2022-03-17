@@ -546,6 +546,11 @@ class NullGuard {
   NullGuard(lockdep::AdoptLockTag, NullGuard&& other) {}
   template <typename... Args>
   void Release(Args&&... args) {}
+
+  template <typename Op, typename... ReleaseArgs>
+  void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) {
+    std::forward<Op>(op)();
+  }
 };
 
 }  // namespace lockdep
