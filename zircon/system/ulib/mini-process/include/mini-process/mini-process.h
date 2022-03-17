@@ -62,10 +62,12 @@ __BEGIN_CDECLS
 #define MINIP_CMD_CHECK_THREAD_POINTER (1 << 16)
 // The process will perform an async_wait on the |transferred_handle| and then
 // port cancel on it in an infinite loop.
-#define MINIP_CMD_WAIT_ASYNC_CANCEL (1 << 17)
+#define MINIP_CMD_WAIT_ASYNC (1 << 17)
+// The process will perform an async_wait on the |transferred_handle| in an infinite loop.
+#define MINIP_CMD_WAIT_ASYNC_CANCEL (1 << 18)
 // The process just calls zx_thread_exit() immediately without replying.
 // The return value upon success is ZX_ERR_PEER_CLOSED.
-#define MINIP_CMD_THREAD_EXIT (1 << 18)
+#define MINIP_CMD_THREAD_EXIT (1 << 19)
 #define MINIP_THREAD_POINTER_CHECK_VALUE (0xdeadbeeffeedfaceUL)
 
 // Create and run a minimal process with one thread that blocks forever.

@@ -58,25 +58,26 @@ __BEGIN_CDECLS
 // ZX_EXCP_POLICY_CODE_* value.
 #define ZX_EXCP_POLICY_ERROR            ((uint32_t) 0x208u | ZX_EXCP_SYNTH)
 
-#define ZX_EXCP_POLICY_CODE_BAD_HANDLE            0u
-#define ZX_EXCP_POLICY_CODE_WRONG_OBJECT          1u
-#define ZX_EXCP_POLICY_CODE_VMAR_WX               2u
-#define ZX_EXCP_POLICY_CODE_NEW_ANY               3u
-#define ZX_EXCP_POLICY_CODE_NEW_VMO               4u
-#define ZX_EXCP_POLICY_CODE_NEW_CHANNEL           5u
-#define ZX_EXCP_POLICY_CODE_NEW_EVENT             6u
-#define ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR         7u
-#define ZX_EXCP_POLICY_CODE_NEW_PORT              8u
-#define ZX_EXCP_POLICY_CODE_NEW_SOCKET            9u
-#define ZX_EXCP_POLICY_CODE_NEW_FIFO              10u
-#define ZX_EXCP_POLICY_CODE_NEW_TIMER             11u
-#define ZX_EXCP_POLICY_CODE_NEW_PROCESS           12u
-#define ZX_EXCP_POLICY_CODE_NEW_PROFILE           13u
-#define ZX_EXCP_POLICY_CODE_NEW_PAGER             14u
-#define ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC 15u
-#define ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE    16u
-#define ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS 17u
-#define ZX_EXCP_POLICY_CODE_BAD_SYSCALL           18u  // synth_data is the syscall number.
+#define ZX_EXCP_POLICY_CODE_BAD_HANDLE              0u
+#define ZX_EXCP_POLICY_CODE_WRONG_OBJECT            1u
+#define ZX_EXCP_POLICY_CODE_VMAR_WX                 2u
+#define ZX_EXCP_POLICY_CODE_NEW_ANY                 3u
+#define ZX_EXCP_POLICY_CODE_NEW_VMO                 4u
+#define ZX_EXCP_POLICY_CODE_NEW_CHANNEL             5u
+#define ZX_EXCP_POLICY_CODE_NEW_EVENT               6u
+#define ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR           7u
+#define ZX_EXCP_POLICY_CODE_NEW_PORT                8u
+#define ZX_EXCP_POLICY_CODE_NEW_SOCKET              9u
+#define ZX_EXCP_POLICY_CODE_NEW_FIFO                10u
+#define ZX_EXCP_POLICY_CODE_NEW_TIMER               11u
+#define ZX_EXCP_POLICY_CODE_NEW_PROCESS             12u
+#define ZX_EXCP_POLICY_CODE_NEW_PROFILE             13u
+#define ZX_EXCP_POLICY_CODE_NEW_PAGER               14u
+#define ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC   15u
+#define ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE      16u
+#define ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS   17u
+#define ZX_EXCP_POLICY_CODE_BAD_SYSCALL             18u  // synth_data is the syscall number.
+#define ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_OBSERVERS 19u
 
 // A process is starting.
 // This exception is sent to job debuggers only

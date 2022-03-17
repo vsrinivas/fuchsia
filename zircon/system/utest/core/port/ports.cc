@@ -4,7 +4,11 @@
 
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
+#include <lib/zx/job.h>
 #include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/vmar.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -18,6 +22,7 @@
 #include <thread>
 
 #include <fbl/algorithm.h>
+#include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -622,6 +627,38 @@ TEST(PortTest, CloseQueueRace) {
   queue_thread.join();
 }
 
+// See that creating too many object observers raises an exception.
+//
+// TODO(fxbug.dev/91615): Enable this test once a default limit is in place.
+TEST(PortTest, DISABLED_TooManyObservers) {
+  if (getenv("NO_NEW_PROCESS")) {
+    ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
+  }
+
+  constexpr char kName[] = "too-many-observers-test";
+  zx::process proc;
+  zx::thread thread;
+  zx::vmar vmar;
+  ASSERT_OK(
+      zx::process::create(*zx::job::default_job(), kName, sizeof(kName) - 1, 0, &proc, &vmar));
+  ASSERT_OK(zx::thread::create(proc, kName, sizeof(kName) - 1, 0u, &thread));
+
+  zx::channel local;
+  zx::channel remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  zx::channel cmd_channel;
+  ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(), true,
+                                   cmd_channel.reset_and_get_address()));
+  // If the process is terminated as expected, we should peer closed.
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, mini_process_cmd(cmd_channel.get(), MINIP_CMD_WAIT_ASYNC, nullptr));
+  ASSERT_OK(proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
+
+  zx_info_process_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
+}
+
 TEST(PortStressTest, WaitSignalCancel) {
   // This tests a race that existed between the port observer
   // removing itself from the event and the cancellation logic which is
@@ -816,74 +853,111 @@ TEST(PortStressTest, CloseWaitRace) {
   constexpr zx::duration kTestDuration = zx::msec(100);
   srand(4);
 
+  constexpr uint64_t kNumWaiters = 4;
+  constexpr uint64_t kTotalThreads = kNumWaiters + 1;
+  struct Args {
+    std::atomic<uint64_t>* ready_count{};
+    std::atomic<bool>* keep_running{};
+    std::atomic<zx_handle_t>* port{};
+    zx_status_t status{ZX_ERR_INTERNAL};
+  };
+
   // Repeatedly asynchronously wait on an event.
-  auto WaitAsyncLoop = [](std::atomic<bool>* keep_running, std::atomic<zx_handle_t>* port,
-                          zx_handle_t event, zx_status_t* return_status) {
-    while (keep_running->load()) {
-      zx_status_t status = zx_object_wait_async(event, port->load(), 0, ZX_EVENT_SIGNALED, 0);
+  auto WaitAsyncLoop = [](Args* args) {
+    // Keep track of how many async waits we perform so we can self-limit and stay below any kernel
+    // imposed maximum.
+    constexpr uint64_t kMaxWaitsPerObject = 100;
+    uint64_t num_waits = 0;
+
+    // Create an event that we'll async_wait on.
+    zx::event event;
+    args->status = zx::event::create(0, &event);
+    if (args->status != ZX_OK) {
+      return;
+    }
+
+    // Signal that we're ready.
+    args->ready_count->fetch_add(1);
+    // Wait for all the other threads to become ready.
+    while (args->ready_count->load() < kTotalThreads) {
+    }
+    while (args->keep_running->load()) {
+      zx_status_t status =
+          zx_object_wait_async(event.get(), args->port->load(), 0, ZX_EVENT_SIGNALED, 0);
       if (status != ZX_OK && status != ZX_ERR_BAD_HANDLE) {
-        *return_status = status;
+        args->status = status;
         return;
       }
+      if (++num_waits >= kMaxWaitsPerObject) {
+        args->status = zx::event::create(0, &event);
+        if (args->status != ZX_OK) {
+          return;
+        }
+
+        num_waits = 0;
+      }
     }
-    *return_status = ZX_OK;
+    args->status = ZX_OK;
   };
 
   // Repeatedly create and close a port.
-  auto CreatePortLoop = [](std::atomic<bool>* keep_running, std::atomic<zx_handle_t>* port,
-                           zx_handle_t event, zx_status_t* return_status) {
-    while (keep_running->load()) {
+  auto CreatePortLoop = [](Args* args) {
+    // Signal that we're ready.
+    args->ready_count->fetch_add(1);
+    // Wait for all the other threads to become ready.
+    while (args->ready_count->load() < kTotalThreads) {
+    }
+    while (args->keep_running->load()) {
       zx_handle_t temp_port;
       zx_status_t status = zx_port_create(0, &temp_port);
       if (status != ZX_OK) {
-        *return_status = status;
+        args->status = status;
         return;
       }
-      port->store(temp_port);
+      args->port->store(temp_port);
 
       // Give the waiter threads an opportunity to get the handle and wait_async on it.
       zx::nanosleep(zx::deadline_after(zx::msec(1)));
 
       // Then close it out from under them.
       status = zx_handle_close(temp_port);
-      port->store(ZX_HANDLE_INVALID);
+      args->port->store(ZX_HANDLE_INVALID);
       if (status != ZX_OK) {
-        *return_status = status;
+        args->status = status;
         return;
       }
     }
-    *return_status = ZX_OK;
+    args->status = ZX_OK;
   };
 
-  zx_handle_t event;
+  std::atomic<uint64_t> ready_count(0);
   std::atomic<bool> keep_running(true);
   std::atomic<zx_handle_t> port(ZX_HANDLE_INVALID);
-  ASSERT_OK(zx_event_create(0u, &event));
 
-  constexpr unsigned kNumWaiters = 4;
+  Args waiter_args[kNumWaiters];
   std::thread wait_async_thread[kNumWaiters];
-  zx_status_t return_status[kNumWaiters];
-  std::fill_n(return_status, kNumWaiters, ZX_ERR_INTERNAL);
   for (size_t ix = 0; ix != kNumWaiters; ++ix) {
-    wait_async_thread[ix] =
-        std::thread(WaitAsyncLoop, &keep_running, &port, event, &return_status[ix]);
+    Args* args = &waiter_args[ix];
+    args->ready_count = &ready_count;
+    args->keep_running = &keep_running;
+    args->port = &port;
+    wait_async_thread[ix] = std::thread(WaitAsyncLoop, args);
   }
 
-  zx_status_t return_status_port = ZX_ERR_INTERNAL;
-  std::thread create_port_thread(CreatePortLoop, &keep_running, &port, event, &return_status_port);
+  Args creator_args{&ready_count, &keep_running, &port, ZX_ERR_INTERNAL};
+  std::thread create_port_thread(CreatePortLoop, &creator_args);
 
   zx::nanosleep(zx::deadline_after(kTestDuration));
   keep_running.store(false);
 
   for (size_t ix = 0; ix != kNumWaiters; ++ix) {
     wait_async_thread[ix].join();
-    ASSERT_OK(return_status[ix]);
+    ASSERT_OK(waiter_args[ix].status);
   }
 
   create_port_thread.join();
-  EXPECT_OK(return_status_port);
+  EXPECT_OK(creator_args.status);
 
-  zx_handle_close(event);
   zx_handle_close(port.load());
 }
 

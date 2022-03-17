@@ -745,6 +745,14 @@ This should be written as just SIZE (an integer byte quantity, which should
 be page-aligned) but will be read back as SIZE,ADDRESS after the kernel
 assigns an address in early boot.
 
+### kernel.port.max-observers=\<uint64_t>
+**Default:** `0xffffffffffffffff`
+
+Specifies the maximum number of observers any single port may have. When this limit is reached, a
+Zircon exception is raised in the process that crosses the limit. This value should be high enough
+that well behaved programs will not hit the limit, but low enough to terminate misbehaving programs
+before they impact the system.
+
 
 ## Options available only on arm64 machines
 

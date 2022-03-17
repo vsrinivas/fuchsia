@@ -33,7 +33,6 @@ core_tests = [
   "object-wait",
   "page-size",
   "pager",
-  "port",
   "property",
   "pthread",
   "pthread-barrier",
@@ -60,6 +59,7 @@ core_tests_with_custom_manifests =
       # Some tests require ZX_POL_NEW_PROCESS.
       "channel",
       "memory-mapping",
+      "port",
 
       # Some tests require ZX_POL_AMBIENT_MARK_VMO_EXEC.
       "vmo",

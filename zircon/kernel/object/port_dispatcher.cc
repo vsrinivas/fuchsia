@@ -423,6 +423,14 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
   {
     Guard<Mutex> guard{get_lock()};
     DEBUG_ASSERT(!zero_handles_);
+
+    // If we're over the limit, raise an exception.
+    if (observers_.size() >= gBootOptions->max_port_observers) {
+      // We limit the number of observers to prevent a misbehaving program from impacting system
+      // performance or stability.
+      Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_OBSERVERS, 0u);
+    }
+
     observers_.push_front(observer_result.value().get());
   }
 

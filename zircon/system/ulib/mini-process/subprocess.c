@@ -240,6 +240,19 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
           }
           goto reply;
         }
+        if (what & MINIP_CMD_WAIT_ASYNC) {
+          zx_handle_t port = ZX_HANDLE_INVALID;
+          if (ctx.port_create(0u, &port) != ZX_OK) {
+            __builtin_trap();
+          }
+          while (1) {
+            if (ctx.object_wait_async(original_handle, port, 42, ZX_USER_SIGNAL_0, 0) != ZX_OK) {
+              __builtin_trap();
+            }
+          }
+          cmd.status = ZX_OK;
+          goto reply;
+        }
         if (what & MINIP_CMD_WAIT_ASYNC_CANCEL) {
           zx_handle_t port = ZX_HANDLE_INVALID;
           if (ctx.port_create(0u, &port) != ZX_OK) {

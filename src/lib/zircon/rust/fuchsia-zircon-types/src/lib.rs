@@ -875,25 +875,26 @@ pub struct zx_exception_header_t {
 pub type zx_excp_policy_code_t = u32;
 
 multiconst!(zx_excp_policy_code_t, [
-    ZX_EXCP_POLICY_CODE_BAD_HANDLE             = 0;
-    ZX_EXCP_POLICY_CODE_WRONG_OBJECT           = 1;
-    ZX_EXCP_POLICY_CODE_VMAR_WX                = 2;
-    ZX_EXCP_POLICY_CODE_NEW_ANY                = 3;
-    ZX_EXCP_POLICY_CODE_NEW_VMO                = 4;
-    ZX_EXCP_POLICY_CODE_NEW_CHANNEL            = 5;
-    ZX_EXCP_POLICY_CODE_NEW_EVENT              = 6;
-    ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR          = 7;
-    ZX_EXCP_POLICY_CODE_NEW_PORT               = 8;
-    ZX_EXCP_POLICY_CODE_NEW_SOCKET             = 9;
-    ZX_EXCP_POLICY_CODE_NEW_FIFO               = 10;
-    ZX_EXCP_POLICY_CODE_NEW_TIMER              = 11;
-    ZX_EXCP_POLICY_CODE_NEW_PROCESS            = 12;
-    ZX_EXCP_POLICY_CODE_NEW_PROFILE            = 13;
-    ZX_EXCP_POLICY_CODE_NEW_PAGER              = 14;
-    ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC  = 15;
-    ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE     = 16;
-    ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS  = 17;
-    ZX_EXCP_POLICY_CODE_BAD_SYSCALL            = 18;
+    ZX_EXCP_POLICY_CODE_BAD_HANDLE              = 0;
+    ZX_EXCP_POLICY_CODE_WRONG_OBJECT            = 1;
+    ZX_EXCP_POLICY_CODE_VMAR_WX                 = 2;
+    ZX_EXCP_POLICY_CODE_NEW_ANY                 = 3;
+    ZX_EXCP_POLICY_CODE_NEW_VMO                 = 4;
+    ZX_EXCP_POLICY_CODE_NEW_CHANNEL             = 5;
+    ZX_EXCP_POLICY_CODE_NEW_EVENT               = 6;
+    ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR           = 7;
+    ZX_EXCP_POLICY_CODE_NEW_PORT                = 8;
+    ZX_EXCP_POLICY_CODE_NEW_SOCKET              = 9;
+    ZX_EXCP_POLICY_CODE_NEW_FIFO                = 10;
+    ZX_EXCP_POLICY_CODE_NEW_TIMER               = 11;
+    ZX_EXCP_POLICY_CODE_NEW_PROCESS             = 12;
+    ZX_EXCP_POLICY_CODE_NEW_PROFILE             = 13;
+    ZX_EXCP_POLICY_CODE_NEW_PAGER               = 14;
+    ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC   = 15;
+    ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE      = 16;
+    ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS   = 17;
+    ZX_EXCP_POLICY_CODE_BAD_SYSCALL             = 18;
+    ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_OBSERVERS = 19;
 ]);
 
 #[repr(C)]

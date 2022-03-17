@@ -8,6 +8,7 @@ source_set("port") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -94,6 +94,8 @@ static const char* policy_exception_code_to_str(uint32_t policy_exception_code) 
       return "PORT_TOO_MANY_PACKETS";
     case ZX_EXCP_POLICY_CODE_BAD_SYSCALL:
       return "BAD_SYSCALL";
+    case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_OBSERVERS:
+      return "PORT_TOO_MANY_OBSERVERS";
     default:
       return "<unknown policy code>";
   }
