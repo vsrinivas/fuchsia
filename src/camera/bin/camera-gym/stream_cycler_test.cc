@@ -18,6 +18,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace camera {
+namespace {
 
 const uint64_t kFakeDeviceId = 23;  // Hard coded device ID
 const uint32_t kFakeConfigId = 0;   // Hard coded config ID
@@ -947,6 +948,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   CommandResult execute_set_config_command_result_;
   CommandResult execute_add_stream_command_result_;
 };
+}  // namespace
 
 // Test Create()
 TEST_F(StreamCyclerTest, SimpleConfiguration_AutomaticMode_Create) {
