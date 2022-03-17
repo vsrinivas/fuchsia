@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -33,38 +34,29 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   class EventHandler : public fidl::WireSyncEventHandler<ProtocolType> {
    public:
-    EventHandler(perftest::RepeatState* state, bool& ready, std::mutex& mu,
-                 std::condition_variable& cond)
-        : state_(state), ready_(ready), mu_(mu), cond_(cond) {}
+    EventHandler(perftest::RepeatState* state, libsync::Completion& completion)
+        : state_(state), completion_(completion) {}
 
     void Send(fidl::WireEvent<typename ProtocolType::Send>* event) override {
       state_->NextStep();  // End: SendEvent. Begin: Teardown.
-      {
-        std::lock_guard<std::mutex> guard(mu_);
-        ready_ = true;
-      }
-      cond_.notify_one();
+
+      completion_.Signal();
     }
 
     zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 
    private:
     perftest::RepeatState* state_;
-    bool& ready_;
-    std::mutex& mu_;
-    std::condition_variable& cond_;
+    libsync::Completion& completion_;
   };
 
-  bool ready = false;
-  std::mutex mu;
-  std::condition_variable cond;
+  libsync::Completion completion;
 
-  std::thread receiver_thread(
-      [channel = std::move(endpoints->client), state, &ready, &mu, &cond]() {
-        EventHandler event_handler(state, ready, mu, cond);
-        while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
-        }
-      });
+  std::thread receiver_thread([channel = std::move(endpoints->client), state, &completion]() {
+    EventHandler event_handler(state, completion);
+    while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
+    }
+  });
 
   while (state->KeepRunning()) {
     fidl::Arena<65536> allocator;
@@ -75,13 +67,8 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     auto result = fidl::WireSendEvent(endpoints->server)->Send(std::move(aligned_value));
     ZX_ASSERT(result.ok());
 
-    {
-      std::unique_lock<std::mutex> lock(mu);
-      while (!ready) {
-        cond.wait(lock);
-      }
-      ready = false;
-    }
+    completion.Wait();
+    completion.Reset();
   }
 
   // close the channel

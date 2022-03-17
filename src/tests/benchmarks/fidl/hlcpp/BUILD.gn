@@ -19,6 +19,7 @@ template("hlcpp_gidl_benchmark_suite") {
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/perftest",
+      "//zircon/system/ulib/sync:sync-cpp",
     ]
     extra_args = [
       "-cpp-benchmarks-fidl-library",

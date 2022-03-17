@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/event_sender.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <thread>
 
@@ -24,16 +25,12 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fidl::InterfacePtr<ProtocolType> ptr;
 
-  bool ready = false;
-  std::mutex mu;
-  std::condition_variable cond;
-  ptr.events().Send = [state, &ready, &mu, &cond](FidlType) {
+  libsync::Completion completion;
+
+  ptr.events().Send = [state, &completion](FidlType) {
     state->NextStep();  // End: SendEvent. Begin: Teardown.
-    {
-      std::lock_guard<std::mutex> guard(mu);
-      ready = true;
-    }
-    cond.notify_one();
+
+    completion.Signal();
   };
   loop.StartThread();
 
@@ -47,13 +44,8 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     sender.events().Send(std::move(obj));
 
-    {
-      std::unique_lock<std::mutex> lock(mu);
-      while (!ready) {
-        cond.wait(lock);
-      }
-      ready = false;
-    }
+    completion.Wait();
+    completion.Reset();
   }
 
   loop.Quit();
