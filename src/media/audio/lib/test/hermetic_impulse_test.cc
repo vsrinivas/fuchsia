@@ -35,9 +35,14 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   }
 
   // Compute the number of input frames.
-  auto start_of_last_impulse = tc.impulse_locations_in_frames.back();
-  auto num_input_frames = start_of_last_impulse + tc.impulse_width_in_frames +
-                          tc.pipeline.pos_filter_width + tc.pipeline.neg_filter_width;
+  auto first_impulse = tc.impulse_locations_in_frames.front();
+  auto first_impulse_to_last_impulse = tc.impulse_locations_in_frames.back();
+
+  auto input_impulse_pre_pad = std::max(tc.pipeline.ramp_in_width, tc.pipeline.pos_filter_width);
+  auto input_impulse_post_pad = std::max(tc.pipeline.decay_width, tc.pipeline.neg_filter_width);
+
+  auto num_input_frames = input_impulse_pre_pad + first_impulse + first_impulse_to_last_impulse +
+                          tc.impulse_width_in_frames + input_impulse_post_pad;
 
   // Helper to translate from an input frame number to an output frame number.
   auto input_frame_to_output_frame = [&tc](int64_t input_frame) {
@@ -56,10 +61,9 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   // Write all of the impulses to an input buffer so we can easily write the full
   // input to a WAV file for debugging. Include silence at the beginning to account
   // for ring in; this allows us to align the input and output WAV files.
-  auto input_impulse_start = tc.pipeline.neg_filter_width;
   AudioBuffer<InputFormat> input(tc.input_format, num_input_frames);
   for (auto start_frame : tc.impulse_locations_in_frames) {
-    start_frame += input_impulse_start;
+    start_frame += input_impulse_pre_pad;
     for (auto f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
       for (auto chan = 0; chan < tc.input_format.channels(); chan++) {
         input.samples()[input.SampleIndex(f, chan)] = tc.impulse_magnitude;
@@ -88,8 +92,8 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
     // End this search halfway between impulses k and k+1.
     int64_t input_next_midpoint_frame;
     if (k + 1 < static_cast<int64_t>(tc.impulse_locations_in_frames.size())) {
-      auto curr = input_impulse_start + tc.impulse_locations_in_frames[k];
-      auto next = input_impulse_start + tc.impulse_locations_in_frames[k + 1];
+      auto curr = input_impulse_pre_pad + tc.impulse_locations_in_frames[k];
+      auto next = input_impulse_pre_pad + tc.impulse_locations_in_frames[k + 1];
       input_next_midpoint_frame = curr + (next - curr) / 2;
     } else {
       input_next_midpoint_frame = num_input_frames;
@@ -102,7 +106,7 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
 
     // Impulse should be at this frame +/- max_impulse_offset_frames.
     auto expected_output_frame =
-        input_frame_to_output_frame(input_impulse_start + tc.impulse_locations_in_frames[k]);
+        input_frame_to_output_frame(input_impulse_pre_pad + tc.impulse_locations_in_frames[k]);
 
     // Test each channel.
     for (auto chan : chans_to_test) {
