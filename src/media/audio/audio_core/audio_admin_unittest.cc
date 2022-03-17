@@ -10,8 +10,8 @@
 #include "src/media/audio/audio_core/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
-#include "src/media/audio/lib/test/null_audio_capturer.h"
-#include "src/media/audio/lib/test/null_audio_renderer.h"
+#include "src/media/audio/audio_core/testing/null_audio_capturer.h"
+#include "src/media/audio/audio_core/testing/null_audio_renderer.h"
 
 namespace media::audio {
 namespace {

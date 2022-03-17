@@ -56,7 +56,6 @@ executable("audio_driver_tests_bin") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",
-    "//src/media/audio/lib/test:message_transceiver",
     "//src/media/audio/lib/test:test_fixture",
     "//zircon/system/ulib/fzl",
   ]

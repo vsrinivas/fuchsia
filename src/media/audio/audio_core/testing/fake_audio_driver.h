@@ -17,8 +17,6 @@
 #include <cstring>
 #include <optional>
 
-#include "src/media/audio/lib/test/message_transceiver.h"
-
 namespace media::audio::testing {
 
 class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,

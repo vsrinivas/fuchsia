@@ -13,8 +13,6 @@ source_set("test") {
     ":constants",
     ":hermetic_audio_test",
     ":hermetic_pipeline_test_main",
-    ":message_transceiver",
-    ":null_renderer_capturer",
     ":test_fixture",
   ]
 }
@@ -113,29 +111,6 @@ source_set("hermetic_pipeline_test_main") {
   ]
 
   public_deps = [ ":hermetic_pipeline_test" ]
-}
-
-# Flexible utility class for channel-based communication (such as to drivers or device services).
-source_set("message_transceiver") {
-  sources = [
-    "message_transceiver.cc",
-    "message_transceiver.h",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async:async-cpp",
-  ]
-}
-
-# Empty renderer and capturer implementations suitable for use in unit testing.
-source_set("null_renderer_capturer") {
-  sources = [
-    "null_audio_capturer.h",
-    "null_audio_renderer.h",
-  ]
-
-  deps = [ "//sdk/fidl/fuchsia.media" ]
 }
 
 source_set("test_fixture") {

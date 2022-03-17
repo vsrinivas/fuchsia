@@ -11,7 +11,6 @@
 #include <zircon/errors.h>
 
 #include "src/media/audio/drivers/test/test_base.h"
-#include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::drivers::test {
 

@@ -335,7 +335,6 @@ executable("unittest_bin") {
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",
-    "//src/media/audio/lib/test:null_renderer_capturer",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

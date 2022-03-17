@@ -10,9 +10,9 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
+#include "src/media/audio/audio_core/testing/null_audio_capturer.h"
+#include "src/media/audio/audio_core/testing/null_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/test/null_audio_capturer.h"
-#include "src/media/audio/lib/test/null_audio_renderer.h"
 
 namespace media::audio {
 namespace {

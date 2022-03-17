@@ -11,8 +11,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "src/media/audio/lib/test/message_transceiver.h"
-
 namespace media::audio::drivers::test {
 
 // Stream channel requests

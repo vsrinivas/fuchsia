@@ -20,6 +20,8 @@ source_set("testing") {
     "fake_stream.cc",
     "fake_stream.h",
     "matchers.h",
+    "null_audio_capturer.h",
+    "null_audio_renderer.h",
     "packet_factory.cc",
     "packet_factory.h",
     "sine_wave_stream.h",
@@ -44,7 +46,6 @@ source_set("testing") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/format",
-    "//src/media/audio/lib/test:message_transceiver",
     "//zircon/system/ulib/async-testing",
   ]
 }
