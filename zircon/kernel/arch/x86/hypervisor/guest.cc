@@ -44,12 +44,14 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   if (status != ZX_OK) {
     return status;
   }
+  auto defer = fit::defer([] { free_vmx_state(); });
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Guest> guest(new (&ac) Guest);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  defer.cancel();
 
   status = hypervisor::GuestPhysicalAddressSpace::Create(&guest->gpas_);
   if (status != ZX_OK) {
