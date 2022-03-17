@@ -9,6 +9,8 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use assembly_images_config::BlobFSLayout;
+
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "assembly", description = "Assemble images")]
@@ -202,13 +204,16 @@ pub struct SizeCheckArgs {
     /// composing the package on device.
     #[argh(option)]
     pub blob_sizes: Vec<PathBuf>,
-
-    /// directory to write the UpdatePackage.
-    #[argh(option)]
-    pub board_config: Option<PathBuf>,
+    /// the layout of blobs in blobfs.
+    #[argh(option, default = "default_blobfs_layout()")]
+    pub blobfs_layout: BlobFSLayout,
     /// path where to write the verification report, in JSON format.
     #[argh(option)]
     pub gerrit_output: Option<PathBuf>,
+}
+
+fn default_blobfs_layout() -> BlobFSLayout {
+    BlobFSLayout::Compact
 }
 
 /// Represents a single addition or modification of a config-data file.

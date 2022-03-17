@@ -4,9 +4,8 @@
 
 use crate::operations::size_check::BlobJsonEntry;
 use crate::util::read_config;
-use anyhow::Context;
 use anyhow::Result;
-use assembly_config::BoardConfig;
+use assembly_images_config::BlobFSLayout;
 use assembly_tool::ToolProvider;
 use std::path::Path;
 use tempfile::NamedTempFile;
@@ -15,31 +14,26 @@ use tempfile::TempDir;
 /// Collect all the blob size entries for a given set of packages.
 pub struct BlobJsonGenerator {
     /// The layout format of the blobs.
-    /// Typically "deprecated_padded" or "compact".
-    layout: String,
-    /// Whenever the blobs are compressed, or not.
-    compress: bool,
-
+    layout: BlobFSLayout,
+    /// The tools provider that contains the blobfs tool.
     tools: Box<dyn ToolProvider>,
 }
 
 impl BlobJsonGenerator {
     /// Reads the specified configuration and return an object capable to build blobfs.
-    pub fn new(tools: Box<dyn ToolProvider>, board_config: &Path) -> Result<BlobJsonGenerator> {
-        let board_config: BoardConfig =
-            read_config(board_config).context("Failed to read the board config")?;
-        Ok(BlobJsonGenerator {
-            layout: "deprecated_padded".into(),
-            compress: board_config.blobfs.compress,
-            tools,
-        })
+    pub fn new(tools: Box<dyn ToolProvider>, layout: BlobFSLayout) -> Result<BlobJsonGenerator> {
+        Ok(BlobJsonGenerator { layout, tools })
     }
 
     /// Returns information blobs used by the specified packages.
     pub fn build(&self, package_manifests: &Vec<&Path>) -> Result<Vec<BlobJsonEntry>> {
-        let mut builder =
-            assembly_blobfs::BlobFSBuilder::new(self.tools.get_tool("blobfs")?, &self.layout);
-        builder.set_compressed(self.compress);
+        let mut builder = assembly_blobfs::BlobFSBuilder::new(
+            self.tools.get_tool("blobfs")?,
+            self.layout.to_string(),
+        );
+        // Currently, we only care about doing size checks on products with compressed blobfs. We
+        // can make this dynamic if the need arises.
+        builder.set_compressed(true);
         package_manifests
             .iter()
             .map(|manifest| builder.add_package(&manifest))
@@ -56,6 +50,7 @@ impl BlobJsonGenerator {
 mod tests {
     use super::*;
     use crate::util::write_json_file;
+    use assembly_images_config::BlobFSLayout;
     use assembly_tool::testing::FakeToolProvider;
     use fuchsia_hash::Hash;
     use serde_json::json;
@@ -65,17 +60,6 @@ mod tests {
     #[test]
     fn generate_blobfs() {
         let temp_dir = TempDir::new().unwrap();
-        let board_config_path = temp_dir.path().join("board_config.json");
-        write_json_file(
-            &board_config_path,
-            &json!({
-              "blobfs": {
-                  "layout": "deprecated_padded",
-                  "compress": true
-              }
-            }),
-        )
-        .unwrap();
         let my_content_path = temp_dir.path().join("my_content.txt");
         write_json_file(&my_content_path, &json!("some file content")).unwrap();
         let manifest_path = temp_dir.path().join("my_package.json");
@@ -123,7 +107,7 @@ mod tests {
                 )
                 .unwrap();
             }));
-        let gen = BlobJsonGenerator::new(tool_provider, &board_config_path).unwrap();
+        let gen = BlobJsonGenerator::new(tool_provider, BlobFSLayout::DeprecatedPadded).unwrap();
         let blob_entries = gen.build(&vec![&manifest_path]).unwrap();
         assert_eq!(
             vec!(BlobJsonEntry {

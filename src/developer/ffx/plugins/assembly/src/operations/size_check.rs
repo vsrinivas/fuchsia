@@ -115,10 +115,8 @@ pub fn verify_budgets(args: SizeCheckArgs) -> Result<()> {
 }
 
 fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) -> Result<()> {
-    let blobfs_builder = match args.board_config {
-        Some(path) => Some(BlobJsonGenerator::new(tools, &path)?),
-        None => None,
-    };
+    let blobfs_builder = BlobJsonGenerator::new(tools, args.blobfs_layout)?;
+
     // Read the budget configuration file.
     let config: BudgetConfig = read_config(&args.budgets)?;
     // List blobs hashes for each package manifest of each package budget.
@@ -266,7 +264,7 @@ fn index_blobs_by_hash(
 fn count_blobs(
     blob_sizes: &Vec<BlobJsonEntry>,
     blob_usages: &Vec<BudgetBlobs>,
-    blobfs_builder: &Option<BlobJsonGenerator>,
+    blobfs_builder: &BlobJsonGenerator,
 ) -> Result<HashMap<Hash, BlobSizeAndCount>> {
     // Index blobs by hash.
     let mut blob_count_by_hash: HashMap<Hash, BlobSizeAndCount> = HashMap::new();
@@ -283,8 +281,11 @@ fn count_blobs(
         .collect();
 
     // If a builder is provided, attempts to build blobfs and complete the blobs database.
-    if !incomplete_packages.is_empty() && blobfs_builder.is_some() {
-        let blobs = blobfs_builder.as_ref().unwrap().build(&incomplete_packages)?;
+    if !incomplete_packages.is_empty() {
+        let blobs = blobfs_builder.build(&incomplete_packages).unwrap_or_else(|e| {
+            log::warn!("Failed to build the blobfs: {}", e);
+            Vec::default()
+        });
         index_blobs_by_hash(&blobs, &mut blob_count_by_hash)?;
     }
 
@@ -400,6 +401,7 @@ mod tests {
     use crate::operations::size_check::verify_budgets_with_tools;
     use crate::util::read_config;
     use crate::util::write_json_file;
+    use assembly_images_config::BlobFSLayout;
     use assembly_tool::testing::FakeToolProvider;
     use errors::ResultExt;
     use ffx_assembly_args::SizeCheckArgs;
@@ -456,7 +458,7 @@ mod tests {
         test_fs.write("size_budgets.json", json!({}));
         let err = verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
@@ -472,7 +474,7 @@ mod tests {
         test_fs.write("blobs.json", json!([]));
         let err = verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
@@ -509,7 +511,7 @@ mod tests {
         );
         let res = verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
@@ -545,7 +547,7 @@ mod tests {
         );
         verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
@@ -626,7 +628,7 @@ mod tests {
         );
         let res = verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
@@ -699,7 +701,7 @@ mod tests {
         );
         verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
@@ -802,7 +804,7 @@ mod tests {
         );
         verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
@@ -862,7 +864,7 @@ mod tests {
         test_fs.write("blobs.json", json!([]));
         let err = verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
@@ -940,7 +942,7 @@ mod tests {
         );
         verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: None,
+                blobfs_layout: BlobFSLayout::Compact,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
@@ -1011,15 +1013,6 @@ mod tests {
                 "size": 37i32
             }]),
         );
-        test_fs.write(
-            "board_config.json",
-            json!({
-                "blobfs": {
-                    "layout": "deprecated_padded",
-                    "compress": true
-                }
-            }),
-        );
         let tool_provider =
             Box::new(FakeToolProvider::new_with_side_effect(|_name: &str, args: &[String]| {
                 assert_eq!(args[0], "--json-output");
@@ -1034,7 +1027,7 @@ mod tests {
             }));
         verify_budgets_with_tools(
             SizeCheckArgs {
-                board_config: Some(test_fs.path("board_config.json")),
+                blobfs_layout: BlobFSLayout::DeprecatedPadded,
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs1.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
