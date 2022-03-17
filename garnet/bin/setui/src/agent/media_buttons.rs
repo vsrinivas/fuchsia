@@ -155,11 +155,8 @@ impl EventHandler {
                 )
                 .send();
             fasync::Task::spawn(async move {
-                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95046)
-                while let Ok((_response, _)) = receptor.next_payload().await {
-                    drop(guard);
-                    break;
-                }
+                let _ = receptor.next_payload().await;
+                drop(guard);
             })
             .detach();
         }

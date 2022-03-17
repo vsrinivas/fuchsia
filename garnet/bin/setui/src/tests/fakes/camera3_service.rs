@@ -12,7 +12,7 @@ use fidl_fuchsia_camera3::{
 };
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_zircon::{self as zx, Duration};
-use futures::{FutureExt, TryStreamExt};
+use futures::TryStreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -86,17 +86,9 @@ impl Service for Camera3Service {
                             } else {
                                 let timer = fasync::Timer::new(
                                     Duration::from_millis(CAMERA_WATCHER_TIMEOUT / 2).after_now(),
-                                )
-                                .fuse();
-                                futures::pin_mut!(timer);
-                                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95046)
-                                loop {
-                                    futures::select! {
-                                        _ = timer => {
-                                            break camera_devices.into_iter();
-                                        }
-                                    }
-                                }
+                                );
+                                timer.await;
+                                camera_devices.into_iter()
                             }
                         } else {
                             if has_camera_device.load(Ordering::Relaxed) {
