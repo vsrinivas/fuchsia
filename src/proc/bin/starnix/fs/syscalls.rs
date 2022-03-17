@@ -799,6 +799,7 @@ pub fn sys_pipe2(
     let fd_flags = get_fd_flags(flags);
     let fd_read = current_task.files.add_with_flags(read, fd_flags)?;
     let fd_write = current_task.files.add_with_flags(write, fd_flags)?;
+    strace!(current_task, "pipe2 -> [{:#x}, {:#x}]", fd_read.raw(), fd_write.raw());
 
     current_task.mm.write_object(user_pipe, &fd_read)?;
     let user_pipe = user_pipe.next();

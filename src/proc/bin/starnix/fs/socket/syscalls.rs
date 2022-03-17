@@ -346,6 +346,7 @@ pub fn sys_socketpair(
     let right_fd = current_task.files.add_with_flags(right, fd_flags)?;
 
     let fds = [left_fd, right_fd];
+    strace!(current_task, "socketpair -> [{:#x}, {:#x}]", fds[0].raw(), fds[1].raw());
     current_task.mm.write_object(user_sockets, &fds)?;
 
     Ok(SUCCESS)
