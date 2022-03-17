@@ -235,10 +235,19 @@ void DeviceImpl::SetSoftwareMuteState(
 
 void DeviceImpl::UpdateControllerStreamingState() {
   if (mute_state_.muted() && controller_streaming_) {
+    std::string detail = "hardware + software";
+    if (!mute_state_.hardware_muted) {
+      detail = "software";
+    }
+    if (!mute_state_.software_muted) {
+      detail = "hardware";
+    }
+    FX_LOGS(INFO) << "disabling streaming because device is muted (" << detail << ")";
     controller_->DisableStreaming();
     controller_streaming_ = false;
   }
   if (!mute_state_.muted() && !controller_streaming_) {
+    FX_LOGS(INFO) << "enabling streaming because device is unmuted";
     controller_->EnableStreaming();
     controller_streaming_ = true;
   }
@@ -342,7 +351,7 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
 
   auto allocation_complete =
-      [this, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
+      [this, index, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
           fpromise::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (result.is_error()) {
           FX_LOGS(WARNING) << "Failed to allocate buffers";
@@ -355,6 +364,10 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
 
         // Inform the stream of the maxmimum number of buffers it may hand out.
         uint32_t max_camping_buffers = buffers.buffer_count - kNumControllerCampingBuffers;
+        FX_LOGS(INFO) << "c" << current_configuration_index_ << "s" << index
+                      << ": collection resolved: at most " << max_camping_buffers << " of "
+                      << buffers.buffer_count
+                      << " buffers will be made available to clients concurrently";
         max_camping_buffers_callback(max_camping_buffers);
       };
 

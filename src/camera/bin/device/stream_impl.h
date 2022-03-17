@@ -129,6 +129,20 @@ class StreamImpl {
     void Rebind(fidl::InterfaceRequest<Stream> request) override;
 
     StreamImpl& stream_;
+    std::string log_prefix_;
+    // Tracking for whether a message has already been logged for the named stage of client
+    // progress. This is used to ensure that only one such message is logged per transition per
+    // client, as they are high-frequency events that would otherwise spam syslog.
+    struct {
+      // The client has called camera3::Stream::GetNextFrame.
+      bool requested = false;
+      // The parent stream has added a frame to this client's available frame queue by calling
+      // AddFrame.
+      bool available = false;
+      // A frame has been sent to the client by invoking the callback provided in a previous call to
+      // GetNextFrame.
+      bool sent = false;
+    } frame_logging_state_;
     uint64_t id_;
     fidl::Binding<fuchsia::camera3::Stream> binding_;
     HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>> buffers_;
