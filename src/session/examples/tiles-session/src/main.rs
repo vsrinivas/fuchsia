@@ -212,18 +212,17 @@ async fn set_scene_manager_root_view(
         fidl::endpoints::create_proxy::<ui_views::FocuserMarker>()
             .expect("Failed to create Focuser channel");
 
-    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95061)
-    while let Some(request) = view_provider_request_stream
+    if let Some(request) = view_provider_request_stream
         .try_next()
         .await
         .context("Failed to obtain next ViewProvider request from stream")?
     {
         match request {
             ui_app::ViewProviderRequest::CreateView { .. } => {
-                return Err(anyhow!("ViewProvider impl only handles CreateView2()"));
+                Err(anyhow!("ViewProvider impl only handles CreateView2()"))
             }
             ui_app::ViewProviderRequest::CreateViewWithViewRef { .. } => {
-                return Err(anyhow!("ViewProvider impl only handles CreateView2()"));
+                Err(anyhow!("ViewProvider impl only handles CreateView2()"))
             }
             ui_app::ViewProviderRequest::CreateView2 { args, .. } => {
                 let (parent_viewport_watcher, parent_viewport_watcher_request) =
@@ -259,11 +258,12 @@ async fn set_scene_manager_root_view(
                 // Now that we've handled the ViewProvider request, we can await the ViewRef.
                 let _view_ref = view_ref.await?;
 
-                return Ok(RootView { parent_viewport_watcher, view_focuser });
+                Ok(RootView { parent_viewport_watcher, view_focuser })
             }
         }
+    } else {
+        Err(anyhow!("ViewProvider request stream closed before CreateView2() was called"))
     }
-    Err(anyhow!("ViewProvider request stream closed before CreateView2() was called"))
 }
 
 fn expose_services() -> Result<ServiceFs<ServiceObj<'static, ExposedServices>>, Error> {
@@ -359,16 +359,14 @@ fn run_client_view_controller_request_stream(
     internal_sender: UnboundedSender<MessageInternal>,
 ) {
     fasync::Task::local(async move {
-        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95061)
-        while let Ok(Some(request)) = request_stream.try_next().await {
-            match request {
-                fidl_fuchsia_element::ViewControllerRequest::Dismiss { control_handle } => {
-                    fx_log_warn!("We should dismiss ourselves!");
-                    internal_sender
-                        .unbounded_send(MessageInternal::DismissClient { control_handle })
-                        .expect("Failed to send MessageInternal::DismissClient");
-                    return;
-                }
+        if let Some(Ok(fidl_fuchsia_element::ViewControllerRequest::Dismiss { control_handle })) =
+            request_stream.next().await
+        {
+            {
+                fx_log_warn!("We should dismiss ourselves!");
+                internal_sender
+                    .unbounded_send(MessageInternal::DismissClient { control_handle })
+                    .expect("Failed to send MessageInternal::DismissClient");
             }
         }
     })

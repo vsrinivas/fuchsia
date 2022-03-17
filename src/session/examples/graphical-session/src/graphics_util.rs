@@ -27,10 +27,8 @@ pub fn quaternion_from_axis_angle(axis: Vec3, angle: f32) -> Quaternion {
 mod tests {
     use super::*;
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95061)
-    const RADS_FROM_90_DEG: f32 = 90.0 * (3.14159 / 180.0);
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95061)
-    const SIN_45_DEG: f32 = 0.7071;
+    const RADS_FROM_90_DEG: f32 = 90.0 * (std::f32::consts::PI / 180.0);
+    const SIN_45_DEG: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
     fn compare_quaternions(q1: &Quaternion, q2: &Quaternion) {
         const EPSILON: f32 = 0.0001;
