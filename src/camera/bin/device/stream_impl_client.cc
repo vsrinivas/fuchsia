@@ -19,7 +19,9 @@ namespace camera {
 StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request)
     : stream_(stream), id_(id), binding_(this, std::move(request)), resolution_(SizeEqual) {
-  FX_LOGS(INFO) << stream_.description_ << ": Stream client " << id << " connected.";
+  log_prefix_ = "stream " + stream_.description_ +
+                " client (koid = " + std::to_string(GetRelatedKoid(binding_)) + "): ";
+  FX_LOGS(INFO) << log_prefix_ << "new stream client, id = " << id_;
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
 }
 
@@ -28,6 +30,10 @@ StreamImpl::Client::~Client() = default;
 void StreamImpl::Client::AddFrame(fuchsia::camera3::FrameInfo2 frame) {
   TRACE_DURATION("camera", "StreamImpl::Client::AddFrame");
   frames_.push(std::move(frame));
+  if (!frame_logging_state_.available) {
+    FX_LOGS(INFO) << log_prefix_ << "frame available";
+    frame_logging_state_.available = true;
+  }
   MaybeSendFrame();
 }
 
@@ -41,6 +47,12 @@ void StreamImpl::Client::MaybeSendFrame() {
   // into the client.
   TRACE_FLOW_BEGIN("camera", "camera3::Stream::GetNextFrame",
                    fsl::GetKoid(frame.release_fence().get()));
+  // Note: this message is logged immediately prior to invoking the frame callback to ensure that no
+  // client logs emitted as a result will have earlier timestamps than this message.
+  if (!frame_logging_state_.sent) {
+    FX_LOGS(INFO) << log_prefix_ << "sent frame";
+    frame_logging_state_.sent = true;
+  }
   frame_callback_(std::move(frame));
   frames_.pop();
   frame_callback_ = nullptr;
@@ -74,7 +86,7 @@ void StreamImpl::Client::ClearFrames() {
 }
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
-  FX_PLOGS(INFO, status) << stream_.description_ << ": Stream client " << id_ << " disconnected.";
+  FX_PLOGS(INFO, status) << log_prefix_ << "closed connection";
   stream_.RemoveClient(id_);
 }
 
@@ -85,11 +97,13 @@ void StreamImpl::Client::CloseConnection(zx_status_t status) {
 
 void StreamImpl::Client::GetProperties(GetPropertiesCallback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::GetProperties");
+  FX_LOGS(INFO) << log_prefix_ << "called GetProperties()";
   callback(Convert(stream_.properties_));
 }
 
 void StreamImpl::Client::GetProperties2(GetProperties2Callback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::GetProperties2");
+  FX_LOGS(INFO) << log_prefix_ << "called GetProperties2()";
   callback(fidl::Clone(stream_.properties_));
 }
 
@@ -134,11 +148,14 @@ void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
 void StreamImpl::Client::SetBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   TRACE_DURATION("camera", "StreamImpl::Client::SetBufferCollection");
+  FX_LOGS(INFO) << log_prefix_ << "called SetBufferCollection(koid = " << GetRelatedKoid(token)
+                << ")";
   stream_.SetBufferCollection(id_, std::move(token));
 }
 
 void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::WatchBufferCollection");
+  FX_LOGS(INFO) << log_prefix_ << "called WatchBufferCollection()";
   if (buffers_.Get(std::move(callback))) {
     CloseConnection(ZX_ERR_BAD_STATE);
   }
@@ -177,6 +194,10 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
 
 void StreamImpl::Client::GetNextFrame2(GetNextFrame2Callback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::GetNextFrame2");
+  if (!frame_logging_state_.requested) {
+    FX_LOGS(INFO) << log_prefix_ << "called GetNextFrame2()";
+    frame_logging_state_.requested = true;
+  }
   if (frame_callback_) {
     FX_LOGS(INFO) << stream_.description_ << ": " << id_
                   << ": Client called GetNextFrame while a previous call was still pending.";
@@ -188,6 +209,7 @@ void StreamImpl::Client::GetNextFrame2(GetNextFrame2Callback callback) {
 }
 
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {
+  FX_LOGS(INFO) << log_prefix_ << "called Rebind(koid = " << GetRelatedKoid(request) << ")";
   stream_.OnNewRequest(std::move(request));
 }
 

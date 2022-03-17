@@ -128,6 +128,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
     void Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) override;
 
     DeviceImpl& device_;
+    std::string log_prefix_;
     uint64_t id_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
     HangingGetHelper<uint32_t> configuration_;

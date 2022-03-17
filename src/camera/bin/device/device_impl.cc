@@ -233,10 +233,19 @@ void DeviceImpl::SetSoftwareMuteState(
 
 void DeviceImpl::UpdateControllerStreamingState() {
   if (mute_state_.muted() && controller_streaming_) {
+    std::string detail = "hardware + software";
+    if (!mute_state_.hardware_muted) {
+      detail = "software";
+    }
+    if (!mute_state_.software_muted) {
+      detail = "hardware";
+    }
+    FX_LOGS(INFO) << "disabling streaming because device is muted (" << detail << ")";
     controller_->DisableStreaming();
     controller_streaming_ = false;
   }
   if (!mute_state_.muted() && !controller_streaming_) {
+    FX_LOGS(INFO) << "enabling streaming because device is unmuted";
     controller_->EnableStreaming();
     controller_streaming_ = true;
   }
@@ -356,6 +365,10 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
             buffers.buffer_count - configs_[current_configuration_index_]
                                        .stream_configs[index]
                                        .constraints.min_buffer_count_for_camping;
+        FX_LOGS(INFO) << "c" << current_configuration_index_ << "s" << index
+                      << ": collection resolved: at most " << max_camping_buffers << " of "
+                      << buffers.buffer_count
+                      << " buffers will be made available to clients concurrently";
         max_camping_buffers_callback(max_camping_buffers);
       };
 
