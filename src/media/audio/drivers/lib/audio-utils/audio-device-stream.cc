@@ -52,19 +52,19 @@ zx_status_t AudioDeviceStream::Open() {
   if (stream_ch_.is_valid())
     return ZX_ERR_BAD_STATE;
 
-  auto client_end = service::Connect<audio_fidl::Device>(name());
+  auto client_end = service::Connect<audio_fidl::StreamConfigConnector>(name());
   if (client_end.is_error()) {
     printf("service::Connect failed with error %s\n", client_end.status_string());
     return client_end.status_value();
   }
   auto client = fidl::BindSyncClient(std::move(client_end.value()));
-  auto channel_wrap = client->GetChannel();
-  if (!channel_wrap.ok()) {
-    printf("GetChannel failed with error %s\n", channel_wrap.status_string());
-    return channel_wrap.status();
-  }
 
-  stream_ch_ = std::move(channel_wrap->channel);
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+  ZX_ASSERT(endpoints.is_ok());
+  auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
+  client->Connect(std::move(stream_channel_remote));
+
+  stream_ch_ = std::move(stream_channel_local);
   return ZX_OK;
 }
 

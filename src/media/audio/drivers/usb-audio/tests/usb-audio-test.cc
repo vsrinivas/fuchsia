@@ -34,13 +34,18 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
 }
 
 fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
-    fidl::ClientEnd<audio_fidl::Device> client) {
+    fidl::ClientEnd<audio_fidl::StreamConfigConnector> client) {
   auto client_wrap = fidl::BindSyncClient(std::move(client));
-  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
-  if (channel_wrap.status() != ZX_OK) {
+  if (!client_wrap.is_valid()) {
     return {};
   }
-  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(channel_wrap->channel));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+  if (!endpoints.is_ok()) {
+    return {};
+  }
+  auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
+  client_wrap->Connect(std::move(stream_channel_remote));
+  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
 }
 
 class FakeDevice;
@@ -321,11 +326,19 @@ TEST(UsbAudioTest, MultipleStreamConfigClients) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch1 = client->GetChannel();
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch2 = client->GetChannel();
-  ASSERT_OK(ch1.status());
-  ASSERT_OK(ch2.status());
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::StreamConfigConnector>());
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
+    ASSERT_OK(client_wrap->Connect(std::move(stream_channel_remote)));
+  }
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
+    ASSERT_OK(client_wrap->Connect(std::move(stream_channel_remote)));
+  }
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -435,9 +448,9 @@ TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
@@ -490,9 +503,9 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartBeforeGetVmo) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
@@ -519,9 +532,9 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartWhileStarted) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
@@ -570,9 +583,9 @@ TEST(UsbAudioTest, DISABLED_RingBufferStopBeforeGetVmo) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
@@ -598,9 +611,9 @@ TEST(UsbAudioTest, RingBufferStopWhileStopped) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
@@ -632,9 +645,9 @@ TEST(UsbAudioTest, Unplug) {
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
   ASSERT_TRUE(stream_client.is_valid());
 
-  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(endpoints.value());
+  auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints2.status_value());
+  auto [local, remote] = std::move(endpoints2.value());
 
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);

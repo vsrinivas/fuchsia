@@ -22,9 +22,9 @@ namespace {
 
 // A minimal |fuchsia::hardware::audio::Device| that we can use to emulate a fake devfs directory
 // for testing.
-class FakeAudioDevice : public fuchsia::hardware::audio::Device {
+class FakeAudioDevice : public fuchsia::hardware::audio::StreamConfigConnector {
  public:
-  FakeAudioDevice() { FX_CHECK(zx::channel::create(0, &client_, &server_) == ZX_OK); }
+  FakeAudioDevice() {}
 
   fbl::RefPtr<fs::Service> AsService() {
     return fbl::MakeRefCounted<fs::Service>([this](zx::channel c) {
@@ -33,18 +33,15 @@ class FakeAudioDevice : public fuchsia::hardware::audio::Device {
     });
   }
 
-  bool is_bound() const { return !client_; }
+  bool is_bound() const { return server_.is_valid(); }
 
  private:
-  void GetChannel(GetChannelCallback callback) override {
-    FX_CHECK(client_);
-    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
-    stream_config.set_channel(std::move(client_));
-    callback(std::move(stream_config));
+  void Connect(fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> server) override {
+    server_ = std::move(server);
   }
 
-  zx::channel client_, server_;
-  fidl::Binding<fuchsia::hardware::audio::Device> binding_{this};
+  fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> server_;
+  fidl::Binding<fuchsia::hardware::audio::StreamConfigConnector> binding_{this};
 };
 
 class DeviceTracker {
