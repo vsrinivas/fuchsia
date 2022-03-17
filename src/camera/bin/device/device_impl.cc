@@ -209,6 +209,12 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   }
 
   streams_.clear();
+
+  // TODO(b/224858687) - Temporary workaround to ensure that camera pipeline has an opportunity to
+  // teardown buffers before the next stream (in the new configuration) is requested. The original
+  // code to protect this race condition has some flaws. The real fix is in progress.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(1000)));
+
   streams_.resize(configurations_[index].streams().size());
   FX_LOGS(INFO) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
