@@ -71,7 +71,7 @@ impl FactoryResetManager {
                 }))
             })
             .map_err(|_| {
-                ControllerError::InitFailure("could not connect to brightness service".into())
+                ControllerError::InitFailure("could not connect to factory reset service".into())
             })
     }
 
