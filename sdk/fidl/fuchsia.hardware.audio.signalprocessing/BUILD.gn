@@ -9,7 +9,10 @@ fidl("fuchsia.hardware.audio.signalprocessing") {
 
   sources = [
     "connector.fidl",
+    "equalizer.fidl",
+    "gain.fidl",
     "signal_processing.fidl",
+    "vendor_specific.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

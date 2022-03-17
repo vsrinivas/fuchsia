@@ -10,7 +10,6 @@ using zx;
 const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
 const MAX_COUNT_TOPOLOGIES uint32 = 64;
 const MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 = 64;
-const MAX_COUNT_EQUALIZER_BANDS uint32 = 64;
 const MAX_STRING_SIZE uint32 = 256;
 
 type ElementType = flexible enum {
@@ -53,158 +52,15 @@ type ElementType = flexible enum {
     SAMPLE_RATE_CONVERSION = 11;
 };
 
-/// Type specific parameters for an `Element` with `type` equal to `VENDOR_SPECIFIC`.
-type VendorSpecific = table {};
-
-/// Hardware domain of the gain, e.g. ANALOG.
-type GainDomain = flexible enum : uint8 {
-    /// The processing element gain is applied in the digital domain.
-    DIGITAL = 1;
-
-    /// The processing element gain is applied in the analog domain.
-    ANALOG = 2;
-
-    /// The processing element gain is mixed using digital and analog hardware.
-    MIXED = 3;
-};
-
-/// Gain type of representation.
-type GainType = strict enum : uint8 {
-    /// Gain specified in dB, for example -103.0dB or +3.2dB.
-    DECIBELS = 1;
-
-    /// Gain specified as a percentage, for example 10.0% or 80.5%.
-    PERCENT = 2;
-};
-
-/// Parameters for an `Element` with `type` equal to `GAIN`.
-type Gain = table {
-    /// Specifies what the numbers for gain represent, e.g. a percentage. Required.
-    1: type GainType;
-
-    /// If included, the gain is applied in the specified `GainDomain`.
-    /// If not included, the gain domain is unspecified.
-    2: domain GainDomain;
-
-    /// Minimum gain in `GainType` format. Required.
-    3: min_gain float32;
-
-    /// Maximum gain in `GainType` format. Required.
-    4: max_gain float32;
-
-    /// Minimum gain step in `GainType` format, this value must not be negative, but may be zero to
-    /// convey an effectively continuous range of values. Must not exceed `max_gain` - `min_gain`.
-    /// The actual gain set may be queried by the client with a `WatchElement` call.
-    /// Required.
-    5: min_gain_step float32;
-};
-
-/// Type of the equalizer band.
-type EqualizerBandType = flexible enum : uint64 {
-    /// Increase/decrease in `gain_db` in the vicinity of a `frequency` with an optional `q`.
-    PEAK = 1;
-
-    /// Narrow band rejection significantly attenuating a `frequency` with an optional `q`.
-    NOTCH = 2;
-
-    /// Decresase gain below a `frequency` with an optional `q`, a.k.a high pass.
-    LOW_CUT = 3;
-
-    /// Decresase gain above a `frequency` with an optional `q`, a.k.a low pass.
-    HIGH_CUT = 4;
-
-    /// Decresase gain below a `frequency` for a `gain_db` amount with a plateau effect.
-    LOW_SHELF = 5;
-
-    /// Decresase gain above a `frequency` for a `gain_db` amount with a plateau effect.
-    HIGH_SHELF = 6;
-};
-
-/// Parameters for an equalizer Band.
-type EqualizerBand = table {
-    /// Unique ID for this band, only required to be unique within the corresponding
-    /// `Element`, and valid until the channel associated with the `SignalProcessing`
-    /// protocol is closed. Required.
-    1: id uint64;
-};
-
-/// Equalizer supported controls specified in `Equalizer`.
-type EqualizerSupportedControls = flexible bits : uint64 {
-    /// If included, the `frequency` of the equalizer bands can be changed with
-    /// `SetElement`.
-    CAN_CONTROL_FREQUENCY = 0x1;
-
-    /// If included, the `q` of the equalizer bands can be changed with `SetElement`.
-    CAN_CONTROL_Q = 0x2;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `PEAK`.
-    SUPPORTS_TYPE_PEAK = 0x4;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `NOTCH`.
-    SUPPORTS_TYPE_NOTCH = 0x8;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `LOW_CUT`.
-    SUPPORTS_TYPE_LOW_CUT = 0x10;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `HIGH_CUT`.
-    SUPPORTS_TYPE_HIGH_CUT = 0x20;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `LOW_SHELF`.
-    SUPPORTS_TYPE_LOW_SHELF = 0x40;
-
-    /// If included, the `type` of the equalizer bands can be changed with `SetElement`
-    /// to `EqualizerBandType` `HIGH_SHELF`.
-    SUPPORTS_TYPE_HIGH_SHELF = 0x80;
-};
-
-/// Parameters for a `Element` with `type` equal to `EQUALIZER`.
-type Equalizer = table {
-    /// Equalizers in this protocol are built by a number of bands, each specifying a number of
-    /// parameters here and `EqualizerElementState` that can be changed with
-    /// `SetElement`.
-    /// The number of elements of the `bands` vector determines the number of bands
-    /// supported by this processing element.
-    1: bands vector<EqualizerBand>:MAX_COUNT_EQUALIZER_BANDS;
-
-    /// The controls supported by this equalizer.
-    2: supported_controls EqualizerSupportedControls;
-
-    /// If included and true, individual bands can be disabled via `ElementState`.
-    /// If not included or false, the bands are always enabled.
-    /// For a band to be functional its enclosing equalizer processing element has to be enabled.
-    3: can_disable_bands bool;
-
-    /// Minimum frequency for the bands in Hz. Required.
-    4: min_frequency uint32;
-
-    /// Maximum frequency for the bands in Hz. Required.
-    5: max_frequency uint32;
-
-    /// Maximum quality factor, usually denoted by "Q", for the bands. Optional.
-    /// Indicates how narrow the frequency transition is. Higher Q values imply narrower
-    /// notches/peaks and steeper cuts/shelves. Must be positive.
-    6: max_q float32;
-
-    /// Minimum gain in dB.
-    /// Required if any `EqualizerBand.EqualizerBandType` is set to `PEAK`, `LOW_SHELF`,
-    /// `HIGH_SHELF`.
-    7: min_gain_db float32;
-
-    /// Maximum gain in dB.
-    /// Required if any `EqualizerBand.EqualizerBandType` is set to `PEAK`, `LOW_SHELF`,
-    /// `HIGH_SHELF`.
-    8: max_gain_db float32;
-};
-
 /// Type specific Parameters for an `Element`.
 type TypeSpecificElement = flexible union {
+    // See vendor_specific.fidl.
     1: vendor_specific VendorSpecific;
+
+    // See gain.fidl.
     2: gain Gain;
+
+    // See equalizer.fidl.
     3: equalizer Equalizer;
 };
 
@@ -237,60 +93,18 @@ type Element = table {
     5: description string:MAX_STRING_SIZE;
 };
 
-/// State for an `Element` with `type` equal to `VENDOR_SPECIFIC`.
-type VendorSpecificState = table {};
-
-/// State for an `Element` with `type` equal to `GAIN`.
-type GainElementState = table {
-    /// Current gain in `GainType` format. Required.
-    1: gain float32;
-};
-
-/// State for a single band within a `Element` with `type` equal to `EQUALIZER`.
-type EqualizerBandState = table {
-    /// Unique ID for the band. Must match one of the `id`s specified in
-    /// `Equalizer` `bands`. Required.
-    1: id uint64;
-
-    /// Type of band. Optional.
-    2: type EqualizerBandType;
-
-    /// Center frequency for the band. Optional.
-    3: frequency uint32;
-
-    /// Quality factor, usually denoted as "Q". Optional.
-    /// Indicates how narrow the frequency transition is. Higher Q values imply narrower
-    /// notches/peaks and steeper cuts/shelves. Must be positive.
-    4: q float32;
-
-    /// Gain in dB. Required for `EqualizerBandType` `PEAK`, `LOW_SHELF` and `HIGH_SHELF`.
-    /// May not be included for `EqualizerBandType` `NOTCH`, `LOW_CUT` or `HIGH_CUT`.
-    5: gain_db float32;
-
-    /// Enable/disable the band. Optional. By default all bands are enabled.
-    /// Disabling the enclosing processing element by setting `ElementState.enabled` to
-    /// false disables the whole equalizer and it does not change this field. For a band to be
-    /// functional its enclosing equalizer processing element has to be enabled.
-    6: enabled bool;
-};
-
-/// State for a `Element` with `type` equal to `EQUALIZER`.
-type EqualizerElementState = table {
-    /// The number of elements of the `bands_state` vector must be equal or smaller than the
-    /// number of elements of the `bands` returned in returned in the corresponding
-    /// `Equalizer`. `bands_state` must have at least one element.
-    /// The bands controlled by `bands_state` are determined by each `band.id`.
-    // Required.
-    1: bands_state vector<EqualizerBandState>:MAX_COUNT_EQUALIZER_BANDS;
-};
-
 /// Type specific processing element state.
 /// The type of processing element control is defined by the type of parameters provided in this
 /// union. Must match the type returned in the corresponding `ElementType` entry in the
 /// corresponding `Element`.
 type TypeSpecificElementState = flexible union {
+    // See vendor_specific.fidl.
     1: vendor_specific VendorSpecificState;
+
+    // See gain.fidl.
     2: gain GainElementState;
+
+    // See equalizer.fidl.
     3: equalizer EqualizerElementState;
 };
 

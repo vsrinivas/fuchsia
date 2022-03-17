@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.audio.signalprocessing;
+
+/// Type specific parameters for an `Element` with `type` equal to `VENDOR_SPECIFIC`.
+type VendorSpecific = table {};
+
+/// State for an `Element` with `type` equal to `VENDOR_SPECIFIC`.
+type VendorSpecificState = table {};
