@@ -8,7 +8,7 @@
 //! femu module since femu is a wrapper around an older version of QEMU.
 
 use crate::serialization::SerializingEngine;
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{
     config::{FfxConfigWrapper, QEMU_TOOL},
@@ -17,7 +17,7 @@ use ffx_emulator_common::{
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice};
 use fidl_fuchsia_developer_ffx as bridge;
 use serde::{Deserialize, Serialize};
-use std::{env, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 pub(crate) mod qemu_base;
 pub(crate) use qemu_base::QemuBasedEngine;
@@ -45,26 +45,13 @@ impl EmulatorEngine for QemuEngine {
             .await
             .expect("could not stage image files");
 
-        // TODO(fxbug.dev/86737): Find the emulator executable using ffx_config::get_host_tool().
-        // This is a workaround until the ffx_config::get_host_tool works.
-        let sdk = ffx_config::get_sdk().await?;
-        let sdk_root = sdk.get_path_prefix();
-        let backup_qemu = match env::consts::OS {
-            "linux" => {
-                sdk_root.join("../../prebuilt/third_party/qemu/linux-x64/bin/qemu-system-x86_64")
-            }
-            "macos" => {
-                sdk_root.join("../../prebuilt/third_party/qemu/mac-x64/bin/qemu-system-x86_64")
-            }
-            _ => panic!("Sorry. {} is not supported.", env::consts::OS),
-        }
-        .canonicalize()?;
-
         let qemu = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
-            Ok(qemu_path) => qemu_path,
+            Ok(qemu_path) => qemu_path.canonicalize().context(format!(
+                "Failed to canonicalize the path to the emulator binary: {:?}",
+                qemu_path
+            ))?,
             Err(e) => {
-                println!("Need to fix {:?}", e);
-                backup_qemu
+                bail!("Cannot find {} in the SDK: {:?}", QEMU_TOOL, e);
             }
         };
 

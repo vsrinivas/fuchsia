@@ -17,6 +17,7 @@ def main():
         help=(
             'The path to the binary in the base directory to list files for. This file'
             'is not included in the output'))
+    parser.add_argument('--src_root', required=True, help="source path root.")
     parser.add_argument(
         '--dest_root', required=True, help="destination path root.")
     parser.add_argument(
@@ -28,7 +29,7 @@ def main():
 
     args = parser.parse_args()
 
-    directory = os.path.dirname(args.binary)
+    directory = args.src_root
     binary_path = os.path.join(
         args.dest_root, os.path.relpath(args.binary, directory))
     # the main binary should be first in the list.

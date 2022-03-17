@@ -22,7 +22,7 @@ use {
 pub const FEMU_TOOL: &'static str = "aemu_internal";
 
 /// QEMU tool.
-pub const QEMU_TOOL: &'static str = "qemu";
+pub const QEMU_TOOL: &'static str = "qemu_internal";
 
 /// The SDK tool "fvm" used to modify fvm files.
 pub const FVM_HOST_TOOL: &'static str = "fvm";

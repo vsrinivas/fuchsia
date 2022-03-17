@@ -38,7 +38,10 @@ impl EmulatorEngine for FemuEngine {
             .expect("could not stage image files");
 
         let aemu = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
-            Ok(aemu_path) => aemu_path,
+            Ok(aemu_path) => aemu_path.canonicalize().context(format!(
+                "Failed to canonicalize the path to the emulator binary: {:?}",
+                aemu_path
+            ))?,
             Err(e) => {
                 bail!("Cannot find {} in the SDK: {:?}", config::FEMU_TOOL, e);
             }

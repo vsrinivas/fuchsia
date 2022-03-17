@@ -368,7 +368,10 @@ sdk_molecule("host_tools") {
     "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
     "//zircon/tools/zbi:zbi_sdk",
+
+    # TODO(https://fxbug.dev/95661): Remove these once the emulators are available independently.
     "//src/developer/ffx/plugins/emulator:aemu_internal",
+    "//src/developer/ffx/plugins/emulator:qemu_internal",
   ]
 
   toolchains = []

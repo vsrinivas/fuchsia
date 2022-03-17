@@ -6,7 +6,7 @@
 //! for engines using QEMU as the emulator platform.
 
 use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{
     config,
@@ -194,14 +194,19 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             bail!("Giving up finding emulator binary. Tried {:?}", emu_binary)
         }
 
-        self.emu_config_mut().flags = process_flag_template(&self.emu_config())?;
+        self.emu_config_mut().flags = process_flag_template(&self.emu_config())
+            .context("Failed to process the flags template file.")?;
 
-        let mut emulator_cmd = self.build_emulator_cmd(&emu_binary)?;
+        let mut emulator_cmd = self
+            .build_emulator_cmd(&emu_binary)
+            .context("Failed while building the emulator command.")?;
 
         if self.emu_config().runtime.console == ConsoleType::None {
             let stdout = File::create(&self.emu_config().host.log)
                 .expect(&format!("Couldn't open log life {:?}", &self.emu_config().host.log));
-            let stderr = stdout.try_clone()?;
+            let stderr = stdout
+                .try_clone()
+                .context("Failed trying to clone stdout for the emulator process.")?;
             emulator_cmd.stdout(stdout).stderr(stderr);
             println!("Logging to {:?}", &self.emu_config().host.log);
         }
@@ -221,14 +226,17 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
         self.set_pid(child_arc.id());
 
-        self.write_to_disk(&self.emu_config().runtime.instance_directory)?;
+        self.write_to_disk(&self.emu_config().runtime.instance_directory)
+            .context("Failed to write the emulation configuration file to disk.")?;
 
         let ssh = self.emu_config().host.port_map.get("ssh");
         let ssh_port = if let Some(ssh) = ssh { ssh.host } else { None };
         if self.emu_config().host.networking == NetworkingMode::User {
             // We only need to do this if we're running in user net mode.
             if let Some(ssh_port) = ssh_port {
-                add_target(proxy, ssh_port).await?;
+                add_target(proxy, ssh_port)
+                    .await
+                    .context("Failed to add the emulator to the ffx target collection.")?;
             }
         }
 
