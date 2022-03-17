@@ -27,6 +27,11 @@ using SetResolutionCommand = fuchsia::camera::gym::SetResolutionCommand;
 
 constexpr zx::duration kDemoTime = zx::msec(CONFIGURATION_CYCLE_TIME_MS);
 
+// Watch dog for general purpose catastrophic frame timeout. This is meant for detecting really bad
+// things happening, such as sensor no longer producing frames.
+constexpr zx::duration kCheckInterval = zx::msec(2000);  // 2 seconds
+constexpr zx::duration kFrameTimeout = zx::msec(5000);   // 5 seconds
+
 // Ratio controls how often ROI is moved.
 // (1 = every frame, 2 = every other frame, etc)
 constexpr uint32_t kRegionOfInterestFramesPerMoveRatio = 1;
@@ -103,6 +108,10 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
             device_->WatchCurrentConfiguration(
                 fit::bind_member(this, &StreamCycler::WatchCurrentConfigurationCallback));
           });
+
+      // Start watch dog.
+      async::PostDelayedTask(dispatcher_, fit::bind_member(this, &StreamCycler::CheckWatchdog),
+                             kCheckInterval);
     }
   }
 
@@ -160,7 +169,9 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
 
   // Connect to specific stream
   StreamInfo new_stream_info;
+  new_stream_info.last_received = zx::clock::get_monotonic();  // Initialize to current time
   stream_infos_.emplace(stream_index, std::move(new_stream_info));
+
   auto& stream = stream_infos_[stream_index].stream;
   auto stream_request = stream.NewRequest(dispatcher_);
   if (config_index == 1 || config_index == 2) {
@@ -195,6 +206,9 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
       CommandSuccessNotify();
     }
 
+    // Begin watch dog deadline fresh for this stream.
+    ResetStreamWatchdog(stream_index);
+
     // Kick start the stream
     stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
       OnNextFrame(stream_index, std::move(frame_info));
@@ -211,6 +225,10 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
   TRACE_DURATION("camera", "StreamCycler::OnNextFrame");
   TRACE_FLOW_END("camera", "camera3::Stream::GetNextFrame",
                  fsl::GetKoid(frame_info.release_fence.get()));
+
+  // Reset the watchdog for this particular stream.
+  ResetStreamWatchdog(stream_index);
+
   auto& stream_info = stream_infos_[stream_index];
   if (show_buffer_handler_ && stream_info.add_collection_handler_returned_value) {
     show_buffer_handler_(stream_info.add_collection_handler_returned_value.value(),
@@ -294,6 +312,20 @@ uint32_t StreamCycler::NextConfigIndex() {
   ZX_ASSERT(configurations_.size() > 0);
   ZX_ASSERT(current_config_index_ < configurations_.size());
   return (current_config_index_ + 1) % configurations_.size();
+}
+
+void StreamCycler::ResetStreamWatchdog(uint32_t stream_index) {
+  auto& stream_info = stream_infos_[stream_index];
+  stream_info.last_received = zx::clock::get_monotonic();
+}
+
+void StreamCycler::CheckWatchdog() {
+  auto now = zx::clock::get_monotonic();
+  for (const auto& [stream_index, info] : stream_infos_) {
+    ZX_ASSERT_MSG((now - info.last_received) < kFrameTimeout, "stream=%u", stream_index);
+  }
+  async::PostDelayedTask(dispatcher_, fit::bind_member(this, &StreamCycler::CheckWatchdog),
+                         kCheckInterval);
 }
 
 void StreamCycler::ExecuteCommand(Command command, CommandStatusHandler handler) {
