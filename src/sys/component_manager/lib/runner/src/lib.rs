@@ -8,7 +8,7 @@ use {
     anyhow::Error, async_trait::async_trait, clonable_error::ClonableError,
     fidl::endpoints::ServerEnd, fidl::prelude::*, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::stream::TryStreamExt, log::*, thiserror::Error,
+    futures::stream::StreamExt, log::*, thiserror::Error,
 };
 
 /// Executes a component instance.
@@ -137,16 +137,11 @@ fn spawn_null_controller_server(mut request_stream: fcrunner::ComponentControlle
     // one, as this is the contract we have implemented so far. Exiting will
     // cause our handle to the channel to drop and close the channel.
     fasync::Task::spawn(async move {
-        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95031)
-        while let Ok(Some(request)) = request_stream.try_next().await {
+        if let Some(Ok(request)) = request_stream.next().await {
             match request {
-                fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
-                    c.shutdown();
-                    break;
-                }
-                fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
-                    c.shutdown();
-                    break;
+                fcrunner::ComponentControllerRequest::Stop { control_handle }
+                | fcrunner::ComponentControllerRequest::Kill { control_handle } => {
+                    control_handle.shutdown();
                 }
             }
         }
