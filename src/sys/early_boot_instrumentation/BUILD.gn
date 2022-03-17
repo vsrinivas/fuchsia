@@ -56,8 +56,34 @@ fuchsia_unittest_component("coverage-source-tests") {
   deps = [ ":coverage-source-test" ]
 }
 
+fuchsia_test_component(
+    "early-boot-instrumentation-integration-test-component") {
+  component_name = "early-boot-instrumentation-integration-test"
+  manifest = "meta/early_boot_instrumentation_test.cml"
+  deps = [ ":early-boot-instrumentation-integration-test" ]
+}
+
+test("early-boot-instrumentation-integration-test") {
+  output_name = "early-boot-instrumentation-integration-test"
+  sources = [ "early_boot_instrumentation_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 fuchsia_test_package("early-boot-instrumentation-tests") {
-  test_components = [ ":coverage-source-tests" ]
+  test_components = [
+    ":coverage-source-tests",
+    ":early-boot-instrumentation-integration-test-component",
+  ]
+  deps = [
+    # Needed by end to end test to provide fake raw instrumentation sources.
+    ":early-boot-instrumentation",
+    "test:early-boot-instrumentation-provider",
+  ]
 }
 
 fuchsia_component("early-boot-instrumentation") {

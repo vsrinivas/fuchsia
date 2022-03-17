@@ -1,0 +1,20 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/provider",
+    },
+    capabilities: [
+        {
+            directory: "boot",
+            rights: [ "r*" ],
+            path: "/boot",
+        },
+    ],
+    expose: [
+        {
+            directory: "boot",
+            from: "self",
+        },
+    ],
+}
