@@ -81,6 +81,8 @@ deepsize = { version = "0.2.0", features = ["chrono", "slab", "smallvec"] }
 derivative = "2.2.0"
 derp = "0.0.14"
 difference = "2.0.0"
+ecdsa = "0.13.4"
+elliptic-curve = "0.11.12"
 either = "1.5.0"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
@@ -129,6 +131,7 @@ num-derive = "0.3"
 num-traits = "0.2"
 numtoa = "0.1.0"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
+p256 = "0.10.1"
 parking_lot = "0.9"
 paste = "1.0"
 pathdiff = { version = "0.2.1", features = ["camino"] }
@@ -164,6 +167,7 @@ serde_json = "1.0.59"
 serde_json5 = { path = "mirrors/serde_json5" }
 serde_repr = "0.1.7"
 sha2 = "0.9"
+signature =  "1.4.0"
 slab = "0.4"
 socket2 = { version = "0.4.4", features = ["all"] }
 splines = "2.2.0"
@@ -415,7 +419,7 @@ env_vars = [ "CARGO_PKG_NAME=futures-task" ]
 env_vars = [ "CARGO_PKG_NAME=futures-util" ]
 rustflags = [ "--cfg=fn_like_proc_macro" ]
 
-[gn.package.generic-array."0.14.4"]
+[gn.package.generic-array."0.14.5"]
 rustflags = [ "--cfg=relaxed_coherence" ]
 
 [gn.package.getrandom."0.2.2"]
@@ -522,7 +526,7 @@ rustflags = []
 [gn.package.signal-hook."0.3.8"]
 rustflags = []
 
-[gn.package.typenum."1.14.0"]
+[gn.package.typenum."1.15.0"]
 env_vars = [
   "TYPENUM_BUILD_CONSTS=../../../compat/typenum/consts.rs",
   "TYPENUM_BUILD_OP=../../../compat/typenum/op.rs",
