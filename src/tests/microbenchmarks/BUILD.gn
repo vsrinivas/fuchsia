@@ -26,6 +26,7 @@ executable("bin") {
     "null.cc",
     "pthreads.cc",
     "random_memcpy.cc",
+    "round_trips_posix.cc",
   ]
   if (is_host) {
     sources += [ "process_spawn_posix.cc" ]
