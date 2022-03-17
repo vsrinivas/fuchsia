@@ -64,6 +64,7 @@ level when some clients cannot be migrated atomically:
 | enum     | member        | ✅ | [⚠️](#enum-member-add) | [⚠️](#enum-member-remove) | [⚠️](#enum-member-rename) | ❌ | -- | ✅ |
 | bits     | member        | ✅ | [⚠️](#bits-member-add) | [⚠️](#bits-member-remove) | [⚠️](#bits-member-rename) | ❌ | -- | ✅ |
 | const    | value         | -- | -- | -- | -- | ❌ | -- | [✅](#const-value-default-value) |
+| alias    | type          | -- | -- | -- | [⚠️](#type-alias-rename) | [⚠️](#type-alias-change-type) | -- | -- |
 | _all_    | attribute     | -- | [⚠️](#attributes) | [⚠️](#attributes) | -- | -- | -- | -- |
 | type     | constraint    | -- | [⚠️](#constraints) | [⚠️](#constraints) | -- | -- | -- | -- |
 | _decl_   | modifier      | -- | [⚠️](#modifiers) | [⚠️](#modifiers) | -- | -- | -- | -- |
@@ -327,6 +328,30 @@ versions.
 It is usually source-compatible to update the value of a `const` declaration. In
 rare circumstances, such a change could cause source-compatibility issues if the
 constant is used in static asserts that would fail with the updated value.
+
+## Type alias {#type-alias}
+
+### Renaming a type alias {#type-alias-rename}
+
+**ABI**
+
+It is ABI compatible to rename a type alias.
+
+**API**
+
+It is not source-compatible to rename a type alias.
+
+### Changing the underlying type of a type alias {#type-alias-change-type}
+
+**ABI**
+
+Typically, it is not ABI compatible to change the underlying type of a type
+alias. However, if the original underlying type and the replacement underlying
+type are ABI compatible, then a change is ABI compatible.
+
+**API**
+
+It is not source-compatible to change the underlying type of a type alias.
 
 ## Modifiers {#modifiers}
 
