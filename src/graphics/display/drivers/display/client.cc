@@ -1183,7 +1183,7 @@ void Client::ApplyConfig() {
   }
 
   if (!config_missing_image && is_owner_) {
-    DisplayConfig* dc_configs[configs_.size()];
+    DisplayConfig* dc_configs[configs_.size() + 1];
     int dc_idx = 0;
     for (auto& c : configs_) {
       dc_configs[dc_idx++] = &c;

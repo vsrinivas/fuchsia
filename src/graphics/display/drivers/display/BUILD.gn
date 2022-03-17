@@ -40,12 +40,7 @@ source_set("shared") {
     "../fake:fake-display-device-tree",
     "./*",
   ]
-  configs += [
-    "//build/config:all_source",
-
-    # FIXME(fxbug.dev/95566): Fix instances of VLAs with a non-positive size detected by UBSan.
-    "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "client.cc",
     "controller.cc",
