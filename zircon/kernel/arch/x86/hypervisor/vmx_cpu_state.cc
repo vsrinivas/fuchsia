@@ -84,12 +84,14 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
   // software should allocate for the VMXON region and any VMCS region. It is
   // a value greater than 0 and at most 4096 (bit 44 is set if and only if
   // bits 43:32 are clear).
-  if (vmx_info.region_size > PAGE_SIZE)
+  if (vmx_info.region_size > PAGE_SIZE) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Check use of write-back memory for VMX regions is supported.
-  if (!vmx_info.write_back)
+  if (!vmx_info.write_back) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // The maximum size for a VMXON or VMCS region is 4096, therefore
   // unconditionally allocating a page is adequate.
@@ -102,25 +104,30 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
 
   // Check that we have instruction information when we VM exit on IO.
   VmxInfo vmx_info;
-  if (!vmx_info.io_exit_info)
+  if (!vmx_info.io_exit_info) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Check that full VMX controls are supported.
-  if (!vmx_info.vmx_controls)
+  if (!vmx_info.vmx_controls) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Check that a page-walk length of 4 is supported.
   EptInfo ept_info;
-  if (!ept_info.page_walk_4)
+  if (!ept_info.page_walk_4) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Check use write-back memory for EPT is supported.
-  if (!ept_info.write_back)
+  if (!ept_info.write_back) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Check that the INVEPT instruction is supported.
-  if (!ept_info.invept)
+  if (!ept_info.invept) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // Enable VMXON, if required.
   uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
@@ -137,11 +144,13 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
 
   // Check control registers are in a VMX-friendly state.
   uint64_t cr0 = x86_get_cr0();
-  if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1))
+  if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
     return ZX_ERR_BAD_STATE;
+  }
   uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
-  if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1))
+  if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
     return ZX_ERR_BAD_STATE;
+  }
 
   // Enable VMX using the VMXE bit.
   x86_set_cr4(cr4);
@@ -189,14 +198,16 @@ zx_status_t alloc_vmx_state() {
     fbl::AllocChecker ac;
     size_t num_cpus = arch_max_num_cpus();
     VmxPage* pages_ptr = new (&ac) VmxPage[num_cpus];
-    if (!ac.check())
+    if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
+    }
     fbl::Array<VmxPage> pages(pages_ptr, num_cpus);
     VmxInfo vmx_info;
     for (auto& page : pages) {
       zx_status_t status = page.Alloc(vmx_info, 0);
-      if (status != ZX_OK)
+      if (status != ZX_OK) {
         return status;
+      }
     }
 
     // Enable VMX for all online CPUs.
