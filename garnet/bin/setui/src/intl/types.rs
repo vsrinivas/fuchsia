@@ -5,6 +5,7 @@
 use fidl_fuchsia_settings::IntlSettings;
 use serde::{Deserialize, Serialize};
 
+use crate::agent::storage::fidl_storage::FidlStorageConvertible;
 use crate::base::Merge;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -13,6 +14,30 @@ pub struct IntlInfo {
     pub temperature_unit: Option<TemperatureUnit>,
     pub time_zone_id: Option<String>,
     pub hour_cycle: Option<HourCycle>,
+}
+
+impl FidlStorageConvertible for IntlInfo {
+    type Storable = fidl_fuchsia_settings::IntlSettings;
+    const KEY: &'static str = "intl";
+
+    fn default_value() -> Self {
+        IntlInfo {
+            // `-x-fxdef` is a private use extension and a special marker denoting that the
+            // setting is a fallback default, and not actually set through any user action.
+            locales: Some(vec![LocaleId { id: "en-US-x-fxdef".to_string() }]),
+            temperature_unit: Some(TemperatureUnit::Celsius),
+            time_zone_id: Some("UTC".to_string()),
+            hour_cycle: Some(HourCycle::H12),
+        }
+    }
+
+    fn to_storable(self) -> Self::Storable {
+        self.into()
+    }
+
+    fn from_storable(storable: Self::Storable) -> Self {
+        storable.into()
+    }
 }
 
 impl Merge for IntlInfo {
@@ -125,5 +150,89 @@ impl From<HourCycle> for fidl_fuchsia_settings::HourCycle {
             HourCycle::H23 => fidl_fuchsia_settings::HourCycle::H23,
             HourCycle::H24 => fidl_fuchsia_settings::HourCycle::H24,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::agent::storage::fidl_storage::FidlStorageConvertible;
+    use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
+    use fidl_fuchsia_settings::IntlSettings;
+
+    const TIME_ZONE_ID: &str = "PDT";
+    const LOCALE_ID: &str = "en_us";
+
+    #[test]
+    fn fidl_storage_convertible_from_storable_empty() {
+        let info = IntlInfo::from_storable(IntlSettings::EMPTY);
+
+        assert_eq!(
+            info,
+            IntlInfo {
+                locales: None,
+                temperature_unit: None,
+                time_zone_id: None,
+                hour_cycle: None,
+            }
+        );
+    }
+
+    #[test]
+    fn fidl_storage_convertible_from_storable() {
+        let intl_settings = IntlSettings {
+            locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: LOCALE_ID.into() }]),
+            temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+            time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
+            hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H12),
+            ..IntlSettings::EMPTY
+        };
+
+        let info = IntlInfo::from_storable(intl_settings);
+
+        assert_eq!(
+            info,
+            IntlInfo {
+                locales: Some(vec![LocaleId { id: LOCALE_ID.into() }]),
+                temperature_unit: Some(TemperatureUnit::Celsius),
+                time_zone_id: Some(TIME_ZONE_ID.to_string()),
+                hour_cycle: Some(HourCycle::H12),
+            }
+        );
+    }
+
+    #[test]
+    fn fidl_storage_convertible_to_storable_empty() {
+        let info = IntlInfo {
+            locales: None,
+            temperature_unit: None,
+            time_zone_id: None,
+            hour_cycle: None,
+        };
+        let storable = info.to_storable();
+
+        assert_eq!(storable, IntlSettings::EMPTY,);
+    }
+
+    #[test]
+    fn fidl_storage_convertible_to_storable() {
+        let info = IntlInfo {
+            locales: Some(vec![LocaleId { id: LOCALE_ID.into() }]),
+            temperature_unit: Some(TemperatureUnit::Celsius),
+            time_zone_id: Some(TIME_ZONE_ID.to_string()),
+            hour_cycle: Some(HourCycle::H12),
+        };
+
+        let storable = info.to_storable();
+
+        assert_eq!(
+            storable,
+            IntlSettings {
+                locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: LOCALE_ID.into() }]),
+                temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+                time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
+                hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H12),
+                ..IntlSettings::EMPTY
+            }
+        );
     }
 }
