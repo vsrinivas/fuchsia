@@ -90,6 +90,22 @@ group("omaha-client") {
   ]
 }
 
+group("omaha-client-no-restart") {
+  public_deps = [
+    "bin/omaha-client:omaha-client-config",
+    "bin/omaha-client:omaha-client-no-restart",
+    "//src/diagnostics/config/triage:omaha-client-detect",
+  ]
+}
+
+group("omaha-client-delayed-start") {
+  public_deps = [
+    "bin/omaha-client:omaha-client-config",
+    "bin/omaha-client:omaha-client-delayed-start",
+    "//src/diagnostics/config/triage:omaha-client-detect",
+  ]
+}
+
 group("pkgfs-disable-executability-restrictions") {
   public_deps = [ "bin/pkgfs:disable-executability-restrictions" ]
   deps = [ "//build/validate:non_production_tag" ]
