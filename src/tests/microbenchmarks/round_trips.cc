@@ -620,7 +620,7 @@ void RegisterTestMultiProc(const char* base_name, Args... args) {
                                       MultiProcess, std::forward<Args>(args)...);
 }
 
-__attribute__((constructor)) void RegisterTests() {
+void RegisterTests() {
   RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel",
                                           /* count= */ 1, /* size= */ 4);
   RegisterTestMultiProc<BasicChannelTest>("IpcThroughput_BasicChannel_1_64kbytes",
@@ -642,6 +642,7 @@ __attribute__((constructor)) void RegisterTests() {
   RegisterTestMultiProc<FidlTest>("RoundTrip_Fidl");
   fbenchmark::RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
 }
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace
 
