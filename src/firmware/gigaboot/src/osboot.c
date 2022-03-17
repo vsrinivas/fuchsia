@@ -427,6 +427,9 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   xefi_init(img, sys);
   gConOut->ClearScreen(gConOut);
 
+  printf("Welcome to GigaBoot 20X6!\n");
+  printf("gSys %p gImg %p gBS %p gConOut %p\n", gSys, gImg, gBS, gConOut);
+
   uint64_t mmio;
   if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
     char tmp[32];
@@ -471,6 +474,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     LOG("Framebuffer base is at %" PRIx64, gop->Mode->FrameBufferBase);
   }
 
+#if __x86_64__
   // Set aside space for the kernel down at the 1MB mark up front
   // to avoid other allocations getting in the way.
   // The kernel itself is about 1MB, but we leave generous space
@@ -481,7 +485,15 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   kernel_zone_base = 0x100000;
   kernel_zone_size = 8 * 1024 * 1024;
 
-  if (gBS->AllocatePages(AllocateAddress, EfiLoaderData, BYTES_TO_PAGES(kernel_zone_size),
+  efi_allocate_type alloc_type = AllocateAddress;
+#else
+  // arm can allocate anywhere in physical memory
+  kernel_zone_base = 0;
+  kernel_zone_size = 16 * 1024 * 1024;
+  efi_allocate_type alloc_type = AllocateAnyPages;
+#endif  // !__x86_64__
+
+  if (gBS->AllocatePages(alloc_type, EfiLoaderData, BYTES_TO_PAGES(kernel_zone_size),
                          &kernel_zone_base)) {
     ELOG("boot: cannot obtain %zu bytes for kernel @ %p", kernel_zone_size,
          (void*)kernel_zone_base);
@@ -491,7 +503,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // to support a large fixed allocation at 0x100000.
   if (kernel_zone_size == 0) {
     kernel_zone_size = 3 * 1024 * 1024;
-    efi_status status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
+    efi_status status = gBS->AllocatePages(alloc_type, EfiLoaderData,
                                            BYTES_TO_PAGES(kernel_zone_size), &kernel_zone_base);
     if (status) {
       ELOG("boot: cannot obtain %zu bytes for kernel @ %p", kernel_zone_size,
@@ -499,7 +511,14 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
       kernel_zone_size = 0;
     }
   }
-  LOG("Kernel allocation done");
+
+#if __aarch64__
+  // align the buffer on at least a 64k boundary
+  efi_physical_addr prev_base = kernel_zone_base;
+  kernel_zone_base = ROUNDUP(kernel_zone_base, 64 * 1024);
+  kernel_zone_size -= kernel_zone_base - prev_base;
+#endif
+  LOG("Kernel space reserved at %#" PRIx64 ", length %#zx\n", kernel_zone_base, kernel_zone_size);
 
   const char* nodename = cmdline_get("zircon.nodename", "");
   uint32_t namegen = cmdline_get_uint32("zircon.namegen", 1);

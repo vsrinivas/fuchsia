@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# quickie hack script to try to boot an arm64 build on qemu + UEFI
+
+# prerequisites:
+# apt-get qemu-efi-aarch64
+# fx set core.qemu-arm64 && fx build
+
+QEMU=./prebuilt/third_party/qemu/linux-x64/bin/qemu-system-aarch64
+UEFI=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+DIR=$(dirname $0)
+DISK=$DIR/../../out/default/obj/build/images/disk.raw
+
+${QEMU} \
+  -cpu max -smp 1 -m 512 \
+  -machine virt-2.12 \
+  -nographic \
+  -bios ${UEFI} \
+  -drive file=${DISK},format=raw,id=mydisk,if=none \
+  -device virtio-blk-pci,drive=mydisk \
+  -nic user,model=virtio-net-pci \
+  $@
+
+#  -kernel core.qemu-arm64-release/efi_arm64/bootaa64.efi \
+#  -initrd core.qemu-arm64-release/netboot.zbi \
+
+#  -device ich9-ahci,id=ahci \
+#  -device ide-hd,drive=mydisk,bus=ahci.0 \
+
+#  -device virtio-gpu \
+#  -serial stdio \

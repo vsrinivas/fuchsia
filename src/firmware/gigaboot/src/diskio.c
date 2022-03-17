@@ -195,6 +195,7 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
     status = bs->OpenProtocol(list[n], &BlockIoProtocol, (void**)&bio, img, NULL,
                               EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
     if (status != EFI_SUCCESS) {
+      ELOG_S(status, "failed to open bio");
       continue;
     }
 
@@ -202,6 +203,7 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
     status = bs->OpenProtocol(list[n], &DevicePathProtocol, (void**)&path, img, NULL,
                               EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
     if (status != EFI_SUCCESS) {
+      ELOG_S(status, "failed to open path");
       bs->CloseProtocol(list[n], &BlockIoProtocol, img, NULL);
       continue;
     }

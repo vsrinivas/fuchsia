@@ -18,6 +18,7 @@ __BEGIN_CDECLS
 #define PAGE_MASK (PAGE_SIZE - 1)
 
 #define BYTES_TO_PAGES(n) (((n) + PAGE_MASK) / PAGE_SIZE)
+#define ROUNDUP(size, align) (((size) + ((align)-1)) & ~((align)-1))
 
 #define CMDLINE_MAX PAGE_SIZE
 

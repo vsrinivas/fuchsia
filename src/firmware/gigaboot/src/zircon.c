@@ -20,6 +20,12 @@
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
 static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
 
+#if __x86_64__
+const uint32_t MY_ARCH_KERNEL_TYPE = ZBI_TYPE_KERNEL_X64;
+#elif __aarch64__
+const uint32_t MY_ARCH_KERNEL_TYPE = ZBI_TYPE_KERNEL_ARM64;
+#endif
+
 static int add_staged_zbi_files(zbi_header_t* zbi, size_t capacity);
 static size_t get_last_crashlog(efi_system_table* sys, void* ptr, size_t max) {
   efi_runtime_services* rs = sys->RuntimeServices;
@@ -79,7 +85,7 @@ size_t image_getsize(void* image, size_t sz) {
   }
   zircon_kernel_t* kernel = image;
   if ((kernel->hdr_file.type != ZBI_TYPE_CONTAINER) || (kernel->hdr_file.magic != ZBI_ITEM_MAGIC) ||
-      (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL_X64) ||
+      (kernel->hdr_kernel.type != MY_ARCH_KERNEL_TYPE) ||
       (kernel->hdr_kernel.magic != ZBI_ITEM_MAGIC)) {
     return 0;
   }
@@ -96,7 +102,7 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
     return -1;
   }
   zircon_kernel_t* kernel = image;
-  if ((sz < sizeof(zircon_kernel_t)) || (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL_X64) ||
+  if ((sz < sizeof(zircon_kernel_t)) || (kernel->hdr_kernel.type != MY_ARCH_KERNEL_TYPE) ||
       ((kernel->hdr_kernel.flags & ZBI_FLAG_VERSION) == 0)) {
     printf("boot: invalid zircon kernel header\n");
     return -1;
@@ -115,6 +121,7 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
   }
   // TODO(fxbug.dev/32255): Eventually the fixed-position case can be removed.
 
+#if __x86_64__
   const uint64_t kFixedLoadAddress = 0x100000;
   const uint64_t image_len = (2 * sizeof(zbi_header_t)) + klen;
   if (entry > kFixedLoadAddress && entry - kFixedLoadAddress < image_len) {
@@ -126,6 +133,11 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
     printf("boot: invalid entry address %#" PRIx64 "\n", entry);
     return -1;
   }
+#elif __aarch64__
+  // arm64 kernels have always been position independent
+  printf("detected position-independent kernel: entry offset %#" PRIx64 "\n", entry);
+  entry += kernel_zone_base;
+#endif
   if (_entry) {
     *_entry = entry;
   }
@@ -295,6 +307,8 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
 
   add_staged_zbi_files(ramdisk, rsz);
 
+  printf("copying kernel image from %p to %p size %zu, entry at %p\n", image,
+         (void*)kernel_zone_base, isz, (void*)entry);
   memcpy((void*)kernel_zone_base, image, isz);
 
   // Obtain the system memory map
