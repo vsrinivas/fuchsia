@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_TYPES_COLOR_H_
 #define SRC_UI_LIB_ESCHER_TYPES_COLOR_H_
 
+#include <ostream>
 #include <tuple>
 
 #include <glm/glm.hpp>

@@ -4,8 +4,6 @@
 
 #include "src/ui/lib/escher/types/color.h"
 
-#include <ostream>
-
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace escher {
