@@ -711,7 +711,7 @@ be page-aligned) but will be read back as SIZE,ADDRESS after the kernel
 assigns an address in early boot.
 )""")
 
-DEFINE_OPTION("kernel.port.max-observers", uint64_t, max_port_observers, {UINT64_MAX},
+DEFINE_OPTION("kernel.port.max-observers", uint64_t, max_port_observers, {50000},
 R"""(
 Specifies the maximum number of observers any single port may have. When this limit is reached, a
 Zircon exception is raised in the process that crosses the limit. This value should be high enough

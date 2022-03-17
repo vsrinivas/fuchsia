@@ -628,9 +628,7 @@ TEST(PortTest, CloseQueueRace) {
 }
 
 // See that creating too many object observers raises an exception.
-//
-// TODO(fxbug.dev/91615): Enable this test once a default limit is in place.
-TEST(PortTest, DISABLED_TooManyObservers) {
+TEST(PortTest, TooManyObservers) {
   if (getenv("NO_NEW_PROCESS")) {
     ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
   }

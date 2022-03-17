@@ -479,7 +479,8 @@ TEST(TestLoopTest, DefaultDispatcherIsCurrentLoop) {
 }
 
 TEST(TestLoopTest, HugeAmountOfTaskAreDispatched) {
-  constexpr size_t kPostCount = 128 * 1024;
+  // This value must be less than or equal to kernel.port.max-observers.
+  constexpr size_t kPostCount = 50000;
   async::TestLoop loop;
   zx::event event;
   ASSERT_OK(zx::event::create(0u, &event));
