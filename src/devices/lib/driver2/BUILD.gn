@@ -36,6 +36,7 @@ source_set("inspect") {
   ]
 
   public_deps = [
+    "//sdk/lib/sys/component/llcpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",
   ]

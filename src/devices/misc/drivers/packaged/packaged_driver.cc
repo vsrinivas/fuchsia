@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
+
+#include <optional>
 
 #include "src/devices/lib/driver2/inspect.h"
 #include "src/devices/lib/driver2/namespace.h"
@@ -19,7 +21,7 @@ class PackagedDriver {
  public:
   PackagedDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                  driver::Namespace ns, driver::Logger logger)
-      : outgoing_(dispatcher),
+      : outgoing_(component::OutgoingDirectory::Create(dispatcher)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)) {}
@@ -33,7 +35,7 @@ class PackagedDriver {
                                                            driver::Logger logger) {
     auto driver = std::make_unique<PackagedDriver>(dispatcher, std::move(node), std::move(ns),
                                                    std::move(logger));
-    auto result = driver->Run(std::move(start_args.outgoing_dir()));
+    auto result = driver->Run(dispatcher, std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
       return result.take_error();
     }
@@ -41,13 +43,15 @@ class PackagedDriver {
   }
 
  private:
-  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    auto inspect = driver::ExposeInspector(inspector_, outgoing_.root_dir());
-    if (inspect.is_error()) {
-      FDF_SLOG(ERROR, "Failed to expose inspector", KV("error_string", inspect.status_string()));
-      return inspect.take_error();
+  zx::status<> Run(async_dispatcher* dispatcher, fidl::ServerEnd<fio::Directory> outgoing_dir) {
+    auto exposed_inspector = driver::ExposedInspector::Create(dispatcher, inspector_, outgoing_);
+    if (exposed_inspector.is_error()) {
+      FDF_SLOG(ERROR, "Failed to expose inspector",
+               KV("error_string", exposed_inspector.status_string()));
+      return exposed_inspector.take_error();
     }
-    inspect_vmo_ = std::move(inspect.value());
+
+    exposed_inspector_ = std::move(exposed_inspector.value());
     auto& root = inspector_.GetRoot();
     root.CreateString("hello", "world", &inspector_);
 
@@ -56,12 +60,12 @@ class PackagedDriver {
     return outgoing_.Serve(std::move(outgoing_dir));
   }
 
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
   inspect::Inspector inspector_;
-  zx::vmo inspect_vmo_;
+  std::optional<driver::ExposedInspector> exposed_inspector_ = std::nullopt;
 };
 
 }  // namespace

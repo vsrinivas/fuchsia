@@ -10,12 +10,14 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/handlers.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <zircon/assert.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <bind/fuchsia/test/cpp/fidl.h>
@@ -60,7 +62,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
   ReceiverDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                  driver::Namespace ns, driver::Logger logger, zx::vmo config_vmo)
       : dispatcher_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(component::OutgoingDirectory::Create(dispatcher)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)) {
@@ -87,7 +89,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
 
  private:
   zx::status<> Run(fidl::ServerEnd<::fuchsia_io::Directory> outgoing_dir) {
-    service::ServiceHandler handler;
+    component::ServiceHandler handler;
     scrs::ConfigService::Handler device(&handler);
 
     auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> zx::status<> {
@@ -104,9 +106,9 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
 
     // Serve the inspect data
     record_to_inspect(&inspector_);
-    auto vmo_result = driver::ExposeInspector(inspector_, outgoing_.root_dir());
-    ZX_ASSERT(vmo_result.is_ok());
-    inspect_vmo_ = std::move(vmo_result.value());
+    auto exposed_inspector = driver::ExposedInspector::Create(dispatcher_, inspector_, outgoing_);
+    ZX_ASSERT(exposed_inspector.is_ok());
+    exposed_inspector_ = std::move(exposed_inspector.value());
 
     return outgoing_.Serve(std::move(outgoing_dir));
   }
@@ -249,14 +251,14 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
   }
 
   async_dispatcher_t* const dispatcher_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
   fidl::WireSharedClient<fdf::Node> node_;
   fidl::WireSharedClient<fdf::NodeController> controller_;
   driver::Namespace ns_;
   driver::Logger logger_;
   DecodedObject<scr::wire::ReceiverConfig> config_;
   inspect::Inspector inspector_;
-  zx::vmo inspect_vmo_;
+  std::optional<driver::ExposedInspector> exposed_inspector_ = std::nullopt;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

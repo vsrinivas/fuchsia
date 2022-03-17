@@ -24,13 +24,13 @@ fuchsia_driver("receiver_driver") {
   deps = [
     ":receiver_bind",
     ":test.structuredconfig.receiver.shim_llcpp",
-    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
     "//src/devices/lib/driver2:inspect",
     "//src/devices/lib/driver2:llcpp",
     "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_llcpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
