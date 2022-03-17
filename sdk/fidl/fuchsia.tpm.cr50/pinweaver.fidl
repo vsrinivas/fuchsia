@@ -166,10 +166,11 @@ type MessageType = strict enum : uint32 {
 
 /// Additional data included as part of `LogEntry` required to execute the
 /// replay step.
-type EntryData = flexible union {
+type EntryData = table {
     1: leaf_hmac Mac;
     2: timestamp uint64;
-    3: return_code uint32;
+    3: boot_count uint32;
+    4: return_code uint32;
 };
 
 /// Parameters to LogReplay method.
