@@ -29,6 +29,7 @@ type MetricsLoggerError = strict enum : uint32 {
 type Metric = strict union {
     1: temperature Temperature;
     2: cpu_load CpuLoad;
+    3: power Power;
 };
 
 /// Temperature metric details.
@@ -45,6 +46,12 @@ type CpuLoad = struct {
     interval_ms uint32;
 };
 
+/// Power metric details.
+type Power = struct {
+    /// Length of the polling interval in milliseconds.
+    /// Must be positive and smaller than `duration_ms` of the logging request.
+    interval_ms uint32;
+};
 
 /// A protocol for managing on-demand metrics logging.
 @discoverable

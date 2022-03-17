@@ -1,9 +1,18 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "title": "Temperature Logger Config Schema",
+    "title": "Metrics Logger Config Schema",
     "type": "object",
     "properties": {
-        "drivers": {
+        "temperature_drivers": {
+            "$ref": "#/definitions/topological_paths"
+        },
+        "power_drivers": {
+            "$ref": "#/definitions/topological_paths"
+        }
+    },
+    "additionalProperties": false,
+    "definitions": {
+        "topological_paths": {
             "type": "array",
             "items": {
                 "type": "object",
@@ -22,7 +31,5 @@
                 ]
             }
         }
-    },
-    "additionalProperties": false,
-    "required": [ "drivers" ]
+    }
 }

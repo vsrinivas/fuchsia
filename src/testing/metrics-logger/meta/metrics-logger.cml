@@ -27,6 +27,11 @@
             path: "/dev/class/thermal",
         },
         {
+            directory: "dev-power-sensor",
+            rights: [ "r*" ],
+            path: "/dev/class/power-sensor",
+        },
+        {
             protocol: [
                 "fuchsia.device.Controller",
                 "fuchsia.hardware.temperature.Device",

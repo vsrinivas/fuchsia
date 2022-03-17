@@ -4,8 +4,9 @@
 
 use {
     anyhow::{format_err, Error, Result},
-    fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_temperature as ftemperature,
-    fidl_fuchsia_kernel as fkernel,
+    async_trait::async_trait,
+    fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_power_sensor as fpower,
+    fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_kernel as fkernel,
     fidl_fuchsia_metricslogger_test::{self as fmetrics, MetricsLoggerRequest},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -36,6 +37,7 @@ const CONFIG_PATH: &'static str = "/config/data/config.json";
 // The fuchsia.hardware.temperature.Device is composed into fuchsia.hardware.thermal.Device, so
 // drivers are found in two directories.
 const TEMPERATURE_SERVICE_DIRS: [&str; 2] = ["/dev/class/temperature", "/dev/class/thermal"];
+const POWER_SERVICE_DIRS: [&str; 1] = ["/dev/class/power-sensor"];
 
 pub fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(path: &str) -> Result<T::Proxy> {
     let (proxy, server) = fidl::endpoints::create_proxy::<T>()
@@ -89,28 +91,225 @@ async fn list_drivers(path: &str) -> Vec<String> {
     }
 }
 
-// Representation of an actively-used temperature driver.
-struct TemperatureDriver {
+/// Generates a list of `SensorDriver` from driver paths and aliases.
+async fn generate_sensor_drivers<T: fidl::endpoints::ProtocolMarker>(
+    service_dirs: &[&str],
+    driver_aliases: HashMap<String, String>,
+) -> Result<Vec<SensorDriver<T::Proxy>>> {
+    // Determine topological paths for devices in service directories.
+    let mut topo_to_class = HashMap::new();
+    for dir in service_dirs {
+        map_topo_paths_to_class_paths(dir, &mut topo_to_class).await?;
+    }
+
+    // For each driver path, create a proxy for the service.
+    let mut drivers = Vec::new();
+    for (topological_path, class_path) in topo_to_class {
+        let proxy: T::Proxy = connect_proxy::<T>(&class_path)?;
+        let alias = driver_aliases.get(&topological_path).map(|c| c.to_string());
+        drivers.push(SensorDriver { alias, topological_path, proxy });
+    }
+    Ok(drivers)
+}
+
+// Type aliases for convenience.
+type TemperatureDriver = SensorDriver<ftemperature::DeviceProxy>;
+type PowerDriver = SensorDriver<fpower::DeviceProxy>;
+type TemperatureLogger = SensorLogger<ftemperature::DeviceProxy>;
+type PowerLogger = SensorLogger<fpower::DeviceProxy>;
+
+// Representation of an actively-used driver.
+struct SensorDriver<T> {
     alias: Option<String>,
 
     topological_path: String,
 
-    proxy: ftemperature::DeviceProxy,
+    proxy: T,
 }
 
-impl TemperatureDriver {
+impl<T> SensorDriver<T> {
     fn name(&self) -> &str {
         &self.alias.as_ref().unwrap_or(&self.topological_path)
     }
 }
 
+enum SensorType {
+    Temperature,
+    Power,
+}
+
+#[async_trait(?Send)]
+trait Sensor<T> {
+    fn sensor_type() -> SensorType;
+    async fn read_data(sensor: &T) -> Result<f32, Error>;
+}
+
+#[async_trait(?Send)]
+impl Sensor<ftemperature::DeviceProxy> for ftemperature::DeviceProxy {
+    fn sensor_type() -> SensorType {
+        SensorType::Temperature
+    }
+
+    async fn read_data(sensor: &ftemperature::DeviceProxy) -> Result<f32, Error> {
+        match sensor.get_temperature_celsius().await {
+            Ok((zx_status, temperature)) => match zx::Status::ok(zx_status) {
+                Ok(()) => Ok(temperature),
+                Err(e) => Err(format_err!("get_temperature_celsius returned an error: {}", e)),
+            },
+            Err(e) => Err(format_err!("get_temperature_celsius IPC failed: {}", e)),
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl Sensor<fpower::DeviceProxy> for fpower::DeviceProxy {
+    fn sensor_type() -> SensorType {
+        SensorType::Power
+    }
+
+    async fn read_data(sensor: &fpower::DeviceProxy) -> Result<f32, Error> {
+        match sensor.get_power_watts().await {
+            Ok(result) => match result {
+                Ok(power) => Ok(power),
+                Err(e) => Err(format_err!("get_power_watts returned an error: {}", e)),
+            },
+            Err(e) => Err(format_err!("get_power_watts IPC failed: {}", e)),
+        }
+    }
+}
+
+struct SensorLogger<T> {
+    /// List of sensor drivers.
+    drivers: Rc<Vec<SensorDriver<T>>>,
+
+    /// Logging interval.
+    interval: zx::Duration,
+
+    /// Start time for the logger; used to calculate elapsed time.
+    start_time: fasync::Time,
+
+    /// Time at which the logger will stop.
+    end_time: fasync::Time,
+
+    inspect: InspectData,
+}
+
+impl<T: Sensor<T>> SensorLogger<T> {
+    fn new(
+        drivers: Rc<Vec<SensorDriver<T>>>,
+        interval: zx::Duration,
+        duration: Option<zx::Duration>,
+        client_inspect: &inspect::Node,
+        driver_names: Vec<String>,
+    ) -> Self {
+        let start_time = fasync::Time::now();
+        let end_time = duration.map_or(fasync::Time::INFINITE, |d| start_time + d);
+
+        let unit = match T::sensor_type() {
+            SensorType::Temperature => "°C",
+            SensorType::Power => "w",
+        };
+        let logger_name = match T::sensor_type() {
+            SensorType::Temperature => "TemperatureLogger",
+            SensorType::Power => "PowerLogger",
+        };
+        let inspect = InspectData::new(client_inspect, logger_name, unit, driver_names);
+
+        SensorLogger { drivers, interval, start_time, end_time, inspect }
+    }
+
+    /// Logs data from all provided sensors.
+    async fn log_data(self) {
+        let mut interval = fasync::Interval::new(self.interval);
+
+        while let Some(()) = interval.next().await {
+            // If we're interested in very high-rate polling in the future, it might be worth
+            // comparing the elapsed time to the intended polling interval and logging any
+            // anomalies.
+            let now = fasync::Time::now();
+            if now >= self.end_time {
+                break;
+            }
+            self.log_single_data(now - self.start_time).await;
+        }
+    }
+
+    async fn log_single_data(&self, elapsed: zx::Duration) {
+        // Execute a query to each sensor driver.
+        let queries = FuturesUnordered::new();
+        for (index, driver) in self.drivers.iter().enumerate() {
+            let query = async move {
+                let result = T::read_data(&driver.proxy).await;
+                (index, result)
+            };
+
+            queries.push(query);
+        }
+        let results = queries.collect::<Vec<(usize, Result<f32, Error>)>>().await;
+
+        // Log data to Inspect and to a trace counter.
+        let mut trace_args = Vec::new();
+        for (index, result) in results.into_iter() {
+            match result {
+                Ok(value) => {
+                    self.inspect.log_data(index, value, elapsed.into_millis());
+
+                    trace_args.push(fuchsia_trace::ArgValue::of(
+                        self.drivers[index].name(),
+                        value as f64,
+                    ));
+                }
+                // In case of a polling error, the previous value from this sensor will not be
+                // updated. We could do something fancier like exposing an error count, but this
+                // sample will be missing from the trace counter as is, and any serious analysis
+                // should be performed on the trace.
+                Err(e) => fx_log_err!(
+                    "Error reading sensor {:?}: {:?}",
+                    self.drivers[index].topological_path,
+                    e
+                ),
+            };
+        }
+
+        match T::sensor_type() {
+            // TODO (didis): Remove temperature_logger category after the e2e test is transitioned.
+            SensorType::Temperature => {
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("temperature_logger"),
+                    fuchsia_trace::cstr!("temperature"),
+                    0,
+                    &trace_args,
+                );
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("temperature"),
+                    0,
+                    &trace_args,
+                );
+            }
+            SensorType::Power => fuchsia_trace::counter(
+                fuchsia_trace::cstr!("metrics_logger"),
+                fuchsia_trace::cstr!("power"),
+                0,
+                &trace_args,
+            ),
+        }
+    }
+}
+
 /// Builds a MetricsLoggerServer.
 pub struct ServerBuilder<'a> {
-    /// Optional configs for temperature sensor drivers.
+    /// Aliases for temperature sensor drivers. Empty if no aliases are provided.
     temperature_driver_aliases: HashMap<String, String>,
 
     /// Optional drivers for test usage.
     temperature_drivers: Option<Vec<TemperatureDriver>>,
+
+    /// Aliases for power sensor drivers. Empty if no aliases are provided.
+    power_driver_aliases: HashMap<String, String>,
+
+    /// Optional drivers for test usage.
+    power_drivers: Option<Vec<PowerDriver>>,
 
     // Optional proxy for test usage.
     cpu_stats_proxy: Option<fkernel::StatsProxy>,
@@ -131,17 +330,30 @@ impl<'a> ServerBuilder<'a> {
         }
         #[derive(Deserialize)]
         struct Config {
-            drivers: Vec<DriverAlias>,
+            temperature_drivers: Option<Vec<DriverAlias>>,
+            power_drivers: Option<Vec<DriverAlias>>,
         }
         let config: Option<Config> = json_data.map(|d| json::from_value(d).unwrap());
 
-        let topo_to_alias: HashMap<String, String> = config.map_or(HashMap::new(), |c| {
-            c.drivers.into_iter().map(|m| (m.topological_path, m.name)).collect()
-        });
+        let (temperature_driver_aliases, power_driver_aliases) = match config {
+            None => (HashMap::new(), HashMap::new()),
+            Some(c) => (
+                c.temperature_drivers.map_or_else(
+                    || HashMap::new(),
+                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
+                ),
+                c.power_drivers.map_or_else(
+                    || HashMap::new(),
+                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
+                ),
+            ),
+        };
 
         ServerBuilder {
-            temperature_driver_aliases: topo_to_alias,
+            temperature_driver_aliases,
             temperature_drivers: None,
+            power_driver_aliases,
+            power_drivers: None,
             cpu_stats_proxy: None,
             inspect_root: None,
         }
@@ -151,6 +363,12 @@ impl<'a> ServerBuilder<'a> {
     #[cfg(test)]
     fn with_temperature_drivers(mut self, temperature_drivers: Vec<TemperatureDriver>) -> Self {
         self.temperature_drivers = Some(temperature_drivers);
+        self
+    }
+
+    #[cfg(test)]
+    fn with_power_drivers(mut self, power_drivers: Vec<PowerDriver>) -> Self {
+        self.power_drivers = Some(power_drivers);
         self
     }
 
@@ -169,32 +387,31 @@ impl<'a> ServerBuilder<'a> {
 
     /// Builds a MetricsLoggerServer.
     async fn build(self) -> Result<Rc<MetricsLoggerServer>> {
-        let drivers = match self.temperature_drivers {
-            // If no proxies are provided, create proxies based on driver paths.
+        // If no proxies are provided, create proxies based on driver paths.
+        let temperature_drivers: Vec<TemperatureDriver> = match self.temperature_drivers {
             None => {
-                // Determine topological paths for devices in TEMPERATURE_SERVICE_DIRS.
-                let mut topo_to_class = HashMap::new();
-                for dir in &TEMPERATURE_SERVICE_DIRS {
-                    map_topo_paths_to_class_paths(dir, &mut topo_to_class).await?;
-                }
-
-                // For each driver path, create a proxy for the service.
-                let mut drivers = Vec::new();
-                for (topological_path, class_path) in topo_to_class {
-                    let proxy = connect_proxy::<ftemperature::DeviceMarker>(&class_path)?;
-                    let alias = self
-                        .temperature_driver_aliases
-                        .get(&topological_path)
-                        .map(|c| c.to_string());
-                    drivers.push(TemperatureDriver { alias, topological_path, proxy });
-                }
-                drivers
+                generate_sensor_drivers::<ftemperature::DeviceMarker>(
+                    &TEMPERATURE_SERVICE_DIRS,
+                    self.temperature_driver_aliases,
+                )
+                .await?
             }
-
             Some(drivers) => drivers,
         };
 
-        // Create proxy for polling CPU stats
+        // If no proxies are provided, create proxies based on driver paths.
+        let power_drivers = match self.power_drivers {
+            None => {
+                generate_sensor_drivers::<fpower::DeviceMarker>(
+                    &POWER_SERVICE_DIRS,
+                    self.power_driver_aliases,
+                )
+                .await?
+            }
+            Some(drivers) => drivers,
+        };
+
+        // If no proxy is provided, create proxy for polling CPU stats
         let cpu_stats_proxy = match &self.cpu_stats_proxy {
             Some(proxy) => proxy.clone(),
             None => connect_to_protocol::<fkernel::StatsMarker>()?,
@@ -204,110 +421,11 @@ impl<'a> ServerBuilder<'a> {
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(MetricsLoggerServer::new(
-            Rc::new(drivers),
-            inspect_root.create_child("MetricsLogger"),
+            Rc::new(temperature_drivers),
+            Rc::new(power_drivers),
             Rc::new(cpu_stats_proxy),
+            inspect_root.create_child("MetricsLogger"),
         ))
-    }
-}
-
-struct TemperatureLogger {
-    /// List of temperature sensor drivers.
-    drivers: Rc<Vec<TemperatureDriver>>,
-
-    /// Logging interval.
-    interval: zx::Duration,
-
-    /// Start time for the logger; used to calculate elapsed time.
-    start_time: fasync::Time,
-
-    /// Time at which the logger will stop.
-    end_time: fasync::Time,
-
-    inspect: InspectData,
-}
-
-impl TemperatureLogger {
-    fn new(
-        drivers: Rc<Vec<TemperatureDriver>>,
-        interval: zx::Duration,
-        duration: Option<zx::Duration>,
-        inspect: InspectData,
-    ) -> Self {
-        let start_time = fasync::Time::now();
-        let end_time = duration.map_or(fasync::Time::INFINITE, |d| start_time + d);
-        TemperatureLogger { drivers, interval, start_time, end_time, inspect }
-    }
-
-    /// Logs temperatures from all provided sensors.
-    async fn log_temperatures(self) {
-        let mut interval = fasync::Interval::new(self.interval);
-
-        while let Some(()) = interval.next().await {
-            // If we're interested in very high-rate polling in the future, it might be worth
-            // comparing the elapsed time to the intended polling interval and logging any
-            // anomalies.
-            let now = fasync::Time::now();
-            if now >= self.end_time {
-                break;
-            }
-            self.log_temperature(now - self.start_time).await;
-        }
-    }
-
-    /// Polls temperature sensors and logs the resulting data to Inspect and trace.
-    async fn log_temperature(&self, elapsed: zx::Duration) {
-        // Execute a query to each temperature sensor driver.
-        let queries = FuturesUnordered::new();
-        for (index, driver) in self.drivers.iter().enumerate() {
-            let query = async move {
-                let result = match driver.proxy.get_temperature_celsius().await {
-                    Ok((zx_status, temperature)) => match zx::Status::ok(zx_status) {
-                        Ok(()) => Ok(temperature),
-                        Err(e) => Err(format_err!(
-                            "{}: get_temperature_celsius returned an error: {}",
-                            driver.topological_path,
-                            e
-                        )),
-                    },
-                    Err(e) => Err(format_err!(
-                        "{}: get_temperature_celsius IPC failed: {}",
-                        driver.topological_path,
-                        e
-                    )),
-                };
-                (index, result)
-            };
-            queries.push(query);
-        }
-        let results = queries.collect::<Vec<(usize, Result<f32, Error>)>>().await;
-
-        // Log the temperatures to Inspect and to a trace counter.
-        let mut trace_args = Vec::new();
-        for (index, result) in results.into_iter() {
-            match result {
-                Ok(temperature) => {
-                    self.inspect.log_temperature(index, temperature, elapsed.into_millis());
-
-                    trace_args.push(fuchsia_trace::ArgValue::of(
-                        self.drivers[index].name(),
-                        temperature as f64,
-                    ));
-                }
-                // In case of a polling error, the previous value will from this sensor will not be
-                // updated. We could do something fancier like exposing an error count, but this
-                // sample will be missing from the trace counter as is, and any serious analysis
-                // should be performed on the trace.
-                Err(e) => fx_log_err!("Error reading temperature: {:?}", e),
-            };
-        }
-
-        fuchsia_trace::counter(
-            fuchsia_trace::cstr!("temperature_logger"),
-            fuchsia_trace::cstr!("temperature"),
-            0,
-            &trace_args,
-        );
     }
 }
 
@@ -358,8 +476,16 @@ impl CpuLoadLogger {
                         cpu_percentage_sum +=
                             100.0 * busy_time.into_nanos() as f64 / elapsed.into_nanos() as f64;
                     }
+                    // TODO (didis): Remove system_metrics_logger category after the e2e test is
+                    // transitioned.
                     fuchsia_trace::counter!(
                         "system_metrics_logger",
+                        "cpu_usage",
+                        0,
+                        "cpu_usage" => cpu_percentage_sum / cpu_stats.actual_num_cpus as f64
+                    );
+                    fuchsia_trace::counter!(
+                        "metrics_logger",
                         "cpu_usage",
                         0,
                         "cpu_usage" => cpu_percentage_sum / cpu_stats.actual_num_cpus as f64
@@ -377,11 +503,14 @@ struct MetricsLoggerServer {
     /// List of temperature sensor drivers for polling temperatures.
     temperature_drivers: Rc<Vec<TemperatureDriver>>,
 
-    /// Root node for MetricsLogger
-    inspect_root: inspect::Node,
+    /// List of power sensor drivers for polling powers.
+    power_drivers: Rc<Vec<PowerDriver>>,
 
     /// Proxy for polling CPU stats.
     cpu_stats_proxy: Rc<fkernel::StatsProxy>,
+
+    /// Root node for MetricsLogger
+    inspect_root: inspect::Node,
 
     /// Map that stores the logging task for all clients. Once a logging request is received
     /// with a new client_id, a task is lazily inserted into the map using client_id as the key.
@@ -391,13 +520,15 @@ struct MetricsLoggerServer {
 impl MetricsLoggerServer {
     fn new(
         temperature_drivers: Rc<Vec<TemperatureDriver>>,
-        inspect_root: inspect::Node,
+        power_drivers: Rc<Vec<PowerDriver>>,
         cpu_stats_proxy: Rc<fkernel::StatsProxy>,
+        inspect_root: inspect::Node,
     ) -> Rc<Self> {
         Rc::new(Self {
             temperature_drivers,
-            inspect_root,
+            power_drivers,
             cpu_stats_proxy,
+            inspect_root,
             client_tasks: RefCell::new(HashMap::new()),
         })
     }
@@ -475,6 +606,14 @@ impl MetricsLoggerServer {
                         return Err(fmetrics::MetricsLoggerError::InvalidArgument);
                     }
                 }
+                fmetrics::Metric::Power(fmetrics::Power { interval_ms }) => {
+                    if self.power_drivers.len() == 0 {
+                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
+                    }
+                    if *interval_ms == 0 || duration_ms.map_or(false, |d| d <= *interval_ms) {
+                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
+                    }
+                }
             }
         }
 
@@ -501,6 +640,7 @@ impl MetricsLoggerServer {
     ) -> fasync::Task<()> {
         let cpu_stats_proxy = self.cpu_stats_proxy.clone();
         let temperature_drivers = self.temperature_drivers.clone();
+        let power_drivers = self.power_drivers.clone();
         let client_inspect = self.inspect_root.create_child(client_id);
 
         fasync::Task::local(async move {
@@ -524,13 +664,23 @@ impl MetricsLoggerServer {
                             temperature_drivers.clone(),
                             zx::Duration::from_millis(interval_ms as i64),
                             duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
-                            InspectData::new(
-                                &client_inspect,
-                                "TemperatureLogger",
-                                temperature_driver_names,
-                            ),
+                            &client_inspect,
+                            temperature_driver_names,
                         );
-                        futures.push(Box::new(temperature_logger.log_temperatures()));
+                        futures.push(Box::new(temperature_logger.log_data()));
+                    }
+                    fmetrics::Metric::Power(fmetrics::Power { interval_ms }) => {
+                        let power_driver_names: Vec<String> =
+                            power_drivers.iter().map(|c| c.name().to_string()).collect();
+
+                        let power_logger = PowerLogger::new(
+                            power_drivers.clone(),
+                            zx::Duration::from_millis(interval_ms as i64),
+                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
+                            &client_inspect,
+                            power_driver_names,
+                        );
+                        futures.push(Box::new(power_logger.log_data()));
                     }
                 }
             }
@@ -541,24 +691,29 @@ impl MetricsLoggerServer {
 
 // TODO (fxbug.dev/92320): Populate CPU Usageinfo into Inspect.
 struct InspectData {
-    temperatures: Vec<inspect::DoubleProperty>,
+    data: Vec<inspect::DoubleProperty>,
     elapsed_millis: inspect::IntProperty,
     _inspect_node: inspect::Node,
 }
 
 impl InspectData {
-    fn new(parent: &inspect::Node, logger_name: &str, sensor_names: Vec<String>) -> Self {
+    fn new(
+        parent: &inspect::Node,
+        logger_name: &str,
+        unit: &str,
+        sensor_names: Vec<String>,
+    ) -> Self {
         let root = parent.create_child(logger_name);
-        let temperatures = sensor_names
+        let data = sensor_names
             .into_iter()
-            .map(|name| root.create_double(name + " (°C)", f64::MIN))
+            .map(|name| root.create_double(format!("{} ({})", name, unit), f64::MIN))
             .collect();
         let elapsed_millis = root.create_int("elapsed time (ms)", std::i64::MIN);
-        Self { temperatures, elapsed_millis, _inspect_node: root }
+        Self { data, elapsed_millis, _inspect_node: root }
     }
 
-    fn log_temperature(&self, index: usize, value: f32, elapsed_millis: i64) {
-        self.temperatures[index].set(value as f64);
+    fn log_data(&self, index: usize, value: f32, elapsed_millis: i64) {
+        self.data[index].set(value as f64);
         self.elapsed_millis.set(elapsed_millis);
     }
 }
@@ -609,7 +764,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
-        fmetrics::{CpuLoad, Metric, Temperature},
+        fmetrics::{CpuLoad, Metric, Power, Temperature},
         futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
         matches::assert_matches,
@@ -635,7 +790,7 @@ mod tests {
         (proxy, task)
     }
 
-    fn setup_fake_driver(
+    fn setup_fake_temperature_driver(
         mut get_temperature: impl FnMut() -> f32 + 'static,
     ) -> (ftemperature::DeviceProxy, fasync::Task<()>) {
         let (proxy, mut stream) =
@@ -654,12 +809,34 @@ mod tests {
         (proxy, task)
     }
 
+    fn setup_fake_power_driver(
+        mut get_power: impl FnMut() -> f32 + 'static,
+    ) -> (fpower::DeviceProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fpower::DeviceMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fpower::DeviceRequest::GetPowerWatts { responder }) => {
+                        let _ = responder.send(&mut Ok(get_power()));
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
     struct Runner {
         server_task: fasync::Task<()>,
         proxy: fmetrics::MetricsLoggerProxy,
 
         cpu_temperature: Rc<Cell<f32>>,
         gpu_temperature: Rc<Cell<f32>>,
+
+        power_1: Rc<Cell<f32>>,
+        power_2: Rc<Cell<f32>>,
 
         inspector: inspect::Inspector,
 
@@ -686,14 +863,23 @@ mod tests {
             let cpu_temperature = Rc::new(Cell::new(0.0));
             let cpu_temperature_clone = cpu_temperature.clone();
             let (cpu_temperature_proxy, task) =
-                setup_fake_driver(move || cpu_temperature_clone.get());
+                setup_fake_temperature_driver(move || cpu_temperature_clone.get());
             tasks.push(task);
             let gpu_temperature = Rc::new(Cell::new(0.0));
             let gpu_temperature_clone = gpu_temperature.clone();
             let (gpu_temperature_proxy, task) =
-                setup_fake_driver(move || gpu_temperature_clone.get());
+                setup_fake_temperature_driver(move || gpu_temperature_clone.get());
             tasks.push(task);
-            let drivers = vec![
+
+            let power_1 = Rc::new(Cell::new(0.0));
+            let power_1_clone = power_1.clone();
+            let (power_1_proxy, task) = setup_fake_power_driver(move || power_1_clone.get());
+            tasks.push(task);
+            let power_2 = Rc::new(Cell::new(0.0));
+            let power_2_clone = power_2.clone();
+            let (power_2_proxy, task) = setup_fake_power_driver(move || power_2_clone.get());
+            tasks.push(task);
+            let temperature_drivers = vec![
                 TemperatureDriver {
                     alias: Some("cpu".to_string()),
                     topological_path: "/dev/fake/cpu_temperature".to_string(),
@@ -703,6 +889,18 @@ mod tests {
                     alias: None,
                     topological_path: "/dev/fake/gpu_temperature".to_string(),
                     proxy: gpu_temperature_proxy,
+                },
+            ];
+            let power_drivers = vec![
+                PowerDriver {
+                    alias: Some("power_1".to_string()),
+                    topological_path: "/dev/fake/power_1".to_string(),
+                    proxy: power_1_proxy,
+                },
+                PowerDriver {
+                    alias: None,
+                    topological_path: "/dev/fake/power_2".to_string(),
+                    proxy: power_2_proxy,
                 },
             ];
 
@@ -716,7 +914,8 @@ mod tests {
 
             // Build the server.
             let builder = ServerBuilder::new_from_json(None)
-                .with_temperature_drivers(drivers)
+                .with_temperature_drivers(temperature_drivers)
+                .with_power_drivers(power_drivers)
                 .with_cpu_stats_proxy(cpu_stats_proxy)
                 .with_inspect_root(inspector.root());
             let poll = executor.run_until_stalled(&mut builder.build().boxed_local());
@@ -738,6 +937,8 @@ mod tests {
                 cpu_temperature,
                 gpu_temperature,
                 inspector,
+                power_1,
+                power_2,
                 _tasks: tasks,
             }
         }
@@ -755,6 +956,10 @@ mod tests {
                 self.executor.run_until_stalled(&mut self.server_task)
             );
             true
+        }
+
+        fn run_server_task_until_stalled(&mut self) {
+            assert_matches!(self.executor.run_until_stalled(&mut self.server_task), Poll::Pending);
         }
     }
 
@@ -796,7 +1001,7 @@ mod tests {
 
         // Run  `server_task`  until stalled to create futures for logging
         // temperatures and CpuLoads.
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Check the Inspect node for TemperatureLogger is created.
         assert_data_tree!(
@@ -814,8 +1019,8 @@ mod tests {
             }
         );
 
-        runner.cpu_temperature.set(35.0 as f32);
-        runner.gpu_temperature.set(45.0 as f32);
+        runner.cpu_temperature.set(35.0);
+        runner.gpu_temperature.set(45.0);
 
         // Run the initial logging tasks.
         for _ in 0..2 {
@@ -876,6 +1081,32 @@ mod tests {
         assert_eq!(runner.iterate_logging_task(), false);
     }
 
+    /// Tests that well-formed alias JSON does not panic the `new_from_json` function.
+    #[test]
+    fn test_new_from_json() {
+        // Test config file for one sensor.
+        let json_data = json::json!({
+            "power_drivers": [{
+                "name": "power_1",
+                "topological_path": "/dev/sys/platform/power_1"
+            }]
+        });
+        let _ = ServerBuilder::new_from_json(Some(json_data));
+
+        // Test config file for two sensors.
+        let json_data = json::json!({
+            "temperature_drivers": [{
+                "name": "temp_1",
+                "topological_path": "/dev/sys/platform/temp_1"
+            }],
+            "power_drivers": [{
+                "name": "power_1",
+                "topological_path": "/dev/sys/platform/power_1"
+            }]
+        });
+        let _ = ServerBuilder::new_from_json(Some(json_data));
+    }
+
     #[test]
     fn test_logging_duration() {
         let mut runner = Runner::new();
@@ -886,7 +1117,7 @@ mod tests {
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             2000,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Ensure that we get exactly 20 samples.
         for _ in 0..20 {
@@ -950,7 +1181,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Samples should continue forever. Obviously we can't check infinitely many samples, but
         // we can check that they don't stop for a relatively large number of iterations.
@@ -983,7 +1214,7 @@ mod tests {
             .into_iter(),
             600,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Check logger added to client with default values before first temperature poll.
         assert_data_tree!(
@@ -1001,8 +1232,8 @@ mod tests {
             }
         );
 
-        runner.cpu_temperature.set(35.0 as f32);
-        runner.gpu_temperature.set(45.0 as f32);
+        runner.cpu_temperature.set(35.0);
+        runner.gpu_temperature.set(45.0);
 
         // Run existing tasks to completion (6 CpuLoad tasks + 3 Temperature tasks).
         for _ in 0..9 {
@@ -1027,7 +1258,7 @@ mod tests {
             "test",
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Check logger added to client with default values before first temperature poll.
         assert_data_tree!(
@@ -1045,8 +1276,8 @@ mod tests {
             }
         );
 
-        runner.cpu_temperature.set(35.0 as f32);
-        runner.gpu_temperature.set(45.0 as f32);
+        runner.cpu_temperature.set(35.0);
+        runner.gpu_temperature.set(45.0);
 
         // Run a few logging tasks to populate Inspect node before we test `stop_logging`.
         for _ in 0..10 {
@@ -1071,7 +1302,7 @@ mod tests {
 
         let mut query = runner.proxy.stop_logging("test");
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         assert_eq!(runner.iterate_logging_task(), false);
 
@@ -1105,7 +1336,7 @@ mod tests {
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 200 })].into_iter(),
             300,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Check default values before first temperature poll.
         assert_data_tree!(
@@ -1130,8 +1361,8 @@ mod tests {
             }
         );
 
-        runner.cpu_temperature.set(35.0 as f32);
-        runner.gpu_temperature.set(45.0 as f32);
+        runner.cpu_temperature.set(35.0);
+        runner.gpu_temperature.set(45.0);
 
         // Run the first task which is the first logging task for client `test1`.
         assert_eq!(runner.iterate_logging_task(), true);
@@ -1160,8 +1391,8 @@ mod tests {
         );
 
         // Set new temperature data.
-        runner.cpu_temperature.set(36.0 as f32);
-        runner.gpu_temperature.set(46.0 as f32);
+        runner.cpu_temperature.set(36.0);
+        runner.gpu_temperature.set(46.0);
 
         for _ in 0..2 {
             assert_eq!(runner.iterate_logging_task(), true);
@@ -1240,10 +1471,7 @@ mod tests {
                 &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 300 })].into_iter(),
             );
             assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
-            assert_matches!(
-                runner.executor.run_until_stalled(&mut runner.server_task),
-                Poll::Pending
-            );
+            runner.run_server_task_until_stalled();
         }
 
         // Check new client logging request returns TOO_MANY_ACTIVE_CLIENTS error.
@@ -1281,7 +1509,7 @@ mod tests {
             400,
         );
 
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         assert_eq!(runner.iterate_logging_task(), true);
 
@@ -1328,7 +1556,7 @@ mod tests {
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
             200,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Starting a new logging task of the second client should still fail.
         let mut query = runner.proxy.start_logging(
@@ -1351,6 +1579,21 @@ mod tests {
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 0 })].into_iter(),
             200,
         );
+
+        // Check `InvalidArgument` is returned when logging interval is 0.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::Power(Power { interval_ms: 500 })].into_iter(),
+            300,
+        );
+
+        // Check `InvalidArgument` is returned when logging interval is larger
+        // than logging duration.
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
             Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
@@ -1373,7 +1616,7 @@ mod tests {
             200,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         let mut query = runner.proxy.stop_logging("test");
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
@@ -1394,7 +1637,7 @@ mod tests {
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
             1_000,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+        runner.run_server_task_until_stalled();
 
         // Check default values before first temperature poll.
         assert_data_tree!(
@@ -1435,6 +1678,64 @@ mod tests {
 
         // With one more time step, the end time has been reached, the client is removed from Inspect.
         runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_logging_power() {
+        let mut runner = Runner::new();
+
+        runner.power_1.set(2.0);
+        runner.power_2.set(5.0);
+
+        let _query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::Power(Power { interval_ms: 100 })].into_iter(),
+            200,
+        );
+        runner.run_server_task_until_stalled();
+
+        // Check default values before first power sensor poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        PowerLogger: {
+                            "power_1 (w)": f64::MIN,
+                            "/dev/fake/power_2 (w)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run 1 logging task.
+        runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        PowerLogger: {
+                            "power_1 (w)": 2.0,
+                            "/dev/fake/power_2 (w)": 5.0,
+                            "elapsed time (ms)": 100i64
+                        }
+                    }
+                }
+            }
+        );
+
+        // Finish the remaining task.
+        runner.iterate_logging_task();
+
         assert_data_tree!(
             runner.inspector,
             root: {
