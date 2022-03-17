@@ -1,0 +1,13 @@
+# This file defines indentation style for the Fuchsia tree in a format usable by many editors.
+# For more information on the format and supported editors, see https://editorconfig.org.
+
+[*]
+indent_style = space
+indent_size = 2
+
+[*.go]
+indent_style = tab
+indent_size = 8
+
+[*.{py,fidl,rs,cml}]
+indent_size = 4
