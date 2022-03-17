@@ -133,6 +133,83 @@ std::optional<int64_t> FindImpulseLeadingEdge(
   return std::nullopt;
 }
 
+// Locate the center of the impulse in the given slice, ignoring samples quieter than the given
+// noise floor. Returns the frame index if found, and std::nullopt otherwise.
+// This function requires a one-channel slice, and it assumes there is exactly one impulse.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+std::optional<int64_t> FindImpulseCenter(
+    AudioBufferSlice<SampleFormat> slice,
+    typename SampleFormatTraits<SampleFormat>::SampleT noise_floor) {
+  constexpr bool kDisplayEdgesAndCenter = false;
+
+  FX_CHECK(slice.format().channels() == 1);
+
+  auto normalize = [](typename SampleFormatTraits<SampleFormat>::SampleT val) {
+    float norm = static_cast<float>(val);
+    if constexpr (SampleFormat == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
+      norm -= 0x80;
+    }
+    return norm;
+  };
+
+  // If our impulse was a single frame, we could simply find the maximum absolute value.
+  // To support wider impulses, we need to find the left and right edges of the impulse.
+  // We do this by finding the first and last values such that there does not exist a
+  // value more than 50% larger.
+  float max_value = 0.0f;
+  for (int64_t idx = 0; idx < slice.NumFrames(); idx++) {
+    float val = std::abs(normalize(slice.SampleAt(idx, 0)));
+    if (val <= static_cast<float>(noise_floor)) {
+      continue;
+    }
+    max_value = std::max(max_value, val);
+  }
+  if (max_value == 0.0f) {
+    return std::nullopt;
+  }
+
+  int64_t leading_idx = 0;
+  float leading_val = 0.0f;
+  for (int64_t idx = 0; idx < slice.NumFrames(); ++idx) {
+    float val = normalize(slice.SampleAt(idx, 0));
+    if (1.5 * std::abs(val) > max_value) {
+      leading_idx = idx;
+      leading_val = val;
+      break;
+    }
+  }
+
+  int64_t trailing_idx = slice.NumFrames() - 1;
+  float trailing_val = 0.0f;
+  for (int64_t idx = slice.NumFrames() - 1; idx >= 0; --idx) {
+    float val = normalize(slice.SampleAt(idx, 0));
+    if (1.5 * std::abs(val) > max_value) {
+      trailing_idx = idx;
+      trailing_val = val;
+      break;
+    }
+  }
+  int64_t sum_idx = leading_idx + trailing_idx;
+  int64_t center_idx = sum_idx / 2;
+  center_idx += ((sum_idx & 0x01) && leading_val < trailing_val) ? 1 : 0;
+
+  if constexpr (kDisplayEdgesAndCenter) {
+    std::stringstream edge_values;
+    edge_values << "   [" << std::setw(5) << slice.start_frame() + leading_idx << "]"
+                << std::setw(10) << leading_val << " | [" << std::setw(5)
+                << slice.start_frame() + center_idx << "]" << std::setw(10)
+                << normalize(slice.SampleAt(center_idx, 0));
+    if ((sum_idx & 0x01) && leading_val < trailing_val) {
+      edge_values << " | [" << std::setw(5) << slice.start_frame() + center_idx << "]"
+                  << std::setw(10) << normalize(slice.SampleAt(center_idx, 0));
+    }
+    FX_LOGS(INFO) << edge_values.str() << " | [" << std::setw(5)
+                  << slice.start_frame() + trailing_idx << "]" << std::setw(10) << trailing_val;
+  }
+
+  return center_idx;
+}
+
 // Multiply the input buffer by a Tukey window, producing a new output buffer. A Tukey window
 // contains a ramp up from zero, followed by a flat top of 1.0, followed by a ramp down to zero.
 // The total width of the up and down ramps is described by the alpha parameter, which must be <= 1.
