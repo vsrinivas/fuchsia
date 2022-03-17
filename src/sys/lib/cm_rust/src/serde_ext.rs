@@ -165,12 +165,18 @@ impl Serialize for DictionaryValue {
 
 struct DictionaryValueVisitor;
 
-#[allow(clippy::serde_api_misuse)] // TODO(fxbug.dev/95072)
 impl<'de> Visitor<'de> for DictionaryValueVisitor {
     type Value = DictionaryValue;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("A dictionary value")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(DictionaryValue::Str(s.to_owned()))
     }
 
     fn visit_string<E>(self, s: String) -> Result<Self::Value, E>
