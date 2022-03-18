@@ -259,7 +259,7 @@ mod tests {
     fn make_v2_manifest(component_id: i32, decl: ComponentDecl) -> Result<Manifest> {
         let mut decl_fidl: fdecl::Component = decl.native_into_fidl();
         let decl_base64 = base64::encode(&encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut decl_fidl,
         )?);
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
@@ -468,7 +468,7 @@ mod tests {
                     split_index_path[2..].join(""),
                     fidl::encoding::encode_persistent_with_context(
                         &fidl::encoding::Context {
-                            wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2,
                         },
                         &mut component_internal::ComponentIdIndex::try_from(component_id_index)
                             .expect("failed to convert component id index to fidl"),
@@ -482,7 +482,7 @@ mod tests {
             DEFAULT_CONFIG_PATH.to_string(),
             fidl::encoding::encode_persistent_with_context(
                 &fidl::encoding::Context {
-                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
                 },
                 &mut runtime_config,
             )
