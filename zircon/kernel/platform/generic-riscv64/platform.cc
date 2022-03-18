@@ -414,6 +414,21 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         platform_set_hw_reboot_reason(reason);
         break;
       }
+      case ZBI_TYPE_CPU_TOPOLOGY: {
+        const size_t node_count = payload.size() / static_cast<size_t>(header->extra);
+        const auto* nodes = reinterpret_cast<const zbi_topology_node_t*>(payload.data());
+        for (int i = 0; i < (int)node_count; i ++) {
+          if (nodes[i].entity_type == ZBI_TOPOLOGY_ENTITY_PROCESSOR &&
+              nodes[i].entity.processor.architecture == ZBI_TOPOLOGY_ARCH_RISCV &&
+              nodes[i].entity.processor.flags == ZBI_TOPOLOGY_PROCESSOR_PRIMARY) {
+            uint boot_hart_id = (uint)nodes[i].entity.processor.architecture_info.riscv.hart_id;
+            riscv64_read_percpu_ptr()->hart_id = boot_hart_id;
+            arch_register_hart(0, boot_hart_id);
+	    break;
+          }
+        }
+        break;
+      }
     };
   }
 
