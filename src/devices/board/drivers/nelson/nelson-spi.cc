@@ -28,8 +28,8 @@
 namespace nelson {
 using spi_channel_t = fidl_metadata::spi::Channel;
 
-// Approximate CPU time required to read a single burst, determined with manual tests.
-constexpr zx::duration kSelinaCapacity = zx::msec(3);
+// Approximate CPU time required to read a single burst, determined with tracing.
+constexpr zx::duration kSelinaCapacity = zx::usec(3'500);
 // The radar sensor interrupts the host with a new burst every 33,333 us.
 constexpr zx::duration kSelinaPeriod = zx::usec(33'333);
 
