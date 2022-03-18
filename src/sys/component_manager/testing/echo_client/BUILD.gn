@@ -5,21 +5,22 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("echo_server_testing") {
+rustc_binary("echo_client_testing") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("echo_server") {
-  testonly = true
-  component_name = "echo_server"
-  manifest = "meta/echo_server.cml"
-  deps = [ ":echo_server_testing" ]
+fuchsia_component("echo_client") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cml"
+  deps = [ ":echo_client_testing" ]
 }

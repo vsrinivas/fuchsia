@@ -46,7 +46,7 @@ fuchsia_component("fuchsia_component_v1_test_component") {
 
 fuchsia_test_package("fuchsia-component-tests") {
   test_components = [ ":fuchsia_component_v1_test_component" ]
-  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
+  deps = [ "//src/sys/component_manager/testing/echo_server" ]
 }
 
 group("tests") {

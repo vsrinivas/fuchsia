@@ -6,7 +6,7 @@
         "args": [
             "Hello Fuchsia!"
         ],
-        "binary": "bin/echo_client"
+        "binary": "bin/echo_client_testing"
     },
     "sandbox": {
         "services": [

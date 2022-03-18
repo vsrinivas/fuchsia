@@ -109,7 +109,6 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
     ":long_running_test",
     ":stdout_ansi_test",
     ":tests_bin",
-    "//examples/components/routing/echo_server:echo_server_component",
     "//examples/tests:disabled-test-example",
     "//examples/tests:echo_test_client",
     "//examples/tests:echo_test_realm",
@@ -126,6 +125,7 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
     "//examples/tests:run-hangs-example",
     "//examples/tests:test-with-stderr",
     "//examples/tests/rust:custom_artifact_user_cmp",
+    "//src/sys/component_manager/testing/echo_server",
     "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
 

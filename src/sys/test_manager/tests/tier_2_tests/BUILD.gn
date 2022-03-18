@@ -17,7 +17,8 @@ fuchsia_test_package("tier_2_test") {
 }
 
 fuchsia_package("tier_2_echo_server") {
-  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
+  testonly = true
+  deps = [ "//src/sys/component_manager/testing/echo_server" ]
 }
 
 group("tests") {

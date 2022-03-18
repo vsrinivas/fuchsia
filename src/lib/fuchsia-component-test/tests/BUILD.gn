@@ -46,27 +46,31 @@ fuchsia_test_component("fuchsia_component_test_tests_component") {
 }
 
 fuchsia_component("echo_client_empty_component") {
+  testonly = true
   manifest = "meta/echo_client_empty.cml"
   component_name = "echo_client_empty"
-  deps = [ "//examples/components/routing/echo_client" ]
+  deps = [ "//src/sys/component_manager/testing/echo_client" ]
 }
 
 fuchsia_component("echo_server_empty_component") {
+  testonly = true
   manifest = "meta/echo_server_empty.cml"
   component_name = "echo_server_empty"
-  deps = [ "//examples/components/routing/echo_server" ]
+  deps = [ "//src/sys/component_manager/testing/echo_server" ]
 }
 
 fuchsia_component("echo_client_component") {
+  testonly = true
   manifest = "meta/echo_client.cmx"
   component_name = "echo_client"
-  deps = [ "//examples/components/routing/echo_client" ]
+  deps = [ "//src/sys/component_manager/testing/echo_client" ]
 }
 
 fuchsia_component("echo_server_component") {
+  testonly = true
   manifest = "meta/echo_server.cmx"
   component_name = "echo_server"
-  deps = [ "//examples/components/routing/echo_server" ]
+  deps = [ "//src/sys/component_manager/testing/echo_server" ]
 }
 
 rustc_test("scoped-instance-test") {
@@ -129,18 +133,23 @@ fuchsia_test_component("realm_with_wait_component") {
   deps = [ ":realm" ]
 }
 
+fuchsia_test_component("echo_realm_component") {
+  component_name = "echo_realm"
+  manifest = "meta/echo_realm.cml"
+}
+
 fuchsia_test_package("fuchsia-component-test-tests") {
   deps = [
     ":echo_client_component",
     ":echo_client_empty_component",
+    ":echo_realm_component",
     ":echo_server_component",
     ":echo_server_empty_component",
     ":fuchsia_component_test_tests_component",
     "echo_client_sc",
-    "//examples/components/routing:echo_realm",
-    "//examples/components/routing/echo_client:echo_client_component",
-    "//examples/components/routing/echo_server:echo_server_component",
     "//src/sys/component_manager:component-manager-realm-builder-cmp",
+    "//src/sys/component_manager/testing/echo_client",
+    "//src/sys/component_manager/testing/echo_server",
   ]
   test_components = [ ":fuchsia_component_test_tests_component" ]
 }
@@ -151,8 +160,8 @@ fuchsia_test_package("scoped-instance-tests") {
     ":echo_server_component",
     ":realm_component",
     ":realm_with_wait_component",
-    "//examples/components/routing/echo_server:echo_server_component",
     "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }
 

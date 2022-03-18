@@ -101,6 +101,6 @@ fuchsia_unittest_package("core_proxy_integration_test") {
     ":core_proxy_integration_test_bin",
     ":fake_appmgr",
     ":fake_core",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

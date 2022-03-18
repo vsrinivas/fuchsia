@@ -38,6 +38,6 @@ group("echo-example") {
   public_deps = [
     ":echo-test-realm",
     ":echo_go_client_component",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

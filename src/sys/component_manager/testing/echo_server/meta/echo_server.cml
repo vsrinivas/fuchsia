@@ -5,7 +5,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/echo_placeholder",
+        binary: "bin/echo_server_testing",
     },
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },
