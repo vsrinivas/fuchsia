@@ -172,7 +172,7 @@ config("standalone") {
   # populate only `.debug_frame` and not `.eh_frame`.
   asmflags = [
     "-include",
-    rebase_path("debug-frame.S"),
+    rebase_path("debug-frame.S", root_build_dir),
   ]
 
   cflags_cc = [
