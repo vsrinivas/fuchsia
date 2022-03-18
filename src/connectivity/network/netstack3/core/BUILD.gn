@@ -49,6 +49,7 @@ lib_sources = [
   "src/transport/mod.rs",
   "src/transport/tcp/buffer.rs",
   "src/transport/tcp/mod.rs",
+  "src/transport/tcp/rtt.rs",
   "src/transport/tcp/segment.rs",
   "src/transport/tcp/seqnum.rs",
   "src/transport/tcp/state.rs",

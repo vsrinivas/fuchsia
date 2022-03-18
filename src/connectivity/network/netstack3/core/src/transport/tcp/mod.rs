@@ -5,6 +5,7 @@
 //! The Transmission Control Protocol (TCP).
 
 mod buffer;
+mod rtt;
 mod segment;
 mod seqnum;
 mod state;
