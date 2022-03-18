@@ -19,9 +19,7 @@ def print_landmines():
     """
     All landmines are emitted from here.
     """
-    print(
-        "fxb/91927 Moving manifest validation 'earlier' in the graph hits incremental bugs."
-    )
+    pass
 
 
 def main():
