@@ -8,7 +8,7 @@
 
 namespace {
 
-static constexpr zx_gpaddr_t kGoodDeviceAddr = 0xc000000;
+constexpr zx_gpaddr_t kGoodDeviceAddr = 0xc000000;
 
 TEST(DevMemTest, NoOverlappingRanges) {
   DevMem dev_mem;
@@ -70,6 +70,28 @@ TEST(DevMemTest, YieldInverseRange) {
   dev_mem.YieldInverseRange(0, kGoodDeviceAddr + 0x1000, yield);
   EXPECT_EQ(0ul, addr);
   EXPECT_EQ(kGoodDeviceAddr, size);
+}
+
+TEST(DevMemTest, FinalizeRanges) {
+  DevMem dev_mem;
+  dev_mem.Finalize();
+
+  EXPECT_FALSE(dev_mem.AddRange(kGoodDeviceAddr, 0x1000));
+}
+
+TEST(DevMemTest, NoGuestMemoryOverlap) {
+  DevMem dev_mem;
+
+  EXPECT_TRUE(dev_mem.AddRange(kGoodDeviceAddr, 0x1000));
+  EXPECT_FALSE(dev_mem.HasGuestMemoryOverlap(
+      {{0, kGoodDeviceAddr}, {kGoodDeviceAddr + 0x1000, kGoodDeviceAddr + 0x2000}}));
+}
+
+TEST(DevMemTest, GuestMemoryOverlap) {
+  DevMem dev_mem;
+
+  EXPECT_TRUE(dev_mem.AddRange(kGoodDeviceAddr, 0x1000));
+  EXPECT_TRUE(dev_mem.HasGuestMemoryOverlap({{0, kGoodDeviceAddr + 0x1000}}));
 }
 
 }  // namespace

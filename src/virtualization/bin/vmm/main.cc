@@ -449,6 +449,14 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Device memory has been finalized. Ensure that there's no overlap with the generated guest
+  // memory ranges.
+  dev_mem.Finalize();
+  if (dev_mem.HasGuestMemoryOverlap(guest.memory_regions())) {
+    // Logs faulty guest ranges internally.
+    return ZX_ERR_INTERNAL;
+  }
+
   // Setup kernel.
   uintptr_t entry = 0;
   uintptr_t boot_ptr = 0;
