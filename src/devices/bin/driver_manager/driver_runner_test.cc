@@ -1074,6 +1074,10 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BindOrphanToBaseDriver) {
     EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
+    args.mutable_properties()->emplace_back(
+        std::move(fdf::NodeProperty()
+                      .set_key(fdf::NodePropertyKey::WithStringValue("driver.prop-one"))
+                      .set_value(fdf::NodePropertyValue::WithStringValue("value"))));
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });

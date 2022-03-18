@@ -513,10 +513,47 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     for (auto& property : request->args.properties()) {
       fdf::wire::NodeProperty node_property(child->arena_);
       if (property.has_key()) {
-        node_property.set_key(child->arena_, property.key());
+        using fdf::wire::NodePropertyKey;
+        switch (property.key().Which()) {
+          case NodePropertyKey::Tag::kIntValue:
+            node_property.set_key(child->arena_,
+                                  NodePropertyKey::WithIntValue(property.key().int_value()));
+            break;
+          case NodePropertyKey::Tag::kStringValue: {
+            node_property.set_key(
+                child->arena_,
+                NodePropertyKey::WithStringValue(
+                    child->arena_,
+                    fidl::StringView(child->arena_, property.key().string_value().get())));
+            break;
+          }
+        }
       }
       if (property.has_value()) {
-        node_property.set_value(child->arena_, property.value());
+        using fdf::wire::NodePropertyValue;
+        switch (property.value().Which()) {
+          case NodePropertyValue::Tag::kIntValue:
+          case NodePropertyValue::Tag::kBoolValue:
+            node_property.set_value(child->arena_, property.value());
+            break;
+          case NodePropertyValue::Tag::kStringValue: {
+            node_property.set_value(
+                child->arena_,
+                NodePropertyValue::WithStringValue(
+                    child->arena_,
+                    fidl::StringView(child->arena_, property.value().string_value().get())));
+            break;
+          }
+          case NodePropertyValue::Tag::kEnumValue: {
+            node_property.set_value(
+                child->arena_,
+                NodePropertyValue::WithEnumValue(
+                    child->arena_,
+                    fidl::StringView(child->arena_, property.value().enum_value().get())));
+
+            break;
+          }
+        }
       }
       child->properties_.push_back(std::move(node_property));
     }
