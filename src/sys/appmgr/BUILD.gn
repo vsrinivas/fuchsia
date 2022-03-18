@@ -207,6 +207,7 @@ executable("unittest_bin") {
     "namespace_builder_unittest.cc",
     "namespace_unittest.cc",
     "policy_checker_unittest.cc",
+    "realm_unittests.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
     "storage_metrics_unittest.cc",
@@ -221,6 +222,7 @@ executable("unittest_bin") {
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -228,6 +230,8 @@ executable("unittest_bin") {
     "//src/storage/memfs:cpp",
     "//src/testing/fidl:placeholders",
     "//third_party/googletest:gmock",
+    "//zircon/system/public",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

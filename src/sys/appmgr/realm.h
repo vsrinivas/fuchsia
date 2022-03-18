@@ -45,6 +45,7 @@
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/runner_holder.h"
 #include "src/sys/appmgr/scheme_map.h"
+#include "src/sys/appmgr/util.h"
 
 namespace component {
 class ComponentEventProviderImpl;
@@ -225,6 +226,12 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void ShutdownNamespace(ShutdownNamespaceCallback callback = nullptr);
 
   static Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp);
+
+  static void InstallRuntime(Realm* realm, zx::job child_job, zx::process process,
+                             fxl::RefPtr<Namespace> ns, fdio_flat_namespace_t* flat,
+                             const std::string args, ComponentRequestWrapper component_request,
+                             const std::string url, ExportedDirChannels channels,
+                             ComponentObjectCreatedCallback callback, zx::channel pkg_handle);
 
  private:
   static uint32_t next_numbered_label_;

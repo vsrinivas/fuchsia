@@ -29,9 +29,23 @@ class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
+  enum Status {
+    /// Namespace running and serving request.
+    RUNNING,
+
+    /// Got shutdown request.
+    SHUTTING_DOWN,
+
+    /// Stopping vfs and dependencies.
+    STOPPING,
+
+    /// Namespace stopped.
+    STOPPED,
+  };
   const fbl::RefPtr<ServiceProviderDirImpl>& services() const { return services_; }
   const fbl::RefPtr<JobProviderImpl>& job_provider() { return job_provider_; }
   fxl::WeakPtr<Realm> realm() const { return realm_; }
+  Status status() { return status_; }
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
@@ -109,19 +123,6 @@ class Namespace : public fuchsia::sys::Environment,
  private:
   // So that constructor with parent namesapace cannot be used directly.
   struct PrivateConstructor {};
-  enum Status {
-    /// Namespace running and serving request.
-    RUNNING,
-
-    /// Got shutdown request.
-    SHUTTING_DOWN,
-
-    /// Stopping vfs and dependencies.
-    STOPPING,
-
-    /// Namespace stopped.
-    STOPPED,
-  };
 
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::WeakPtr<Realm> realm, fuchsia::sys::ServiceListPtr additional_services,

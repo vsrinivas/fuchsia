@@ -1069,6 +1069,42 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   }
 }
 
+void Realm::InstallRuntime(
+    Realm* realm, zx::job child_job, zx::process process, fxl::RefPtr<Namespace> ns,
+    fdio_flat_namespace_t* flat, const std::string args, ComponentRequestWrapper component_request,
+    const std::string url, ExportedDirChannels channels,
+    fit::function<void(std::weak_ptr<ComponentControllerImpl> component)> callback,
+    zx::channel pkg_handle) {
+  if (process) {
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
+
+    component_request.Extract(&controller);
+    auto application = std::make_shared<ComponentControllerImpl>(
+        std::move(controller), realm, std::move(child_job), std::move(process), url,
+        std::move(args), Util::GetLabelFromURL(url), std::move(ns),
+        std::move(channels.exported_dir), std::move(channels.client_request),
+        std::move(pkg_handle));
+    // update hub
+    realm->hub_.AddComponent(application->HubInfo());
+    ComponentControllerImpl* key = application.get();
+    if (callback != nullptr) {
+      callback(application);
+    }
+    fuchsia::sys::internal::SourceIdentity component_info;
+    component_info.set_component_name(application->label());
+    component_info.set_component_url(application->url());
+    component_info.set_instance_id(application->hub_instance_id());
+    realm->RegisterJobForCrashIntrospection(application->job(), std::move(component_info));
+    realm->NotifyComponentStarted(application->url(), application->label(),
+                                  application->hub_instance_id());
+    realm->applications_.emplace(key, std::move(application));
+  } else {
+    ns->FlushAndShutdown(ns, [&]() {});
+    zx_handle_close_many(flat->handle, flat->count);
+    child_job.kill();
+  }
+}
+
 void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, zx::vmo executable, const std::string& app_argv0,
     std::vector<std::string> env_vars, zx::channel loader_service, fdio_flat_namespace_t* flat,
@@ -1100,30 +1136,9 @@ void Realm::CreateElfBinaryComponentFromPackage(
   auto channels = Util::BindDirectory(&launch_info);
   zx::process process = CreateProcess(child_job, std::move(executable), app_argv0, env_vars,
                                       std::move(launch_info), std::move(loader_service), flat);
-
-  if (process) {
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
-
-    component_request.Extract(&controller);
-    auto application = std::make_shared<ComponentControllerImpl>(
-        std::move(controller), this, std::move(child_job), std::move(process), url, std::move(args),
-        Util::GetLabelFromURL(url), std::move(ns), std::move(channels.exported_dir),
-        std::move(channels.client_request), std::move(package_handle));
-    // update hub
-    hub_.AddComponent(application->HubInfo());
-    ComponentControllerImpl* key = application.get();
-    if (callback != nullptr) {
-      callback(application);
-    }
-    fuchsia::sys::internal::SourceIdentity component_info;
-    component_info.set_component_name(application->label());
-    component_info.set_component_url(application->url());
-    component_info.set_instance_id(application->hub_instance_id());
-    RegisterJobForCrashIntrospection(application->job(), std::move(component_info));
-    NotifyComponentStarted(application->url(), application->label(),
-                           application->hub_instance_id());
-    applications_.emplace(key, std::move(application));
-  }
+  InstallRuntime(this, std::move(child_job), std::move(process), ns, flat, std::move(args),
+                 std::move(component_request), url, std::move(channels), std::move(callback),
+                 std::move(package_handle));
 }
 
 void Realm::CreateRunnerComponentFromPackage(
