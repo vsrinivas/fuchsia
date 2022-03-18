@@ -16,6 +16,7 @@ test("fastboot-test") {
   deps = [
     "..:lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/testing:fake-paver",

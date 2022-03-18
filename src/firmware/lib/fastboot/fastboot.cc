@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fastboot/fastboot.h>
 #include <lib/fdio/directory.h>
@@ -48,7 +49,7 @@ zx::status<> SendResponse(ResponseType resp_type, const std::string& message, Tr
 
   std::string resp = type + message;
   if (ret_status.is_error()) {
-    resp += fxl::StringPrintf("(0x%s)", ret_status.status_string());
+    resp += fxl::StringPrintf("(%s)", ret_status.status_string());
   }
   if (zx::status<> ret = transport->Send(resp); ret.is_error()) {
     FX_LOGF(ERROR, kFastbootLogTag, "Failed to write packet %d\n", ret.status_value());
@@ -125,6 +126,14 @@ const std::vector<Fastboot::CommandEntry>& Fastboot::GetCommandTable() {
       {
           .name = "set_active",
           .cmd = &Fastboot::SetActive,
+      },
+      {
+          .name = "reboot",
+          .cmd = &Fastboot::Reboot,
+      },
+      {
+          .name = "continue",
+          .cmd = &Fastboot::Continue,
       },
   });
   return *kCommandTable;
@@ -264,7 +273,7 @@ zx::status<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_
   return boot_manager_res.value()->QueryCurrentConfiguration().ok() ? zx::ok("2") : zx::ok("1");
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver() {
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
   // If `svc_root_` is not set, use the system svc root.
   if (!svc_root_) {
     zx::channel request, service_root;
@@ -283,8 +292,17 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver(
     svc_root_ = fidl::ClientEnd<fuchsia_io::Directory>(std::move(service_root));
   }
 
+  return zx::ok(&svc_root_);
+}
+
+zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver() {
   // Connect to the paver
-  auto paver_svc = service::ConnectAt<fuchsia_paver::Paver>(svc_root_);
+  auto svc_root = GetSvcRoot();
+  if (svc_root.is_error()) {
+    return zx::error(svc_root.status_value());
+  }
+
+  auto paver_svc = service::ConnectAt<fuchsia_paver::Paver>(*svc_root.value());
   if (!paver_svc.is_ok()) {
     FX_LOGF(ERROR, kFastbootLogTag, "Unable to open /svc/fuchsia.paver.Paver");
     return zx::error(paver_svc.error_value());
@@ -422,6 +440,46 @@ zx::status<> Fastboot::SetActive(const std::string& command, Transport* transpor
   }
 
   return SendResponse(ResponseType::kOkay, "", transport);
+}
+
+zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) {
+  auto svc_root = GetSvcRoot();
+  if (svc_root.is_error()) {
+    return zx::error(svc_root.status_value());
+  }
+
+  auto connect_result =
+      service::ConnectAt<fuchsia_hardware_power_statecontrol::Admin>(*svc_root.value());
+  if (connect_result.is_error()) {
+    return SendResponse(ResponseType::kFail,
+                        "Failed to connect to power state control service: ", transport,
+                        zx::error(connect_result.status_value()));
+  }
+
+  // Send an okay response regardless of the result. Because once system reboots, we have
+  // no chance to send any response.
+  zx::status<> ret = SendResponse(ResponseType::kOkay, "", transport);
+  if (ret.is_error()) {
+    return ret;
+  }
+
+  auto admin_client = fidl::BindSyncClient(std::move(connect_result.value()));
+  auto resp = admin_client->Reboot(fuchsia_hardware_power_statecontrol::RebootReason::kUserRequest);
+  if (!resp.ok()) {
+    return zx::error(resp.status());
+  }
+
+  return zx::ok();
+}
+
+zx::status<> Fastboot::Continue(const std::string& command, Transport* transport) {
+  zx::status<> ret = SendResponse(
+      ResponseType::kInfo, "userspace fastboot cannot continue, rebooting instead", transport);
+  if (ret.is_error()) {
+    return ret;
+  }
+
+  return Reboot(command, transport);
 }
 
 }  // namespace fastboot

@@ -87,6 +87,8 @@ class __EXPORT Fastboot {
   zx::status<> Download(const std::string &command, Transport *transport);
   zx::status<> Flash(const std::string &command, Transport *transport);
   zx::status<> SetActive(const std::string &command, Transport *transport);
+  zx::status<> Reboot(const std::string &command, Transport *transport);
+  zx::status<> Continue(const std::string &command, Transport *transport);
 
   void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
@@ -112,6 +114,8 @@ class __EXPORT Fastboot {
 
   // A static table of fastboot variable name to method mapping.
   static const VariableHashTable &GetVariableTable();
+
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory> *> GetSvcRoot();
 
   friend class FastbootDownloadTest;
 };

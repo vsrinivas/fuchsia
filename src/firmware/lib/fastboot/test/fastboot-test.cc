@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -563,6 +564,82 @@ TEST_F(FastbootFlashTest, GetVarSlotCountAbrNotSupported) {
   ASSERT_TRUE(ret.is_ok());
   std::vector<std::string> expected_packets = {"OKAY1"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+class FastbootRebootTest : public zxtest::Test,
+                           public fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin> {
+ public:
+  FastbootRebootTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {
+    // Set up a svc root directory with a power state control service entry.
+    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_power_statecontrol::Admin>,
+        fbl::MakeRefCounted<fs::Service>(
+            [this](fidl::ServerEnd<fuchsia_hardware_power_statecontrol::Admin> request) {
+              return fidl::BindSingleInFlightOnly<
+                  fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin>>(
+                  loop_.dispatcher(), std::move(request), this);
+            }));
+    zx::status server_end = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(server_end.status_value());
+    vfs_.ServeDirectory(root_dir, std::move(server_end.value()));
+    loop_.StartThread("fastboot-reboot-test-loop");
+  }
+
+  ~FastbootRebootTest() { loop_.Shutdown(); }
+
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+  bool reboot_triggered() { return reboot_triggered_; }
+
+ private:
+  void Reboot(RebootRequestView request, RebootCompleter::Sync& completer) override {
+    reboot_triggered_ = true;
+    completer.ReplySuccess();
+  }
+
+  void RebootToRecovery(RebootToRecoveryRequestView request,
+                        RebootToRecoveryCompleter::Sync& completer) override {}
+  void PowerFullyOn(PowerFullyOnRequestView request,
+                    PowerFullyOnCompleter::Sync& completer) override {}
+  void RebootToBootloader(RebootToBootloaderRequestView request,
+                          RebootToBootloaderCompleter::Sync& completer) override {}
+  void Poweroff(PoweroffRequestView request, PoweroffCompleter::Sync& completer) override {}
+  void Mexec(MexecRequestView request, MexecCompleter::Sync& completer) override {}
+  void SuspendToRam(SuspendToRamRequestView request,
+                    SuspendToRamCompleter::Sync& completer) override {}
+
+  async::Loop loop_;
+  fs::SynchronousVfs vfs_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
+
+  bool reboot_triggered_ = false;
+};
+
+TEST_F(FastbootRebootTest, Reboot) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "reboot";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+  ASSERT_TRUE(reboot_triggered());
+}
+
+TEST_F(FastbootRebootTest, Continue) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "continue";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  // One info message plus one OKAY message
+  ASSERT_EQ(transport.GetOutPackets().size(), 2ULL);
+  ASSERT_EQ(transport.GetOutPackets().back(), "OKAY");
+  ASSERT_TRUE(reboot_triggered());
 }
 
 }  // namespace
