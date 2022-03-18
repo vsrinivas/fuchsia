@@ -507,7 +507,7 @@ fn setup_profiles(
 /// be suspended immediately.
 const ACTIVE_STREAM_LIMIT: usize = 1;
 
-#[fuchsia::component]
+#[fuchsia::component(logging_tags = ["bt-a2dp"])]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
 
