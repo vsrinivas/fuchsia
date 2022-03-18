@@ -109,6 +109,12 @@ enum VersionedPackageManifest {
     Version1(PackageManifestV1),
 }
 
+impl From<PackageManifestV1> for PackageManifest {
+    fn from(manifest: PackageManifestV1) -> Self {
+        PackageManifest(VersionedPackageManifest::Version1(manifest))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct PackageManifestV1 {
     package: PackageMetadata,
@@ -132,7 +138,7 @@ struct PackageManifestV1 {
 /// the path.  To use the path, it must be resolved against the path to the
 /// file.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-enum RelativeTo {
+pub enum RelativeTo {
     #[serde(rename = "working_dir")]
     WorkingDir,
     #[serde(rename = "file")]
@@ -163,6 +169,106 @@ pub struct BlobInfo {
     pub path: String,
     pub merkle: fuchsia_merkle::Hash,
     pub size: u64,
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+pub mod host {
+    use super::*;
+    use crate::PathToStringExt;
+    use anyhow::Context;
+    use assembly_util::{path_relative_from_file, resolve_path_from_file};
+    use std::fs::File;
+    use std::io::BufReader;
+    use std::path::Path;
+
+    impl PackageManifest {
+        pub fn try_load_from(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+            let manifest_path = path.as_ref();
+            let file = File::open(manifest_path)?;
+            let manifest: Self = serde_json::from_reader(BufReader::new(file))?;
+            match manifest.0 {
+                VersionedPackageManifest::Version1(manifest) => {
+                    Ok(manifest.resolve_blob_source_paths(manifest_path)?.into())
+                }
+            }
+        }
+
+        pub fn write_with_relative_blob_paths(
+            self,
+            path: impl AsRef<Path>,
+        ) -> anyhow::Result<Self> {
+            match self.0 {
+                VersionedPackageManifest::Version1(manifest) => {
+                    manifest.write_with_relative_blob_paths(path).map(Into::into)
+                }
+            }
+        }
+    }
+
+    impl PackageManifestV1 {
+        pub fn write_with_relative_blob_paths(
+            self,
+            manifest_path: impl AsRef<Path>,
+        ) -> anyhow::Result<Self> {
+            let manifest = if let RelativeTo::WorkingDir = &self.blob_sources_relative {
+                // manifest contains working-dir relative source paths, make
+                // them relative to the file, instead.
+                let blobs = self
+                    .blobs
+                    .into_iter()
+                    .map(|blob| relativize_blob_source_path(blob, &manifest_path))
+                    .collect::<anyhow::Result<Vec<BlobInfo>>>()?;
+                Self { blobs, ..self }
+            } else {
+                self
+            };
+            let file = File::create(manifest_path)?;
+            serde_json::to_writer(file, &manifest)?;
+            Ok(manifest)
+        }
+    }
+
+    impl PackageManifestV1 {
+        pub fn resolve_blob_source_paths(
+            self,
+            manifest_path: impl AsRef<Path>,
+        ) -> anyhow::Result<Self> {
+            if let RelativeTo::File = &self.blob_sources_relative {
+                let blobs = self
+                    .blobs
+                    .into_iter()
+                    .map(|blob| resolve_blob_source_path(blob, &manifest_path))
+                    .collect::<anyhow::Result<Vec<BlobInfo>>>()?;
+                Ok(Self { blobs, ..self })
+            } else {
+                Ok(self)
+            }
+        }
+    }
+
+    fn relativize_blob_source_path(
+        blob: BlobInfo,
+        manifest_path: impl AsRef<Path>,
+    ) -> anyhow::Result<BlobInfo> {
+        let source_path = path_relative_from_file(blob.source_path, manifest_path)?;
+        let source_path = source_path.path_to_string().with_context(|| {
+            format!(
+                "Path from UTF-8 string, made relative, is no longer utf-8: {}",
+                source_path.display()
+            )
+        })?;
+
+        Ok(BlobInfo { source_path, ..blob })
+    }
+
+    fn resolve_blob_source_path(
+        blob: BlobInfo,
+        manifest_path: impl AsRef<Path>,
+    ) -> anyhow::Result<BlobInfo> {
+        let source_path =
+            resolve_path_from_file(&blob.source_path, manifest_path)?.path_to_string()?;
+        Ok(BlobInfo { source_path, ..blob })
+    }
 }
 
 #[cfg(test)]
@@ -348,5 +454,193 @@ mod tests {
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
+    }
+}
+
+#[cfg(all(test, not(target_os = "fuchsia")))]
+mod host_tests {
+    use super::*;
+    use crate::PathToStringExt;
+    use serde_json::Value;
+    use std::fs::File;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_load_from_simple() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let data_dir = temp_dir.path().join("data_source");
+        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let manifest_path = manifest_dir.join("package_manifest.json");
+        let expected_blob_source_path = data_dir.join("p1").path_to_string().unwrap();
+
+        std::fs::create_dir_all(&data_dir).unwrap();
+        std::fs::create_dir_all(&manifest_dir).unwrap();
+
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: expected_blob_source_path.clone(),
+                path: "data/p1".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: None,
+            blob_sources_relative: RelativeTo::WorkingDir,
+        }));
+
+        let manifest_file = File::create(&manifest_path).unwrap();
+        serde_json::to_writer(manifest_file, &manifest).unwrap();
+
+        let loaded_manifest = PackageManifest::try_load_from(&manifest_path).unwrap();
+        assert_eq!(loaded_manifest.name(), &"example".parse::<PackageName>().unwrap());
+
+        let blobs = loaded_manifest.into_blobs();
+        assert_eq!(blobs.len(), 1);
+        let blob = blobs.first().unwrap();
+        assert_eq!(blob.path, "data/p1");
+        assert_eq!(blob.source_path, expected_blob_source_path);
+    }
+
+    #[test]
+    fn test_load_from_resolves_source_paths() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let data_dir = temp_dir.path().join("data_source");
+        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let manifest_path = manifest_dir.join("package_manifest.json");
+        let expected_blob_source_path = data_dir.join("p1").path_to_string().unwrap();
+
+        std::fs::create_dir_all(&data_dir).unwrap();
+        std::fs::create_dir_all(&manifest_dir).unwrap();
+
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: "../data_source/p1".into(),
+                path: "data/p1".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: None,
+            blob_sources_relative: RelativeTo::File,
+        }));
+
+        let manifest_file = File::create(&manifest_path).unwrap();
+        serde_json::to_writer(manifest_file, &manifest).unwrap();
+
+        let loaded_manifest = PackageManifest::try_load_from(&manifest_path).unwrap();
+        assert_eq!(loaded_manifest.name(), &"example".parse::<PackageName>().unwrap());
+
+        let blobs = loaded_manifest.into_blobs();
+        assert_eq!(blobs.len(), 1);
+        let blob = blobs.first().unwrap();
+        assert_eq!(blob.path, "data/p1");
+        assert_eq!(blob.source_path, expected_blob_source_path);
+    }
+
+    #[test]
+    fn test_write_package_manifest_already_relative() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let data_dir = temp_dir.path().join("data_source");
+        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let manifest_path = manifest_dir.join("package_manifest.json");
+
+        std::fs::create_dir_all(&data_dir).unwrap();
+        std::fs::create_dir_all(&manifest_dir).unwrap();
+
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: "../data_source/p1".into(),
+                path: "data/p1".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: None,
+            blob_sources_relative: RelativeTo::File,
+        }));
+
+        let result_manifest =
+            manifest.clone().write_with_relative_blob_paths(&manifest_path).unwrap();
+
+        // The manifest should not have been changed in this case.
+        assert_eq!(result_manifest, manifest);
+
+        let parsed_manifest: Value =
+            serde_json::from_reader(File::open(manifest_path).unwrap()).unwrap();
+        let object = parsed_manifest.as_object().unwrap();
+        let blobs_value = object.get("blobs").unwrap();
+        let blobs = blobs_value.as_array().unwrap();
+        let blob_value = blobs.first().unwrap();
+        let blob = blob_value.as_object().unwrap();
+        let source_path_value = blob.get("source_path").unwrap();
+        let source_path = source_path_value.as_str().unwrap();
+
+        assert_eq!(source_path, "../data_source/p1");
+    }
+
+    #[test]
+    fn test_write_package_manifest_making_paths_relative() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let data_dir = temp_dir.path().join("data_source");
+        let manifest_dir = temp_dir.path().join("manifest_dir");
+        let manifest_path = manifest_dir.join("package_manifest.json");
+        let blob_source_path = data_dir.join("p2").path_to_string().unwrap();
+
+        std::fs::create_dir_all(&data_dir).unwrap();
+        std::fs::create_dir_all(&manifest_dir).unwrap();
+
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: blob_source_path,
+                path: "data/p2".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: None,
+            blob_sources_relative: RelativeTo::WorkingDir,
+        }));
+
+        let result_manifest =
+            manifest.clone().write_with_relative_blob_paths(&manifest_path).unwrap();
+        let blob = result_manifest.blobs().first().unwrap();
+        assert_eq!(blob.source_path, "../data_source/p2");
+
+        let parsed_manifest: serde_json::Value =
+            serde_json::from_reader(File::open(manifest_path).unwrap()).unwrap();
+
+        let object = parsed_manifest.as_object().unwrap();
+        let blobs_value = object.get("blobs").unwrap();
+        let blobs = blobs_value.as_array().unwrap();
+        let blob_value = blobs.first().unwrap();
+        let blob = blob_value.as_object().unwrap();
+        let source_path_value = blob.get("source_path").unwrap();
+        let source_path = source_path_value.as_str().unwrap();
+
+        assert_eq!(source_path, "../data_source/p2");
     }
 }

@@ -28,6 +28,9 @@ rustc_library("fuchsia-pkg") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:walkdir",
   ]
+  if (is_host) {
+    deps += [ "//src/lib/assembly/util" ]
+  }
 
   test_deps = [
     "//src/lib/fuchsia-async",

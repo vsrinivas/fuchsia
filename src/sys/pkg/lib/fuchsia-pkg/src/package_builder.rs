@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{path_to_string::PathToStringExt, CreationManifest, MetaPackage, PackageManifest},
+    crate::{
+        path_to_string::PathToStringExt, CreationManifest, MetaPackage, PackageManifest, RelativeTo,
+    },
     anyhow::{anyhow, bail, ensure, Context, Result},
     std::{
         collections::BTreeMap,
         convert::TryInto,
         fs::File,
-        io::{BufReader, Cursor},
+        io::{BufReader, BufWriter, Cursor},
         path::{Path, PathBuf},
     },
 };
@@ -38,6 +40,10 @@ pub struct PackageBuilder {
     /// Optional path to serialize the PackageManifest to
     manifest_path: Option<PathBuf>,
 
+    /// Optionally make the blob 'source_path's relative to the path the
+    /// PackageManifest is serialized to.
+    blob_sources_relative: RelativeTo,
+
     /// Optional (possibly different) name to publish the package under.
     /// This changes the name that's placed in the output package manifest.
     published_name: Option<String>,
@@ -52,6 +58,7 @@ impl PackageBuilder {
             far_contents: BTreeMap::default(),
             blobs: BTreeMap::default(),
             manifest_path: None,
+            blob_sources_relative: RelativeTo::default(),
             published_name: None,
         }
     }
@@ -128,6 +135,10 @@ impl PackageBuilder {
     /// Specify a path to write out the json package manifest to.
     pub fn manifest_path(&mut self, manifest_path: impl Into<PathBuf>) {
         self.manifest_path = Some(manifest_path.into())
+    }
+
+    pub fn manifest_blobs_relative_to(&mut self, relative_to: RelativeTo) {
+        self.blob_sources_relative = relative_to
     }
 
     fn validate_ok_to_add_at_path(&self, at_path: impl AsRef<str>) -> Result<()> {
@@ -279,6 +290,7 @@ impl PackageBuilder {
             mut far_contents,
             blobs,
             manifest_path,
+            blob_sources_relative,
             published_name,
         } = self;
 
@@ -311,15 +323,32 @@ impl PackageBuilder {
             published_name.as_ref().unwrap_or(&name),
         )?;
 
-        if let Some(manifest_path) = manifest_path {
-            // Write the package manifest to a file.
-            let package_manifest_file = std::fs::File::create(&manifest_path).context(format!(
-                "Failed to create package manifest: {}",
-                manifest_path.display()
-            ))?;
-            serde_json::ser::to_writer(package_manifest_file, &package_manifest)?;
-        }
-        Ok(package_manifest)
+        Ok(if let Some(manifest_path) = manifest_path {
+            let package_manifest = if let RelativeTo::File = blob_sources_relative {
+                package_manifest.write_with_relative_blob_paths(&manifest_path).with_context(
+                    || {
+                        format!(
+                        "Failed to create package manifest with relative blob source_paths at: {}",
+                        manifest_path.display()
+                    )
+                    },
+                )?
+            } else {
+                // Write the package manifest to a file.
+                let package_manifest_file = std::fs::File::create(&manifest_path).context(
+                    format!("Failed to create package manifest: {}", manifest_path.display()),
+                )?;
+                serde_json::ser::to_writer(
+                    BufWriter::new(package_manifest_file),
+                    &package_manifest,
+                )?;
+                package_manifest
+            };
+
+            package_manifest
+        } else {
+            package_manifest
+        })
     }
 }
 
@@ -624,5 +653,47 @@ mod tests {
         let mut builder = PackageBuilder::new("some_pkg_name");
         builder.add_file_as_blob("some/far/file", "some/src/file").unwrap();
         assert!(builder.add_file_as_blob("some/far/file", "some/src/file").is_err());
+    }
+
+    #[test]
+    fn test_builder_makes_file_relative_manifests_when_asked() {
+        let outdir = TempDir::new().unwrap();
+        let metafar_path = outdir.path().join("meta.far");
+        let manifest_path = outdir.path().join("package_manifest.json");
+
+        // Create a file to write to the package metafar
+        let far_source_file_path = NamedTempFile::new_in(&outdir).unwrap();
+        std::fs::write(&far_source_file_path, "some data for far").unwrap();
+
+        // Create a file to include as a blob
+        let blob_source_file_path = outdir.path().join("contents/data_file");
+        std::fs::create_dir_all(blob_source_file_path.parent().unwrap()).unwrap();
+        let blob_contents = "some data for blob";
+        std::fs::write(&blob_source_file_path, blob_contents).unwrap();
+
+        // Create the builder
+        let mut builder = PackageBuilder::new("some_pkg_name");
+        builder
+            .add_file_as_blob("some/blob", blob_source_file_path.path_to_string().unwrap())
+            .unwrap();
+        builder
+            .add_file_to_far(
+                "meta/some/file",
+                far_source_file_path.path().path_to_string().unwrap(),
+            )
+            .unwrap();
+
+        // set it to write a manifest, with file-relative paths.
+        builder.manifest_path(&manifest_path);
+        builder.manifest_blobs_relative_to(RelativeTo::File);
+
+        // Build the package
+        let manifest = builder.build(&outdir, &metafar_path).unwrap();
+
+        // The manifest should have paths relative to itself
+        let blob = manifest.blobs().first().unwrap();
+        assert_eq!(blob.source_path, "contents/data_file");
+
+        // The written manifest is tested in [crate::package_manifest::host_tests]
     }
 }

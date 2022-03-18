@@ -11,7 +11,6 @@ mod errors;
 mod meta_contents;
 mod meta_package;
 mod package;
-mod package_builder;
 mod package_directory;
 mod package_manifest;
 mod package_manifest_list;
@@ -29,12 +28,17 @@ pub use {
         meta_contents::MetaContents,
         meta_package::MetaPackage,
         package::{BlobEntry, Package},
-        package_builder::PackageBuilder,
         package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
-        package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder},
+        package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder, RelativeTo},
         package_manifest_list::PackageManifestList,
         path::{PackageName, PackagePath, PackageVariant},
     },
     fuchsia_url::errors::PackagePathSegmentError,
     path_to_string::PathToStringExt,
 };
+
+#[cfg(not(target_os = "fuchsia"))]
+mod package_builder;
+
+#[cfg(not(target_os = "fuchsia"))]
+pub use package_builder::PackageBuilder;
