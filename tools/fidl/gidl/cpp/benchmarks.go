@@ -27,6 +27,8 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/cpp/builder_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/cpp/decode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/cpp/encode_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/echo_call_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/cpp/send_event_benchmark_util.h"
 
 namespace {
 
@@ -77,6 +79,16 @@ bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
 	return cpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
+{{ if .EnableSendEventBenchmark }}
+bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
+}
+{{- end -}}
+{{ if .EnableEchoCallBenchmark }}
+bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
+	return cpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+}
+{{- end -}}
 {{ end }}
 
 void RegisterTests() {
@@ -84,6 +96,12 @@ void RegisterTests() {
 	perftest::RegisterTest("CPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
 	perftest::RegisterTest("CPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
 	perftest::RegisterTest("CPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
+	{{ if .EnableSendEventBenchmark }}
+	perftest::RegisterTest("CPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
+	{{- end -}}
+	{{ if .EnableEchoCallBenchmark }}
+	perftest::RegisterTest("CPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+	{{- end -}}
 	{{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
@@ -92,9 +110,10 @@ PERFTEST_CTOR(RegisterTests)
 `))
 
 type benchmark struct {
-	Path, Name, Type     string
-	ValueBuild, ValueVar string
-	HandleDefs           string
+	Path, Name, Type, EventProtocolType, EchoCallProtocolType string
+	ValueBuild, ValueVar                                      string
+	HandleDefs                                                string
+	EnableSendEventBenchmark, EnableEchoCallBenchmark         bool
 }
 
 type benchmarkTmplInput struct {
@@ -120,12 +139,16 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 		}
 		valBuild, valVar := buildValue(gidlBenchmark.Value, decl, handleReprRaw)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
-			Path:       gidlBenchmark.Name,
-			Name:       benchmarkName(gidlBenchmark.Name),
-			Type:       benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
-			ValueBuild: valBuild,
-			ValueVar:   valVar,
-			HandleDefs: libhlcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
+			Path:                     gidlBenchmark.Name,
+			Name:                     benchmarkName(gidlBenchmark.Name),
+			Type:                     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
+			EventProtocolType:        benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EventProtocol",
+			EchoCallProtocolType:     benchmarkProtocolFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EchoCall",
+			ValueBuild:               valBuild,
+			ValueVar:                 valVar,
+			HandleDefs:               libhlcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
+			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
+			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
 		})
 	}
 	var buf bytes.Buffer
@@ -136,7 +159,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 }
 
 func libraryInclude(librarySuffix string) string {
-	return fmt.Sprintf("fidl/test.benchmarkfidl%s/cpp/natural_types.h", strings.ReplaceAll(librarySuffix, " ", ""))
+	return fmt.Sprintf("fidl/test.benchmarkfidl%s/cpp/natural_messaging.h", strings.ReplaceAll(librarySuffix, " ", ""))
 }
 func libraryName(librarySuffix string) string {
 	return fmt.Sprintf("test_benchmarkfidl%s", strings.ReplaceAll(librarySuffix, " ", ""))
