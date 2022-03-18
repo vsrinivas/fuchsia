@@ -41,9 +41,12 @@ func NewFile(path string, ft FileType) (*File, error) {
 	}
 
 	plusVal(NumFiles, path)
-	return &File{
+	f := &File{
 		Name: filepath.Base(path),
 		Path: path,
 		Data: data,
-	}, nil
+	}
+
+	AllFiles[path] = f
+	return f, nil
 }

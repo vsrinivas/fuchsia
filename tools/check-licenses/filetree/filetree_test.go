@@ -5,7 +5,6 @@
 package filetree
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"os"
@@ -66,11 +65,13 @@ func setupFileTreeTestDir(name string, t *testing.T) (string, string) {
 
 	// Unmarshal the config json data into the Config object, and run
 	// NewFileTree.
-	if err = json.Unmarshal(configJson, Config); err != nil {
+	c := NewFileTreeConfig()
+	if err = json.Unmarshal(configJson, c); err != nil {
 		t.Fatal(err)
 	}
+	Config = c
 
-	gotTree, err := NewFileTree(context.Background(), root, nil)
+	gotTree, err := NewFileTree(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

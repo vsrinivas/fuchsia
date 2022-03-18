@@ -7,13 +7,13 @@ package checklicenses
 import (
 	"context"
 	"fmt"
-	//"runtime/trace"
+	"runtime/trace"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
-	//"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	//"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
 )
 
@@ -27,15 +27,16 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	}
 	fmt.Printf("Done. [%v]\n", time.Since(startInitialize))
 
+	r := trace.StartRegion(ctx, "filetree.NewFileTree("+config.Target+")")
+	startFileTree := time.Now()
+	fmt.Print("Discovering files and folders... ")
+	_, err := filetree.NewFileTree(config.Target, nil)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Done. [%v]\n", time.Since(startFileTree))
+	r.End()
 	/*
-		// Traverse the file system, creating a file tree that represents
-		// all files and folders from the target directory.
-		r := trace.StartRegion(ctx, "filetree.NewFileTree("+config.Target+")")
-		_, err := filetree.NewFileTree(config.Target, nil)
-		if err != nil {
-			return err
-		}
-		r.End()
 
 		// Analyze the LICENSE and NOTICE files found in the previous step.
 		r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
@@ -64,10 +65,10 @@ func initialize(c *CheckLicensesConfig) error {
 	if err := project.Initialize(c.Project); err != nil {
 		return err
 	}
+	if err := filetree.Initialize(c.FileTree); err != nil {
+		return err
+	}
 	/*
-		if err := filetree.Initialize(c.FileTree); err != nil {
-			return err
-		}
 		if err := result.Initialize(c.Result); err != nil {
 			return err
 		}*/

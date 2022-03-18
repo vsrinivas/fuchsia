@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	/*
-		"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 		"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
 	*/)
 
@@ -32,11 +32,11 @@ type Include struct {
 type CheckLicensesConfig struct {
 	Includes []Include `json:"includes"`
 
-	File    *file.FileConfig       `json:"file"`
-	License *license.LicenseConfig `json:"license"`
-	Project *project.ProjectConfig `json:"project"`
+	File     *file.FileConfig         `json:"file"`
+	License  *license.LicenseConfig   `json:"license"`
+	Project  *project.ProjectConfig   `json:"project"`
+	FileTree *filetree.FileTreeConfig `json:"filetree"`
 	/*
-		FileTree *filetree.FileTreeConfig `json:"filetree"`
 		Result   *result.ResultConfig     `json:"result"`
 	*/
 
@@ -59,11 +59,11 @@ func NewCheckLicensesConfig(path string) (*CheckLicensesConfig, error) {
 func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error) {
 	configJson = strings.ReplaceAll(configJson, "{FUCHSIA_DIR}", os.Getenv("FUCHSIA_DIR"))
 	c := &CheckLicensesConfig{
-		File:    &file.FileConfig{},
-		License: &license.LicenseConfig{},
-		Project: &project.ProjectConfig{},
+		File:     &file.FileConfig{},
+		License:  &license.LicenseConfig{},
+		Project:  &project.ProjectConfig{},
+		FileTree: &filetree.FileTreeConfig{},
 		/*
-			FileTree: &filetree.FileTreeConfig{},
 			Result:   &result.ResultConfig{},
 		*/
 	}

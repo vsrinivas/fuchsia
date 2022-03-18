@@ -10,6 +10,7 @@ go_library("filetree") {
     "config.go",
     "filetree.go",
     "filetree_test.go",
+    "init.go",
     "metrics.go",
   ]
   deps = [

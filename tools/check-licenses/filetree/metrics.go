@@ -14,7 +14,10 @@ const (
 	NumFolders  = "Folder Count"
 	NumSymlinks = "Symlink Count"
 
-	MissingProject = "Files Missing Projects"
+	FileMissingProject   = "Files Missing Projects"
+	FolderMissingProject = "Folders Missing Projects"
+
+	Skipped = "Skipped Items"
 )
 
 var Metrics *FileTreeMetrics

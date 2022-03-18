@@ -70,11 +70,12 @@ go_library("lib") {
   deps = [
     ":noticetxt",
     ":templates",
+    "file",
+    "filetree",
+    "license",
+    "project",
     "//third_party/golibs:golang.org/x/sync",
     "//third_party/golibs:golang.org/x/text",
-    "//tools/check-licenses/file",
-    "//tools/check-licenses/license",
-    "//tools/check-licenses/project",
     "//tools/lib/logger",
   ]
 }
@@ -101,6 +102,7 @@ group("tests") {
     ":check-licenses_main_tests($host_toolchain)",
     ":check-licenses_noticetxt_tests($host_toolchain)",
     "file:tests",
+    "filetree:tests",
     "project:tests",
   ]
 }
