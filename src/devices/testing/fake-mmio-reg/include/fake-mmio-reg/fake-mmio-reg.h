@@ -9,8 +9,6 @@
 #include <lib/mmio-ptr/fake.h>
 #include <lib/mmio/mmio.h>
 
-#include <fbl/vector.h>
-
 namespace ddk_fake {
 
 // Fakes a single MMIO register. This class is intended to be used with a ddk::MmioBuffer;
