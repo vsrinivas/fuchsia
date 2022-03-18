@@ -14,11 +14,41 @@ remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
 # ../../ because this script lives in build/rbe.
 # The value is an absolute path.
-project_root="$(readlink -f "$script_dir"/../..)"
+default_project_root="$(readlink -f "$script_dir"/../..)"
+
+function usage() {
+cat <<EOF
+$script [options] -- C++-command...
+
+Options:
+  --help|-h: print this help and exit
+  --local: disable remote execution and run the original command locally.
+    The --remote-disable fake compiler flag (passed after the -- ) has the same
+    effect, and is removed from the executed command.
+  --verbose|-v: print debug information, including details about uploads.
+  --dry-run: print remote execution command without executing (remote only).
+
+  --project-root: location of source tree which also encompasses outputs
+      and prebuilt tools, forwarded to --exec-root in the reclient tools.
+      [default: $default_project_root]
+
+  There are two ways to forward options to $remote_action_wrapper,
+  most of which are forwarded to 'rewrapper':
+
+    Before -- : all unhandled flags are forwarded to $remote_action_wrapper.
+
+    After -- : --remote-flag=* will be forwarded to $remote_action_wrapper
+      and removed from the remote command.
+
+  See '$remote_action_wrapper --help' for additional debug features.
+
+EOF
+}
 
 dry_run=0
 local_only=0
 verbose=0
+project_root="$default_project_root"
 rewrapper_options=()
 
 # Extract script options before --
@@ -95,6 +125,19 @@ do
   case "$opt" in
     *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
     *=) optarg= ;;
+  esac
+
+  # Reject absolute paths, for the sake of build artifact portability,
+  # and remote-action cache hit benefits.
+  case "$opt" in
+    *"$project_root"*)
+      cat <<EOF
+Absolute paths are not remote-portable.  Found:
+  $opt
+Please rewrite the command without absolute paths.
+EOF
+      exit 1
+      ;;
   esac
 
   case "$opt" in
@@ -247,10 +290,14 @@ test "${#extra_outputs[@]}" = 0 || {
   remote_outputs_joined="${_remote_outputs_comma%,}"  # get rid of last trailing comma
 }
 
+exec_root_flag=()
+[[ "$project_root" == "$default_project_root" ]] || \
+  exec_root_flag=( "--exec_root=$project_root" )
+
 remote_cc_command=(
   "$remote_action_wrapper"
   --labels=type=compile,compiler=clang,lang=cpp
-  --exec_root="$project_root"
+  "${exec_root_flag[@]}"
 #  "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
   --output_files="$remote_outputs_joined"
@@ -258,6 +305,12 @@ remote_cc_command=(
   --
   "${cc_command[@]}"
 )
+
+if test "$dry_run" = 1
+then
+  echo "[$script: skipped]:" "${remote_cc_command[@]}"
+  exit
+fi
 
 # Cannot `exec` because that would bypass the trap cleanup.
 "${remote_cc_command[@]}"
