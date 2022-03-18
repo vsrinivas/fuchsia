@@ -112,9 +112,7 @@ class ChannelDispatcher final
   void RemoveWaiter(MessageWaiter* waiter);
 
   explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
-  void Init(fbl::RefPtr<ChannelDispatcher> other);
   void WriteSelf(MessagePacketPtr msg) TA_REQ(get_lock());
-  zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
 
   MessageList messages_ TA_GUARDED(get_lock());
   uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;

@@ -37,10 +37,8 @@ class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_
  private:
   FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder, uint32_t options,
                  uint32_t elem_count, uint32_t elem_size, ktl::unique_ptr<uint8_t[]> data);
-  void Init(fbl::RefPtr<FifoDispatcher> other);
   zx_status_t WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr, size_t count,
                               size_t* actual) TA_REQ(get_lock());
-  zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
 
   const uint32_t elem_count_;
   const uint32_t elem_size_;

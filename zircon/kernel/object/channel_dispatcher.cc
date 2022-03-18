@@ -66,8 +66,8 @@ zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
-  new_handle0.dispatcher()->Init(new_handle1.dispatcher());
-  new_handle1.dispatcher()->Init(new_handle0.dispatcher());
+  new_handle0.dispatcher()->InitPeer(new_handle1.dispatcher());
+  new_handle1.dispatcher()->InitPeer(new_handle0.dispatcher());
 
   *rights = default_rights();
   *handle0 = ktl::move(new_handle0);
@@ -79,13 +79,6 @@ zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
 ChannelDispatcher::ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder)
     : PeeredDispatcher(ktl::move(holder), ZX_CHANNEL_WRITABLE) {
   kcounter_add(dispatcher_channel_create_count, 1);
-}
-
-// This is called before either ChannelDispatcher is accessible from threads other than the one
-// initializing the channel, so it does not need locking.
-void ChannelDispatcher::Init(fbl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-  peer_ = ktl::move(other);
-  peer_koid_ = peer_->get_koid();
 }
 
 ChannelDispatcher::~ChannelDispatcher() {
@@ -185,7 +178,7 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
     return ZX_ERR_BAD_HANDLE;
 
   if (messages_.is_empty()) {
-    return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+    return peer() ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
   } else if (messages_.size() == kMaxPendingMessageCount / 2) {
     auto process = ProcessDispatcher::GetCurrent();
     char pname[ZX_MAX_NAME_LEN];
@@ -223,11 +216,11 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   if (owner != owner_)
     return ZX_ERR_BAD_HANDLE;
 
-  if (!peer_)
+  if (!peer())
     return ZX_ERR_PEER_CLOSED;
 
-  AssertHeld(*peer_->get_lock());
-  peer_->WriteSelf(ktl::move(msg));
+  AssertHeld(*peer()->get_lock());
+  peer()->WriteSelf(ktl::move(msg));
 
   return ZX_OK;
 }
@@ -252,7 +245,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
     if (owner != owner_)
       return ZX_ERR_BAD_HANDLE;
 
-    if (!peer_) {
+    if (!peer()) {
       waiter->EndWait(reply);
       return ZX_ERR_PEER_CLOSED;
     }
@@ -281,8 +274,8 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
     waiters_.push_back(waiter);
 
     // (1) Write outbound message to opposing endpoint.
-    AssertHeld(*peer_->get_lock());
-    peer_->WriteSelf(ktl::move(msg));
+    AssertHeld(*peer()->get_lock());
+    peer()->WriteSelf(ktl::move(msg));
   }
 
   auto process = ProcessDispatcher::GetCurrent();
@@ -374,12 +367,6 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
-}
-
-zx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
-  canary_.Assert();
-  UpdateStateLocked(clear_mask, set_mask);
-  return ZX_OK;
 }
 
 ChannelDispatcher::MessageWaiter::~MessageWaiter() {

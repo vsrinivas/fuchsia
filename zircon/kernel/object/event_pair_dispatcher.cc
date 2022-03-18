@@ -34,8 +34,8 @@ zx_status_t EventPairDispatcher::Create(KernelHandle<EventPairDispatcher>* handl
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
-  ep0.dispatcher()->Init(ep1.dispatcher());
-  ep1.dispatcher()->Init(ep0.dispatcher());
+  ep0.dispatcher()->InitPeer(ep1.dispatcher());
+  ep1.dispatcher()->InitPeer(ep0.dispatcher());
 
   *rights = default_rights();
   *handle0 = ktl::move(ep0);
@@ -55,15 +55,4 @@ void EventPairDispatcher::OnPeerZeroHandlesLocked() {
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)
     : PeeredDispatcher(ktl::move(holder)) {
   kcounter_add(dispatcher_eventpair_create_count, 1);
-}
-
-// This is called before either EventPairDispatcher is accessible from threads other than the one
-// initializing the event pair, so it does not need locking.
-void EventPairDispatcher::Init(fbl::RefPtr<EventPairDispatcher> other)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
-  DEBUG_ASSERT(other);
-  // No need to take |lock_| here.
-  DEBUG_ASSERT(!peer_);
-  peer_koid_ = other->get_koid();
-  peer_ = ktl::move(other);
 }

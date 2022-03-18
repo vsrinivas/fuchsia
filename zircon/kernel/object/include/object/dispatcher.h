@@ -397,12 +397,29 @@ class PeeredDispatcher : public Dispatcher {
   Lock<Mutex>* get_lock() const final { return holder_->get_lock(); }
 
  protected:
+  // Initialize this dispatcher's peer field.
+  //
+  // This method is logically part of the class constructor and must be called exactly once, during
+  // initialization, prior to any other thread obtaining a reference to the object.  These
+  // constraints allow for an optimization where fields are accessed without acquiring the lock,
+  // hence the TA_NO_THREAD_SAFETY_ANALYSIS annotation.
+  void InitPeer(fbl::RefPtr<Self> peer) TA_NO_THREAD_SAFETY_ANALYSIS {
+    DEBUG_ASSERT(!peer_);
+    DEBUG_ASSERT(peer_koid_ == ZX_KOID_INVALID);
+    peer_ = ktl::move(peer);
+    peer_koid_ = peer_->get_koid();
+  }
+
+  const fbl::RefPtr<Self>& peer() const TA_REQ(get_lock()) { return peer_; }
+  zx_koid_t peer_koid() const { return peer_koid_; }
+
   const fbl::Canary<CanaryTag<Self>::magic> canary_;
 
-  zx_koid_t peer_koid_ = 0u;
-  fbl::RefPtr<Self> peer_ TA_GUARDED(get_lock());
-
  private:
+  fbl::RefPtr<Self> peer_ TA_GUARDED(get_lock());
+  // After InitPeer is called, this field is logically const.
+  zx_koid_t peer_koid_ = ZX_KOID_INVALID;
+
   const fbl::RefPtr<PeerHolder<Self>> holder_;
 };
 

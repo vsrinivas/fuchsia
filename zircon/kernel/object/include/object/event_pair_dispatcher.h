@@ -30,7 +30,6 @@ class EventPairDispatcher final
 
  private:
   explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);
-  void Init(fbl::RefPtr<EventPairDispatcher> other);
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_PAIR_DISPATCHER_H_

@@ -54,8 +54,8 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
-  fifo0.dispatcher()->Init(fifo1.dispatcher());
-  fifo1.dispatcher()->Init(fifo0.dispatcher());
+  fifo0.dispatcher()->InitPeer(fifo1.dispatcher());
+  fifo1.dispatcher()->InitPeer(fifo0.dispatcher());
 
   *rights = default_rights();
   *handle0 = ktl::move(fifo0);
@@ -76,19 +76,6 @@ FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder, u
 
 FifoDispatcher::~FifoDispatcher() { kcounter_add(dispatcher_fifo_destroy_count, 1); }
 
-// Thread safety analysis disabled as this happens during creation only,
-// when no other thread could be accessing the object.
-void FifoDispatcher::Init(fbl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-  peer_ = ktl::move(other);
-  peer_koid_ = peer_->get_koid();
-}
-
-zx_status_t FifoDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) {
-  canary_.Assert();
-  UpdateStateLocked(clear_mask, set_mask);
-  return ZX_OK;
-}
-
 void FifoDispatcher::on_zero_handles_locked() { canary_.Assert(); }
 
 void FifoDispatcher::OnPeerZeroHandlesLocked() {
@@ -102,10 +89,10 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
   canary_.Assert();
 
   Guard<Mutex> guard{get_lock()};
-  if (!peer_)
+  if (!peer())
     return ZX_ERR_PEER_CLOSED;
-  AssertHeld(*peer_->get_lock());
-  return peer_->WriteSelfLocked(elem_size, ptr, count, actual);
+  AssertHeld(*peer()->get_lock());
+  return peer()->WriteSelfLocked(elem_size, ptr, count, actual);
 }
 
 zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr,
@@ -160,8 +147,8 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
 
   // if now full, we're no longer writable
   if (elem_count_ == (head_ - tail_)) {
-    AssertHeld(*peer_->get_lock());
-    peer_->UpdateStateLocked(ZX_FIFO_WRITABLE, 0u);
+    AssertHeld(*peer()->get_lock());
+    peer()->UpdateStateLocked(ZX_FIFO_WRITABLE, 0u);
   }
 
   *actual = (head_ - old_head);
@@ -185,7 +172,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   size_t avail = (head_ - tail_);
 
   if (avail == 0)
-    return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+    return peer() ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
 
   bool was_full = (avail == elem_count_);
 
@@ -216,9 +203,9 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   }
 
   // if we were full, we have become writable
-  if (was_full && peer_) {
-    AssertHeld(*peer_->get_lock());
-    peer_->UpdateStateLocked(0u, ZX_FIFO_WRITABLE);
+  if (was_full && peer()) {
+    AssertHeld(*peer()->get_lock());
+    peer()->UpdateStateLocked(0u, ZX_FIFO_WRITABLE);
   }
 
   // if we've become empty, we're no longer readable
