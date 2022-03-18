@@ -12,7 +12,9 @@
 
 #include "vmx_cpu_state_priv.h"
 
-static void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t msr) {
+namespace {
+
+void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t msr) {
   // From Volume 3, Section 24.6.9.
   uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
   if (msr >= 0xc0000000) {
@@ -32,6 +34,8 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t m
     msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
   }
 }
+
+}  // namespace
 
 // static
 zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
