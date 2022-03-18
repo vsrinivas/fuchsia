@@ -11,11 +11,10 @@ if (is_host) {
     version = "0.1.0"
     with_unit_tests = true
     deps = [
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//src/sys/pkg/lib/fuchsia-pkg",
       "//src/sys/pkg/lib/version-history/rust:version-history",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:camino",
+      "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:serde_json5",
@@ -28,6 +27,7 @@ if (is_host) {
       "src/insert_unique.rs",
       "src/lib.rs",
       "src/path_to_string.rs",
+      "src/paths.rs",
     ]
   }
 
