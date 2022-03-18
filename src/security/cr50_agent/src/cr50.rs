@@ -13,8 +13,8 @@ use crate::{
                 CcdRequest,
             },
             pinweaver::{
-                PinweaverInsertLeaf, PinweaverRemoveLeaf, PinweaverResetTree, PinweaverTryAuth,
-                PROTOCOL_VERSION,
+                GetLogEntryData, PinweaverGetLog, PinweaverInsertLeaf, PinweaverRemoveLeaf,
+                PinweaverResetTree, PinweaverTryAuth, PROTOCOL_VERSION,
             },
             wp::WpInfoRequest,
             Serializable, TpmCommand,
@@ -29,10 +29,10 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
-    Cr50RequestStream, Cr50Status, InsertLeafResponse, PhysicalPresenceEvent,
-    PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverError, PinWeaverRequest,
-    PinWeaverRequestStream, TryAuthFailed, TryAuthRateLimited, TryAuthResponse, TryAuthSuccess,
-    WpState,
+    Cr50RequestStream, Cr50Status, EntryData, InsertLeafResponse, LogEntry, MessageType,
+    PhysicalPresenceEvent, PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverError,
+    PinWeaverRequest, PinWeaverRequestStream, TryAuthFailed, TryAuthRateLimited, TryAuthResponse,
+    TryAuthSuccess, WpState,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
@@ -221,7 +221,57 @@ impl Cr50 {
 
                     responder.send(&mut fidl_result).context("Replying to request")?;
                 }
-                PinWeaverRequest::GetLog { .. } => todo!(),
+                PinWeaverRequest::GetLog { root_hash, responder } => {
+                    let request = match PinweaverGetLog::new(root_hash) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            responder.send(&mut Err(e)).context("Replying to request")?;
+                            continue;
+                        }
+                    };
+
+                    let exec_result =
+                        request.execute(&self.proxy).await.context("Executing TPM command")?;
+                    let mut result = match exec_result.ok() {
+                        Ok(_) => Ok(exec_result
+                            .data
+                            .ok_or(anyhow::anyhow!("No data in GetLog?"))?
+                            .log_entries
+                            .into_iter()
+                            .map(|v| {
+                                // Unpack the TPM type into the FIDL type.
+                                let mut entry = LogEntry::EMPTY;
+                                entry.root_hash = Some(v.root);
+                                entry.label = Some(v.label);
+                                let mut entry_data: EntryData = EntryData::EMPTY;
+                                entry.message_type = Some(match v.action {
+                                    GetLogEntryData::InsertLeaf(hash) => {
+                                        entry_data.leaf_hmac = Some(hash);
+                                        MessageType::InsertLeaf
+                                    }
+                                    GetLogEntryData::RemoveLeaf(rc) => {
+                                        entry_data.boot_count = Some(rc.boot_count);
+                                        entry_data.timestamp = Some(rc.timer_value);
+                                        entry_data.return_code = Some(rc.return_code);
+                                        MessageType::RemoveLeaf
+                                    }
+                                    GetLogEntryData::TryAuth(rc) => {
+                                        entry_data.boot_count = Some(rc.boot_count);
+                                        entry_data.timestamp = Some(rc.timer_value);
+                                        entry_data.return_code = Some(rc.return_code);
+                                        MessageType::TryAuth
+                                    }
+                                    GetLogEntryData::ResetTree => MessageType::ResetTree,
+                                });
+                                entry.entry_data = Some(entry_data);
+                                entry
+                            })
+                            .collect::<Vec<LogEntry>>()),
+                        Err(e) => Err(e),
+                    };
+
+                    responder.send(&mut result).context("Replying to request")?;
+                }
                 PinWeaverRequest::LogReplay { .. } => todo!(),
             }
         }

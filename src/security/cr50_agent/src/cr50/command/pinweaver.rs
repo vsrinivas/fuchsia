@@ -4,9 +4,11 @@
 
 use fidl_fuchsia_tpm_cr50::{
     InsertLeafParams, PinWeaverError, RemoveLeafParams, TryAuthParams, DELAY_SCHEDULE_MAX_COUNT,
-    HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
+    HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE, MAX_LOG_ENTRIES,
 };
 use fuchsia_syslog::fx_log_warn;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::{convert::TryInto, marker::PhantomData};
 
 use crate::{
@@ -20,7 +22,7 @@ pub const PROTOCOL_VERSION: u8 = 1;
 const PCR_CRITERIA_MAX: usize = 2;
 const WRAP_BLOCK_SIZE: usize = 16;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum PinweaverMessageType {
@@ -450,6 +452,135 @@ impl PinweaverRemoveLeaf {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+/// Data for a GetLog request.
+/// https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/cr50/include/pinweaver_types.h;l=291;drc=1c95cff7463ef29bd0c6d087ce8c3d7e17f94c6a
+pub struct PinweaverGetLog {
+    /// Current root on the AP side.
+    root: [u8; HASH_SIZE as usize],
+}
+
+impl PinweaverGetLog {
+    pub fn new(
+        root: [u8; HASH_SIZE as usize],
+    ) -> Result<PinweaverRequest<PinweaverGetLog, PinweaverGetLogResponse>, PinWeaverError> {
+        Ok(PinweaverRequest::new(PinweaverMessageType::GetLog, PinweaverGetLog { root }))
+    }
+}
+
+impl Serializable for PinweaverGetLog {
+    /// Serialization output:
+    /// size of data [u16, little-endian]
+    /// root hash [u8 array]
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.put_le_u16(HASH_SIZE as u16);
+        serializer.put(&self.root);
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LeafActionReturnCode {
+    /// Number of boots, used to track if Cr50 was rebooted since timer_value was last recorded.
+    pub boot_count: u32,
+    /// Seconds since boot.
+    pub timer_value: u64,
+    pub return_code: u32,
+}
+
+impl Deserializable for LeafActionReturnCode {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        let ret = Ok(LeafActionReturnCode {
+            boot_count: deserializer.take_le_u32()?,
+            timer_value: deserializer.take_le_u64()?,
+            return_code: deserializer.take_le_u32()?,
+        });
+
+        ret
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GetLogEntryData {
+    /// Contains leaf HMAC.
+    InsertLeaf([u8; HASH_SIZE as usize]),
+    RemoveLeaf(LeafActionReturnCode),
+    TryAuth(LeafActionReturnCode),
+    ResetTree,
+}
+
+impl Deserializable for GetLogEntryData {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        // In C, this is a union, so we have to make sure we always take the full length of the
+        // union. This is determined by its biggest member, which is the leaf HMAC in InsertLeaf.
+        const DATA_SIZE: usize = HASH_SIZE as usize;
+        let message_type = PinweaverMessageType::from_u8(deserializer.take_u8()?)
+            .ok_or(DeserializeError::InvalidValue)?;
+
+        let target = deserializer
+            .available()
+            .checked_sub(DATA_SIZE)
+            .ok_or(DeserializeError::NotEnoughBytes)?;
+        let ret = match message_type {
+            PinweaverMessageType::InsertLeaf => GetLogEntryData::InsertLeaf(
+                deserializer.take(HASH_SIZE as usize)?.try_into().unwrap(),
+            ),
+            PinweaverMessageType::RemoveLeaf => {
+                GetLogEntryData::RemoveLeaf(LeafActionReturnCode::deserialize(deserializer)?)
+            }
+            PinweaverMessageType::TryAuth => {
+                GetLogEntryData::TryAuth(LeafActionReturnCode::deserialize(deserializer)?)
+            }
+            PinweaverMessageType::ResetTree => GetLogEntryData::ResetTree,
+            _ => return Err(DeserializeError::InvalidValue),
+        };
+
+        let available = deserializer.available();
+        assert!(target <= available, "GetLogEntryData consumed too many bytes");
+
+        // Take any remaining bytes.
+        deserializer.take(available - target)?;
+
+        Ok(ret)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct PinweaverGetLogEntry {
+    /// Root hash after this operation.
+    pub root: [u8; HASH_SIZE as usize],
+    /// Label of the leaf that was operated on.
+    pub label: u64,
+    /// Action that occured.
+    /// One of PW_INSERT_LEAF, PW_REMOVE_LEAF, PW_TRY_AUTH, or PW_RESET_AUTH.
+    pub action: GetLogEntryData,
+}
+
+impl Deserializable for PinweaverGetLogEntry {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        Ok(PinweaverGetLogEntry {
+            root: deserializer.take(HASH_SIZE as usize)?.try_into().unwrap(),
+            label: deserializer.take_le_u64()?,
+            action: GetLogEntryData::deserialize(deserializer)?,
+        })
+    }
+}
+
+pub struct PinweaverGetLogResponse {
+    pub log_entries: Vec<PinweaverGetLogEntry>,
+}
+
+impl Deserializable for PinweaverGetLogResponse {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        let mut log_entries = Vec::with_capacity(MAX_LOG_ENTRIES as usize);
+
+        while deserializer.available() > 0 && log_entries.len() < MAX_LOG_ENTRIES as usize {
+            log_entries.push(PinweaverGetLogEntry::deserialize(deserializer)?);
+        }
+
+        Ok(PinweaverGetLogResponse { log_entries })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -721,5 +852,79 @@ mod tests {
                 0xab, 0xab, 0xab, 0xab, //
             ]
         );
+    }
+
+    #[test]
+    fn test_get_log() {
+        let mut serializer = Serializer::new();
+        let root = [0xaa; HASH_SIZE as usize];
+        PinweaverGetLog::new(root).expect("create get log ok").serialize(&mut serializer);
+        let vec = serializer.into_vec();
+        assert_eq!(
+            vec,
+            vec![
+                0x00, 0x25, /* Subcommand::Pinweaver */
+                0x01, 0x06, /* Protocol version and message type */
+                0x20, 0x00, /* Data length (LE) */
+                /* Root hash: 32 bytes */
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+                0xaa, 0xaa, 0xaa, 0xaa,
+            ]
+        )
+    }
+
+    #[test]
+    fn test_get_log_response() {
+        let mut deserializer = Deserializer::new(vec![
+            0x00, 0x25, /* Subcommand::Pinweaver */
+            0x01, /* Protocol version */
+            0x20, 0x00, /* Data length (little endian) */
+            0x00, 0x00, 0x00, 0x00, /* Result code */
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x01, 0x01, 0x01, /* Root hash (in header) */
+            /* Entry 1 */
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+            0xbb, 0xbb, 0xbb, 0xbb, /* Root hash - 32 bytes */
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, /* Label - 8 bytes */
+            0x01, /* Type - RESET_TREE (1 byte) */
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, /* Padding */
+            /* Entry 2 */
+            0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc,
+            0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc, 0xbc,
+            0xbc, 0xbc, 0xbc, 0xbc, /* Root hash - 32 bytes */
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, /* Label - 8 bytes */
+            0x02, /* Type - INSERT_LEAF (1 byte) */
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, /* leaf_hmac (32 bytes) */
+        ]);
+
+        let response = PinweaverResponse::<PinweaverGetLogResponse>::deserialize(&mut deserializer)
+            .expect("deserialize ok");
+        assert_eq!(response.result_code, 0);
+        assert_eq!(response.root, [0x01; 32]);
+        let entries = response.data.expect("parsed get log response").log_entries;
+        assert_eq!(entries.len(), 2);
+        assert_eq!(
+            entries[0],
+            PinweaverGetLogEntry {
+                root: [0xbb; 32],
+                label: 0xaaaaaaaaaaaaaaaa,
+                action: GetLogEntryData::ResetTree,
+            }
+        );
+        assert_eq!(
+            entries[1],
+            PinweaverGetLogEntry {
+                root: [0xbc; 32],
+                label: 0xaaaaaaaaaaaaaaaa,
+                action: GetLogEntryData::InsertLeaf([0xcc; 32]),
+            }
+        )
     }
 }

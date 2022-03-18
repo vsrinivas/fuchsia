@@ -52,6 +52,10 @@ impl Deserializer {
         Ok(self.take(1)?[0])
     }
 
+    pub fn take_le_u64(&mut self) -> Result<u64, DeserializeError> {
+        Ok(u64::from_le_bytes(self.take(size_of::<u64>())?.try_into().unwrap()))
+    }
+
     pub fn take_le_u32(&mut self) -> Result<u32, DeserializeError> {
         Ok(u32::from_le_bytes(self.take(size_of::<u32>())?.try_into().unwrap()))
     }
