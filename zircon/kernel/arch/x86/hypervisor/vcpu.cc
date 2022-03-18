@@ -32,14 +32,16 @@
 #include "vmexit_priv.h"
 #include "vmx_cpu_state_priv.h"
 
-static constexpr uint32_t kInterruptInfoValid = 1u << 31;
-static constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
-static constexpr uint32_t kInterruptTypeNmi = 2u << 8;
-static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
-static constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
-static constexpr uint16_t kBaseProcessorVpid = 1;
+namespace {
 
-static zx_status_t vmptrld(paddr_t pa) {
+constexpr uint32_t kInterruptInfoValid = 1u << 31;
+constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
+constexpr uint32_t kInterruptTypeNmi = 2u << 8;
+constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
+constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
+constexpr uint16_t kBaseProcessorVpid = 1;
+
+zx_status_t vmptrld(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmptrld %[pa]"
@@ -50,7 +52,7 @@ static zx_status_t vmptrld(paddr_t pa) {
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
 
-static zx_status_t vmclear(paddr_t pa) {
+zx_status_t vmclear(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmclear %[pa]"
@@ -61,7 +63,7 @@ static zx_status_t vmclear(paddr_t pa) {
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
 
-static uint64_t vmread(uint64_t field) {
+uint64_t vmread(uint64_t field) {
   uint8_t err;
   uint64_t val;
 
@@ -74,7 +76,7 @@ static uint64_t vmread(uint64_t field) {
   return val;
 }
 
-static void vmwrite(uint64_t field, uint64_t val) {
+void vmwrite(uint64_t field, uint64_t val) {
   uint8_t err;
 
   __asm__ __volatile__("vmwrite %[val], %[field]"
@@ -84,41 +86,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
   DEBUG_ASSERT(!err);
 }
 
-AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
-  DEBUG_ASSERT(!arch_ints_disabled());
-  int_state_ = arch_interrupt_save();
-  __UNUSED zx_status_t status = vmptrld(vmcs_address_);
-  arch_set_blocking_disallowed(true);
-  DEBUG_ASSERT(status == ZX_OK);
-}
-
-AutoVmcs::~AutoVmcs() {
-  DEBUG_ASSERT(arch_ints_disabled());
-  if (vmcs_address_ != 0) {
-    arch_set_blocking_disallowed(false);
-  }
-  arch_interrupt_restore(int_state_);
-}
-
-void AutoVmcs::Invalidate() {
-  if (vmcs_address_ != 0) {
-    vmcs_address_ = 0;
-    arch_set_blocking_disallowed(false);
-  }
-}
-
-void AutoVmcs::InterruptWindowExiting(bool enable) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
-  if (enable) {
-    controls |= kProcbasedCtlsIntWindowExiting;
-  } else {
-    controls &= ~kProcbasedCtlsIntWindowExiting;
-  }
-  Write(VmcsField32::PROCBASED_CTLS, controls);
-}
-
-static bool has_error_code(uint32_t vector) {
+bool has_error_code(uint32_t vector) {
   switch (vector) {
     case X86_INT_DOUBLE_FAULT:
     case X86_INT_INVALID_TSS:
@@ -133,98 +101,7 @@ static bool has_error_code(uint32_t vector) {
   }
 }
 
-void AutoVmcs::IssueInterrupt(uint32_t vector) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  uint32_t interrupt_info = kInterruptInfoValid | (vector & UINT8_MAX);
-  if (vector == X86_INT_BREAKPOINT || vector == X86_INT_OVERFLOW) {
-    // From Volume 3, Section 24.8.3. A VMM should use type hardware exception for all
-    // exceptions other than breakpoints and overflows, which should be software exceptions.
-    interrupt_info |= kInterruptTypeSoftwareException;
-  } else if (vector == X86_INT_NMI) {
-    interrupt_info |= kInterruptTypeNmi;
-  } else if (vector <= X86_INT_VIRT) {
-    // From Volume 3, Section 6.15. All other vectors from 0 to X86_INT_VIRT are exceptions.
-    interrupt_info |= kInterruptTypeHardwareException;
-  }
-  if (has_error_code(vector)) {
-    interrupt_info |= kInterruptInfoDeliverErrorCode;
-    Write(VmcsField32::ENTRY_EXCEPTION_ERROR_CODE, 0);
-  }
-
-  DEBUG_ASSERT((Read(VmcsField32::ENTRY_INTERRUPTION_INFORMATION) & kInterruptInfoValid) == 0);
-  Write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
-}
-
-uint16_t AutoVmcs::Read(VmcsField16 field) const {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  return static_cast<uint16_t>(vmread(static_cast<uint64_t>(field)));
-}
-
-uint32_t AutoVmcs::Read(VmcsField32 field) const {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  return static_cast<uint32_t>(vmread(static_cast<uint64_t>(field)));
-}
-
-uint64_t AutoVmcs::Read(VmcsField64 field) const {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  return vmread(static_cast<uint64_t>(field));
-}
-
-uint64_t AutoVmcs::Read(VmcsFieldXX field) const {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  return vmread(static_cast<uint64_t>(field));
-}
-
-void AutoVmcs::Write(VmcsField16 field, uint16_t val) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  vmwrite(static_cast<uint64_t>(field), val);
-}
-
-void AutoVmcs::Write(VmcsField32 field, uint32_t val) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  vmwrite(static_cast<uint64_t>(field), val);
-}
-
-void AutoVmcs::Write(VmcsField64 field, uint64_t val) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  vmwrite(static_cast<uint64_t>(field), val);
-}
-
-void AutoVmcs::Write(VmcsFieldXX field, uint64_t val) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  vmwrite(static_cast<uint64_t>(field), val);
-}
-
-zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
-                                 uint32_t set, uint32_t clear) {
-  DEBUG_ASSERT(vmcs_address_ != 0);
-  uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
-  uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
-  if ((allowed_1 & set) != set) {
-    dprintf(INFO, "Failed to set VMCS controls %#x\n", static_cast<uint>(controls));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if ((~allowed_0 & clear) != clear) {
-    dprintf(INFO, "Failed to clear VMCS controls %#x\n", static_cast<uint>(controls));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if ((set & clear) != 0) {
-    dprintf(INFO, "Failed to set and clear the same VMCS controls %#x\n",
-            static_cast<uint>(controls));
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // See Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control can be
-  // either 0 or 1 (flexible), and the control is unknown, then refer to the
-  // old MSR to find the default value.
-  uint32_t flexible = allowed_0 ^ allowed_1;
-  uint32_t unknown = flexible & ~(set | clear);
-  uint32_t defaults = unknown & BITS(old_msr, 31, 0);
-  Write(controls, allowed_0 | defaults | set);
-  return ZX_OK;
-}
-
-static uint64_t ept_pointer(paddr_t pml4_address) {
+uint64_t ept_pointer(paddr_t pml4_address) {
   return
       // Physical address of the PML4 page, page aligned.
       pml4_address |
@@ -240,7 +117,7 @@ struct MsrListEntry {
   uint64_t value;
 } __PACKED;
 
-static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, uint64_t value) {
+void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, uint64_t value) {
   // From Volume 3, Section 24.7.2.
 
   // From Volume 3, Appendix A.6: Specifically, if the value bits 27:25 of
@@ -260,19 +137,28 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
   entry->value = value;
 }
 
-bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
-  uint64_t check_value = cr0_value;
-  // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
-  // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
-  if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
-    check_value |= X86_CR0_PE | X86_CR0_PG;
-  }
-  return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
+template <typename Out, typename In>
+void register_copy(Out* out, const In& in) {
+  out->rax = in.rax;
+  out->rcx = in.rcx;
+  out->rdx = in.rdx;
+  out->rbx = in.rbx;
+  out->rbp = in.rbp;
+  out->rsi = in.rsi;
+  out->rdi = in.rdi;
+  out->r8 = in.r8;
+  out->r9 = in.r9;
+  out->r10 = in.r10;
+  out->r11 = in.r11;
+  out->r12 = in.r12;
+  out->r13 = in.r13;
+  out->r14 = in.r14;
+  out->r15 = in.r15;
 }
 
-static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
-                             paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
-                             VmxPage* host_msr_page, VmxPage* guest_msr_page) {
+zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
+                      paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
+                      VmxPage* host_msr_page, VmxPage* guest_msr_page) {
   zx_status_t status = vmclear(vmcs_address);
   if (status != ZX_OK) {
     return status;
@@ -653,6 +539,202 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
   return ZX_OK;
 }
 
+// Injects an interrupt into the guest, if there is one pending.
+zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+  // Since hardware generated exceptions are delivered to the guest directly, the only exceptions
+  // we see here are those we generate in the VMM, e.g. GP faults in vmexit handlers. Therefore
+  // we simplify interrupt priority to 1) NMIs, 2) interrupts, and 3) generated exceptions. See
+  // Volume 3, Section 6.9, Table 6-2.
+  uint32_t vector = X86_INT_COUNT;
+  hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
+  if (type != hypervisor::InterruptType::INACTIVE) {
+    vector = X86_INT_NMI;
+  } else {
+    // Pop scans vectors from highest to lowest, which will correctly pop interrupts before
+    // exceptions. All vectors <= X86_INT_VIRT except the NMI vector are exceptions.
+    type = local_apic_state->interrupt_tracker.Pop(&vector);
+    if (type == hypervisor::InterruptType::INACTIVE) {
+      return ZX_OK;
+    }
+    // If type isn't inactive, then Pop should have initialized vector to a valid value.
+    DEBUG_ASSERT(vector != X86_INT_COUNT);
+  }
+
+  // NMI injection is blocked if an NMI is already being serviced (Volume 3, Section 24.4.2,
+  // Table 24-3), and mov ss blocks *all* interrupts (Volume 2 Section 4.3 MOV-Move instruction).
+  // Note that the IF flag does not affect NMIs (Volume 3, Section 6.8.1).
+  auto can_inject_nmi = [vmcs] {
+    return (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
+            (kInterruptibilityNmiBlocking | kInterruptibilityMovSsBlocking)) == 0;
+  };
+  // External interrupts can be blocked due to STI, move SS or the IF flag.
+  auto can_inject_external_int = [vmcs] {
+    return (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) &&
+           (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
+            (kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking)) == 0;
+  };
+
+  if (vector > X86_INT_VIRT && vector < X86_INT_PLATFORM_BASE) {
+    dprintf(INFO, "Invalid interrupt vector: %u\n", vector);
+    return ZX_ERR_NOT_SUPPORTED;
+  } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
+             (vector == X86_INT_NMI && !can_inject_nmi())) {
+    local_apic_state->interrupt_tracker.Track(vector, type);
+    // If interrupts are disabled, we set VM exit on interrupt enable.
+    vmcs->InterruptWindowExiting(true);
+    return ZX_OK;
+  }
+
+  // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
+  vmcs->IssueInterrupt(vector);
+
+  // Volume 3, Section 6.9: Lower priority exceptions are discarded; lower priority interrupts are
+  // held pending. Discarded exceptions are re-generated when the interrupt handler returns
+  // execution to the point in the program or task where the exceptions and/or interrupts
+  // occurred.
+  local_apic_state->interrupt_tracker.Clear(0, X86_INT_NMI);
+  local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
+
+  return ZX_OK;
+}
+
+}  // namespace
+
+AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
+  DEBUG_ASSERT(!arch_ints_disabled());
+  int_state_ = arch_interrupt_save();
+  __UNUSED zx_status_t status = vmptrld(vmcs_address_);
+  arch_set_blocking_disallowed(true);
+  DEBUG_ASSERT(status == ZX_OK);
+}
+
+AutoVmcs::~AutoVmcs() {
+  DEBUG_ASSERT(arch_ints_disabled());
+  if (vmcs_address_ != 0) {
+    arch_set_blocking_disallowed(false);
+  }
+  arch_interrupt_restore(int_state_);
+}
+
+void AutoVmcs::Invalidate() {
+  if (vmcs_address_ != 0) {
+    vmcs_address_ = 0;
+    arch_set_blocking_disallowed(false);
+  }
+}
+
+void AutoVmcs::InterruptWindowExiting(bool enable) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
+  if (enable) {
+    controls |= kProcbasedCtlsIntWindowExiting;
+  } else {
+    controls &= ~kProcbasedCtlsIntWindowExiting;
+  }
+  Write(VmcsField32::PROCBASED_CTLS, controls);
+}
+
+void AutoVmcs::IssueInterrupt(uint32_t vector) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  uint32_t interrupt_info = kInterruptInfoValid | (vector & UINT8_MAX);
+  if (vector == X86_INT_BREAKPOINT || vector == X86_INT_OVERFLOW) {
+    // From Volume 3, Section 24.8.3. A VMM should use type hardware exception for all
+    // exceptions other than breakpoints and overflows, which should be software exceptions.
+    interrupt_info |= kInterruptTypeSoftwareException;
+  } else if (vector == X86_INT_NMI) {
+    interrupt_info |= kInterruptTypeNmi;
+  } else if (vector <= X86_INT_VIRT) {
+    // From Volume 3, Section 6.15. All other vectors from 0 to X86_INT_VIRT are exceptions.
+    interrupt_info |= kInterruptTypeHardwareException;
+  }
+  if (has_error_code(vector)) {
+    interrupt_info |= kInterruptInfoDeliverErrorCode;
+    Write(VmcsField32::ENTRY_EXCEPTION_ERROR_CODE, 0);
+  }
+
+  DEBUG_ASSERT((Read(VmcsField32::ENTRY_INTERRUPTION_INFORMATION) & kInterruptInfoValid) == 0);
+  Write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
+}
+
+uint16_t AutoVmcs::Read(VmcsField16 field) const {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  return static_cast<uint16_t>(vmread(static_cast<uint64_t>(field)));
+}
+
+uint32_t AutoVmcs::Read(VmcsField32 field) const {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  return static_cast<uint32_t>(vmread(static_cast<uint64_t>(field)));
+}
+
+uint64_t AutoVmcs::Read(VmcsField64 field) const {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  return vmread(static_cast<uint64_t>(field));
+}
+
+uint64_t AutoVmcs::Read(VmcsFieldXX field) const {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  return vmread(static_cast<uint64_t>(field));
+}
+
+void AutoVmcs::Write(VmcsField16 field, uint16_t val) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  vmwrite(static_cast<uint64_t>(field), val);
+}
+
+void AutoVmcs::Write(VmcsField32 field, uint32_t val) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  vmwrite(static_cast<uint64_t>(field), val);
+}
+
+void AutoVmcs::Write(VmcsField64 field, uint64_t val) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  vmwrite(static_cast<uint64_t>(field), val);
+}
+
+void AutoVmcs::Write(VmcsFieldXX field, uint64_t val) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  vmwrite(static_cast<uint64_t>(field), val);
+}
+
+zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
+                                 uint32_t set, uint32_t clear) {
+  DEBUG_ASSERT(vmcs_address_ != 0);
+  uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
+  uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
+  if ((allowed_1 & set) != set) {
+    dprintf(INFO, "Failed to set VMCS controls %#x\n", static_cast<uint>(controls));
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((~allowed_0 & clear) != clear) {
+    dprintf(INFO, "Failed to clear VMCS controls %#x\n", static_cast<uint>(controls));
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((set & clear) != 0) {
+    dprintf(INFO, "Failed to set and clear the same VMCS controls %#x\n",
+            static_cast<uint>(controls));
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // See Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control can be
+  // either 0 or 1 (flexible), and the control is unknown, then refer to the
+  // old MSR to find the default value.
+  uint32_t flexible = allowed_0 ^ allowed_1;
+  uint32_t unknown = flexible & ~(set | clear);
+  uint32_t defaults = unknown & BITS(old_msr, 31, 0);
+  Write(controls, allowed_0 | defaults | set);
+  return ZX_OK;
+}
+
+bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
+  uint64_t check_value = cr0_value;
+  // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
+  // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
+  if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
+    check_value |= X86_CR0_PE | X86_CR0_PG;
+  }
+  return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
+}
+
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
   hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
@@ -890,65 +972,6 @@ void Vcpu::SaveGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   x86_extended_register_restore_state(thread->arch().extended_register_buffer);
 }
 
-// Injects an interrupt into the guest, if there is one pending.
-static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-  // Since hardware generated exceptions are delivered to the guest directly, the only exceptions
-  // we see here are those we generate in the VMM, e.g. GP faults in vmexit handlers. Therefore
-  // we simplify interrupt priority to 1) NMIs, 2) interrupts, and 3) generated exceptions. See
-  // Volume 3, Section 6.9, Table 6-2.
-  uint32_t vector = X86_INT_COUNT;
-  hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
-  if (type != hypervisor::InterruptType::INACTIVE) {
-    vector = X86_INT_NMI;
-  } else {
-    // Pop scans vectors from highest to lowest, which will correctly pop interrupts before
-    // exceptions. All vectors <= X86_INT_VIRT except the NMI vector are exceptions.
-    type = local_apic_state->interrupt_tracker.Pop(&vector);
-    if (type == hypervisor::InterruptType::INACTIVE) {
-      return ZX_OK;
-    }
-    // If type isn't inactive, then Pop should have initialized vector to a valid value.
-    DEBUG_ASSERT(vector != X86_INT_COUNT);
-  }
-
-  // NMI injection is blocked if an NMI is already being serviced (Volume 3, Section 24.4.2,
-  // Table 24-3), and mov ss blocks *all* interrupts (Volume 2 Section 4.3 MOV-Move instruction).
-  // Note that the IF flag does not affect NMIs (Volume 3, Section 6.8.1).
-  auto can_inject_nmi = [vmcs] {
-    return (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
-            (kInterruptibilityNmiBlocking | kInterruptibilityMovSsBlocking)) == 0;
-  };
-  // External interrupts can be blocked due to STI, move SS or the IF flag.
-  auto can_inject_external_int = [vmcs] {
-    return (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) &&
-           (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
-            (kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking)) == 0;
-  };
-
-  if (vector > X86_INT_VIRT && vector < X86_INT_PLATFORM_BASE) {
-    dprintf(INFO, "Invalid interrupt vector: %u\n", vector);
-    return ZX_ERR_NOT_SUPPORTED;
-  } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
-             (vector == X86_INT_NMI && !can_inject_nmi())) {
-    local_apic_state->interrupt_tracker.Track(vector, type);
-    // If interrupts are disabled, we set VM exit on interrupt enable.
-    vmcs->InterruptWindowExiting(true);
-    return ZX_OK;
-  }
-
-  // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
-  vmcs->IssueInterrupt(vector);
-
-  // Volume 3, Section 6.9: Lower priority exceptions are discarded; lower priority interrupts are
-  // held pending. Discarded exceptions are re-generated when the interrupt handler returns
-  // execution to the point in the program or task where the exceptions and/or interrupts
-  // occurred.
-  local_apic_state->interrupt_tracker.Clear(0, X86_INT_NMI);
-  local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
-
-  return ZX_OK;
-}
-
 zx_status_t vmx_enter(VmxState* vmx_state) {
   // Perform the low-level vmlaunch or vmresume, entering the guest,
   // and returning when the guest exits.
@@ -1078,25 +1101,6 @@ void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
     mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
   }
-}
-
-template <typename Out, typename In>
-static void register_copy(Out* out, const In& in) {
-  out->rax = in.rax;
-  out->rcx = in.rcx;
-  out->rdx = in.rdx;
-  out->rbx = in.rbx;
-  out->rbp = in.rbp;
-  out->rsi = in.rsi;
-  out->rdi = in.rdi;
-  out->r8 = in.r8;
-  out->r9 = in.r9;
-  out->r10 = in.r10;
-  out->r11 = in.r11;
-  out->r12 = in.r12;
-  out->r13 = in.r13;
-  out->r14 = in.r14;
-  out->r15 = in.r15;
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) {
