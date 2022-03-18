@@ -115,7 +115,17 @@ struct BudgetResult {
 /// Verifies that no budget is exceeded.
 pub fn verify_budgets(args: SizeCheckArgs) -> Result<()> {
     let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
-    verify_budgets_with_tools(args, Box::new(sdk_tools))
+
+    // Convert budget failure errors to a warning log.
+    // This is necessary so that we can run size checks as part of the build, and check the result
+    // post-build.
+    match verify_budgets_with_tools(args, Box::new(sdk_tools)) {
+        Ok(_) => Ok(()),
+        err => {
+            println!("Size Checker Failed: {:?}", err);
+            Ok(())
+        }
+    }
 }
 
 fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) -> Result<()> {
@@ -123,20 +133,6 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
 
     // Read the budget configuration file.
     let config: BudgetConfig = read_config(&args.budgets)?;
-
-    // Ensure that the sum of all the budgets falls beneath the maximum.
-    if let Some(total) = config.total_budget_bytes {
-        let mut sum_of_budgets = 0u64;
-        for budget in &config.package_set_budgets {
-            sum_of_budgets += budget.budget_bytes;
-        }
-        for budget in &config.resource_budgets {
-            sum_of_budgets += budget.budget_bytes;
-        }
-        if sum_of_budgets > total {
-            anyhow::bail!("Sum of budgets exceeds maximum: sum={}, max={}", sum_of_budgets, total);
-        }
-    }
 
     // List blobs hashes for each package manifest of each package budget.
     let package_budget_blobs = load_manifests_blobs_match_budgets(&config.package_set_budgets)?;
@@ -173,7 +169,7 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
     let over_budget = results.iter().filter(|e| e.used_bytes > e.budget_bytes).count();
 
     if over_budget > 0 {
-        println!("FAILED: {} package set(s) over budget.", over_budget);
+        println!("FAILED: {} package set(s) over budget", over_budget);
         for entry in results.iter() {
             if entry.used_bytes > entry.budget_bytes {
                 println!(
@@ -186,19 +182,26 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
             }
         }
         if let Some(out_path) = &args.gerrit_output {
-            print!("Report written to {}", out_path.to_string_lossy());
+            println!("Report written to {}", out_path.to_string_lossy());
         }
-        Err(anyhow::Error::new(errors::ffx_error_with_code!(2, "FAILED: Size budget(s) exceeded")))
-    } else {
-        // Return Ok if every budget is respected.
-        if let None = args.gerrit_output {
-            print!(
-                "SUCCESS: {} packages set(s) fit(s) within their respective budgets.",
-                results.len()
-            );
-        }
-        Ok(())
+        anyhow::bail!(errors::ffx_error_with_code!(2, "FAILED: Size budget(s) exceeded"));
     }
+
+    // Ensure that the sum of all the budgets falls beneath the maximum.
+    if let Some(total) = config.total_budget_bytes {
+        let mut sum_of_budgets = 0u64;
+        for budget in &config.package_set_budgets {
+            sum_of_budgets += budget.budget_bytes;
+        }
+        for budget in &config.resource_budgets {
+            sum_of_budgets += budget.budget_bytes;
+        }
+        if sum_of_budgets > total {
+            anyhow::bail!("Sum of budgets exceeds maximum: sum={}, max={}", sum_of_budgets, total);
+        }
+    }
+
+    Ok(())
 }
 
 /// Reads each mentioned package manifest.

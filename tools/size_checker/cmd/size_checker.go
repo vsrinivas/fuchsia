@@ -1148,6 +1148,5 @@ See //tools/size_checker for more details.`)
 
 	if overBudget {
 		log.Println(report)
-		os.Exit(1)
 	}
 }
