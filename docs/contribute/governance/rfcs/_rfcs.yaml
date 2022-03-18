@@ -1983,3 +1983,16 @@
   reviewers: ['dgilhooley@google.com', 'frousseau@google.com', 'maniscalco@google.com', 'palmer@google.com', 'pankhurst@google.com', 'ppi@google.com', 'pshickel@google.com', 'rashaeqbal@google.com', 'shayba@google.com', 'surajmalhotra@google.com']
   submitted: '2021-12-20'
   reviewed: '2022-02-09'
+
+- name: 'RFC-0153'
+  title: 'Ninja customization for Fuchsia'
+  short_description: 'Proposal to use a customized version of the Ninja build tool for Fuchsia to speed up the build, improve status reporting and usability.'
+  authors: ['digit@google.com', 'shayba@google.com', 'tmandry@google.com']
+  file: '0153_ninja_customization.md'
+  area: ['Build']
+  issue: ['91545']
+  gerrit_change_id: ['635356']
+  status: 'Accepted'
+  reviewers: ['shayba@google.com', 'maruel@google.com', 'abarth@google.com', 'fangism@google.com', 'jayzhuang@google.com', 'rudymathu@google.com']
+  submitted: '2021-01-22'
+  reviewed: '2021-03-17'
