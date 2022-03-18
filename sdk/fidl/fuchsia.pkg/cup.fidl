@@ -1,0 +1,60 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.pkg;
+
+/// This protocol gives access to persisted CUP data for eager packages in
+/// pkg-resolver.
+@discoverable
+protocol Cup {
+    /// Resolve the eager package given by the pinned package URL, and write the
+    /// CUP data to storage.
+    Write(struct {
+        /// The pinned eager package URL from Omaha, must appear in CUP data.
+        url PackageUrl;
+        /// The CUP data from the update check.
+        cup CupData;
+    }) -> (struct {}) error WriteError;
+
+    /// Returns the eager package version and channel of the given package URL.
+    GetInfo(struct {
+        /// The eager package URL, must be unpinned.
+        url PackageUrl;
+    }) -> (struct {
+        version string:64;
+        channel string:128;
+    }) error GetInfoError;
+};
+
+type CupData = table {
+    /// Omaha request json
+    1: request bytes:65536;
+    /// The public key id
+    2: key_id uint64;
+    /// ECDSA nonce in lowercase hexadecimal
+    3: nonce string:128;
+    /// Omaha response json
+    4: response bytes:65536;
+    /// DER encoded ECDSA signature
+    5: signature bytes:72;
+};
+
+type WriteError = strict enum {
+    /// The URL is not a known eager package.
+    UNKNOWN_URL = 1;
+    /// The CUP data associated with the eager package failed verification.
+    VERIFICATION = 2;
+    /// Downloading the eager package failed.
+    DOWNLOAD = 3;
+    /// Writing the CUP data to storage failed.
+    STORAGE = 4;
+};
+
+type GetInfoError = strict enum {
+    /// The URL is not a known eager package.
+    UNKNOWN_URL = 1;
+    /// The CUP data associated with the eager package failed verification.
+    VERIFICATION = 2;
+    /// The URL is a known eager package, but there are no packages available.
+    NOT_AVAILABLE = 3;
+};
