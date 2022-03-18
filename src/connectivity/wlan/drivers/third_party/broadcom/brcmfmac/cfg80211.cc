@@ -2100,10 +2100,10 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     brcmf_btcoex_log_active_bt_tasks(ifp);
   }
 
-  // If the rate is 6 Mbps or less OR Rx error rate >= 40% OR Tx error rate is >= 40%
+  // If the rate is 6 Mbps or less OR Rx error rate >= 15% OR Tx error rate is >= 15%
   // log some of the Tx and Rx error counts retrieved from FW.
-  if ((real_rate != 0.0 && (real_rate <= BRCMF_LOW_DATA_RATE_THRESHOLD)) || rx_err_rate >= 0.4 ||
-      tx_err_rate >= 0.4) {
+  if ((real_rate != 0.0 && (real_rate <= BRCMF_LOW_DATA_RATE_THRESHOLD)) || rx_err_rate >= 0.15 ||
+      tx_err_rate >= 0.15) {
     uint8_t cnt_buf[BRCMF_DCMD_MAXLEN] = {0};
     // If data rate is at or below threshold, increment the counter.
     if (real_rate != 0.0 && (real_rate <= BRCMF_LOW_DATA_RATE_THRESHOLD)) {
