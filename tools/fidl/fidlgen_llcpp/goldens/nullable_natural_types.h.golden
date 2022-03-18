@@ -98,6 +98,8 @@ class StructWithNullableVector {
                       fidl::internal::NaturalCodingConstraintVector<
                           fidl::internal::NaturalCodingConstraintEmpty>>{
           &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
@@ -158,6 +160,8 @@ class StructWithNullableUnion {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
@@ -218,6 +222,8 @@ class StructWithNullableStruct {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_nullable::Int32Wrapper>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
@@ -274,6 +280,8 @@ class StructWithNullableString {
                       Storage_, ::cpp17::optional<::std::string>,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #ifdef __Fuchsia__
@@ -319,8 +327,10 @@ class StructWithNullableRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::val,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
+          &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -368,8 +378,10 @@ class StructWithNullableProtocol {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::val,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
+          &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -408,11 +420,14 @@ class StructWithNullableHandle {
       ::test_nullable::StructWithNullableHandle, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableHandle>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::vmo,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_VMO, 0x80000000>>{&Storage_::val, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::vmo,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
+                                                        0x80000000, true>>{
+          &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -575,6 +590,8 @@ class SimpleProtocolAddTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::sum, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
@@ -638,6 +655,8 @@ class SimpleProtocolAddRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 4, 4});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
@@ -688,6 +707,8 @@ class Int32Wrapper {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::val, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_nullable

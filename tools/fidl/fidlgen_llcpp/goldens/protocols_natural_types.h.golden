@@ -144,11 +144,14 @@ class WithErrorSyntax_HandleInResult_Response {
       ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithErrorSyntax_HandleInResult_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::handle,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_NONE, 0x80000000>>{&Storage_::h, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::handle,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                        0x80000000, false>>{
+          &Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -308,6 +311,8 @@ class WithErrorSyntaxHandleInResultTopResponse {
           Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -353,7 +358,9 @@ class HandleRightsProtocolResponseMethodTopResponse {
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::zx::socket,
                       fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x1>>{&Storage_::h, 0, 0});
+                          ZX_OBJ_TYPE_SOCKET, 0x1, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -399,7 +406,9 @@ class HandleRightsProtocolResponseMethodRequest {
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::zx::socket,
                       fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -445,7 +454,9 @@ class HandleRightsProtocolNoResponseMethodRequest {
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::zx::socket,
                       fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -491,7 +502,9 @@ class HandleRightsProtocolAnEventRequest {
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::zx::socket,
                       fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
+                          ZX_OBJ_TYPE_SOCKET, 0x3, false>>{&Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -533,11 +546,14 @@ class ChannelProtocolTakeHandleRequest {
       ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolTakeHandleRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::handle,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_NONE, 0x80000000>>{&Storage_::h, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::handle,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                        0x80000000, false>>{
+          &Storage_::h, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -579,11 +595,14 @@ class ChannelProtocolMutateSocketTopResponse {
       ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x80000000>>{&Storage_::b, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::socket,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
+                                                        0x80000000, false>>{
+          &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -625,11 +644,14 @@ class ChannelProtocolMutateSocketRequest {
       ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::zx::socket,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_SOCKET, 0x80000000>>{&Storage_::a, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::socket,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
+                                                        0x80000000, false>>{
+          &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -680,8 +702,10 @@ class WithProtocolEndsServerEndsTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::out,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::out, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -732,8 +756,10 @@ class WithProtocolEndsServerEndsRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::in, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
+          &Storage_::in, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -784,8 +810,10 @@ class WithProtocolEndsClientEndsTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::out,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
+          &Storage_::out, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -836,8 +864,10 @@ class WithProtocolEndsClientEndsRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::in, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::in, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -920,6 +950,8 @@ class WithErrorSyntax_ResponseAsStruct_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::c, 16, 16});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1112,6 +1144,8 @@ class WithErrorSyntaxResponseAsStructTopResponse {
           Storage_, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1175,6 +1209,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1367,6 +1403,8 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse {
           Storage_, ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1430,6 +1468,8 @@ class WithErrorSyntax_ErrorAsEnum_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1509,6 +1549,8 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::ret, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1588,6 +1630,8 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::arg, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1666,6 +1710,8 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::arg, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1745,6 +1791,8 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::arg, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1812,6 +1860,8 @@ class WithAndWithoutRequestResponseOnWithResponseRequest {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::ret, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1891,6 +1941,8 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::ret, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
@@ -1951,6 +2003,8 @@ class TransitionalRequestTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
@@ -2008,6 +2062,8 @@ class TransitionalRequestRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
@@ -2063,6 +2119,8 @@ class TransitionalOneWayRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
@@ -2118,6 +2176,8 @@ class TransitionalEventRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
@@ -2265,6 +2325,8 @@ class MethodWithUnionUnionMethodRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::TheUnion,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::u, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
@@ -2332,6 +2394,8 @@ class SyscallProtocolMethodCRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #ifdef __Fuchsia__
@@ -2412,23 +2476,25 @@ class ProtocolEnds {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
           &Storage_::client, 0, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
           &Storage_::server, 4, 4},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
           &Storage_::client_opt, 8, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
           &Storage_::server_opt, 12, 12});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -2476,6 +2542,8 @@ class WithProtocolEndsStructContainingEndsTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::ProtocolEnds,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::out, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -2522,6 +2590,8 @@ class WithProtocolEndsStructContainingEndsRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::ProtocolEnds,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::in, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -2712,6 +2782,8 @@ class ManyParametersFifteenRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::p15, 14, 14});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -2900,6 +2972,8 @@ class WithErrorSyntaxErrorAsEnumTopResponse {
           Storage_, ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -2963,6 +3037,8 @@ class ChannelProtocolMethodBTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::result, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
@@ -3030,6 +3106,8 @@ class ChannelProtocolMethodBRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
@@ -3097,6 +3175,8 @@ class ChannelProtocolMethodARequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
@@ -3164,6 +3244,8 @@ class ChannelProtocolEventARequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_protocols

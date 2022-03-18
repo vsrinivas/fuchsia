@@ -63,8 +63,10 @@ class ServerEndWrapper {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::value,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::value, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -110,8 +112,10 @@ class ClientEndWrapper {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::value,
-                                                               0, 0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::value, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__

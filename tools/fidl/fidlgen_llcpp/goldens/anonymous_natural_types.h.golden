@@ -170,6 +170,8 @@ class TableData {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::data, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
@@ -305,6 +307,8 @@ class SomeProtocolSomeMethodRequest {
           Storage_, ::test_anonymous::TableMember,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::table_member,
                                                         24, 16});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
@@ -385,6 +389,16 @@ class OverrideTest {
           Storage_, ::std::unique_ptr<::test_anonymous::Expression>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 32,
                                                         24});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
@@ -660,6 +674,8 @@ class SomeProtocol_SomeMethod_Response {
                       Storage_, ::test_anonymous::BitsMember,
                       fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::bits_member, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
@@ -842,6 +858,8 @@ class SomeProtocolSomeMethodTopResponse {
           Storage_, ::test_anonymous::SomeProtocol_SomeMethod_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_anonymous

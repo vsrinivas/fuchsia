@@ -84,8 +84,18 @@ class NonInlineStructTestStruct {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::handle,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
-                                                        0x80000000>>{
+                                                        0x80000000, false>>{
           &Storage_::h, 8, 8});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 8,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 8,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 #endif  // __Fuchsia__
@@ -148,6 +158,16 @@ class Int8Int32 {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 4, 4});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0x00000000ffffff00ull,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0x00000000ffffff00ull,
+      });
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
@@ -208,6 +228,16 @@ class Int16Int8 {
       ::fidl::internal::NaturalStructMember<
           Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 2, 2});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+          .offset = 0,
+          .mask = 0xff000000,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+          .offset = 0,
+          .mask = 0xff000000,
+      });
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
@@ -267,6 +297,8 @@ class ArrayInt16Int8 {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arr, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -356,6 +388,8 @@ class StructPaddingTestStruct {
           Storage_, ::test_encapsulatedstructs::ArrayInt16Int8,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::array, 12,
                                                         12});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #ifdef __Fuchsia__
@@ -412,6 +446,8 @@ class TopLevelStruct {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 24, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__

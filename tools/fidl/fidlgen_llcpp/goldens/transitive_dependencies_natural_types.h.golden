@@ -67,6 +67,8 @@ class Baz {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_middle::Bar,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::g, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_transitivedependencies

@@ -258,6 +258,8 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
           ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -561,6 +563,8 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
           ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -756,6 +760,8 @@ class MainProtocolOnImportWithErrorRequest {
           ::test_protocollayouts::MainProtocol_OnImportWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1008,6 +1014,8 @@ class MainProtocolOnAnonWithErrorRequest {
           Storage_, ::test_protocollayouts::MainProtocol_OnAnonWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1651,6 +1659,8 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
           ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
@@ -1894,6 +1904,8 @@ class MainProtocolOnLocalWithErrorRequest {
           ::test_protocollayouts::MainProtocol_OnLocalWithError_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_protocollayouts

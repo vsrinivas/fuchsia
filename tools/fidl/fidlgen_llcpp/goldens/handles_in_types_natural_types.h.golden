@@ -68,7 +68,7 @@ class UnionWithHandle {
           ::fidl::internal::NaturalCodingConstraintEmpty>(),
       ::fidl::internal::NaturalUnionMember<
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000>>());
+                                                        0x80000000, false>>());
 
   explicit UnionWithHandle(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -131,11 +131,12 @@ class TableWithHandle {
       ::test_handlesintypes::TableWithHandle>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_handlesintypes::TableWithHandle>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<
-                      Storage_, ::zx::vmo,
-                      fidl::internal::NaturalCodingConstraintHandle<
-                          ZX_OBJ_TYPE_VMO, 0x80000000>>{1, &Storage_::h});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::zx::vmo,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
+                                                        0x80000000, false>>{
+          1, &Storage_::h});
 };
 
 #endif  // __Fuchsia__
@@ -231,24 +232,24 @@ class HandlesInTypes {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000>>{
+                                                        0x80000000, false>>{
           &Storage_::normal_handle, 0, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<::zx::vmo>,
           fidl::internal::NaturalCodingConstraintVector<
-              fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                            0x80000000>>>{
+              fidl::internal::NaturalCodingConstraintHandle<
+                  ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{
           &Storage_::handle_in_vec, 8, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::array<::zx::vmo, 5>,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                        0x80000000>>{
+                                                        0x80000000, false>>{
           &Storage_::handle_in_array, 24, 24},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<::std::array<::zx::vmo, 5>>,
           fidl::internal::NaturalCodingConstraintVector<
-              fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
-                                                            0x80000000>>>{
+              fidl::internal::NaturalCodingConstraintHandle<
+                  ZX_OBJ_TYPE_VMO, 0x80000000, false>>>{
           &Storage_::handle_in_mixed_vec_array, 48, 48},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_handlesintypes::TableWithHandle,
@@ -258,6 +259,24 @@ class HandlesInTypes {
           Storage_, ::test_handlesintypes::UnionWithHandle,
           fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::union_with_handle, 80, 80});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 40,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 40,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 #endif  // __Fuchsia__

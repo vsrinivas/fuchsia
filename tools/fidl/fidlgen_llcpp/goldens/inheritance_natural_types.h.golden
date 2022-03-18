@@ -71,6 +71,8 @@ class SuperFooTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
@@ -122,6 +124,8 @@ class SuperFooRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
           fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_inheritance

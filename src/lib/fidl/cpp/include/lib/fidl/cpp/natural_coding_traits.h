@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 
+#include <lib/fidl/cpp/natural_coding_errors.h>
 #include <lib/fidl/cpp/natural_decoder.h>
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -18,36 +19,13 @@
 
 namespace fidl::internal {
 
-// Use extern definitions of errors to avoid a copy for each .cc file including
-// this .h file.
-extern const char* const kCodingErrorInvalidBoolean;
-extern const char* const kCodingErrorVectorLimitExceeded;
-extern const char* const kCodingErrorNullDataReceivedForNonNullableVector;
-extern const char* const kCodingErrorNullVectorMustHaveSizeZero;
-extern const char* const kCodingErrorStringLimitExceeded;
-extern const char* const kCodingErrorNullDataReceivedForNonNullableString;
-extern const char* const kCodingErrorNullStringMustHaveSizeZero;
-extern const char* const kCodingErrorStringNotValidUtf8;
-extern const char* const kCodingErrorNullTableMustHaveSizeZero;
-extern const char* const kCodingErrorInvalidNumBytesSpecifiedInEnvelope;
-extern const char* const kCodingErrorInvalidNumHandlesSpecifiedInEnvelope;
-extern const char* const kCodingErrorNonEmptyByteCountInNullEnvelope;
-extern const char* const kCodingErrorNonEmptyHandleCountInNullEnvelope;
-extern const char* const kCodingErrorInvalidInlineBit;
-extern const char* const kCodingErrorUnknownBitSetInBitsValue;
-extern const char* const kCodingErrorUnknownEnumValue;
-extern const char* const kCodingErrorUnknownUnionTag;
-extern const char* const kCodingErrorRecursionDepthExceeded;
-extern const char* const kCodingErrorInvalidPresenceIndicator;
-extern const char* const kCodingErrorNotAllBytesConsumed;
-extern const char* const kCodingErrorNotAllHandlesConsumed;
-
 struct NaturalCodingConstraintEmpty {};
 
-template <zx_obj_type_t ObjType, zx_rights_t Rights>
+template <zx_obj_type_t ObjType, zx_rights_t Rights, bool IsOptional>
 struct NaturalCodingConstraintHandle {
   static constexpr zx_obj_type_t obj_type = ObjType;
   static constexpr zx_rights_t rights = Rights;
+  static constexpr bool is_optional = IsOptional;
 };
 
 template <size_t Limit = std::numeric_limits<size_t>::max()>
@@ -213,6 +191,10 @@ struct NaturalCodingTraits<::std::vector<T>, Constraint> {
                      size_t recursion_depth) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
     size_t count = encoded->count;
+    if (count > Constraint::limit) {
+      decoder->SetError(kCodingErrorVectorLimitExceeded);
+      return;
+    }
     switch (reinterpret_cast<uintptr_t>(encoded->data)) {
       case FIDL_ALLOC_PRESENT:
         break;
@@ -295,7 +277,7 @@ struct NaturalCodingTraits<
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
   }
 };
 #endif  // __Fuchsia__
@@ -546,7 +528,7 @@ struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
     *value = ClientEnd<T>(std::move(channel));
   }
 };
@@ -571,7 +553,7 @@ struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
     *value = ServerEnd<T>(std::move(channel));
   }
 };

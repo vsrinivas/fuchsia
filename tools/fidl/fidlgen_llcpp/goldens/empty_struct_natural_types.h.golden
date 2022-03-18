@@ -75,6 +75,8 @@ class Empty {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
@@ -132,6 +134,8 @@ class EmptyProtocolSendRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -195,6 +199,8 @@ class EmptyProtocolSendAndReceiveTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -258,6 +264,8 @@ class EmptyProtocolSendAndReceiveRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
@@ -315,6 +323,8 @@ class EmptyProtocolReceiveRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_emptystruct

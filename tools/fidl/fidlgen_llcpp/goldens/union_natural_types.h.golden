@@ -343,6 +343,8 @@ class StructWithNullableXUnion {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_union::OlderSimpleUnion>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::x1, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_StrictUnionTable;
@@ -858,6 +860,8 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_union::StrictBoundedXUnion,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
@@ -1016,6 +1020,8 @@ class Pizza {
                       fidl::internal::NaturalCodingConstraintVector<
                           fidl::internal::NaturalCodingConstraintString<16>>>{
           &Storage_::toppings, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_PastaTable;
@@ -1067,6 +1073,8 @@ class Pasta {
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<16>>{
           &Storage_::sauce, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
@@ -1667,6 +1675,8 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_union::OlderSimpleUnion,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
@@ -1725,6 +1735,8 @@ class NullableUnionStruct {
                       Storage_, ::std::unique_ptr<::test_union::Union>,
                       fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::the_union, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
@@ -2334,6 +2346,24 @@ class UnionSandwich {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 32, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 32,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 24,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
@@ -2691,6 +2721,8 @@ class Empty {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;

@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 
+#include <lib/fidl/cpp/natural_coding_errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
@@ -42,26 +43,67 @@ class NaturalDecoder final {
 
   [[nodiscard]] bool Alloc(size_t size, size_t* offset) {
     if (size > std::numeric_limits<uint32_t>::max()) {
-      SetError("allocation size exceeds 32-bits");
+      SetError(kCodingErrorAllocationSizeExceeds32Bits);
       return false;
     }
     size_t old = next_out_of_line_;
-    size_t next = next_out_of_line_ + FIDL_ALIGN(size);
+    size_t next_unaligned = next_out_of_line_ + size;
+    size_t next = FIDL_ALIGN(next_unaligned);
     if (next > body_.byte_actual()) {
-      SetError("out of line object exceeds message bounds");
+      SetError(kCodingErrorOutOfLineObjectExceedsMessageBounds);
       return false;
     }
+
+    uint64_t padding;
+    switch (next - next_unaligned) {
+      case 0:
+        padding = 0x0000000000000000;
+        break;
+      case 1:
+        padding = 0xff00000000000000;
+        break;
+      case 2:
+        padding = 0xffff000000000000;
+        break;
+      case 3:
+        padding = 0xffffff0000000000;
+        break;
+      case 4:
+        padding = 0xffffffff00000000;
+        break;
+      case 5:
+        padding = 0xffffffffff000000;
+        break;
+      case 6:
+        padding = 0xffffffffffff0000;
+        break;
+      case 7:
+        padding = 0xffffffffffffff00;
+        break;
+      default:
+        __builtin_unreachable();
+    }
+    if (*GetPtr<uint64_t>(next - 8) & padding) {
+      SetError(kCodingErrorInvalidPaddingBytes);
+      return false;
+    }
+
     next_out_of_line_ = next;
     *offset = old;
     return true;
   }
 
 #ifdef __Fuchsia__
-  void DecodeHandle(zx::object_base* value, HandleAttributes attr, size_t offset) {
+  void DecodeHandle(zx::object_base* value, HandleAttributes attr, size_t offset,
+                    bool is_nullable) {
     zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
     switch (*handle) {
       case FIDL_HANDLE_PRESENT: {
-        ZX_DEBUG_ASSERT(handle_index_ < body_.handle_actual());
+        if (handle_index_ >= body_.handle_actual()) {
+          SetError(kCodingErrorTooManyHandlesConsumed);
+          return;
+        }
+
         zx_handle_t& body_handle = body_.handles()[handle_index_];
 
         const char* error;
@@ -80,11 +122,15 @@ class NaturalDecoder final {
         return;
       }
       case FIDL_HANDLE_ABSENT: {
-        value->reset();
+        if (is_nullable) {
+          value->reset();
+        } else {
+          SetError(kCodingErrorAbsentNonNullableHandle);
+        }
         return;
       }
       default: {
-        SetError("invalid presence marker");
+        SetError(kCodingErrorInvalidPresenceIndicator);
         return;
       }
     }

@@ -8,6 +8,7 @@
 source_set("cpp_base") {
   public = [
     "include/lib/fidl/cpp/internal/message_extensions.h",
+    "include/lib/fidl/cpp/natural_coding_errors.h",
     "include/lib/fidl/cpp/natural_coding_traits.h",
     "include/lib/fidl/cpp/natural_decoder.h",
     "include/lib/fidl/cpp/natural_encoder.h",
@@ -15,7 +16,7 @@ source_set("cpp_base") {
   ]
   sources = [
     "internal/message_extensions.cc",
-    "natural_coding_traits.cc",
+    "natural_coding_errors.cc",
     "natural_decoder.cc",
     "natural_encoder.cc",
   ]

@@ -538,7 +538,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		if !ok {
 			panic(fmt.Sprintf("unknown handle type for const: %v", val))
 		}
-		r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_%s, 0x%x>", subtype, val.HandleRights)
+		r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_%s, 0x%x, %t>", subtype, val.HandleRights, val.Nullable)
 	case fidlgen.RequestType:
 		p := c.compileNameVariants(val.RequestSubtype)
 		if val.ProtocolTransport == "Driver" {
@@ -557,7 +557,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
-		r.FieldConstraint = "fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>"
+		r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
 	case fidlgen.PrimitiveType:
 		r.nameVariants = NameVariantsForPrimitive(val.PrimitiveSubtype)
 		r.WireFamily = FamilyKinds.TrivialCopy
@@ -587,7 +587,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
 			r.IsResource = true
-			r.FieldConstraint = "fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>"
+			r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
 		} else {
 			switch declType {
 			case fidlgen.BitsDeclType:

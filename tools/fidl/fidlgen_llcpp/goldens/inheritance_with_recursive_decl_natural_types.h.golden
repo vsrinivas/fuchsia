@@ -67,8 +67,10 @@ class ParentFirstRequest {
           Storage_,
           ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
           &Storage_::request, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -119,8 +121,10 @@ class ChildSecondRequest {
           Storage_,
           ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
           &Storage_::request, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__

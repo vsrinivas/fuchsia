@@ -91,6 +91,8 @@ class ExampleUseOfVectors {
               fidl::internal::NaturalCodingConstraintVector<
                   fidl::internal::NaturalCodingConstraintEmpty>>>{
           &Storage_::vector_of_vector_of_bool, 16, 16});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_vectors

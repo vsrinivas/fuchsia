@@ -346,6 +346,8 @@ class StructSmallArray {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::array<uint32_t, 2>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
@@ -398,6 +400,8 @@ class StructLargeArray {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::array<uint32_t, 100>,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_arrays

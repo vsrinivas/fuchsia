@@ -72,6 +72,8 @@ class Foo {
                       Storage_, ::test_dependent::MyEnum,
                       fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::field, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_structdefaultvalueenumlibraryreference

@@ -102,6 +102,24 @@ class {{ .Name }} {
       }
     {{- end -}}
   );
+  static constexpr auto kPaddingV1 = std::make_tuple(
+    {{- range $i, $p := .PaddingV1 }}
+      {{- if $i }}, {{ end -}}
+      ::fidl::internal::NaturalStructPadding<{{ $p.MaskType }}>{
+        .offset = {{ $p.Offset }},
+        .mask = {{ $p.Mask }},
+      }
+    {{- end -}}
+  );
+  static constexpr auto kPaddingV2 = std::make_tuple(
+    {{- range $i, $p := .PaddingV2 }}
+      {{- if $i }}, {{ end -}}
+      ::fidl::internal::NaturalStructPadding<{{ $p.MaskType }}>{
+        .offset = {{ $p.Offset }},
+        .mask = {{ $p.Mask }},
+      }
+    {{- end -}}
+  );
 
 };
 

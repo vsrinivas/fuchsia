@@ -75,6 +75,8 @@ class Example_foo_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
@@ -237,6 +239,8 @@ class ExampleFooTopResponse {
                       Storage_, ::test_error::Example_foo_Result,
                       fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::result, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
@@ -288,6 +292,8 @@ class ExampleFooRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
           fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_error

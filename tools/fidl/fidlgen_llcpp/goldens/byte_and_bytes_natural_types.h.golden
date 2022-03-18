@@ -114,6 +114,16 @@ class ByteAndBytes {
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty, 1024>>{
           &Storage_::opt_only_one_k_bytes, 40, 40});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffffffffff00ull,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffffffffff00ull,
+      });
 };
 
 }  // namespace test_byteandbytes

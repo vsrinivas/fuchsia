@@ -68,8 +68,10 @@ class ParentTakeChildRequestRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::r, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::r, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -115,8 +117,10 @@ class ParentTakeChildRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::c, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::c, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -163,8 +167,10 @@ class ParentGetChildTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::c, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::c, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -213,8 +219,10 @@ class ParentGetChildRequestTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>,
           fidl::internal::NaturalCodingConstraintHandle<
-              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::r, 0,
-                                                               0});
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          &Storage_::r, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 #endif  // __Fuchsia__

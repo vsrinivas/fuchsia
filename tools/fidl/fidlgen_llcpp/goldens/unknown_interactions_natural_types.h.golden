@@ -82,6 +82,8 @@ class Example_FlexibleTwoWay_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -270,6 +272,8 @@ class ExampleFlexibleTwoWayTopResponse {
           Storage_, ::test_unknowninteractions::Example_FlexibleTwoWay_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_unknowninteractions

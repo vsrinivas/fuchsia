@@ -211,6 +211,8 @@ class MemberOnlyAppearsInImportingLibrary {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -283,6 +285,8 @@ class OnlyAppearsInImportingLibrary {
           ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
           fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::member_only_appears_in_importing_library, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -347,6 +351,8 @@ class DenyEachBinding_OnlyDenySyzkaller_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -546,6 +552,8 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse {
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -609,6 +617,8 @@ class DenyEachBinding_OnlyDenyRust_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -803,6 +813,8 @@ class DenyEachBindingOnlyDenyRustTopResponse {
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -867,6 +879,8 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1066,6 +1080,8 @@ class DenyEachBindingOnlyDenyLibfuzzerTopResponse {
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1129,6 +1145,8 @@ class DenyEachBinding_OnlyDenyGo_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1321,6 +1339,8 @@ class DenyEachBindingOnlyDenyGoTopResponse {
           Storage_, ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1384,6 +1404,8 @@ class DenyEachBinding_OnlyDenyDart_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1578,6 +1600,8 @@ class DenyEachBindingOnlyDenyDartTopResponse {
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1641,6 +1665,8 @@ class DenyEachBindingOnlyDenySyzkallerRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1704,6 +1730,8 @@ class DenyEachBindingOnlyDenyRustRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1767,6 +1795,8 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1830,6 +1860,8 @@ class DenyEachBindingOnlyDenyGoRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1893,6 +1925,8 @@ class DenyEachBindingOnlyDenyDartRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 constexpr uint32_t AllBindings = 0u;

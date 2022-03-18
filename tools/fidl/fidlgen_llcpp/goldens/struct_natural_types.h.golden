@@ -76,6 +76,8 @@ class Simple {
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::f2, 1, 1});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
@@ -135,6 +137,16 @@ class BasicStruct {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
           fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8, 8});
+  static constexpr auto kPaddingV1 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 =
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 }  // namespace test_struct

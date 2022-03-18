@@ -201,6 +201,8 @@ class ProtocolRequestStrictResponseFlexibleRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::StrictFoo,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -273,6 +275,8 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::StrictFoo,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
@@ -450,6 +454,8 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -521,6 +527,8 @@ class ProtocolRequestFlexibleResponseStrictRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_requestflexibleenvelope

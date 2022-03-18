@@ -128,6 +128,28 @@ void NaturalEnvelopeDecode(NaturalDecoder* decoder, Field* value, size_t offset,
         if (decoder->CurrentHandleCount() != handles_before + envelope->num_handles) {
           decoder->SetError(kCodingErrorInvalidNumHandlesSpecifiedInEnvelope);
         }
+
+        uint32_t padding;
+        switch (::fidl::internal::NaturalDecodingInlineSize<Field, Constraint>(decoder)) {
+          case 1:
+            padding = 0xffffff00;
+            break;
+          case 2:
+            padding = 0xffff0000;
+            break;
+          case 3:
+            padding = 0xff000000;
+            break;
+          case 4:
+            padding = 0x00000000;
+            break;
+          default:
+            __builtin_unreachable();
+        }
+        if ((*decoder->GetPtr<uint32_t>(offset) & padding) != 0) {
+          decoder->SetError(kCodingErrorInvalidPaddingBytes);
+        }
+
         return;
       }
 
@@ -270,6 +292,57 @@ struct NaturalStructMember final {
       : member_ptr(member_ptr), offset_v1(offset_v1), offset_v2(offset_v2) {}
 };
 
+// Performs generic operations on tuples by visiting each node.
+struct TupleVisitor {
+ public:
+  // Returns true iff the |func| is satified on all items of |tuple|.
+  //
+  // e.g. TupleVisitor::All(std::make_tuple(1, 2, 3), [](int v) { return v > 0; })
+  // returns true because 1, 2, 3 are all > 0.
+  template <typename Tuple, typename Fn>
+  static bool All(Tuple tuple, Fn func) {
+    return Reduce(tuple, true, [&func](auto input, bool last) { return last && func(input); });
+  }
+
+  // Perform a reduce operation over the values of the tuple, by applying the function
+  // iteratively to each aggregate result, starting with |initial|.
+  //
+  // e.g. TupleVisitor::Reduce(std::make_tuple(1, 2, 3), 0, [](int v, int agg) { return v + agg })
+  // implements a sum operation.
+  //
+  // |tuple|   is the tuple to process.
+  // |initial| is the initial value of the aggregate type.
+  // |func|    is a function with two arguments - the first is the tuple value being
+  //           processed and the second is the previous value of the aggregate type.
+  template <typename Tuple, typename Agg, typename Fn>
+  static Agg Reduce(Tuple tuple, Agg initial, Fn func) {
+    if constexpr (std::tuple_size_v<Tuple> == 0) {
+      return initial;
+    } else {
+      return ReduceOp(tuple, initial, func,
+                      std::make_index_sequence<std::tuple_size_v<Tuple> - 1>());
+    }
+  }
+
+ private:
+  template <typename Tuple, typename Agg, typename Fn, std::size_t... Is>
+  static Agg ReduceOp(Tuple tuple, Agg last, Fn func, std::index_sequence<Is...> indexes) {
+    return Reduce(std::make_tuple(std::get<1 + Is>(tuple)...), func(std::get<0>(tuple), last),
+                  func);
+  }
+};
+
+template <typename MaskType>
+struct NaturalStructPadding final {
+  // Offset within the struct (start of struct = 0).
+  size_t offset;
+  MaskType mask;
+
+  [[nodiscard]] bool ValidatePadding(NaturalDecoder* decoder, size_t base_offset) {
+    return (*decoder->GetPtr<MaskType>(base_offset + offset) & mask) == 0;
+  }
+};
+
 template <typename T, size_t V1, size_t V2>
 struct NaturalStructCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = V1;
@@ -297,6 +370,19 @@ struct NaturalStructCodingTraits {
       fidl::internal::NaturalDecode<Constraint>(decoder, member, offset + field_offset,
                                                 recursion_depth);
     });
+
+    bool padding_valid;
+    auto valid_padding_predicate = [decoder, offset](auto padding) {
+      return padding.ValidatePadding(decoder, offset);
+    };
+    if (wire_format == ::fidl::internal::WireFormatVersion::kV1) {
+      padding_valid = TupleVisitor::All(T::kPaddingV1, valid_padding_predicate);
+    } else {
+      padding_valid = TupleVisitor::All(T::kPaddingV2, valid_padding_predicate);
+    }
+    if (!padding_valid) {
+      decoder->SetError(kCodingErrorInvalidPaddingBytes);
+    }
   }
 
   static bool Equal(const T* struct1, const T* struct2) {

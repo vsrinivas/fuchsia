@@ -164,18 +164,36 @@ class ExampleOfUseOfAliases {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
-                                                        0x80000000>>{
+                                                        0x80000000, false>>{
           &Storage_::field_of_channel, 72, 72},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
-                                                        0x80000000>>{
+                                                        0x80000000, false>>{
           &Storage_::field_of_client_end, 76, 76},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
-                                                        0x80000000>>{
+                                                        0x80000000, true>>{
           &Storage_::field_of_nullable_client_end, 80, 80});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 80,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 80,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 #endif  // __Fuchsia__

@@ -201,6 +201,24 @@ class SandwichUnionSize8Alignment4 {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 32,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 24,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
@@ -372,6 +390,24 @@ class SandwichUnionSize36Alignment4 {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 32,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 24,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
@@ -543,6 +579,24 @@ class SandwichUnionSize12Alignment4 {
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 32,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 24,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
@@ -608,6 +662,8 @@ class StructSize16Alignment8 {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::f2, 8, 8});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
@@ -781,6 +837,24 @@ class SandwichUnionSize24Alignment8 {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
+  static constexpr auto kPaddingV1 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 32,
+          .mask = 0xffffffff00000000ull,
+      });
+  static constexpr auto kPaddingV2 = std::make_tuple(
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 0,
+          .mask = 0xffffffff00000000ull,
+      },
+      ::fidl::internal::NaturalStructPadding<uint64_t>{
+          .offset = 24,
+          .mask = 0xffffffff00000000ull,
+      });
 };
 
 }  // namespace test_unionsandwich

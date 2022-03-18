@@ -125,25 +125,6 @@ template <typename FidlType>
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
   ZX_ASSERT(!message.is_transactional());
 
-  const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
-  zx_status_t status;
-  const char* err_msg;
-  switch (metadata.wire_format_version()) {
-    case fidl::internal::WireFormatVersion::kV1: {
-      status = internal__fidl_validate__v1__may_break(
-          coding_table, message.bytes(), message.byte_actual(), message.handle_actual(), &err_msg);
-      break;
-    }
-    case fidl::internal::WireFormatVersion::kV2: {
-      status = internal__fidl_validate__v2__may_break(
-          coding_table, message.bytes(), message.byte_actual(), message.handle_actual(), &err_msg);
-      break;
-    }
-  }
-  if (status != ZX_OK) {
-    return ::fitx::error(::fidl::Error::DecodeError(status, err_msg));
-  }
-
   uint32_t message_byte_actual = message.byte_actual();
   uint32_t message_handle_actual = message.handle_actual();
   ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());

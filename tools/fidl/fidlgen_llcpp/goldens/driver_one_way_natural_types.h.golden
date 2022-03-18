@@ -68,6 +68,8 @@ class Payload {
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::value, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
@@ -123,6 +125,8 @@ class OneWaySendRequest {
                       Storage_, ::test_driveroneway::Payload,
                       fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::payload, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_driveroneway

@@ -90,6 +90,8 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response {
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::value, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -295,6 +297,8 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
           ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
           fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
                                                         0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -359,6 +363,8 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
           fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
 };
 
 }  // namespace test_errorsyntax

@@ -31,9 +31,16 @@ const char* const kCodingErrorInvalidInlineBit = "invalid inline bit in envelope
 const char* const kCodingErrorUnknownBitSetInBitsValue = "unknown bit set in bits value";
 const char* const kCodingErrorUnknownEnumValue = "unknown enum value";
 const char* const kCodingErrorUnknownUnionTag = "unknown union tag";
+const char* const kCodingErrorInvalidPaddingBytes = "invalid padding bytes";
 const char* const kCodingErrorRecursionDepthExceeded = "recursion depth exceeded";
 const char* const kCodingErrorInvalidPresenceIndicator = "invalid presence indicator";
 const char* const kCodingErrorNotAllBytesConsumed = "not all bytes consumed";
 const char* const kCodingErrorNotAllHandlesConsumed = "not all handles consumed";
+const char* const kCodingErrorAllocationSizeExceeds32Bits = "allocation size exceeds 32-bits";
+const char* const kCodingErrorOutOfLineObjectExceedsMessageBounds =
+    "out of line object exceeds message bounds";
+const char* const kCodingErrorTooManyHandlesConsumed =
+    "more handles consumed than exist in message";
+const char* const kCodingErrorAbsentNonNullableHandle = "non-nullable handle is absent";
 
 }  // namespace fidl::internal

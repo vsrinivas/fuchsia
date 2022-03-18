@@ -12,6 +12,10 @@ success("EmptyStruct") {
 }
 
 decode_failure("NonZeroEmptyStructBytes") {
+    // Empty structs are special cased for natural types to have a single uint8
+    // member, thus not being empty and not having padding that can be validated.
+    // TODO(fxbug.dev/95757) Figure out what to do here.
+    bindings_denylist = [cpp],
     type = EmptyStruct,
     bytes = {
         v1, v2 = [
