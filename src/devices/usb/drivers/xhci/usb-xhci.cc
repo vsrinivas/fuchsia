@@ -1647,6 +1647,7 @@ zx_status_t UsbXhci::InitMmio() {
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "UsbXhci: failed to map MMIO registers (%s)", zx_status_get_string(status));
     return status;
   }
   mmio_ = std::move(*mmio);
@@ -1659,7 +1660,7 @@ zx_status_t UsbXhci::InitMmio() {
   for (uint16_t i = 0; i < irq_count_; i++) {
     status = pdev_.GetInterrupt(i, &interrupter(i).GetIrq());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "MapMmio error: %s", zx_status_get_string(status));
+      zxlogf(ERROR, "UsbXhci: failed fetch interrupt (%s)", zx_status_get_string(status));
       return status;
     }
   }
