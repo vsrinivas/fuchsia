@@ -1,4 +1,3 @@
-const fuchsia.logger/COMPONENT_NAME_PLACEHOLDER_TAG string "COMPONENT_NAME"
 enum/member fuchsia.logger/InterestChangeError.CALLED_TWICE 1
 strict enum fuchsia.logger/InterestChangeError uint32
 const fuchsia.logger/LOG_LEVEL_DEFAULT uint8 48

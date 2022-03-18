@@ -149,48 +149,6 @@ fn tags_with_message() {
 }
 
 #[fuchsia::test]
-fn placeholder_tag_replaced_with_attributed_name() {
-    let mut packet = test_packet();
-
-    let t_count = COMPONENT_NAME_PLACEHOLDER_TAG.len();
-    packet.data[0] = t_count as c_char;
-    let t_start = 1;
-    packet.add_data(1, COMPONENT_NAME_PLACEHOLDER_TAG.as_bytes());
-    let t_end = t_start + t_count;
-
-    let a_count = 5;
-    packet.data[t_end] = a_count as c_char;
-    let a_start = t_end + 1;
-    let a_end = a_start + a_count;
-    packet.fill_data(a_start..a_end, 'A' as _);
-    packet.data[a_end] = 0; // terminate tags
-
-    let b_start = a_end + 1;
-    let b_count = 5;
-    let b_end = b_start + b_count;
-    packet.fill_data(b_start..b_end, 'B' as _);
-
-    let buffer = &packet.as_bytes()[..METADATA_SIZE + b_end + 1]; // null-terminate message
-    let logger_message = LoggerMessage::try_from(buffer).unwrap();
-    assert_eq!(logger_message.size_bytes, METADATA_SIZE + b_end);
-    let parsed = crate::from_logger(get_test_identity(), logger_message);
-    let expected = LogsDataBuilder::new(BuilderArgs {
-        timestamp_nanos: packet.metadata.time.into(),
-        component_url: Some(TEST_IDENTITY.url.clone()),
-        moniker: TEST_IDENTITY.moniker.clone(),
-        severity: Severity::Debug,
-    })
-    .set_pid(packet.metadata.pid)
-    .set_dropped(packet.metadata.dropped_logs.into())
-    .set_message("BBBBB".to_string())
-    .add_tag(TEST_IDENTITY.moniker.clone())
-    .add_tag("AAAAA")
-    .set_tid(packet.metadata.tid)
-    .build();
-    assert_eq!(parsed, expected);
-}
-
-#[fuchsia::test]
 fn two_tags_no_message() {
     let mut packet = test_packet();
     let a_start = 1;

@@ -8,7 +8,6 @@ use diagnostics_data::{
     BuilderArgs, LegacySeverity, LogsData, LogsDataBuilder, LogsField, LogsProperty, Severity,
 };
 use diagnostics_log_encoding::{Value, ValueUnknown};
-use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
 use serde::Serialize;
@@ -53,9 +52,6 @@ pub fn from_logger(source: MonikerWithUrl, msg: LoggerMessage) -> LogsData {
     .set_tid(msg.tid)
     .set_dropped(msg.dropped_logs)
     .set_message(msg.message);
-    if msg.include_moniker_tag {
-        builder = builder.add_tag(source.moniker);
-    }
     for tag in &msg.tags {
         builder = builder.add_tag(tag.as_ref());
     }
@@ -225,7 +221,6 @@ pub struct LoggerMessage {
     pub dropped_logs: u64,
     pub message: Box<str>,
     pub tags: Vec<Box<str>>,
-    include_moniker_tag: bool,
 }
 
 /// Parse the provided buffer as if it implements the [logger/syslog wire format].
@@ -260,7 +255,6 @@ impl TryFrom<&[u8]> for LoggerMessage {
         let mut cursor = METADATA_SIZE;
         let mut tag_len = bytes[cursor] as usize;
         let mut tags = Vec::new();
-        let mut include_moniker_tag = false;
         while tag_len != 0 {
             if tags.len() == MAX_TAGS {
                 return Err(MessageError::TooManyTags);
@@ -277,12 +271,7 @@ impl TryFrom<&[u8]> for LoggerMessage {
             let tag_start = cursor + 1;
             let tag_end = tag_start + tag_len;
             let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
-
-            if tag == COMPONENT_NAME_PLACEHOLDER_TAG {
-                include_moniker_tag = true;
-            } else {
-                tags.push(tag.into());
-            }
+            tags.push(tag.into());
 
             cursor = tag_end;
             tag_len = bytes[cursor] as usize;
@@ -307,7 +296,6 @@ impl TryFrom<&[u8]> for LoggerMessage {
                 tid,
                 dropped_logs,
                 tags,
-                include_moniker_tag,
                 size_bytes: cursor + message_len + 1,
             };
             return Ok(result);
