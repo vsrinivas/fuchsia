@@ -223,8 +223,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         )
         .await
         .expect("Failed adding LogSink route to test components");
-    let mut test_topology = builder.build().await.unwrap();
-    let realm_destroyed = test_topology.root.take_destroy_waiter();
+    let test_topology = builder.build().await.unwrap();
 
     // If the routing is correctly configured, we expect 6 events:
     //   1. `hfp-audio-gateway` connecting to the Profile service to Advertise.
@@ -265,9 +264,8 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         2
     );
 
-    // Ensure realm components terminate before the local executor stops mocked components. Prevents
-    // issues with mocked dependencies disappearing before termination.
-    drop(test_topology);
-    let _ = realm_destroyed.await.expect("realm destruction wait failed");
-    info!("Finished HFP Audio Gateway smoke test");
+    // Explicitly destroy the test realm so that components within this realm are shut down
+    // correctly.
+    test_topology.destroy().await.expect("Can destroy test realm");
+    info!("Finished bt-hfp-audio-gateway smoke test");
 }

@@ -21,7 +21,7 @@ use {
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{mock_dev, provide_bt_gap_uses},
     std::sync::Arc,
-    tracing::{error, info},
+    tracing::info,
     vfs::{directory::entry::DirectoryEntry, pseudo_directory},
 };
 
@@ -270,8 +270,8 @@ async fn bt_gap_component_topology() {
         )
         .await
         .expect("Failed adding temp storage route to SecureStore component");
-    let mut test_topology = builder.build().await.unwrap();
-    let realm_destroyed = test_topology.root.take_destroy_waiter();
+    let test_topology = builder.build().await.unwrap();
+
     // If the routing is correctly configured, we expect one of each `Event` to be sent (so, in
     // total, 10 events)
     let mut events = Vec::new();
@@ -305,11 +305,8 @@ async fn bt_gap_component_topology() {
         );
     }
 
-    // Explicitly drop the topology and wait for realm destruction to ensure that realm components
-    // terminate before the local executor stops the mock components. Otherwise, realm components
-    // encounter issues with their mocked dependencies disappearing while they are still running.
-    // See fxbug.dev/78987 and fxbug.dev/77775 for more background.
-    std::mem::drop(test_topology);
-    let _ =
-        realm_destroyed.await.map_err(|e| error!("failed to wait for realm destruction {:?}", e));
+    // Explicitly destroy the test realm so that components within this realm are shut down
+    // correctly.
+    test_topology.destroy().await.expect("Can destroy test realm");
+    info!("Finished bt-gap smoke test");
 }
