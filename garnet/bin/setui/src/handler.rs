@@ -6,6 +6,9 @@
 /// handlers.
 pub mod base;
 
+/// This mod implements a struct for managing storage of the setting_proxies inspect node.
+pub mod setting_proxy_inspect_info;
+
 /// Trait definition for setting controllers and a wrapper handler to interface
 /// with the proxy.
 pub mod setting_handler;

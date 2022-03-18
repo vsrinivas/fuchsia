@@ -38,11 +38,11 @@ const INSPECT_REQUESTS_COUNT: usize = 25;
 
 /// Information about a setting to be written to inspect.
 #[derive(Inspect)]
-struct SettingTypeInfo {
-    /// Map from the name of the Request variant to a RequestTypeInfo that holds a list of
+struct SettingTypeInspectInfo {
+    /// Map from the name of the Request variant to a RequestTypeInspectInfo that holds a list of
     /// recent requests.
     #[inspect(skip)]
-    requests_by_type: HashMap<String, RequestTypeInfo>,
+    requests_by_type: HashMap<String, RequestTypeInspectInfo>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -54,7 +54,7 @@ struct SettingTypeInfo {
     inspect_node: inspect::Node,
 }
 
-impl SettingTypeInfo {
+impl SettingTypeInspectInfo {
     fn new() -> Self {
         Self { count: 0, requests_by_type: HashMap::new(), inspect_node: inspect::Node::default() }
     }
@@ -62,16 +62,16 @@ impl SettingTypeInfo {
 
 /// Information for all requests of a particular SettingType variant for a given setting type.
 #[derive(Inspect)]
-struct RequestTypeInfo {
+struct RequestTypeInspectInfo {
     /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
     #[inspect(skip)]
-    last_requests: VecDeque<RequestInfo>,
+    last_requests: VecDeque<RequestInspectInfo>,
 
     /// Node of this info.
     inspect_node: inspect::Node,
 }
 
-impl RequestTypeInfo {
+impl RequestTypeInspectInfo {
     fn new() -> Self {
         Self {
             last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
@@ -82,7 +82,7 @@ impl RequestTypeInfo {
 
 /// Information about a request to be written to inspect.
 #[derive(Inspect)]
-struct RequestInfo {
+struct RequestInspectInfo {
     /// Debug string representation of this Request.
     request: inspect::StringProperty,
 
@@ -93,7 +93,7 @@ struct RequestInfo {
     inspect_node: inspect::Node,
 }
 
-impl RequestInfo {
+impl RequestInspectInfo {
     fn new() -> Self {
         Self {
             request: inspect::StringProperty::default(),
@@ -108,7 +108,7 @@ impl RequestInfo {
 pub(crate) struct SettingProxyInspectAgent {
     inspect_node: inspect::Node,
     /// Last requests for inspect to save.
-    last_requests: HashMap<SettingType, SettingTypeInfo>,
+    last_requests: HashMap<SettingType, SettingTypeInspectInfo>,
 }
 
 impl DeviceStorageAccess for SettingProxyInspectAgent {
@@ -196,12 +196,12 @@ impl SettingProxyInspectAgent {
     fn record_request(&mut self, setting_type: SettingType, request: &Request) {
         let inspect_node = &self.inspect_node;
         let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
-            SettingTypeInfo::new()
+            SettingTypeInspectInfo::new()
                 .with_inspect(inspect_node, format!("{:?}", setting_type))
                 // `with_inspect` will only return an error on types with
                 // interior mutability. Since none are used here, this should be
                 // fine.
-                .expect("failed to create SettingTypeInfo inspect node")
+                .expect("failed to create SettingTypeInspectInfo inspect node")
         });
 
         let key = request.for_inspect().to_string();
@@ -211,9 +211,9 @@ impl SettingProxyInspectAgent {
                 // `with_inspect` will only return an error on types with
                 // interior mutability. Since none are used here, this
                 // should be fine.
-                RequestTypeInfo::new()
+                RequestTypeInspectInfo::new()
                     .with_inspect(setting_type_inspect_node, key)
-                    .expect("failed to create RequestTypeInfo inspect node")
+                    .expect("failed to create RequestTypeInspectInfo inspect node")
             });
 
         let last_requests = &mut request_type_info.last_requests;
@@ -225,9 +225,9 @@ impl SettingProxyInspectAgent {
         setting_type_info.count += 1;
         let timestamp = clock::inspect_format_now();
         // std::u64::MAX maxes out at 20 digits.
-        let request_info = RequestInfo::new()
+        let request_info = RequestInspectInfo::new()
             .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
-            .expect("failed to create RequestInfo inspect node");
+            .expect("failed to create RequestInspectInfo inspect node");
         request_info.request.set(&format!("{:?}", request));
         request_info.timestamp.set(&timestamp);
         last_requests.push_front(request_info);

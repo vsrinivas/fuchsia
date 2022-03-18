@@ -32,14 +32,14 @@ blueprint_definition!(
 pub(crate) struct PolicyValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    policy_values: HashMap<&'static str, InspectPolicyInfo>,
+    policy_values: HashMap<&'static str, PolicyValuesInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
 ///
 /// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
 /// once they go out of scope.
-struct InspectPolicyInfo {
+struct PolicyValuesInspectInfo {
     /// Node of this info.
     _node: inspect::Node,
 
@@ -252,7 +252,11 @@ impl PolicyValuesInspectAgent {
                 let timestamp_prop = node.create_string("timestamp", timestamp);
                 let _ = self.policy_values.insert(
                     policy_name,
-                    InspectPolicyInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
+                    PolicyValuesInspectInfo {
+                        _node: node,
+                        value: value_prop,
+                        timestamp: timestamp_prop,
+                    },
                 );
             }
         }

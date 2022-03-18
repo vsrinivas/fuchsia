@@ -15,8 +15,8 @@ use settings::agent::BlueprintHandle as AgentBlueprintHandle;
 use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};
 use settings::config::default_settings::DefaultSetting;
+use settings::handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
 use settings::inspect::stash_logger::StashInspectLoggerHandle;
-use settings::inspect::utils::setting_proxy_node::SettingProxyNode;
 use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
 use settings::EnabledPoliciesConfiguration;
@@ -31,8 +31,8 @@ const STASH_IDENTITY: &str = "settings_service";
 
 lazy_static! {
     // TODO(fxb/93842): replace with a dependency injected value instead of a static.
-    static ref SETTING_PROXY_NODE: SettingProxyNode =
-        SettingProxyNode::new(component::inspector().root());
+    static ref SETTING_PROXY_INSPECT_INFO: SettingProxyInspectInfo =
+        SettingProxyInspectInfo::new(component::inspector().root());
 }
 
 fn main() -> Result<(), Error> {
@@ -104,7 +104,7 @@ fn main() -> Result<(), Error> {
     EnvironmentBuilder::new(Arc::new(storage_factory))
         .configuration(configuration)
         .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
-        .setting_proxy_node(SETTING_PROXY_NODE.node())
+        .setting_proxy_inspect_info(SETTING_PROXY_INSPECT_INFO.node())
         .spawn(executor)
         .context("Failed to spawn environment for setui")
 }

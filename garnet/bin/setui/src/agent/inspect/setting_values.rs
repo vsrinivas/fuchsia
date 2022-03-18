@@ -35,7 +35,7 @@ blueprint_definition!(
 pub(crate) struct SettingValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
-    setting_values: HashMap<&'static str, InspectSettingInfo>,
+    setting_values: HashMap<&'static str, SettingValuesInspectInfo>,
     setting_types: HashSet<SettingType>,
     _setting_types_inspect_node: SettingTypesInspectInfo,
 }
@@ -54,7 +54,7 @@ struct SettingTypesInspectInfo {
 ///
 /// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
 /// out of scope.
-struct InspectSettingInfo {
+struct SettingValuesInspectInfo {
     /// Node of this info.
     _node: inspect::Node,
 
@@ -216,7 +216,7 @@ impl SettingValuesInspectAgent {
                 let timestamp_prop = node.create_string("timestamp", timestamp);
                 let _ = self.setting_values.insert(
                     key,
-                    InspectSettingInfo {
+                    SettingValuesInspectInfo {
                         _node: node,
                         value: value_prop,
                         timestamp: timestamp_prop,

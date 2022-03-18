@@ -80,8 +80,8 @@ pub mod task;
 pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
+pub use handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
 pub use input::input_device_configuration::InputConfiguration;
-pub use inspect::utils::setting_proxy_node::SettingProxyNode;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
 pub use service::{Address, Payload, Role};
 
@@ -266,7 +266,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     settings: Vec<SettingType>,
     handlers: HashMap<SettingType, GenerateHandler>,
     resource_monitors: Vec<monitor_base::monitor::Generate>,
-    setting_proxy_node: Option<&'static fuchsia_inspect::Node>,
+    setting_proxy_inspect_info: Option<&'static fuchsia_inspect::Node>,
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
@@ -282,7 +282,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             registrants: vec![],
             settings: vec![],
             resource_monitors: vec![],
-            setting_proxy_node: None,
+            setting_proxy_inspect_info: None,
         }
     }
 
@@ -389,11 +389,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    pub fn setting_proxy_node(
+    pub fn setting_proxy_inspect_info(
         mut self,
-        setting_proxy_node: &'static fuchsia_inspect::Node,
+        setting_proxy_inspect_info: &'static fuchsia_inspect::Node,
     ) -> EnvironmentBuilder<T> {
-        self.setting_proxy_node = Some(setting_proxy_node);
+        self.setting_proxy_inspect_info = Some(setting_proxy_inspect_info);
         self
     }
 
@@ -515,7 +515,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             Arc::new(Mutex::new(handler_factory)),
             Arc::new(Mutex::new(policy_handler_factory)),
             self.storage_factory,
-            self.setting_proxy_node.unwrap_or_else(|| component::inspector().root()),
+            self.setting_proxy_inspect_info.unwrap_or_else(|| component::inspector().root()),
         )
         .await
         .context("Could not create environment")?;
