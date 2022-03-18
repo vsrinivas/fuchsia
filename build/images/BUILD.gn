@@ -1464,7 +1464,7 @@ group("default-images") {
       }) {
     # Size checks only make sense when bootfs_only is false, since
     # they require system images in addition to the ZBI.
-    deps += [ "size_checker:compare_size_reports_test" ]
+    deps += [ "size_checker:size_report.json" ]
   }
 
   if (recovery_is_zedboot) {

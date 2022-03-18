@@ -10,10 +10,6 @@ python_binary("check_size_hermetic_inputs") {
   main_source = "check_size_hermetic_inputs.py"
 }
 
-python_binary("compare_size_reports") {
-  main_source = "compare_size_reports.py"
-}
-
 python_host_test("compare_json_list_test") {
   main_source = "compare_json_list_test.py"
   sources = [ "compare_json_list.py" ]
@@ -45,6 +41,5 @@ group("tests") {
   deps = [
     ":check_size_hermetic_inputs_test",
     ":compare_json_list_test",
-    ":convert_size_limits_test",
   ]
 }
