@@ -13,8 +13,8 @@ use crate::{
                 CcdRequest,
             },
             pinweaver::{
-                GetLogEntryData, PinweaverGetLog, PinweaverInsertLeaf, PinweaverRemoveLeaf,
-                PinweaverResetTree, PinweaverTryAuth, PROTOCOL_VERSION,
+                GetLogEntryData, PinweaverGetLog, PinweaverInsertLeaf, PinweaverLogReplay,
+                PinweaverRemoveLeaf, PinweaverResetTree, PinweaverTryAuth, PROTOCOL_VERSION,
             },
             wp::WpInfoRequest,
             Serializable, TpmCommand,
@@ -29,10 +29,10 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
-    Cr50RequestStream, Cr50Status, EntryData, InsertLeafResponse, LogEntry, MessageType,
-    PhysicalPresenceEvent, PhysicalPresenceNotifierMarker, PhysicalPresenceState, PinWeaverError,
-    PinWeaverRequest, PinWeaverRequestStream, TryAuthFailed, TryAuthRateLimited, TryAuthResponse,
-    TryAuthSuccess, WpState,
+    Cr50RequestStream, Cr50Status, EntryData, InsertLeafResponse, LogEntry, LogReplayResponse,
+    MessageType, PhysicalPresenceEvent, PhysicalPresenceNotifierMarker, PhysicalPresenceState,
+    PinWeaverError, PinWeaverRequest, PinWeaverRequestStream, TryAuthFailed, TryAuthRateLimited,
+    TryAuthResponse, TryAuthSuccess, WpState,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
@@ -272,7 +272,34 @@ impl Cr50 {
 
                     responder.send(&mut result).context("Replying to request")?;
                 }
-                PinWeaverRequest::LogReplay { .. } => todo!(),
+                PinWeaverRequest::LogReplay { params, responder } => {
+                    let request = match PinweaverLogReplay::new(params) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            responder.send(&mut Err(e)).context("Replying to request")?;
+                            continue;
+                        }
+                    };
+
+                    let exec_result = request.execute(&self.proxy).await?;
+
+                    let mut fidl_result = match exec_result.ok() {
+                        Ok(_) => {
+                            let mut success = LogReplayResponse::EMPTY;
+                            let data = exec_result.data.as_ref().unwrap();
+                            // cred metadata is just the whole unimported_leaf_data.
+                            let mut serializer = Serializer::new();
+                            data.unimported_leaf_data.serialize(&mut serializer);
+                            success.cred_metadata = Some(serializer.into_vec());
+
+                            success.leaf_hash = Some(data.unimported_leaf_data.hmac);
+                            Ok(success)
+                        }
+                        Err(e) => Err(e),
+                    };
+
+                    responder.send(&mut fidl_result).context("Replying to request")?;
+                }
             }
         }
         Ok(())

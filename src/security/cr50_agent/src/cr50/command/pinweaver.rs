@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_tpm_cr50::{
-    InsertLeafParams, PinWeaverError, RemoveLeafParams, TryAuthParams, DELAY_SCHEDULE_MAX_COUNT,
-    HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE, MAX_LOG_ENTRIES,
+    InsertLeafParams, LogReplayParams, PinWeaverError, RemoveLeafParams, TryAuthParams,
+    DELAY_SCHEDULE_MAX_COUNT, HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
+    MAX_LOG_ENTRIES,
 };
 use fuchsia_syslog::fx_log_warn;
 use num_derive::FromPrimitive;
@@ -24,7 +25,6 @@ const WRAP_BLOCK_SIZE: usize = 16;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
 #[repr(u8)]
-#[allow(dead_code)]
 pub enum PinweaverMessageType {
     Invalid = 0,
     ResetTree = 1,
@@ -581,6 +581,58 @@ impl Deserializable for PinweaverGetLogResponse {
     }
 }
 
+/// Data for a LogReplay request.
+/// https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/cr50/include/pinweaver_types.h;l=337;drc=1c95cff7463ef29bd0c6d087ce8c3d7e17f94c6a
+pub struct PinweaverLogReplay {
+    log_root: [u8; HASH_SIZE as usize],
+    leaf_data: Vec<u8>,
+    h_aux: Vec<u8>,
+}
+
+impl PinweaverLogReplay {
+    pub fn new(
+        params: LogReplayParams,
+    ) -> Result<PinweaverRequest<PinweaverLogReplay, PinweaverLogReplayResponse>, PinWeaverError>
+    {
+        let data = PinweaverLogReplay {
+            log_root: params.root_hash.ok_or(PinWeaverError::TypeInvalid)?,
+            leaf_data: params.cred_metadata.ok_or(PinWeaverError::TypeInvalid)?,
+            h_aux: params.h_aux.ok_or(PinWeaverError::TypeInvalid)?.into_iter().flatten().collect(),
+        };
+
+        Ok(PinweaverRequest::new(PinweaverMessageType::LogReplay, data))
+    }
+}
+
+impl Serializable for PinweaverLogReplay {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.put_le_u16(
+            (HASH_SIZE as usize + self.leaf_data.len() + self.h_aux.len())
+                .try_into()
+                .unwrap_or_else(|e| {
+                    fx_log_warn!("LogReplay request too long ({:?})", e);
+                    0
+                }),
+        );
+        serializer.put(&self.log_root);
+        self.leaf_data.as_slice().serialize(serializer);
+        self.h_aux.as_slice().serialize(serializer);
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct PinweaverLogReplayResponse {
+    pub unimported_leaf_data: UnimportedLeafData,
+}
+
+impl Deserializable for PinweaverLogReplayResponse {
+    fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        Ok(PinweaverLogReplayResponse {
+            unimported_leaf_data: UnimportedLeafData::deserialize(deserializer)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -926,5 +978,76 @@ mod tests {
                 action: GetLogEntryData::InsertLeaf([0xcc; 32]),
             }
         )
+    }
+
+    #[test]
+    fn test_log_replay() {
+        let mut serializer = Serializer::new();
+        let mut params = LogReplayParams::EMPTY;
+        params.h_aux = Some(vec![[0xab; 32], [0xac; 32]]);
+        params.root_hash = Some([0xcc; 32]);
+        params.cred_metadata = Some(vec![0xdd; 8]);
+        PinweaverLogReplay::new(params).expect("Create log reply ok").serialize(&mut serializer);
+
+        assert_eq!(
+            serializer.into_vec(),
+            vec![
+                0x00, 0x25, /* Subcommand::Pinweaver */
+                0x01, 0x07, /* Protocol version and message type */
+                0x68, 0x00, /* Data length (LE) */
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, /* Root hash (32 bytes) */
+                0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, /* Leaf data (8 bytes) */
+                /* h_aux (2 * 32 bytes) */
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, /**/
+                0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac,
+                0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac,
+                0xac, 0xac, 0xac, 0xac,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_log_replay_response() {
+        let mut deserializer = Deserializer::new(vec![
+            0x00, 0x25, /* Subcommand::Pinweaver */
+            0x01, /* Protocol version */
+            0x20, 0x00, /* Data length (little endian) */
+            0x00, 0x00, 0x00, 0x00, /* Result code */
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x01, 0x01, 0x01, /* Root hash (in header) */
+            /* Unimported leaf data */
+            0x01, 0x00, /* minor */
+            0x00, 0x00, /* major */
+            0x04, 0x00, /* pub_len */
+            0x08, 0x00, /* sec_len */
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
+            0xaa, 0xaa, 0xaa, 0xaa, /* HMAC (32 bytes) */
+            0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0xcc, 0xcc, /* IV (16 bytes) */
+            0x01, 0x01, 0x01, 0x01, /* pub_data (4 bytes) */
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* cipher_text (8 bytes) */
+        ]);
+
+        let response =
+            PinweaverResponse::<PinweaverLogReplayResponse>::deserialize(&mut deserializer)
+                .expect("deserialize ok");
+
+        assert_eq!(response.result_code, 0);
+        assert_eq!(response.root, [0x01; 32]);
+        let leaf_data = response.data.expect("parsed log replay response").unimported_leaf_data;
+
+        assert_eq!(leaf_data.minor, 0x01);
+        assert_eq!(leaf_data.major, 0x00);
+        assert_eq!(leaf_data.pub_len, 0x04);
+        assert_eq!(leaf_data.sec_len, 0x08);
+        assert_eq!(leaf_data.hmac, [0xaa; 32]);
+        assert_eq!(leaf_data.iv, [0xcc; 16]);
+        assert_eq!(leaf_data.payload, vec![0x1; 12]);
     }
 }
