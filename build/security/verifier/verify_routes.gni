@@ -54,6 +54,7 @@ template("verify_routes") {
       rebase_path(depfile, root_build_dir),
     ]
     if (defined(invoker.component_tree_config)) {
+      inputs += [ invoker.component_tree_config ]
       args += [
         "--component-tree-config",
         rebase_path(invoker.component_tree_config, root_build_dir),
