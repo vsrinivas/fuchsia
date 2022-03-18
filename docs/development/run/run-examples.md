@@ -77,12 +77,14 @@ Note: If you aren't familiar with GN, see
 * {C++}
 
   ```gn
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/cpp/BUILD.gn" region_tag="cpp_bin" adjust_indentation="auto" %}
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/cpp/BUILD.gn" region_tag="fuchsia_component" adjust_indentation="auto" %}
   ```
 
 * {Rust}
 
   ```gn
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" region_tag="rustc_tests" adjust_indentation="auto" %}
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/BUILD.gn" region_tag="fuchsia_component" adjust_indentation="auto" %}
   ```
 
