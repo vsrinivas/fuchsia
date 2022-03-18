@@ -363,7 +363,7 @@ impl InformationReceived {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 struct IdentityAssociation {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
     address: Ipv6Addr,
@@ -1104,13 +1104,13 @@ mod private {
 
     /// Holds an IA for an address different from what was configured.
     #[derive(Debug, PartialEq, Clone)]
-    pub(super) struct NonConfiguredIA {
+    pub(super) struct NonConfiguredIa {
         ia: IdentityAssociation,
         configured_address: Option<Ipv6Addr>,
     }
 
-    impl NonConfiguredIA {
-        /// Creates a `NonConfiguredIA`. Returns `None` if the address within
+    impl NonConfiguredIa {
+        /// Creates a `NonConfiguredIa`. Returns `None` if the address within
         /// the IA is the same as what was configured.
         pub(super) fn new(
             ia: IdentityAssociation,
@@ -1783,15 +1783,16 @@ impl Requesting {
                     match iana_status_code {
                         v6::StatusCode::Success => {
                             if let Some(iaaddr_data) = iaaddr_opt {
-                                let _: &mut AddressEntry =
-                                    vacant_ia_entry.insert(AddressEntry::new_assigned(
+                                let _: &mut AddressEntry = vacant_ia_entry.insert(
+                                    AddressEntry::Assigned(AssignedIa::new(
                                         IdentityAssociation {
                                             address: Ipv6Addr::from(iaaddr_data.addr()),
                                             preferred_lifetime: iaaddr_data.preferred_lifetime(),
                                             valid_lifetime: iaaddr_data.valid_lifetime(),
                                         },
                                         configured_address,
-                                    ));
+                                    )),
+                                );
                                 min_preferred_lifetime = maybe_get_nonzero_min(
                                     min_preferred_lifetime,
                                     iaaddr_data.preferred_lifetime(),
@@ -1805,8 +1806,10 @@ impl Requesting {
                         v6::StatusCode::NotOnLink => {
                             // If the client receives IAs with NotOnLink status,
                             // try to obtain other addresses in follow-up messages.
-                            let _: &mut AddressEntry = vacant_ia_entry
-                                .insert(AddressEntry::new_to_request(None, configured_address));
+                            let _: &mut AddressEntry =
+                                vacant_ia_entry.insert(AddressEntry::ToRequest(
+                                    AddressToRequest::new(None, configured_address),
+                                ));
                         }
                         v6::StatusCode::UnspecFail
                         | v6::StatusCode::NoAddrsAvail
@@ -2015,9 +2018,8 @@ impl Requesting {
             // client is to negotiate addresses.
             v6::StatusCode::Success => if !addresses.iter().any(|(_iaid, entry)| {
                 match entry {
-                    AddressEntry::Configured(_conf_ia) => true,
-                    AddressEntry::NonConfigured(_non_conf_ia_) => true,
-                    AddressEntry::ToRequest(_addr) => false,
+                    AddressEntry::Assigned(_) => true,
+                    AddressEntry::ToRequest(_) => false,
                 }
             }) {
                 return request_from_alternate_server_or_restart_server_discovery(
@@ -2128,45 +2130,53 @@ impl Requesting {
     }
 }
 
+/// Represents an assigned identity association, relative to the configured
+/// address for that IA.
+#[derive(Debug, PartialEq, Clone)]
+enum AssignedIa {
+    /// The assigned address is the same as the configured address for the IA.
+    Configured(IdentityAssociation),
+    /// The assigned address is different than the configured address for the
+    /// IA.
+    NonConfigured(NonConfiguredIa),
+}
+
+impl AssignedIa {
+    /// Creates a new assigned identity association.
+    fn new(ia: IdentityAssociation, configured_address: Option<Ipv6Addr>) -> AssignedIa {
+        match NonConfiguredIa::new(ia, configured_address) {
+            None => AssignedIa::Configured(ia),
+            Some(non_conf_ia) => AssignedIa::NonConfigured(non_conf_ia),
+        }
+    }
+
+    /// Returns the assigned address.
+    fn address(&self) -> Ipv6Addr {
+        match self {
+            AssignedIa::Configured(IdentityAssociation {
+                address,
+                preferred_lifetime: _,
+                valid_lifetime: _,
+            }) => *address,
+            AssignedIa::NonConfigured(non_conf_ia) => non_conf_ia.address(),
+        }
+    }
+}
+
 /// Represents an address entry negotiated by the client.
 #[derive(Debug, PartialEq)]
 enum AddressEntry {
-    /// The address is assigned and it's the same address as the configured
-    /// address.
-    Configured(IdentityAssociation),
-    /// The address is assigned and it's different than as the configured
-    /// address.
-    NonConfigured(NonConfiguredIA),
-    /// The address is not assigned and it's to be requested in subsequent
+    /// The address is assigned.
+    Assigned(AssignedIa),
+    /// The address is not assigned, and is to be requested in subsequent
     /// messages.
     ToRequest(AddressToRequest),
 }
 
 impl AddressEntry {
-    /// Creates a new assigned address entry.
-    fn new_assigned(ia: IdentityAssociation, configured_address: Option<Ipv6Addr>) -> AddressEntry {
-        match NonConfiguredIA::new(ia.clone(), configured_address) {
-            Some(non_conf_ia) => AddressEntry::NonConfigured(non_conf_ia),
-            None => AddressEntry::Configured(ia),
-        }
-    }
-
-    /// Creates a new address to request entry.
-    fn new_to_request(
-        address: Option<Ipv6Addr>,
-        configured_address: Option<Ipv6Addr>,
-    ) -> AddressEntry {
-        AddressEntry::ToRequest(AddressToRequest::new(address, configured_address))
-    }
-
     fn address(&self) -> Option<Ipv6Addr> {
         match self {
-            AddressEntry::Configured(IdentityAssociation {
-                address,
-                preferred_lifetime: _,
-                valid_lifetime: _,
-            }) => Some(*address),
-            AddressEntry::NonConfigured(non_conf_ia) => Some(non_conf_ia.address()),
+            AddressEntry::Assigned(ia) => Some(ia.address()),
             AddressEntry::ToRequest(address) => address.address(),
         }
     }
@@ -3149,14 +3159,14 @@ pub(crate) mod testutil {
                 assert_eq!(
                     addrs.insert(
                         *iaid,
-                        AddressEntry::new_assigned(
+                        AddressEntry::Assigned(AssignedIa::new(
                             IdentityAssociation {
                                 address: *address,
                                 preferred_lifetime: *preferred_lifetime,
                                 valid_lifetime: *valid_lifetime
                             },
                             Some(*address)
-                        )
+                        ))
                     ),
                     None
                 );
@@ -4254,10 +4264,10 @@ mod tests {
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
         let expected_addresses = HashMap::from([
-            (iaid1, AddressEntry::new_to_request(None, Some(address1))),
+            (iaid1, AddressEntry::ToRequest(AddressToRequest::new(None, Some(address1)))),
             (
                 iaid2,
-                AddressEntry::new_assigned(
+                AddressEntry::Assigned(AssignedIa::new(
                     IdentityAssociation {
                         address: address2,
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
@@ -4270,7 +4280,7 @@ mod tests {
                         )),
                     },
                     None,
-                ),
+                )),
             ),
         ]);
         assert_matches!(state,
@@ -5505,6 +5515,25 @@ mod tests {
                     .expect("should succeed for non-zero or u32::MAX values"),
             )),
         };
-        assert_eq!(NonConfiguredIA::new(ia, configured_address).is_some(), expect_ia_is_some);
+        assert_eq!(NonConfiguredIa::new(ia, configured_address).is_some(), expect_ia_is_some);
+    }
+
+    #[test]
+    fn create_assigned_ia() {
+        let address1 = std_ip_v6!("ff01::1234");
+        let ia1 = IdentityAssociation::new_default(address1);
+        let assigned_ia = AssignedIa::new(ia1, Some(address1));
+        assert_eq!(assigned_ia, AssignedIa::Configured(ia1));
+        assert_eq!(assigned_ia.address(), address1);
+
+        let address2 = std_ip_v6!("ff01::5678");
+        let ia2 = IdentityAssociation::new_default(address2);
+        let assigned_ia = AssignedIa::new(ia2, Some(address1));
+        assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
+        assert_eq!(assigned_ia.address(), address2);
+
+        let assigned_ia = AssignedIa::new(ia2, None);
+        assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
+        assert_eq!(assigned_ia.address(), address2);
     }
 }
