@@ -373,7 +373,8 @@ impl Entry for MockDir {
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
-        buf.write_u8(fio::DIRENT_TYPE_DIRECTORY).expect("writing mockdir type to work");
+        buf.write_u8(fio::DirentType::Directory.into_primitive())
+            .expect("writing mockdir type to work");
         buf.write(self.name.as_ref()).expect("writing mockdir name to work");
     }
 
@@ -427,7 +428,7 @@ impl Entry for MockFile {
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
-        buf.write_u8(fio::DIRENT_TYPE_FILE).expect("writing mockdir type to work");
+        buf.write_u8(fio::DirentType::File.into_primitive()).expect("writing mockdir type to work");
         buf.write(self.name.as_ref()).expect("writing mockdir name to work");
     }
 

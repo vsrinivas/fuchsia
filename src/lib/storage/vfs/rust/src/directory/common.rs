@@ -173,7 +173,8 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
     buf.write_u64::<LittleEndian>(entry.inode())
         .expect("out should be an in memory buffer that grows as needed");
     buf.write_u8(name.len() as u8).expect("out should be an in memory buffer that grows as needed");
-    buf.write_u8(entry.type_()).expect("out should be an in memory buffer that grows as needed");
+    buf.write_u8(entry.type_().into_primitive())
+        .expect("out should be an in memory buffer that grows as needed");
     buf.write(name.as_ref()).expect("out should be an in memory buffer that grows as needed");
 
     true

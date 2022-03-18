@@ -51,7 +51,7 @@ abstract class Vnode {
   /// For non empty path it will fail with [ERR_NOT_DIR].
   void open(int flags, int mode, String path, InterfaceRequest<Node> request,
       [int parentFlags = Flags.fsRightsDefault]) {
-    if (type() == direntTypeDirectory) {
+    if (type() == DirentType.directory) {
       // dir types should implement this function
       throw UnimplementedError();
     }
@@ -68,17 +68,7 @@ abstract class Vnode {
     }
   }
 
-  /// Should be one of
-  ///
-  /// direntTypeUnknown
-  /// direntTypeDirectory
-  /// direntTypeBlockDevice
-  /// direntTypeFile
-  /// direntTypeSocket
-  /// direntTypeService
-  ///
-  /// These are defined in fuchsia.io.
-  int type();
+  DirentType type();
 
   void _removeErrorNode(ErrorNodeForSendingEvent e) {
     _errorNodes.remove(e);

@@ -72,7 +72,7 @@ class RemoteDir extends Vnode {
   }
 
   @override
-  int type() {
-    return direntTypeDirectory;
+  DirentType type() {
+    return DirentType.directory;
   }
 }

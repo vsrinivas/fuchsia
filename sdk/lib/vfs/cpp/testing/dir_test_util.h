@@ -35,7 +35,7 @@ class Dirent {
   uint64_t size_in_bytes() const { return size_in_bytes_; }
 
  private:
-  Dirent(uint64_t ino, uint8_t type, const std::string& name);
+  Dirent(uint64_t ino, fuchsia::io::DirentType type, const std::string& name);
 
   uint64_t ino_;
   uint8_t type_;

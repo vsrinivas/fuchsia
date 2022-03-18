@@ -470,7 +470,7 @@ impl DirectoryEntry for FxDirectory {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(self.object_id(), fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.object_id(), fio::DirentType::Directory)
     }
 }
 
@@ -500,7 +500,7 @@ impl Directory for FxDirectory {
             TraversalPosition::Start => {
                 // Synthesize a "." entry if we're at the start of the stream.
                 match sink
-                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".")
+                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), ".")
                 {
                     AppendResult::Ok(new_sink) => sink = new_sink,
                     AppendResult::Sealed(sealed) => {
@@ -522,8 +522,8 @@ impl Directory for FxDirectory {
             self.directory.iter_from(&mut merger, starting_name).await.map_err(map_to_status)?;
         while let Some((name, object_id, object_descriptor)) = iter.get() {
             let entry_type = match object_descriptor {
-                ObjectDescriptor::File => fio::DIRENT_TYPE_FILE,
-                ObjectDescriptor::Directory => fio::DIRENT_TYPE_DIRECTORY,
+                ObjectDescriptor::File => fio::DirentType::File,
+                ObjectDescriptor::Directory => fio::DirentType::Directory,
                 ObjectDescriptor::Volume => return Err(Status::IO_DATA_INTEGRITY),
             };
             let info = EntryInfo::new(object_id, entry_type);

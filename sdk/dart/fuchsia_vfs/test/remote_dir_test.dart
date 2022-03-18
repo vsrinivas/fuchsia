@@ -43,7 +43,7 @@ void main() {
 
     test('type', () {
       final dir = RemoteDir(_remoteDirHandle);
-      expect(dir.type(), direntTypeDirectory);
+      expect(dir.type(), DirentType.directory);
     });
 
     test('add remote after serve', () async {

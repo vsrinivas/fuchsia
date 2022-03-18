@@ -640,7 +640,7 @@ fn create_file() {
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".").add(fio::DIRENT_TYPE_FILE, b"fstab");
+                expected.add(fio::DirentType::Directory, b".").add(fio::DirentType::File, b"fstab");
 
                 assert_read_dirents!(etc, 1000, expected.into_vec());
             }
@@ -672,9 +672,9 @@ fn create_directory() {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"tmp");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::Directory, b"etc")
+                    .add(fio::DirentType::Directory, b"tmp");
 
                 assert_read_dirents!(proxy, 1000, expected.into_vec());
             }
@@ -714,9 +714,9 @@ fn create_two_levels_deep() {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"tmp");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::Directory, b"etc")
+                    .add(fio::DirentType::Directory, b"tmp");
 
                 assert_read_dirents!(proxy, 1000, expected.into_vec());
             }
@@ -727,9 +727,9 @@ fn create_two_levels_deep() {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"fstab")
-                    .add(fio::DIRENT_TYPE_FILE, b"passwd");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"fstab")
+                    .add(fio::DirentType::File, b"passwd");
 
                 assert_read_dirents!(etc, 1000, expected.into_vec());
             }
@@ -762,7 +762,7 @@ fn can_not_create_nested() {
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
+                expected.add(fio::DirentType::Directory, b".");
 
                 assert_read_dirents!(proxy, 1000, expected.into_vec());
             }
@@ -798,9 +798,9 @@ fn can_create_nested() {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"tmp");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::Directory, b"etc")
+                    .add(fio::DirentType::Directory, b"tmp");
 
                 assert_read_dirents!(proxy, 1000, expected.into_vec());
             }

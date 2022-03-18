@@ -425,7 +425,7 @@ mod tests {
         }
 
         fn entry_info(&self) -> EntryInfo {
-            EntryInfo::new(0, fio::DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(0, fio::DirentType::Directory)
         }
     }
 

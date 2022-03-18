@@ -475,6 +475,6 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(self.inode, fio::DIRENT_TYPE_FILE)
+        EntryInfo::new(self.inode, fio::DirentType::File)
     }
 }

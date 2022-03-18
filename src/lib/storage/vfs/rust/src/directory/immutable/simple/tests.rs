@@ -890,11 +890,11 @@ fn read_dirents_large_buffer() {
         {
             let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
             expected
-                .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
-                .add(fio::DIRENT_TYPE_FILE, b"files")
-                .add(fio::DIRENT_TYPE_FILE, b"more")
-                .add(fio::DIRENT_TYPE_FILE, b"uname");
+                .add(fio::DirentType::Directory, b".")
+                .add(fio::DirentType::Directory, b"etc")
+                .add(fio::DirentType::File, b"files")
+                .add(fio::DirentType::File, b"more")
+                .add(fio::DirentType::File, b"uname");
 
             assert_read_dirents!(root, 1000, expected.into_vec());
         }
@@ -905,11 +905,11 @@ fn read_dirents_large_buffer() {
 
             let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
             expected
-                .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                .add(fio::DIRENT_TYPE_FILE, b"fstab")
-                .add(fio::DIRENT_TYPE_FILE, b"passwd")
-                .add(fio::DIRENT_TYPE_FILE, b"shells")
-                .add(fio::DIRENT_TYPE_DIRECTORY, b"ssh");
+                .add(fio::DirentType::Directory, b".")
+                .add(fio::DirentType::File, b"fstab")
+                .add(fio::DirentType::File, b"passwd")
+                .add(fio::DirentType::File, b"shells")
+                .add(fio::DirentType::Directory, b"ssh");
 
             assert_read_dirents!(etc_dir, 1000, expected.into_vec());
             assert_close!(etc_dir);
@@ -921,8 +921,8 @@ fn read_dirents_large_buffer() {
 
             let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
             expected
-                .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                .add(fio::DIRENT_TYPE_FILE, b"sshd_config");
+                .add(fio::DirentType::Directory, b".")
+                .add(fio::DirentType::File, b"sshd_config");
 
             assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
             assert_close!(ssh_dir);
@@ -947,7 +947,7 @@ fn read_dirents_small_buffer() {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
                 // (10 + 1) = 11
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
+                expected.add(fio::DirentType::Directory, b".");
                 assert_read_dirents!(root, 11, expected.into_vec());
             }
 
@@ -955,15 +955,15 @@ fn read_dirents_small_buffer() {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
                     // (10 + 3) = 13
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(fio::DirentType::Directory, b"etc")
                     // 13 + (10 + 5) = 28
-                    .add(fio::DIRENT_TYPE_FILE, b"files");
+                    .add(fio::DirentType::File, b"files");
                 assert_read_dirents!(root, 28, expected.into_vec());
             }
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_FILE, b"more").add(fio::DIRENT_TYPE_FILE, b"uname");
+                expected.add(fio::DirentType::File, b"more").add(fio::DirentType::File, b"uname");
                 assert_read_dirents!(root, 100, expected.into_vec());
             }
 
@@ -1004,11 +1004,11 @@ fn read_dirents_rewind() {
                 // Entry header is 10 bytes + length of the name in bytes.
                 expected
                     // (10 + 1) = 11
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
+                    .add(fio::DirentType::Directory, b".")
                     // 11 + (10 + 3) = 24
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(fio::DirentType::Directory, b"etc")
                     // 24 + (10 + 5) = 39
-                    .add(fio::DIRENT_TYPE_FILE, b"files");
+                    .add(fio::DirentType::File, b"files");
                 assert_read_dirents!(root, 39, expected.into_vec());
             }
 
@@ -1019,18 +1019,18 @@ fn read_dirents_rewind() {
                 // Entry header is 10 bytes + length of the name in bytes.
                 expected
                     // (10 + 1) = 11
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
+                    .add(fio::DirentType::Directory, b".")
                     // 11 + (10 + 3) = 24
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc");
+                    .add(fio::DirentType::Directory, b"etc");
                 assert_read_dirents!(root, 24, expected.into_vec());
             }
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_FILE, b"files")
-                    .add(fio::DIRENT_TYPE_FILE, b"more")
-                    .add(fio::DIRENT_TYPE_FILE, b"uname");
+                    .add(fio::DirentType::File, b"files")
+                    .add(fio::DirentType::File, b"more")
+                    .add(fio::DirentType::File, b"uname");
                 assert_read_dirents!(root, 200, expected.into_vec());
             }
 
@@ -1083,7 +1083,7 @@ fn add_entry_too_long_error() {
 
     run_server_client(fio::OPEN_RIGHT_READABLE, root, |root| async move {
         let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-        expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
+        expected.add(fio::DirentType::Directory, b".");
         assert_read_dirents!(root, 1000, expected.into_vec());
         assert_close!(root);
     });
@@ -1344,7 +1344,7 @@ fn in_tree_remove_file() {
             None => panic!("remove_entry() did not find 'passwd'"),
             Some(passwd) => {
                 let entry_info = passwd.entry_info();
-                assert_eq!(entry_info, EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE));
+                assert_eq!(entry_info, EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File));
             }
         }
 
@@ -1566,7 +1566,7 @@ fn watch_removal() {
             None => panic!("remove_entry() did not find 'passwd'"),
             Some(passwd) => {
                 let entry_info = passwd.entry_info();
-                assert_eq!(entry_info, EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE));
+                assert_eq!(entry_info, EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File));
             }
         }
 

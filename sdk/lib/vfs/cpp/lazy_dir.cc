@@ -12,7 +12,7 @@ namespace vfs {
 
 bool LazyDir::LazyEntry::operator<(const LazyDir::LazyEntry& rhs) const { return id < rhs.id; }
 
-LazyDir::LazyDir() {}
+LazyDir::LazyDir() = default;
 
 LazyDir::~LazyDir() = default;
 
@@ -48,7 +48,8 @@ zx_status_t LazyDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64_t
 
   const uint64_t ino = fuchsia::io::INO_UNKNOWN;
   if (offset < kDotId) {
-    if (filler.Next(".", 1, fuchsia::io::DIRENT_TYPE_DIRECTORY, ino) != ZX_OK) {
+    if (filler.Next(".", 1, static_cast<uint8_t>(fuchsia::io::DirentType::DIRECTORY), ino) !=
+        ZX_OK) {
       *out_actual = filler.GetBytesFilled();
       return ZX_ERR_INVALID_ARGS;  // out_actual would be 0
     }
@@ -56,7 +57,7 @@ zx_status_t LazyDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64_t
     *out_offset = kDotId;
   }
   for (auto it = std::upper_bound(entries.begin(), entries.end(), offset,
-                                  [](uint64_t b_id, const LazyEntry&a) { return b_id < a.id; });
+                                  [](uint64_t b_id, const LazyEntry& a) { return b_id < a.id; });
        it != entries.end(); ++it) {
     auto dtype = ((fuchsia::io::MODE_TYPE_MASK & it->type) >> 12);
     if (filler.Next(it->name, dtype, ino) != ZX_OK) {

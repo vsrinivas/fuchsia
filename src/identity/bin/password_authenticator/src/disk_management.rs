@@ -875,7 +875,7 @@ pub mod test {
         }
 
         fn entry_info(&self) -> EntryInfo {
-            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
         }
     }
 

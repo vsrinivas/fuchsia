@@ -51,29 +51,7 @@ pub enum DecodeDirentError {
     InvalidUtf8(Utf8Error),
 }
 
-/// The type of a node.
-#[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy, Debug)]
-pub enum DirentKind {
-    Unknown,
-    Directory,
-    BlockDevice,
-    File,
-    Socket,
-    Service,
-}
-
-impl From<u8> for DirentKind {
-    fn from(kind: u8) -> Self {
-        match kind {
-            fio::DIRENT_TYPE_DIRECTORY => DirentKind::Directory,
-            fio::DIRENT_TYPE_BLOCK_DEVICE => DirentKind::BlockDevice,
-            fio::DIRENT_TYPE_FILE => DirentKind::File,
-            fio::DIRENT_TYPE_SOCKET => DirentKind::Socket,
-            fio::DIRENT_TYPE_SERVICE => DirentKind::Service,
-            _ => DirentKind::Unknown,
-        }
-    }
-}
+pub use fio::DirentType as DirentKind;
 
 /// A directory entry.
 #[derive(Clone, Eq, Ord, PartialOrd, PartialEq, Debug)]
@@ -302,7 +280,10 @@ pub fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentErr
             // Advance to the next entry.
             buf = &rest[size..];
             match String::from_utf8(rest[..size].to_vec()) {
-                Ok(name) => Ok(DirEntry { name, kind: kind.into() }),
+                Ok(name) => Ok(DirEntry {
+                    name,
+                    kind: DirentKind::from_primitive(kind).unwrap_or(DirentKind::Unknown),
+                }),
                 Err(err) => Err(DecodeDirentError::InvalidUtf8(err.utf8_error())),
             }
         };
@@ -412,7 +393,7 @@ mod tests {
             // name length
             4,
             // type
-            fio::DIRENT_TYPE_FILE,
+            fio::DirentType::File.into_primitive(),
             // name
             't' as u8, 'e' as u8, 's' as u8, 't' as u8,
         ];
@@ -433,7 +414,7 @@ mod tests {
             // name length
             1,
             // type
-            fio::DIRENT_TYPE_FILE,
+            fio::DirentType::File.into_primitive(),
             // name (a lonely continuation byte)
             0x80,
             // entry 1
@@ -442,7 +423,7 @@ mod tests {
             // name length
             4,
             // type
-            fio::DIRENT_TYPE_FILE,
+            fio::DirentType::File.into_primitive(),
             // name
             'o' as u8, 'k' as u8, 'a' as u8, 'y' as u8,
         ];
@@ -467,7 +448,7 @@ mod tests {
             // name length
             5,
             // type
-            fio::DIRENT_TYPE_FILE,
+            fio::DirentType::File.into_primitive(),
             // name
             't' as u8, 'e' as u8, 's' as u8, 't' as u8,
         ];

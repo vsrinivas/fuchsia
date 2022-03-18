@@ -50,11 +50,11 @@ fn not_found(_name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
     Err(Status::NOT_FOUND)
 }
 
-const DOT: (u8, &'static str) = (fio::DIRENT_TYPE_DIRECTORY, ".");
+const DOT: (fio::DirentType, &'static str) = (fio::DirentType::Directory, ".");
 
 impl Entries {
     fn new<F: Fn(&str) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>(
-        mut entries: Vec<(u8, &'static str)>,
+        mut entries: Vec<(fio::DirentType, &'static str)>,
         get_entry_fn: F,
     ) -> Self {
         entries.sort_unstable_by_key(|&(_, name)| name);
@@ -146,9 +146,9 @@ fn empty_with_watchers() {
 fn static_listing() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
 
     run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
@@ -158,10 +158,10 @@ fn static_listing() {
                 // Note that the build_sorted_static_get_entry_names() will sort entries
                 // alphabetically when returning them, so we see a different order here.
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"one")
-                    .add(fio::DIRENT_TYPE_FILE, b"three")
-                    .add(fio::DIRENT_TYPE_FILE, b"two");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"one")
+                    .add(fio::DirentType::File, b"three")
+                    .add(fio::DirentType::File, b"two");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
@@ -175,9 +175,9 @@ fn static_listing() {
 fn static_entries() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
 
     let get_entry = |name: &str| {
@@ -202,7 +202,7 @@ fn static_entries() {
 
 #[test]
 fn static_entries_with_traversal() {
-    let entries = vec![DOT, (fio::DIRENT_TYPE_DIRECTORY, "etc"), (fio::DIRENT_TYPE_FILE, "files")];
+    let entries = vec![DOT, (fio::DirentType::Directory, "etc"), (fio::DirentType::File, "files")];
 
     let get_entry = |name: &str| match name {
         "etc" => {
@@ -226,9 +226,9 @@ fn static_entries_with_traversal() {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
-                    .add(fio::DIRENT_TYPE_FILE, b"files");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::Directory, b"etc")
+                    .add(fio::DirentType::File, b"files");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
@@ -238,9 +238,9 @@ fn static_entries_with_traversal() {
 
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"fstab")
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"ssh");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"fstab")
+                    .add(fio::DirentType::Directory, b"ssh");
 
                 assert_read_dirents!(etc_dir, 1000, expected.into_vec());
                 assert_close!(etc_dir);
@@ -251,8 +251,8 @@ fn static_entries_with_traversal() {
 
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"sshd_config");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"sshd_config");
 
                 assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
                 assert_close!(ssh_dir);
@@ -303,8 +303,8 @@ impl LazyDirectory for DynamicEntries {
 
 #[test]
 fn dynamic_listing() {
-    let listing1 = vec![DOT, (fio::DIRENT_TYPE_FILE, "one"), (fio::DIRENT_TYPE_FILE, "two")];
-    let listing2 = vec![DOT, (fio::DIRENT_TYPE_FILE, "two"), (fio::DIRENT_TYPE_FILE, "three")];
+    let listing1 = vec![DOT, (fio::DirentType::File, "one"), (fio::DirentType::File, "two")];
+    let listing2 = vec![DOT, (fio::DirentType::File, "two"), (fio::DirentType::File, "three")];
 
     let entries = DynamicEntries::new(
         vec![Entries::new(listing1, not_found), Entries::new(listing2, not_found)].into(),
@@ -317,9 +317,9 @@ fn dynamic_listing() {
                 // Note that the build_sorted_static_get_entry_names() will sort entries
                 // alphabetically when returning them, so we see a different order here.
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"one")
-                    .add(fio::DIRENT_TYPE_FILE, b"two");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"one")
+                    .add(fio::DirentType::File, b"two");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
@@ -331,9 +331,9 @@ fn dynamic_listing() {
                 // Note that the build_sorted_static_get_entry_names() will sort entries
                 // alphabetically when returning them, so we see a different order here.
                 expected
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b".")
-                    .add(fio::DIRENT_TYPE_FILE, b"three")
-                    .add(fio::DIRENT_TYPE_FILE, b"two");
+                    .add(fio::DirentType::Directory, b".")
+                    .add(fio::DirentType::File, b"three")
+                    .add(fio::DirentType::File, b"two");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }
@@ -345,7 +345,7 @@ fn dynamic_listing() {
 
 #[test]
 fn dynamic_entries() {
-    let entries = vec![DOT, (fio::DIRENT_TYPE_FILE, "file1"), (fio::DIRENT_TYPE_FILE, "file2")];
+    let entries = vec![DOT, (fio::DirentType::File, "file1"), (fio::DirentType::File, "file2")];
 
     let count = Arc::new(AtomicU8::new(0));
     let get_entry = move |name: &str| {
@@ -389,10 +389,10 @@ fn dynamic_entries() {
 fn read_dirents_small_buffer() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_DIRECTORY, "etc"),
-        (fio::DIRENT_TYPE_FILE, "files"),
-        (fio::DIRENT_TYPE_FILE, "more"),
-        (fio::DIRENT_TYPE_FILE, "uname"),
+        (fio::DirentType::Directory, "etc"),
+        (fio::DirentType::File, "files"),
+        (fio::DirentType::File, "more"),
+        (fio::DirentType::File, "uname"),
     ];
 
     run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
@@ -401,7 +401,7 @@ fn read_dirents_small_buffer() {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
                 // (10 + 1) = 11
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
+                expected.add(fio::DirentType::Directory, b".");
                 assert_read_dirents!(root, 11, expected.into_vec());
             }
 
@@ -409,15 +409,15 @@ fn read_dirents_small_buffer() {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
                 expected
                     // (10 + 3) = 13
-                    .add(fio::DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(fio::DirentType::Directory, b"etc")
                     // 13 + (10 + 5) = 28
-                    .add(fio::DIRENT_TYPE_FILE, b"files");
+                    .add(fio::DirentType::File, b"files");
                 assert_read_dirents!(root, 28, expected.into_vec());
             }
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_FILE, b"more").add(fio::DIRENT_TYPE_FILE, b"uname");
+                expected.add(fio::DirentType::File, b"more").add(fio::DirentType::File, b"uname");
                 assert_read_dirents!(root, 100, expected.into_vec());
             }
 
@@ -430,7 +430,7 @@ fn read_dirents_small_buffer() {
 
 #[test]
 fn read_dirents_very_small_buffer() {
-    let entries = vec![DOT, (fio::DIRENT_TYPE_FILE, "file")];
+    let entries = vec![DOT, (fio::DirentType::File, "file")];
 
     run_server_client(fio::OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
         async move {
@@ -440,7 +440,7 @@ fn read_dirents_very_small_buffer() {
 
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".").add(fio::DIRENT_TYPE_FILE, b"file");
+                expected.add(fio::DirentType::Directory, b".").add(fio::DirentType::File, b"file");
                 assert_read_dirents!(root, 100, expected.into_vec());
             }
 
@@ -477,9 +477,9 @@ fn watch_empty() {
 fn watch_non_empty() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
@@ -515,9 +515,9 @@ fn watch_non_empty() {
 fn watch_two_watchers() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
@@ -565,9 +565,9 @@ fn watch_two_watchers() {
 fn watch_with_mask() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
@@ -591,7 +591,7 @@ fn watch_with_mask() {
 
 #[test]
 fn watch_addition() {
-    let entries = vec![DOT, (fio::DIRENT_TYPE_FILE, "one")];
+    let entries = vec![DOT, (fio::DirentType::File, "one")];
 
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
@@ -630,10 +630,10 @@ fn watch_addition() {
 fn watch_removal() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
-        (fio::DIRENT_TYPE_FILE, "four"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
+        (fio::DirentType::File, "four"),
     ];
 
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
@@ -673,9 +673,9 @@ fn watch_removal() {
 fn watch_watcher_stream_closed() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
     // Dropping the sender will close the receiver end.
     let (_, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
@@ -699,9 +699,9 @@ fn watch_watcher_stream_closed() {
 fn watch_close_watcher_stream() {
     let entries = vec![
         DOT,
-        (fio::DIRENT_TYPE_FILE, "one"),
-        (fio::DIRENT_TYPE_FILE, "two"),
-        (fio::DIRENT_TYPE_FILE, "three"),
+        (fio::DirentType::File, "one"),
+        (fio::DirentType::File, "two"),
+        (fio::DirentType::File, "three"),
     ];
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 

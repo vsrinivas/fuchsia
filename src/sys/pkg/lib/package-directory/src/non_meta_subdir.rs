@@ -103,7 +103,7 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
     }
 
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&sub_dir),
-            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
         );
     }
 
@@ -259,8 +259,8 @@ mod tests {
         assert_eq!(
             crate::tests::FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("dir1".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("dir1".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);

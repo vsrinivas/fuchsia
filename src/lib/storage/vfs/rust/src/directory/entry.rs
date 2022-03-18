@@ -18,52 +18,34 @@ use {
 /// The first element is the inode number, or INO_UNKNOWN (from fuchsia.io) if not set, and the second
 /// element is one of the DIRENT_TYPE_* constants defined in the fuchsia.io.
 #[derive(PartialEq, Eq, Clone)]
-pub struct EntryInfo(u64, u8);
+pub struct EntryInfo(u64, fio::DirentType);
 
 impl EntryInfo {
     /// Constructs a new directory entry information object.
-    pub fn new(inode: u64, type_: u8) -> EntryInfo {
-        match type_ {
-            fio::DIRENT_TYPE_UNKNOWN
-            | fio::DIRENT_TYPE_DIRECTORY
-            | fio::DIRENT_TYPE_BLOCK_DEVICE
-            | fio::DIRENT_TYPE_FILE
-            | fio::DIRENT_TYPE_SOCKET
-            | fio::DIRENT_TYPE_SERVICE => EntryInfo(inode, type_),
-            _ => panic!("Unexpected directory entry type: {}", type_),
-        }
+    pub fn new(inode: u64, type_: fio::DirentType) -> Self {
+        Self(inode, type_)
     }
 
     /// Retrives the `inode` argument of the [`EntryInfo::new()`] constructor.
     pub fn inode(&self) -> u64 {
-        self.0
+        let Self(inode, _type) = self;
+        *inode
     }
 
-    /// Retrives the `type_` argument of the [`EntryInfo::new()`] constructor.
-    pub fn type_(&self) -> u8 {
-        self.1
+    /// Retrieves the `type_` argument of the [`EntryInfo::new()`] constructor.
+    pub fn type_(&self) -> fio::DirentType {
+        let Self(_inode, type_) = self;
+        *type_
     }
 }
 
 impl fmt::Debug for EntryInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let new_type_str;
-        let type_str = match self.type_() {
-            fio::DIRENT_TYPE_UNKNOWN => "Unknown",
-            fio::DIRENT_TYPE_DIRECTORY => "Directory",
-            fio::DIRENT_TYPE_BLOCK_DEVICE => "BlockDevice",
-            fio::DIRENT_TYPE_FILE => "File",
-            fio::DIRENT_TYPE_SOCKET => "Socket",
-            fio::DIRENT_TYPE_SERVICE => "Service",
-            new_type => {
-                new_type_str = format!("Unexpected EntryInfo type ({})", new_type);
-                &new_type_str
-            }
-        };
-        if self.inode() == fio::INO_UNKNOWN {
-            write!(f, "{}(fio::INO_UNKNOWN)", type_str)
+        let Self(inode, type_) = self;
+        if *inode == fio::INO_UNKNOWN {
+            write!(f, "{:?}(fio::INO_UNKNOWN)", type_)
         } else {
-            write!(f, "{}({})", type_str, self.inode())
+            write!(f, "{:?}({})", type_, inode)
         }
     }
 }

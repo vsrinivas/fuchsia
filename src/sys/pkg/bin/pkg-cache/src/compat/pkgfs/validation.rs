@@ -94,7 +94,7 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -283,7 +283,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&validation),
-            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
         );
     }
 
@@ -301,8 +301,8 @@ mod tests {
         assert_eq!(
             crate::compat::pkgfs::testing::FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("missing".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("missing".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);

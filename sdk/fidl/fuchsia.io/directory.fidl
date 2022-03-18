@@ -111,19 +111,20 @@ const MAX_FILENAME uint64 = 255;
 
 // Dirent type information associated with the results of ReadDirents.
 // The following values are aligned with the values from libc's "dirent.h" "DT_...".
-
-/// A dirent with an unknown type.
-const DIRENT_TYPE_UNKNOWN uint8 = 0;
-/// A dirent representing a directory object.
-const DIRENT_TYPE_DIRECTORY uint8 = 4;
-/// A dirent representing a block device object.
-const DIRENT_TYPE_BLOCK_DEVICE uint8 = 6;
-/// A dirent representing a file object.
-const DIRENT_TYPE_FILE uint8 = 8;
-/// A dirent representing a socket object.
-const DIRENT_TYPE_SOCKET uint8 = 12;
-/// A dirent representing a service object.
-const DIRENT_TYPE_SERVICE uint8 = 16;
+type DirentType = strict enum : uint8 {
+    /// A dirent with an unknown type.
+    UNKNOWN = 0;
+    /// A dirent representing a directory object.
+    DIRECTORY = 4;
+    /// A dirent representing a block device object.
+    BLOCK_DEVICE = 6;
+    /// A dirent representing a file object.
+    FILE = 8;
+    /// A dirent representing a socket object.
+    SOCKET = 12;
+    /// A dirent representing a service object.
+    SERVICE = 16;
+};
 
 /// Nodes which do not have ino values should return this value
 /// from Readdir and GetAttr.
@@ -232,7 +233,7 @@ protocol Directory1 {
     ///   // Describes the length of the dirent name in bytes.
     ///   uint8 size;
     ///   // Describes the type of the entry. Aligned with the
-    ///   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    ///   // POSIX d_type values. Use `DirentType` constants.
     ///   uint8 type;
     ///   // Unterminated name of entry.
     ///   char name[0];

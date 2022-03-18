@@ -78,9 +78,8 @@ zx_status_t PseudoDir::Lookup(const std::string& name, vfs::internal::Node** out
   if (search != entries_by_name_.end()) {
     *out_node = search->second->node();
     return ZX_OK;
-  } else {
-    return ZX_ERR_NOT_FOUND;
   }
+  return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
@@ -89,7 +88,8 @@ zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64
   *out_actual = 0;
   *out_offset = offset;
   if (offset < kDotId) {
-    if (df.Next(".", 1, fuchsia::io::DIRENT_TYPE_DIRECTORY, fuchsia::io::INO_UNKNOWN) != ZX_OK) {
+    if (df.Next(".", 1, static_cast<uint8_t>(fuchsia::io::DirentType::DIRECTORY),
+                fuchsia::io::INO_UNKNOWN) != ZX_OK) {
       *out_actual = df.GetBytesFilled();
       return ZX_ERR_INVALID_ARGS;  // out_actual would be 0
     }
@@ -100,7 +100,7 @@ zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64
 
   for (auto it = entries_by_id_.upper_bound(*out_offset); it != entries_by_id_.end(); ++it) {
     fuchsia::io::NodeAttributes attr;
-    auto d_type = fuchsia::io::DIRENT_TYPE_UNKNOWN;
+    auto d_type = static_cast<uint8_t>(fuchsia::io::DirentType::UNKNOWN);
     auto ino = fuchsia::io::INO_UNKNOWN;
     if (it->second->node()->GetAttr(&attr) == ZX_OK) {
       d_type = ((fuchsia::io::MODE_TYPE_MASK & attr.mode) >> 12);
@@ -124,7 +124,7 @@ zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64
 
 bool PseudoDir::IsEmpty() const {
   std::lock_guard<std::mutex> guard(mutex_);
-  return entries_by_name_.size() == 0;
+  return entries_by_name_.empty();
 }
 
 PseudoDir::Entry::Entry(uint64_t id, std::string name) : id_(id), name_(std::move(name)) {}

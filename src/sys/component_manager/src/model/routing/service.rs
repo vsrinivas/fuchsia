@@ -185,7 +185,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -296,7 +296,7 @@ impl lazy::LazyDirectory for CollectionServiceDirectory {
                             // path segment.
                             let entry_name = format!("{},{}", &instance, &dirent.name);
                             sink = match sink.append(
-                                &EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                                &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                                 &entry_name,
                             ) {
                                 dirents_sink::AppendResult::Ok(sink) => sink,

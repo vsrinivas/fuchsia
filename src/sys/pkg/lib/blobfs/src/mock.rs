@@ -111,7 +111,7 @@ impl Mock {
         let mut entries_iter = entries.map(|hash| Dirent {
             ino: fio::INO_UNKNOWN,
             size: NAME_LEN as u8,
-            kind: fio::DIRENT_TYPE_FILE,
+            kind: fio::DirentType::File.into_primitive(),
             name: hash.to_string().as_bytes().try_into().unwrap(),
         });
 

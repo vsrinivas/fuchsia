@@ -199,7 +199,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -368,7 +368,7 @@ mod tests {
 
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),]
         );
         assert_eq!(pos, TraversalPosition::End);
     }
@@ -401,17 +401,17 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                (hash(0).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                (hash(1).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                (hash(2).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                (hash(0).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                (hash(1).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                (hash(2).to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
                 (
                     hash(10).to_string(),
-                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
                 ),
                 (
                     hash(14).to_string(),
-                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
                 ),
             ]
         );

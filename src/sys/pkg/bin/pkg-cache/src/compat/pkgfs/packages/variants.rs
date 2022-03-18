@@ -101,7 +101,7 @@ impl DirectoryEntry for PkgfsPackagesVariants {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -122,7 +122,7 @@ impl Directory for PkgfsPackagesVariants {
                 // traversal position so we try again next time (where the client hopefully
                 // provides a bigger buffer).
                 match sink
-                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".")
+                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), ".")
                 {
                     AppendResult::Ok(new_sink) => sink = new_sink,
                     AppendResult::Sealed(sealed) => return Ok((TraversalPosition::Start, sealed)),
@@ -151,7 +151,7 @@ impl Directory for PkgfsPackagesVariants {
         while let Some(variant) = remaining.next() {
             let variant = variant.to_string();
             match sink
-                .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), &variant)
+                .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), &variant)
             {
                 AppendResult::Ok(new_sink) => sink = new_sink,
                 AppendResult::Sealed(sealed) => {
@@ -310,7 +310,7 @@ mod tests {
 
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),]
         );
         assert_eq!(pos, TraversalPosition::End);
     }
@@ -334,10 +334,10 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("0".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("1".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("two".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("0".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("1".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("two".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
@@ -354,22 +354,22 @@ mod tests {
         let expected_entries = vec![
             (
                 ".".to_owned(),
-                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                 TraversalPosition::Name("0".to_owned()),
             ),
             (
                 "0".to_owned(),
-                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                 TraversalPosition::Name("1".to_owned()),
             ),
             (
                 "1".to_owned(),
-                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                 TraversalPosition::Name("two".to_owned()),
             ),
             (
                 "two".to_owned(),
-                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                 TraversalPosition::End,
             ),
         ];

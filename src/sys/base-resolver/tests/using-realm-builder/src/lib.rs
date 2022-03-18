@@ -271,7 +271,7 @@ impl vfs::directory::entry::DirectoryEntry for MinfsSyncOnOpenSelf {
     }
 
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        vfs::directory::entry::EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        vfs::directory::entry::EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -291,7 +291,7 @@ impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
         let sink = match pos {
             vfs::directory::traversal_position::TraversalPosition::Start => {
                 match sink.append(
-                    &vfs::directory::entry::EntryInfo::new(0, fio::DIRENT_TYPE_DIRECTORY),
+                    &vfs::directory::entry::EntryInfo::new(0, fio::DirentType::Directory),
                     ".",
                 ) {
                     vfs::directory::dirents_sink::AppendResult::Ok(sink) => (sink),

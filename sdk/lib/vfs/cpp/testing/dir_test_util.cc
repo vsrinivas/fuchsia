@@ -11,15 +11,15 @@ namespace vfs_tests {
 Dirent Dirent::DirentForDot() { return DirentForDirectory("."); }
 
 Dirent Dirent::DirentForDirectory(const std::string& name) {
-  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_DIRECTORY, name);
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DirentType::DIRECTORY, name);
 }
 
 Dirent Dirent::DirentForFile(const std::string& name) {
-  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_FILE, name);
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DirentType::FILE, name);
 }
 
 Dirent Dirent::DirentForService(const std::string& name) {
-  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_SERVICE, name);
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DirentType::SERVICE, name);
 }
 
 std::string Dirent::String() {
@@ -27,9 +27,9 @@ std::string Dirent::String() {
          "\nsize: " + std ::to_string(size_) + "\nname: " + name_;
 }
 
-Dirent::Dirent(uint64_t ino, uint8_t type, const std::string& name)
+Dirent::Dirent(uint64_t ino, fuchsia::io::DirentType type, const std::string& name)
     : ino_(ino),
-      type_(type),
+      type_(static_cast<uint8_t>(type)),
       size_(static_cast<uint8_t>(name.length())),
       name_(name),
       size_in_bytes_(sizeof(vdirent_t) + size_) {

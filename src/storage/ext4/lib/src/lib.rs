@@ -104,10 +104,10 @@ mod tests {
         run_server_client(fio::OPEN_RIGHT_READABLE, tree, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b".");
-                expected.add(fio::DIRENT_TYPE_FILE, b"file1");
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b"inner");
-                expected.add(fio::DIRENT_TYPE_DIRECTORY, b"lost+found");
+                expected.add(fio::DirentType::Directory, b".");
+                expected.add(fio::DirentType::File, b"file1");
+                expected.add(fio::DirentType::Directory, b"inner");
+                expected.add(fio::DirentType::Directory, b"lost+found");
 
                 assert_read_dirents!(root, 1000, expected.into_vec());
             }

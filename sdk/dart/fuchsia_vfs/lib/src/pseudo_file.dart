@@ -133,8 +133,8 @@ class PseudoFile extends Vnode {
   }
 
   @override
-  int type() {
-    return direntTypeFile;
+  DirentType type() {
+    return DirentType.file;
   }
 
   NodeInfo describe() {

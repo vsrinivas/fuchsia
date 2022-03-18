@@ -132,9 +132,9 @@ fn remote_dir_direct_connection() {
         let mut expected = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
         expected
             // (10 + 1) = 11
-            .add(fio::DIRENT_TYPE_DIRECTORY, b".")
+            .add(fio::DirentType::Directory, b".")
             // 11 + (10 + 1) = 22
-            .add(fio::DIRENT_TYPE_FILE, b"a");
+            .add(fio::DirentType::File, b"a");
         assert_read_dirents!(proxy, 22, expected.into_vec());
 
         assert_close!(proxy);

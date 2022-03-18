@@ -700,12 +700,12 @@ macro_rules! assert_read_dirents_one_listing {
         assert_read_dirents!($proxy, $max_bytes, expected.into_vec());
     }};
 
-    (@expand_dirent_type UNKNOWN) => { fio::DIRENT_TYPE_UNKNOWN };
-    (@expand_dirent_type DIRECTORY) => { fio::DIRENT_TYPE_DIRECTORY };
-    (@expand_dirent_type BLOCK_DEVICE) => { fio::DIRENT_TYPE_BLOCK_DEVICE };
-    (@expand_dirent_type FILE) => { fio::DIRENT_TYPE_FILE };
-    (@expand_dirent_type SOCKET) => { fio::DIRENT_TYPE_SOCKET };
-    (@expand_dirent_type SERVICE) => { fio::DIRENT_TYPE_SERVICE };
+    (@expand_dirent_type UNKNOWN) => { fio::DirentType::Unknown };
+    (@expand_dirent_type DIRECTORY) => { fio::DirentType::Directory };
+    (@expand_dirent_type BLOCK_DEVICE) => { fio::DirentType::BlockDevice };
+    (@expand_dirent_type FILE) => { fio::DirentType::File };
+    (@expand_dirent_type SOCKET) => { fio::DirentType::Socket };
+    (@expand_dirent_type SERVICE) => { fio::DirentType::Service };
 }
 
 #[macro_export]

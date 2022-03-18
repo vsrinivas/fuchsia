@@ -28,20 +28,20 @@ pub type RoutingFn =
 /// Create a new [`Remote`] node that forwards requests to the provided [`RoutingFn`]. This routing
 /// function is called once per open request. The dirent type is set to the provided
 /// `dirent_type`, which should be one of the `DIRENT_TYPE_*` values defined in fuchsia.io.
-pub fn remote_boxed_with_type(open: RoutingFn, dirent_type: u8) -> Arc<Remote> {
+pub fn remote_boxed_with_type(open: RoutingFn, dirent_type: fio::DirentType) -> Arc<Remote> {
     Arc::new(Remote { open, dirent_type })
 }
 
 /// Create a new [`Remote`] node that forwards open requests to the provided [`RoutingFn`]. This
 /// routing function is called once per open request. The dirent type is set as
-/// `DIRENT_TYPE_UNKNOWN`. If the remote node is a known `DIRENT_TYPE_*` type, you may wish to use
+/// `DirentType::Unknown`. If the remote node is a known `DIRENT_TYPE_*` type, you may wish to use
 /// [`remote_boxed_with_type`] instead.
 pub fn remote_boxed(open: RoutingFn) -> Arc<Remote> {
-    remote_boxed_with_type(open, fio::DIRENT_TYPE_UNKNOWN)
+    remote_boxed_with_type(open, fio::DirentType::Unknown)
 }
 
 /// Create a new [`Remote`] node that forwards open requests to the provided callback. This routing
-/// function is called once per open request. The dirent type is set as `DIRENT_TYPE_UNKNOWN`. If
+/// function is called once per open request. The dirent type is set as `DirentType::Unknown`. If
 /// the remote node is a known `DIRENT_TYPE_*` type, you may wish to use [`remote_boxed_with_type`]
 /// instead.
 pub fn remote<Open>(open: Open) -> Arc<Remote>
@@ -58,7 +58,7 @@ pub fn remote_dir(dir: fio::DirectoryProxy) -> Arc<Remote> {
         Box::new(move |_scope, flags, mode, path, server_end| {
             let _ = dir.open(flags, mode, path.as_ref(), server_end);
         }),
-        fio::DIRENT_TYPE_DIRECTORY,
+        fio::DirentType::Directory,
     )
 }
 
@@ -70,7 +70,7 @@ pub fn remote_dir(dir: fio::DirectoryProxy) -> Arc<Remote> {
 /// created instead.
 pub struct Remote {
     open: RoutingFn,
-    dirent_type: u8,
+    dirent_type: fio::DirentType,
 }
 
 impl Remote {

@@ -132,7 +132,7 @@ fn get_dir_children<'a>(
                     // TODO(fxbug.dev/81370) Replace .contains/.insert with .get_or_insert_owned when non-experimental.
                     if !added_entries.contains(path) {
                         res.push((
-                            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE),
+                            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File),
                             path.to_string(),
                         ));
                         added_entries.insert(path.to_string());
@@ -141,7 +141,7 @@ fn get_dir_children<'a>(
                 Some((first, _)) => {
                     if !added_entries.contains(first) {
                         res.push((
-                            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                             first.to_string(),
                         ));
                         added_entries.insert(first.to_string());
@@ -175,7 +175,7 @@ async fn read_dirents<'a>(
             unreachable!();
         }
         TraversalPosition::Start => {
-            match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".") {
+            match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), ".") {
                 AppendResult::Ok(new_sink) => sink = new_sink,
                 AppendResult::Sealed(sealed) => {
                     return Ok((TraversalPosition::Start, sealed));
@@ -381,11 +381,11 @@ mod tests {
     }
 
     fn file() -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)
     }
 
     fn dir() -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 
     #[test]
@@ -498,9 +498,9 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File))
             ]
         );
         assert_eq!(end_pos, TraversalPosition::End);
@@ -529,8 +529,8 @@ mod tests {
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
             vec![
-                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
+                (".".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("meta".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
             ]
         );
         assert_eq!(pos, TraversalPosition::Index(1));
@@ -540,7 +540,7 @@ mod tests {
             .expect("read_dirents failed");
         assert_eq!(
             FakeSink::from_sealed(sealed).entries,
-            vec![("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))]
+            vec![("resource".to_string(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File))]
         );
         assert_eq!(end_pos, TraversalPosition::End);
     }

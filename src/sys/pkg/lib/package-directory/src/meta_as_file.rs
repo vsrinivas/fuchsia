@@ -69,7 +69,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)
     }
 }
 
@@ -249,7 +249,7 @@ mod tests {
 
         assert_eq!(
             DirectoryEntry::entry_info(&meta_as_file),
-            EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
+            EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)
         );
     }
 

@@ -378,16 +378,18 @@ func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (in
 			dirent := syscall.Dirent{
 				Ino:  attr.Id,
 				Size: uint8(len(name)),
-			}
-			switch modeType := attr.Mode & io.ModeTypeMask; modeType {
-			case io.ModeTypeDirectory:
-				dirent.Type = io.DirentTypeDirectory
-			case io.ModeTypeFile:
-				dirent.Type = io.DirentTypeFile
-			case io.ModeTypeService:
-				dirent.Type = io.DirentTypeService
-			default:
-				panic(fmt.Sprintf("unknown mode type: %b", modeType))
+				Type: uint8(func() io.DirentType {
+					switch modeType := attr.Mode & io.ModeTypeMask; modeType {
+					case io.ModeTypeDirectory:
+						return io.DirentTypeDirectory
+					case io.ModeTypeFile:
+						return io.DirentTypeFile
+					case io.ModeTypeService:
+						return io.DirentTypeService
+					default:
+						panic(fmt.Sprintf("unknown mode type: %b", modeType))
+					}
+				}()),
 			}
 			if err := binary.Write(&dirState.dirents, binary.LittleEndian, dirent); err != nil {
 				panic(err)

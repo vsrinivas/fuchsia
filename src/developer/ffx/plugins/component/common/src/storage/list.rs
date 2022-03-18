@@ -59,7 +59,7 @@ mod test {
             // size: u8
             bytes.push(name.len() as u8);
             // type: u8
-            bytes.push(fio::DIRENT_TYPE_FILE);
+            bytes.push(fio::DirentType::File);
             // name: [u8]
             for byte in name.bytes() {
                 bytes.push(byte);

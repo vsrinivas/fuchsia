@@ -87,11 +87,11 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
         }
     }
 
-    fn to_dirent_type(&self) -> u8 {
+    fn to_dirent_type(&self) -> fio::DirentType {
         match self {
-            ServiceFsNode::Directory(_) => fio::DIRENT_TYPE_DIRECTORY,
-            ServiceFsNode::Service(_) => fio::DIRENT_TYPE_SERVICE,
-            ServiceFsNode::VmoFile { .. } => fio::DIRENT_TYPE_FILE,
+            ServiceFsNode::Directory(_) => fio::DirentType::Directory,
+            ServiceFsNode::Service(_) => fio::DirentType::Service,
+            ServiceFsNode::VmoFile { .. } => fio::DirentType::File,
         }
     }
 }
@@ -1708,11 +1708,16 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     }
 }
 
-fn write_dirent_bytes(buf: &mut Vec<u8>, ino: u64, typ: u8, name: &str) -> Result<(), Error> {
+fn write_dirent_bytes(
+    buf: &mut Vec<u8>,
+    ino: u64,
+    typ: fio::DirentType,
+    name: &str,
+) -> Result<(), Error> {
     // Safe to unwrap since `Write::write` on a `Vec` should never fail.
     buf.write_u64::<LittleEndian>(ino).unwrap();
     buf.write_u8(name.len() as u8).unwrap();
-    buf.write_u8(typ as u8).unwrap();
+    buf.write_u8(typ.into_primitive()).unwrap();
     buf.write_all(name.as_ref()).unwrap();
     Ok(())
 }

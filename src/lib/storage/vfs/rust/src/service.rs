@@ -153,6 +153,6 @@ impl DirectoryEntry for Service {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_SERVICE)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Service)
     }
 }

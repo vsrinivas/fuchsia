@@ -576,7 +576,7 @@ impl DirectoryEntry for FatDirectory {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
     }
 }
 
@@ -615,9 +615,9 @@ impl Directory for FatDirectory {
                             None
                         } else {
                             let entry_type = if entry.is_dir() {
-                                fio::DIRENT_TYPE_DIRECTORY
+                                fio::DirentType::Directory
                             } else {
-                                fio::DIRENT_TYPE_FILE
+                                fio::DirentType::File
                             };
                             Some((name, EntryInfo::new(fio::INO_UNKNOWN, entry_type)))
                         }
@@ -630,7 +630,7 @@ impl Directory for FatDirectory {
         if self.data.read().unwrap().parent.is_none() && filter(".") {
             entries.push((
                 ".".to_owned(),
-                EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
             ));
         }
 
@@ -825,13 +825,13 @@ mod tests {
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
                 (
                     "directory".to_owned(),
-                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
                 ),
-                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
             ]
         );
 
@@ -841,7 +841,7 @@ mod tests {
                 .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),]
+            vec![("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),]
         );
     }
 
@@ -869,14 +869,14 @@ mod tests {
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
             vec![
-                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),
-                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                (".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),
+                ("aaa".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
                 (
                     "directory".to_owned(),
-                    EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+                    EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
                 ),
-                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
-                ("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)),
+                ("qwerty".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
+                ("test_file".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File)),
             ]
         );
     }
@@ -899,7 +899,7 @@ mod tests {
         .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![("!".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE))]
+            vec![("!".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::File))]
         );
 
         let (_, sealed) =
@@ -907,7 +907,7 @@ mod tests {
                 .expect("read_dirents failed");
         assert_eq!(
             DummySink::from_sealed(sealed).entries,
-            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)),]
+            vec![(".".to_owned(), EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)),]
         );
     }
 

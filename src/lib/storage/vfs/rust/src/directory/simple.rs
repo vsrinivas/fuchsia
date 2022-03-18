@@ -230,7 +230,7 @@ where
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(self.inode, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.inode, fio::DirentType::Directory)
     }
 }
 
@@ -250,7 +250,7 @@ where
 
         let (mut sink, entries_iter) = match pos {
             TraversalPosition::Start => {
-                match sink.append(&EntryInfo::new(self.inode, fio::DIRENT_TYPE_DIRECTORY), ".") {
+                match sink.append(&EntryInfo::new(self.inode, fio::DirentType::Directory), ".") {
                     AppendResult::Ok(sink) => {
                         // I wonder why, but rustc can not infer T in
                         //
@@ -392,7 +392,7 @@ where
             Entry::Vacant(_) => Ok(None),
             Entry::Occupied(occupied) => {
                 if must_be_directory
-                    && occupied.get().entry_info().type_() != fio::DIRENT_TYPE_DIRECTORY
+                    && occupied.get().entry_info().type_() != fio::DirentType::Directory
                 {
                     Err(Status::NOT_DIR)
                 } else {

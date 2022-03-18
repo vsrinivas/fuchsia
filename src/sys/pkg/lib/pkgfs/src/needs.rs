@@ -264,7 +264,7 @@ impl MockNeeds {
         let mut needs_iter = needs.iter().enumerate().map(|(i, hash)| Dirent {
             ino: i as u64 + 1,
             size: 64,
-            kind: fio::DIRENT_TYPE_FILE,
+            kind: fio::DirentType::File.into_primitive(),
             name: hash.to_string().as_bytes().try_into().unwrap(),
         });
 

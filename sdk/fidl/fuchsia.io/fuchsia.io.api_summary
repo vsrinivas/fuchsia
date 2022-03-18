@@ -36,12 +36,6 @@ table/member fuchsia.io/ConnectionOptions.protocols fuchsia.io/NodeProtocols
 table/member fuchsia.io/ConnectionOptions.rights_request fuchsia.io/RightsRequest
 table fuchsia.io/ConnectionOptions
 table fuchsia.io/ConnectorInfo
-const fuchsia.io/DIRENT_TYPE_BLOCK_DEVICE uint8 6
-const fuchsia.io/DIRENT_TYPE_DIRECTORY uint8 4
-const fuchsia.io/DIRENT_TYPE_FILE uint8 8
-const fuchsia.io/DIRENT_TYPE_SERVICE uint8 16
-const fuchsia.io/DIRENT_TYPE_SOCKET uint8 12
-const fuchsia.io/DIRENT_TYPE_UNKNOWN uint8 0
 struct/member fuchsia.io/DatagramSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
 resource struct fuchsia.io/DatagramSocket
 table/member fuchsia.io/DatagramSocketInfo.event zx/handle:EVENTPAIR
@@ -142,6 +136,13 @@ union/member fuchsia.io/DirectoryIterator_GetNext_Result.response fuchsia.io/Dir
 strict union fuchsia.io/DirectoryIterator_GetNext_Result
 struct fuchsia.io/DirectoryObject
 protocol fuchsia.io/DirectoryWatcher
+enum/member fuchsia.io/DirentType.BLOCK_DEVICE 6
+enum/member fuchsia.io/DirentType.DIRECTORY 4
+enum/member fuchsia.io/DirentType.FILE 8
+enum/member fuchsia.io/DirentType.SERVICE 16
+enum/member fuchsia.io/DirentType.SOCKET 12
+enum/member fuchsia.io/DirentType.UNKNOWN 0
+strict enum fuchsia.io/DirentType uint8
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File.Close() -> (fuchsia.io/Node2_Close_Result result)

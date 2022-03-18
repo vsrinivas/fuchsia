@@ -194,7 +194,7 @@ mod tests {
                 .unwrap();
         });
         let fs = pseudo_directory! {
-            "foo" => remote_boxed_with_type(channel_only_foo, fio::DIRENT_TYPE_FILE),
+            "foo" => remote_boxed_with_type(channel_only_foo, fio::DirentType::File),
         };
         let directory = serve_vfs_dir(fs);
 
@@ -235,7 +235,7 @@ mod tests {
             });
         });
         let fs = pseudo_directory! {
-            "foo" => remote_boxed_with_type(channel_only_foo, fio::DIRENT_TYPE_FILE),
+            "foo" => remote_boxed_with_type(channel_only_foo, fio::DirentType::File),
         };
         let directory = serve_vfs_dir(fs);
 
@@ -285,7 +285,7 @@ mod tests {
             });
         });
         let fs = pseudo_directory! {
-            "foo" => remote_boxed_with_type(channel_only_foo, fio::DIRENT_TYPE_FILE),
+            "foo" => remote_boxed_with_type(channel_only_foo, fio::DirentType::File),
         };
         let directory = serve_vfs_dir(fs);
 

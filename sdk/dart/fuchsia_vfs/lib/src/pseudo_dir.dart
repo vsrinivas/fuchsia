@@ -239,8 +239,8 @@ class PseudoDir extends Vnode {
   }
 
   @override
-  int type() {
-    return direntTypeDirectory;
+  DirentType type() {
+    return DirentType.directory;
   }
 
   void _onClose(_DirConnection obj) {
@@ -464,7 +464,7 @@ class _DirConnection extends Directory {
     // add dot
     if (_seek < 0) {
       var bytes = _encodeDirent(
-          bData, index, maxBytes, inoUnknown, direntTypeDirectory, '.');
+          bData, index, maxBytes, inoUnknown, DirentType.directory, '.');
       if (bytes == -1) {
         return Directory$ReadDirents$Response(
             ZX.ERR_BUFFER_TOO_SMALL, Uint8List(0));
@@ -549,7 +549,7 @@ class _DirConnection extends Directory {
 
   /// returns number of bytes written
   int _encodeDirent(ByteData buf, int startIndex, int maxBytes, int inodeNumber,
-      int type, String name) {
+      DirentType type, String name) {
     List<int> charBytes = utf8.encode(name);
     var len = 8 /*ino*/ + 1 /*size*/ + 1 /*type*/ + charBytes.length;
     // cannot fit in buffer
@@ -561,7 +561,7 @@ class _DirConnection extends Directory {
     index += 8;
     buf
       ..setUint8(index++, charBytes.length)
-      ..setUint8(index++, type);
+      ..setUint8(index++, type.$value);
     for (int i = 0; i < charBytes.length; i++) {
       buf.setUint8(index++, charBytes[i]);
     }

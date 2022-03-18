@@ -537,7 +537,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "type",
-              "returnType": "int",
+              "returnType": "DirentType",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -777,7 +777,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "type",
-              "returnType": "int",
+              "returnType": "DirentType",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1059,7 +1059,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "type",
-              "returnType": "int",
+              "returnType": "DirentType",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1185,7 +1185,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "type",
-              "returnType": "int",
+              "returnType": "DirentType",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1603,7 +1603,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "type",
-              "returnType": "int",
+              "returnType": "DirentType",
               "type": "MethodDeclarationImpl"
             }
           },

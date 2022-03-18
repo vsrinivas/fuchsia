@@ -21,7 +21,7 @@ void main() {
 
     test('type', () {
       Vnode dir = PseudoDir();
-      expect(dir.type(), direntTypeDirectory);
+      expect(dir.type(), DirentType.directory);
     });
 
     test('basic', () {
@@ -331,7 +331,7 @@ void main() {
     });
 
     _Dirent _createDirentForDot() {
-      return _Dirent(inoUnknown, 1, direntTypeDirectory, '.');
+      return _Dirent(inoUnknown, 1, DirentType.directory, '.');
     }
 
     _Dirent _createDirent(Vnode vnode, String name) {
@@ -1122,7 +1122,7 @@ class _Dirent {
   static const int _fixedSize = 10;
   int? ino;
   int? size;
-  int? type;
+  DirentType? type;
   String? str;
 
   int? direntSizeInBytes;
@@ -1133,7 +1133,7 @@ class _Dirent {
   _Dirent.fromData(ByteData data) {
     ino = data.getUint64(0, Endian.little);
     size = data.getUint8(8);
-    type = data.getUint8(9);
+    type = DirentType(data.getUint8(9));
     var offset = _fixedSize;
     List<int> charBytes = [];
     direntSizeInBytes = offset + size!;
@@ -1179,8 +1179,8 @@ class _TestVnode extends Vnode {
   }
 
   @override
-  int type() {
-    return direntTypeUnknown;
+  DirentType type() {
+    return DirentType.unknown;
   }
 
   String value() => _val;

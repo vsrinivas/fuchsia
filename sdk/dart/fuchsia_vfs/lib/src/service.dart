@@ -46,8 +46,8 @@ class Service<T> extends Vnode {
   }
 
   @override
-  int type() {
-    return direntTypeService;
+  DirentType type() {
+    return DirentType.service;
   }
 
   int _validateFlagsAndMode(int flags, int mode) {
