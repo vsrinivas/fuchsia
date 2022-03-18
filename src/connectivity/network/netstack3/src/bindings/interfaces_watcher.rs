@@ -19,11 +19,21 @@ use futures::{
 };
 use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet, SubnetEither};
 use netstack3_core::{get_all_ip_addr_subnets, get_all_routes, EntryDest};
+use todo_unused::todo_unused;
 
 use super::{
     devices::{CommonInfo, DeviceSpecificInfo, EthernetInfo, LoopbackInfo},
     util::IntoFidl,
     Devices, LockableContext,
+};
+
+#[todo_unused("https://fxbug.dev/60923")]
+use {
+    super::devices::BindingId,
+    fidl_fuchsia_net as fidl_net,
+    futures::{channel::mpsc, FutureExt},
+    net_types::ip::{InterfaceAddr, IpVersion},
+    std::collections::HashMap,
 };
 
 pub(crate) const LOOPBACK_DEVICE_NAME: &str = "lo";
@@ -38,6 +48,8 @@ pub(crate) enum Error {
 }
 
 /// Serves the `fuchsia.net.interfaces/State` protocol.
+// TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked up to
+// NS3.
 pub(crate) async fn serve<C, S>(ctx: C, stream: StateRequestStream, sink: S) -> Result<(), Error>
 where
     C: LockableContext,
@@ -64,6 +76,8 @@ where
         .await
 }
 
+// TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked up to
+// NS3.
 async fn existing_properties<C>(ctx: &C) -> Result<EventQueue, zx::Status>
 where
     C: LockableContext,
@@ -188,7 +202,10 @@ struct EventQueue {
 }
 
 impl EventQueue {
-    /// Creates a queue with all the existing [`Properties`] and an [`Event::Idle`].
+    /// Creates a queue with all the existing [`Properties`] and an
+    /// [`Event::Idle`].
+    // TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked
+    // up to NS3.
     fn existing(
         existing: impl IntoIterator<Item = fidl_interfaces_ext::Properties>,
     ) -> Result<Self, zx::Status> {
@@ -201,6 +218,60 @@ impl EventQueue {
             return Err(zx::Status::BUFFER_TOO_SMALL);
         }
         Ok(EventQueue { events })
+    }
+
+    /// Creates a new event queue containing all the interfaces in `state`
+    /// wrapped in a [`fidl_interfaces::Event::Existing`] followed by a
+    /// [`fidl_interfaces::Event::Idle`].
+    #[todo_unused("https://fxbug.dev/60923")]
+    fn from_state(state: &HashMap<BindingId, InterfaceState>) -> Result<Self, zx::Status> {
+        // NB: Leave room for idle event.
+        if state.len() >= MAX_EVENTS {
+            return Err(zx::Status::BUFFER_TOO_SMALL);
+        }
+        // NB: Compiler can't infer the parameter types.
+        let state_to_event = |(id, state): (&u64, &InterfaceState)| {
+            let InterfaceState {
+                properties: InterfaceProperties { name, device_class },
+                addresses,
+                has_default_ipv4_route,
+                has_default_ipv6_route,
+                online,
+            } = state;
+            fidl_interfaces::Event::Existing(
+                fidl_interfaces_ext::Properties {
+                    id: *id,
+                    name: name.clone(),
+                    device_class: device_class.clone(),
+                    online: *online,
+                    addresses: Worker::collect_addresses(addresses),
+                    has_default_ipv4_route: *has_default_ipv4_route,
+                    has_default_ipv6_route: *has_default_ipv6_route,
+                }
+                .into(),
+            )
+        };
+        Ok(Self {
+            events: state
+                .iter()
+                .map(state_to_event)
+                .chain(std::iter::once(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {})))
+                .collect(),
+        })
+    }
+
+    /// Adds a [`fidl_interfaces::Event`] to the back of the queue.
+    #[todo_unused("https://fxbug.dev/60923")]
+    fn push(&mut self, event: fidl_interfaces::Event) -> Result<(), fidl_interfaces::Event> {
+        let Self { events } = self;
+        if events.len() >= MAX_EVENTS {
+            return Err(event);
+        }
+        // NB: We could perform event consolidation here, but that's not
+        // implemented in NS2 at the moment of writing so it's easier to match
+        // behavior.
+        events.push_back(event);
+        Ok(())
     }
 
     /// Removes an [`Event`] from the front of the queue.
@@ -238,12 +309,6 @@ impl Future for Watcher {
                             return Poll::Ready(Ok(()));
                         }
                         None => {
-                            // TODO(https://fxbug.dev/75553): Support events other
-                            // than Existing and Idle.
-                            responder
-                                .control_handle()
-                                .shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
-                            log::error!("The client tried to hanging-get new events while it is not supported (https://fxbug.dev/75553)");
                             self.responder = Some(responder);
                         }
                     },
@@ -254,14 +319,1166 @@ impl Future for Watcher {
     }
 }
 
+#[todo_unused("https://fxbug.dev/60923")]
+impl Watcher {
+    fn push(&mut self, mut event: fidl_interfaces::Event) {
+        let Self { stream, events, responder } = self;
+        if let Some(responder) = responder.take() {
+            match responder.send(&mut event) {
+                Ok(()) => (),
+                Err(e) if e.is_closed() => (),
+                Err(e) => log::error!("error sending event {:?} to watcher: {:?}", event, e),
+            }
+            return;
+        }
+        match events.push(event) {
+            Ok(()) => (),
+            Err(event) => {
+                log::warn!("failed to enqueue event {:?} on watcher, closing channel", event);
+                stream.control_handle().shutdown();
+            }
+        }
+    }
+}
+
+/// Interface specific events.
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, Eq, PartialEq))]
+pub enum InterfaceUpdate {
+    AddressAssigned { addr: InterfaceAddr, properties: AddressState },
+    AddressUnassigned(InterfaceAddr),
+    DefaultRouteChanged { version: IpVersion, has_default_route: bool },
+    OnlineChanged(bool),
+}
+
+/// Immutable interface properties.
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, Eq, PartialEq))]
+pub struct InterfaceProperties {
+    pub name: String,
+    pub device_class: fidl_fuchsia_net_interfaces::DeviceClass,
+}
+
+/// Cached interface state by the worker.
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, Eq, PartialEq))]
+pub struct InterfaceState {
+    properties: InterfaceProperties,
+    online: bool,
+    addresses: HashMap<InterfaceAddr, AddressState>,
+    has_default_ipv4_route: bool,
+    has_default_ipv6_route: bool,
+}
+
+/// Cached address state by the worker.
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, Eq, PartialEq))]
+pub struct AddressState {
+    pub valid_until: zx::Time,
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone))]
+enum InterfaceEvent {
+    Added { id: BindingId, properties: InterfaceProperties },
+    Changed { id: BindingId, event: InterfaceUpdate },
+    Removed(BindingId),
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+pub struct InterfaceEventProducer {
+    id: BindingId,
+    channel: mpsc::UnboundedSender<InterfaceEvent>,
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl InterfaceEventProducer {
+    /// Notifies the interface state [`Worker`] of [`event`] on this
+    /// [`InterfaceEventProducer`]'s interface.
+    pub fn notify(&self, event: InterfaceUpdate) -> Result<(), InterfaceUpdate> {
+        let Self { id, channel } = self;
+        channel.unbounded_send(InterfaceEvent::Changed { id: *id, event }).map_err(|e| {
+            match e.into_inner() {
+                InterfaceEvent::Changed { id: _, event } => event,
+                // All other patterns are unreachable, this is only so we can get
+                // back the event we just created above.
+                e => unreachable!("{:?}", e),
+            }
+        })
+    }
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl Drop for InterfaceEventProducer {
+    fn drop(&mut self) {
+        let Self { id, channel } = self;
+        channel.unbounded_send(InterfaceEvent::Removed(*id)).unwrap_or_else(
+            |_: mpsc::TrySendError<_>| {
+                // If the worker was closed before its producers we can assume
+                // it's no longer interested in events, so we simply drop these
+                // errors.
+            },
+        )
+    }
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(thiserror::Error, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+pub enum WorkerError {
+    #[error("attempted to reinsert interface {interface} over old {old:?}")]
+    AddedDuplicateInterface { interface: BindingId, old: InterfaceState },
+    #[error("attempted to remove nonexisting interface with id {0}")]
+    RemoveNonexistentInterface(BindingId),
+    #[error("attempted to update nonexisting interface with id {0}")]
+    UpdateNonexistentInterface(BindingId),
+    #[error("attempted to assign already assigned address {addr} on interface {interface}")]
+    AssignExistingAddr { interface: BindingId, addr: InterfaceAddr },
+    #[error("attempted to unassign nonexisting interface address {addr} on interface {interface}")]
+    UnassignNonexistentAddr { interface: BindingId, addr: InterfaceAddr },
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+pub struct Worker {
+    events: mpsc::UnboundedReceiver<InterfaceEvent>,
+    watchers: mpsc::Receiver<fidl_interfaces::WatcherRequestStream>,
+}
+
+/// Arbitrarily picked constant to force backpressure on FIDL requests.
+#[todo_unused("https://fxbug.dev/60923")]
+const WATCHER_CHANNEL_CAPACITY: usize = 32;
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl Worker {
+    fn new() -> (Worker, WorkerWatcherSink, WorkerInterfaceSink) {
+        let (events_sender, events_receiver) = mpsc::unbounded();
+        let (watchers_sender, watchers_receiver) = mpsc::channel(WATCHER_CHANNEL_CAPACITY);
+        (
+            Worker { events: events_receiver, watchers: watchers_receiver },
+            WorkerWatcherSink { sender: watchers_sender },
+            WorkerInterfaceSink { sender: events_sender },
+        )
+    }
+
+    /// Runs the worker until all [`WorkerWatcherSink`]s and
+    /// [`WorkerInterfaceSink`]s are closed.
+    ///
+    /// On success, returns the set of currently opened [`Watcher`]s that the
+    /// `Worker` was polling on when all its sinks were closed.
+    pub(crate) async fn run(
+        self,
+    ) -> Result<futures::stream::FuturesUnordered<Watcher>, WorkerError> {
+        let Self { events, watchers: watchers_stream } = self;
+        let mut current_watchers = futures::stream::FuturesUnordered::<Watcher>::new();
+        let mut interface_state = HashMap::new();
+
+        enum SinkAction {
+            NewWatcher(fidl_interfaces::WatcherRequestStream),
+            Event(InterfaceEvent),
+        }
+        let mut sink_actions = futures::stream::select(
+            watchers_stream.map(SinkAction::NewWatcher),
+            events.map(SinkAction::Event),
+        );
+
+        loop {
+            let mut poll_watchers = if current_watchers.is_empty() {
+                futures::future::pending().left_future()
+            } else {
+                current_watchers.by_ref().next().right_future()
+            };
+
+            // NB: Declare an enumeration with actions to prevent too much logic
+            // in select macro.
+            enum Action {
+                WatcherEnded(Option<Result<(), fidl::Error>>),
+                Sink(Option<SinkAction>),
+            }
+            let action = futures::select! {
+                r = poll_watchers => Action::WatcherEnded(r),
+                a = sink_actions.next() => Action::Sink(a),
+            };
+
+            match action {
+                Action::WatcherEnded(r) => match r {
+                    Some(Ok(())) => {}
+                    Some(Err(e)) => {
+                        if !e.is_closed() {
+                            log::error!("error operating interface watcher {:?}", e);
+                        }
+                    }
+                    // This should not be observable since we check if our
+                    // watcher collection is empty above and replace it with a
+                    // pending future.
+                    None => unreachable!("should not observe end of FuturesUnordered"),
+                },
+                Action::Sink(Some(SinkAction::NewWatcher(stream))) => {
+                    match EventQueue::from_state(&interface_state) {
+                        Ok(events) => {
+                            current_watchers.push(Watcher { stream, events, responder: None })
+                        }
+                        Err(status) => {
+                            log::warn!("failed to construct events for watcher: {}", status);
+                            stream.control_handle().shutdown_with_epitaph(status);
+                        }
+                    }
+                }
+                Action::Sink(Some(SinkAction::Event(e))) => {
+                    if let Some(event) = Self::consume_event(&mut interface_state, e)? {
+                        current_watchers.iter_mut().for_each(|watcher| watcher.push(event.clone()));
+                    }
+                }
+                // If all of the sinks close, shutdown the worker.
+                Action::Sink(None) => {
+                    return Ok(current_watchers);
+                }
+            }
+        }
+    }
+
+    /// Consumes a single worker event, mutating state.
+    ///
+    /// On `Err`, the worker must be stopped and `state` can't be considered
+    /// valid anymore.
+    fn consume_event(
+        state: &mut HashMap<BindingId, InterfaceState>,
+        event: InterfaceEvent,
+    ) -> Result<Option<fidl_interfaces::Event>, WorkerError> {
+        match event {
+            InterfaceEvent::Added {
+                id,
+                properties: InterfaceProperties { name, device_class },
+            } => {
+                let online = false;
+                let has_default_ipv4_route = false;
+                let has_default_ipv6_route = false;
+                match state.insert(
+                    id,
+                    InterfaceState {
+                        properties: InterfaceProperties { name: name.clone(), device_class },
+                        online,
+                        addresses: HashMap::new(),
+                        has_default_ipv4_route,
+                        has_default_ipv6_route,
+                    },
+                ) {
+                    Some(old) => Err(WorkerError::AddedDuplicateInterface { interface: id, old }),
+                    None => Ok(Some(fidl_interfaces::Event::Added(
+                        fidl_interfaces_ext::Properties {
+                            id,
+                            name,
+                            device_class,
+                            online,
+                            addresses: Vec::new(),
+                            has_default_ipv4_route,
+                            has_default_ipv6_route,
+                        }
+                        .into(),
+                    ))),
+                }
+            }
+            InterfaceEvent::Removed(rm) => match state.remove(&rm) {
+                Some(InterfaceState { .. }) => Ok(Some(fidl_interfaces::Event::Removed(rm))),
+                None => Err(WorkerError::RemoveNonexistentInterface(rm)),
+            },
+            InterfaceEvent::Changed { id, event } => {
+                let InterfaceState {
+                    properties: _,
+                    online,
+                    addresses,
+                    has_default_ipv4_route,
+                    has_default_ipv6_route,
+                } = state
+                    .get_mut(&id)
+                    .ok_or_else(|| WorkerError::UpdateNonexistentInterface(id))?;
+                match event {
+                    InterfaceUpdate::AddressAssigned {
+                        addr,
+                        properties: AddressState { valid_until },
+                    } => match addresses.insert(addr.clone(), AddressState { valid_until }) {
+                        Some(AddressState { .. }) => {
+                            Err(WorkerError::AssignExistingAddr { interface: id, addr })
+                        }
+                        None => {
+                            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                                id: Some(id),
+                                addresses: Some(Self::collect_addresses(addresses)),
+                                ..fidl_interfaces::Properties::EMPTY
+                            })))
+                        }
+                    },
+                    InterfaceUpdate::AddressUnassigned(addr) => match addresses.remove(&addr) {
+                        Some(AddressState { .. }) => {
+                            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                                id: Some(id),
+                                addresses: (Some(Self::collect_addresses(addresses))),
+                                ..fidl_interfaces::Properties::EMPTY
+                            })))
+                        }
+                        None => Err(WorkerError::UnassignNonexistentAddr { interface: id, addr }),
+                    },
+                    InterfaceUpdate::DefaultRouteChanged {
+                        version,
+                        has_default_route: new_value,
+                    } => {
+                        let mut table = fidl_interfaces::Properties {
+                            id: Some(id),
+                            ..fidl_interfaces::Properties::EMPTY
+                        };
+                        let (state, prop) = match version {
+                            IpVersion::V4 => {
+                                (has_default_ipv4_route, &mut table.has_default_ipv4_route)
+                            }
+                            IpVersion::V6 => {
+                                (has_default_ipv6_route, &mut table.has_default_ipv6_route)
+                            }
+                        };
+                        Ok((*state != new_value)
+                            .then(|| {
+                                *state = new_value;
+                                *prop = Some(new_value);
+                            })
+                            .map(move |()| fidl_interfaces::Event::Changed(table)))
+                    }
+                    InterfaceUpdate::OnlineChanged(new_online) => {
+                        Ok((*online != new_online).then(|| {
+                            *online = new_online;
+                            fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                                id: Some(id),
+                                online: Some(new_online),
+                                ..fidl_interfaces::Properties::EMPTY
+                            })
+                        }))
+                    }
+                }
+            }
+        }
+    }
+
+    fn collect_addresses<T: SortableInterfaceAddress>(
+        addrs: &HashMap<InterfaceAddr, AddressState>,
+    ) -> Vec<T> {
+        let mut addrs = addrs
+            .iter()
+            .map(|(addr, AddressState { valid_until })| {
+                fidl_interfaces_ext::Address {
+                    value: addr.clone().into_fidl(),
+                    valid_until: valid_until.into_nanos(),
+                }
+                .into()
+            })
+            .collect::<Vec<T>>();
+        // Provide a stably ordered vector of addresses.
+        addrs.sort_by_key(|addr| addr.get_sort_key());
+        addrs
+    }
+}
+
+/// This trait enables the implementation of [`Worker::collect_addresses`] to be
+/// agnostic to extension and pure FIDL types, it is not meant to be used in
+/// other contexts.
+#[todo_unused("https://fxbug.dev/60923")]
+trait SortableInterfaceAddress: From<fidl_interfaces_ext::Address> {
+    type Key: Ord;
+    fn get_sort_key(&self) -> Self::Key;
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl SortableInterfaceAddress for fidl_interfaces_ext::Address {
+    type Key = fidl_net::InterfaceAddress;
+    fn get_sort_key(&self) -> fidl_net::InterfaceAddress {
+        self.value.clone()
+    }
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl SortableInterfaceAddress for fidl_interfaces::Address {
+    type Key = Option<fidl_net::InterfaceAddress>;
+    fn get_sort_key(&self) -> Option<fidl_net::InterfaceAddress> {
+        self.value.clone()
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("Connection to interfaces worker closed")]
+pub struct WorkerClosedError {}
+
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Clone)]
+pub struct WorkerWatcherSink {
+    sender: mpsc::Sender<fidl_interfaces::WatcherRequestStream>,
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl WorkerWatcherSink {
+    /// Adds a new interface watcher to be operated on by [`Worker`].
+    pub async fn add_watcher(
+        &mut self,
+        watcher: fidl_interfaces::WatcherRequestStream,
+    ) -> Result<(), WorkerClosedError> {
+        self.sender.send(watcher).await.map_err(|_: mpsc::SendError| WorkerClosedError {})
+    }
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Clone)]
+pub struct WorkerInterfaceSink {
+    sender: mpsc::UnboundedSender<InterfaceEvent>,
+}
+
+#[todo_unused("https://fxbug.dev/60923")]
+impl WorkerInterfaceSink {
+    /// Adds a new interface `id` with fixed properties `properties`.
+    ///
+    /// Added interfaces are always assumed to be offline and have no assigned
+    /// address or default routes.
+    ///
+    /// The returned [`InterfaceEventProducer`] can be used to feed interface
+    /// changes to be notified to FIDL watchers. On drop,
+    /// `InterfaceEventProducer` notifies the [`Worker`] that the interface was
+    /// removed.
+    ///
+    /// Note that the [`Worker`] will exit with an error if two interfaces with
+    /// the same identifier are created at the same time, but that is not
+    /// observable from `add_interface`. It does not provide guardrails to
+    /// prevent identifier reuse, however.
+    pub fn add_interface(
+        &self,
+        id: BindingId,
+        properties: InterfaceProperties,
+    ) -> Result<InterfaceEventProducer, WorkerClosedError> {
+        self.sender
+            .unbounded_send(InterfaceEvent::Added { id, properties })
+            .map_err(|_: mpsc::TrySendError<_>| WorkerClosedError {})?;
+        Ok(InterfaceEventProducer { id, channel: self.sender.clone() })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bindings::util::TryIntoCore as _;
+    use assert_matches::assert_matches;
+    use fixture::fixture;
+    use futures::{Future, Stream};
+    use itertools::Itertools as _;
+    use std::convert::{TryFrom as _, TryInto as _};
+    use test_case::test_case;
+
+    impl WorkerWatcherSink {
+        fn create_watcher(&mut self) -> fidl_interfaces::WatcherProxy {
+            let (watcher, stream) =
+                fidl::endpoints::create_proxy_and_stream::<fidl_interfaces::WatcherMarker>()
+                    .expect("create proxy");
+            self.add_watcher(stream)
+                .now_or_never()
+                .expect("unexpected backpressure on sink")
+                .expect("failed to send watcher to worker");
+            watcher
+        }
+
+        fn create_watcher_event_stream(
+            &mut self,
+        ) -> impl Stream<Item = fidl_interfaces::Event> + Unpin {
+            futures::stream::unfold(self.create_watcher(), |watcher| {
+                watcher.watch().map(move |e| match e {
+                    Ok(event) => Some((event, watcher)),
+                    Err(e) => {
+                        if e.is_closed() {
+                            None
+                        } else {
+                            panic!("error fetching next event on watcher {:?}", e);
+                        }
+                    }
+                })
+            })
+        }
+    }
 
     #[test]
     fn test_events_idle() {
         let mut events = EventQueue::existing(std::iter::empty()).expect("failed to create Events");
         assert_eq!(events.pop_front(), Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty)));
         assert_eq!(events.pop_front(), None);
+    }
+
+    async fn with_worker<
+        Fut: Future<Output = ()>,
+        F: FnOnce(WorkerWatcherSink, WorkerInterfaceSink) -> Fut,
+    >(
+        _name: &str,
+        f: F,
+    ) {
+        let (worker, watcher_sink, interface_sink) = Worker::new();
+        let (r, ()) = futures::future::join(worker.run(), f(watcher_sink, interface_sink)).await;
+        let watchers = r.expect("worker failed");
+        let () = watchers.try_collect().await.expect("watchers error");
+    }
+
+    const IFACE1_ID: BindingId = 111;
+    const IFACE1_NAME: &str = "iface1";
+    const IFACE1_CLASS: fidl_interfaces::DeviceClass =
+        fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Ethernet);
+
+    const IFACE2_ID: BindingId = 222;
+    const IFACE2_NAME: &str = "iface2";
+    const IFACE2_CLASS: fidl_interfaces::DeviceClass =
+        fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty {});
+
+    /// Tests full integration between [`Worker`] and [`Watcher`]s through basic
+    /// state updates.
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn basic_state_updates(
+        mut watcher_sink: WorkerWatcherSink,
+        interface_sink: WorkerInterfaceSink,
+    ) {
+        let mut watcher = watcher_sink.create_watcher_event_stream();
+        assert_eq!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+
+        let producer = interface_sink
+            .add_interface(
+                IFACE1_ID,
+                InterfaceProperties { name: IFACE1_NAME.to_string(), device_class: IFACE1_CLASS },
+            )
+            .expect("add interface");
+
+        assert_eq!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Added(
+                fidl_interfaces_ext::Properties {
+                    id: IFACE1_ID,
+                    addresses: Vec::new(),
+                    online: false,
+                    device_class: IFACE1_CLASS,
+                    has_default_ipv4_route: false,
+                    has_default_ipv6_route: false,
+                    name: IFACE1_NAME.to_string(),
+                }
+                .into()
+            ))
+        );
+
+        const ADDR1: InterfaceAddr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        const ADDR_VALID_UNTIL: zx::Time = zx::Time::from_nanos(12345);
+        const BASE_PROPERTIES: fidl_interfaces::Properties = fidl_interfaces::Properties {
+            id: Some(IFACE1_ID),
+            ..fidl_interfaces::Properties::EMPTY
+        };
+
+        for (event, expect) in [
+            (
+                InterfaceUpdate::AddressAssigned {
+                    addr: ADDR1,
+                    properties: AddressState { valid_until: ADDR_VALID_UNTIL },
+                },
+                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                    addresses: Some(vec![fidl_interfaces_ext::Address {
+                        value: ADDR1.into_fidl(),
+                        valid_until: ADDR_VALID_UNTIL.into_nanos(),
+                    }
+                    .into()]),
+                    ..BASE_PROPERTIES
+                }),
+            ),
+            (
+                InterfaceUpdate::DefaultRouteChanged {
+                    version: IpVersion::V4,
+                    has_default_route: true,
+                },
+                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                    has_default_ipv4_route: Some(true),
+                    ..BASE_PROPERTIES
+                }),
+            ),
+            (
+                InterfaceUpdate::DefaultRouteChanged {
+                    version: IpVersion::V6,
+                    has_default_route: true,
+                },
+                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                    has_default_ipv6_route: Some(true),
+                    ..BASE_PROPERTIES
+                }),
+            ),
+            (
+                InterfaceUpdate::DefaultRouteChanged {
+                    version: IpVersion::V6,
+                    has_default_route: false,
+                },
+                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                    has_default_ipv6_route: Some(false),
+                    ..BASE_PROPERTIES
+                }),
+            ),
+            (
+                InterfaceUpdate::OnlineChanged(true),
+                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                    online: Some(true),
+                    ..BASE_PROPERTIES
+                }),
+            ),
+        ] {
+            producer.notify(event).expect("notify event");
+            assert_eq!(watcher.next().await, Some(expect));
+        }
+
+        // Install a new watcher and observe accumulated interface state.
+        let mut new_watcher = watcher_sink.create_watcher_event_stream();
+        assert_eq!(
+            new_watcher.next().await,
+            Some(fidl_interfaces::Event::Existing(
+                fidl_interfaces_ext::Properties {
+                    id: IFACE1_ID,
+                    name: IFACE1_NAME.to_string(),
+                    device_class: IFACE1_CLASS,
+                    online: true,
+                    addresses: vec![fidl_interfaces_ext::Address {
+                        value: ADDR1.into_fidl(),
+                        valid_until: ADDR_VALID_UNTIL.into_nanos()
+                    }
+                    .into()],
+                    has_default_ipv4_route: true,
+                    has_default_ipv6_route: false,
+                }
+                .into()
+            ))
+        );
+        assert_eq!(
+            new_watcher.next().await,
+            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+    }
+
+    /// Tests [`Drop`] implementation for [`InterfaceEventProducer`].
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn drop_producer_removes_interface(
+        mut watcher_sink: WorkerWatcherSink,
+        interface_sink: WorkerInterfaceSink,
+    ) {
+        let mut watcher = watcher_sink.create_watcher_event_stream();
+        assert_eq!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+        let producer1 = interface_sink
+            .add_interface(
+                IFACE1_ID,
+                InterfaceProperties { name: IFACE1_NAME.to_string(), device_class: IFACE1_CLASS },
+            )
+            .expect(" add interface");
+        let _producer2 = interface_sink.add_interface(
+            IFACE2_ID,
+            InterfaceProperties { name: IFACE2_NAME.to_string(), device_class: IFACE2_CLASS },
+        );
+        assert_matches!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Added(
+                fidl_interfaces::Properties {
+                    id: Some(id),
+                    ..
+                })) if id == IFACE1_ID
+        );
+        assert_matches!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Added(
+                fidl_interfaces::Properties {
+                    id: Some(id),
+                    ..
+                })) if id == IFACE2_ID
+        );
+        std::mem::drop(producer1);
+        assert_eq!(watcher.next().await, Some(fidl_interfaces::Event::Removed(IFACE1_ID)));
+
+        // Create new watcher and enumerate, only interface 2 should be
+        // around now.
+        let mut new_watcher = watcher_sink.create_watcher_event_stream();
+        assert_matches!(
+            new_watcher.next().await,
+            Some(fidl_interfaces::Event::Existing(fidl_interfaces::Properties {
+                id: Some(id),
+                ..
+            })) if id == IFACE2_ID
+        );
+        assert_eq!(
+            new_watcher.next().await,
+            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+    }
+
+    fn iface1_initial_state() -> (BindingId, InterfaceState) {
+        (
+            IFACE1_ID,
+            InterfaceState {
+                properties: InterfaceProperties {
+                    name: IFACE1_NAME.to_string(),
+                    device_class: IFACE1_CLASS,
+                },
+                online: false,
+                addresses: Default::default(),
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
+            },
+        )
+    }
+
+    #[test]
+    fn consume_interface_added() {
+        let mut state = HashMap::new();
+        let (id, initial_state) = iface1_initial_state();
+
+        let event = InterfaceEvent::Added { id, properties: initial_state.properties.clone() };
+
+        // Add interface.
+        assert_eq!(
+            Worker::consume_event(&mut state, event.clone()),
+            Ok(Some(fidl_interfaces::Event::Added(
+                fidl_interfaces_ext::Properties {
+                    id,
+                    name: initial_state.properties.name.clone(),
+                    device_class: initial_state.properties.device_class.clone(),
+                    online: false,
+                    addresses: Vec::new(),
+                    has_default_ipv4_route: false,
+                    has_default_ipv6_route: false,
+                }
+                .into()
+            )))
+        );
+
+        // Verify state has been updated.
+        assert_eq!(state.get(&id), Some(&initial_state));
+
+        // Adding again causes error.
+        assert_eq!(
+            Worker::consume_event(&mut state, event),
+            Err(WorkerError::AddedDuplicateInterface { interface: id, old: initial_state })
+        );
+    }
+
+    #[test]
+    fn consume_interface_removed() {
+        let (id, initial_state) = iface1_initial_state();
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        // Remove interface.
+        assert_eq!(
+            Worker::consume_event(&mut state, InterfaceEvent::Removed(id)),
+            Ok(Some(fidl_interfaces::Event::Removed(id)))
+        );
+        // State is updated.
+        assert_eq!(state.get(&id), None);
+        // Can't remove again.
+        assert_eq!(
+            Worker::consume_event(&mut state, InterfaceEvent::Removed(id)),
+            Err(WorkerError::RemoveNonexistentInterface(id))
+        );
+    }
+
+    #[test]
+    fn consume_changed_bad_id() {
+        let mut state = HashMap::new();
+        assert_eq!(
+            Worker::consume_event(
+                &mut state,
+                InterfaceEvent::Changed {
+                    id: IFACE1_ID,
+                    event: InterfaceUpdate::OnlineChanged(true)
+                }
+            ),
+            Err(WorkerError::UpdateNonexistentInterface(IFACE1_ID))
+        );
+    }
+
+    #[test]
+    fn consume_changed_address_asigned() {
+        let addr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        let valid_until = zx::Time::from_nanos(1234);
+        let address_properties = AddressState { valid_until };
+        let (id, initial_state) = iface1_initial_state();
+
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        let event = InterfaceEvent::Changed {
+            id,
+            event: InterfaceUpdate::AddressAssigned {
+                addr: addr.clone(),
+                properties: address_properties.clone(),
+            },
+        };
+
+        // Add address.
+        assert_eq!(
+            Worker::consume_event(&mut state, event.clone()),
+            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                id: Some(id),
+                addresses: Some(vec![fidl_interfaces_ext::Address {
+                    value: addr.clone().into_fidl(),
+                    valid_until: valid_until.into_nanos()
+                }
+                .into()]),
+                ..fidl_interfaces::Properties::EMPTY
+            })))
+        );
+        // Check state is updated.
+        assert_eq!(
+            state.get(&id).expect("missing interface entry").addresses.get(&addr),
+            Some(&address_properties)
+        );
+        // Can't add again.
+        assert_eq!(
+            Worker::consume_event(&mut state, event),
+            Err(WorkerError::AssignExistingAddr { addr: addr, interface: id })
+        );
+    }
+
+    #[test]
+    fn consume_changed_address_unasigned() {
+        let addr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        let address_properties = AddressState { valid_until: zx::Time::INFINITE };
+        let (id, initial_state) = iface1_initial_state();
+        let initial_state = InterfaceState {
+            addresses: HashMap::from([(addr.clone(), address_properties)]),
+            ..initial_state
+        };
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        let event =
+            InterfaceEvent::Changed { id, event: InterfaceUpdate::AddressUnassigned(addr.clone()) };
+
+        // Add address.
+        assert_eq!(
+            Worker::consume_event(&mut state, event.clone()),
+            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                id: Some(id),
+                addresses: Some(Vec::new()),
+                ..fidl_interfaces::Properties::EMPTY
+            })))
+        );
+        // Check state is updated.
+        assert_eq!(state.get(&id).expect("missing interface entry").addresses.get(&addr), None);
+        // Can't remove again.
+        assert_eq!(
+            Worker::consume_event(&mut state, event),
+            Err(WorkerError::UnassignNonexistentAddr { interface: id, addr })
+        );
+    }
+
+    #[test]
+    fn consume_changed_online() {
+        let (id, initial_state) = iface1_initial_state();
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        // Change to online.
+        assert_eq!(
+            Worker::consume_event(
+                &mut state,
+                InterfaceEvent::Changed { id, event: InterfaceUpdate::OnlineChanged(true) }
+            ),
+            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                id: Some(id),
+                online: Some(true),
+                ..fidl_interfaces::Properties::EMPTY
+            })))
+        );
+        // Check state is updated.
+        assert_eq!(state.get(&id).expect("missing interface entry").online, true);
+        // Change again produces no update.
+        assert_eq!(
+            Worker::consume_event(
+                &mut state,
+                InterfaceEvent::Changed { id, event: InterfaceUpdate::OnlineChanged(true) }
+            ),
+            Ok(None)
+        );
+    }
+
+    #[test_case(IpVersion::V4; "ipv4")]
+    #[test_case(IpVersion::V6; "ipv6")]
+    fn consume_changed_default_route(version: IpVersion) {
+        let (id, initial_state) = iface1_initial_state();
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        let expect_set_props = match version {
+            IpVersion::V4 => fidl_interfaces::Properties {
+                has_default_ipv4_route: Some(true),
+                ..fidl_interfaces::Properties::EMPTY
+            },
+            IpVersion::V6 => fidl_interfaces::Properties {
+                has_default_ipv6_route: Some(true),
+                ..fidl_interfaces::Properties::EMPTY
+            },
+        };
+
+        // Update default route.
+        assert_eq!(
+            Worker::consume_event(
+                &mut state,
+                InterfaceEvent::Changed {
+                    id,
+                    event: InterfaceUpdate::DefaultRouteChanged {
+                        version,
+                        has_default_route: true
+                    }
+                }
+            ),
+            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                id: Some(id),
+                ..expect_set_props
+            })))
+        );
+        // Check only the proper state is updated.
+        let InterfaceState { has_default_ipv4_route, has_default_ipv6_route, .. } =
+            state.get(&id).expect("missing interface entry");
+        assert_eq!(*has_default_ipv4_route, version == IpVersion::V4);
+        assert_eq!(*has_default_ipv6_route, version == IpVersion::V6);
+        // Change again produces no update.
+        assert_eq!(
+            Worker::consume_event(
+                &mut state,
+                InterfaceEvent::Changed {
+                    id,
+                    event: InterfaceUpdate::DefaultRouteChanged {
+                        version,
+                        has_default_route: true
+                    }
+                }
+            ),
+            Ok(None)
+        );
+    }
+
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn watcher_enqueues_events(
+        mut watcher_sink: WorkerWatcherSink,
+        interface_sink: WorkerInterfaceSink,
+    ) {
+        let mut create_watcher = || {
+            let mut watcher = watcher_sink.create_watcher_event_stream();
+            async move {
+                assert_eq!(
+                    watcher.next().await,
+                    Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+                );
+                watcher
+            }
+        };
+
+        let watcher1 = create_watcher().await;
+        let watcher2 = create_watcher().await;
+
+        let range = 1..=10;
+        let producers = watcher1
+            .zip(futures::stream::iter(range.clone().map(|i| {
+                let producer = interface_sink
+                    .add_interface(
+                        i,
+                        InterfaceProperties {
+                            name: format!("if{}", i),
+                            device_class: IFACE1_CLASS,
+                        },
+                    )
+                    .expect("failed to add interface");
+                (producer, i)
+            })))
+            .map(|(event, (producer, i))| {
+                assert_matches!(
+                    event,
+                    fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                        id: Some(id),
+                        ..
+                    }) if id == i
+                );
+                producer
+            })
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(producers.len(), usize::try_from(*range.end()).unwrap());
+
+        let last = watcher2
+            .zip(futures::stream::iter(range.clone()))
+            .fold(None, |_, (event, i)| {
+                assert_matches!(
+                    event,
+                    fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                        id: Some(id),
+                        ..
+                    }) if id == i
+                );
+                futures::future::ready(Some(i))
+            })
+            .await;
+        assert_eq!(last, Some(*range.end()));
+    }
+
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn idle_watcher_gets_closed(
+        mut watcher_sink: WorkerWatcherSink,
+        interface_sink: WorkerInterfaceSink,
+    ) {
+        let watcher = watcher_sink.create_watcher();
+        // NB: Every round generates two events, addition and removal because we
+        // drop the producer.
+        for i in 1..(MAX_EVENTS / 2 + 1) {
+            let _: InterfaceEventProducer = interface_sink
+                .add_interface(
+                    i.try_into().unwrap(),
+                    InterfaceProperties { name: format!("if{}", i), device_class: IFACE1_CLASS },
+                )
+                .expect("failed to add interface");
+        }
+        // Watcher gets closed.
+        assert_eq!(watcher.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
+    }
+
+    /// Tests that the worker can handle watchers coming and going.
+    #[test]
+    fn watcher_turnaround() {
+        let mut executor =
+            fuchsia_async::TestExecutor::new_with_fake_time().expect("failed to create executor");
+        let (worker, mut watcher_sink, interface_sink) = Worker::new();
+        let sink_keep = watcher_sink.clone();
+        let create_watchers = fuchsia_async::Task::spawn(async move {
+            let mut watcher = watcher_sink.create_watcher_event_stream();
+            assert_eq!(
+                watcher.next().await,
+                Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+            );
+        });
+
+        // NB: Map the output of the worker future so we can assert equality on
+        // the return, since its return is not Debug otherwise.
+        let worker_fut = worker.run().map(|result| {
+            let pending_watchers = result.expect("worker finished with error");
+            pending_watchers.len()
+        });
+        futures::pin_mut!(worker_fut);
+        assert_eq!(executor.run_until_stalled(&mut worker_fut), std::task::Poll::Pending);
+        // If executor stalled then the task must've finished.
+        assert_eq!(create_watchers.now_or_never(), Some(()));
+
+        // Drop the sinks, should cause the worker to return.
+        std::mem::drop((sink_keep, interface_sink));
+        assert_eq!(executor.run_until_stalled(&mut worker_fut), std::task::Poll::Ready(0));
+    }
+
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn address_sorting(
+        mut watcher_sink: WorkerWatcherSink,
+        interface_sink: WorkerInterfaceSink,
+    ) {
+        let mut watcher = watcher_sink.create_watcher_event_stream();
+        assert_eq!(
+            watcher.next().await,
+            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+
+        const ADDR1: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("2000::1");
+        const ADDR2: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.1/24");
+        const ADDR3: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.2/24");
+
+        for addrs in IntoIterator::into_iter([ADDR1, ADDR2, ADDR3]).permutations(3) {
+            let producer = interface_sink
+                .add_interface(
+                    IFACE1_ID,
+                    InterfaceProperties {
+                        name: IFACE1_NAME.to_string(),
+                        device_class: IFACE1_CLASS,
+                    },
+                )
+                .expect("failed to add interface");
+            assert_matches!(
+                watcher.next().await,
+                Some(fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                    id: Some(id), .. }
+                )) if id == IFACE1_ID
+            );
+
+            let mut expect = vec![];
+            for addr in addrs {
+                producer
+                    .notify(InterfaceUpdate::AddressAssigned {
+                        addr: addr.try_into_core().expect("invalid address"),
+                        properties: AddressState { valid_until: zx::Time::INFINITE },
+                    })
+                    .expect("failed to notify");
+                expect.push(addr);
+                expect.sort();
+
+                let addresses = assert_matches!(
+                    watcher.next().await,
+                    Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties{
+                        id: Some(IFACE1_ID),
+                        addresses: Some(addresses),
+                        ..
+                    })) => addresses
+                );
+                let addresses = addresses
+                    .into_iter()
+                    .map(|fidl_interfaces::Address { value, .. }| {
+                        value.expect("missing address value")
+                    })
+                    .collect::<Vec<_>>();
+                assert_eq!(addresses, expect);
+            }
+            std::mem::drop(producer);
+            assert_eq!(watcher.next().await, Some(fidl_interfaces::Event::Removed(IFACE1_ID)));
+        }
+    }
+
+    #[fixture(with_worker)]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn watcher_disallows_double_get(
+        mut watcher_sink: WorkerWatcherSink,
+        _interface_sink: WorkerInterfaceSink,
+    ) {
+        let watcher = watcher_sink.create_watcher();
+        assert_matches!(
+            watcher.watch().await,
+            Ok(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+        );
+
+        let (r1, r2) = futures::future::join(watcher.watch(), watcher.watch()).await;
+        for r in [r1, r2] {
+            assert_matches!(
+                r,
+                Err(fidl::Error::ClientChannelClosed { status: zx::Status::ALREADY_EXISTS, .. })
+            );
+        }
+    }
+
+    #[test]
+    fn watcher_blocking_push() {
+        let mut executor =
+            fuchsia_async::TestExecutor::new_with_fake_time().expect("failed to create executor");
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_interfaces::WatcherMarker>()
+                .expect("failed to create watcher");
+        let mut watcher =
+            Watcher { stream, events: EventQueue { events: Default::default() }, responder: None };
+        let mut watch_fut = proxy.watch();
+        assert_matches!(executor.run_until_stalled(&mut watch_fut), std::task::Poll::Pending);
+        assert_matches!(executor.run_until_stalled(&mut watcher), std::task::Poll::Pending);
+        // Got a responder, we're pending.
+        assert_matches!(watcher.responder, Some(_));
+        watcher.push(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}));
+        // Responder is executed.
+        assert_matches!(watcher.responder, None);
+        assert_matches!(
+            executor.run_until_stalled(&mut watch_fut),
+            std::task::Poll::Ready(Ok(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {})))
+        );
     }
 }

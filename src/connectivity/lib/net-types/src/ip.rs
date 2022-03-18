@@ -2335,6 +2335,13 @@ impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
     }
 }
 
+impl<S: IpAddress, A: Witness<S> + Copy + Display> Display for AddrSubnet<S, A> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{}/{}", self.addr, self.subnet.prefix)
+    }
+}
+
 impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
     /// Gets the address as a [`UnicastAddr`] witness.
     ///
@@ -2519,6 +2526,16 @@ impl<S: IpAddress, A: IpAddressWitness<S> + Copy> From<AddrSubnet<S, A>>
 pub enum InterfaceAddr {
     V4(AddrSubnet<Ipv4Addr>),
     V6(UnicastAddr<Ipv6Addr>),
+}
+
+impl Display for InterfaceAddr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::V4(a) => write!(f, "{}", a),
+            Self::V6(a) => write!(f, "{}", a),
+        }
+    }
 }
 
 #[cfg(test)]

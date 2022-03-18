@@ -8,12 +8,10 @@
 
 use std::collections::HashMap;
 
-use fidl::endpoints::ProtocolMarker as _;
 use fidl::endpoints::Proxy as _;
-use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use net_declare::fidl_if_addr;
-use netstack_testing_common::realms::{Netstack, Netstack3, NetstackVersion, TestSandboxExt as _};
+use netstack_testing_common::realms::{Netstack, NetstackVersion, TestSandboxExt as _};
 use netstack_testing_macros::variants_test;
 
 #[variants_test]
@@ -74,50 +72,4 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
         NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
-}
-
-// TODO(https://fxbug.dev/75553): Rewrite this test and make it a variants test
-// once we support hanging-get in N3.
-#[fasync::run_singlethreaded(test)]
-async fn interfaces_watcher_hanging_get() {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = sandbox
-        .create_netstack_realm::<Netstack3, _>("interfaces_watcher_hanging_get")
-        .expect("failed to create netstack");
-
-    let interfaces_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect fuchsia.net.interfaces/State");
-    let (watcher, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-            .expect("failed to create watcher proxy");
-    let () = interfaces_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
-        .expect("failed to get watcher");
-
-    assert_matches::assert_matches!(
-        watcher.watch().await.expect("failed to get existing event for loopback"),
-        fidl_fuchsia_net_interfaces::Event::Existing(fidl_fuchsia_net_interfaces::Properties {
-            id: Some(id),
-            device_class: Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                fidl_fuchsia_net_interfaces::Empty,
-            )),
-            ..
-        }) => assert_ne!(id, 0)
-    );
-    assert_eq!(
-        watcher.watch().await.expect("failed to get idle event"),
-        fidl_fuchsia_net_interfaces::Event::Idle(fidl_fuchsia_net_interfaces::Empty)
-    );
-
-    // Try hanging-get twice, and we should get NOT_SUPPORTED back.
-    for _ in 0..2 {
-        assert_matches::assert_matches!(
-            watcher.watch().await,
-            Err(fidl::Error::ClientChannelClosed {
-                status: zx::Status::NOT_SUPPORTED,
-                protocol_name: fidl_fuchsia_net_interfaces::WatcherMarker::DEBUG_NAME,
-            })
-        );
-    }
 }
