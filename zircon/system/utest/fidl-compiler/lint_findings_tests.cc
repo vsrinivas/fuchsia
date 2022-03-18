@@ -1075,6 +1075,13 @@ library fidl.a;
 )FIDL");
   ASSERT_NO_FINDINGS(test);
 
+  test.that("missing copyright will produce a suggestion with ${YYYY}")
+      .source_template(R"FIDL(library fidl.a;
+)FIDL")
+      .suggestion("Insert missing header:\n\n" + copyright_template.str())
+      .AddFinding("library fidl.a;");
+  ASSERT_FINDINGS(test);
+
   test.that("the copyright must start on the first line")
       .source_template("\n" + copyright_2019 + R"FIDL(
 
