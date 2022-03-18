@@ -520,7 +520,7 @@ async fn verify_set_attr(node: fio::NodeProxy) -> Result<(), Error> {
         creation_time: 0,
         modification_time: 0,
     };
-    match node.set_attr(0, &mut node_attr).await {
+    match node.set_attr(fio::NodeAttributeFlags::empty(), &mut node_attr).await {
         Ok(status) => {
             if matches!(
                 zx::Status::from_raw(status),

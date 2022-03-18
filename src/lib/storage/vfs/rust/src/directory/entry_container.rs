@@ -105,8 +105,11 @@ pub trait MutableDirectory: Directory + Send + Sync {
     }
 
     /// Set the attributes of this directory based on the values in `attrs`.
-    /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    async fn set_attrs(&self, flags: u32, attributes: fio::NodeAttributes) -> Result<(), Status>;
+    async fn set_attrs(
+        &self,
+        flags: fio::NodeAttributeFlags,
+        attributes: fio::NodeAttributes,
+    ) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
     async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status>;

@@ -148,7 +148,8 @@ uint32_t Node::GetProhibitiveFlags() const {
   return 0;
 }
 
-zx_status_t Node::SetAttr(uint32_t flags, const fuchsia::io::NodeAttributes& attributes) {
+zx_status_t Node::SetAttr(fuchsia::io::NodeAttributeFlags flags,
+                          const fuchsia::io::NodeAttributes& attributes) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -84,8 +84,10 @@ type NodeInfo = strict resource union {
 
 /// The fields of 'attributes' which are used to update the Node are indicated
 /// by the 'flags' argument.
-const NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 = 0x00000001;
-const NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 = 0x00000002;
+type NodeAttributeFlags = strict bits : uint32 {
+    CREATION_TIME = 0x00000001;
+    MODIFICATION_TIME = 0x00000002;
+};
 
 /// NodeAttributes defines generic information about a filesystem node.
 type NodeAttributes = struct {
@@ -189,13 +191,12 @@ protocol Node1 {
     });
 
     /// Updates information about the node.
-    /// `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/Node.SetAttr")
     SetAttr(struct {
-        flags uint32;
+        flags NodeAttributeFlags;
         attributes NodeAttributes;
     }) -> (struct {
         s zx.status;

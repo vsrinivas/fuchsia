@@ -193,7 +193,7 @@ impl MutableConnection {
 
     async fn handle_setattr(
         &mut self,
-        flags: u32,
+        flags: fio::NodeAttributeFlags,
         attributes: fio::NodeAttributes,
     ) -> Result<(), Status> {
         if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
@@ -389,7 +389,7 @@ mod tests {
         Link { id: u32, path: String },
         Unlink { id: u32, name: String },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
-        SetAttr { id: u32, flags: u32, attrs: fio::NodeAttributes },
+        SetAttr { id: u32, flags: fio::NodeAttributeFlags, attrs: fio::NodeAttributes },
         Sync,
         Close,
     }
@@ -483,7 +483,11 @@ mod tests {
             })
         }
 
-        async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
+        async fn set_attrs(
+            &self,
+            flags: fio::NodeAttributeFlags,
+            attrs: fio::NodeAttributes,
+        ) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
@@ -620,7 +624,7 @@ mod tests {
         };
         let status = proxy
             .set_attr(
-                fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                fio::NodeAttributeFlags::CREATION_TIME | fio::NodeAttributeFlags::MODIFICATION_TIME,
                 &mut attrs,
             )
             .await
@@ -632,8 +636,8 @@ mod tests {
             *events,
             vec![MutableDirectoryAction::SetAttr {
                 id: 0,
-                flags: fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME
-                    | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                flags: fio::NodeAttributeFlags::CREATION_TIME
+                    | fio::NodeAttributeFlags::MODIFICATION_TIME,
                 attrs
             }]
         );

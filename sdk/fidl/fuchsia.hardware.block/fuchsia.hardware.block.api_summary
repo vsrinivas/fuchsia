@@ -23,7 +23,7 @@ protocol/member fuchsia.hardware.block/BlockAndNode.OnOpen -> (int32 s,fuchsia.i
 protocol/member fuchsia.hardware.block/BlockAndNode.QueryFilesystem() -> (int32 s,fuchsia.io/FilesystemInfo:optional info)
 protocol/member fuchsia.hardware.block/BlockAndNode.RebindDevice() -> (int32 status)
 protocol/member fuchsia.hardware.block/BlockAndNode.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
-protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.hardware.block/BlockAndNode.SyncDeprecated() -> (int32 s)

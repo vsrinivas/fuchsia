@@ -520,14 +520,18 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(
+        &self,
+        flags: fio::NodeAttributeFlags,
+        attrs: fio::NodeAttributes,
+    ) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = self.borrow_dir_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
-        if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME != 0 {
+        if flags.contains(fio::NodeAttributeFlags::CREATION_TIME) {
             dir.set_created(unix_to_dos_time(attrs.creation_time));
         }
-        if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME != 0 {
+        if flags.contains(fio::NodeAttributeFlags::MODIFICATION_TIME) {
             dir.set_modified(unix_to_dos_time(attrs.modification_time));
         }
 

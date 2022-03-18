@@ -460,17 +460,17 @@ impl File for FxFile {
         })
     }
 
-    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
-        let crtime = if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
-            Some(Timestamp::from_nanos(attrs.creation_time))
-        } else {
-            None
-        };
-        let mtime = if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
-            Some(Timestamp::from_nanos(attrs.modification_time))
-        } else {
-            None
-        };
+    async fn set_attrs(
+        &self,
+        flags: fio::NodeAttributeFlags,
+        attrs: fio::NodeAttributes,
+    ) -> Result<(), Status> {
+        let crtime = flags
+            .contains(fio::NodeAttributeFlags::CREATION_TIME)
+            .then(|| Timestamp::from_nanos(attrs.creation_time));
+        let mtime = flags
+            .contains(fio::NodeAttributeFlags::MODIFICATION_TIME)
+            .then(|| Timestamp::from_nanos(attrs.modification_time));
         if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
             return Ok(());
         }
@@ -582,7 +582,7 @@ mod tests {
         attrs.creation_time = crtime;
         attrs.modification_time = mtime;
         let status = file
-            .set_attr(fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
+            .set_attr(fio::NodeAttributeFlags::CREATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");
@@ -597,7 +597,7 @@ mod tests {
         attrs.creation_time = 0u64; // This should be ignored since we don't set the flag.
         attrs.modification_time = mtime;
         let status = file
-            .set_attr(fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
+            .set_attr(fio::NodeAttributeFlags::MODIFICATION_TIME, &mut attrs)
             .await
             .expect("FIDL call failed");
         Status::ok(status).expect("set_attr failed");

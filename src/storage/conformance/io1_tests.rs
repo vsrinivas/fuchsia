@@ -1837,7 +1837,7 @@ async fn set_attr_file_with_sufficient_rights() {
         // Set CREATION_TIME flag, but not MODIFICATION_TIME.
         let status = file
             .set_attr(
-                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                io::NodeAttributeFlags::CREATION_TIME,
                 &mut io::NodeAttributes {
                     creation_time: 111,
                     modification_time: 222,
@@ -1870,7 +1870,7 @@ async fn set_attr_file_with_insufficient_rights() {
 
         let status = file
             .set_attr(
-                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                io::NodeAttributeFlags::CREATION_TIME,
                 &mut io::NodeAttributes {
                     creation_time: 111,
                     modification_time: 222,
@@ -1901,7 +1901,7 @@ async fn set_attr_directory_with_sufficient_rights() {
         // Set CREATION_TIME flag, but not MODIFICATION_TIME.
         let status = dir
             .set_attr(
-                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                io::NodeAttributeFlags::CREATION_TIME,
                 &mut io::NodeAttributes {
                     creation_time: 111,
                     modification_time: 222,
@@ -1934,7 +1934,7 @@ async fn set_attr_directory_with_insufficient_rights() {
 
         let status = dir
             .set_attr(
-                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                io::NodeAttributeFlags::CREATION_TIME,
                 &mut io::NodeAttributes {
                     creation_time: 111,
                     modification_time: 222,

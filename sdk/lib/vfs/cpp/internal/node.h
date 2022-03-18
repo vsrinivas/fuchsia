@@ -61,7 +61,8 @@ class Node {
   virtual zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const;
 
   // Implementation of |fuchsia.io.Node/SetAttr|.
-  virtual zx_status_t SetAttr(uint32_t flags, const fuchsia::io::NodeAttributes& attributes);
+  virtual zx_status_t SetAttr(fuchsia::io::NodeAttributeFlags flags,
+                              const fuchsia::io::NodeAttributes& attributes);
 
   // Implementation of |fuchsia.io.Node/Clone|.
   virtual void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,

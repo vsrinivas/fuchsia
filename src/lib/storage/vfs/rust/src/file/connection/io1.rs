@@ -572,7 +572,11 @@ impl<T: 'static + File> FileConnection<T> {
         };
     }
 
-    async fn handle_set_attr(&mut self, flags: u32, attrs: fio::NodeAttributes) -> zx::Status {
+    async fn handle_set_attr(
+        &mut self,
+        flags: fio::NodeAttributeFlags,
+        attrs: fio::NodeAttributes,
+    ) -> zx::Status {
         if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
             return zx::Status::BAD_HANDLE;
         }
@@ -621,7 +625,7 @@ mod tests {
         GetBuffer { flags: fio::VmoFlags },
         GetSize,
         GetAttrs,
-        SetAttrs { flags: u32, attrs: fio::NodeAttributes },
+        SetAttrs { flags: fio::NodeAttributeFlags, attrs: fio::NodeAttributes },
         Close,
         Sync,
     }
@@ -726,7 +730,7 @@ mod tests {
 
         async fn set_attrs(
             &self,
-            flags: u32,
+            flags: fio::NodeAttributeFlags,
             attrs: fio::NodeAttributes,
         ) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::SetAttrs { flags, attrs })?;
@@ -1206,7 +1210,7 @@ mod tests {
         let status = env
             .proxy
             .set_attr(
-                fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                fio::NodeAttributeFlags::CREATION_TIME | fio::NodeAttributeFlags::MODIFICATION_TIME,
                 &mut set_attrs,
             )
             .await
@@ -1218,8 +1222,8 @@ mod tests {
             vec![
                 FileOperation::Init { flags: fio::OPEN_RIGHT_WRITABLE },
                 FileOperation::SetAttrs {
-                    flags: fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME
-                        | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+                    flags: fio::NodeAttributeFlags::CREATION_TIME
+                        | fio::NodeAttributeFlags::MODIFICATION_TIME,
                     attrs: set_attrs
                 },
             ]

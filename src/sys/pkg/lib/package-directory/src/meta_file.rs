@@ -214,7 +214,11 @@ impl vfs::file::File for MetaFile {
         })
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: fio::NodeAttributes) -> Result<(), zx::Status> {
+    async fn set_attrs(
+        &self,
+        _flags: fio::NodeAttributeFlags,
+        _attrs: fio::NodeAttributes,
+    ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -543,7 +547,7 @@ mod tests {
         assert_eq!(
             File::set_attrs(
                 &meta_file,
-                0,
+                fio::NodeAttributeFlags::empty(),
                 fio::NodeAttributes {
                     mode: 0,
                     id: 0,

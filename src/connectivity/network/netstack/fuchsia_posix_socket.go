@@ -375,7 +375,7 @@ func (ep *endpoint) GetAttributes(_ fidl.Context, query fidlio.NodeAttributesQue
 	return fidlio.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32, error) {
+func (ep *endpoint) SetAttr(fidl.Context, fidlio.NodeAttributeFlags, fidlio.NodeAttributes) (int32, error) {
 	_ = syslog.DebugTf("SetAttr", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}

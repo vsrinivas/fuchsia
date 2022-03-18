@@ -723,7 +723,7 @@ async fn unsupported_per_package_source(source: PackageSource) {
         assert_eq!(
             zx::Status::from_raw(
                 file.set_attr(
-                    0,
+                    fio::NodeAttributeFlags::empty(),
                     &mut fio::NodeAttributes {
                         mode: 0,
                         id: 0,

@@ -36,7 +36,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void SyncDeprecated(SyncDeprecatedCallback callback) override;
   void Sync(SyncCallback callback) override;
   void GetAttr(GetAttrCallback callback) override;
-  void SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
+  void SetAttr(fuchsia::io::NodeAttributeFlags flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
   void ReadDeprecated(uint64_t count, ReadDeprecatedCallback callback) override;
   void Read(uint64_t count, ReadCallback callback) override;

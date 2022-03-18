@@ -66,7 +66,7 @@ protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,v
 protocol/member fuchsia.io/Directory.Rename(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory2_Rename_Result result)
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)
-protocol/member fuchsia.io/Directory.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/Directory.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Directory.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Directory.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Directory.SyncDeprecated() -> (int32 s)
@@ -91,7 +91,7 @@ protocol/member fuchsia.io/Directory1.QueryFilesystem() -> (int32 s,box<fuchsia.
 protocol/member fuchsia.io/Directory1.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/Directory1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory1.Rewind() -> (int32 s)
-protocol/member fuchsia.io/Directory1.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/Directory1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Directory1.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Directory1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Directory1.SyncDeprecated() -> (int32 s)
@@ -166,7 +166,7 @@ protocol/member fuchsia.io/File.Reopen(fuchsia.io/ConnectionOptions options,zx/h
 protocol/member fuchsia.io/File.Resize(uint64 length) -> (fuchsia.io/File2_Resize_Result result)
 protocol/member fuchsia.io/File.Seek(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)
 protocol/member fuchsia.io/File.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
-protocol/member fuchsia.io/File.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/File.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/File.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File.SetFlagsDeprecatedUseNode(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File.Sync() -> (fuchsia.io/Node2_Sync_Result result)
@@ -195,7 +195,7 @@ protocol/member fuchsia.io/File1.ReadAtDeprecated(uint64 count,uint64 offset) ->
 protocol/member fuchsia.io/File1.ReadDeprecated(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File1.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
-protocol/member fuchsia.io/File1.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/File1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/File1.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File1.SetFlagsDeprecatedUseNode(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
@@ -325,8 +325,6 @@ const fuchsia.io/MODE_TYPE_SOCKET uint32 49152
 const fuchsia.io/MOVE fuchsia.io/InotifyWatchMask 192
 table/member fuchsia.io/MemoryInfo.buffer fuchsia.mem/Range
 resource table fuchsia.io/MemoryInfo
-const fuchsia.io/NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 1
-const fuchsia.io/NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 2
 protocol/member fuchsia.io/Node.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Node.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Node.CloseDeprecated() -> (int32 s)
@@ -339,7 +337,7 @@ protocol/member fuchsia.io/Node.OnConnectionInfo -> (fuchsia.io/ConnectionInfo i
 protocol/member fuchsia.io/Node.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Node.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Node.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
-protocol/member fuchsia.io/Node.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/Node.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Node.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Node.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Node.SyncDeprecated() -> (int32 s)
@@ -357,7 +355,7 @@ protocol/member fuchsia.io/Node1.OnConnectionInfo -> (fuchsia.io/ConnectionInfo 
 protocol/member fuchsia.io/Node1.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Node1.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Node1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
-protocol/member fuchsia.io/Node1.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.io/Node1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Node1.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Node1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Node1.SyncDeprecated() -> (int32 s)
@@ -388,6 +386,9 @@ struct fuchsia.io/Node2_UpdateAttributes_Response
 union/member fuchsia.io/Node2_UpdateAttributes_Result.err int32
 union/member fuchsia.io/Node2_UpdateAttributes_Result.response fuchsia.io/Node2_UpdateAttributes_Response
 strict union fuchsia.io/Node2_UpdateAttributes_Result
+bits/member fuchsia.io/NodeAttributeFlags.CREATION_TIME 1
+bits/member fuchsia.io/NodeAttributeFlags.MODIFICATION_TIME 2
+strict bits fuchsia.io/NodeAttributeFlags uint32
 struct/member fuchsia.io/NodeAttributes.content_size uint64
 struct/member fuchsia.io/NodeAttributes.creation_time uint64
 struct/member fuchsia.io/NodeAttributes.id uint64

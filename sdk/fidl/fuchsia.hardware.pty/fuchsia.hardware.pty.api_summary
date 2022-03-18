@@ -26,7 +26,7 @@ protocol/member fuchsia.hardware.pty/Device.Reopen(fuchsia.io/ConnectionOptions 
 protocol/member fuchsia.hardware.pty/Device.Resize(uint64 length) -> (fuchsia.io/File2_Resize_Result result)
 protocol/member fuchsia.hardware.pty/Device.Seek(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)
 protocol/member fuchsia.hardware.pty/Device.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
-protocol/member fuchsia.hardware.pty/Device.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.SetFlagsDeprecatedUseNode(uint32 flags) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.SetWindowSize(fuchsia.hardware.pty/WindowSize size) -> (int32 status)

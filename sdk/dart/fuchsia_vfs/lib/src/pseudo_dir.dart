@@ -518,7 +518,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> setAttr(int flags, NodeAttributes attributes) async {
+  Future<int> setAttr(
+      NodeAttributeFlags flags, NodeAttributes attributes) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

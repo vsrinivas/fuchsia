@@ -549,10 +549,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
                    });
   }
   client->GetToken(UnsupportedEpitaphMatcher());
-  {
-    fuchsia_io::wire::NodeAttributes attrs = {};
-    client->SetAttr(0, attrs, UnsupportedEpitaphMatcher());
-  }
+  client->SetAttr({}, {}, UnsupportedEpitaphMatcher());
   client->Sync(UnsupportedErrorMatcher());
 
   coordinator_loop()->RunUntilIdle();

@@ -511,14 +511,14 @@ zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to
 template <typename ToIo1ModePermissions>
 zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissions to_io1,
                                  const zxio_node_attributes_t* attr) {
-  uint32_t flags = 0;
+  fio::wire::NodeAttributeFlags flags;
   zxio_node_attributes_t::zxio_node_attr_has_t remaining = attr->has;
   if (attr->has.creation_time) {
-    flags |= fio::wire::kNodeAttributeFlagCreationTime;
+    flags |= fio::wire::NodeAttributeFlags::kCreationTime;
     remaining.creation_time = false;
   }
   if (attr->has.modification_time) {
-    flags |= fio::wire::kNodeAttributeFlagModificationTime;
+    flags |= fio::wire::NodeAttributeFlags::kModificationTime;
     remaining.modification_time = false;
   }
   zxio_node_attributes_t::zxio_node_attr_has_t all_absent = {};

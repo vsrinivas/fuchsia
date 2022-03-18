@@ -2924,9 +2924,13 @@ mod serve_write_blob_tests {
                 StubRequestor::Describe => proxy.describe().map(|_| ()).boxed(),
                 StubRequestor::Sync => proxy.sync().map(|_| ()).boxed(),
                 StubRequestor::GetAttr => proxy.get_attr().map(|_| ()).boxed(),
-                StubRequestor::SetAttr => {
-                    proxy.set_attr(0, &mut fio::NodeAttributes::new_empty()).map(|_| ()).boxed()
-                }
+                StubRequestor::SetAttr => proxy
+                    .set_attr(
+                        fio::NodeAttributeFlags::empty(),
+                        &mut fio::NodeAttributes::new_empty(),
+                    )
+                    .map(|_| ())
+                    .boxed(),
                 StubRequestor::GetFlagsDeprecatedUseNode => {
                     proxy.get_flags_deprecated_use_node().map(|_| ()).boxed()
                 }

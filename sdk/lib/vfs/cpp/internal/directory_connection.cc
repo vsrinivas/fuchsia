@@ -66,7 +66,8 @@ void DirectoryConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
 
-void DirectoryConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
+void DirectoryConnection::SetAttr(fuchsia::io::NodeAttributeFlags flags,
+                                  fuchsia::io::NodeAttributes attributes,
                                   SetAttrCallback callback) {
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }

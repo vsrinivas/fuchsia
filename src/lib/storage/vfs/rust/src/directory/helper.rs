@@ -140,7 +140,11 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         }
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: fio::NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(
+        &self,
+        _flags: fio::NodeAttributeFlags,
+        _attrs: fio::NodeAttributes,
+    ) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
     }
 

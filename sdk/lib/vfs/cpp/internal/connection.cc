@@ -83,7 +83,8 @@ void Connection::GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback) 
   callback(status, attributes);
 }
 
-void Connection::SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
+void Connection::SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,
+                         fuchsia::io::NodeAttributes attributes,
                          fuchsia::io::Node::SetAttrCallback callback) {
   // TODO: Check flags.
   callback(vn->SetAttr(flags, attributes));

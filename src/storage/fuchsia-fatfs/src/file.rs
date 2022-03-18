@@ -289,21 +289,25 @@ impl VfsFile for FatFile {
     // use a TimeProvider to change the creation/modification time of a file after the fact,
     // so we need to use the deprecated methods.
     #[allow(deprecated)]
-    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(
+        &self,
+        flags: fio::NodeAttributeFlags,
+        attrs: fio::NodeAttributes,
+    ) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
-        let needs_flush = flags
-            & (fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME);
-
-        if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME != 0 {
+        let mut needs_flush = false;
+        if flags.contains(fio::NodeAttributeFlags::CREATION_TIME) {
             file.set_created(unix_to_dos_time(attrs.creation_time));
+            needs_flush = true;
         }
-        if flags & fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME != 0 {
+        if flags.contains(fio::NodeAttributeFlags::MODIFICATION_TIME) {
             file.set_modified(unix_to_dos_time(attrs.modification_time));
+            needs_flush = true;
         }
 
-        if needs_flush != 0 {
+        if needs_flush {
             file.flush().map_err(fatfs_error_to_status)?;
             self.filesystem.mark_dirty();
         }

@@ -7,6 +7,7 @@
 
 #include <zircon/device/vfs.h>
 
+#include <bitset>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -19,6 +20,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/llcpp/string_view.h>
 #endif  // __Fuchsia__
 
@@ -177,6 +179,25 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, Path path) {
 template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fidl::StringView path) {
   sb->Append(path.data(), path.size());
+}
+
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::NodeAttributeFlags flags) {
+  constexpr std::pair<fuchsia_io::wire::NodeAttributeFlags, std::string_view> flagToString[] = {
+      {fuchsia_io::wire::NodeAttributeFlags::kCreationTime, "CREATION_TIME"},
+      {fuchsia_io::wire::NodeAttributeFlags::kModificationTime, "MODIFICATION_TIME"},
+  };
+  bool first = true;
+  for (const auto& [flag, desc] : flagToString) {
+    if (flags & flag) {
+      if (!first) {
+        sb->Append(" | ");
+      }
+      first = false;
+      sb->Append(desc);
+    }
+    flags ^= flag;
+  }
 }
 
 #endif  // __Fuchsia__

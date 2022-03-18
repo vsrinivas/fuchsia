@@ -56,8 +56,8 @@ void NodeConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
 
-void NodeConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
-                             SetAttrCallback callback) {
+void NodeConnection::SetAttr(fuchsia::io::NodeAttributeFlags flags,
+                             fuchsia::io::NodeAttributes attributes, SetAttrCallback callback) {
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 

@@ -194,7 +194,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   zx::status<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
   zx::status<VnodeAttributes> NodeGetAttr();
-  zx::status<> NodeSetAttr(uint32_t flags, const fuchsia_io::wire::NodeAttributes& attributes);
+  zx::status<> NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
+                           const fuchsia_io::wire::NodeAttributes& attributes);
   zx::status<uint32_t> NodeGetFlags();
   zx::status<> NodeSetFlags(uint32_t flags);
 

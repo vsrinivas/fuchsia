@@ -337,7 +337,8 @@ zx::status<VnodeAttributes> Connection::NodeGetAttr() {
   return zx::ok(attr);
 }
 
-zx::status<> Connection::NodeSetAttr(uint32_t flags, const fio::wire::NodeAttributes& attributes) {
+zx::status<> Connection::NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
+                                     const fio::wire::NodeAttributes& attributes) {
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 
   if (options().flags.node_reference) {
@@ -346,17 +347,12 @@ zx::status<> Connection::NodeSetAttr(uint32_t flags, const fio::wire::NodeAttrib
   if (!options().rights.write) {
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
-  constexpr uint32_t supported_flags =
-      fio::wire::kNodeAttributeFlagCreationTime | fio::wire::kNodeAttributeFlagModificationTime;
-  if (flags & ~supported_flags) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
 
   fs::VnodeAttributesUpdate update;
-  if (flags & fio::wire::kNodeAttributeFlagCreationTime) {
+  if (flags & fio::wire::NodeAttributeFlags::kCreationTime) {
     update.set_creation_time(attributes.creation_time);
   }
-  if (flags & fio::wire::kNodeAttributeFlagModificationTime) {
+  if (flags & fio::wire::NodeAttributeFlags::kModificationTime) {
     update.set_modification_time(attributes.modification_time);
   }
   return zx::make_status(vnode_->SetAttributes(update));

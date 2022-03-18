@@ -97,8 +97,8 @@ class Connection {
   void SyncDeprecated(Node* vn, fuchsia::io::Node::SyncDeprecatedCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
-  void SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
-               fuchsia::io::Node::SetAttrCallback callback);
+  void SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,
+               fuchsia::io::NodeAttributes attributes, fuchsia::io::Node::SetAttrCallback callback);
 
   // returns |fuchsia.io.NodeInfo| if status is |ZX_OK|, else returns null
   // inside unique_ptr.

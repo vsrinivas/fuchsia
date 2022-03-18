@@ -352,7 +352,7 @@ mod tests {
 
             async fn set_attrs(
                 &self,
-                _flags: u32,
+                _flags: fio::NodeAttributeFlags,
                 _attributes: fio::NodeAttributes,
             ) -> Result<(), Status> {
                 panic!("Not implemented!")

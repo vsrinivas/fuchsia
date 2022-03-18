@@ -35,7 +35,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void SyncDeprecated(SyncDeprecatedCallback callback) override;
   void Sync(SyncCallback callback) override;
   void GetAttr(GetAttrCallback callback) override;
-  void SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
+  void SetAttr(fuchsia::io::NodeAttributeFlags flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;

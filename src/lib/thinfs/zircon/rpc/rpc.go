@@ -246,7 +246,7 @@ func (d *directoryWrapper) GetAttributes(_ fidl.Context, query io.NodeAttributes
 	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
+func (d *directoryWrapper) SetAttr(_ fidl.Context, flags io.NodeAttributeFlags, attr io.NodeAttributes) (int32, error) {
 	t := time.Unix(0, int64(attr.ModificationTime))
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
@@ -591,7 +591,7 @@ func (f *fileWrapper) GetAttributes(_ fidl.Context, query io.NodeAttributesQuery
 	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (f *fileWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
+func (f *fileWrapper) SetAttr(_ fidl.Context, flags io.NodeAttributeFlags, attr io.NodeAttributes) (int32, error) {
 	if f.file.GetOpenFlags().Path() {
 		return int32(zx.ErrBadHandle), nil
 	}

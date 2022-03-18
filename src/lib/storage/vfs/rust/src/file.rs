@@ -65,8 +65,11 @@ pub trait File: Sync + Send + DirectoryEntry {
     async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status>;
 
     /// Set the attributes of this file based on the values in `attrs`.
-    /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    async fn set_attrs(&self, flags: u32, attrs: fio::NodeAttributes) -> Result<(), Status>;
+    async fn set_attrs(
+        &self,
+        flags: fio::NodeAttributeFlags,
+        attrs: fio::NodeAttributes,
+    ) -> Result<(), Status>;
 
     /// Called when the file is closed.
     /// This function will also do the equivalent of sync() before the returning.
