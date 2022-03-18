@@ -23,6 +23,13 @@ type Replacement struct {
 	Notes   []string `json:"notes"`
 }
 
+func NewFileConfig() *FileConfig {
+	return &FileConfig{
+		CopyrightSize: 0,
+		Replacements:  make([]*Replacement, 0),
+	}
+}
+
 func (c *FileConfig) Merge(other *FileConfig) {
 	if c.CopyrightSize == 0 {
 		c.CopyrightSize = other.CopyrightSize

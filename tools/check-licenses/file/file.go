@@ -16,6 +16,13 @@ type File struct {
 	Data []*FileData
 }
 
+// Order implements sort.Interface for []*File based on the Path field.
+type Order []*File
+
+func (a Order) Len() int           { return len(a) }
+func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Order) Less(i, j int) bool { return a[i].Path < a[j].Path }
+
 // NewFile returns a new File struct, with the file content loaded
 // in.
 //

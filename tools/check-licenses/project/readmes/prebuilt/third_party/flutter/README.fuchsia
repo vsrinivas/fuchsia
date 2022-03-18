@@ -4,3 +4,4 @@ License File: licenses_fuchsia
 License File: licenses_gpu
 License File: licenses_skia
 License File: licenses_third_party
+check-licenses: license format: multi_license_flutter

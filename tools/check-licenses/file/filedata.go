@@ -29,11 +29,19 @@ type FileData struct {
 }
 
 // Order implements sort.Interface for []*FileData based on the FilePath field.
-type Order []*FileData
+type OrderFileData []*FileData
 
-func (a Order) Len() int           { return len(a) }
-func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a Order) Less(i, j int) bool { return a[i].FilePath < a[j].FilePath }
+func (a OrderFileData) Len() int      { return len(a) }
+func (a OrderFileData) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a OrderFileData) Less(i, j int) bool {
+	if a[i].FilePath < a[j].FilePath {
+		return true
+	} else if a[i].FilePath > a[j].FilePath {
+		return false
+	} else {
+		return a[i].LineNumber < a[j].LineNumber
+	}
+}
 
 func NewFileData(path string, filetype FileType) ([]*FileData, error) {
 	data := make([]*FileData, 0)

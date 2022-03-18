@@ -15,15 +15,17 @@ func init() {
 }
 
 type ProjectConfig struct {
+	FuchsiaDir string
+
 	// Paths to temporary directories holding README.fuchsia files.
 	// These files will eventually migrate to their correct locations in
 	// the Fuchsia repository.
-	Readmes []Readme `json:"readmes"`
+	Readmes []*Readme `json:"readmes"`
 
 	// Keywords signifying where the license information for one project
 	// ends, and the license info for another project begins.
 	// (e.g. "third_party")
-	Barriers []Barrier `json:"barriers"`
+	Barriers []*Barrier `json:"barriers"`
 
 	ContinueOnError bool `json:"continueOnError"`
 }
@@ -55,7 +57,17 @@ func IsBarrier(path string) bool {
 	return false
 }
 
+func NewProjectConfig() *ProjectConfig {
+	return &ProjectConfig{
+		Readmes:  make([]*Readme, 0),
+		Barriers: make([]*Barrier, 0),
+	}
+}
+
 func (c *ProjectConfig) Merge(other *ProjectConfig) {
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	c.Readmes = append(c.Readmes, other.Readmes...)
 	c.Barriers = append(c.Barriers, other.Barriers...)
 	c.ContinueOnError = c.ContinueOnError || other.ContinueOnError

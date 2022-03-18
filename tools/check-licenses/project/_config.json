@@ -1,0 +1,23 @@
+{
+    "project": {
+        "readmes": [
+            {
+                "paths": [
+                    "tools/check-licenses/project/readmes"
+                ],
+                "notes": []
+            }
+        ],
+        "barriers": [
+            {
+                "paths": [
+                    "third_party",
+                    "thirdparty",
+                    "prebuilt"
+                ],
+                "notes": []
+            }
+        ],
+        "continueOnError": true
+    }
+}
