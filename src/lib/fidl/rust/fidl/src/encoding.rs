@@ -3089,7 +3089,7 @@ macro_rules! fidl_table {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 decoder.debug_check_bounds::<Self>(offset);
                 let len = match $crate::encoding::decode_vector_header(decoder, offset)? {
-                    None => return Err($crate::Error::NotNullable),
+                    None => return Err($crate::Error::UnexpectedNullRef),
                     Some(len) => len,
                 };
                 let envelope_size = match decoder.context().wire_format_version {

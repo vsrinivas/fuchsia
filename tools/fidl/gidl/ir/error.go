@@ -19,7 +19,6 @@ const (
 	InvalidNumHandlesInEnvelope        ErrorCode = "INVALID_NUM_HANDLES_IN_ENVELOPE"
 	InvalidPaddingByte                 ErrorCode = "INVALID_PADDING_BYTE"
 	InvalidPresenceIndicator           ErrorCode = "INVALID_PRESENCE_INDICATOR"
-	InvalidHandlePresenceIndicator     ErrorCode = "INVALID_HANDLE_PRESENCE_INDICATOR"
 	MissingRequiredHandleRights        ErrorCode = "MISSING_REQUIRED_HANDLE_RIGHTS"
 	NonEmptyStringWithNullBody         ErrorCode = "NON_EMPTY_STRING_WITH_NULL_BODY"
 	NonEmptyVectorWithNullBody         ErrorCode = "NON_EMPTY_VECTOR_WITH_NULL_BODY"
@@ -52,7 +51,6 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	InvalidNumHandlesInEnvelope:        {},
 	InvalidPaddingByte:                 {},
 	InvalidPresenceIndicator:           {},
-	InvalidHandlePresenceIndicator:     {},
 	MissingRequiredHandleRights:        {},
 	NonEmptyStringWithNullBody:         {},
 	NonEmptyVectorWithNullBody:         {},

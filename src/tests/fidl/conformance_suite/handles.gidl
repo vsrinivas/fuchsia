@@ -49,32 +49,6 @@ success("SingleOptionalHandleAbsent") {
     },
 }
 
-decode_failure("SingleHandleMissingAndInvalidPresenceIndicator") {
-    bindings_denylist = [dart],
-    bytes = {
-        v1, v2 = [
-            repeat(0xab):4, padding:4,
-        ],
-    },
-    type = SingleOptionalHandle,
-    err = INVALID_HANDLE_PRESENCE_INDICATOR,
-}
-
-decode_failure("SingleHandleInvalidPresenceIndicator") {
-    bindings_denylist = [dart],
-    handle_defs = {
-        #0 = event(),
-    },
-    bytes = {
-        v1, v2 = [
-            repeat(0xab):4, padding:4,
-        ],
-    },
-    handles = {v1, v2 = [#0]},
-    type = SingleOptionalHandle,
-    err = INVALID_HANDLE_PRESENCE_INDICATOR,
-}
-
 success("ArrayOfHandles") {
     handle_defs = {
         #0 = event(),

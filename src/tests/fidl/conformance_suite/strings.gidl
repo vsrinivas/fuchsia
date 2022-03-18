@@ -50,18 +50,6 @@ success("EmptyOptionalStringWithNullPtrBody") {
     },
 }
 
-decode_failure("OptionalStringWithInvalidPresenceIndicator") {
-    bindings_denylist = [dart],
-    bytes = {
-        v1, v2 = [
-            repeat(0x00):8, // length of string data
-            repeat(0xab):8, // invalid null pointer to content
-        ],
-    },
-    type = OptionalStringWrapper,
-    err = INVALID_PRESENCE_INDICATOR,
-}
-
 decode_failure("NonEmptyStringWithNullPtrBody") {
     type = StringWrapper,
     bytes = {
