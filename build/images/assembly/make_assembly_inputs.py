@@ -17,8 +17,6 @@ def main():
     parser.add_argument(
         '--product-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
-        '--board-config', type=argparse.FileType('r'), required=True)
-    parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
@@ -78,20 +76,6 @@ def main():
     if "bootfs_files" in product_config:
         for bootfs_file in product_config["bootfs_files"]:
             add_file(bootfs_file["source"])
-
-    # Add the board config.
-    add_file(args.board_config.name)
-    board_config = json.load(args.board_config)
-    if "vbmeta" in board_config:
-        add_file(board_config["vbmeta"]["key"])
-        add_file(board_config["vbmeta"]["key_metadata"])
-        if "additional_descriptor_files" in board_config["vbmeta"]:
-            for descriptor in board_config["vbmeta"][
-                    "additional_descriptor_files"]:
-                add_file(descriptor)
-    if "zbi" in board_config:
-        if "signing_script" in board_config["zbi"]:
-            add_file(board_config["zbi"]["signing_script"]["tool"])
 
     # Add the images config.
     add_file(args.images_config.name)

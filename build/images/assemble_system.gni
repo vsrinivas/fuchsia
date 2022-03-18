@@ -8,7 +8,6 @@ import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/compare_json_list.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
-import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
@@ -17,6 +16,7 @@ import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
+import("//build/product.gni")
 import("//build/python/python_action.gni")
 import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
@@ -224,7 +224,6 @@ template("assemble_system") {
     image_assembly_inputs = "${image_name}_image_assembly_inputs"
     compare_image_assembly_configs =
         "${image_name}_compare_image_assembly_configs"
-    board_config = "${image_name}_board_config"
     images_config = "${image_name}_images_config"
     partitions_config = "${image_name}_partitions_config"
     product_assembler = "${image_name}_product_assembler"
@@ -252,7 +251,6 @@ template("assemble_system") {
     image_assembly_inputs =
         "$target_out_dir/${image_name}_image_assembly_inputs"
 
-    board_config = "$target_out_dir/${image_name}_board_config.json"
     images_config = "$target_out_dir/${image_name}_images_config.json"
     partitions_config = "$target_out_dir/${image_name}_partitions.json"
 
@@ -526,55 +524,6 @@ template("assemble_system") {
     }
   }
 
-  generated_board_config(labels.board_config) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                             "blobfs_minimum_inodes",
-                             "blobfs_minimum_data_bytes",
-                             "blobfs_maximum_bytes",
-                             "minfs_minimum_data_bytes",
-                             "minfs_maximum_bytes",
-                             "embed_fvm_in_zbi",
-                             "zbi_name",
-                             "zbi_signing_script",
-                             "zbi_signing_args",
-                             "fvm_truncate_to_length",
-                           ])
-    base_package_name = base_package_name
-    generate_fvm = generate_fvm
-    output_path = files.board_config
-
-    zbi_name = "${image_name}"
-    if (defined(invoker.zbi_name)) {
-      zbi_name = invoker.zbi_name
-    }
-
-    if (generate_fvm) {
-      fvm_slice_size = 1048576
-      if (defined(invoker.assembly_fvm_slice_size)) {
-        fvm_slice_size = invoker.assembly_fvm_slice_size
-      }
-
-      blob_layout_format = "compact"
-      if (defined(invoker.assembly_blob_layout_format)) {
-        blob_layout_format = invoker.assembly_blob_layout_format
-      }
-
-      compress_blobs = true
-      if (defined(invoker.assembly_compress_blobs)) {
-        compress_blobs = invoker.assembly_compress_blobs
-      }
-
-      assembly_include_account_in_fvm = false
-      if (defined(invoker.assembly_include_account_in_fvm)) {
-        assembly_include_account_in_fvm =
-            invoker.assembly_include_account_in_fvm
-      }
-    }
-  }
-
   generated_images_config(labels.images_config) {
     forward_variables_from(invoker,
                            [
@@ -641,12 +590,10 @@ template("assemble_system") {
                              "visibility",
                            ])
     product_config = files.image_assembly_config
-    board_config = files.board_config
     images_config = files.images_config
     output_path = files.assembly_inputs
 
     deps = [
-      ":${labels.board_config}",
       ":${labels.image_assembly_config}",
       ":${labels.images_config}",
     ]

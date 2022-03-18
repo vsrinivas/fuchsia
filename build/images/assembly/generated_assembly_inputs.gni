@@ -17,7 +17,6 @@
 #
 template("generated_assembly_inputs") {
   assert(defined(invoker.product_config), "Need to define product_config")
-  assert(defined(invoker.board_config), "Need to define board_config")
   assert(defined(invoker.images_config), "Need to define images_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
@@ -35,15 +34,12 @@ template("generated_assembly_inputs") {
     outputs = [ invoker.output_path ]
     inputs = [
       invoker.product_config,
-      invoker.board_config,
       invoker.images_config,
     ]
 
     args = [
       "--product-config",
       rebase_path(invoker.product_config, root_build_dir),
-      "--board-config",
-      rebase_path(invoker.board_config, root_build_dir),
       "--images-config",
       rebase_path(invoker.images_config, root_build_dir),
       "--output",
