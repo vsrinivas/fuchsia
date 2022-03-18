@@ -15,7 +15,7 @@ func init() {
 }
 
 type ProjectConfig struct {
-	FuchsiaDir string
+	FuchsiaDir string `json:"fuchsiaDir"`
 
 	// Paths to temporary directories holding README.fuchsia files.
 	// These files will eventually migrate to their correct locations in

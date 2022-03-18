@@ -1,0 +1,2 @@
+External Library Name, Link to License File, License Name
+{{ range $_, $entry := (getCSVEntries . ) }}{{ $entry }}{{ end }}

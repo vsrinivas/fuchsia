@@ -51,6 +51,9 @@ func (c *FileTreeConfig) shouldSkip(item string) bool {
 }
 
 func (c *FileTreeConfig) Merge(other *FileTreeConfig) {
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	c.Skips = append(c.Skips, other.Skips...)
 	c.ExitOnMissingProject = c.ExitOnMissingProject || other.ExitOnMissingProject
 }

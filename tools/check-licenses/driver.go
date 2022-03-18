@@ -14,7 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
-	//"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
 )
 
 func Execute(ctx context.Context, config *CheckLicensesConfig) error {
@@ -23,6 +23,7 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	startInitialize := time.Now()
 	fmt.Print("Initializing... ")
 	if err := initialize(config); err != nil {
+		fmt.Println("Error!")
 		return err
 	}
 	fmt.Printf("Done. [%v]\n", time.Since(startInitialize))
@@ -32,26 +33,36 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	fmt.Print("Discovering files and folders... ")
 	_, err := filetree.NewFileTree(config.Target, nil)
 	if err != nil {
+		fmt.Println("Error!")
 		return err
 	}
 	fmt.Printf("Done. [%v]\n", time.Since(startFileTree))
 	r.End()
-	/*
 
-		// Analyze the LICENSE and NOTICE files found in the previous step.
-		r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
-		err = project.AnalyzeLicenses()
-		if err != nil {
-			return err
-		}
-		r.End()
-	*/
+	r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
+	startAnalyze := time.Now()
+	fmt.Printf("Searching for license texts [%v projects]... ", len(project.AllProjects))
+	err = project.AnalyzeLicenses()
+	if err != nil {
+		fmt.Println("Error!")
+		return err
+	}
+	fmt.Printf("Done. [%v]\n", time.Since(startAnalyze))
+	r.End()
 
-	//if err := result.SaveResults(); err != nil {
-	//	return err
-	//}
+	r = trace.StartRegion(ctx, "result.SaveResults")
+	startSaveResults := time.Now()
+	fmt.Print("Saving results... ")
+	var s string
+	s, err = result.SaveResults()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Done. [%v]\n", time.Since(startSaveResults))
+	r.End()
 
-	fmt.Printf("Total runtime: %v\n", time.Since(start))
+	fmt.Printf("\nTotal runtime: %v\n============\n", time.Since(start))
+	fmt.Println(s)
 	return nil
 }
 
@@ -68,10 +79,9 @@ func initialize(c *CheckLicensesConfig) error {
 	if err := filetree.Initialize(c.FileTree); err != nil {
 		return err
 	}
-	/*
-		if err := result.Initialize(c.Result); err != nil {
-			return err
-		}*/
+	if err := result.Initialize(c.Result); err != nil {
+		return err
+	}
 
 	return nil
 }

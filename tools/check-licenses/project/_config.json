@@ -1,5 +1,6 @@
 {
     "project": {
+        "fuchsiaDir": "{FUCHSIA_DIR}",
         "readmes": [
             {
                 "paths": [

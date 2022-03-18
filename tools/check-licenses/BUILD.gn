@@ -74,6 +74,7 @@ go_library("lib") {
     "filetree",
     "license",
     "project",
+    "result",
     "//third_party/golibs:golang.org/x/sync",
     "//third_party/golibs:golang.org/x/text",
     "//tools/lib/logger",

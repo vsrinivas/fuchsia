@@ -1,0 +1,20 @@
+{
+    "result": {
+        "fuchsiaDir": "{FUCHSIA_DIR}",
+        "outputdir": "/tmp/check-licenses",
+        "outputs": [
+            "summary.csv"
+        ],
+        "templates": [
+            {
+                "paths": [
+                    "tools/check-licenses/result/templates"
+                ],
+                "notes": []
+            }
+        ],
+        "diffNotices": [
+        ],
+        "zip": true
+    }
+}
