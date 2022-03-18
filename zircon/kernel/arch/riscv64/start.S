@@ -30,11 +30,10 @@ FUNCTION(_start)
 
     // The fixup code appears right after the kernel image (at __data_end in
     // our view).  Note this code overlaps with the kernel's bss!  It
-    // expects a0 to contain the current physical address of __code_start and
-    // a1 to contain the desired virtual address of __code_start.
+    // expects a0 to contain the desired virtual address of __code_start.
     lla     t0, kernel_relocated_base
     ld      s10, (t0)
-    mv      a1, s10
+    mv      a0, s10
     jal     __data_end
 
     // zero bss

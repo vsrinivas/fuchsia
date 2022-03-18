@@ -58,32 +58,35 @@ END_DATA(_zbi_kernel_payload)
 // Immediately after the kernel image comes the fixup code.
 // The start.S code sees this address as __data_end.
 
-// TODO(revest): Use IMAGE_LOAD_START when LLVM supports it
-// This constant was found in the boot-shim logs with the formula:
-//   "Kernel to 0000000089180000" - "Kernel at 0000000088200000"
-#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0x18c0000)
+#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + IMAGE_LOAD_START)
 
 // This code must be purely position-independent and have no relocs.
-// This is called with the physical address of __code_start in a0 and the
-// desired virtual address of __code_start in a1.
+// This is called with the desired virtual address of __code_start in a0.
 FUNCTION(apply_fixups)
     // This is the constant address the kernel was linked for.
     li   t1, KERNEL_BASE
-    sub  t1, a1, t1
+    sub  a0, a0, t1
 
 // The generated kernel-fixups.inc invokes this macro for each run of fixups.
 .macro fixup addr, n, stride
-    li  t2, FIXUP_LOCATION(\addr)
-    add t2, t2, a0
-    // TODO(revest): Optimize this macro to use less instructions when n < 3
+    lla t1, FIXUP_LOCATION(\addr)
+.if \n > 1
+    // Do a strided loop.
     li   t3, \n
-0:
-    ld   t4, (t2)
-    add  t4, t4, t1
-    sd   t4, (t2)
-    addi t2, t2, \stride
+0:  fixup_single \stride
     addi t3, t3, -1
     bnez t3, 0b
+.else
+    // Do a singleton.
+    fixup_single 8
+.endif
+.endm
+
+.macro fixup_single stride
+    ld   t4, (t1)
+    add  t4, t4, a0
+    sd   t4, (t1)
+    addi t1, t1, \stride
 .endm
 
 #include "kernel-fixups.inc"
