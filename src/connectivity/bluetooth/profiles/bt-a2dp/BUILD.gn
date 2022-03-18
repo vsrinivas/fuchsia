@@ -144,6 +144,13 @@ core_shard("eager_core_shard") {
   shard_file = "meta/bt-a2dp-eager.core_shard.cml"
 }
 
+# The core realm shards to be used by product integrators.
+# The "testonly-core-shard" should be used in test configurations in which A2DP is started by
+# requesting a capability it exposes (e.g `fuchsia.bluetooth.avdtp.PeerManager`).
+core_shard("testonly-core-shard") {
+  shard_file = "meta/bt-a2dp-testonly.core_shard.cml"
+}
+
 fuchsia_unittest_package("bt-a2dp-tests") {
   deps = [ ":bin_test" ]
 }
