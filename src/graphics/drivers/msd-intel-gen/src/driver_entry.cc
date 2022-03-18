@@ -304,6 +304,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "msd-intel-gen";
+  args.flags = DEVICE_ADD_NON_BINDABLE;
   args.ctx = device.get();
   args.ops = &sysdrv_gpu_device_proto;
   args.proto_id = ZX_PROTOCOL_GPU;
