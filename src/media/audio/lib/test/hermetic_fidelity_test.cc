@@ -218,7 +218,7 @@ std::vector<HermeticFidelityTest::Frequency> HermeticFidelityTest::GetTestFreque
     // If not, round down to a lower frequency that is, and use those results.
     size_t freq_idx;
     for (freq_idx = 0u; freq_idx < kNumReferenceFreqs - 1; ++freq_idx) {
-      if (freq_display_val <= kReferenceFrequencies[freq_idx + 1]) {
+      if (freq_display_val < kReferenceFrequencies[freq_idx + 1]) {
         break;
       }
     }
