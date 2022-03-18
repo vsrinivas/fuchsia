@@ -46,7 +46,7 @@ use crate::{
         TransportReceiveError,
     },
     socket::{ConnSocketEntry, ConnSocketMap, Socket},
-    BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -576,7 +576,9 @@ pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
     );
 }
 
-impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D> {
+impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>, C: BlanketCoreContext> IcmpContext<I>
+    for Ctx<D, C>
+{
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
     }
@@ -586,8 +588,12 @@ impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
-    BufferIcmpContext<I, B> for Ctx<D>
+impl<
+        I: IcmpIpExt,
+        B: BufferMut,
+        D: EventDispatcher + BufferIcmpContext<I, B>,
+        C: BlanketCoreContext,
+    > BufferIcmpContext<I, B> for Ctx<D, C>
 {
     fn receive_icmp_echo_reply(
         &mut self,
@@ -2138,8 +2144,8 @@ fn receive_icmp_echo_reply<I: IcmpIpExt + IpExt, B: BufferMut, C: InnerBufferIcm
 ///
 /// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
 /// connection.
-pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Ctx<D>,
+pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
@@ -2153,8 +2159,8 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
 ///
 /// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
 /// connection.
-pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Ctx<D>,
+pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
@@ -2216,8 +2222,8 @@ pub enum IcmpSockCreationError {
 ///
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
-pub fn new_icmpv4_connection<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn new_icmpv4_connection<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
@@ -2253,8 +2259,8 @@ fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
 ///
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
-pub fn new_icmpv6_connection<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn new_icmpv6_connection<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
@@ -2332,15 +2338,15 @@ mod tests {
     };
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
-        fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Ctx<D>,
+        fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Self>, IcmpSockCreationError>;
 
-        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Ctx<D>,
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             conn: IcmpConnId<Self>,
             seq_num: u16,
             body: B,
@@ -2348,8 +2354,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv4 {
-        fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Ctx<D>,
+        fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
             icmp_id: u16,
@@ -2357,8 +2363,8 @@ mod tests {
             new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
         }
 
-        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Ctx<D>,
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
             body: B,
@@ -2368,8 +2374,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv6 {
-        fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Ctx<D>,
+        fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
             icmp_id: u16,
@@ -2377,8 +2383,8 @@ mod tests {
             new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
         }
 
-        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Ctx<D>,
+        fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,
             body: B,

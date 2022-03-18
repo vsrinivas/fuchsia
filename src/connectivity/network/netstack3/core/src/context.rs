@@ -35,6 +35,49 @@
 //! just a matter of providing a different implementation of the transport layer
 //! context traits (this isn't what we do today, but we may in the future).
 //!
+//! # Synchronized vs Non-Synchronized Contexts
+//!
+//! Since Netstack3 aspires to be multi-threaded in the future, some resources
+//! need to be shared between threads, including resources which are accessed
+//! via context traits. Sometimes, this resource sharing has implications for
+//! how the context's behavior is exposed via its API, and thus has implications
+//! for how the consuming code needs to interact with that API.
+//!
+//! For this reason, some modules require two different contexts - a
+//! "synchronized" context and a "non-synchronized" context. Traits implementing
+//! a synchronized context are named `FooSyncContext` while traits implementing
+//! a non-synchronized context are named `FooContext`. Note that the
+//! implementation of a non-synchronized context trait may still provide access
+//! to shared resources - the distinction is simply that the consumer doesn't
+//! need to be aware that that's what's happening under the hood. As a result,
+//! this shared access is not assumed by the context trait itself. Its API is
+//! designed just as it would be if exclusive access were assumed. For example,
+//! even though a multi-threaded implementation of [`TimerContext`] would need
+//! to synchronize on a shared set of timers, the `TimerContext` trait is
+//! designed as though it were providing a vanilla, unsynchronized container.
+//!
+//! When synchronized contexts provide access to state, they do it via a
+//! `with`-style API:
+//!
+//! ```rust
+//! trait FooSyncContext<S> {
+//!     fn with_state<O, F: FnOnce(&mut S) -> O>(&mut self, f: F) -> O;
+//! }
+//! ```
+//!
+//! This style is easy to implement when state is shared and mutated via
+//! interior mutability (e.g., using mutexes), and is also easy to implement
+//! when state is accessed exclusively (e.g., when writing a test mock). It also
+//! makes it clear that a critical section is starting and ending, and thus
+//! makes it clear to the programmer that they're performing a potentially
+//! expensive operation, and hopefully encourages them to minimize the duration
+//! of the critical section.
+//!
+//! Since the `with_xxx` method operates on `&mut self`, it prevents other
+//! operations on the context from happening concurrently. This prevents
+//! deadlocks which occur as a result of a single mutex being locked while it is
+//! held by the locking thread - in other words, it prevents lock reentrance.
+//!
 //! [`ArpContext`]: crate::device::arp::ArpContext
 
 use core::time::Duration;
@@ -42,7 +85,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{Ctx, EventDispatcher, Instant, TimerId};
+use crate::{BlanketCoreContext, Ctx, EventDispatcher, Instant, TimerId};
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -63,11 +106,11 @@ pub trait InstantContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> InstantContext for Ctx<D> {
-    type Instant = D::Instant;
+impl<D: EventDispatcher, C: BlanketCoreContext> InstantContext for Ctx<D, C> {
+    type Instant = C::Instant;
 
     fn now(&self) -> Self::Instant {
-        self.dispatcher.now()
+        self.ctx.now()
     }
 }
 
@@ -144,25 +187,25 @@ pub trait TimerContext<Id>: InstantContext {
     fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
 }
 
-impl<D: EventDispatcher> TimerContext<TimerId> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> TimerContext<TimerId> for Ctx<D, C> {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
         id: TimerId,
     ) -> Option<Self::Instant> {
-        self.dispatcher.schedule_timer_instant(time, id)
+        self.ctx.schedule_timer_instant(time, id)
     }
 
     fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher.cancel_timer(id)
+        self.ctx.cancel_timer(id)
     }
 
     fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.dispatcher.cancel_timers_with(f)
+        self.ctx.cancel_timers_with(f)
     }
 
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher.scheduled_instant(id)
+        self.ctx.scheduled_instant(id)
     }
 }
 
@@ -232,15 +275,15 @@ impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> RngContext for Ctx<D> {
-    type Rng = D::Rng;
+impl<D: EventDispatcher, C: BlanketCoreContext> RngContext for Ctx<D, C> {
+    type Rng = C::Rng;
 
-    fn rng(&self) -> &D::Rng {
-        self.dispatcher.rng()
+    fn rng(&self) -> &C::Rng {
+        self.ctx.rng()
     }
 
-    fn rng_mut(&mut self) -> &mut D::Rng {
-        self.dispatcher.rng_mut()
+    fn rng_mut(&mut self) -> &mut C::Rng {
+        self.ctx.rng_mut()
     }
 }
 
@@ -460,7 +503,7 @@ pub trait CounterContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> CounterContext for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> CounterContext for Ctx<D, C> {
     // TODO(rheacock): This is tricky because it's used in test only macro
     // code so the compiler thinks `key` is unused. Remove this when this is
     // no longer a problem.

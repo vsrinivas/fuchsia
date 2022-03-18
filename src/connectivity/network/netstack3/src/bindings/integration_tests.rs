@@ -24,12 +24,11 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    context::{InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     initialize_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
-    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId,
-    UdpConnId, UdpContext, UdpListenerId,
+    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, UdpConnId,
+    UdpContext, UdpListenerId,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -39,8 +38,8 @@ use crate::bindings::{
     devices::{CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
-    DEFAULT_LOOPBACK_MTU,
+    BindingsContextImpl, BindingsDispatcher, DeviceStatusNotifier, LockableContext,
+    RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -89,11 +88,13 @@ pub(crate) struct TestDispatcher {
     status_changed_signal: Option<futures::channel::oneshot::Sender<()>>,
 }
 
-impl TestDispatcher {
-    fn new() -> Self {
-        Self { disp: BindingsDispatcher::default(), status_changed_signal: None }
+impl Default for TestDispatcher {
+    fn default() -> TestDispatcher {
+        TestDispatcher { disp: BindingsDispatcher::default(), status_changed_signal: None }
     }
+}
 
+impl TestDispatcher {
     /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
     /// identifier.
     fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
@@ -166,47 +167,6 @@ impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
     }
 }
 
-impl InstantContext for TestDispatcher {
-    type Instant = <BindingsDispatcher as InstantContext>::Instant;
-    fn now(&self) -> Self::Instant {
-        self.disp.now()
-    }
-}
-
-impl RngContext for TestDispatcher {
-    type Rng = <BindingsDispatcher as RngContext>::Rng;
-
-    fn rng(&self) -> &Self::Rng {
-        self.disp.rng()
-    }
-
-    fn rng_mut(&mut self) -> &mut Self::Rng {
-        self.disp.rng_mut()
-    }
-}
-
-impl TimerContext<TimerId> for TestDispatcher {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        id: TimerId,
-    ) -> Option<Self::Instant> {
-        self.disp.schedule_timer_instant(time, id)
-    }
-
-    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.disp.cancel_timer(id)
-    }
-
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.disp.cancel_timers_with(f)
-    }
-
-    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
-        self.disp.scheduled_instant(id)
-    }
-}
-
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -248,12 +208,18 @@ where
 
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<TestDispatcher>>>,
+    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl>>>,
 }
 
 impl TestContext {
     fn new(builder: StackStateBuilder) -> Self {
-        Self { ctx: Arc::new(Mutex::new(Ctx::new(builder.build(), TestDispatcher::new()))) }
+        Self {
+            ctx: Arc::new(Mutex::new(Ctx::new(
+                builder.build(),
+                TestDispatcher::default(),
+                BindingsContextImpl::default(),
+            ))),
+        }
     }
 }
 
@@ -263,9 +229,9 @@ impl Clone for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<TestDispatcher>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher>>;
+impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsContextImpl>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsContextImpl>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -273,6 +239,7 @@ impl<'a> Lockable<'a, Ctx<TestDispatcher>> for TestContext {
 
 impl LockableContext for TestContext {
     type Dispatcher = TestDispatcher;
+    type Context = BindingsContextImpl;
 }
 
 /// A holder for a [`TestContext`].
@@ -405,8 +372,11 @@ impl TestStack {
     }
 
     /// Helper function to invoke a closure that provides a locked
-    /// [`Ctx<TestDispatcher>`] provided by this `TestStack`.
-    pub(crate) async fn with_ctx<R, F: FnOnce(&mut Ctx<TestDispatcher>) -> R>(
+    /// [`Ctx<TestDispatcher, BindingsContext>`] provided by this `TestStack`.
+    pub(crate) async fn with_ctx<
+        R,
+        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl>) -> R,
+    >(
         &mut self,
         f: F,
     ) -> R {
@@ -415,7 +385,9 @@ impl TestStack {
     }
 
     /// Acquire a lock on this `TestStack`'s context.
-    pub(crate) async fn ctx(&self) -> <TestContext as Lockable<'_, Ctx<TestDispatcher>>>::Guard {
+    pub(crate) async fn ctx(
+        &self,
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl>>>::Guard {
         self.ctx.lock().await
     }
 
@@ -454,7 +426,7 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl>>>::Guard {
         self.get(i).ctx.lock().await
     }
 

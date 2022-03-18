@@ -72,7 +72,8 @@ use crate::{
             IpSockUpdate, IpSocketContext, IpSocketHandler,
         },
     },
-    BufferDispatcher, Ctx, EventDispatcher, Instant, StackState, TimerId, TimerIdInner,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState, TimerId,
+    TimerIdInner,
 };
 
 /// Default IPv4 TTL.
@@ -254,19 +255,19 @@ pub(crate) trait Ipv6TransportLayerContext {
     type Proto17: IpTransportContext<Ipv6, Self>;
 }
 
-impl<D: EventDispatcher> Ipv4TransportLayerContext for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> Ipv4TransportLayerContext for Ctx<D, C> {
     type Proto6 = ();
     type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<D: EventDispatcher> Ipv6TransportLayerContext for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6TransportLayerContext for Ctx<D, C> {
     type Proto6 = ();
     type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<I: IpExt, D: EventDispatcher> TransportIpContext<I> for Ctx<D>
+impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext> TransportIpContext<I> for Ctx<D, C>
 where
-    Ctx<D>: IpSocketHandler<I>,
+    Ctx<D, C>: IpSocketHandler<I>,
 {
     fn is_assigned_local_addr(&self, addr: I::Addr) -> bool {
         match addr.to_ip_addr() {
@@ -535,33 +536,33 @@ impl<C: IpLayerContext<Ipv6> + device::IpDeviceContext<Ipv6>> IpSocketContext<Ip
     }
 }
 
-impl<D: EventDispatcher> IpStateContext<Ipv4> for Ctx<D> {
-    fn get_ip_layer_state(&self) -> &Ipv4State<D::Instant, DeviceId> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4> for Ctx<D, C> {
+    fn get_ip_layer_state(&self) -> &Ipv4State<C::Instant, DeviceId> {
         &self.state.ipv4
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<D::Instant, DeviceId> {
+    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<C::Instant, DeviceId> {
         &mut self.state.ipv4
     }
 }
 
-impl<D: EventDispatcher> TransportContext<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> TransportContext<Ipv4> for Ctx<D, C> {
     fn on_routing_state_updated(&mut self) {
         crate::ip::socket::update_all_ipv4_sockets(self, IpSockUpdate::new());
     }
 }
 
-impl<D: EventDispatcher> IpStateContext<Ipv6> for Ctx<D> {
-    fn get_ip_layer_state(&self) -> &Ipv6State<D::Instant, DeviceId> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, C> {
+    fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
         &self.state.ipv6
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<D::Instant, DeviceId> {
+    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<C::Instant, DeviceId> {
         &mut self.state.ipv6
     }
 }
 
-impl<D: EventDispatcher> TransportContext<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> TransportContext<Ipv6> for Ctx<D, C> {
     fn on_routing_state_updated(&mut self) {
         crate::ip::socket::update_all_ipv6_sockets(self, IpSockUpdate::new());
     }
@@ -618,7 +619,9 @@ impl<
 {
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv4, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTransportContext<Ipv4, B>
+    for Ctx<D, C>
+{
     fn dispatch_receive_ip_packet(
         &mut self,
         device: Option<DeviceId>,
@@ -647,14 +650,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv4, B> for C
                 Ok(())
             }
             Ipv4Proto::Proto(IpProto::Udp) => {
-                <<Ctx<D> as Ipv4TransportLayerContext>::Proto17 as BufferIpTransportContext<
+                <<Ctx<D, C> as Ipv4TransportLayerContext>::Proto17 as BufferIpTransportContext<
                     Ipv4,
                     _,
                     _,
                 >>::receive_ip_packet(self, device, src_ip, dst_ip, body)
             }
             Ipv4Proto::Proto(IpProto::Tcp) => {
-                <<Ctx<D> as Ipv4TransportLayerContext>::Proto6 as BufferIpTransportContext<
+                <<Ctx<D, C> as Ipv4TransportLayerContext>::Proto6 as BufferIpTransportContext<
                     Ipv4,
                     _,
                     _,
@@ -670,7 +673,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv4, B> for C
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv6, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTransportContext<Ipv6, B>
+    for Ctx<D, C>
+{
     fn dispatch_receive_ip_packet(
         &mut self,
         device: Option<DeviceId>,
@@ -693,14 +698,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv6, B> for C
             // processing here.
             Ipv6Proto::NoNextHeader => Ok(()),
             Ipv6Proto::Proto(IpProto::Tcp) => {
-                <<Ctx<D> as Ipv6TransportLayerContext>::Proto6 as BufferIpTransportContext<
+                <<Ctx<D, C> as Ipv6TransportLayerContext>::Proto6 as BufferIpTransportContext<
                     Ipv6,
                     _,
                     _,
                 >>::receive_ip_packet(self, device, src_ip, dst_ip, body)
             }
             Ipv6Proto::Proto(IpProto::Udp) => {
-                <<Ctx<D> as Ipv6TransportLayerContext>::Proto17 as BufferIpTransportContext<
+                <<Ctx<D, C> as Ipv6TransportLayerContext>::Proto17 as BufferIpTransportContext<
                     Ipv6,
                     _,
                     _,
@@ -850,9 +855,9 @@ pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
 }
 
 #[specialize_ip]
-fn get_state_inner<I: Ip, D: EventDispatcher>(
-    state: &StackState<D>,
-) -> &IpStateInner<I, D::Instant, DeviceId> {
+fn get_state_inner<I: Ip, Instant: crate::Instant>(
+    state: &StackState<Instant>,
+) -> &IpStateInner<I, Instant, DeviceId> {
     #[ipv4]
     return &state.ipv4.inner;
     #[ipv6]
@@ -860,9 +865,9 @@ fn get_state_inner<I: Ip, D: EventDispatcher>(
 }
 
 #[specialize_ip]
-fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
-    state: &mut StackState<D>,
-) -> &mut IpStateInner<I, D::Instant, DeviceId> {
+fn get_state_inner_mut<I: Ip, Instant: crate::Instant>(
+    state: &mut StackState<Instant>,
+) -> &mut IpStateInner<I, Instant, DeviceId> {
     #[ipv4]
     return &mut state.ipv4.inner;
     #[ipv6]
@@ -908,7 +913,10 @@ impl From<FragmentCacheKey<Ipv6Addr>> for IpLayerTimerId {
 }
 
 /// Handle a timer event firing in the IP layer.
-pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    id: IpLayerTimerId,
+) {
     match id {
         IpLayerTimerId::ReassemblyTimeoutv4(key) => {
             ctx.state.ipv4.inner.fragment_cache.handle_timer(key);
@@ -917,23 +925,15 @@ pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTime
             ctx.state.ipv6.inner.fragment_cache.handle_timer(key);
         }
         IpLayerTimerId::PmtuTimeout(IpVersion::V4) => {
-            ctx.state
-                .ipv4
-                .inner
-                .pmtu_cache
-                .handle_timer(&mut ctx.dispatcher, PmtuTimerId::default());
+            ctx.state.ipv4.inner.pmtu_cache.handle_timer(&mut ctx.ctx, PmtuTimerId::default());
         }
         IpLayerTimerId::PmtuTimeout(IpVersion::V6) => {
-            ctx.state
-                .ipv6
-                .inner
-                .pmtu_cache
-                .handle_timer(&mut ctx.dispatcher, PmtuTimerId::default());
+            ctx.state.ipv6.inner.pmtu_cache.handle_timer(&mut ctx.ctx, PmtuTimerId::default());
         }
     }
 }
 
-impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for D {
+impl<A: IpAddress, C: BlanketCoreContext> TimerContext<FragmentCacheKey<A>> for C {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
@@ -953,10 +953,10 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for D {
         #[specialize_ip_address]
         fn cancel_timers_with_inner<
             A: IpAddress,
-            D: EventDispatcher,
+            C: BlanketCoreContext,
             F: FnMut(&FragmentCacheKey<A>) -> bool,
         >(
-            ctx: &mut D,
+            ctx: &mut C,
             mut f: F,
         ) {
             ctx.cancel_timers_with(|id| match id {
@@ -976,7 +976,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for D {
     }
 }
 
-impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for D {
+impl<I: Ip, C: BlanketCoreContext> TimerContext<PmtuTimerId<I>> for C {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
@@ -1174,7 +1174,7 @@ macro_rules! process_fragment {
     ($ctx:expr, $dispatch:ident, $device:ident, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
         match get_state_inner_mut::<$ip, _>(&mut $ctx.state)
             .fragment_cache
-            .process_fragment::<_, &mut [u8]>(&mut $ctx.dispatcher, $packet)
+            .process_fragment::<_, &mut [u8]>(&mut $ctx.ctx, $packet)
         {
             // Handle the packet right away since reassembly is not needed.
             FragmentProcessingState::NotNeeded(packet) => {
@@ -1202,7 +1202,7 @@ macro_rules! process_fragment {
                 // Attempt to reassemble the packet.
                 match get_state_inner_mut::<$ip, _>(&mut $ctx.state)
                     .fragment_cache
-                    .reassemble_packet(&mut $ctx.dispatcher, &key, buffer.buffer_view_mut())
+                    .reassemble_packet(&mut $ctx.ctx, &key, buffer.buffer_view_mut())
                 {
                     // Successfully reassembled the packet, handle it.
                     Ok(packet) => {
@@ -1286,8 +1286,13 @@ macro_rules! try_parse_ip_packet {
 ///
 /// `receive_ip_packet` calls [`receive_ipv4_packet`] or [`receive_ipv6_packet`]
 /// depending on the type parameter, `I`.
-pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn receive_ip_packet<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    C: BlanketCoreContext,
+    I: Ip,
+>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     frame_dst: FrameDestination,
     buffer: B,
@@ -1302,8 +1307,8 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
 ///
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
-pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
@@ -1502,8 +1507,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
 ///
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
-pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
@@ -2014,8 +2019,8 @@ pub(crate) fn del_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLaye
 }
 
 /// Returns all the routes for the provided `IpAddress` type.
-pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
+pub(crate) fn iter_all_routes<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
+    ctx: &Ctx<D, C>,
 ) -> Iter<'_, Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(&ctx.state).table.iter_installed()
 }
@@ -2149,12 +2154,12 @@ pub(crate) fn send_ipv6_packet_from_device<
     }
 }
 
-impl<D: EventDispatcher> PmtuHandler<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> PmtuHandler<Ipv4> for Ctx<D, C> {
     fn update_pmtu_if_less(&mut self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr, new_mtu: u32) {
         // TODO(https://fxbug.dev/92599): Do something with this `Result` or
         // change `update_pmtu_if_less` to not return one?
         let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_if_less(
-            &mut self.dispatcher,
+            &mut self.ctx,
             src_ip,
             dst_ip,
             new_mtu,
@@ -2164,7 +2169,7 @@ impl<D: EventDispatcher> PmtuHandler<Ipv4> for Ctx<D> {
         // TODO(https://fxbug.dev/92599): Do something with this `Result` or
         // change `update_pmtu_next_lower` to not return one?
         let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_next_lower(
-            &mut self.dispatcher,
+            &mut self.ctx,
             src_ip,
             dst_ip,
             from,
@@ -2172,12 +2177,12 @@ impl<D: EventDispatcher> PmtuHandler<Ipv4> for Ctx<D> {
     }
 }
 
-impl<D: EventDispatcher> PmtuHandler<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> PmtuHandler<Ipv6> for Ctx<D, C> {
     fn update_pmtu_if_less(&mut self, src_ip: Ipv6Addr, dst_ip: Ipv6Addr, new_mtu: u32) {
         // TODO(https://fxbug.dev/92599): Do something with this `Result` or
         // change `update_pmtu_if_less` to not return one?
         let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_if_less(
-            &mut self.dispatcher,
+            &mut self.ctx,
             src_ip,
             dst_ip,
             new_mtu,
@@ -2187,7 +2192,7 @@ impl<D: EventDispatcher> PmtuHandler<Ipv6> for Ctx<D> {
         // TODO(https://fxbug.dev/92599): Do something with this `Result` or
         // change `update_pmtu_next_lower` to not return one?
         let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_next_lower(
-            &mut self.dispatcher,
+            &mut self.ctx,
             src_ip,
             dst_ip,
             from,
@@ -2195,7 +2200,7 @@ impl<D: EventDispatcher> PmtuHandler<Ipv6> for Ctx<D> {
     }
 }
 
-impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv4> for Ctx<D, C> {
     fn receive_icmp_error(
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
@@ -2212,7 +2217,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
                 match original_proto {
                     Ipv4Proto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<Ctx<D> as Ipv4TransportLayerContext>::$ty as IpTransportContext<Ipv4, _>>
+                    $($cond => <<Ctx<D, C> as Ipv4TransportLayerContext>::$ty as IpTransportContext<Ipv4, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2231,7 +2236,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
     fn get_state_and_update_meta(
         &mut self,
     ) -> (
-        &mut IcmpState<Ipv4Addr, D::Instant, IpSock<Ipv4, DeviceId>>,
+        &mut IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>,
         &ForwardingTable<Ipv4, DeviceId>,
     ) {
         let state = &mut self.state.ipv4;
@@ -2239,7 +2244,9 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> InnerBufferIcmpContext<Ipv4, B>
+    for Ctx<D, C>
+{
     fn send_icmp_error_message<
         S: Serializer<Buffer = B>,
         F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S,
@@ -2286,7 +2293,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
     }
 }
 
-impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6> for Ctx<D, C> {
     fn receive_icmp_error(
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
@@ -2303,7 +2310,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
                 match original_next_header {
                     Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
                     ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<Ctx<D> as Ipv6TransportLayerContext>::$ty as IpTransportContext<Ipv6, _>>
+                    $($cond => <<Ctx<D, C> as Ipv6TransportLayerContext>::$ty as IpTransportContext<Ipv6, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2322,7 +2329,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
     fn get_state_and_update_meta(
         &mut self,
     ) -> (
-        &mut IcmpState<Ipv6Addr, D::Instant, IpSock<Ipv6, DeviceId>>,
+        &mut IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>,
         &ForwardingTable<Ipv6, DeviceId>,
     ) {
         let state = &mut self.state.ipv6;
@@ -2330,7 +2337,9 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> InnerBufferIcmpContext<Ipv6, B>
+    for Ctx<D, C>
+{
     fn send_icmp_error_message<
         S: Serializer<Buffer = B>,
         F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S,
@@ -2384,18 +2393,19 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
 /// message if it returns false.
 fn get_icmp_error_message_destination<
     D: EventDispatcher,
+    C: BlanketCoreContext,
     A: IpAddress,
     F: FnOnce(DeviceId) -> Option<AddrSubnet<A>>,
 >(
-    ctx: &Ctx<D>,
+    ctx: &Ctx<D, C>,
     _device: DeviceId,
     src_ip: SpecifiedAddr<A>,
     _dst_ip: SpecifiedAddr<A>,
     get_ip_addr_subnet: F,
 ) -> Option<(DeviceId, SpecifiedAddr<A>, SpecifiedAddr<A>)>
 where
-    A::Version: IpLayerStateIpExt<<Ctx<D> as InstantContext>::Instant, DeviceId>,
-    Ctx<D>: IpLayerContext<A::Version> + IpDeviceIdContext<A::Version, DeviceId = DeviceId>,
+    A::Version: IpLayerStateIpExt<<Ctx<D, C> as InstantContext>::Instant, DeviceId>,
+    Ctx<D, C>: IpLayerContext<A::Version> + IpDeviceIdContext<A::Version, DeviceId = DeviceId>,
 {
     // TODO(joshlf): Come up with rules for when to send ICMP error messages.
     // E.g., should we send a response over a different device than the device
@@ -2479,7 +2489,7 @@ mod tests {
     /// frame in `net` is an ICMP packet with code set to `code`, and pointer
     /// set to `pointer`.
     fn verify_icmp_for_unrecognized_ext_hdr_option(
-        ctx: &mut crate::testutil::DummyCtx,
+        ctx: &mut DummyCtx,
         code: Icmpv6ParameterProblemCode,
         pointer: u32,
         offset: usize,
@@ -2568,8 +2578,8 @@ mod tests {
 
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
     /// specialized with.
-    fn process_ip_fragment<I: Ip, D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn process_ip_fragment<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2590,8 +2600,8 @@ mod tests {
     /// `fragment_offset` is the fragment offset. `fragment_count` is the number
     /// of fragments for a packet. The generated packet will have a body of size
     /// 8 bytes.
-    fn process_ipv4_fragment<D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn process_ipv4_fragment<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2617,8 +2627,8 @@ mod tests {
     /// `fragment_offset` is the fragment offset. `fragment_count` is the number
     /// of fragments for a packet. The generated packet will have a body of size
     /// 8 bytes.
-    fn process_ipv6_fragment<D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn process_ipv6_fragment<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2851,7 +2861,7 @@ mod tests {
 
         // Test that a non fragmented packet gets dispatched right away.
 
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 1);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 0, 1);
 
         // Make sure the packet got dispatched.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
@@ -2867,16 +2877,16 @@ mod tests {
         // all the fragments.
 
         // Process fragment #0
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 0, 3);
 
         // Process fragment #1
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process fragment #2
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 2, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -2895,38 +2905,38 @@ mod tests {
         // the fragments with out of order arrival of fragments.
 
         // Process packet #0, fragment #1
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 1, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_0, 1, 3);
 
         // Process packet #1, fragment #2
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 2, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_1, 2, 3);
 
         // Process packet #1, fragment #0
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 0, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_1, 0, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process a packet that does not require reassembly (packet #2, fragment #0).
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_2, 0, 1);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_2, 0, 1);
 
         // Make packet #1 got dispatched since it didn't need reassembly.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #2
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 2, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_0, 2, 3);
 
         // Make sure no other packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #0
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 0, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_0, 0, 3);
 
         // Make sure that packet #0 finally got dispatched now that the final
         // fragment has been 'received'.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Process packet #1, fragment #1
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 1, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id_1, 1, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -2946,10 +2956,10 @@ mod tests {
         // timer.
 
         // Process fragment #0
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 0, 3);
 
         // Make sure a timer got added.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             IpLayerTimerId::from(FragmentCacheKey::new(
                 I::DUMMY_CONFIG.remote_ip.get(),
                 I::DUMMY_CONFIG.local_ip.get(),
@@ -2960,7 +2970,7 @@ mod tests {
         )]);
 
         // Process fragment #1
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
         let key = FragmentCacheKey::<_>::new(
@@ -2974,10 +2984,10 @@ mod tests {
         );
 
         // Make sure no other timers exist.
-        ctx.dispatcher.timer_ctx().assert_no_timers_installed();
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         // Process fragment #2
-        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _, _>(&mut ctx, device, fragment_id, 2, 3);
 
         // Make sure no packets got dispatched yet since even though we
         // technically received all the fragments, this fragment (#2) arrived
@@ -2999,8 +3009,11 @@ mod tests {
         ipv6_config.max_router_solicitations = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
-        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
-            .build_with(state_builder, DummyEventDispatcher::default());
+        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build_with(
+            state_builder,
+            DummyEventDispatcher::default(),
+            crate::context::testutil::DummyCtx::default(),
+        );
         set_routing_enabled::<_, I>(&mut alice, device, true)
             .expect("error setting routing enabled");
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
@@ -3014,12 +3027,12 @@ mod tests {
         // fragments.
 
         // Process fragment #0
-        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
         // Make sure the packet got sent from alice to bob
         assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Process fragment #1
-        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 1, 3);
         assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Make sure no packets got dispatched yet.
@@ -3033,7 +3046,7 @@ mod tests {
         );
 
         // Process fragment #2
-        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
         assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Make sure the packet finally got dispatched now that the final
@@ -3075,7 +3088,11 @@ mod tests {
             extra_mac.to_ipv6_link_local().addr().get(),
             extra_mac,
         );
-        let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
+        let mut ctx = dispatcher_builder.build_with(
+            state_builder,
+            DummyEventDispatcher::default(),
+            crate::context::testutil::DummyCtx::default(),
+        );
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
             .expect("error setting routing enabled");
@@ -3199,13 +3216,13 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3226,14 +3243,14 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
-            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3254,14 +3271,14 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
 
         // The PMTU should have updated to 1900.
         assert_eq!(
-            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3293,13 +3310,13 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
@@ -3348,7 +3365,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3375,7 +3392,7 @@ mod tests {
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
         assert_eq!(
-            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3402,7 +3419,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3431,7 +3448,7 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
-            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3609,8 +3626,11 @@ mod tests {
         // our own custom `StackStateBuilder` to set it to the default value of
         // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
+            StackStateBuilder::default(),
+            DummyEventDispatcher::default(),
+            crate::context::testutil::DummyCtx::default(),
+        );
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
@@ -3784,8 +3804,11 @@ mod tests {
             // built above with `builder.clone().build()` has DAD disabled, and
             // so addresses start off in the assigned state rather than the
             // tentative state.
-            let mut ctx =
-                builder.build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+            let mut ctx = builder.build_with(
+                StackStateBuilder::default(),
+                DummyEventDispatcher::default(),
+                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId>::default(),
+            );
             let tentative: UnicastAddr<Ipv6Addr> =
                 v6_config.local_mac.to_ipv6_link_local().addr().get();
             assert_eq!(

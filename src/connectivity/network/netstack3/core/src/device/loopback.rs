@@ -12,7 +12,7 @@ use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
     device::{DeviceIdInner, FrameDestination},
-    BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
 
 pub(super) struct LoopbackDeviceState {
@@ -28,10 +28,11 @@ impl LoopbackDeviceState {
 pub(super) fn send_ip_frame<
     B: BufferMut,
     D: BufferDispatcher<Buf<Vec<u8>>>,
+    C: BlanketCoreContext,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut Ctx<D>,
+    ctx: &mut Ctx<D, C>,
     _local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
@@ -41,7 +42,7 @@ pub(super) fn send_ip_frame<
         .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
         .into_inner();
 
-    crate::ip::receive_ip_packet::<_, _, A::Version>(
+    crate::ip::receive_ip_packet::<_, _, _, A::Version>(
         ctx,
         DeviceIdInner::Loopback.into(),
         FrameDestination::Unicast,
@@ -51,7 +52,7 @@ pub(super) fn send_ip_frame<
 }
 
 /// Gets the MTU associated with this device.
-pub(super) fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>) -> u32 {
+pub(super) fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>) -> u32 {
     ctx.state.device.loopback.as_ref().unwrap().device.link.mtu
 }
 
@@ -62,12 +63,11 @@ mod tests {
     use net_types::ip::{AddrSubnet, Ipv4, Ipv6};
 
     use crate::{
-        context::InstantContext,
         device::DeviceId,
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceState, IpDeviceStateIpExt},
         testutil::{DummyCtx, DummyEventDispatcherBuilder, DummyEventDispatcherConfig, TestIpExt},
-        Ctx, EventDispatcher,
+        BlanketCoreContext, Ctx, EventDispatcher,
     };
 
     #[test]
@@ -81,12 +81,13 @@ mod tests {
         assert_eq!(crate::ip::device::get_mtu::<Ipv6, _>(&ctx, device), MTU);
 
         fn test<
-            I: TestIpExt + IpDeviceStateIpExt<D::Instant>,
-            D: EventDispatcher + InstantContext,
+            I: TestIpExt + IpDeviceStateIpExt<C::Instant>,
+            D: EventDispatcher,
+            C: BlanketCoreContext,
         >(
-            ctx: &mut Ctx<D>,
+            ctx: &mut Ctx<D, C>,
             device: DeviceId,
-            get_ip_state: fn(&Ctx<D>, DeviceId) -> &IpDeviceState<D::Instant, I>,
+            get_ip_state: fn(&Ctx<D, C>, DeviceId) -> &IpDeviceState<C::Instant, I>,
         ) {
             assert_eq!(
                 &get_ip_state(ctx, device)
@@ -127,7 +128,7 @@ mod tests {
             assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Err(NotFoundError));
         }
 
-        test::<Ipv4, _>(&mut ctx, device, crate::ip::device::get_ipv4_device_state::<DummyCtx>);
-        test::<Ipv6, _>(&mut ctx, device, crate::ip::device::get_ipv6_device_state::<DummyCtx>);
+        test::<Ipv4, _, _>(&mut ctx, device, crate::ip::device::get_ipv4_device_state::<DummyCtx>);
+        test::<Ipv6, _, _>(&mut ctx, device, crate::ip::device::get_ipv6_device_state::<DummyCtx>);
     }
 }

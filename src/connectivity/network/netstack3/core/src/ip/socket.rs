@@ -24,7 +24,7 @@ use crate::{
         IpDeviceIdContext, IpExt, SendIpPacketMeta,
     },
     socket::Socket,
-    Ctx, EventDispatcher,
+    BlanketCoreContext, Ctx, EventDispatcher,
 };
 
 /// A socket identifying a connection between a local and remote IP host.
@@ -387,8 +387,8 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
 /// `update_all_ipv4_sockets` applies the given socket update to all IPv4
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv4 sockets.
-pub(super) fn update_all_ipv4_sockets<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub(super) fn update_all_ipv4_sockets<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     update: IpSockUpdate<Ipv4>,
 ) {
     crate::ip::icmp::update_all_ipv4_sockets(ctx, update);
@@ -399,8 +399,8 @@ pub(super) fn update_all_ipv4_sockets<D: EventDispatcher>(
 /// `update_all_ipv6_sockets` applies the given socket update to all IPv6
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv6 sockets.
-pub(super) fn update_all_ipv6_sockets<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub(super) fn update_all_ipv6_sockets<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     update: IpSockUpdate<Ipv6>,
 ) {
     crate::ip::icmp::update_all_ipv6_sockets(ctx, update);

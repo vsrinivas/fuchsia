@@ -29,7 +29,7 @@ pub(crate) struct StackFidlWorker<C> {
 }
 
 struct LockedFidlWorker<'a, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context>>>::Guard,
     worker: &'a StackFidlWorker<C>,
 }
 
@@ -163,7 +163,7 @@ where
         .await
         .map_err(|_| fidl_net_stack::Error::Internal)?;
 
-        let Ctx { state, dispatcher } = self.ctx.deref_mut();
+        let Ctx { state, dispatcher, ctx: _ } = self.ctx.deref_mut();
         let client_stream = client.get_stream();
 
         let online = client

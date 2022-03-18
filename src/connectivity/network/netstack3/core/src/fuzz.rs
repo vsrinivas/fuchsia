@@ -23,9 +23,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::testutil::DummyTimerCtxExt,
-    testutil::{DummyCtx, DummyEventDispatcher},
-    Ctx, DeviceId, TimerId,
+    context::testutil::DummyTimerCtxExt, testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId,
 };
 
 mod print_on_panic {
@@ -307,7 +305,7 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
     Ok((bytes, description))
 }
 
-fn dispatch(ctx: &mut DummyCtx, device_id: DeviceId, action: FuzzAction) {
+fn dispatch(ctx: &mut crate::testutil::DummyCtx, device_id: DeviceId, action: FuzzAction) {
     use FuzzAction::*;
     match action {
         ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {
@@ -323,7 +321,10 @@ fn dispatch(ctx: &mut DummyCtx, device_id: DeviceId, action: FuzzAction) {
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     print_on_panic::initialize_logging();
 
-    let mut ctx = Ctx::with_default_state(DummyEventDispatcher::default());
+    let mut ctx = Ctx::with_default_state(
+        DummyEventDispatcher::default(),
+        crate::context::testutil::DummyCtx::default(),
+    );
     let FuzzInput { actions } = input;
     let device_id = ctx
         .state

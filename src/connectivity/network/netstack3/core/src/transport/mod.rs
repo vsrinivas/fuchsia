@@ -60,7 +60,9 @@ pub(crate) mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
-use crate::{device::DeviceId, transport::udp::UdpStateBuilder, Ctx, EventDispatcher};
+use crate::{
+    device::DeviceId, transport::udp::UdpStateBuilder, BlanketCoreContext, Ctx, EventDispatcher,
+};
 
 /// A builder for transport layer state.
 #[derive(Default, Clone)]
@@ -90,6 +92,9 @@ pub(crate) struct TransportLayerState {
 pub(crate) enum TransportLayerTimerId {}
 
 /// Handle a timer event firing in the transport layer.
-pub(crate) fn handle_timer<D: EventDispatcher>(_ctx: &mut Ctx<D>, id: TransportLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
+    _ctx: &mut Ctx<D, C>,
+    id: TransportLayerTimerId,
+) {
     match id {}
 }

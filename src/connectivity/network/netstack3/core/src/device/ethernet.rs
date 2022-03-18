@@ -40,7 +40,7 @@ use crate::{
     },
     error::{ExistsError, NotFoundError},
     ip::device::state::{AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig},
-    Ctx, EventDispatcher, Ipv6DeviceConfiguration,
+    BlanketCoreContext, Ctx, EventDispatcher, Ipv6DeviceConfiguration,
 };
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -103,12 +103,12 @@ pub(crate) trait EthernetIpLinkDeviceContext:
     );
 }
 
-impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext for Ctx<D, C> {
     fn add_ipv6_addr_subnet(
         &mut self,
         device_id: EthernetDeviceId,
         addr_sub: AddrSubnet<Ipv6Addr>,
-        config: AddrConfig<D::Instant>,
+        config: AddrConfig<C::Instant>,
     ) -> Result<(), ExistsError> {
         crate::ip::device::add_ipv6_addr_subnet(self, device_id.into(), addr_sub, config)
     }
@@ -1380,7 +1380,7 @@ mod tests {
 
         // Receiving a packet not destined for the node should only result in a
         // dest unreachable message if routing is enabled.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_empty(ctx.dispatcher.frames_sent().iter());
 
         // Set routing and expect packets to be forwarded.
@@ -1391,7 +1391,7 @@ mod tests {
 
         // Should route the packet since routing fully enabled (netstack &
         // device).
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
             parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
@@ -1415,7 +1415,7 @@ mod tests {
             .ok()
             .unwrap()
             .unwrap_b();
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf_unknown_dest);
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf_unknown_dest);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
         check_icmp::<I>(&ctx.dispatcher.frames_sent()[1].1);
 
@@ -1426,7 +1426,7 @@ mod tests {
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Should not route packets anymore
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
     }
 
@@ -1587,7 +1587,7 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
+        receive_ip_packet::<_, _, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
         assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
     }
 
@@ -1657,8 +1657,8 @@ mod tests {
         return MulticastAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();
     }
 
-    fn join_ip_multicast<A: IpAddress, D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn join_ip_multicast<A: IpAddress, D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {
@@ -1672,8 +1672,8 @@ mod tests {
         }
     }
 
-    fn leave_ip_multicast<A: IpAddress, D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn leave_ip_multicast<A: IpAddress, D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {

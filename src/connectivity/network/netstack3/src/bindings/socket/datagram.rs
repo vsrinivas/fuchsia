@@ -27,11 +27,11 @@ use net_types::{
 };
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferDispatcher,
-    BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
-    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, LocalAddressError,
-    TransportIpContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
-    UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpStateContext,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BlanketCoreContext,
+    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
+    IdMapCollection, IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError,
+    LocalAddressError, TransportIpContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId,
+    UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpStateContext,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -478,22 +478,22 @@ impl IntoErrno for IcmpSendError {
 
 /// An extension trait that allows generic access to IP-specific ICMP functionality in the Core.
 pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
-    fn new_icmp_connection<D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D, C>>>::LocalIdentifier>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-        ctx: &mut Ctx<D>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
     ) -> Result<(), (B, IcmpSendError)>;
 
-    fn send_conn<B: BufferMut, D: BufferDispatcher<B>>(
-        ctx: &mut Ctx<D>,
+    fn send_conn<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         conn: icmp::IcmpConnId<Self>,
         mut body: B,
     ) -> Result<(), (B, IcmpSendError)>
@@ -541,17 +541,17 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
 }
 
 impl IcmpEchoIpExt for Ipv4 {
-    fn new_icmp_connection<D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D, C>>>::LocalIdentifier>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
         icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-        ctx: &mut Ctx<D>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
@@ -562,17 +562,17 @@ impl IcmpEchoIpExt for Ipv4 {
 }
 
 impl IcmpEchoIpExt for Ipv6 {
-    fn new_icmp_connection<D: EventDispatcher>(
-        ctx: &mut Ctx<D>,
+    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D, C>>>::LocalIdentifier>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
         icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-        ctx: &mut Ctx<D>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+        ctx: &mut Ctx<D, C>,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
@@ -588,14 +588,16 @@ impl OptionFromU16 for u16 {
     }
 }
 
-impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEcho {
+impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState<I, Ctx<D, C>>
+    for IcmpEcho
+{
     type CreateConnError = icmp::IcmpSockCreationError;
     type CreateListenerError = icmp::IcmpSockCreationError;
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
     fn create_connection(
-        ctx: &mut Ctx<D>,
+        ctx: &mut Ctx<D, C>,
         local_addr: Option<SpecifiedAddr<I::Addr>>,
         local_id: Option<Self::LocalIdentifier>,
         remote_addr: SpecifiedAddr<I::Addr>,
@@ -606,7 +608,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
     }
 
     fn create_listener(
-        _ctx: &mut Ctx<D>,
+        _ctx: &mut Ctx<D, C>,
         _addr: Option<SpecifiedAddr<I::Addr>>,
         _id: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError> {
@@ -614,7 +616,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
     }
 
     fn get_conn_info(
-        _ctx: &Ctx<D>,
+        _ctx: &Ctx<D, C>,
         _id: Self::ConnId,
     ) -> (
         SpecifiedAddr<I::Addr>,
@@ -626,14 +628,14 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
     }
 
     fn get_listener_info(
-        _ctx: &Ctx<D>,
+        _ctx: &Ctx<D, C>,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn remove_conn(
-        _ctx: &mut Ctx<D>,
+        _ctx: &mut Ctx<D, C>,
         _id: Self::ConnId,
     ) -> (
         SpecifiedAddr<I::Addr>,
@@ -645,15 +647,15 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
     }
 
     fn remove_listener(
-        _ctx: &mut Ctx<D>,
+        _ctx: &mut Ctx<D, C>,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
 
-impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>> BufferTransportState<I, B, Ctx<D>>
-    for IcmpEcho
+impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
+    BufferTransportState<I, B, Ctx<D, C>> for IcmpEcho
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -662,7 +664,7 @@ where
     type SendListenerError = IcmpSendError;
 
     fn send(
-        _ctx: &mut Ctx<D>,
+        _ctx: &mut Ctx<D, C>,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
         _local_id: Option<Self::LocalIdentifier>,
         _remote_ip: SpecifiedAddr<I::Addr>,
@@ -673,7 +675,7 @@ where
     }
 
     fn send_conn(
-        ctx: &mut Ctx<D>,
+        ctx: &mut Ctx<D, C>,
         conn: Self::ConnId,
         body: B,
     ) -> Result<(), (B, Self::SendConnError)> {
@@ -681,7 +683,7 @@ where
     }
 
     fn send_listener(
-        _ctx: &mut Ctx<D>,
+        _ctx: &mut Ctx<D, C>,
         _listener: Self::ListenerId,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
         _remote_ip: SpecifiedAddr<I::Addr>,
@@ -895,12 +897,28 @@ where
     I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
     T: Transport<Ipv4>,
     T: Transport<Ipv6>,
-    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
-    T: BufferTransportState<I, Buf<Vec<u8>>, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    T: TransportState<
+        I,
+        Ctx<
+            <C as RequestHandlerContext<I, T>>::Dispatcher,
+            <C as RequestHandlerContext<I, T>>::Context,
+        >,
+    >,
+    T: BufferTransportState<
+        I,
+        Buf<Vec<u8>>,
+        Ctx<
+            <C as RequestHandlerContext<I, T>>::Dispatcher,
+            <C as RequestHandlerContext<I, T>>::Context,
+        >,
+    >,
     C: RequestHandlerContext<I, T>,
     T: Send + Sync + 'static,
     C: Clone + Send + Sync + 'static,
-    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
+    Ctx<
+        <C as RequestHandlerContext<I, T>>::Dispatcher,
+        <C as RequestHandlerContext<I, T>>::Context,
+    >: TransportIpContext<I>,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -922,7 +940,7 @@ where
             async move {
                 let id = {
                     let mut guard = ctx.lock().await;
-                    let Ctx { state: _, dispatcher } = &mut *guard;
+                    let Ctx { state: _, dispatcher, ctx: _ } = &mut *guard;
                     let SocketCollection { binding_data, conns: _, listeners: _ } =
                         I::get_collection_mut(dispatcher);
                     binding_data.push(BindingData::new(local_event, peer_event, properties))
@@ -1514,7 +1532,10 @@ where
 // TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
 // a bound on the parent trait's associated type.
 trait RequestHandlerContext<I, T>:
-    LockableContext<Dispatcher = <Self as RequestHandlerContext<I, T>>::Dispatcher>
+    LockableContext<
+    Dispatcher = <Self as RequestHandlerContext<I, T>>::Dispatcher,
+    Context = <Self as RequestHandlerContext<I, T>>::Context,
+>
 where
     I: IpExt,
     T: Transport<Ipv4>,
@@ -1522,6 +1543,7 @@ where
     T: Transport<I>,
 {
     type Dispatcher: RequestHandlerDispatcher<I, T>;
+    type Context: BlanketCoreContext;
 }
 
 impl<I, T, C> RequestHandlerContext<I, T> for C
@@ -1534,10 +1556,11 @@ where
     C::Dispatcher: RequestHandlerDispatcher<I, T>,
 {
     type Dispatcher = C::Dispatcher;
+    type Context = C::Context;
 }
 
 struct RequestHandler<'a, I, T, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context>>>::Guard,
     binding_id: usize,
     rights: u32,
     _marker: PhantomData<(I, T)>,
@@ -1576,9 +1599,18 @@ where
     I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
     T: Transport<Ipv4>,
     T: Transport<Ipv6>,
-    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    T: TransportState<
+        I,
+        Ctx<
+            <C as RequestHandlerContext<I, T>>::Dispatcher,
+            <C as RequestHandlerContext<I, T>>::Context,
+        >,
+    >,
     C: RequestHandlerContext<I, T>,
-    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
+    Ctx<
+        <C as RequestHandlerContext<I, T>>::Dispatcher,
+        <C as RequestHandlerContext<I, T>>::Context,
+    >: TransportIpContext<I>,
 {
     /// Handles a [POSIX socket connect request].
     ///
@@ -1840,10 +1872,26 @@ where
     I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
     T: Transport<Ipv4>,
     T: Transport<Ipv6>,
-    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
-    T: BufferTransportState<I, Buf<Vec<u8>>, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    T: TransportState<
+        I,
+        Ctx<
+            <C as RequestHandlerContext<I, T>>::Dispatcher,
+            <C as RequestHandlerContext<I, T>>::Context,
+        >,
+    >,
+    T: BufferTransportState<
+        I,
+        Buf<Vec<u8>>,
+        Ctx<
+            <C as RequestHandlerContext<I, T>>::Dispatcher,
+            <C as RequestHandlerContext<I, T>>::Context,
+        >,
+    >,
     C: RequestHandlerContext<I, T>,
-    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
+    Ctx<
+        <C as RequestHandlerContext<I, T>>::Dispatcher,
+        <C as RequestHandlerContext<I, T>>::Context,
+    >: TransportIpContext<I>,
 {
     fn send_msg(
         &mut self,

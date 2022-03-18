@@ -37,6 +37,7 @@ mod macros;
 
 mod algorithm;
 #[cfg(test)]
+#[cfg(ignore)]
 mod benchmarks;
 pub mod context;
 mod data_structures;
@@ -197,7 +198,7 @@ impl StackStateBuilder {
     }
 
     /// Consume this builder and produce a `StackState`.
-    pub fn build<D: EventDispatcher>(self) -> StackState<D> {
+    pub fn build<I: Instant>(self) -> StackState<I> {
         StackState {
             transport: self.transport.build(),
             ipv4: self.ipv4.build(),
@@ -210,16 +211,16 @@ impl StackStateBuilder {
 }
 
 /// The state associated with the network stack.
-pub struct StackState<D: EventDispatcher> {
+pub struct StackState<I: Instant> {
     transport: TransportLayerState,
-    ipv4: Ipv4State<D::Instant, DeviceId>,
-    ipv6: Ipv6State<D::Instant, DeviceId>,
-    device: DeviceLayerState<D::Instant>,
+    ipv4: Ipv4State<I, DeviceId>,
+    ipv6: Ipv6State<I, DeviceId>,
+    device: DeviceLayerState<I>,
     #[cfg(test)]
     test_counters: core::cell::RefCell<testutil::TestCounters>,
 }
 
-impl<D: EventDispatcher> StackState<D> {
+impl<I: Instant> StackState<I> {
     /// Add a new ethernet device to the device layer.
     ///
     /// `add_ethernet_device` only makes the netstack aware of the device. The
@@ -249,8 +250,8 @@ impl<D: EventDispatcher> StackState<D> {
     }
 }
 
-impl<D: EventDispatcher> Default for StackState<D> {
-    fn default() -> StackState<D> {
+impl<I: Instant> Default for StackState<I> {
+    fn default() -> StackState<I> {
         StackStateBuilder::default().build()
     }
 }
@@ -260,30 +261,40 @@ impl<D: EventDispatcher> Default for StackState<D> {
 /// `Ctx` provides access to the state of the netstack and to an event
 /// dispatcher which can be used to emit events and schedule timers. A mutable
 /// reference to a `Ctx` is passed to every function in the netstack.
-#[derive(Default)]
-pub struct Ctx<D: EventDispatcher> {
+pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext> {
     /// Contains the state of the stack.
-    pub state: StackState<D>,
+    pub state: StackState<C::Instant>,
     /// The dispatcher, take a look at [`EventDispatcher`] for more details.
     pub dispatcher: D,
+    /// The execution context.
+    pub ctx: C,
 }
 
-impl<D: EventDispatcher> Ctx<D> {
+impl<D: EventDispatcher + Default, C: BlanketCoreContext + Default> Default for Ctx<D, C>
+where
+    StackState<C::Instant>: Default,
+{
+    fn default() -> Ctx<D, C> {
+        Ctx { state: StackState::default(), dispatcher: D::default(), ctx: C::default() }
+    }
+}
+
+impl<D: EventDispatcher, C: BlanketCoreContext> Ctx<D, C> {
     /// Constructs a new `Ctx`.
-    pub fn new(state: StackState<D>, dispatcher: D) -> Ctx<D> {
-        Ctx { state, dispatcher }
+    pub fn new(state: StackState<C::Instant>, dispatcher: D, ctx: C) -> Ctx<D, C> {
+        Ctx { state, dispatcher, ctx }
     }
 
     /// Constructs a new `Ctx` using the default `StackState`.
-    pub fn with_default_state(dispatcher: D) -> Ctx<D> {
-        Ctx { state: StackState::default(), dispatcher }
+    pub fn with_default_state(dispatcher: D, ctx: C) -> Ctx<D, C> {
+        Ctx { state: StackState::default(), dispatcher, ctx }
     }
 }
 
-impl<D: EventDispatcher + Default> Ctx<D> {
+impl<D: EventDispatcher + Default, C: BlanketCoreContext> Ctx<D, C> {
     /// Construct a new `Ctx` using the default dispatcher.
-    pub fn with_default_dispatcher(state: StackState<D>) -> Ctx<D> {
-        Ctx { state, dispatcher: D::default() }
+    pub fn with_default_dispatcher(state: StackState<C::Instant>, ctx: C) -> Ctx<D, C> {
+        Ctx { state, dispatcher: D::default(), ctx }
     }
 }
 
@@ -347,7 +358,7 @@ impl_timer_context!(
 );
 
 /// Handle a generic timer event.
-pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
+pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(ctx: &mut Ctx<D, C>, id: TimerId) {
     trace!("handle_timer: dispatching timerid: {:?}", id);
 
     match id {
@@ -426,6 +437,10 @@ impl<
 // [u8]>` bound? Would anything get more efficient if we were able to stack
 // allocate internally-generated buffers?
 
+/// The execution context required by the Netstack3 Core.
+pub trait BlanketCoreContext: InstantContext + RngContext + TimerContext<TimerId> {}
+impl<C: InstantContext + RngContext + TimerContext<TimerId>> BlanketCoreContext for C {}
+
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
@@ -434,10 +449,7 @@ impl<
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher:
-    InstantContext
-    + RngContext
-    + TimerContext<TimerId>
-    + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+    DeviceLayerEventDispatcher<Buf<Vec<u8>>>
     + DeviceLayerEventDispatcher<EmptyBuf>
     + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
@@ -455,10 +467,7 @@ pub trait EventDispatcher:
 }
 
 impl<
-        D: InstantContext
-            + RngContext
-            + TimerContext<TimerId>
-            + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+        D: DeviceLayerEventDispatcher<Buf<Vec<u8>>>
             + DeviceLayerEventDispatcher<EmptyBuf>
             + IcmpContext<Ipv4>
             + IcmpContext<Ipv6>
@@ -477,8 +486,8 @@ impl<
 }
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
-pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
-    ctx: &'a Ctx<D>,
+pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &'a Ctx<D, C>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
     let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
@@ -490,8 +499,8 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
 }
 
 /// Set the IP address and subnet for a device.
-pub fn add_ip_addr_subnet<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
 ) -> error::Result<()> {
@@ -503,8 +512,8 @@ pub fn add_ip_addr_subnet<D: EventDispatcher>(
 }
 
 /// Delete an IP address on a device.
-pub fn del_ip_addr<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
 ) -> error::Result<()> {
@@ -516,8 +525,8 @@ pub fn del_ip_addr<D: EventDispatcher>(
 }
 
 /// Adds a route to the forwarding table.
-pub fn add_route<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     entry: EntryEither<DeviceId>,
 ) -> Result<(), error::NetstackError> {
     let (subnet, dest) = entry.into_subnet_dest();
@@ -542,7 +551,10 @@ pub fn add_route<D: EventDispatcher>(
 
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
-pub fn del_route<D: EventDispatcher>(ctx: &mut Ctx<D>, subnet: SubnetEither) -> error::Result<()> {
+pub fn del_route<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    subnet: SubnetEither,
+) -> error::Result<()> {
     map_addr_version!(
         subnet: SubnetEither;
         crate::ip::del_route::<Ipv4, _>(ctx, subnet),
@@ -552,11 +564,11 @@ pub fn del_route<D: EventDispatcher>(ctx: &mut Ctx<D>, subnet: SubnetEither) -> 
 }
 
 /// Get all the routes.
-pub fn get_all_routes<'a, D: EventDispatcher>(
-    ctx: &'a Ctx<D>,
+pub fn get_all_routes<'a, D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &'a Ctx<D, C>,
 ) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
-    let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
-    let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);
+    let v4_routes = ip::iter_all_routes::<_, _, Ipv4Addr>(ctx);
+    let v6_routes = ip::iter_all_routes::<_, _, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }
 

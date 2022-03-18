@@ -57,7 +57,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -98,8 +98,8 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
     fn is_device_usable(&self, device: <Self as DeviceIdContext<D>>::DeviceId) -> bool;
 }
 
-impl<D: EventDispatcher> IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>>
-    for Ctx<D>
+impl<D: EventDispatcher, C: BlanketCoreContext>
+    IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>> for Ctx<D, C>
 {
     fn is_device_usable(&self, device: EthernetDeviceId) -> bool {
         is_device_usable(&self.state, device.into())
@@ -129,48 +129,48 @@ impl<
 {
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>>
-    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for Ctx<D>
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
+    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for Ctx<D, C>
 {
     fn receive_frame(&mut self, metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv4>, frame: B) {
         crate::ip::receive_ipv4_packet(self, metadata.device.into(), metadata.frame_dst, frame);
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>>
-    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for Ctx<D>
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
+    RecvFrameContext<B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for Ctx<D, C>
 {
     fn receive_frame(&mut self, metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv6>, frame: B) {
         crate::ip::receive_ipv6_packet(self, metadata.device.into(), metadata.frame_dst, frame);
     }
 }
 
-impl<D: EventDispatcher>
-    DualStateContext<IpLinkDeviceState<D::Instant, EthernetDeviceState>, D::Rng, EthernetDeviceId>
-    for Ctx<D>
+impl<D: EventDispatcher, C: BlanketCoreContext>
+    DualStateContext<IpLinkDeviceState<C::Instant, EthernetDeviceState>, C::Rng, EthernetDeviceId>
+    for Ctx<D, C>
 {
     fn get_states_with(
         &self,
         id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState>, &D::Rng) {
-        (&self.state.device.ethernet.get(id0.0).unwrap().device, self.dispatcher.rng())
+    ) -> (&IpLinkDeviceState<C::Instant, EthernetDeviceState>, &C::Rng) {
+        (&self.state.device.ethernet.get(id0.0).unwrap().device, self.ctx.rng())
     }
 
     fn get_states_mut_with(
         &mut self,
         id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState>, &mut D::Rng) {
-        let Ctx { state, dispatcher } = self;
-        (&mut state.device.ethernet.get_mut(id0.0).unwrap().device, dispatcher.rng_mut())
+    ) -> (&mut IpLinkDeviceState<C::Instant, EthernetDeviceState>, &mut C::Rng) {
+        let Ctx { state, dispatcher: _, ctx } = self;
+        (&mut state.device.ethernet.get_mut(id0.0).unwrap().device, ctx.rng_mut())
     }
 }
 
-fn get_ip_device_state<D: EventDispatcher>(
-    ctx: &Ctx<D>,
+fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &Ctx<D, C>,
     device: DeviceId,
-) -> &DualStackIpDeviceState<D::Instant> {
+) -> &DualStackIpDeviceState<C::Instant> {
     match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &ctx.state.device.ethernet.get(id).unwrap().device.ip
@@ -179,10 +179,10 @@ fn get_ip_device_state<D: EventDispatcher>(
     }
 }
 
-fn get_ip_device_state_mut_and_rng<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
-) -> (&mut DualStackIpDeviceState<D::Instant>, &mut D::Rng) {
+) -> (&mut DualStackIpDeviceState<C::Instant>, &mut C::Rng) {
     let state = match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &mut ctx.state.device.ethernet.get_mut(id).unwrap().device.ip
@@ -190,10 +190,12 @@ fn get_ip_device_state_mut_and_rng<D: EventDispatcher>(
         DeviceIdInner::Loopback => &mut ctx.state.device.loopback.as_mut().unwrap().device.ip,
     };
 
-    (state, ctx.dispatcher.rng_mut())
+    (state, ctx.ctx.rng_mut())
 }
 
-fn iter_devices<D: EventDispatcher>(ctx: &Ctx<D>) -> impl Iterator<Item = DeviceId> + '_ {
+fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &Ctx<D, C>,
+) -> impl Iterator<Item = DeviceId> + '_ {
     let DeviceLayerState { ethernet, loopback, default_ndp_config: _, default_ipv6_config: _ } =
         &ctx.state.device;
 
@@ -205,15 +207,15 @@ fn iter_devices<D: EventDispatcher>(ctx: &Ctx<D>) -> impl Iterator<Item = Device
         }))
 }
 
-fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> u32 {
+fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>, device: DeviceId) -> u32 {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, id),
         DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
     }
 }
 
-fn join_link_multicast_group<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
+fn join_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
+    ctx: &mut Ctx<D, C>,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
@@ -225,8 +227,8 @@ fn join_link_multicast_group<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-fn leave_link_multicast_group<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
+fn leave_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
+    ctx: &mut Ctx<D, C>,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
@@ -238,7 +240,7 @@ fn leave_link_multicast_group<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-impl<D: EventDispatcher> IpDeviceContext<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4> for Ctx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv4DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv4
     }
@@ -246,7 +248,7 @@ impl<D: EventDispatcher> IpDeviceContext<Ipv4> for Ctx<D> {
     fn get_ip_device_state_mut_and_rng(
         &mut self,
         device: DeviceId,
-    ) -> (&mut Ipv4DeviceState<Self::Instant>, &mut D::Rng) {
+    ) -> (&mut Ipv4DeviceState<Self::Instant>, &mut C::Rng) {
         let (state, rng) = get_ip_device_state_mut_and_rng(self, device);
         (&mut state.ipv4, rng)
     }
@@ -276,8 +278,14 @@ impl<D: EventDispatcher> IpDeviceContext<Ipv4> for Ctx<D> {
     }
 }
 
-fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, S: Serializer<Buffer = B>, A: IpAddress>(
-    ctx: &mut Ctx<D>,
+fn send_ip_frame<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    C: BlanketCoreContext,
+    S: Serializer<Buffer = B>,
+    A: IpAddress,
+>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     local_addr: SpecifiedAddr<A>,
     body: S,
@@ -291,7 +299,9 @@ fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, S: Serializer<Buffer = B>
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv4, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv4, B>
+    for Ctx<D, C>
+{
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
@@ -302,7 +312,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv4, B> for Ct
     }
 }
 
-impl<D: EventDispatcher> IpDeviceContext<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv6DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv6
     }
@@ -310,7 +320,7 @@ impl<D: EventDispatcher> IpDeviceContext<Ipv6> for Ctx<D> {
     fn get_ip_device_state_mut_and_rng(
         &mut self,
         device: DeviceId,
-    ) -> (&mut Ipv6DeviceState<Self::Instant>, &mut D::Rng) {
+    ) -> (&mut Ipv6DeviceState<Self::Instant>, &mut C::Rng) {
         let (state, rng) = get_ip_device_state_mut_and_rng(self, device);
         (&mut state.ipv6, rng)
     }
@@ -340,7 +350,7 @@ impl<D: EventDispatcher> IpDeviceContext<Ipv6> for Ctx<D> {
     }
 }
 
-impl<D: EventDispatcher> Ipv6DeviceContext for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> {
     fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => NdpHandler::retrans_timer(self, id),
@@ -358,7 +368,9 @@ impl<D: EventDispatcher> Ipv6DeviceContext for Ctx<D> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv6, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv6, B>
+    for Ctx<D, C>
+{
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
@@ -369,7 +381,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv6, B> for Ct
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, EthernetDeviceId> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> FrameContext<B, EthernetDeviceId>
+    for Ctx<D, C>
+{
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: EthernetDeviceId,
@@ -419,7 +433,7 @@ impl From<EthernetTimerId<EthernetDeviceId>> for DeviceLayerTimerId {
     }
 }
 
-impl<D: EventDispatcher> DeviceIdContext<EthernetLinkDevice> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> DeviceIdContext<EthernetLinkDevice> for Ctx<D, C> {
     type DeviceId = EthernetDeviceId;
 }
 
@@ -431,7 +445,10 @@ impl_timer_context!(
 );
 
 /// Handle a timer event firing in the device layer.
-pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: DeviceLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    id: DeviceLayerTimerId,
+) {
     match id.0 {
         DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(ctx, id),
     }
@@ -653,16 +670,13 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
 /// Is `device` usable?
 ///
 /// That is, is it either initializing or initialized?
-pub(crate) fn is_device_usable<D: EventDispatcher>(
-    state: &StackState<D>,
-    device: DeviceId,
-) -> bool {
+pub(crate) fn is_device_usable<I: crate::Instant>(state: &StackState<I>, device: DeviceId) -> bool {
     !get_common_device_state(state, device).is_uninitialized()
 }
 
 /// Is `device` initialized?
-pub(crate) fn is_device_initialized<D: EventDispatcher>(
-    state: &StackState<D>,
+pub(crate) fn is_device_initialized<I: crate::Instant>(
+    state: &StackState<I>,
     device: DeviceId,
 ) -> bool {
     get_common_device_state(state, device).is_initialized()
@@ -688,7 +702,10 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 /// # Panics
 ///
 /// Panics if `device` is already initialized.
-pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) {
+pub fn initialize_device<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    device: DeviceId,
+) {
     let state = get_common_device_state_mut(&mut ctx.state, device);
 
     // `device` must currently be uninitialized.
@@ -717,7 +734,10 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
 /// # Panics
 ///
 /// Panics if `device` does not refer to an existing device.
-pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> Option<Vec<usize>> {
+pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    device: DeviceId,
+) -> Option<Vec<usize>> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             // TODO(rheacock): Generate any final frames to send here.
@@ -746,8 +766,8 @@ pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> 
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
-pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Ctx<D>,
+pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     buffer: B,
 ) -> Result<(), NotSupportedError> {
@@ -763,8 +783,8 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 /// Set the promiscuous mode flag on `device`.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
-pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn set_promiscuous_mode<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     enabled: bool,
 ) -> Result<(), NotSupportedError> {
@@ -782,8 +802,8 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
-pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), ExistsError> {
@@ -809,8 +829,8 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
-pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), NotFoundError> {
@@ -829,7 +849,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // the `context` module.
-impl<D: EventDispatcher, I: Ip> IpDeviceIdContext<I> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext, I: Ip> IpDeviceIdContext<I> for Ctx<D, C> {
     type DeviceId = DeviceId;
 
     fn loopback_id(&self) -> Option<DeviceId> {
@@ -842,8 +862,8 @@ impl<D: EventDispatcher, I: Ip> IpDeviceIdContext<I> for Ctx<D> {
 }
 
 /// Get a reference to the common device state for a `device`.
-fn get_common_device_state<D: EventDispatcher>(
-    state: &StackState<D>,
+fn get_common_device_state<I: crate::Instant>(
+    state: &StackState<I>,
     device: DeviceId,
 ) -> &CommonDeviceState {
     match device.inner() {
@@ -862,8 +882,8 @@ fn get_common_device_state<D: EventDispatcher>(
 }
 
 /// Get a mutable reference to the common device state for a `device`.
-fn get_common_device_state_mut<D: EventDispatcher>(
-    state: &mut StackState<D>,
+fn get_common_device_state_mut<I: crate::Instant>(
+    state: &mut StackState<I>,
     device: DeviceId,
 ) -> &mut CommonDeviceState {
     match device.inner() {
@@ -888,8 +908,8 @@ fn get_common_device_state_mut<D: EventDispatcher>(
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
 // called by a pub fn in the device mod.
 #[cfg(test)]
-pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub(super) fn insert_static_arp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr: Ipv4Addr,
     mac: UnicastAddr<Mac>,
@@ -909,8 +929,8 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
 /// resolution.
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
-pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
@@ -937,14 +957,14 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 ///    solicitation will continue using the old value.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
-pub fn set_ndp_configuration<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn set_ndp_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     config: ndp::NdpConfiguration,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            Ok(<Ctx<_> as NdpHandler<EthernetLinkDevice>>::set_configuration(ctx, id, config))
+            Ok(<Ctx<_, _> as NdpHandler<EthernetLinkDevice>>::set_configuration(ctx, id, config))
         }
         DeviceIdInner::Loopback => {
             // TODO(https://fxbug.dev/72378): Support NDP configurations on
@@ -955,8 +975,8 @@ pub fn set_ndp_configuration<D: EventDispatcher>(
 }
 
 /// Updates the IPv4 Configuration for a `device`.
-pub fn set_ipv4_configuration<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn set_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     config: Ipv4DeviceConfiguration,
 ) {
@@ -964,8 +984,8 @@ pub fn set_ipv4_configuration<D: EventDispatcher>(
 }
 
 /// Updates the IPv6 Configuration for a `device`.
-pub fn set_ipv6_configuration<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
+pub fn set_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
     device: DeviceId,
     config: Ipv6DeviceConfiguration,
 ) {
@@ -984,7 +1004,7 @@ pub fn set_ipv6_configuration<D: EventDispatcher>(
 pub struct Tentative<T>(T, bool);
 
 /// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
-impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<DeviceId> for Ctx<D, C> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
         device: DeviceId,
@@ -1018,33 +1038,37 @@ pub(crate) mod testutil {
     pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>:
         IpDeviceStateIpExt<Instant>
     {
-        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
-            ctx: &Ctx<D>,
+        fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
+            ctx: &Ctx<D, C>,
             device: DeviceId,
-        ) -> &IpDeviceState<D::Instant, Self>;
+        ) -> &IpDeviceState<C::Instant, Self>;
     }
 
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv4 {
-        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
-            ctx: &Ctx<D>,
+        fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
+            ctx: &Ctx<D, C>,
             device: DeviceId,
-        ) -> &IpDeviceState<D::Instant, Ipv4> {
+        ) -> &IpDeviceState<C::Instant, Ipv4> {
             crate::ip::device::get_ipv4_device_state(ctx, device)
         }
     }
 
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv6 {
-        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
-            ctx: &Ctx<D>,
+        fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
+            ctx: &Ctx<D, C>,
             device: DeviceId,
-        ) -> &IpDeviceState<D::Instant, Ipv6> {
+        ) -> &IpDeviceState<C::Instant, Ipv6> {
             crate::ip::device::get_ipv6_device_state(ctx, device)
         }
     }
 
     /// Calls [`receive_frame`], panicking on error.
-    pub(crate) fn receive_frame_or_panic<B: BufferMut, D: BufferDispatcher<B>>(
-        ctx: &mut Ctx<D>,
+    pub(crate) fn receive_frame_or_panic<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+    >(
+        ctx: &mut Ctx<D, C>,
         device: DeviceId,
         buffer: B,
     ) {

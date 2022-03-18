@@ -2809,7 +2809,6 @@ mod tests {
 
     use alloc::{vec, vec::Vec};
     use core::convert::{TryFrom, TryInto as _};
-    use rand::rngs::mock::StepRng;
 
     use net_declare::net::{ip_v6, mac, subnet_v6};
     use net_types::{ethernet::Mac, ip::AddrSubnet};
@@ -2825,12 +2824,15 @@ mod tests {
         ip::IpProto,
         testutil::{parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame},
     };
+    use rand::rngs::mock::StepRng;
     use test_case::test_case;
 
     use crate::{
         assert_empty,
         context::{
-            testutil::{DummyInstant, DummyInstantRange, DummyTimerCtxExt as _, StepResult},
+            testutil::{
+                DummyCtx, DummyInstant, DummyInstantRange, DummyTimerCtxExt as _, StepResult,
+            },
             InstantContext as _,
         },
         device::{
@@ -3082,7 +3084,7 @@ mod tests {
         // local.
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         // A timer should've been started.
-        assert_eq!(net.context("local").dispatcher.timer_ctx().timers().len(), 1);
+        assert_eq!(net.context("local").ctx.timer_ctx().timers().len(), 1);
 
         let _: StepResult = net.step(receive_frame_or_panic, crate::handle_timer);
         // Neighbor entry for remote should be marked as Incomplete.
@@ -3142,7 +3144,7 @@ mod tests {
         assert_eq!(remote_neighbor.state, NeighborEntryState::Stale);
 
         // The local timer should've been unscheduled.
-        assert_empty(net.context("local").dispatcher.timer_ctx().timers());
+        assert_empty(net.context("local").ctx.timer_ctx().timers());
 
         // Upon link layer resolution, the original ping request should've been
         // sent out.
@@ -3178,7 +3180,7 @@ mod tests {
 
         // This should have scheduled a timer
         let timer_id = NdpTimerId::new_link_address_resolution(device_id, remote_ip()).into();
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Deinitializing a different ID should not impact the current timer
         let other_id = {
@@ -3186,11 +3188,11 @@ mod tests {
             EthernetDeviceId(id + 1).into()
         };
         deinitialize(&mut ctx, other_id);
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Deinitializing the correct ID should cancel the timer.
         deinitialize(&mut ctx, dev_id.try_into().expect("expected ethernet ID"));
-        ctx.dispatcher.timer_ctx().assert_no_timers_installed();
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -3219,9 +3221,13 @@ mod tests {
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build_with(stack_builder.clone(), DummyEventDispatcher::default()),
+            local.build_with(
+                stack_builder.clone(),
+                DummyEventDispatcher::default(),
+                DummyCtx::default(),
+            ),
             "remote",
-            remote.build_with(stack_builder, DummyEventDispatcher::default()),
+            remote.build_with(stack_builder, DummyEventDispatcher::default(), DummyCtx::default()),
         );
 
         // Create the devices (will start DAD at the same time).
@@ -3366,8 +3372,11 @@ mod tests {
         // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
         // our own custom `StackStateBuilder` to set it to the default value of
         // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
+            StackStateBuilder::default(),
+            DummyEventDispatcher::default(),
+            DummyCtx::<(), TimerId, DeviceId>::default(),
+        );
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         let addr = local_ip();
@@ -3411,7 +3420,8 @@ mod tests {
         ipv6_config.dad_transmits = None;
         ipv6_config.max_router_solicitations = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx =
+            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
@@ -3492,8 +3502,8 @@ mod tests {
         let _: StepResult = net.step(receive_frame_or_panic, crate::handle_timer);
 
         // Let's make sure that all timers are cancelled properly.
-        assert_empty(net.context("local").dispatcher.timer_ctx().timers());
-        assert_empty(net.context("remote").dispatcher.timer_ctx().timers());
+        assert_empty(net.context("local").ctx.timer_ctx().timers());
+        assert_empty(net.context("remote").ctx.timer_ctx().timers());
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
@@ -4413,7 +4423,7 @@ mod tests {
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be set.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             NdpTimerId::new_prefix_invalidation(device_id, subnet).into(),
             ..,
         )]);
@@ -4438,7 +4448,7 @@ mod tests {
         // Should remove the prefix from our list now.
         assert!(!ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be unset.
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (same as before but new since it
         // isn't in our list right now).
@@ -4461,7 +4471,7 @@ mod tests {
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be set.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             NdpTimerId::new_prefix_invalidation(device_id, subnet).into(),
             ..,
         )]);
@@ -4486,7 +4496,7 @@ mod tests {
         // Prefix should be in our list still.
         assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should still be set.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(
+        ctx.ctx.timer_ctx().assert_timers_installed([(
             NdpTimerId::new_prefix_invalidation(device_id, subnet).into(),
             ..,
         )]);
@@ -4532,7 +4542,8 @@ mod tests {
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx =
+            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
 
         assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
@@ -4616,7 +4627,8 @@ mod tests {
         ipv6_config.dad_transmits = None;
         ipv6_config.max_router_solicitations = NonZeroU8::new(2);
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx =
+            Ctx::new(stack_builder.build(), DummyEventDispatcher::default(), DummyCtx::default());
 
         assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
@@ -4675,11 +4687,14 @@ mod tests {
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(state_builder, DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
+            state_builder,
+            DummyEventDispatcher::default(),
+            DummyCtx::default(),
+        );
 
         assert_empty(ctx.dispatcher.frames_sent());
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -4688,7 +4703,7 @@ mod tests {
 
         // Send the first router solicitation.
         assert_empty(ctx.dispatcher.frames_sent());
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer).unwrap(), timer_id);
 
@@ -4701,7 +4716,7 @@ mod tests {
                 |_| {},
             )
             .unwrap();
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Enable routing on device.
         set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
@@ -4710,13 +4725,13 @@ mod tests {
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        assert_empty(ctx.dispatcher.timer_ctx().timers().iter().filter(|x| x.1 == timer_id));
+        assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| x.1 == timer_id));
 
         // Unsetting routing should succeed.
         set_ipv6_routing_enabled(&mut ctx, device, false).expect("error setting routing enabled");
         assert!(!is_ipv6_routing_enabled(&ctx, device));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Send the first router solicitation after being turned into a host.
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer).unwrap(), timer_id);
@@ -4730,7 +4745,7 @@ mod tests {
             ),
             Ok((_, _, _, _, _, _, _))
         );
-        ctx.dispatcher.timer_ctx().assert_timers_installed([(timer_id, ..)]);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
     }
 
     #[test]
@@ -4746,7 +4761,7 @@ mod tests {
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
         assert_empty(ctx.dispatcher.frames_sent());
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Updating the IP should resolve immediately since DAD is turned off by
         // `DummyEventDispatcherBuilder::build`.
@@ -4765,7 +4780,7 @@ mod tests {
             AddressState::Assigned
         );
         assert_empty(ctx.dispatcher.frames_sent());
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Enable DAD for the device.
         const DUP_ADDR_DETECT_TRANSMITS: u8 = 3;
@@ -4797,7 +4812,7 @@ mod tests {
             }
         );
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher.timer_ctx().timers().len(), 1);
+        assert_eq!(ctx.ctx.timer_ctx().timers().len(), 1);
 
         // Disable DAD during DAD.
         ipv6_config.dad_transmits = None;
@@ -5211,8 +5226,11 @@ mod tests {
         ipv6_config.dad_transmits = None;
         ipv6_config.max_router_solicitations = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(state_builder, DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build_with(
+            state_builder,
+            DummyEventDispatcher::default(),
+            DummyCtx::default(),
+        );
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
         set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
@@ -5362,7 +5380,7 @@ mod tests {
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
-        ctx.dispatcher.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
@@ -5434,7 +5452,7 @@ mod tests {
 
         // Timers should have been reset.
         let now = ctx.now();
-        ctx.dispatcher.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
@@ -5551,15 +5569,15 @@ mod tests {
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
-        assert_empty(ctx.dispatcher.timer_ctx().timers().iter().filter(|x| {
+        assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
             x.1 == NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into()
         }));
-        assert_empty(ctx.dispatcher.timer_ctx().timers().iter().filter(|x| {
+        assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
             x.0 == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
                 && x.1 == NdpTimerId::new_invalidate_slaac_address(device_id, expected_addr).into()
         }));
         assert_empty(
-            ctx.dispatcher
+            ctx.ctx
                 .timer_ctx()
                 .timers()
                 .iter()
@@ -5649,7 +5667,7 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         // Use `.as_dyn()` since not all range types are the same.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
@@ -5726,7 +5744,7 @@ mod tests {
 
         // Timers should have been reset. SLAAC deprecation timer is no longer
         // present.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (NdpTimerId::new_prefix_invalidation(device.try_into().unwrap(), subnet).into(), ..),
             (
                 NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
@@ -5781,10 +5799,10 @@ mod tests {
 
         // Timers should have been reset.
         let _now = ctx.now();
-        assert_empty(ctx.dispatcher.timer_ctx().timers().iter().filter(|x| {
+        assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
             x.1 == NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into()
         }));
-        ctx.dispatcher.timer_ctx().assert_some_timers_installed([(
+        ctx.ctx.timer_ctx().assert_some_timers_installed([(
             NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                 .into(),
             ctx.now() + Duration::from_secs(valid_lifetime.into()),
@@ -5838,7 +5856,7 @@ mod tests {
         // longer installed.
         let now = ctx.now();
         // Use `.as_dyn()` since not all range types are the same.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into(),
                 (now + Duration::from_secs(preferred_lifetime.into())).as_dyn(),
@@ -6135,7 +6153,7 @@ mod tests {
             [],
             // Clone the RNG so we can see what the next value (which will be
             // used to generate the temporary address) will be.
-            OpaqueIidNonce::Random(ctx.dispatcher.rng().clone().next_u64()),
+            OpaqueIidNonce::Random(ctx.ctx.rng().clone().next_u64()),
             &StateContext::<NdpState<_>, _>::get_state_with(&ctx, device.try_into().unwrap())
                 .config
                 .get_temporary_address_configuration()
@@ -6227,7 +6245,7 @@ mod tests {
             .unwrap();
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -6269,7 +6287,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
     }
 
     #[test]
@@ -6309,7 +6327,7 @@ mod tests {
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -6350,7 +6368,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
     }
 
     #[test]
@@ -6389,7 +6407,7 @@ mod tests {
             .unwrap();
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -6438,7 +6456,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Address invalidation timers were added.
-        ctx.dispatcher.timer_ctx().assert_timers_installed([
+        ctx.ctx.timer_ctx().assert_timers_installed([
             (NdpTimerId::new_deprecate_slaac_address(device_id, slaac_addr_sub.addr()).into(), ..),
             (NdpTimerId::new_invalidate_slaac_address(device_id, slaac_addr_sub.addr()).into(), ..),
         ]);
@@ -6464,7 +6482,7 @@ mod tests {
         let conflicted_addr = {
             let (mut ctx, device, _config) = initialize_with_temporary_addresses_enabled();
 
-            *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
+            *ctx.ctx.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
 
             // Receive an RA and determine what temporary address was assigned, then return it.
             receive_prefix_update(&mut ctx, device, src_ip, dst_ip, subnet, 9000, 10000, true);
@@ -6495,7 +6513,7 @@ mod tests {
 
         // Seed the RNG right before the RA is received, just like in our
         // earlier run above.
-        *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
+        *ctx.ctx.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
 
         // Receive a new RA with new prefix (autonomous). The system will assign
         // a temporary and static SLAAC address. The first temporary address
@@ -6569,7 +6587,7 @@ mod tests {
         );
 
         // Address invalidation timers were added.
-        assert_empty(ctx.dispatcher.timer_ctx().timers());
+        assert_empty(ctx.ctx.timer_ctx().timers());
     }
 
     #[test]
@@ -6644,7 +6662,7 @@ mod tests {
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
-        ctx.dispatcher.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into(),
                 now + Duration::from_secs(preferred_lifetime.into()),
@@ -6708,7 +6726,7 @@ mod tests {
     }
 
     fn get_matching_slaac_address_entries<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
-        ctx: &Ctx<DummyEventDispatcher>,
+        ctx: &crate::testutil::DummyCtx,
         device: DeviceId,
         filter: F,
     ) -> impl Iterator<Item = &Ipv6AddressEntry<DummyInstant>> {
@@ -6718,7 +6736,7 @@ mod tests {
     }
 
     fn get_matching_slaac_address_entry<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
-        ctx: &Ctx<DummyEventDispatcher>,
+        ctx: &crate::testutil::DummyCtx,
         device: DeviceId,
         filter: F,
     ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
@@ -6762,7 +6780,7 @@ mod tests {
             AddrConfig::Manual => None,
         };
         assert_eq!(entry_valid_until, Some(valid_until));
-        ctx.dispatcher.timer_ctx().assert_some_timers_installed([
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device, entry.addr_sub().addr()).into(),
                 preferred_until,
@@ -6997,7 +7015,7 @@ mod tests {
     }
 
     fn receive_neighbor_advertisement_for_duplicate_address(
-        ctx: &mut Ctx<DummyEventDispatcher>,
+        ctx: &mut crate::testutil::DummyCtx,
         device: DeviceId,
         source_ip: UnicastAddr<Ipv6Addr>,
         router_ip: Ipv6Addr,
@@ -7600,7 +7618,7 @@ mod tests {
             [],
             // Clone the RNG so we can see what the next value (which will be
             // used to generate the temporary address) will be.
-            OpaqueIidNonce::Random(ctx.dispatcher.rng().clone().next_u64()),
+            OpaqueIidNonce::Random(ctx.ctx.rng().clone().next_u64()),
             &secret_key,
         );
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];

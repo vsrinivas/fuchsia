@@ -54,10 +54,10 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{InstantContext, RngContext, TimerContext},
     handle_timer, icmp, initialize_device, remove_device, set_ipv4_configuration,
-    set_ipv6_configuration, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
-    EntryEither, EventDispatcher, IpDeviceConfiguration, IpExt, IpSockCreationError,
-    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId, UdpConnId, UdpContext,
-    UdpListenerId,
+    set_ipv6_configuration, BlanketCoreContext, BufferUdpContext, Ctx, DeviceId,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpDeviceConfiguration,
+    IpExt, IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId,
+    UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -71,8 +71,11 @@ use netstack3_core::{
 /// ```
 const DEFAULT_LOOPBACK_MTU: u32 = 65536;
 
-pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::Dispatcher>> {
+pub(crate) trait LockableContext:
+    for<'a> Lockable<'a, Ctx<Self::Dispatcher, Self::Context>>
+{
     type Dispatcher: EventDispatcher;
+    type Context: BlanketCoreContext + Send;
 }
 
 pub(crate) trait DeviceStatusNotifier {
@@ -100,8 +103,6 @@ type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
 #[derive(Default)]
 pub(crate) struct BindingsDispatcher {
     devices: Devices,
-    timers: timers::TimerDispatcher<TimerId>,
-    rng: OsRng,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
 }
@@ -118,18 +119,6 @@ impl AsMut<Devices> for BindingsDispatcher {
     }
 }
 
-impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
-    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
-        &self.timers
-    }
-}
-
-impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
-    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
-        &mut self.timers
-    }
-}
-
 impl DeviceStatusNotifier for BindingsDispatcher {
     fn device_status_changed(&mut self, _id: u64) {
         // NOTE(brunodalbo) we may want to do more things here in the future,
@@ -137,9 +126,30 @@ impl DeviceStatusNotifier for BindingsDispatcher {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<BindingsDispatcher>> for Netstack {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher>>;
+/// Provides context implementations which satisfy [`BlanketCoreContext`].
+///
+/// `BindingsContext` provides time, timers, and random numbers to the Core.
+#[derive(Default)]
+pub(crate) struct BindingsContextImpl {
+    timers: timers::TimerDispatcher<TimerId>,
+    rng: OsRng,
+}
+
+impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
+    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
+        &self.timers
+    }
+}
+
+impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
+    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
+        &mut self.timers
+    }
+}
+
+impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl>> for Netstack {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, BindingsContextImpl>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, BindingsContextImpl>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -169,29 +179,27 @@ impl AsMut<UdpSockets> for BindingsDispatcher {
     }
 }
 
-impl<D> timers::TimerHandler<TimerId> for Ctx<D>
+impl<D, C> timers::TimerHandler<TimerId> for Ctx<D, C>
 where
-    D: EventDispatcher,
-    D: AsMut<timers::TimerDispatcher<TimerId>>,
-    D: Send + Sync + 'static,
+    D: EventDispatcher + Send + Sync + 'static,
+    C: BlanketCoreContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
         handle_timer(self, timer)
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
-        self.dispatcher.as_mut()
+        self.ctx.as_mut()
     }
 }
 
 impl<C> timers::TimerContext<TimerId> for C
 where
-    C: LockableContext,
-    C: Clone + Send + Sync + 'static,
-    C::Dispatcher: AsMut<timers::TimerDispatcher<TimerId>>,
+    C: LockableContext + Clone + Send + Sync + 'static,
     C::Dispatcher: Send + Sync + 'static,
+    C::Context: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
-    type Handler = Ctx<C::Dispatcher>;
+    type Handler = Ctx<C::Dispatcher, C::Context>;
 }
 
 impl<D> ConversionContext for D
@@ -233,7 +241,7 @@ impl netstack3_core::Instant for StackTime {
     }
 }
 
-impl InstantContext for BindingsDispatcher {
+impl InstantContext for BindingsContextImpl {
     type Instant = StackTime;
 
     fn now(&self) -> StackTime {
@@ -241,7 +249,7 @@ impl InstantContext for BindingsDispatcher {
     }
 }
 
-impl RngContext for BindingsDispatcher {
+impl RngContext for BindingsContextImpl {
     type Rng = OsRng;
 
     fn rng(&self) -> &OsRng {
@@ -253,7 +261,7 @@ impl RngContext for BindingsDispatcher {
     }
 }
 
-impl TimerContext<TimerId> for BindingsDispatcher {
+impl TimerContext<TimerId> for BindingsContextImpl {
     fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
         self.timers.schedule_timer(id, time)
     }
@@ -387,11 +395,10 @@ trait MutableDeviceState {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
 }
 
-impl<D> MutableDeviceState for Ctx<D>
+impl<D, C> MutableDeviceState for Ctx<D, C>
 where
-    D: EventDispatcher,
-    D: AsMut<Devices>,
-    D: DeviceStatusNotifier,
+    D: EventDispatcher + AsMut<Devices> + DeviceStatusNotifier,
+    C: BlanketCoreContext,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
         if let Some(device_info) = self.dispatcher.as_mut().get_device_mut(id) {
@@ -416,13 +423,13 @@ trait InterfaceControl {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-impl<D> InterfaceControl for Ctx<D>
+impl<D, C> InterfaceControl for Ctx<D, C>
 where
-    D: EventDispatcher,
-    D: AsRef<Devices> + AsMut<Devices>,
+    D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
+    C: BlanketCoreContext,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { state, dispatcher } = self;
+        let Ctx { state, dispatcher, ctx: _ } = self;
         let device = dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         let enabled = match device.info() {
@@ -529,19 +536,14 @@ where
 ///
 /// Provides the entry point for creating a netstack to be served as a
 /// component.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Netstack {
-    ctx: Arc<Mutex<Ctx<BindingsDispatcher>>>,
-}
-
-impl Clone for Netstack {
-    fn clone(&self) -> Self {
-        Self { ctx: Arc::clone(&self.ctx) }
-    }
+    ctx: Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl>>>,
 }
 
 impl LockableContext for Netstack {
     type Dispatcher = BindingsDispatcher;
+    type Context = BindingsContextImpl;
 }
 
 enum Service {
@@ -595,14 +597,8 @@ impl Netstack {
             // loopback addresses and on-link routes to the loopback subnets.
             let Ctx {
                 state,
-                dispatcher:
-                    BindingsDispatcher {
-                        devices,
-                        timers: _,
-                        rng: _,
-                        icmp_echo_sockets: _,
-                        udp_sockets: _,
-                    },
+                dispatcher: BindingsDispatcher { devices, icmp_echo_sockets: _, udp_sockets: _ },
+                ctx: _,
             } = ctx;
             let loopback = state
                 .add_loopback_device(DEFAULT_LOOPBACK_MTU)
@@ -677,14 +673,8 @@ impl Netstack {
             // Start servicing timers.
             let Ctx {
                 state: _,
-                dispatcher:
-                    BindingsDispatcher {
-                        devices: _,
-                        timers,
-                        rng: _,
-                        icmp_echo_sockets: _,
-                        udp_sockets: _,
-                    },
+                dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
+                ctx: BindingsContextImpl { rng: _, timers },
             } = ctx;
             timers.spawn(self.clone());
         }

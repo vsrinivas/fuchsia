@@ -11,7 +11,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{fmt::Debug, time::Duration};
+use core::{convert::Infallible as Never, fmt::Debug, time::Duration};
 
 use net_types::{
     ethernet::Mac,
@@ -25,10 +25,8 @@ use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{
-            DummyFrameCtx, DummyInstant, DummyNetworkContext, DummyTimerCtx, InstantAndData,
-        },
-        FrameContext as _, InstantContext, RngContext, TimerContext,
+        testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
+        FrameContext as _, InstantContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
     ip::{
@@ -37,7 +35,7 @@ use crate::{
         EntryDest, EntryEither, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    {Ctx, EventDispatcher, StackStateBuilder, TimerId},
+    BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
 };
 
 /// Utilities to allow running benchmarks as tests.
@@ -82,7 +80,15 @@ pub(crate) mod benchmarks {
     }
 }
 
-pub(crate) type DummyCtx = Ctx<DummyEventDispatcher>;
+// Use the `Never` type for the `crate::context::testutil::DummyCtx`'s frame
+// metadata type. This ensures that we don't accidentally send frames to its
+// `DummyFrameCtx`, which isn't actually used (instead, we use the
+// `DummyFrameCtx` stored in `DummyEventDispatcher`). Note that this doesn't
+// prevent code from attempting to read from this context (code which only
+// accesses the frame contents rather than the frame metadata will still
+// compile).
+pub(crate) type DummyCtx =
+    Ctx<DummyEventDispatcher, crate::context::testutil::DummyCtx<(), TimerId, Never>>;
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///
@@ -439,7 +445,7 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Build a `Ctx` from the present configuration with a default dispatcher,
+    /// Builds a `Ctx` from the present configuration with a default dispatcher,
     /// and stack state set to disable NDP's Duplicate Address Detection by
     /// default.
     pub(crate) fn build(self) -> DummyCtx {
@@ -463,17 +469,18 @@ impl DummyEventDispatcherBuilder {
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
         f(&mut stack_builder);
-        self.build_with(stack_builder, Default::default())
+        self.build_with(stack_builder, Default::default(), Default::default())
     }
 
     /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
-    pub(crate) fn build_with<D: EventDispatcher>(
+    pub(crate) fn build_with<D: EventDispatcher, C: BlanketCoreContext>(
         self,
         state_builder: StackStateBuilder,
         dispatcher: D,
-    ) -> Ctx<D> {
-        let mut ctx = Ctx::new(state_builder.build(), dispatcher);
+        ctx: C,
+    ) -> Ctx<D, C> {
+        let mut ctx = Ctx::new(state_builder.build(), dispatcher, ctx);
 
         let DummyEventDispatcherBuilder {
             devices,
@@ -556,26 +563,26 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
 /// events have been emitted to the system.
 #[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
-    ctx: crate::context::testutil::DummyCtx<(), TimerId, DeviceId>,
+    frames: DummyFrameCtx<DeviceId>,
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
 }
 
 impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
     fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
-        self.dispatcher.ctx.timer_ctx()
+        self.ctx.timer_ctx()
     }
 }
 
 impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
-        self.dispatcher.ctx.timer_ctx_mut()
+        self.ctx.timer_ctx_mut()
     }
 }
 
 impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
-        self.dispatcher.ctx.as_mut()
+        &mut self.dispatcher.frames
     }
 }
 
@@ -608,11 +615,7 @@ impl TestutilIpExt for Ipv6 {
 
 impl DummyEventDispatcher {
     pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
-        &self.ctx.frames()
-    }
-
-    pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<TimerId> {
-        self.ctx.timer_ctx()
+        self.frames.frames()
     }
 
     /// Takes all the received ICMP replies for a given `conn`.
@@ -674,49 +677,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.ctx.send_frame(device, frame)
-    }
-}
-
-impl InstantContext for DummyEventDispatcher {
-    type Instant = DummyInstant;
-
-    fn now(&self) -> DummyInstant {
-        self.ctx.timer_ctx().now()
-    }
-}
-
-impl RngContext for DummyEventDispatcher {
-    type Rng = FakeCryptoRng<XorShiftRng>;
-
-    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        self.ctx.rng()
-    }
-
-    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        self.ctx.rng_mut()
-    }
-}
-
-impl TimerContext<TimerId> for DummyEventDispatcher {
-    fn schedule_timer(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
-        self.ctx.timer_ctx_mut().schedule_timer(duration, id)
-    }
-
-    fn schedule_timer_instant(&mut self, time: DummyInstant, id: TimerId) -> Option<DummyInstant> {
-        self.ctx.timer_ctx_mut().schedule_timer_instant(time, id)
-    }
-
-    fn cancel_timer(&mut self, id: TimerId) -> Option<DummyInstant> {
-        self.ctx.timer_ctx_mut().cancel_timer(id)
-    }
-
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.ctx.timer_ctx_mut().cancel_timers_with(f);
-    }
-
-    fn scheduled_instant(&self, id: TimerId) -> Option<DummyInstant> {
-        self.ctx.timer_ctx().scheduled_instant(id)
+        self.frames.send_frame(device, frame)
     }
 }
 
@@ -791,37 +752,37 @@ mod tests {
 
         assert_eq!(
             net.context(1)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context(2)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context(2)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
         assert_eq!(
             net.context(1)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
             None
         );
         assert_eq!(
             net.context(1)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
             None
         );
         assert_eq!(
             net.context(2)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
             None
         );
@@ -868,19 +829,19 @@ mod tests {
         );
         assert_eq!(
             net.context(1)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context(2)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context(2)
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
@@ -938,19 +899,19 @@ mod tests {
 
         assert_eq!(
             net.context("alice")
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context("bob")
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context("bob")
-                .dispatcher
+                .ctx
                 .schedule_timer(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
             None
         );

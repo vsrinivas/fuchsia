@@ -39,7 +39,7 @@ use crate::{
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
     socket::{ConnSocketEntry, ConnSocketMap, ListenerSocketMap},
-    BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
 
 /// A builder for UDP layer state.
@@ -448,7 +448,7 @@ pub trait UdpContext<I: IcmpIpExt> {
     }
 }
 
-impl<D: EventDispatcher> UdpContext<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv4> for Ctx<D, C> {
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<Ipv4>, UdpListenerId<Ipv4>>,
@@ -458,7 +458,7 @@ impl<D: EventDispatcher> UdpContext<Ipv4> for Ctx<D> {
     }
 }
 
-impl<D: EventDispatcher> UdpContext<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv6> for Ctx<D, C> {
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<Ipv6>, UdpListenerId<Ipv6>>,
@@ -520,7 +520,9 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<Ipv4, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpContext<Ipv4, B>
+    for Ctx<D, C>
+{
     fn receive_udp_from_conn(
         &mut self,
         conn: UdpConnId<Ipv4>,
@@ -550,7 +552,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<Ipv4, B> for Ctx<D> 
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<Ipv6, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpContext<Ipv6, B>
+    for Ctx<D, C>
+{
     fn receive_udp_from_conn(
         &mut self,
         conn: UdpConnId<Ipv6>,
@@ -595,19 +599,23 @@ impl<
 {
 }
 
-impl<I: IpExt, D: EventDispatcher> DualStateContext<UdpState<I, DeviceId>, D::Rng> for Ctx<D> {
-    fn get_states_with(&self, _id0: (), _id1: ()) -> (&UdpState<I, DeviceId>, &D::Rng) {
+impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
+    DualStateContext<UdpState<I, DeviceId>, C::Rng> for Ctx<D, C>
+{
+    fn get_states_with(&self, _id0: (), _id1: ()) -> (&UdpState<I, DeviceId>, &C::Rng) {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
         // Ip + IpExt`) and requires that the single trait bound is named `Ip`,
         // introduce this trait - effectively an alias for `IpExt`.
         trait Ip: IpExt {}
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
-        fn get<I: Ip, D: EventDispatcher>(ctx: &Ctx<D>) -> (&UdpState<I, DeviceId>, &D::Rng) {
+        fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
+            ctx: &Ctx<D, C>,
+        ) -> (&UdpState<I, DeviceId>, &C::Rng) {
             #[ipv4]
-            return (&ctx.state.transport.udpv4, ctx.dispatcher.rng());
+            return (&ctx.state.transport.udpv4, ctx.ctx.rng());
             #[ipv6]
-            return (&ctx.state.transport.udpv6, ctx.dispatcher.rng());
+            return (&ctx.state.transport.udpv6, ctx.ctx.rng());
         }
 
         get(self)
@@ -617,21 +625,21 @@ impl<I: IpExt, D: EventDispatcher> DualStateContext<UdpState<I, DeviceId>, D::Rn
         &mut self,
         _id0: (),
         _id1: (),
-    ) -> (&mut UdpState<I, DeviceId>, &mut D::Rng) {
+    ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
         // Ip + IpExt`) and requires that the single trait bound is named `Ip`,
         // introduce this trait - effectively an alias for `IpExt`.
         trait Ip: IpExt {}
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
-        fn get<I: Ip, D: EventDispatcher>(
-            ctx: &mut Ctx<D>,
-        ) -> (&mut UdpState<I, DeviceId>, &mut D::Rng) {
-            let Ctx { state, dispatcher } = ctx;
+        fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
+            ctx: &mut Ctx<D, C>,
+        ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
+            let Ctx { state, dispatcher: _, ctx } = ctx;
             #[ipv4]
-            return (&mut state.transport.udpv4, dispatcher.rng_mut());
+            return (&mut state.transport.udpv4, ctx.rng_mut());
             #[ipv6]
-            return (&mut state.transport.udpv6, dispatcher.rng_mut());
+            return (&mut state.transport.udpv6, ctx.rng_mut());
         }
 
         get(self)
