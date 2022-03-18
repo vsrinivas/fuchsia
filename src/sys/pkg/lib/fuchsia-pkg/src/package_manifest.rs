@@ -58,7 +58,12 @@ impl PackageManifest {
             name: package.meta_package().name().to_owned(),
             version: package.meta_package().variant().to_owned(),
         };
-        let manifest_v1 = PackageManifestV1 { package: package_metadata, blobs, repository: None };
+        let manifest_v1 = PackageManifestV1 {
+            package: package_metadata,
+            blobs,
+            repository: None,
+            blob_sources_relative: Default::default(),
+        };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
     }
 }
@@ -77,6 +82,7 @@ impl PackageManifestBuilder {
                 },
                 blobs: vec![],
                 repository: None,
+                blob_sources_relative: Default::default(),
             },
         }
     }
@@ -109,6 +115,40 @@ struct PackageManifestV1 {
     blobs: Vec<BlobInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     repository: Option<String>,
+
+    /// Are the blob source_paths relative to the working dir (default, as made
+    /// by 'pm') or the file containing the serialized manifest (new, portable,
+    /// behavior)
+    #[serde(default, skip_serializing_if = "RelativeTo::is_default")]
+    blob_sources_relative: RelativeTo,
+}
+
+/// If the path is a relative path, what is it relative from?
+///
+/// If 'RelativeTo::WorkingDir', then the path is assumed to be relative to the
+/// working dir, and can be used directly as a path.
+///
+/// If 'RelativeTo::File', then the path is relative to the file that contained
+/// the path.  To use the path, it must be resolved against the path to the
+/// file.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+enum RelativeTo {
+    #[serde(rename = "working_dir")]
+    WorkingDir,
+    #[serde(rename = "file")]
+    File,
+}
+
+impl Default for RelativeTo {
+    fn default() -> Self {
+        RelativeTo::WorkingDir
+    }
+}
+
+impl RelativeTo {
+    pub(crate) fn is_default(&self) -> bool {
+        matches!(self, RelativeTo::WorkingDir)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -149,6 +189,7 @@ mod tests {
                 size: 1,
             }],
             repository: None,
+            blob_sources_relative: Default::default(),
         }));
 
         assert_eq!(
@@ -186,6 +227,7 @@ mod tests {
                 size: 1,
             }],
             repository: Some("testrepository.org".into()),
+            blob_sources_relative: RelativeTo::File,
         }));
 
         assert_eq!(
@@ -205,7 +247,8 @@ mod tests {
                             "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
                             "size": 1
                         },
-                    ]
+                    ],
+                    "blob_sources_relative": "file"
                 }
             )
         );
@@ -248,6 +291,7 @@ mod tests {
                     size: 1
                 }],
                 repository: Some("testrepository.org".into()),
+                blob_sources_relative: Default::default(),
             }))
         );
 
@@ -265,7 +309,8 @@ mod tests {
                         "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
                         "size": 1
                     },
-                ]
+                ],
+                "blob_sources_relative": "file"
             }
         )).expect("valid json");
 
@@ -285,6 +330,7 @@ mod tests {
                     size: 1
                 }],
                 repository: None,
+                blob_sources_relative: RelativeTo::File,
             }))
         )
     }
