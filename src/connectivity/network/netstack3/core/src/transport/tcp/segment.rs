@@ -101,7 +101,6 @@ impl<P: Payload> Segment<P> {
 
 impl<P: Payload> Segment<P> {
     /// Returns the part of the incoming segment within the receive window.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) fn overlap(self, rnxt: SeqNum, rwnd: WindowSize) -> Option<Segment<P>> {
         let Segment { seq, ack, wnd, contents } = self;
         let len = contents.len();
@@ -127,11 +126,11 @@ impl<P: Payload> Segment<P> {
                     // the condition as quoted above because of the following
                     // text immediately after the above table:
                     //   One could tailor actual segments to fit this assumption by
-                    //   trimming off any portions that lie outside the window 
+                    //   trimming off any portions that lie outside the window
                     //   (including SYN and FIN), and only processing further if
                     //   the segment then begins at RCV.NXT.
                     // This is essential for TCP simultaneous open to work,
-                    // otherwise, the state machine would reject the SYN-ACK 
+                    // otherwise, the state machine would reject the SYN-ACK
                     // sent by the peer.
                     || (!(seq + len).before(rnxt) && !(seq + len).after(rnxt + rwnd))
             }
@@ -225,7 +224,6 @@ impl Segment<()> {
         Segment::new(seq, Some(ack), Some(Control::RST), WindowSize::ZERO)
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     /// Creates a FIN segment.
     pub(super) fn fin(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
         Segment::new(seq, Some(ack), Some(Control::FIN), wnd)

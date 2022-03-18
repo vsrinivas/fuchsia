@@ -107,8 +107,6 @@ impl SeqNum {
     }
 }
 
-// TODO(https://fxbug.dev/88814): The code below will trigger dead code lint
-// because there is no user currently. Disallow when it is actually used.
 impl SeqNum {
     /// A predicate for whether a sequence number is before the other.
     ///
@@ -144,7 +142,6 @@ impl WindowSize {
     // in the state module once `Option::unwrap` is stable.
     pub(super) const DEFAULT: WindowSize = WindowSize(65535);
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) const fn new(wnd: u32) -> Option<Self> {
         let WindowSize(max) = Self::MAX;
         if wnd > max {

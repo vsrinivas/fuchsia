@@ -25,7 +25,6 @@ use crate::transport::tcp::{
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Closed<Error> {
     /// Describes a reason why the connection was closed.
-    #[cfg_attr(not(test), allow(dead_code))]
     reason: Error,
 }
 
@@ -35,12 +34,10 @@ impl Closed<()> {
     ///
     /// `iss`is The initial send sequence number. Which is effectively the
     /// sequence number of SYN.
-    #[cfg_attr(not(test), allow(dead_code))]
     fn connect(iss: SeqNum) -> (SynSent, Segment<()>) {
         (SynSent { iss }, Segment::syn(iss, WindowSize::DEFAULT))
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     fn listen(iss: SeqNum) -> Listen {
         Listen { iss }
     }
@@ -359,7 +356,9 @@ impl SynRcvd {
                     None => (None, None),
                 }
             }
-            Some(Control::FIN) => todo!("fxb/93522: should transition into CLOSE_WAIT"),
+            Some(Control::FIN) => {
+                todo!("https://fxbug.dev/93522: should transition into CLOSE_WAIT")
+            }
         }
     }
 }
@@ -369,9 +368,7 @@ impl SynRcvd {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Send {
     nxt: SeqNum,
-    #[cfg_attr(not(test), allow(dead_code))]
     una: SeqNum,
-    #[cfg_attr(not(test), allow(dead_code))]
     wnd: WindowSize,
 }
 
@@ -505,7 +502,6 @@ enum State<R: ReceiveBuffer> {
 
 impl<R: ReceiveBuffer> State<R> {
     /// Processes an incoming segment and advances the state machine.
-    #[cfg_attr(not(test), allow(dead_code))]
     fn on_segment<P: Payload>(&mut self, incoming: Segment<P>) -> Option<Segment<()>> {
         let (maybe_new_state, seg) = match self {
             State::SynRcvd(synrcvd) => {
