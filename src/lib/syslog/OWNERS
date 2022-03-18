@@ -1,4 +1,4 @@
+include /src/diagnostics/OWNERS
 anmittal@google.com
-crjohns@google.com
 
 # COMPONENT: Diagnostics
