@@ -1,66 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This source set contains a broad variety of test-related classes.
-#
-# It intentionally includes every source_set defined in this file, to include
-# them in whole-tree compiles even if they have are no in-tree consumers.
-source_set("test") {
-  testonly = true
-
-  public_deps = [
-    ":comparators",
-    ":constants",
-    ":hermetic_audio_test",
-    ":hermetic_pipeline_test_main",
-    ":test_fixture",
-    ":vmo_backed_buffer",
-  ]
-}
-
-source_set("constants") {
-  testonly = true
-
-  sources = [ "constants.h" ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.media" ]
-}
-
-source_set("comparators") {
-  testonly = true
-
-  sources = [
-    "comparators.cc",
-    "comparators.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/media/audio/lib/analysis",
-    "//src/media/audio/lib/format",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fzl",
-  ]
-}
-
-source_set("vmo_backed_buffer") {
-  testonly = true
-
-  sources = [ "vmo_backed_buffer.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/syslog/cpp",
-    "//src/media/audio/lib/format",
-    "//zircon/system/ulib/fzl",
-  ]
-}
-
-# Base class for hermetic test cases
 source_set("hermetic_audio_test") {
   testonly = true
 
@@ -70,6 +11,7 @@ source_set("hermetic_audio_test") {
     "hermetic_audio_environment.h",
     "hermetic_audio_test.cc",
     "hermetic_audio_test.h",
+    "inspect.h",
     "renderer_shim.cc",
     "renderer_shim.h",
     "virtual_device.cc",
@@ -77,10 +19,6 @@ source_set("hermetic_audio_test") {
   ]
 
   public_deps = [
-    ":comparators",
-    ":constants",
-    ":test_fixture",
-    ":vmo_backed_buffer",
     "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
@@ -96,6 +34,9 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/format",
+    "//src/media/audio/lib/test:comparators",
+    "//src/media/audio/lib/test:constants",
+    "//src/media/audio/lib/test:test_fixture",
     "//src/media/audio/lib/wav",
     "//src/power/fidl/testing:test.thermal",
     "//third_party/googletest:gtest",
@@ -145,19 +86,4 @@ source_set("hermetic_pipeline_test_main") {
   ]
 
   public_deps = [ ":hermetic_pipeline_test" ]
-}
-
-source_set("test_fixture") {
-  testonly = true
-
-  sources = [
-    "test_fixture.cc",
-    "test_fixture.h",
-  ]
-
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fit",
-    "//src/lib/testing/loop_fixture",
-  ]
 }

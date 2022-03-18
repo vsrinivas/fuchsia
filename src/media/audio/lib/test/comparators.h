@@ -6,7 +6,6 @@
 #define SRC_MEDIA_AUDIO_LIB_TEST_COMPARATORS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
