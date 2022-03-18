@@ -46,17 +46,16 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 
 namespace compat {
 
-Device::Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
-               const zx_protocol_device_t* ops, Driver* driver, std::optional<Device*> parent,
-               driver::Logger& logger, async_dispatcher_t* dispatcher)
-    : compat_child_(std::string(name), proto_ops.id, "", nullptr, MetadataMap()),
-      name_(name),
-      context_(context),
-      ops_(ops),
+Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
+               std::optional<Device*> parent, driver::Logger& logger,
+               async_dispatcher_t* dispatcher)
+    : compat_child_(std::string(device.name), device.proto_ops.id, "", nullptr, MetadataMap()),
+      name_(device.name),
       logger_(logger),
       dispatcher_(dispatcher),
       driver_(driver),
-      proto_ops_(proto_ops),
+      compat_symbol_(device),
+      ops_(ops),
       parent_(parent),
       executor_(dispatcher) {}
 
@@ -75,10 +74,10 @@ Device::~Device() {
     // to be investigated further. For now, it will let us run integration tests.
     // TODO(fxbug.dev/92196)
     if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
-      ops_->unbind(context_);
+      ops_->unbind(compat_symbol_.context);
     }
     if (HasOp(ops_, &zx_protocol_device_t::release)) {
-      ops_->release(context_);
+      ops_->release(compat_symbol_.context);
     }
   }
 }
@@ -101,12 +100,20 @@ const char* Device::Name() const { return name_.data(); }
 bool Device::HasChildren() const { return !children_.empty(); }
 
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
-  const compat_device_proto_ops_t device_proto_ops{
-      .ops = zx_args->proto_ops,
-      .id = zx_args->proto_id,
+  device_t compat_device = {
+      .proto_ops =
+          {
+              .ops = zx_args->proto_ops,
+              .id = zx_args->proto_id,
+          },
+      .name = zx_args->name,
+      .context = zx_args->ctx,
   };
-  auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, device_proto_ops,
-                                         zx_args->ops, driver_, this, logger_, dispatcher_);
+
+  auto device =
+      std::make_shared<Device>(compat_device, zx_args->ops, driver_, this, logger_, dispatcher_);
+  // Update the compat symbol name pointer with a pointer the device owns.
+  device->compat_symbol_.name = device->name_.data();
 
   device->topological_path_ = topological_path_;
   if (!device->topological_path_.empty()) {
@@ -192,17 +199,11 @@ zx_status_t Device::CreateNode() {
 
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
-      .set_name(arena, kName)
-      .set_address(arena, reinterpret_cast<uint64_t>(Name()));
-  symbols.emplace_back(arena)
-      .set_name(arena, kContext)
-      .set_address(arena, reinterpret_cast<uint64_t>(context_));
+      .set_name(arena, kDeviceSymbol)
+      .set_address(arena, reinterpret_cast<uint64_t>(&compat_symbol_));
   symbols.emplace_back(arena)
       .set_name(arena, kOps)
       .set_address(arena, reinterpret_cast<uint64_t>(ops_));
-  symbols.emplace_back(arena)
-      .set_name(arena, kProtoOps)
-      .set_address(arena, reinterpret_cast<uint64_t>(&proto_ops_));
 
   fdf::wire::NodeAddArgs args(arena);
   auto valid_name = MakeValidName(name_);
@@ -288,7 +289,7 @@ zx_status_t Device::CreateNode() {
                     // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
                     // init task after adding the device.
                     if (HasOp(ops_, &zx_protocol_device_t::init)) {
-                      ops_->init(context_);
+                      ops_->init(compat_symbol_.context);
                     }
                   })
                   .or_else([this](std::variant<zx_status_t, fdf::NodeError>& status) {
@@ -363,20 +364,25 @@ void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodeProperty
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   if (HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
-    return ops_->get_protocol(context_, proto_id, out);
+    return ops_->get_protocol(compat_symbol_.context, proto_id, out);
   }
 
-  if ((proto_ops_.id != proto_id) || (proto_ops_.ops == nullptr)) {
+  if ((compat_symbol_.proto_ops.id != proto_id) || (compat_symbol_.proto_ops.ops == nullptr)) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!out) {
+    return ZX_OK;
   }
 
   struct GenericProtocol {
     void* ops;
     void* ctx;
   };
+
   auto proto = static_cast<GenericProtocol*>(out);
-  proto->ops = proto_ops_.ops;
-  proto->ctx = context_;
+  proto->ops = compat_symbol_.proto_ops.ops;
+  proto->ctx = compat_symbol_.context;
   return ZX_OK;
 }
 
@@ -396,7 +402,7 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   if (!HasOp(ops_, &zx_protocol_device_t::message)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return ops_->message(context_, msg, txn);
+  return ops_->message(compat_symbol_.context, msg, txn);
 }
 
 constexpr char kCompatKey[] = "fuchsia.compat.LIBNAME";

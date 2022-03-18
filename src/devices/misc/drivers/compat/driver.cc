@@ -72,8 +72,7 @@ void DriverList::Log(FuchsiaLogSeverity severity, const char* tag, const char* f
 }
 
 Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-               driver::Namespace ns, driver::Logger logger, std::string_view url,
-               std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
+               driver::Namespace ns, driver::Logger logger, std::string_view url, device_t device,
                const zx_protocol_device_t* ops)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
@@ -81,7 +80,7 @@ Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node>
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
-      device_(name, context, proto_ops, ops, this, std::nullopt, inner_logger_, dispatcher) {
+      device_(device, ops, this, std::nullopt, inner_logger_, dispatcher) {
   device_.Bind(std::move(node));
   global_driver_list.AddDriver(this);
 }
@@ -102,16 +101,8 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
   if (start_args.has_symbols()) {
     symbols = start_args.symbols();
   }
-  auto name = GetSymbol<const char*>(symbols, kName, "compat-device");
-  auto context = GetSymbol<void*>(symbols, kContext);
+  auto compat_device = GetSymbol<const device_t*>(symbols, kDeviceSymbol, &kDefaultDevice);
   const zx_protocol_device_t* ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
-  compat_device_proto_ops_t proto_ops;
-  {
-    auto parent_ops = GetSymbol<const compat_device_proto_ops_t*>(symbols, kProtoOps);
-    if (parent_ops) {
-      proto_ops = *parent_ops;
-    }
-  }
 
   // Open the compat driver's binary within the package.
   auto compat = driver::ProgramValue(start_args.program(), "compat");
@@ -122,7 +113,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
 
   auto driver =
       std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
-                               start_args.url().get(), name, context, proto_ops, ops);
+                               start_args.url().get(), *compat_device, ops);
 
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {

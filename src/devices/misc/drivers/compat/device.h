@@ -29,14 +29,16 @@
 
 namespace compat {
 
+// The DFv1 ops: zx_protocol_device_t.
+constexpr char kOps[] = "compat-ops";
+
 class Driver;
 
 // Device is an implementation of a DFv1 device.
 class Device : public std::enable_shared_from_this<Device> {
  public:
-  Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
-         const zx_protocol_device_t* ops, Driver* driver, std::optional<Device*> parent,
-         driver::Logger& logger, async_dispatcher_t* dispatcher);
+  Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
+         std::optional<Device*> parent, driver::Logger& logger, async_dispatcher_t* dispatcher);
 
   ~Device();
 
@@ -89,8 +91,6 @@ class Device : public std::enable_shared_from_this<Device> {
 
   std::string topological_path_;
   const std::string name_;
-  void* const context_;
-  const zx_protocol_device_t* const ops_;
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
   uint32_t device_flags_ = 0;
@@ -102,7 +102,8 @@ class Device : public std::enable_shared_from_this<Device> {
   bool pending_rebind_ = false;
 
   // The default protocol of the device.
-  compat_device_proto_ops_t proto_ops_ = {};
+  device_t compat_symbol_;
+  const zx_protocol_device_t* ops_;
 
   std::optional<fpromise::promise<>> controller_teardown_finished_;
 

@@ -84,9 +84,11 @@ class RootDriver {
           fidl::Arena arena;
 
           // Set the symbols of the node that a driver will have access to.
+          compat_device_.name = "v1";
+          compat_device_.proto_ops.ops = reinterpret_cast<void*>(0xabcdef);
           fdf::wire::NodeSymbol symbol(arena);
-          symbol.set_name(arena, compat::kOps)
-              .set_address(arena, reinterpret_cast<uint64_t>(&ops_));
+          symbol.set_name(arena, compat::kDeviceSymbol)
+              .set_address(arena, reinterpret_cast<uint64_t>(&compat_device_));
 
           // Set the properties of the node that a driver will bind to.
           fdf::wire::NodeProperty property(arena);
@@ -138,6 +140,7 @@ class RootDriver {
   };
 
   compat::Interop interop_;
+  compat::device_t compat_device_ = compat::kDefaultDevice;
   std::optional<compat::Child> child_;
   service::OutgoingDirectory outgoing_;
 

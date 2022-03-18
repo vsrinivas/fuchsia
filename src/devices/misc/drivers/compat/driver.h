@@ -27,8 +27,8 @@ class Driver {
  public:
   Driver(async_dispatcher_t* dispatcher,
          fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
-         driver::Logger logger, std::string_view url, std::string_view name, void* context,
-         const compat_device_proto_ops_t& proto_ops, const zx_protocol_device_t* ops);
+         driver::Logger logger, std::string_view url, device_t device,
+         const zx_protocol_device_t* ops);
   ~Driver();
 
   static constexpr const char* Name() { return "compat"; }

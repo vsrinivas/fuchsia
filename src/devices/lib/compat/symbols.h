@@ -5,21 +5,33 @@
 #ifndef SRC_DEVICES_LIB_COMPAT_SYMBOLS_H_
 #define SRC_DEVICES_LIB_COMPAT_SYMBOLS_H_
 
+#include <stdint.h>
+
 namespace compat {
 
-// Name of the DFv1 device.
-constexpr char kName[] = "compat-name";
-// Context for the DFv1 device.
-constexpr char kContext[] = "compat-context";
-// Ops of the DFv1 device.
-constexpr char kOps[] = "compat-ops";
-
-struct compat_device_proto_ops_t {
+struct device_proto_ops_t {
   void* ops;
   uint32_t id;
 };
 
-constexpr char kProtoOps[] = "compat-proto-ops";
+struct device_t {
+  device_proto_ops_t proto_ops;
+  const char* name;
+  void* context;
+};
+
+constexpr device_t kDefaultDevice = {
+    .proto_ops =
+        {
+            .ops = nullptr,
+            .id = 0,
+        },
+    .name = "compat-device",
+    .context = nullptr,
+};
+
+// The symbol for the compat device: device_t.
+constexpr char kDeviceSymbol[] = "fuchsia.compat.device/Device";
 
 }  // namespace compat
 
