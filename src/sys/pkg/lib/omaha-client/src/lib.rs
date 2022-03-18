@@ -11,6 +11,7 @@ pub mod app_set;
 pub mod clock;
 pub mod common;
 pub mod configuration;
+pub mod cup_ecdsa;
 pub mod http_request;
 pub mod installer;
 pub mod metrics;

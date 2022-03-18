@@ -295,15 +295,21 @@ impl<'a> RequestBuilder<'a> {
 /// This struct owns all of it's data, so that they can be moved directly into the constructed http
 /// request.
 #[derive(Debug)]
-struct Intermediate {
+pub struct Intermediate {
     /// The URI for the http request.
-    uri: String,
+    pub uri: String,
 
     /// The http request headers, in key:&str=value:String pairs
-    headers: Vec<(&'static str, String)>,
+    pub headers: Vec<(&'static str, String)>,
 
     /// The request body, still in object form as a RequestWrapper
-    body: RequestWrapper,
+    pub body: RequestWrapper,
+}
+
+impl Intermediate {
+    pub fn serialize_body(&self) -> serde_json::Result<Vec<u8>> {
+        serde_json::to_vec(&self.body)
+    }
 }
 
 impl Display for Intermediate {
@@ -321,13 +327,12 @@ impl Display for Intermediate {
 
 impl From<Intermediate> for Result<http::Request<hyper::Body>> {
     fn from(intermediate: Intermediate) -> Self {
-        let mut builder = hyper::Request::post(intermediate.uri);
-        for (key, value) in intermediate.headers {
-            builder = builder.header(key, value);
+        let mut builder = hyper::Request::post(&intermediate.uri);
+        for (key, value) in &intermediate.headers {
+            builder = builder.header(*key, value);
         }
 
-        let body = serde_json::to_string(&intermediate.body)?;
-        let request = builder.body(body.into())?;
+        let request = builder.body(intermediate.serialize_body()?.into())?;
         Ok(request)
     }
 }
