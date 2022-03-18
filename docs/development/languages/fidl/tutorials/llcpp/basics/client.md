@@ -94,7 +94,7 @@ As in the server, the code first sets up an async loop so that the client can
 listen for incoming responses from the server without blocking.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,34,36,52,53,65,66,80" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,34,36,52,53,67" %}
 ```
 
 The dispatcher is used to run two pieces of async code. It is first used to run
