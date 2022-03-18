@@ -5,14 +5,17 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("results") {
+go_library("result") {
   sources = [
     "config.go",
-    "results.go",
+    "init.go",
+    "metrics.go",
+    "result.go",
+    "template.go",
   ]
   deps = [
-    "templates",
     "//tools/check-licenses/filetree",
+    "//tools/check-licenses/license",
     "//tools/check-licenses/project",
     "//tools/lib/logger",
   ]

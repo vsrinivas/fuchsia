@@ -1,0 +1,15 @@
+{{ range $_, $pattern := .Patterns }}
+================================================================================
+License Category: {{ $pattern.Name }}
+
+{{ range $key := $pattern.MatchesDedupedKeys }}
+{{ $matches := (index $pattern.MatchesDeduped $key) }}
+--------------------------------------------------------------------------------
+The following license text(s) applies to these projects:
+{{ range $_, $libraryName := (uniqueList $matches) }}
+ • {{ $libraryName }}{{ end }}
+
+{{ printf "%s" (index $matches 0).Data }}
+{{ end }}
+================================================================================
+{{ end }}
