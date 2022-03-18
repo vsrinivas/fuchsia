@@ -188,7 +188,8 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
-    if (unlikely(WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1 &&
+    if (unlikely((WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1 ||
+                  pointee_type != PointeeType::kEnvelope) &&
                  reinterpret_cast<uintptr_t>(*object_ptr_ptr) != FIDL_ALLOC_PRESENT)) {
       SetError("invalid presence marker");
       return Status::kMemoryError;

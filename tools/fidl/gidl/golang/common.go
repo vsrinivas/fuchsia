@@ -327,6 +327,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.InvalidNumHandlesInEnvelope:        "ErrInvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:                 "ErrNonZeroPadding",
 	gidlir.InvalidPresenceIndicator:           "ErrBadRefEncoding",
+	gidlir.InvalidHandlePresenceIndicator:     "ErrBadHandleEncoding",
 	gidlir.MissingRequiredHandleRights:        "ErrMissingRequiredHandleRights",
 	gidlir.NonEmptyStringWithNullBody:         "ErrUnexpectedNullRef",
 	gidlir.NonEmptyVectorWithNullBody:         "ErrUnexpectedNullRef",

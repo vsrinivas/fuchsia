@@ -472,7 +472,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_
     uint32_t num_bytes = payload_type != nullptr ? TypeSize<WireFormatVersion>(payload_type)
                                                  : v1_envelope->num_bytes;
     Position obj_position;
-    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
+    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kEnvelope,
                                          // casting since |envelope_ptr->data| is always void*
                                          &const_cast<Ptr<void>&>(v1_envelope->data), num_bytes,
                                          kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
@@ -565,7 +565,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
 
     uint32_t num_bytes = payload_type != nullptr ? type_size : v2_envelope->num_bytes;
     Position obj_position;
-    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
+    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kEnvelope,
                                          PtrTo<void*>(envelope_position), num_bytes,
                                          kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
     FIDL_STATUS_GUARD(status);

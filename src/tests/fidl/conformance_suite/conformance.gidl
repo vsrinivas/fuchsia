@@ -11,6 +11,38 @@ success("EmptyStruct") {
     },
 }
 
+success("OptionalEmptyStructPresent") {
+    value = OptionalEmptyStructWrapper{
+        s: EmptyStruct{},
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            0x00, padding:7,
+        ],
+    },
+}
+
+success("OptionalEmptyStructAbsent") {
+    value = OptionalEmptyStructWrapper{},
+    bytes = {
+        v1, v2 = [
+            repeat(0x00):8,
+        ],
+    },
+}
+
+decode_failure("OptionalEmptyStructInvalidPresenceIndicator") {
+    bindings_denylist = [dart],
+    bytes = {
+        v1, v2 = [
+            repeat(0xab):8,
+        ],
+    },
+    type = OptionalEmptyStructWrapper,
+    err = INVALID_PRESENCE_INDICATOR,
+}
+
 decode_failure("NonZeroEmptyStructBytes") {
     // Empty structs are special cased for natural types to have a single uint8
     // member, thus not being empty and not having padding that can be validated.
