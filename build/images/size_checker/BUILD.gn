@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/images/args.gni")
+import("//build/images/filesystem_limits.gni")
 import("//build/python/python_action.gni")
 import("//build/tools/json_merge/json_merge.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
@@ -38,14 +39,16 @@ action("convert_size_limits_to_size_budgets") {
   ]
   testonly = true
   args = [
-    "--size_limits",
+    "--size-limits",
     rebase_path("$root_build_dir/size_checker.json", root_build_dir),
-    "--image_assembly_config",
+    "--image-assembly-config",
     rebase_path(_image_assembly_config, root_build_dir),
     "--output",
     rebase_path(_size_budgets_blobfs_file, root_build_dir),
-    "--non_blobfs_output",
+    "--non-blobfs-output",
     rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
+    "--blobfs-capacity",
+    blobfs_capacity,
   ]
 }
 
