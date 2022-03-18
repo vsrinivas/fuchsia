@@ -53,26 +53,27 @@ TEST(FidlExamples, Unions) {
 
 // [START tables]
 TEST(FidlExamples, Tables) {
-  fidl::Arena allocator;
-  // Construct a table by allocating its frame from an arena.
-  fuchsia_examples::wire::User user(allocator);
-  ASSERT_TRUE(user.IsEmpty());
-  // The first |allocator| is used to allocate storage for the inline portions
-  // of the |name| field, i.e. a |fidl::StringView|. The next arguments are
-  // forwarded to the |fidl::StringView| constructor, namely allocating and
-  // initializing the "jdoe" string.
-  user.set_name(allocator, allocator, "jdoe");
+  fidl::Arena arena;
+  // Construct a table creating a builder with an arena.
+  auto builder = fuchsia_examples::wire::User::Builder(arena);
+  // The |arena| passed to the builder will be used to allocate the table frame,
+  // the inline portions of any fields and passed to the constructor of field
+  // types.
+  builder.name("jdoe");
+  // The builder is turned into an actual instance by calling |Build()|.
+  auto user = builder.Build();
   ASSERT_FALSE(user.IsEmpty());
   ASSERT_EQ(user.name().get(), "jdoe");
 }
 
 TEST(FidlExamples, TablesInlineSetter) {
-  fidl::Arena allocator;
-  // Construct a table by allocating its frame from an arena.
-  fuchsia_examples::wire::User user(allocator);
-  ASSERT_TRUE(user.IsEmpty());
+  fidl::Arena arena;
+  // Construct a table creating a builder with an arena.
+  auto builder = fuchsia_examples::wire::User::Builder(arena);
   // Small values <= 4 bytes are inlined inside the frame of the table.
-  user.set_age(30);
+  builder.age(30);
+  // The builder is turned into an actual instance by calling |Build()|.
+  auto user = builder.Build();
   ASSERT_FALSE(user.IsEmpty());
   ASSERT_EQ(user.age(), 30);
 }
@@ -82,16 +83,16 @@ TEST(FidlExamples, TablesDefaultConstructor) {
   // In some situations it could be difficult to provide an arena when
   // constructing tables. For example, here it is hard to provide constructor
   // arguments to 10 tables at once. When a table is default constructed, it
-  // does not have an associated |fidl::WireTableFrame<T>|. One should
-  // explicitly call |Allocate| to initialize the table with a frame.
+  // does not have an associated |fidl::WireTableFrame<T>|. A new table
+  // instance should be built and assigned to the default constructed table.
   fidl::Array<fuchsia_examples::wire::User, 10> users;
   for (auto& user : users) {
-    user.Allocate(allocator);
-    user.set_age(30);
-    user.set_name(allocator, allocator, "jdoe");
+    ASSERT_TRUE(user.IsEmpty());
+    user = fuchsia_examples::wire::User::Builder(allocator).age(30).name("jdoe").Build();
     ASSERT_FALSE(user.IsEmpty());
     ASSERT_EQ(user.age(), 30);
   }
+  ASSERT_EQ(users[0].age(), 30);
 }
 // [END tables]
 

@@ -57,6 +57,10 @@ test("aml-pwm-regulator-test-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("aml-pwm-regulator-test") {

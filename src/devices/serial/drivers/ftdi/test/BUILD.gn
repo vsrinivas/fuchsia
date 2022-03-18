@@ -50,6 +50,10 @@ source_set("common") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("ftdi-i2c-test-package") {

@@ -29,13 +29,16 @@ These are non-owning views that only keep a reference and do not manage the
 object lifetime. The lifetime of the objects must be managed externally. That
 means that the referenced objects must outlive the views.
 
-Conceptually speaking, it helps to think of wire tables and unions as pointers.
+Conceptually speaking, it helps to think of unions as pointers.
 For example, just as `T* my_pointer;` creates an invalid pointer that must be
-initialized before use, default constructing a wire table and union also leads
-to an invalid object (except for the purpose of sending an empty table/absent
-union), and in the case of tables, one must subsequently initialize them with
-a valid table frame using arenas or providing a
-`fidl::ObjectView<fidl::WireTableFrame<SomeTable>>` directly.
+initialized before use, default constructing a wire union also leads
+to an invalid object (except for the purpose of sending an empty absent
+union).
+
+For memory safety reasons tables are immutable. The default constructor for a
+table returns an empty table. To create a table with firelds you must use a
+builder. The members of tables may be mutable but you can't add or remove
+members after creation.
 
 ### fidl::StringView
 
@@ -162,7 +165,7 @@ The standard pattern for using the arena is:
 
 Example for a table, which is more subtle than other types since it requires
 allocating a separate data structure, `fidl::WireTableFrame<SomeTable>`, to keep
-track of field metadata, in addition to the fields themselves:
+track of field metadata, in addition to the fields themselves we use a builder pattern:
 
 Example:
 

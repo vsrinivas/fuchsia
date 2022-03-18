@@ -428,6 +428,10 @@ fuchsia_driver("astro-driver") {
     include_dirs = [ "$root_out_dir" ]
     defines = [ "TAS2770_CONFIG_PATH=\"$config_tas2770\"" ]
   }
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("astro") {

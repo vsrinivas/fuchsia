@@ -5,6 +5,11 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_TYPES_H_
 #define LIB_FIDL_LLCPP_WIRE_TYPES_H_
 
+#include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/object_view.h>
+
+#include <algorithm>
+
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #endif  // __Fuchsia__
@@ -25,6 +30,40 @@ namespace fidl {
 // insufficient. Once created, a frame can only be used for one single table.
 template <typename FidlTable>
 struct WireTableFrame;
+
+// |WireTableBuilder| is a helper class for building tables. They're created by
+// calling the static |Build(AnyArena&)| on a FIDL wire table type. The table's
+// frame and members will be allocated from supplied arena.
+//
+// Table members are set by passing constructor arguments or |ObjectView|s into
+// a builder method named for the member.
+//
+// To get the built table call |Build()|. The builder must not be used after
+// |Build()| has been called.
+template <typename FidlTable>
+class WireTableBuilder;
+
+// |WireTableExternalBuilder| is a low-level helper class for building tables.
+// They're created by calling the static
+// |Build(fidl::ObjectView<fidl::WireTableFrame<T>>)| on a FIDL wire table type,
+// passing in an externally managed table frame object view.
+//
+// Table members are set by passing |ObjectView|s into a builder method named
+// for the member.
+//
+// To get the built table call |Build()|. The builder must not be used after
+// |Build()| has been called.
+template <typename FidlTable>
+class WireTableExternalBuilder;
+
+namespace internal {
+
+// |WireTableBaseBuilder| holds the shared code between |WireTableBuilder| and
+// |WireTableExternalBuilder|. It shouldn't be used directly.
+template <typename FidlTable, typename Builder>
+class WireTableBaseBuilder;
+
+}  // namespace internal
 
 }  // namespace fidl
 

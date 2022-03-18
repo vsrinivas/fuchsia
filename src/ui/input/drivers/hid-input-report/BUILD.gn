@@ -49,6 +49,10 @@ fuchsia_driver("hid-input-report-driver") {
     "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("hid-input-report") {
@@ -90,6 +94,10 @@ test("hid-input-report-test-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("hid-input-report-test") {

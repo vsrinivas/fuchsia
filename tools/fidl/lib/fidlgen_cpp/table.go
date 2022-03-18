@@ -15,7 +15,9 @@ type TableFrameItem *TableMember
 // These correspond to templated classes forward-declared in
 // //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_types.h
 var (
-	WireTableFrame = fidlNs.member("WireTableFrame")
+	WireTableFrame           = fidlNs.member("WireTableFrame")
+	WireTableBuilder         = fidlNs.member("WireTableBuilder")
+	WireTableExternalBuilder = fidlNs.member("WireTableExternalBuilder")
 )
 
 // TableName stores all of the information necessary to use a table as a
@@ -66,6 +68,9 @@ type Table struct {
 	// WireTableFrame is the name of the table frame type associated with
 	// this table in wire domain objects.
 	WireTableFrame name
+	// TODO(ianloic): document these
+	WireTableBuilder         name
+	WireTableExternalBuilder name
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
 }
@@ -144,8 +149,10 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		WireTableFrame: WireTableFrame.template(name.Wire),
-		TypeTraits:     TypeTraits.template(name.Unified),
+		WireTableFrame:           WireTableFrame.template(name.Wire),
+		TypeTraits:               TypeTraits.template(name.Unified),
+		WireTableBuilder:         WireTableBuilder.template(name.Wire),
+		WireTableExternalBuilder: WireTableExternalBuilder.template(name.Wire),
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {

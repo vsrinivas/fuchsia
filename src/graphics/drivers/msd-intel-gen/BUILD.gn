@@ -86,6 +86,10 @@ source_set("msd_intel_entry") {
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 source_set("msd_intel_test_entry") {
@@ -121,6 +125,10 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_conformance_tests",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 # This config allows inclusion of headers via relative paths

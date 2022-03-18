@@ -37,12 +37,20 @@ test("nand-broker") {
   output_name = "nand-broker-test"
   sources = [ "main.cc" ]
   deps = [ ":common" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 test("nandpart-broker") {
   output_name = "nandpart-broker-test"
   sources = [ "nandpart-main.cc" ]
   deps = [ ":common" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("nand-broker-test") {

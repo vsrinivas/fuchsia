@@ -294,11 +294,16 @@ Given the [table][lang-tables] definition:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
-The FIDL toolchain `User` class with the following methods:
+The FIDL toolchain generates a `User` class with the following methods:
 
-* `User()`: Default constructor, initializes with all fields unset.
-* `User(::fidl::AnyArena& allocator)`: Constructor which allocates the frame but with all
-fields unset.
+* `User()`: Default constructor, initializes an empty table with no fields set.
+* `User::Builder(fidl::AnyArena& arena)`: Builder factory.
+  Returns a `fidl::WireTableBuilder<User>` that allocates the frame and members
+  from the supplied arena.
+* `User::ExternalBuilder(fidl::ObjectView<fidl::WireTableFrame<User>> frame)`:
+  External builder factory. Returns a `fidl::WireTableExternalBuilder<User>`
+  with the supplied frame. This builder requires careful, memory management but
+  might occasionally be useful. _Caveat Emptor_.
 * `User(User&&)`: Default move constructor.
 * `~User()`: Default destructor.
 * `User& operator=(User&&)`: Default move assignment.
@@ -308,26 +313,36 @@ fields unset.
 * `const uint8_t& age() const` and `const fidl::StringView& name() const`:
   Read-only field accessor methods. Calling these methods without first setting
   the field leads to an assertion error.
-* `void set_age(uint8_t)`: set age by inlining it into the table frame.
-* `void clear_age()`: unset age.
-* `void set_name(::fidl::ObjectView<::fidl::StringView>)`: set name with an already allocated value.
-* `void set_name(::fidl::AnyArena&, ::fidl::AnyArena&, std::string_view)`: set name with the
-  given value. The storage for the storage of the value (StringView) and the storage of the string
-  are allocated using the two allocators. The same allocator should be given to the two allocator
-  arguments.
-* `void clear_name()`: unset name.
 
-In order to build a table, one additional class is generated:
+In order to build a table, three additional class is generated:
+`fidl::WireTableBuilder<User>`, `fidl::WireTableExternalBuilder<User>` and
 `fidl::WireTableFrame<User>`.
 
 `fidl::WireTableFrame<User>` is a container for the table's internal storage,
 and is allocated separately from the builder because LLCPP maintains the object
-layout of the underlying wire format. It is only use internally by
-`User(::fidl::AnyArena&)`.
+layout of the underlying wire format. It is only use internally by builders.
 
 `fidl::WireTableFrame<User>` has the following methods:
 
 * `WireTableFrame()`: Default constructor.
+
+`fidl::WireTableExternalBuilder<User>` has the following methods:
+
+* `fidl::WireTableExternalBuilder<User> age(uint8_t)`:
+  set age by inlining it into the table frame.
+* `fidl::WireTableExternalBuilder<User> name(fidl::ObjectView<fidl::StringView>)`:
+  set name with an already allocated value.
+* `User Build()`: build and return the table object. After `Build()` is called
+  the builder must be discarded.
+
+`fidl::WireTableBuilder<User>` has all of the methods of
+`fidl::WireTableExternalBuilder<User>` (but with the right return type from the
+setters) and adds:
+
+* `fidl::WireTableBuilder<User> name(std::string_view)`: set name by allocating
+  a new `fidl::StringView` from the builder's arena and copying the supplied
+  string into it.
+
 
 Example usage:
 

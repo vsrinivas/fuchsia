@@ -311,6 +311,10 @@ test("blobfs_verifier_service") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-verifier-service-component") {

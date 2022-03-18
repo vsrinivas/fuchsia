@@ -23,19 +23,18 @@ fuchsia_sysmem::wire::PixelFormat GetCppPixelFormat(const fuchsia_sysmem_PixelFo
 fuchsia_sysmem_PixelFormat GetCPixelFormat(const fuchsia_sysmem::wire::PixelFormat& pixel_format);
 
 constexpr fuchsia_sysmem::wire::ImageFormatConstraints GetDefaultImageFormatConstraints() {
-  fuchsia_sysmem::wire::ImageFormatConstraints constraints;
   // Should match values in constraints.fidl.
   // TODO(fxbug.dev/35314): LLCPP should initialize to default values.
-  constraints.max_coded_width_times_coded_height = 0xffffffff;
-  constraints.layers = 1;
-  constraints.coded_width_divisor = 1;
-  constraints.coded_height_divisor = 1;
-  constraints.bytes_per_row_divisor = 1;
-  constraints.start_offset_divisor = 1;
-  constraints.display_width_divisor = 1;
-  constraints.display_height_divisor = 1;
-
-  return constraints;
+  return fuchsia_sysmem::wire::ImageFormatConstraints{
+      .max_coded_width_times_coded_height = 0xffffffff,
+      .layers = 1,
+      .coded_width_divisor = 1,
+      .coded_height_divisor = 1,
+      .bytes_per_row_divisor = 1,
+      .start_offset_divisor = 1,
+      .display_width_divisor = 1,
+      .display_height_divisor = 1,
+  };
 }
 
 constexpr fuchsia_sysmem::wire::BufferMemoryConstraints GetDefaultBufferMemoryConstraints() {

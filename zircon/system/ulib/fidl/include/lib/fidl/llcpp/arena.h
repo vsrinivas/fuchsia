@@ -34,11 +34,19 @@ class AnyArena {
  public:
   // Allocates and default constructs an instance of T. Used by
   // |fidl::ObjectView|.
+  // If T has a constructor that takes an |AnyArena&| followed by the supplied
+  // arguments then this arena will be passed.
   template <typename T, typename... Args>
   T* Allocate(Args&&... args) {
-    return new (Allocate(sizeof(T), 1,
-                         std::is_trivially_destructible<T>::value ? nullptr : ObjectDestructor<T>))
-        T(std::forward<Args>(args)...);
+    uint8_t* buf = Allocate(
+        sizeof(T), 1, std::is_trivially_destructible<T>::value ? nullptr : ObjectDestructor<T>);
+    if constexpr (std::is_constructible_v<T, AnyArena&, Args...>) {
+      // Call the object constructor with this arena as its first argumeent.
+      return new (buf) T(*this, std::forward<Args>(args)...);
+    } else {
+      // Call the object constructor.
+      return new (buf) T(std::forward<Args>(args)...);
+    }
   }
 
   // Allocates and default constructs a vector of T. Used by fidl::VectorView

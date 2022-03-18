@@ -17,6 +17,11 @@ class {{ .Name }};
 {{- end }}
 
 {{ EnsureNamespace "" }}
+template<>
+class {{ .WireTableBuilder }};
+template<>
+class {{ .WireTableExternalBuilder }};
+
 template <>
 struct {{ .WireTableFrame }} final {
  public:
@@ -43,6 +48,8 @@ struct {{ .WireTableFrame }} final {
   {{- end }}
 
   friend class {{ . }};
+  friend ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}>;
+  friend ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>;
 };
 
 {{ EnsureNamespace . }}
@@ -53,12 +60,29 @@ public:
 {{- range .AnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
+  {{ .Name }}() = default;
+  {{ .Name }}(const {{ .Name }}& other) noexcept = default;
+  {{ .Name }}& operator=(const {{ .Name }}& other) noexcept = default;
+  {{ .Name }}({{ .Name }}&& other) noexcept = default;
+  {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
+
+  ~{{ .Name }}() = default;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  {{- if .IsResourceType }}
+  void _CloseHandles();
+  {{- end }}
+
+  // Return a builder that by defaults allocates of an arena.
+  static {{ .WireTableBuilder }} Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static {{ .WireTableExternalBuilder }} ExternalBuilder(::fidl::ObjectView<{{ .WireTableFrame }}> frame);
 
 {{- range .Members }}
 {{ "" }}
@@ -74,6 +98,15 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.has_data();
   }
+{{- end }}
+
+{{- /* Temporarily special case fuchsia.hardware.goldfish because of out of tree users. */}}
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || {{ eq .Namespace.String  "::fuchsia_hardware_goldfish::wire" }}
+public:
+#else // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+private:
+#endif // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+{{ range .Members }}
 
   {{- if .Type.InlineInEnvelope }}
   {{ $.Name }}& set_{{ .Name }}({{ .Type }} elem) {
@@ -110,9 +143,8 @@ public:
     frame_ptr_->{{ .Name }}_.clear_data();
     return *this;
   }
-  {{- end }}
+{{- end }}
 
-  {{ .Name }}() = default;
   explicit {{ .Name }}(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<{{ .WireTableFrame }}>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
@@ -120,11 +152,6 @@ public:
   // As soon as the frame is given to the table, it must not be used directly or for another table.
   explicit {{ .Name }}(::fidl::ObjectView<{{ .WireTableFrame }}>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~{{ .Name }}() = default;
-  {{ .Name }}(const {{ .Name }}& other) noexcept = default;
-  {{ .Name }}& operator=(const {{ .Name }}& other) noexcept = default;
-  {{ .Name }}({{ .Name }}&& other) noexcept = default;
-  {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -135,14 +162,96 @@ public:
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  {{- if .IsResourceType }}
-  void _CloseHandles();
-  {{- end }}
-
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}>;
+  friend ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<{{ .WireTableFrame }}> frame_ptr_;
 };
+
+{{- EnsureNamespace "" }}
+template<typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<{{ . }}, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  {{ . }} Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    {{ . }} t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  {{- range .Members }}
+    {{ .Docs }}
+    {{- if .Type.InlineInEnvelope }}
+      BuilderImpl& {{ .Name }}({{ .Type }} elem) {
+        ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+        table_.frame_ptr_->{{ .Name }}_.set_data(std::move(elem));
+        table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+        return *static_cast<BuilderImpl*>(this);
+      }
+    {{- else }}
+      {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
+      BuilderImpl& {{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
+        ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+        table_.frame_ptr_->{{ .Name }}_.set_data(elem);
+        table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+        return *static_cast<BuilderImpl*>(this);
+      }
+    {{- end }}
+  {{- end }}
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<{{ .WireTableFrame }}>&& frame)
+    : table_(std::move(frame)) {}
+
+ private:
+  {{ . }} table_;
+};
+
+template<>
+class {{ .WireTableBuilder }} final : public ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}> {
+ using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}>;
+ public:
+  {{- range .Members }}
+    {{- if not .Type.InlineInEnvelope }}
+    using Base::{{ .Name }};
+    {{ .Docs }}
+      template <typename... Args>
+      {{ $.WireTableBuilder }}& {{ .Name }}(Args&&... args_) {
+        {{ .Name }}(::fidl::ObjectView<{{ .Type }}>(arena_.get(), std::forward<Args>(args_)...));
+        return *this;
+      }
+    {{- end }}
+  {{- end }}
+ private:
+  friend class {{ . }};
+  {{ .WireTableBuilder.Self }}(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<{{ .WireTableFrame }}>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+
+};
+
+template<>
+class {{ .WireTableExternalBuilder }} final : public ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>  {
+ using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>;
+ private:
+  friend class {{ . }};
+  using Base::Base;
+  {{ .WireTableExternalBuilder.Self }}({{ .WireTableFrame }}* frame)
+      : Base(::fidl::ObjectView<{{ .WireTableFrame }}>::FromExternal(frame)) {}
+};
+
+{{- EnsureNamespace . }}
+inline {{ .WireTableBuilder }} {{ .Name }}::Builder(::fidl::AnyArena& arena) {
+  return {{ .WireTableBuilder }}(arena);
+}
+inline {{ .WireTableExternalBuilder }} {{ .Name }}::ExternalBuilder(::fidl::ObjectView<{{ .WireTableFrame }}> frame) {
+  return {{ .WireTableExternalBuilder }}(std::move(frame));
+}
 
 {{- if .IsResourceType }}
 {{- EndifFuchsia -}}

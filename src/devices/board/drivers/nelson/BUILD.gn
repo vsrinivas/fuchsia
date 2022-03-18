@@ -471,6 +471,10 @@ fuchsia_driver("nelson-module-driver") {
     include_dirs = [ "//prebuilt" ]
     defines = [ "TAS5805M_CONFIG_PATH=\"$config_tas5805m\"" ]
   }
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("nelson-module") {

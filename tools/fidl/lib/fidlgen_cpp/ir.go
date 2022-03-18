@@ -170,7 +170,6 @@ func (t *Type) WireInitMessage(n string) string {
 		return fmt.Sprintf("%s(%s)", n, n)
 	default:
 		panic(fmt.Sprintf("Unknown wire family kind %v", t.WireFamily))
-
 	}
 }
 
@@ -324,21 +323,25 @@ func (r Result) ValueArity() int {
 // parameters described by a layout. For flattened parameter lists, this may
 // look like (assuming the supplied `varName` is "_response"):
 //
-//   _response.a = std::move(a);
-//   _response.b = std::move(b);
+//   MyLayoutArgType _response = MyLayoutArgType{
+//     .a = std::move(a),
+//     .b = std::move(b),
+//   };
 //
 // Unflattened layouts are always rendered as:
 //
 //   MyLayoutArgType _response = std::move(my_layout_arg);
 func (r Result) BuildPayload(varName string) string {
-	out := fmt.Sprintf("%s %s;\n", r.ValueTypeDecl, varName)
+	out := fmt.Sprintf("%s %s = ", r.ValueTypeDecl, varName)
 	if !r.valueTypeIsStruct && currentVariant != unifiedVariant {
-		return out + fmt.Sprintf("%s = std::move(%s);\n", varName, r.Value.Name())
+		return out + fmt.Sprintf("std::move(%s);\n", r.Value.Name())
 	}
 
+	out += fmt.Sprintf("%s {\n", r.ValueTypeDecl)
 	for _, v := range r.ValueParameters {
-		out += fmt.Sprintf("%s.%s = std::move(%s);\n", varName, v.Name(), v.Name())
+		out += fmt.Sprintf("  .%s = std::move(%s),\n", v.Name(), v.Name())
 	}
+	out += "};\n"
 	return out
 }
 

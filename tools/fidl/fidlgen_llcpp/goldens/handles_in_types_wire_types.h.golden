@@ -37,6 +37,12 @@ class UnionWithHandle;
 }  // namespace wire
 }  // namespace test_handlesintypes
 template <>
+class ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_handlesintypes::wire::TableWithHandle>;
+
+template <>
 struct ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>
     final {
  public:
@@ -56,6 +62,13 @@ struct ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>
   ::fidl::Envelope<::zx::vmo> h_;
 
   friend class ::test_handlesintypes::wire::TableWithHandle;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableExternalBuilder<
+          ::test_handlesintypes::wire::TableWithHandle>>;
 };
 
 namespace test_handlesintypes {
@@ -64,11 +77,32 @@ extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
 class TableWithHandle {
  public:
+  TableWithHandle() = default;
+  TableWithHandle(const TableWithHandle& other) noexcept = default;
+  TableWithHandle& operator=(const TableWithHandle& other) noexcept = default;
+  TableWithHandle(TableWithHandle&& other) noexcept = default;
+  TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
+
+  ~TableWithHandle() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+  void _CloseHandles();
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_handlesintypes::wire::TableWithHandle>
+  ExternalBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>>
+          frame);
 
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h());
@@ -79,6 +113,12 @@ class TableWithHandle {
     return frame_ptr_->h_.get_data();
   }
   bool has_h() const { return max_ordinal_ >= 1 && frame_ptr_->h_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   TableWithHandle& set_h(::zx::vmo elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->h_.set_data(std::move(elem));
@@ -92,7 +132,6 @@ class TableWithHandle {
     return *this;
   }
 
-  TableWithHandle() = default;
   explicit TableWithHandle(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -105,11 +144,6 @@ class TableWithHandle {
       ::fidl::ObjectView<::fidl::WireTableFrame<
           ::test_handlesintypes::wire::TableWithHandle>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~TableWithHandle() = default;
-  TableWithHandle(const TableWithHandle& other) noexcept = default;
-  TableWithHandle& operator=(const TableWithHandle& other) noexcept = default;
-  TableWithHandle(TableWithHandle&& other) noexcept = default;
-  TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -122,14 +156,113 @@ class TableWithHandle {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-  void _CloseHandles();
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableExternalBuilder<
+          ::test_handlesintypes::wire::TableWithHandle>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_handlesintypes
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_handlesintypes::wire::TableWithHandle, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_handlesintypes::wire::TableWithHandle Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_handlesintypes::wire::TableWithHandle t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& h(::zx::vmo elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->h_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_handlesintypes::wire::TableWithHandle>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_handlesintypes::wire::TableWithHandle table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_handlesintypes::wire::TableWithHandle,
+                ::fidl::WireTableBuilder<
+                    ::test_handlesintypes::wire::TableWithHandle>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>>;
+
+ public:
+ private:
+  friend class ::test_handlesintypes::wire::TableWithHandle;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_handlesintypes::wire::TableWithHandle>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_handlesintypes::wire::TableWithHandle>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_handlesintypes::wire::TableWithHandle,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_handlesintypes::wire::TableWithHandle>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_handlesintypes::wire::TableWithHandle,
+      ::fidl::WireTableExternalBuilder<
+          ::test_handlesintypes::wire::TableWithHandle>>;
+
+ private:
+  friend class ::test_handlesintypes::wire::TableWithHandle;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>*
+          frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_handlesintypes::wire::TableWithHandle>>::
+                 FromExternal(frame)) {}
+};
+namespace test_handlesintypes {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>
+TableWithHandle::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_handlesintypes::wire::TableWithHandle>
+TableWithHandle::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_handlesintypes::wire::TableWithHandle>(std::move(frame));
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

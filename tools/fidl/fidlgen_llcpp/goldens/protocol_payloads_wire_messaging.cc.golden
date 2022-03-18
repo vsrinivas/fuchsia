@@ -3071,8 +3071,10 @@ void fidl::internal::WireCompleterImpl<
 void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplySuccess(int32_t a) {
-  ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
-  _response.a = std::move(a);
+  ::test_protocolpayloads_imported::wire::ImportStructPayload _response =
+      ::test_protocolpayloads_imported::wire::ImportStructPayload{
+          .a = std::move(a),
+      };
 
   return Reply(::test_protocolpayloads_imported::wire::
                    ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(
@@ -3114,8 +3116,10 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplySuccess(int32_t a) {
-  ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
-  _response.a = std::move(a);
+  ::test_protocolpayloads_imported::wire::ImportStructPayload _response =
+      ::test_protocolpayloads_imported::wire::ImportStructPayload{
+          .a = std::move(a),
+      };
 
   return Reply(::test_protocolpayloads_imported::wire::
                    ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(
@@ -3193,9 +3197,11 @@ void fidl::internal::WireCompleterImpl<
 void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
-  ::test_protocolpayloads::wire::LocalStructPayload _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+  ::test_protocolpayloads::wire::LocalStructPayload _response =
+      ::test_protocolpayloads::wire::LocalStructPayload{
+          .a = std::move(a),
+          .b = std::move(b),
+      };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::
@@ -3239,9 +3245,11 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
-  ::test_protocolpayloads::wire::LocalStructPayload _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+  ::test_protocolpayloads::wire::LocalStructPayload _response =
+      ::test_protocolpayloads::wire::LocalStructPayload{
+          .a = std::move(a),
+          .b = std::move(b),
+      };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::
@@ -3319,8 +3327,10 @@ void fidl::internal::WireCompleterImpl<
 void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(int32_t a) {
-  ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
-  _response.a = std::move(a);
+  ::test_protocolpayloads_imported::wire::ImportStructPayload _response =
+      ::test_protocolpayloads_imported::wire::ImportStructPayload{
+          .a = std::move(a),
+      };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::
@@ -3362,8 +3372,10 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(int32_t a) {
-  ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
-  _response.a = std::move(a);
+  ::test_protocolpayloads_imported::wire::ImportStructPayload _response =
+      ::test_protocolpayloads_imported::wire::ImportStructPayload{
+          .a = std::move(a),
+      };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::
@@ -3442,9 +3454,11 @@ void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse
-      _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+      _response = ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResponse{
+              .a = std::move(a),
+              .b = std::move(b),
+          };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::
@@ -3490,9 +3504,11 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse
-      _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
+      _response = ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResponse{
+              .a = std::move(a),
+              .b = std::move(b),
+          };
 
   return Reply(
       ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::

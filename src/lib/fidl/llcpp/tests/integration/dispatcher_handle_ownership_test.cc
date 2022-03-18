@@ -54,9 +54,8 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
 
   auto [observer, send] = CreateEventPair();
   fidl::Arena allocator;
-  test::wire::Resource r(allocator);
-  r.set_handle(std::move(send));
-  auto result = client->SendResource(r);
+  auto result = client->SendResource(
+      test::wire::Resource::Builder(allocator).handle(std::move(send)).Build());
   ASSERT_TRUE(result.ok());
 
   ASSERT_OK(loop.RunUntilIdle());
@@ -81,10 +80,8 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
                      GetResourceCompleter::Sync& completer) override {
       auto [observer, send] = CreateEventPair();
       fidl::Arena allocator;
-      test::wire::Resource r(allocator);
-      r.set_handle(std::move(send));
       observer_ = std::move(observer);
-      completer.Reply(r);
+      completer.Reply(test::wire::Resource::Builder(allocator).handle(std::move(send)).Build());
     }
 
     const zx::eventpair& observer() const { return observer_; }
@@ -149,9 +146,9 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
 
   auto [observer, send] = CreateEventPair();
   fidl::Arena allocator;
-  test::wire::Resource r(allocator);
-  r.set_handle(std::move(send));
-  ASSERT_OK(fidl::WireSendEvent(server_binding)->ResourceEvent(r));
+  ASSERT_OK(fidl::WireSendEvent(server_binding)
+                ->ResourceEvent(
+                    test::wire::Resource::Builder(allocator).handle(std::move(send)).Build()));
 
   class EventHandler final : public fidl::WireAsyncEventHandler<test::Protocol> {
    public:

@@ -33,6 +33,10 @@ executable("bin") {
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_component("platform_component") {

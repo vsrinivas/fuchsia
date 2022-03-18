@@ -5948,10 +5948,12 @@ void fidl::internal::WireCompleterImpl<
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplySuccess(int64_t a, int64_t b, int64_t c) {
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
-  _response.c = std::move(c);
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse{
+          .a = std::move(a),
+          .b = std::move(b),
+          .c = std::move(c),
+      };
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
@@ -5996,10 +5998,12 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplySuccess(int64_t a, int64_t b, int64_t c) {
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response;
-  _response.a = std::move(a);
-  _response.b = std::move(b);
-  _response.c = std::move(c);
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse{
+          .a = std::move(a),
+          .b = std::move(b),
+          .c = std::move(c),
+      };
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
@@ -6037,7 +6041,8 @@ void fidl::internal::WireCompleterImpl<
 }
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse{};
 
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                    WithResponse(std::move(_response)));
@@ -6077,7 +6082,8 @@ void fidl::internal::WireBufferCompleterImpl<
 }
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse{};
 
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                    WithResponse(std::move(_response)));
@@ -6110,7 +6116,8 @@ void fidl::internal::
 }
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse{};
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(
@@ -6150,7 +6157,8 @@ void fidl::internal::WireBufferCompleterImpl<
 }
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse{};
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(
@@ -6185,8 +6193,10 @@ void fidl::internal::
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     ReplySuccess(::zx::handle&& h) {
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
-  _response.h = std::move(h);
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
+          .h = std::move(h),
+      };
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(
@@ -6227,8 +6237,10 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     ReplySuccess(::zx::handle&& h) {
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
-  _response.h = std::move(h);
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response =
+      ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
+          .h = std::move(h),
+      };
 
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(

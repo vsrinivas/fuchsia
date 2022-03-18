@@ -67,6 +67,7 @@ type SampleTable = table {
     2: y uint8;
     3: vector_of_struct vector<CopyableStruct>;
     4: b bool;
+    5: s string;
 };
 
 /// Verifies that an empty table compiles.
@@ -123,9 +124,7 @@ type FlexibleEnum = flexible enum : uint32 {
 };
 
 type EmptyFlexibleEnum = flexible enum : uint32 {};
-
 type EmptyStruct = struct {};
-
 type TestTable = table {
     1: x uint8;
 };

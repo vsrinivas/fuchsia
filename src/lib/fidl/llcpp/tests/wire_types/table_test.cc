@@ -10,9 +10,8 @@
 
 TEST(Table, TablePrimitive) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::SampleTable table(allocator);
-  table.set_x(3).set_y(100);
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable::Builder(arena).x(3).y(100).Build();
 
   ASSERT_TRUE(table.has_x());
   ASSERT_TRUE(table.has_y());
@@ -22,45 +21,67 @@ TEST(Table, TablePrimitive) {
   EXPECT_FALSE(table.HasUnknownData());
 }
 
-TEST(Table, InlineSetClear) {
+TEST(Table, InlineSet) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::SampleTable table(allocator);
-  table.set_x(3u);
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable::Builder(arena).x(3u).Build();
 
   ASSERT_TRUE(table.has_x());
   ASSERT_EQ(table.x(), 3u);
-  EXPECT_FALSE(table.HasUnknownData());
-
-  table.clear_x();
-  ASSERT_FALSE(table.has_x());
   EXPECT_FALSE(table.HasUnknownData());
 }
 
-TEST(Table, OutOfLineSetClear) {
+TEST(Table, OutOfLineSet) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::Uint64Table table(allocator);
-  table.set_x(allocator, 3u);
+  fidl::Arena arena;
+  auto table = test::wire::Uint64Table::Builder(arena).x(3u).Build();
 
   ASSERT_TRUE(table.has_x());
   ASSERT_EQ(table.x(), 3u);
   EXPECT_FALSE(table.HasUnknownData());
+}
 
-  table.clear_x();
-  ASSERT_FALSE(table.has_x());
+TEST(Table, Builder) {
+  namespace test = test_types;
+  fidl::Arena arena;
+  auto builder = test::wire::Uint64Table::Builder(arena).x(3u);
+  auto table = builder.Build();
+  ASSERT_EQ(table.x(), 3u);
   EXPECT_FALSE(table.HasUnknownData());
+
+  builder = test::wire::Uint64Table::Builder(arena);
+  table = builder.x(3u).Build();
+  ASSERT_EQ(table.x(), 3u);
+  EXPECT_FALSE(table.HasUnknownData());
+}
+
+TEST(Table, BuilderArena) {
+  namespace test = test_types;
+
+  // A buffer to store string contents.
+  const size_t kSize = 1024;
+  char buffer[kSize];
+  strlcpy(buffer, "hello", kSize);
+
+  // Build a table containing that string. The contents should be copied to the arena.
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable::Builder(arena).s(buffer).Build();
+
+  // Overwrite the buffer.
+  strncpy(buffer, "world", kSize - 1);
+
+  // Make sure the table contains what was passed into the builder, not what's now in the buffer.
+  ASSERT_EQ("hello", table.s().get());
 }
 
 TEST(Table, TableVectorOfStruct) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  fidl::VectorView<test::wire::CopyableStruct> structs(allocator, 2);
+  fidl::Arena arena;
+  fidl::VectorView<test::wire::CopyableStruct> structs(arena, 2);
   structs[0].x = 30;
   structs[1].x = 42;
 
-  test::wire::SampleTable table(allocator);
-  table.set_vector_of_struct(allocator, std::move(structs));
+  auto table = test::wire::SampleTable::Builder(arena).vector_of_struct(std::move(structs)).Build();
 
   ASSERT_FALSE(table.has_x());
   ASSERT_FALSE(table.has_y());
@@ -80,18 +101,16 @@ TEST(Table, EmptyTableWithoutFrame) {
 
 TEST(Table, EmptyTableWithFrame) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::SampleEmptyTable table(allocator);
+  fidl::Arena arena;
+  auto table = test::wire::SampleEmptyTable::Builder(arena).Build();
   ASSERT_TRUE(table.IsEmpty());
   EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, NotEmptyTable) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::SampleTable table(allocator);
-  ASSERT_TRUE(table.IsEmpty());
-  table.set_x(3).set_y(100);
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable::Builder(arena).x(3).y(100).Build();
   ASSERT_FALSE(table.IsEmpty());
   EXPECT_FALSE(table.HasUnknownData());
 }
@@ -99,114 +118,52 @@ TEST(Table, NotEmptyTable) {
 TEST(Table, ManualFrame) {
   namespace test = test_types;
   fidl::WireTableFrame<test::wire::SampleTable> frame;
-  test::wire::SampleTable table(
-      fidl::ObjectView<fidl::WireTableFrame<test::wire::SampleTable>>::FromExternal(&frame));
-  table.set_x(42);
-  table.set_y(100);
+  auto table =
+      test::wire::SampleTable::ExternalBuilder(
+          fidl::ObjectView<fidl::WireTableFrame<test::wire::SampleTable>>::FromExternal(&frame))
+          .x(42)
+          .y(100)
+          .Build();
   EXPECT_EQ(table.x(), 42);
   EXPECT_EQ(table.y(), 100);
   EXPECT_FALSE(table.HasUnknownData());
 }
 
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-TEST(Table, CrashWhenSettingFieldWithoutFrameOrArena) {
-  namespace test = test_types;
-  test::wire::SampleTable table;
-  ASSERT_DEATH({ table.set_x(42); }, "");
-}
-#endif
-
 TEST(Table, Getters) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::SampleTable table(allocator);
-  EXPECT_FALSE(table.has_x());
-  table.set_x(3);
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable ::Builder(arena).x(3).Build();
   static_assert(std::is_same<uint8_t&, decltype(table.x())>::value);
   EXPECT_TRUE(table.has_x());
   EXPECT_EQ(3, table.x());
-  table.set_x(4);
-  EXPECT_TRUE(table.has_x());
-  EXPECT_EQ(4, table.x());
 }
 
 TEST(Table, SubTables) {
   namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::TableWithSubTables table(allocator);
+  fidl::Arena arena;
 
   // Test setting a field which is a table.
-  EXPECT_FALSE(table.has_t());
-  table.set_t(allocator, allocator);
+  auto table = test::wire::TableWithSubTables::Builder(arena)
+                   .t(test::wire::SampleTable::Builder(arena).x(12).Build())
+                   .Build();
   EXPECT_TRUE(table.has_t());
-
-  EXPECT_FALSE(table.t().has_x());
-  table.t().set_x(12);
   EXPECT_TRUE(table.t().has_x());
   EXPECT_EQ(12, table.t().x());
 
   // Test setting a field which is a vector of tables.
   EXPECT_FALSE(table.has_vt());
-  table.set_vt(allocator, allocator, 6);
+  table = test::wire::TableWithSubTables::Builder(arena).vt().Build();
+  table.vt().Allocate(arena, 1);
+  table.vt()[0] = test::wire::SampleTable::Builder(arena).x(13).Build();
   EXPECT_TRUE(table.has_vt());
-  // |Allocate| must be called on a default-constructed table before using it.
-  table.vt()[0].Allocate(allocator);
-
-  EXPECT_FALSE(table.vt()[0].has_x());
-  table.vt()[0].set_x(13);
   EXPECT_TRUE(table.vt()[0].has_x());
   EXPECT_EQ(13, table.vt()[0].x());
-  table.vt()[0].clear_x();
-  EXPECT_FALSE(table.vt()[0].has_x());
 
-  // Test setting a field which is an array of tables.
-  EXPECT_FALSE(table.has_at());
-  table.set_at(allocator);
+  // Test setting a field which is an array of tables
+  table = test::wire::TableWithSubTables::Builder(arena).at().Build();
+  table.at()[0] = test::wire::SampleTable::Builder(arena).x(15).Build();
   EXPECT_TRUE(table.has_at());
-
-  // |Allocate| must be called on a default-constructed table before using it.
-  table.at()[0].Allocate(allocator);
-  EXPECT_FALSE(table.at()[0].has_x());
-  table.at()[0].set_x(15);
-  EXPECT_TRUE(table.at()[0].has_x());
   EXPECT_EQ(15, table.at()[0].x());
-  table.at()[0].clear_x();
-  EXPECT_FALSE(table.at()[0].has_x());
-}
-
-TEST(Table, SettingUnsettingHandles) {
-  namespace test = test_types;
-  fidl::Arena allocator;
-  test::wire::TestHandleTable table(allocator);
-
-  auto event_ref_count = [](const zx::event& event) {
-    zx_info_handle_count_t handle_count;
-    ZX_ASSERT(ZX_OK == event.get_info(ZX_INFO_HANDLE_COUNT, &handle_count, sizeof(handle_count),
-                                      nullptr, nullptr));
-    return handle_count.handle_count;
-  };
-
-  zx::event event1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &event1));
-  zx::event event1_dup;
-  event1.duplicate(ZX_RIGHT_SAME_RIGHTS, &event1_dup);
-  table.set_hs(test::wire::HandleStruct{
-      .h = std::move(event1),
-  });
-  ASSERT_EQ(2u, event_ref_count(event1_dup));
-
-  zx::event event2;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &event2));
-  zx::event event2_dup;
-  event2.duplicate(ZX_RIGHT_SAME_RIGHTS, &event2_dup);
-  table.set_hs(test::wire::HandleStruct{
-      .h = std::move(event2),
-  });
-  ASSERT_EQ(1u, event_ref_count(event1_dup));
-  ASSERT_EQ(2u, event_ref_count(event2_dup));
-
-  table.clear_hs();
-  ASSERT_EQ(1u, event_ref_count(event2_dup));
 }
 
 TEST(Table, UnknownHandlesResource) {

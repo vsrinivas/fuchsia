@@ -40,6 +40,10 @@ fuchsia_driver("hdmi-audio-codec-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("hdmi-audio-codec") {

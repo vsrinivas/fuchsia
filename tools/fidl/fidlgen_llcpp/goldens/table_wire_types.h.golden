@@ -42,6 +42,11 @@ class EmptyTable;
 }  // namespace wire
 }  // namespace test_table
 template <>
+class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>;
+
+template <>
 struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
  public:
   WireTableFrame() = default;
@@ -60,6 +65,13 @@ struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::TableWithAttributes;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::TableWithAttributes>>;
 };
 
 namespace test_table {
@@ -68,11 +80,33 @@ extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 
 class TableWithAttributes {
  public:
+  TableWithAttributes() = default;
+  TableWithAttributes(const TableWithAttributes& other) noexcept = default;
+  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept =
+      default;
+  TableWithAttributes(TableWithAttributes&& other) noexcept = default;
+  TableWithAttributes& operator=(TableWithAttributes&& other) noexcept =
+      default;
+
+  ~TableWithAttributes() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::TableWithAttributes>
+  ExternalBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>
+          frame);
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -83,6 +117,12 @@ class TableWithAttributes {
     return frame_ptr_->x_.get_data();
   }
   bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   TableWithAttributes& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(elem);
@@ -109,7 +149,6 @@ class TableWithAttributes {
     return *this;
   }
 
-  TableWithAttributes() = default;
   explicit TableWithAttributes(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
                        ::test_table::wire::TableWithAttributes>>(allocator)) {}
@@ -122,13 +161,6 @@ class TableWithAttributes {
           ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~TableWithAttributes() = default;
-  TableWithAttributes(const TableWithAttributes& other) noexcept = default;
-  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept =
-      default;
-  TableWithAttributes(TableWithAttributes&& other) noexcept = default;
-  TableWithAttributes& operator=(TableWithAttributes&& other) noexcept =
-      default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -143,14 +175,124 @@ class TableWithAttributes {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::TableWithAttributes>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_table::wire::TableWithAttributes, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::TableWithAttributes Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::TableWithAttributes t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                           ::test_table::wire::TableWithAttributes>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::TableWithAttributes table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::TableWithAttributes,
+          ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+
+ public:
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>& x(
+      Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::TableWithAttributes;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_table::wire::TableWithAttributes,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_table::wire::TableWithAttributes>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::TableWithAttributes,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::TableWithAttributes>>;
+
+ private:
+  friend class ::test_table::wire::TableWithAttributes;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>* frame)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>::
+                 FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>
+TableWithAttributes::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>
+TableWithAttributes::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::TableWithAttributes>(std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::SimpleTable> final {
  public:
@@ -174,6 +316,12 @@ struct ::fidl::WireTableFrame<::test_table::wire::SimpleTable> final {
   ::fidl::Envelope<int64_t> y_;
 
   friend class ::test_table::wire::SimpleTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>>;
 };
 
 namespace test_table {
@@ -182,11 +330,29 @@ extern "C" const fidl_type_t test_table_SimpleTableTable;
 
 class SimpleTable {
  public:
+  SimpleTable() = default;
+  SimpleTable(const SimpleTable& other) noexcept = default;
+  SimpleTable& operator=(const SimpleTable& other) noexcept = default;
+  SimpleTable(SimpleTable&& other) noexcept = default;
+  SimpleTable& operator=(SimpleTable&& other) noexcept = default;
+
+  ~SimpleTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::SimpleTable> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_table::wire::SimpleTable>>
+                      frame);
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -197,6 +363,22 @@ class SimpleTable {
     return frame_ptr_->x_.get_data();
   }
   bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   SimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(elem);
@@ -222,16 +404,6 @@ class SimpleTable {
     frame_ptr_->x_.clear_data();
     return *this;
   }
-
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
   SimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(elem);
@@ -258,7 +430,6 @@ class SimpleTable {
     return *this;
   }
 
-  SimpleTable() = default;
   explicit SimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<
                    ::fidl::WireTableFrame<::test_table::wire::SimpleTable>>(
@@ -271,11 +442,6 @@ class SimpleTable {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_table::wire::SimpleTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~SimpleTable() = default;
-  SimpleTable(const SimpleTable& other) noexcept = default;
-  SimpleTable& operator=(const SimpleTable& other) noexcept = default;
-  SimpleTable(SimpleTable&& other) noexcept = default;
-  SimpleTable& operator=(SimpleTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -290,13 +456,133 @@ class SimpleTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::SimpleTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SimpleTable,
+                                             BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::SimpleTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::SimpleTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->y_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::SimpleTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::SimpleTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::SimpleTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::SimpleTable,
+          ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>>;
+
+ public:
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& x(
+      Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::y;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& y(
+      Args&&... args_) {
+    y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::SimpleTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::SimpleTable>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::SimpleTable,
+          ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>>;
+
+ private:
+  friend class ::test_table::wire::SimpleTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::SimpleTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::SimpleTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>
+SimpleTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>
+SimpleTable::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::SimpleTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
  public:
@@ -318,6 +604,13 @@ struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::ReverseOrdinalTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::ReverseOrdinalTable>>;
 };
 
 namespace test_table {
@@ -326,11 +619,33 @@ extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 
 class ReverseOrdinalTable {
  public:
+  ReverseOrdinalTable() = default;
+  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
+  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept =
+      default;
+  ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
+      default;
+
+  ~ReverseOrdinalTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::ReverseOrdinalTable>
+  ExternalBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>
+          frame);
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
@@ -341,6 +656,32 @@ class ReverseOrdinalTable {
     return frame_ptr_->z_.get_data();
   }
   bool has_z() const { return max_ordinal_ >= 1 && frame_ptr_->z_.has_data(); }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  bool has_y() const { return max_ordinal_ >= 2 && frame_ptr_->y_.has_data(); }
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  bool has_x() const { return max_ordinal_ >= 3 && frame_ptr_->x_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   ReverseOrdinalTable& set_z(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.set_data(elem);
@@ -366,16 +707,6 @@ class ReverseOrdinalTable {
     frame_ptr_->z_.clear_data();
     return *this;
   }
-
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const { return max_ordinal_ >= 2 && frame_ptr_->y_.has_data(); }
   ReverseOrdinalTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(elem);
@@ -401,16 +732,6 @@ class ReverseOrdinalTable {
     frame_ptr_->y_.clear_data();
     return *this;
   }
-
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const { return max_ordinal_ >= 3 && frame_ptr_->x_.has_data(); }
   ReverseOrdinalTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(elem);
@@ -437,7 +758,6 @@ class ReverseOrdinalTable {
     return *this;
   }
 
-  ReverseOrdinalTable() = default;
   explicit ReverseOrdinalTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
                        ::test_table::wire::ReverseOrdinalTable>>(allocator)) {}
@@ -450,13 +770,6 @@ class ReverseOrdinalTable {
           ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~ReverseOrdinalTable() = default;
-  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
-  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept =
-      default;
-  ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
-  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
-      default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -471,14 +784,156 @@ class ReverseOrdinalTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::ReverseOrdinalTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_table::wire::ReverseOrdinalTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::ReverseOrdinalTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::ReverseOrdinalTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->z_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->y_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                           ::test_table::wire::ReverseOrdinalTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::ReverseOrdinalTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::ReverseOrdinalTable,
+          ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+
+ public:
+  using Base::z;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& z(
+      Args&&... args_) {
+    z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::y;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& y(
+      Args&&... args_) {
+    y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& x(
+      Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::ReverseOrdinalTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_table::wire::ReverseOrdinalTable,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_table::wire::ReverseOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ReverseOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::ReverseOrdinalTable>>;
+
+ private:
+  friend class ::test_table::wire::ReverseOrdinalTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>* frame)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>::
+                 FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>
+ReverseOrdinalTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>
+ReverseOrdinalTable::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::ReverseOrdinalTable>(std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable> final {
  public:
@@ -498,6 +953,12 @@ struct ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable> final {
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::OlderSimpleTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>>;
 };
 
 namespace test_table {
@@ -506,11 +967,29 @@ extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 
 class OlderSimpleTable {
  public:
+  OlderSimpleTable() = default;
+  OlderSimpleTable(const OlderSimpleTable& other) noexcept = default;
+  OlderSimpleTable& operator=(const OlderSimpleTable& other) noexcept = default;
+  OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
+  OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
+
+  ~OlderSimpleTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>
+                      frame);
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -521,6 +1000,12 @@ class OlderSimpleTable {
     return frame_ptr_->x_.get_data();
   }
   bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   OlderSimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(elem);
@@ -547,7 +1032,6 @@ class OlderSimpleTable {
     return *this;
   }
 
-  OlderSimpleTable() = default;
   explicit OlderSimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<
@@ -561,11 +1045,6 @@ class OlderSimpleTable {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~OlderSimpleTable() = default;
-  OlderSimpleTable(const OlderSimpleTable& other) noexcept = default;
-  OlderSimpleTable& operator=(const OlderSimpleTable& other) noexcept = default;
-  OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
-  OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -580,14 +1059,121 @@ class OlderSimpleTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_table::wire::OlderSimpleTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::OlderSimpleTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::OlderSimpleTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::OlderSimpleTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::OlderSimpleTable,
+          ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>>;
+
+ public:
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>& x(
+      Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::OlderSimpleTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_table::wire::OlderSimpleTable,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_table::wire::OlderSimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::OlderSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>>;
+
+ private:
+  friend class ::test_table::wire::OlderSimpleTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::OlderSimpleTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>
+OlderSimpleTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>
+OlderSimpleTable::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable> final {
  public:
@@ -612,6 +1198,12 @@ struct ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable> final {
   ::fidl::Envelope<int64_t> z_;
 
   friend class ::test_table::wire::NewerSimpleTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>>;
 };
 
 namespace test_table {
@@ -620,11 +1212,29 @@ extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 
 class NewerSimpleTable {
  public:
+  NewerSimpleTable() = default;
+  NewerSimpleTable(const NewerSimpleTable& other) noexcept = default;
+  NewerSimpleTable& operator=(const NewerSimpleTable& other) noexcept = default;
+  NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
+  NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
+
+  ~NewerSimpleTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>
+                      frame);
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -635,6 +1245,32 @@ class NewerSimpleTable {
     return frame_ptr_->x_.get_data();
   }
   bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
+
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return frame_ptr_->z_.get_data();
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return frame_ptr_->z_.get_data();
+  }
+  bool has_z() const { return max_ordinal_ >= 6 && frame_ptr_->z_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   NewerSimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(elem);
@@ -660,16 +1296,6 @@ class NewerSimpleTable {
     frame_ptr_->x_.clear_data();
     return *this;
   }
-
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
   NewerSimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(elem);
@@ -695,16 +1321,6 @@ class NewerSimpleTable {
     frame_ptr_->y_.clear_data();
     return *this;
   }
-
-  const int64_t& z() const {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  bool has_z() const { return max_ordinal_ >= 6 && frame_ptr_->z_.has_data(); }
   NewerSimpleTable& set_z(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.set_data(elem);
@@ -731,7 +1347,6 @@ class NewerSimpleTable {
     return *this;
   }
 
-  NewerSimpleTable() = default;
   explicit NewerSimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<
@@ -745,11 +1360,6 @@ class NewerSimpleTable {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~NewerSimpleTable() = default;
-  NewerSimpleTable(const NewerSimpleTable& other) noexcept = default;
-  NewerSimpleTable& operator=(const NewerSimpleTable& other) noexcept = default;
-  NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
-  NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -764,14 +1374,153 @@ class NewerSimpleTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_table::wire::NewerSimpleTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::NewerSimpleTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::NewerSimpleTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->y_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->z_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(6));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::NewerSimpleTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::NewerSimpleTable,
+          ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>>;
+
+ public:
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& x(
+      Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::y;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& y(
+      Args&&... args_) {
+    y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::z;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& z(
+      Args&&... args_) {
+    z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::NewerSimpleTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_table::wire::NewerSimpleTable,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_table::wire::NewerSimpleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::NewerSimpleTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>>;
+
+ private:
+  friend class ::test_table::wire::NewerSimpleTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::NewerSimpleTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>
+NewerSimpleTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>
+NewerSimpleTable::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::ExtensionTable> final {
  public:
@@ -790,6 +1539,12 @@ struct ::fidl::WireTableFrame<::test_table::wire::ExtensionTable> final {
   bool HasUnknownData() const;
 
   friend class ::test_table::wire::ExtensionTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>>;
 };
 
 namespace test_table {
@@ -798,13 +1553,35 @@ extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
 class ExtensionTable {
  public:
+  ExtensionTable() = default;
+  ExtensionTable(const ExtensionTable& other) noexcept = default;
+  ExtensionTable& operator=(const ExtensionTable& other) noexcept = default;
+  ExtensionTable(ExtensionTable&& other) noexcept = default;
+  ExtensionTable& operator=(ExtensionTable&& other) noexcept = default;
+
+  ~ExtensionTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
 
-  ExtensionTable() = default;
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>
+                      frame);
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   explicit ExtensionTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<
                    ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>(
@@ -817,11 +1594,6 @@ class ExtensionTable {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~ExtensionTable() = default;
-  ExtensionTable(const ExtensionTable& other) noexcept = default;
-  ExtensionTable& operator=(const ExtensionTable& other) noexcept = default;
-  ExtensionTable(ExtensionTable&& other) noexcept = default;
-  ExtensionTable& operator=(ExtensionTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -835,13 +1607,104 @@ class ExtensionTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ExtensionTable,
+                                             BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::ExtensionTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::ExtensionTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::ExtensionTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::ExtensionTable,
+          ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>>;
+
+ public:
+ private:
+  friend class ::test_table::wire::ExtensionTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::ExtensionTable,
+          ::fidl::WireTableExternalBuilder<
+              ::test_table::wire::ExtensionTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::ExtensionTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>>;
+
+ private:
+  friend class ::test_table::wire::ExtensionTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::ExtensionTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>
+ExtensionTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>
+ExtensionTable::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_table::wire::SixtyFourOrdinalTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable> final {
  public:
@@ -924,6 +1787,13 @@ struct ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable> final {
   ::fidl::Envelope<::test_table::wire::ExtensionTable> v64_;
 
   friend class ::test_table::wire::SixtyFourOrdinalTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::SixtyFourOrdinalTable>>;
 };
 
 namespace test_table {
@@ -932,11 +1802,33 @@ extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 
 class SixtyFourOrdinalTable {
  public:
+  SixtyFourOrdinalTable() = default;
+  SixtyFourOrdinalTable(const SixtyFourOrdinalTable& other) noexcept = default;
+  SixtyFourOrdinalTable& operator=(
+      const SixtyFourOrdinalTable& other) noexcept = default;
+  SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other) noexcept = default;
+  SixtyFourOrdinalTable& operator=(SixtyFourOrdinalTable&& other) noexcept =
+      default;
+
+  ~SixtyFourOrdinalTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable>
+  ExternalBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>>
+          frame);
 
   const int64_t& v1() const {
     ZX_ASSERT(has_v1());
@@ -949,6 +1841,768 @@ class SixtyFourOrdinalTable {
   bool has_v1() const {
     return max_ordinal_ >= 1 && frame_ptr_->v1_.has_data();
   }
+
+  const int64_t& v2() const {
+    ZX_ASSERT(has_v2());
+    return frame_ptr_->v2_.get_data();
+  }
+  int64_t& v2() {
+    ZX_ASSERT(has_v2());
+    return frame_ptr_->v2_.get_data();
+  }
+  bool has_v2() const {
+    return max_ordinal_ >= 2 && frame_ptr_->v2_.has_data();
+  }
+
+  const int64_t& v3() const {
+    ZX_ASSERT(has_v3());
+    return frame_ptr_->v3_.get_data();
+  }
+  int64_t& v3() {
+    ZX_ASSERT(has_v3());
+    return frame_ptr_->v3_.get_data();
+  }
+  bool has_v3() const {
+    return max_ordinal_ >= 3 && frame_ptr_->v3_.has_data();
+  }
+
+  const int64_t& v4() const {
+    ZX_ASSERT(has_v4());
+    return frame_ptr_->v4_.get_data();
+  }
+  int64_t& v4() {
+    ZX_ASSERT(has_v4());
+    return frame_ptr_->v4_.get_data();
+  }
+  bool has_v4() const {
+    return max_ordinal_ >= 4 && frame_ptr_->v4_.has_data();
+  }
+
+  const int64_t& v5() const {
+    ZX_ASSERT(has_v5());
+    return frame_ptr_->v5_.get_data();
+  }
+  int64_t& v5() {
+    ZX_ASSERT(has_v5());
+    return frame_ptr_->v5_.get_data();
+  }
+  bool has_v5() const {
+    return max_ordinal_ >= 5 && frame_ptr_->v5_.has_data();
+  }
+
+  const int64_t& v6() const {
+    ZX_ASSERT(has_v6());
+    return frame_ptr_->v6_.get_data();
+  }
+  int64_t& v6() {
+    ZX_ASSERT(has_v6());
+    return frame_ptr_->v6_.get_data();
+  }
+  bool has_v6() const {
+    return max_ordinal_ >= 6 && frame_ptr_->v6_.has_data();
+  }
+
+  const int64_t& v7() const {
+    ZX_ASSERT(has_v7());
+    return frame_ptr_->v7_.get_data();
+  }
+  int64_t& v7() {
+    ZX_ASSERT(has_v7());
+    return frame_ptr_->v7_.get_data();
+  }
+  bool has_v7() const {
+    return max_ordinal_ >= 7 && frame_ptr_->v7_.has_data();
+  }
+
+  const int64_t& v8() const {
+    ZX_ASSERT(has_v8());
+    return frame_ptr_->v8_.get_data();
+  }
+  int64_t& v8() {
+    ZX_ASSERT(has_v8());
+    return frame_ptr_->v8_.get_data();
+  }
+  bool has_v8() const {
+    return max_ordinal_ >= 8 && frame_ptr_->v8_.has_data();
+  }
+
+  const int64_t& v9() const {
+    ZX_ASSERT(has_v9());
+    return frame_ptr_->v9_.get_data();
+  }
+  int64_t& v9() {
+    ZX_ASSERT(has_v9());
+    return frame_ptr_->v9_.get_data();
+  }
+  bool has_v9() const {
+    return max_ordinal_ >= 9 && frame_ptr_->v9_.has_data();
+  }
+
+  const int64_t& v10() const {
+    ZX_ASSERT(has_v10());
+    return frame_ptr_->v10_.get_data();
+  }
+  int64_t& v10() {
+    ZX_ASSERT(has_v10());
+    return frame_ptr_->v10_.get_data();
+  }
+  bool has_v10() const {
+    return max_ordinal_ >= 10 && frame_ptr_->v10_.has_data();
+  }
+
+  const int64_t& v11() const {
+    ZX_ASSERT(has_v11());
+    return frame_ptr_->v11_.get_data();
+  }
+  int64_t& v11() {
+    ZX_ASSERT(has_v11());
+    return frame_ptr_->v11_.get_data();
+  }
+  bool has_v11() const {
+    return max_ordinal_ >= 11 && frame_ptr_->v11_.has_data();
+  }
+
+  const int64_t& v12() const {
+    ZX_ASSERT(has_v12());
+    return frame_ptr_->v12_.get_data();
+  }
+  int64_t& v12() {
+    ZX_ASSERT(has_v12());
+    return frame_ptr_->v12_.get_data();
+  }
+  bool has_v12() const {
+    return max_ordinal_ >= 12 && frame_ptr_->v12_.has_data();
+  }
+
+  const int64_t& v13() const {
+    ZX_ASSERT(has_v13());
+    return frame_ptr_->v13_.get_data();
+  }
+  int64_t& v13() {
+    ZX_ASSERT(has_v13());
+    return frame_ptr_->v13_.get_data();
+  }
+  bool has_v13() const {
+    return max_ordinal_ >= 13 && frame_ptr_->v13_.has_data();
+  }
+
+  const int64_t& v14() const {
+    ZX_ASSERT(has_v14());
+    return frame_ptr_->v14_.get_data();
+  }
+  int64_t& v14() {
+    ZX_ASSERT(has_v14());
+    return frame_ptr_->v14_.get_data();
+  }
+  bool has_v14() const {
+    return max_ordinal_ >= 14 && frame_ptr_->v14_.has_data();
+  }
+
+  const int64_t& v15() const {
+    ZX_ASSERT(has_v15());
+    return frame_ptr_->v15_.get_data();
+  }
+  int64_t& v15() {
+    ZX_ASSERT(has_v15());
+    return frame_ptr_->v15_.get_data();
+  }
+  bool has_v15() const {
+    return max_ordinal_ >= 15 && frame_ptr_->v15_.has_data();
+  }
+
+  const int64_t& v16() const {
+    ZX_ASSERT(has_v16());
+    return frame_ptr_->v16_.get_data();
+  }
+  int64_t& v16() {
+    ZX_ASSERT(has_v16());
+    return frame_ptr_->v16_.get_data();
+  }
+  bool has_v16() const {
+    return max_ordinal_ >= 16 && frame_ptr_->v16_.has_data();
+  }
+
+  const int64_t& v17() const {
+    ZX_ASSERT(has_v17());
+    return frame_ptr_->v17_.get_data();
+  }
+  int64_t& v17() {
+    ZX_ASSERT(has_v17());
+    return frame_ptr_->v17_.get_data();
+  }
+  bool has_v17() const {
+    return max_ordinal_ >= 17 && frame_ptr_->v17_.has_data();
+  }
+
+  const int64_t& v18() const {
+    ZX_ASSERT(has_v18());
+    return frame_ptr_->v18_.get_data();
+  }
+  int64_t& v18() {
+    ZX_ASSERT(has_v18());
+    return frame_ptr_->v18_.get_data();
+  }
+  bool has_v18() const {
+    return max_ordinal_ >= 18 && frame_ptr_->v18_.has_data();
+  }
+
+  const int64_t& v19() const {
+    ZX_ASSERT(has_v19());
+    return frame_ptr_->v19_.get_data();
+  }
+  int64_t& v19() {
+    ZX_ASSERT(has_v19());
+    return frame_ptr_->v19_.get_data();
+  }
+  bool has_v19() const {
+    return max_ordinal_ >= 19 && frame_ptr_->v19_.has_data();
+  }
+
+  const int64_t& v20() const {
+    ZX_ASSERT(has_v20());
+    return frame_ptr_->v20_.get_data();
+  }
+  int64_t& v20() {
+    ZX_ASSERT(has_v20());
+    return frame_ptr_->v20_.get_data();
+  }
+  bool has_v20() const {
+    return max_ordinal_ >= 20 && frame_ptr_->v20_.has_data();
+  }
+
+  const int64_t& v21() const {
+    ZX_ASSERT(has_v21());
+    return frame_ptr_->v21_.get_data();
+  }
+  int64_t& v21() {
+    ZX_ASSERT(has_v21());
+    return frame_ptr_->v21_.get_data();
+  }
+  bool has_v21() const {
+    return max_ordinal_ >= 21 && frame_ptr_->v21_.has_data();
+  }
+
+  const int64_t& v22() const {
+    ZX_ASSERT(has_v22());
+    return frame_ptr_->v22_.get_data();
+  }
+  int64_t& v22() {
+    ZX_ASSERT(has_v22());
+    return frame_ptr_->v22_.get_data();
+  }
+  bool has_v22() const {
+    return max_ordinal_ >= 22 && frame_ptr_->v22_.has_data();
+  }
+
+  const int64_t& v23() const {
+    ZX_ASSERT(has_v23());
+    return frame_ptr_->v23_.get_data();
+  }
+  int64_t& v23() {
+    ZX_ASSERT(has_v23());
+    return frame_ptr_->v23_.get_data();
+  }
+  bool has_v23() const {
+    return max_ordinal_ >= 23 && frame_ptr_->v23_.has_data();
+  }
+
+  const int64_t& v24() const {
+    ZX_ASSERT(has_v24());
+    return frame_ptr_->v24_.get_data();
+  }
+  int64_t& v24() {
+    ZX_ASSERT(has_v24());
+    return frame_ptr_->v24_.get_data();
+  }
+  bool has_v24() const {
+    return max_ordinal_ >= 24 && frame_ptr_->v24_.has_data();
+  }
+
+  const int64_t& v25() const {
+    ZX_ASSERT(has_v25());
+    return frame_ptr_->v25_.get_data();
+  }
+  int64_t& v25() {
+    ZX_ASSERT(has_v25());
+    return frame_ptr_->v25_.get_data();
+  }
+  bool has_v25() const {
+    return max_ordinal_ >= 25 && frame_ptr_->v25_.has_data();
+  }
+
+  const int64_t& v26() const {
+    ZX_ASSERT(has_v26());
+    return frame_ptr_->v26_.get_data();
+  }
+  int64_t& v26() {
+    ZX_ASSERT(has_v26());
+    return frame_ptr_->v26_.get_data();
+  }
+  bool has_v26() const {
+    return max_ordinal_ >= 26 && frame_ptr_->v26_.has_data();
+  }
+
+  const int64_t& v27() const {
+    ZX_ASSERT(has_v27());
+    return frame_ptr_->v27_.get_data();
+  }
+  int64_t& v27() {
+    ZX_ASSERT(has_v27());
+    return frame_ptr_->v27_.get_data();
+  }
+  bool has_v27() const {
+    return max_ordinal_ >= 27 && frame_ptr_->v27_.has_data();
+  }
+
+  const int64_t& v28() const {
+    ZX_ASSERT(has_v28());
+    return frame_ptr_->v28_.get_data();
+  }
+  int64_t& v28() {
+    ZX_ASSERT(has_v28());
+    return frame_ptr_->v28_.get_data();
+  }
+  bool has_v28() const {
+    return max_ordinal_ >= 28 && frame_ptr_->v28_.has_data();
+  }
+
+  const int64_t& v29() const {
+    ZX_ASSERT(has_v29());
+    return frame_ptr_->v29_.get_data();
+  }
+  int64_t& v29() {
+    ZX_ASSERT(has_v29());
+    return frame_ptr_->v29_.get_data();
+  }
+  bool has_v29() const {
+    return max_ordinal_ >= 29 && frame_ptr_->v29_.has_data();
+  }
+
+  const int64_t& v30() const {
+    ZX_ASSERT(has_v30());
+    return frame_ptr_->v30_.get_data();
+  }
+  int64_t& v30() {
+    ZX_ASSERT(has_v30());
+    return frame_ptr_->v30_.get_data();
+  }
+  bool has_v30() const {
+    return max_ordinal_ >= 30 && frame_ptr_->v30_.has_data();
+  }
+
+  const int64_t& v31() const {
+    ZX_ASSERT(has_v31());
+    return frame_ptr_->v31_.get_data();
+  }
+  int64_t& v31() {
+    ZX_ASSERT(has_v31());
+    return frame_ptr_->v31_.get_data();
+  }
+  bool has_v31() const {
+    return max_ordinal_ >= 31 && frame_ptr_->v31_.has_data();
+  }
+
+  const int64_t& v32() const {
+    ZX_ASSERT(has_v32());
+    return frame_ptr_->v32_.get_data();
+  }
+  int64_t& v32() {
+    ZX_ASSERT(has_v32());
+    return frame_ptr_->v32_.get_data();
+  }
+  bool has_v32() const {
+    return max_ordinal_ >= 32 && frame_ptr_->v32_.has_data();
+  }
+
+  const int64_t& v33() const {
+    ZX_ASSERT(has_v33());
+    return frame_ptr_->v33_.get_data();
+  }
+  int64_t& v33() {
+    ZX_ASSERT(has_v33());
+    return frame_ptr_->v33_.get_data();
+  }
+  bool has_v33() const {
+    return max_ordinal_ >= 33 && frame_ptr_->v33_.has_data();
+  }
+
+  const int64_t& v34() const {
+    ZX_ASSERT(has_v34());
+    return frame_ptr_->v34_.get_data();
+  }
+  int64_t& v34() {
+    ZX_ASSERT(has_v34());
+    return frame_ptr_->v34_.get_data();
+  }
+  bool has_v34() const {
+    return max_ordinal_ >= 34 && frame_ptr_->v34_.has_data();
+  }
+
+  const int64_t& v35() const {
+    ZX_ASSERT(has_v35());
+    return frame_ptr_->v35_.get_data();
+  }
+  int64_t& v35() {
+    ZX_ASSERT(has_v35());
+    return frame_ptr_->v35_.get_data();
+  }
+  bool has_v35() const {
+    return max_ordinal_ >= 35 && frame_ptr_->v35_.has_data();
+  }
+
+  const int64_t& v36() const {
+    ZX_ASSERT(has_v36());
+    return frame_ptr_->v36_.get_data();
+  }
+  int64_t& v36() {
+    ZX_ASSERT(has_v36());
+    return frame_ptr_->v36_.get_data();
+  }
+  bool has_v36() const {
+    return max_ordinal_ >= 36 && frame_ptr_->v36_.has_data();
+  }
+
+  const int64_t& v37() const {
+    ZX_ASSERT(has_v37());
+    return frame_ptr_->v37_.get_data();
+  }
+  int64_t& v37() {
+    ZX_ASSERT(has_v37());
+    return frame_ptr_->v37_.get_data();
+  }
+  bool has_v37() const {
+    return max_ordinal_ >= 37 && frame_ptr_->v37_.has_data();
+  }
+
+  const int64_t& v38() const {
+    ZX_ASSERT(has_v38());
+    return frame_ptr_->v38_.get_data();
+  }
+  int64_t& v38() {
+    ZX_ASSERT(has_v38());
+    return frame_ptr_->v38_.get_data();
+  }
+  bool has_v38() const {
+    return max_ordinal_ >= 38 && frame_ptr_->v38_.has_data();
+  }
+
+  const int64_t& v39() const {
+    ZX_ASSERT(has_v39());
+    return frame_ptr_->v39_.get_data();
+  }
+  int64_t& v39() {
+    ZX_ASSERT(has_v39());
+    return frame_ptr_->v39_.get_data();
+  }
+  bool has_v39() const {
+    return max_ordinal_ >= 39 && frame_ptr_->v39_.has_data();
+  }
+
+  const int64_t& v40() const {
+    ZX_ASSERT(has_v40());
+    return frame_ptr_->v40_.get_data();
+  }
+  int64_t& v40() {
+    ZX_ASSERT(has_v40());
+    return frame_ptr_->v40_.get_data();
+  }
+  bool has_v40() const {
+    return max_ordinal_ >= 40 && frame_ptr_->v40_.has_data();
+  }
+
+  const int64_t& v41() const {
+    ZX_ASSERT(has_v41());
+    return frame_ptr_->v41_.get_data();
+  }
+  int64_t& v41() {
+    ZX_ASSERT(has_v41());
+    return frame_ptr_->v41_.get_data();
+  }
+  bool has_v41() const {
+    return max_ordinal_ >= 41 && frame_ptr_->v41_.has_data();
+  }
+
+  const int64_t& v42() const {
+    ZX_ASSERT(has_v42());
+    return frame_ptr_->v42_.get_data();
+  }
+  int64_t& v42() {
+    ZX_ASSERT(has_v42());
+    return frame_ptr_->v42_.get_data();
+  }
+  bool has_v42() const {
+    return max_ordinal_ >= 42 && frame_ptr_->v42_.has_data();
+  }
+
+  const int64_t& v43() const {
+    ZX_ASSERT(has_v43());
+    return frame_ptr_->v43_.get_data();
+  }
+  int64_t& v43() {
+    ZX_ASSERT(has_v43());
+    return frame_ptr_->v43_.get_data();
+  }
+  bool has_v43() const {
+    return max_ordinal_ >= 43 && frame_ptr_->v43_.has_data();
+  }
+
+  const int64_t& v44() const {
+    ZX_ASSERT(has_v44());
+    return frame_ptr_->v44_.get_data();
+  }
+  int64_t& v44() {
+    ZX_ASSERT(has_v44());
+    return frame_ptr_->v44_.get_data();
+  }
+  bool has_v44() const {
+    return max_ordinal_ >= 44 && frame_ptr_->v44_.has_data();
+  }
+
+  const int64_t& v45() const {
+    ZX_ASSERT(has_v45());
+    return frame_ptr_->v45_.get_data();
+  }
+  int64_t& v45() {
+    ZX_ASSERT(has_v45());
+    return frame_ptr_->v45_.get_data();
+  }
+  bool has_v45() const {
+    return max_ordinal_ >= 45 && frame_ptr_->v45_.has_data();
+  }
+
+  const int64_t& v46() const {
+    ZX_ASSERT(has_v46());
+    return frame_ptr_->v46_.get_data();
+  }
+  int64_t& v46() {
+    ZX_ASSERT(has_v46());
+    return frame_ptr_->v46_.get_data();
+  }
+  bool has_v46() const {
+    return max_ordinal_ >= 46 && frame_ptr_->v46_.has_data();
+  }
+
+  const int64_t& v47() const {
+    ZX_ASSERT(has_v47());
+    return frame_ptr_->v47_.get_data();
+  }
+  int64_t& v47() {
+    ZX_ASSERT(has_v47());
+    return frame_ptr_->v47_.get_data();
+  }
+  bool has_v47() const {
+    return max_ordinal_ >= 47 && frame_ptr_->v47_.has_data();
+  }
+
+  const int64_t& v48() const {
+    ZX_ASSERT(has_v48());
+    return frame_ptr_->v48_.get_data();
+  }
+  int64_t& v48() {
+    ZX_ASSERT(has_v48());
+    return frame_ptr_->v48_.get_data();
+  }
+  bool has_v48() const {
+    return max_ordinal_ >= 48 && frame_ptr_->v48_.has_data();
+  }
+
+  const int64_t& v49() const {
+    ZX_ASSERT(has_v49());
+    return frame_ptr_->v49_.get_data();
+  }
+  int64_t& v49() {
+    ZX_ASSERT(has_v49());
+    return frame_ptr_->v49_.get_data();
+  }
+  bool has_v49() const {
+    return max_ordinal_ >= 49 && frame_ptr_->v49_.has_data();
+  }
+
+  const int64_t& v50() const {
+    ZX_ASSERT(has_v50());
+    return frame_ptr_->v50_.get_data();
+  }
+  int64_t& v50() {
+    ZX_ASSERT(has_v50());
+    return frame_ptr_->v50_.get_data();
+  }
+  bool has_v50() const {
+    return max_ordinal_ >= 50 && frame_ptr_->v50_.has_data();
+  }
+
+  const int64_t& v51() const {
+    ZX_ASSERT(has_v51());
+    return frame_ptr_->v51_.get_data();
+  }
+  int64_t& v51() {
+    ZX_ASSERT(has_v51());
+    return frame_ptr_->v51_.get_data();
+  }
+  bool has_v51() const {
+    return max_ordinal_ >= 51 && frame_ptr_->v51_.has_data();
+  }
+
+  const int64_t& v52() const {
+    ZX_ASSERT(has_v52());
+    return frame_ptr_->v52_.get_data();
+  }
+  int64_t& v52() {
+    ZX_ASSERT(has_v52());
+    return frame_ptr_->v52_.get_data();
+  }
+  bool has_v52() const {
+    return max_ordinal_ >= 52 && frame_ptr_->v52_.has_data();
+  }
+
+  const int64_t& v53() const {
+    ZX_ASSERT(has_v53());
+    return frame_ptr_->v53_.get_data();
+  }
+  int64_t& v53() {
+    ZX_ASSERT(has_v53());
+    return frame_ptr_->v53_.get_data();
+  }
+  bool has_v53() const {
+    return max_ordinal_ >= 53 && frame_ptr_->v53_.has_data();
+  }
+
+  const int64_t& v54() const {
+    ZX_ASSERT(has_v54());
+    return frame_ptr_->v54_.get_data();
+  }
+  int64_t& v54() {
+    ZX_ASSERT(has_v54());
+    return frame_ptr_->v54_.get_data();
+  }
+  bool has_v54() const {
+    return max_ordinal_ >= 54 && frame_ptr_->v54_.has_data();
+  }
+
+  const int64_t& v55() const {
+    ZX_ASSERT(has_v55());
+    return frame_ptr_->v55_.get_data();
+  }
+  int64_t& v55() {
+    ZX_ASSERT(has_v55());
+    return frame_ptr_->v55_.get_data();
+  }
+  bool has_v55() const {
+    return max_ordinal_ >= 55 && frame_ptr_->v55_.has_data();
+  }
+
+  const int64_t& v56() const {
+    ZX_ASSERT(has_v56());
+    return frame_ptr_->v56_.get_data();
+  }
+  int64_t& v56() {
+    ZX_ASSERT(has_v56());
+    return frame_ptr_->v56_.get_data();
+  }
+  bool has_v56() const {
+    return max_ordinal_ >= 56 && frame_ptr_->v56_.has_data();
+  }
+
+  const int64_t& v57() const {
+    ZX_ASSERT(has_v57());
+    return frame_ptr_->v57_.get_data();
+  }
+  int64_t& v57() {
+    ZX_ASSERT(has_v57());
+    return frame_ptr_->v57_.get_data();
+  }
+  bool has_v57() const {
+    return max_ordinal_ >= 57 && frame_ptr_->v57_.has_data();
+  }
+
+  const int64_t& v58() const {
+    ZX_ASSERT(has_v58());
+    return frame_ptr_->v58_.get_data();
+  }
+  int64_t& v58() {
+    ZX_ASSERT(has_v58());
+    return frame_ptr_->v58_.get_data();
+  }
+  bool has_v58() const {
+    return max_ordinal_ >= 58 && frame_ptr_->v58_.has_data();
+  }
+
+  const int64_t& v59() const {
+    ZX_ASSERT(has_v59());
+    return frame_ptr_->v59_.get_data();
+  }
+  int64_t& v59() {
+    ZX_ASSERT(has_v59());
+    return frame_ptr_->v59_.get_data();
+  }
+  bool has_v59() const {
+    return max_ordinal_ >= 59 && frame_ptr_->v59_.has_data();
+  }
+
+  const int64_t& v60() const {
+    ZX_ASSERT(has_v60());
+    return frame_ptr_->v60_.get_data();
+  }
+  int64_t& v60() {
+    ZX_ASSERT(has_v60());
+    return frame_ptr_->v60_.get_data();
+  }
+  bool has_v60() const {
+    return max_ordinal_ >= 60 && frame_ptr_->v60_.has_data();
+  }
+
+  const int64_t& v61() const {
+    ZX_ASSERT(has_v61());
+    return frame_ptr_->v61_.get_data();
+  }
+  int64_t& v61() {
+    ZX_ASSERT(has_v61());
+    return frame_ptr_->v61_.get_data();
+  }
+  bool has_v61() const {
+    return max_ordinal_ >= 61 && frame_ptr_->v61_.has_data();
+  }
+
+  const int64_t& v62() const {
+    ZX_ASSERT(has_v62());
+    return frame_ptr_->v62_.get_data();
+  }
+  int64_t& v62() {
+    ZX_ASSERT(has_v62());
+    return frame_ptr_->v62_.get_data();
+  }
+  bool has_v62() const {
+    return max_ordinal_ >= 62 && frame_ptr_->v62_.has_data();
+  }
+
+  const int64_t& v63() const {
+    ZX_ASSERT(has_v63());
+    return frame_ptr_->v63_.get_data();
+  }
+  int64_t& v63() {
+    ZX_ASSERT(has_v63());
+    return frame_ptr_->v63_.get_data();
+  }
+  bool has_v63() const {
+    return max_ordinal_ >= 63 && frame_ptr_->v63_.has_data();
+  }
+
+  const ::test_table::wire::ExtensionTable& v64() const {
+    ZX_ASSERT(has_v64());
+    return frame_ptr_->v64_.get_data();
+  }
+  ::test_table::wire::ExtensionTable& v64() {
+    ZX_ASSERT(has_v64());
+    return frame_ptr_->v64_.get_data();
+  }
+  bool has_v64() const {
+    return max_ordinal_ >= 64 && frame_ptr_->v64_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   SixtyFourOrdinalTable& set_v1(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v1_.set_data(elem);
@@ -973,18 +2627,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v1_.clear_data();
     return *this;
-  }
-
-  const int64_t& v2() const {
-    ZX_ASSERT(has_v2());
-    return frame_ptr_->v2_.get_data();
-  }
-  int64_t& v2() {
-    ZX_ASSERT(has_v2());
-    return frame_ptr_->v2_.get_data();
-  }
-  bool has_v2() const {
-    return max_ordinal_ >= 2 && frame_ptr_->v2_.has_data();
   }
   SixtyFourOrdinalTable& set_v2(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1011,18 +2653,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v2_.clear_data();
     return *this;
   }
-
-  const int64_t& v3() const {
-    ZX_ASSERT(has_v3());
-    return frame_ptr_->v3_.get_data();
-  }
-  int64_t& v3() {
-    ZX_ASSERT(has_v3());
-    return frame_ptr_->v3_.get_data();
-  }
-  bool has_v3() const {
-    return max_ordinal_ >= 3 && frame_ptr_->v3_.has_data();
-  }
   SixtyFourOrdinalTable& set_v3(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v3_.set_data(elem);
@@ -1047,18 +2677,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v3_.clear_data();
     return *this;
-  }
-
-  const int64_t& v4() const {
-    ZX_ASSERT(has_v4());
-    return frame_ptr_->v4_.get_data();
-  }
-  int64_t& v4() {
-    ZX_ASSERT(has_v4());
-    return frame_ptr_->v4_.get_data();
-  }
-  bool has_v4() const {
-    return max_ordinal_ >= 4 && frame_ptr_->v4_.has_data();
   }
   SixtyFourOrdinalTable& set_v4(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1085,18 +2703,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v4_.clear_data();
     return *this;
   }
-
-  const int64_t& v5() const {
-    ZX_ASSERT(has_v5());
-    return frame_ptr_->v5_.get_data();
-  }
-  int64_t& v5() {
-    ZX_ASSERT(has_v5());
-    return frame_ptr_->v5_.get_data();
-  }
-  bool has_v5() const {
-    return max_ordinal_ >= 5 && frame_ptr_->v5_.has_data();
-  }
   SixtyFourOrdinalTable& set_v5(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v5_.set_data(elem);
@@ -1121,18 +2727,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v5_.clear_data();
     return *this;
-  }
-
-  const int64_t& v6() const {
-    ZX_ASSERT(has_v6());
-    return frame_ptr_->v6_.get_data();
-  }
-  int64_t& v6() {
-    ZX_ASSERT(has_v6());
-    return frame_ptr_->v6_.get_data();
-  }
-  bool has_v6() const {
-    return max_ordinal_ >= 6 && frame_ptr_->v6_.has_data();
   }
   SixtyFourOrdinalTable& set_v6(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1159,18 +2753,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v6_.clear_data();
     return *this;
   }
-
-  const int64_t& v7() const {
-    ZX_ASSERT(has_v7());
-    return frame_ptr_->v7_.get_data();
-  }
-  int64_t& v7() {
-    ZX_ASSERT(has_v7());
-    return frame_ptr_->v7_.get_data();
-  }
-  bool has_v7() const {
-    return max_ordinal_ >= 7 && frame_ptr_->v7_.has_data();
-  }
   SixtyFourOrdinalTable& set_v7(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v7_.set_data(elem);
@@ -1195,18 +2777,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v7_.clear_data();
     return *this;
-  }
-
-  const int64_t& v8() const {
-    ZX_ASSERT(has_v8());
-    return frame_ptr_->v8_.get_data();
-  }
-  int64_t& v8() {
-    ZX_ASSERT(has_v8());
-    return frame_ptr_->v8_.get_data();
-  }
-  bool has_v8() const {
-    return max_ordinal_ >= 8 && frame_ptr_->v8_.has_data();
   }
   SixtyFourOrdinalTable& set_v8(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1233,18 +2803,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v8_.clear_data();
     return *this;
   }
-
-  const int64_t& v9() const {
-    ZX_ASSERT(has_v9());
-    return frame_ptr_->v9_.get_data();
-  }
-  int64_t& v9() {
-    ZX_ASSERT(has_v9());
-    return frame_ptr_->v9_.get_data();
-  }
-  bool has_v9() const {
-    return max_ordinal_ >= 9 && frame_ptr_->v9_.has_data();
-  }
   SixtyFourOrdinalTable& set_v9(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v9_.set_data(elem);
@@ -1269,18 +2827,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v9_.clear_data();
     return *this;
-  }
-
-  const int64_t& v10() const {
-    ZX_ASSERT(has_v10());
-    return frame_ptr_->v10_.get_data();
-  }
-  int64_t& v10() {
-    ZX_ASSERT(has_v10());
-    return frame_ptr_->v10_.get_data();
-  }
-  bool has_v10() const {
-    return max_ordinal_ >= 10 && frame_ptr_->v10_.has_data();
   }
   SixtyFourOrdinalTable& set_v10(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1307,18 +2853,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v10_.clear_data();
     return *this;
   }
-
-  const int64_t& v11() const {
-    ZX_ASSERT(has_v11());
-    return frame_ptr_->v11_.get_data();
-  }
-  int64_t& v11() {
-    ZX_ASSERT(has_v11());
-    return frame_ptr_->v11_.get_data();
-  }
-  bool has_v11() const {
-    return max_ordinal_ >= 11 && frame_ptr_->v11_.has_data();
-  }
   SixtyFourOrdinalTable& set_v11(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v11_.set_data(elem);
@@ -1343,18 +2877,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v11_.clear_data();
     return *this;
-  }
-
-  const int64_t& v12() const {
-    ZX_ASSERT(has_v12());
-    return frame_ptr_->v12_.get_data();
-  }
-  int64_t& v12() {
-    ZX_ASSERT(has_v12());
-    return frame_ptr_->v12_.get_data();
-  }
-  bool has_v12() const {
-    return max_ordinal_ >= 12 && frame_ptr_->v12_.has_data();
   }
   SixtyFourOrdinalTable& set_v12(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1381,18 +2903,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v12_.clear_data();
     return *this;
   }
-
-  const int64_t& v13() const {
-    ZX_ASSERT(has_v13());
-    return frame_ptr_->v13_.get_data();
-  }
-  int64_t& v13() {
-    ZX_ASSERT(has_v13());
-    return frame_ptr_->v13_.get_data();
-  }
-  bool has_v13() const {
-    return max_ordinal_ >= 13 && frame_ptr_->v13_.has_data();
-  }
   SixtyFourOrdinalTable& set_v13(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v13_.set_data(elem);
@@ -1417,18 +2927,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v13_.clear_data();
     return *this;
-  }
-
-  const int64_t& v14() const {
-    ZX_ASSERT(has_v14());
-    return frame_ptr_->v14_.get_data();
-  }
-  int64_t& v14() {
-    ZX_ASSERT(has_v14());
-    return frame_ptr_->v14_.get_data();
-  }
-  bool has_v14() const {
-    return max_ordinal_ >= 14 && frame_ptr_->v14_.has_data();
   }
   SixtyFourOrdinalTable& set_v14(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1455,18 +2953,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v14_.clear_data();
     return *this;
   }
-
-  const int64_t& v15() const {
-    ZX_ASSERT(has_v15());
-    return frame_ptr_->v15_.get_data();
-  }
-  int64_t& v15() {
-    ZX_ASSERT(has_v15());
-    return frame_ptr_->v15_.get_data();
-  }
-  bool has_v15() const {
-    return max_ordinal_ >= 15 && frame_ptr_->v15_.has_data();
-  }
   SixtyFourOrdinalTable& set_v15(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v15_.set_data(elem);
@@ -1491,18 +2977,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v15_.clear_data();
     return *this;
-  }
-
-  const int64_t& v16() const {
-    ZX_ASSERT(has_v16());
-    return frame_ptr_->v16_.get_data();
-  }
-  int64_t& v16() {
-    ZX_ASSERT(has_v16());
-    return frame_ptr_->v16_.get_data();
-  }
-  bool has_v16() const {
-    return max_ordinal_ >= 16 && frame_ptr_->v16_.has_data();
   }
   SixtyFourOrdinalTable& set_v16(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1529,18 +3003,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v16_.clear_data();
     return *this;
   }
-
-  const int64_t& v17() const {
-    ZX_ASSERT(has_v17());
-    return frame_ptr_->v17_.get_data();
-  }
-  int64_t& v17() {
-    ZX_ASSERT(has_v17());
-    return frame_ptr_->v17_.get_data();
-  }
-  bool has_v17() const {
-    return max_ordinal_ >= 17 && frame_ptr_->v17_.has_data();
-  }
   SixtyFourOrdinalTable& set_v17(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v17_.set_data(elem);
@@ -1565,18 +3027,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v17_.clear_data();
     return *this;
-  }
-
-  const int64_t& v18() const {
-    ZX_ASSERT(has_v18());
-    return frame_ptr_->v18_.get_data();
-  }
-  int64_t& v18() {
-    ZX_ASSERT(has_v18());
-    return frame_ptr_->v18_.get_data();
-  }
-  bool has_v18() const {
-    return max_ordinal_ >= 18 && frame_ptr_->v18_.has_data();
   }
   SixtyFourOrdinalTable& set_v18(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1603,18 +3053,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v18_.clear_data();
     return *this;
   }
-
-  const int64_t& v19() const {
-    ZX_ASSERT(has_v19());
-    return frame_ptr_->v19_.get_data();
-  }
-  int64_t& v19() {
-    ZX_ASSERT(has_v19());
-    return frame_ptr_->v19_.get_data();
-  }
-  bool has_v19() const {
-    return max_ordinal_ >= 19 && frame_ptr_->v19_.has_data();
-  }
   SixtyFourOrdinalTable& set_v19(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v19_.set_data(elem);
@@ -1639,18 +3077,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v19_.clear_data();
     return *this;
-  }
-
-  const int64_t& v20() const {
-    ZX_ASSERT(has_v20());
-    return frame_ptr_->v20_.get_data();
-  }
-  int64_t& v20() {
-    ZX_ASSERT(has_v20());
-    return frame_ptr_->v20_.get_data();
-  }
-  bool has_v20() const {
-    return max_ordinal_ >= 20 && frame_ptr_->v20_.has_data();
   }
   SixtyFourOrdinalTable& set_v20(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1677,18 +3103,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v20_.clear_data();
     return *this;
   }
-
-  const int64_t& v21() const {
-    ZX_ASSERT(has_v21());
-    return frame_ptr_->v21_.get_data();
-  }
-  int64_t& v21() {
-    ZX_ASSERT(has_v21());
-    return frame_ptr_->v21_.get_data();
-  }
-  bool has_v21() const {
-    return max_ordinal_ >= 21 && frame_ptr_->v21_.has_data();
-  }
   SixtyFourOrdinalTable& set_v21(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v21_.set_data(elem);
@@ -1713,18 +3127,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v21_.clear_data();
     return *this;
-  }
-
-  const int64_t& v22() const {
-    ZX_ASSERT(has_v22());
-    return frame_ptr_->v22_.get_data();
-  }
-  int64_t& v22() {
-    ZX_ASSERT(has_v22());
-    return frame_ptr_->v22_.get_data();
-  }
-  bool has_v22() const {
-    return max_ordinal_ >= 22 && frame_ptr_->v22_.has_data();
   }
   SixtyFourOrdinalTable& set_v22(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1751,18 +3153,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v22_.clear_data();
     return *this;
   }
-
-  const int64_t& v23() const {
-    ZX_ASSERT(has_v23());
-    return frame_ptr_->v23_.get_data();
-  }
-  int64_t& v23() {
-    ZX_ASSERT(has_v23());
-    return frame_ptr_->v23_.get_data();
-  }
-  bool has_v23() const {
-    return max_ordinal_ >= 23 && frame_ptr_->v23_.has_data();
-  }
   SixtyFourOrdinalTable& set_v23(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v23_.set_data(elem);
@@ -1787,18 +3177,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v23_.clear_data();
     return *this;
-  }
-
-  const int64_t& v24() const {
-    ZX_ASSERT(has_v24());
-    return frame_ptr_->v24_.get_data();
-  }
-  int64_t& v24() {
-    ZX_ASSERT(has_v24());
-    return frame_ptr_->v24_.get_data();
-  }
-  bool has_v24() const {
-    return max_ordinal_ >= 24 && frame_ptr_->v24_.has_data();
   }
   SixtyFourOrdinalTable& set_v24(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1825,18 +3203,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v24_.clear_data();
     return *this;
   }
-
-  const int64_t& v25() const {
-    ZX_ASSERT(has_v25());
-    return frame_ptr_->v25_.get_data();
-  }
-  int64_t& v25() {
-    ZX_ASSERT(has_v25());
-    return frame_ptr_->v25_.get_data();
-  }
-  bool has_v25() const {
-    return max_ordinal_ >= 25 && frame_ptr_->v25_.has_data();
-  }
   SixtyFourOrdinalTable& set_v25(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v25_.set_data(elem);
@@ -1861,18 +3227,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v25_.clear_data();
     return *this;
-  }
-
-  const int64_t& v26() const {
-    ZX_ASSERT(has_v26());
-    return frame_ptr_->v26_.get_data();
-  }
-  int64_t& v26() {
-    ZX_ASSERT(has_v26());
-    return frame_ptr_->v26_.get_data();
-  }
-  bool has_v26() const {
-    return max_ordinal_ >= 26 && frame_ptr_->v26_.has_data();
   }
   SixtyFourOrdinalTable& set_v26(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1899,18 +3253,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v26_.clear_data();
     return *this;
   }
-
-  const int64_t& v27() const {
-    ZX_ASSERT(has_v27());
-    return frame_ptr_->v27_.get_data();
-  }
-  int64_t& v27() {
-    ZX_ASSERT(has_v27());
-    return frame_ptr_->v27_.get_data();
-  }
-  bool has_v27() const {
-    return max_ordinal_ >= 27 && frame_ptr_->v27_.has_data();
-  }
   SixtyFourOrdinalTable& set_v27(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v27_.set_data(elem);
@@ -1935,18 +3277,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v27_.clear_data();
     return *this;
-  }
-
-  const int64_t& v28() const {
-    ZX_ASSERT(has_v28());
-    return frame_ptr_->v28_.get_data();
-  }
-  int64_t& v28() {
-    ZX_ASSERT(has_v28());
-    return frame_ptr_->v28_.get_data();
-  }
-  bool has_v28() const {
-    return max_ordinal_ >= 28 && frame_ptr_->v28_.has_data();
   }
   SixtyFourOrdinalTable& set_v28(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1973,18 +3303,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v28_.clear_data();
     return *this;
   }
-
-  const int64_t& v29() const {
-    ZX_ASSERT(has_v29());
-    return frame_ptr_->v29_.get_data();
-  }
-  int64_t& v29() {
-    ZX_ASSERT(has_v29());
-    return frame_ptr_->v29_.get_data();
-  }
-  bool has_v29() const {
-    return max_ordinal_ >= 29 && frame_ptr_->v29_.has_data();
-  }
   SixtyFourOrdinalTable& set_v29(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v29_.set_data(elem);
@@ -2009,18 +3327,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v29_.clear_data();
     return *this;
-  }
-
-  const int64_t& v30() const {
-    ZX_ASSERT(has_v30());
-    return frame_ptr_->v30_.get_data();
-  }
-  int64_t& v30() {
-    ZX_ASSERT(has_v30());
-    return frame_ptr_->v30_.get_data();
-  }
-  bool has_v30() const {
-    return max_ordinal_ >= 30 && frame_ptr_->v30_.has_data();
   }
   SixtyFourOrdinalTable& set_v30(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2047,18 +3353,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v30_.clear_data();
     return *this;
   }
-
-  const int64_t& v31() const {
-    ZX_ASSERT(has_v31());
-    return frame_ptr_->v31_.get_data();
-  }
-  int64_t& v31() {
-    ZX_ASSERT(has_v31());
-    return frame_ptr_->v31_.get_data();
-  }
-  bool has_v31() const {
-    return max_ordinal_ >= 31 && frame_ptr_->v31_.has_data();
-  }
   SixtyFourOrdinalTable& set_v31(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v31_.set_data(elem);
@@ -2083,18 +3377,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v31_.clear_data();
     return *this;
-  }
-
-  const int64_t& v32() const {
-    ZX_ASSERT(has_v32());
-    return frame_ptr_->v32_.get_data();
-  }
-  int64_t& v32() {
-    ZX_ASSERT(has_v32());
-    return frame_ptr_->v32_.get_data();
-  }
-  bool has_v32() const {
-    return max_ordinal_ >= 32 && frame_ptr_->v32_.has_data();
   }
   SixtyFourOrdinalTable& set_v32(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2121,18 +3403,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v32_.clear_data();
     return *this;
   }
-
-  const int64_t& v33() const {
-    ZX_ASSERT(has_v33());
-    return frame_ptr_->v33_.get_data();
-  }
-  int64_t& v33() {
-    ZX_ASSERT(has_v33());
-    return frame_ptr_->v33_.get_data();
-  }
-  bool has_v33() const {
-    return max_ordinal_ >= 33 && frame_ptr_->v33_.has_data();
-  }
   SixtyFourOrdinalTable& set_v33(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v33_.set_data(elem);
@@ -2157,18 +3427,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v33_.clear_data();
     return *this;
-  }
-
-  const int64_t& v34() const {
-    ZX_ASSERT(has_v34());
-    return frame_ptr_->v34_.get_data();
-  }
-  int64_t& v34() {
-    ZX_ASSERT(has_v34());
-    return frame_ptr_->v34_.get_data();
-  }
-  bool has_v34() const {
-    return max_ordinal_ >= 34 && frame_ptr_->v34_.has_data();
   }
   SixtyFourOrdinalTable& set_v34(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2195,18 +3453,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v34_.clear_data();
     return *this;
   }
-
-  const int64_t& v35() const {
-    ZX_ASSERT(has_v35());
-    return frame_ptr_->v35_.get_data();
-  }
-  int64_t& v35() {
-    ZX_ASSERT(has_v35());
-    return frame_ptr_->v35_.get_data();
-  }
-  bool has_v35() const {
-    return max_ordinal_ >= 35 && frame_ptr_->v35_.has_data();
-  }
   SixtyFourOrdinalTable& set_v35(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v35_.set_data(elem);
@@ -2231,18 +3477,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v35_.clear_data();
     return *this;
-  }
-
-  const int64_t& v36() const {
-    ZX_ASSERT(has_v36());
-    return frame_ptr_->v36_.get_data();
-  }
-  int64_t& v36() {
-    ZX_ASSERT(has_v36());
-    return frame_ptr_->v36_.get_data();
-  }
-  bool has_v36() const {
-    return max_ordinal_ >= 36 && frame_ptr_->v36_.has_data();
   }
   SixtyFourOrdinalTable& set_v36(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2269,18 +3503,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v36_.clear_data();
     return *this;
   }
-
-  const int64_t& v37() const {
-    ZX_ASSERT(has_v37());
-    return frame_ptr_->v37_.get_data();
-  }
-  int64_t& v37() {
-    ZX_ASSERT(has_v37());
-    return frame_ptr_->v37_.get_data();
-  }
-  bool has_v37() const {
-    return max_ordinal_ >= 37 && frame_ptr_->v37_.has_data();
-  }
   SixtyFourOrdinalTable& set_v37(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v37_.set_data(elem);
@@ -2305,18 +3527,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v37_.clear_data();
     return *this;
-  }
-
-  const int64_t& v38() const {
-    ZX_ASSERT(has_v38());
-    return frame_ptr_->v38_.get_data();
-  }
-  int64_t& v38() {
-    ZX_ASSERT(has_v38());
-    return frame_ptr_->v38_.get_data();
-  }
-  bool has_v38() const {
-    return max_ordinal_ >= 38 && frame_ptr_->v38_.has_data();
   }
   SixtyFourOrdinalTable& set_v38(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2343,18 +3553,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v38_.clear_data();
     return *this;
   }
-
-  const int64_t& v39() const {
-    ZX_ASSERT(has_v39());
-    return frame_ptr_->v39_.get_data();
-  }
-  int64_t& v39() {
-    ZX_ASSERT(has_v39());
-    return frame_ptr_->v39_.get_data();
-  }
-  bool has_v39() const {
-    return max_ordinal_ >= 39 && frame_ptr_->v39_.has_data();
-  }
   SixtyFourOrdinalTable& set_v39(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v39_.set_data(elem);
@@ -2379,18 +3577,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v39_.clear_data();
     return *this;
-  }
-
-  const int64_t& v40() const {
-    ZX_ASSERT(has_v40());
-    return frame_ptr_->v40_.get_data();
-  }
-  int64_t& v40() {
-    ZX_ASSERT(has_v40());
-    return frame_ptr_->v40_.get_data();
-  }
-  bool has_v40() const {
-    return max_ordinal_ >= 40 && frame_ptr_->v40_.has_data();
   }
   SixtyFourOrdinalTable& set_v40(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2417,18 +3603,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v40_.clear_data();
     return *this;
   }
-
-  const int64_t& v41() const {
-    ZX_ASSERT(has_v41());
-    return frame_ptr_->v41_.get_data();
-  }
-  int64_t& v41() {
-    ZX_ASSERT(has_v41());
-    return frame_ptr_->v41_.get_data();
-  }
-  bool has_v41() const {
-    return max_ordinal_ >= 41 && frame_ptr_->v41_.has_data();
-  }
   SixtyFourOrdinalTable& set_v41(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v41_.set_data(elem);
@@ -2453,18 +3627,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v41_.clear_data();
     return *this;
-  }
-
-  const int64_t& v42() const {
-    ZX_ASSERT(has_v42());
-    return frame_ptr_->v42_.get_data();
-  }
-  int64_t& v42() {
-    ZX_ASSERT(has_v42());
-    return frame_ptr_->v42_.get_data();
-  }
-  bool has_v42() const {
-    return max_ordinal_ >= 42 && frame_ptr_->v42_.has_data();
   }
   SixtyFourOrdinalTable& set_v42(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2491,18 +3653,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v42_.clear_data();
     return *this;
   }
-
-  const int64_t& v43() const {
-    ZX_ASSERT(has_v43());
-    return frame_ptr_->v43_.get_data();
-  }
-  int64_t& v43() {
-    ZX_ASSERT(has_v43());
-    return frame_ptr_->v43_.get_data();
-  }
-  bool has_v43() const {
-    return max_ordinal_ >= 43 && frame_ptr_->v43_.has_data();
-  }
   SixtyFourOrdinalTable& set_v43(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v43_.set_data(elem);
@@ -2527,18 +3677,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v43_.clear_data();
     return *this;
-  }
-
-  const int64_t& v44() const {
-    ZX_ASSERT(has_v44());
-    return frame_ptr_->v44_.get_data();
-  }
-  int64_t& v44() {
-    ZX_ASSERT(has_v44());
-    return frame_ptr_->v44_.get_data();
-  }
-  bool has_v44() const {
-    return max_ordinal_ >= 44 && frame_ptr_->v44_.has_data();
   }
   SixtyFourOrdinalTable& set_v44(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2565,18 +3703,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v44_.clear_data();
     return *this;
   }
-
-  const int64_t& v45() const {
-    ZX_ASSERT(has_v45());
-    return frame_ptr_->v45_.get_data();
-  }
-  int64_t& v45() {
-    ZX_ASSERT(has_v45());
-    return frame_ptr_->v45_.get_data();
-  }
-  bool has_v45() const {
-    return max_ordinal_ >= 45 && frame_ptr_->v45_.has_data();
-  }
   SixtyFourOrdinalTable& set_v45(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v45_.set_data(elem);
@@ -2601,18 +3727,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v45_.clear_data();
     return *this;
-  }
-
-  const int64_t& v46() const {
-    ZX_ASSERT(has_v46());
-    return frame_ptr_->v46_.get_data();
-  }
-  int64_t& v46() {
-    ZX_ASSERT(has_v46());
-    return frame_ptr_->v46_.get_data();
-  }
-  bool has_v46() const {
-    return max_ordinal_ >= 46 && frame_ptr_->v46_.has_data();
   }
   SixtyFourOrdinalTable& set_v46(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2639,18 +3753,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v46_.clear_data();
     return *this;
   }
-
-  const int64_t& v47() const {
-    ZX_ASSERT(has_v47());
-    return frame_ptr_->v47_.get_data();
-  }
-  int64_t& v47() {
-    ZX_ASSERT(has_v47());
-    return frame_ptr_->v47_.get_data();
-  }
-  bool has_v47() const {
-    return max_ordinal_ >= 47 && frame_ptr_->v47_.has_data();
-  }
   SixtyFourOrdinalTable& set_v47(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v47_.set_data(elem);
@@ -2675,18 +3777,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v47_.clear_data();
     return *this;
-  }
-
-  const int64_t& v48() const {
-    ZX_ASSERT(has_v48());
-    return frame_ptr_->v48_.get_data();
-  }
-  int64_t& v48() {
-    ZX_ASSERT(has_v48());
-    return frame_ptr_->v48_.get_data();
-  }
-  bool has_v48() const {
-    return max_ordinal_ >= 48 && frame_ptr_->v48_.has_data();
   }
   SixtyFourOrdinalTable& set_v48(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2713,18 +3803,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v48_.clear_data();
     return *this;
   }
-
-  const int64_t& v49() const {
-    ZX_ASSERT(has_v49());
-    return frame_ptr_->v49_.get_data();
-  }
-  int64_t& v49() {
-    ZX_ASSERT(has_v49());
-    return frame_ptr_->v49_.get_data();
-  }
-  bool has_v49() const {
-    return max_ordinal_ >= 49 && frame_ptr_->v49_.has_data();
-  }
   SixtyFourOrdinalTable& set_v49(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v49_.set_data(elem);
@@ -2749,18 +3827,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v49_.clear_data();
     return *this;
-  }
-
-  const int64_t& v50() const {
-    ZX_ASSERT(has_v50());
-    return frame_ptr_->v50_.get_data();
-  }
-  int64_t& v50() {
-    ZX_ASSERT(has_v50());
-    return frame_ptr_->v50_.get_data();
-  }
-  bool has_v50() const {
-    return max_ordinal_ >= 50 && frame_ptr_->v50_.has_data();
   }
   SixtyFourOrdinalTable& set_v50(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2787,18 +3853,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v50_.clear_data();
     return *this;
   }
-
-  const int64_t& v51() const {
-    ZX_ASSERT(has_v51());
-    return frame_ptr_->v51_.get_data();
-  }
-  int64_t& v51() {
-    ZX_ASSERT(has_v51());
-    return frame_ptr_->v51_.get_data();
-  }
-  bool has_v51() const {
-    return max_ordinal_ >= 51 && frame_ptr_->v51_.has_data();
-  }
   SixtyFourOrdinalTable& set_v51(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v51_.set_data(elem);
@@ -2823,18 +3877,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v51_.clear_data();
     return *this;
-  }
-
-  const int64_t& v52() const {
-    ZX_ASSERT(has_v52());
-    return frame_ptr_->v52_.get_data();
-  }
-  int64_t& v52() {
-    ZX_ASSERT(has_v52());
-    return frame_ptr_->v52_.get_data();
-  }
-  bool has_v52() const {
-    return max_ordinal_ >= 52 && frame_ptr_->v52_.has_data();
   }
   SixtyFourOrdinalTable& set_v52(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2861,18 +3903,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v52_.clear_data();
     return *this;
   }
-
-  const int64_t& v53() const {
-    ZX_ASSERT(has_v53());
-    return frame_ptr_->v53_.get_data();
-  }
-  int64_t& v53() {
-    ZX_ASSERT(has_v53());
-    return frame_ptr_->v53_.get_data();
-  }
-  bool has_v53() const {
-    return max_ordinal_ >= 53 && frame_ptr_->v53_.has_data();
-  }
   SixtyFourOrdinalTable& set_v53(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v53_.set_data(elem);
@@ -2897,18 +3927,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v53_.clear_data();
     return *this;
-  }
-
-  const int64_t& v54() const {
-    ZX_ASSERT(has_v54());
-    return frame_ptr_->v54_.get_data();
-  }
-  int64_t& v54() {
-    ZX_ASSERT(has_v54());
-    return frame_ptr_->v54_.get_data();
-  }
-  bool has_v54() const {
-    return max_ordinal_ >= 54 && frame_ptr_->v54_.has_data();
   }
   SixtyFourOrdinalTable& set_v54(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -2935,18 +3953,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v54_.clear_data();
     return *this;
   }
-
-  const int64_t& v55() const {
-    ZX_ASSERT(has_v55());
-    return frame_ptr_->v55_.get_data();
-  }
-  int64_t& v55() {
-    ZX_ASSERT(has_v55());
-    return frame_ptr_->v55_.get_data();
-  }
-  bool has_v55() const {
-    return max_ordinal_ >= 55 && frame_ptr_->v55_.has_data();
-  }
   SixtyFourOrdinalTable& set_v55(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v55_.set_data(elem);
@@ -2971,18 +3977,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v55_.clear_data();
     return *this;
-  }
-
-  const int64_t& v56() const {
-    ZX_ASSERT(has_v56());
-    return frame_ptr_->v56_.get_data();
-  }
-  int64_t& v56() {
-    ZX_ASSERT(has_v56());
-    return frame_ptr_->v56_.get_data();
-  }
-  bool has_v56() const {
-    return max_ordinal_ >= 56 && frame_ptr_->v56_.has_data();
   }
   SixtyFourOrdinalTable& set_v56(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -3009,18 +4003,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v56_.clear_data();
     return *this;
   }
-
-  const int64_t& v57() const {
-    ZX_ASSERT(has_v57());
-    return frame_ptr_->v57_.get_data();
-  }
-  int64_t& v57() {
-    ZX_ASSERT(has_v57());
-    return frame_ptr_->v57_.get_data();
-  }
-  bool has_v57() const {
-    return max_ordinal_ >= 57 && frame_ptr_->v57_.has_data();
-  }
   SixtyFourOrdinalTable& set_v57(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v57_.set_data(elem);
@@ -3045,18 +4027,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v57_.clear_data();
     return *this;
-  }
-
-  const int64_t& v58() const {
-    ZX_ASSERT(has_v58());
-    return frame_ptr_->v58_.get_data();
-  }
-  int64_t& v58() {
-    ZX_ASSERT(has_v58());
-    return frame_ptr_->v58_.get_data();
-  }
-  bool has_v58() const {
-    return max_ordinal_ >= 58 && frame_ptr_->v58_.has_data();
   }
   SixtyFourOrdinalTable& set_v58(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -3083,18 +4053,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v58_.clear_data();
     return *this;
   }
-
-  const int64_t& v59() const {
-    ZX_ASSERT(has_v59());
-    return frame_ptr_->v59_.get_data();
-  }
-  int64_t& v59() {
-    ZX_ASSERT(has_v59());
-    return frame_ptr_->v59_.get_data();
-  }
-  bool has_v59() const {
-    return max_ordinal_ >= 59 && frame_ptr_->v59_.has_data();
-  }
   SixtyFourOrdinalTable& set_v59(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v59_.set_data(elem);
@@ -3119,18 +4077,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v59_.clear_data();
     return *this;
-  }
-
-  const int64_t& v60() const {
-    ZX_ASSERT(has_v60());
-    return frame_ptr_->v60_.get_data();
-  }
-  int64_t& v60() {
-    ZX_ASSERT(has_v60());
-    return frame_ptr_->v60_.get_data();
-  }
-  bool has_v60() const {
-    return max_ordinal_ >= 60 && frame_ptr_->v60_.has_data();
   }
   SixtyFourOrdinalTable& set_v60(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -3157,18 +4103,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v60_.clear_data();
     return *this;
   }
-
-  const int64_t& v61() const {
-    ZX_ASSERT(has_v61());
-    return frame_ptr_->v61_.get_data();
-  }
-  int64_t& v61() {
-    ZX_ASSERT(has_v61());
-    return frame_ptr_->v61_.get_data();
-  }
-  bool has_v61() const {
-    return max_ordinal_ >= 61 && frame_ptr_->v61_.has_data();
-  }
   SixtyFourOrdinalTable& set_v61(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v61_.set_data(elem);
@@ -3193,18 +4127,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v61_.clear_data();
     return *this;
-  }
-
-  const int64_t& v62() const {
-    ZX_ASSERT(has_v62());
-    return frame_ptr_->v62_.get_data();
-  }
-  int64_t& v62() {
-    ZX_ASSERT(has_v62());
-    return frame_ptr_->v62_.get_data();
-  }
-  bool has_v62() const {
-    return max_ordinal_ >= 62 && frame_ptr_->v62_.has_data();
   }
   SixtyFourOrdinalTable& set_v62(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -3231,18 +4153,6 @@ class SixtyFourOrdinalTable {
     frame_ptr_->v62_.clear_data();
     return *this;
   }
-
-  const int64_t& v63() const {
-    ZX_ASSERT(has_v63());
-    return frame_ptr_->v63_.get_data();
-  }
-  int64_t& v63() {
-    ZX_ASSERT(has_v63());
-    return frame_ptr_->v63_.get_data();
-  }
-  bool has_v63() const {
-    return max_ordinal_ >= 63 && frame_ptr_->v63_.has_data();
-  }
   SixtyFourOrdinalTable& set_v63(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v63_.set_data(elem);
@@ -3267,18 +4177,6 @@ class SixtyFourOrdinalTable {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v63_.clear_data();
     return *this;
-  }
-
-  const ::test_table::wire::ExtensionTable& v64() const {
-    ZX_ASSERT(has_v64());
-    return frame_ptr_->v64_.get_data();
-  }
-  ::test_table::wire::ExtensionTable& v64() {
-    ZX_ASSERT(has_v64());
-    return frame_ptr_->v64_.get_data();
-  }
-  bool has_v64() const {
-    return max_ordinal_ >= 64 && frame_ptr_->v64_.has_data();
   }
   SixtyFourOrdinalTable& set_v64(
       ::fidl::ObjectView<::test_table::wire::ExtensionTable> elem) {
@@ -3308,7 +4206,6 @@ class SixtyFourOrdinalTable {
     return *this;
   }
 
-  SixtyFourOrdinalTable() = default;
   explicit SixtyFourOrdinalTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
                        ::test_table::wire::SixtyFourOrdinalTable>>(allocator)) {
@@ -3322,13 +4219,6 @@ class SixtyFourOrdinalTable {
           ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~SixtyFourOrdinalTable() = default;
-  SixtyFourOrdinalTable(const SixtyFourOrdinalTable& other) noexcept = default;
-  SixtyFourOrdinalTable& operator=(
-      const SixtyFourOrdinalTable& other) noexcept = default;
-  SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other) noexcept = default;
-  SixtyFourOrdinalTable& operator=(SixtyFourOrdinalTable&& other) noexcept =
-      default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -3343,14 +4233,1190 @@ class SixtyFourOrdinalTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::SixtyFourOrdinalTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_table::wire::SixtyFourOrdinalTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::SixtyFourOrdinalTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::SixtyFourOrdinalTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& v1(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v1_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v2(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v2_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v3(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v3_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v4(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v4_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(4));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v5(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v5_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v6(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v6_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(6));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v7(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v7_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(7));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v8(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v8_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(8));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v9(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v9_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(9));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v10(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v10_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(10));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v11(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v11_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(11));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v12(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v12_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(12));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v13(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v13_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(13));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v14(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v14_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(14));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v15(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v15_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(15));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v16(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v16_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(16));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v17(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v17_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(17));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v18(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v18_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(18));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v19(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v19_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(19));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v20(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v20_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(20));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v21(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v21_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(21));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v22(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v22_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(22));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v23(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v23_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(23));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v24(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v24_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(24));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v25(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v25_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(25));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v26(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v26_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(26));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v27(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v27_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(27));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v28(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v28_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(28));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v29(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v29_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(29));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v30(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v30_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(30));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v31(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v31_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(31));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v32(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v32_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(32));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v33(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v33_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(33));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v34(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v34_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(34));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v35(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v35_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(35));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v36(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v36_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(36));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v37(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v37_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(37));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v38(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v38_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(38));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v39(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v39_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(39));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v40(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v40_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(40));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v41(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v41_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(41));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v42(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v42_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(42));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v43(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v43_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(43));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v44(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v44_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(44));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v45(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v45_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(45));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v46(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v46_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(46));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v47(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v47_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(47));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v48(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v48_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(48));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v49(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v49_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(49));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v50(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v50_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(50));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v51(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v51_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(51));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v52(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v52_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(52));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v53(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v53_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(53));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v54(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v54_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(54));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v55(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v55_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(55));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v56(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v56_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(56));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v57(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v57_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(57));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v58(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v58_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(58));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v59(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v59_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(59));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v60(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v60_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(60));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v61(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v61_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(61));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v62(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v62_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(62));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v63(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v63_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(63));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& v64(
+      ::fidl::ObjectView<::test_table::wire::ExtensionTable> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->v64_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(64));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                           ::test_table::wire::SixtyFourOrdinalTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::SixtyFourOrdinalTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::SixtyFourOrdinalTable,
+          ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>>;
+
+ public:
+  using Base::v1;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v1(
+      Args&&... args_) {
+    v1(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v2;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v2(
+      Args&&... args_) {
+    v2(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v3;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v3(
+      Args&&... args_) {
+    v3(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v4;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v4(
+      Args&&... args_) {
+    v4(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v5;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v5(
+      Args&&... args_) {
+    v5(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v6;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v6(
+      Args&&... args_) {
+    v6(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v7;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v7(
+      Args&&... args_) {
+    v7(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v8;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v8(
+      Args&&... args_) {
+    v8(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v9;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v9(
+      Args&&... args_) {
+    v9(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v10;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v10(
+      Args&&... args_) {
+    v10(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v11;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v11(
+      Args&&... args_) {
+    v11(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v12;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v12(
+      Args&&... args_) {
+    v12(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v13;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v13(
+      Args&&... args_) {
+    v13(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v14;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v14(
+      Args&&... args_) {
+    v14(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v15;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v15(
+      Args&&... args_) {
+    v15(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v16;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v16(
+      Args&&... args_) {
+    v16(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v17;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v17(
+      Args&&... args_) {
+    v17(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v18;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v18(
+      Args&&... args_) {
+    v18(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v19;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v19(
+      Args&&... args_) {
+    v19(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v20;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v20(
+      Args&&... args_) {
+    v20(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v21;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v21(
+      Args&&... args_) {
+    v21(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v22;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v22(
+      Args&&... args_) {
+    v22(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v23;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v23(
+      Args&&... args_) {
+    v23(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v24;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v24(
+      Args&&... args_) {
+    v24(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v25;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v25(
+      Args&&... args_) {
+    v25(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v26;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v26(
+      Args&&... args_) {
+    v26(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v27;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v27(
+      Args&&... args_) {
+    v27(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v28;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v28(
+      Args&&... args_) {
+    v28(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v29;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v29(
+      Args&&... args_) {
+    v29(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v30;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v30(
+      Args&&... args_) {
+    v30(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v31;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v31(
+      Args&&... args_) {
+    v31(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v32;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v32(
+      Args&&... args_) {
+    v32(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v33;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v33(
+      Args&&... args_) {
+    v33(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v34;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v34(
+      Args&&... args_) {
+    v34(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v35;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v35(
+      Args&&... args_) {
+    v35(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v36;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v36(
+      Args&&... args_) {
+    v36(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v37;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v37(
+      Args&&... args_) {
+    v37(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v38;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v38(
+      Args&&... args_) {
+    v38(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v39;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v39(
+      Args&&... args_) {
+    v39(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v40;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v40(
+      Args&&... args_) {
+    v40(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v41;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v41(
+      Args&&... args_) {
+    v41(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v42;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v42(
+      Args&&... args_) {
+    v42(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v43;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v43(
+      Args&&... args_) {
+    v43(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v44;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v44(
+      Args&&... args_) {
+    v44(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v45;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v45(
+      Args&&... args_) {
+    v45(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v46;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v46(
+      Args&&... args_) {
+    v46(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v47;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v47(
+      Args&&... args_) {
+    v47(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v48;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v48(
+      Args&&... args_) {
+    v48(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v49;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v49(
+      Args&&... args_) {
+    v49(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v50;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v50(
+      Args&&... args_) {
+    v50(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v51;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v51(
+      Args&&... args_) {
+    v51(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v52;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v52(
+      Args&&... args_) {
+    v52(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v53;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v53(
+      Args&&... args_) {
+    v53(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v54;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v54(
+      Args&&... args_) {
+    v54(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v55;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v55(
+      Args&&... args_) {
+    v55(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v56;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v56(
+      Args&&... args_) {
+    v56(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v57;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v57(
+      Args&&... args_) {
+    v57(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v58;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v58(
+      Args&&... args_) {
+    v58(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v59;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v59(
+      Args&&... args_) {
+    v59(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v60;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v60(
+      Args&&... args_) {
+    v60(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v61;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v61(
+      Args&&... args_) {
+    v61(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v62;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v62(
+      Args&&... args_) {
+    v62(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v63;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v63(
+      Args&&... args_) {
+    v63(::fidl::ObjectView<int64_t>(arena_.get(),
+                                    std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::v64;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v64(
+      Args&&... args_) {
+    v64(::fidl::ObjectView<::test_table::wire::ExtensionTable>(
+        arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::SixtyFourOrdinalTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_table::wire::SixtyFourOrdinalTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_table::wire::SixtyFourOrdinalTable,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_table::wire::SixtyFourOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_table::wire::SixtyFourOrdinalTable>>;
+
+ private:
+  friend class ::test_table::wire::SixtyFourOrdinalTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::SixtyFourOrdinalTable>>::
+                 FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>
+SixtyFourOrdinalTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_table::wire::SixtyFourOrdinalTable>
+SixtyFourOrdinalTable::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_table::wire::SixtyFourOrdinalTable>(std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
  public:
@@ -3369,6 +5435,12 @@ struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
   bool HasUnknownData() const;
 
   friend class ::test_table::wire::EmptyTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
 };
 
 namespace test_table {
@@ -3377,13 +5449,35 @@ extern "C" const fidl_type_t test_table_EmptyTableTable;
 
 class EmptyTable {
  public:
+  EmptyTable() = default;
+  EmptyTable(const EmptyTable& other) noexcept = default;
+  EmptyTable& operator=(const EmptyTable& other) noexcept = default;
+  EmptyTable(EmptyTable&& other) noexcept = default;
+  EmptyTable& operator=(EmptyTable&& other) noexcept = default;
+
+  ~EmptyTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
 
-  EmptyTable() = default;
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>
+          frame);
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   explicit EmptyTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<
                    ::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(
@@ -3396,11 +5490,6 @@ class EmptyTable {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~EmptyTable() = default;
-  EmptyTable(const EmptyTable& other) noexcept = default;
-  EmptyTable& operator=(const EmptyTable& other) noexcept = default;
-  EmptyTable(EmptyTable&& other) noexcept = default;
-  EmptyTable& operator=(EmptyTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -3415,10 +5504,92 @@ class EmptyTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable,
+                                             BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::EmptyTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::EmptyTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::EmptyTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::EmptyTable,
+          ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
+
+ public:
+ private:
+  friend class ::test_table::wire::EmptyTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_table::wire::EmptyTable,
+          ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_table::wire::EmptyTable,
+      ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
+
+ private:
+  friend class ::test_table::wire::EmptyTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_table::wire::EmptyTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_table::wire::EmptyTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>
+EmptyTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>
+EmptyTable::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_table

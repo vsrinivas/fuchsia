@@ -69,6 +69,11 @@ struct SomeProtocolSomeMethodResponse {
 }  // namespace wire
 }  // namespace test_anonymous
 template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>;
+
+template <>
 struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
  public:
   WireTableFrame() = default;
@@ -89,6 +94,12 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
       table_data_;
 
   friend class ::test_anonymous::wire::TableMember;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
 };
 
 namespace test_anonymous {
@@ -98,12 +109,29 @@ extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 class TableMember {
  public:
   using TableData = test_anonymous::wire::TableData;
+  TableMember() = default;
+  TableMember(const TableMember& other) noexcept = default;
+  TableMember& operator=(const TableMember& other) noexcept = default;
+  TableMember(TableMember&& other) noexcept = default;
+  TableMember& operator=(TableMember&& other) noexcept = default;
+
+  ~TableMember() = default;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>
+                      frame);
 
   const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data()
       const {
@@ -117,6 +145,12 @@ class TableMember {
   bool has_table_data() const {
     return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
   }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   TableMember& set_table_data(
       ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>
           elem) {
@@ -147,7 +181,6 @@ class TableMember {
     return *this;
   }
 
-  TableMember() = default;
   explicit TableMember(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<
                    ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(
@@ -160,11 +193,6 @@ class TableMember {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~TableMember() = default;
-  TableMember(const TableMember& other) noexcept = default;
-  TableMember& operator=(const TableMember& other) noexcept = default;
-  TableMember(TableMember&& other) noexcept = default;
-  TableMember& operator=(TableMember&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -178,14 +206,126 @@ class TableMember {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_anonymous
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_anonymous::wire::TableMember, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_anonymous::wire::TableMember Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_anonymous::wire::TableMember t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& table_data(
+      ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>
+          elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->table_data_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_anonymous::wire::TableMember table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_anonymous::wire::TableMember,
+          ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+
+ public:
+  using Base::table_data;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>& table_data(
+      Args&&... args_) {
+    table_data(::fidl::ObjectView<
+               ::fidl::VectorView<::test_anonymous::wire::TableData>>(
+        arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_anonymous::wire::TableMember;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_anonymous::wire::TableMember,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_anonymous::wire::TableMember>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::TableMember,
+      ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
+
+ private:
+  friend class ::test_anonymous::wire::TableMember;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_anonymous::wire::TableMember>>::FromExternal(frame)) {}
+};
+namespace test_anonymous {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>
+TableMember::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>
+TableMember::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_anonymous
+template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_anonymous::wire::FunctionApplication>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>
     final {
@@ -210,6 +350,13 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>
   ::fidl::Envelope<::test_anonymous::wire::Flags> flags_;
 
   friend class ::test_anonymous::wire::FunctionApplication;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableExternalBuilder<
+          ::test_anonymous::wire::FunctionApplication>>;
 };
 
 namespace test_anonymous {
@@ -219,12 +366,33 @@ extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 class FunctionApplication {
  public:
   using Flags = test_anonymous::wire::Flags;
+  FunctionApplication() = default;
+  FunctionApplication(const FunctionApplication& other) noexcept = default;
+  FunctionApplication& operator=(const FunctionApplication& other) noexcept =
+      default;
+  FunctionApplication(FunctionApplication&& other) noexcept = default;
+  FunctionApplication& operator=(FunctionApplication&& other) noexcept =
+      default;
+
+  ~FunctionApplication() = default;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_anonymous::wire::FunctionApplication>
+  ExternalBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>
+          frame);
 
   const ::fidl::StringView& func() const {
     ZX_ASSERT(has_func());
@@ -237,6 +405,36 @@ class FunctionApplication {
   bool has_func() const {
     return max_ordinal_ >= 1 && frame_ptr_->func_.has_data();
   }
+
+  const ::fidl::VectorView<::test_anonymous::wire::Expression>& args() const {
+    ZX_ASSERT(has_args());
+    return frame_ptr_->args_.get_data();
+  }
+  ::fidl::VectorView<::test_anonymous::wire::Expression>& args() {
+    ZX_ASSERT(has_args());
+    return frame_ptr_->args_.get_data();
+  }
+  bool has_args() const {
+    return max_ordinal_ >= 3 && frame_ptr_->args_.has_data();
+  }
+
+  const ::test_anonymous::wire::Flags& flags() const {
+    ZX_ASSERT(has_flags());
+    return frame_ptr_->flags_.get_data();
+  }
+  ::test_anonymous::wire::Flags& flags() {
+    ZX_ASSERT(has_flags());
+    return frame_ptr_->flags_.get_data();
+  }
+  bool has_flags() const {
+    return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   FunctionApplication& set_func(::fidl::ObjectView<::fidl::StringView> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->func_.set_data(elem);
@@ -261,18 +459,6 @@ class FunctionApplication {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->func_.clear_data();
     return *this;
-  }
-
-  const ::fidl::VectorView<::test_anonymous::wire::Expression>& args() const {
-    ZX_ASSERT(has_args());
-    return frame_ptr_->args_.get_data();
-  }
-  ::fidl::VectorView<::test_anonymous::wire::Expression>& args() {
-    ZX_ASSERT(has_args());
-    return frame_ptr_->args_.get_data();
-  }
-  bool has_args() const {
-    return max_ordinal_ >= 3 && frame_ptr_->args_.has_data();
   }
   FunctionApplication& set_args(
       ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>>
@@ -303,18 +489,6 @@ class FunctionApplication {
     frame_ptr_->args_.clear_data();
     return *this;
   }
-
-  const ::test_anonymous::wire::Flags& flags() const {
-    ZX_ASSERT(has_flags());
-    return frame_ptr_->flags_.get_data();
-  }
-  ::test_anonymous::wire::Flags& flags() {
-    ZX_ASSERT(has_flags());
-    return frame_ptr_->flags_.get_data();
-  }
-  bool has_flags() const {
-    return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
-  }
   FunctionApplication& set_flags(::test_anonymous::wire::Flags elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->flags_.set_data(std::move(elem));
@@ -328,7 +502,6 @@ class FunctionApplication {
     return *this;
   }
 
-  FunctionApplication() = default;
   explicit FunctionApplication(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -342,13 +515,6 @@ class FunctionApplication {
           ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~FunctionApplication() = default;
-  FunctionApplication(const FunctionApplication& other) noexcept = default;
-  FunctionApplication& operator=(const FunctionApplication& other) noexcept =
-      default;
-  FunctionApplication(FunctionApplication&& other) noexcept = default;
-  FunctionApplication& operator=(FunctionApplication&& other) noexcept =
-      default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -363,11 +529,150 @@ class FunctionApplication {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableExternalBuilder<
+          ::test_anonymous::wire::FunctionApplication>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_anonymous
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_anonymous::wire::FunctionApplication, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_anonymous::wire::FunctionApplication Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_anonymous::wire::FunctionApplication t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& func(::fidl::ObjectView<::fidl::StringView> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->func_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& args(
+      ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>>
+          elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->args_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& flags(::test_anonymous::wire::Flags elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->flags_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(4));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>&&
+          frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_anonymous::wire::FunctionApplication table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_anonymous::wire::FunctionApplication,
+                ::fidl::WireTableBuilder<
+                    ::test_anonymous::wire::FunctionApplication>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>>;
+
+ public:
+  using Base::func;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& func(
+      Args&&... args_) {
+    func(::fidl::ObjectView<::fidl::StringView>(arena_.get(),
+                                                std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::args;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& args(
+      Args&&... args_) {
+    args(::fidl::ObjectView<
+         ::fidl::VectorView<::test_anonymous::wire::Expression>>(
+        arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_anonymous::wire::FunctionApplication;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_anonymous::wire::FunctionApplication>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_anonymous::wire::FunctionApplication>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_anonymous::wire::FunctionApplication,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_anonymous::wire::FunctionApplication>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_anonymous::wire::FunctionApplication,
+      ::fidl::WireTableExternalBuilder<
+          ::test_anonymous::wire::FunctionApplication>>;
+
+ private:
+  friend class ::test_anonymous::wire::FunctionApplication;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>*
+          frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_anonymous::wire::FunctionApplication>>::
+                 FromExternal(frame)) {}
+};
+namespace test_anonymous {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>
+FunctionApplication::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_anonymous::wire::FunctionApplication>
+FunctionApplication::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_anonymous::wire::FunctionApplication>(std::move(frame));
+}
 
 extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 

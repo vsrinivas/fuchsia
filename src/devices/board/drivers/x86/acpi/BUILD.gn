@@ -48,6 +48,10 @@ source_set("acpi") {
   ]
   public_deps = shared_public_deps
   deps = shared_deps + [ "//src/lib/ddk" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 test("acpi-test") {
@@ -74,6 +78,10 @@ test("acpi-test") {
          ]
 
   defines = [ "IS_TEST" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("x86-acpi-tests") {

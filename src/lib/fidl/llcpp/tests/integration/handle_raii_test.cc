@@ -110,32 +110,35 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
   void GetHandleTable(GetHandleTableRequestView request,
                       GetHandleTableCompleter::Sync& completer) override {
     fidl::Arena allocator;
-    test::wire::HandleTable t(allocator);
+    auto builder = test::wire::HandleTable::Builder(allocator);
     if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
-      t.set_h1(std::move(event));
+      builder.h1(std::move(event));
     }
     if ((request->fields & 2) != 0) {
-      t.set_h2({});
-      zx::event::create(0, &t.h2().h);
+      test::wire::HandleStruct hs{};
+      zx::event::create(0, &hs.h);
+      builder.h2(std::move(hs));
     }
-    completer.Reply(std::move(t));
+    completer.Reply(builder.Build());
   }
   void GetHandleTableStruct(GetHandleTableStructRequestView request,
                             GetHandleTableStructCompleter::Sync& completer) override {
     fidl::Arena allocator;
     test::wire::HandleTableStruct reply;
-    reply.t.Allocate(allocator);
+    auto builder = test::wire::HandleTable::Builder(allocator);
     if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
-      reply.t.set_h1(std::move(event));
+      builder.h1(std::move(event));
     }
     if ((request->fields & 2) != 0) {
-      reply.t.set_h2({});
-      zx::event::create(0, &reply.t.h2().h);
+      test::wire::HandleStruct hs{};
+      zx::event::create(0, &hs.h);
+      builder.h2(std::move(hs));
     }
+    reply.t = builder.Build();
     completer.Reply(std::move(reply));
   }
   void GetOptionalHandleStruct(GetOptionalHandleStructRequestView request,
@@ -188,17 +191,18 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     if (request->defined) {
       fidl::Arena allocator;
       fidl::ObjectView<test::wire::HandleTableStruct> reply(allocator);
-      reply->t.Allocate(allocator);
+      auto builder = test::wire::HandleTable::Builder(allocator);
       if ((request->fields & 1) != 0) {
         zx::event e;
         zx::event::create(0, &e);
-        reply->t.set_h1(std::move(e));
+        builder.h1(std::move(e));
       }
       if ((request->fields & 2) != 0) {
         test::wire::HandleStruct s;
         zx::event::create(0, &s.h);
-        reply->t.set_h2(std::move(s));
+        builder.h2(std::move(s));
       }
+      reply->t = builder.Build();
       completer.Reply(reply);
     } else {
       completer.Reply(nullptr);

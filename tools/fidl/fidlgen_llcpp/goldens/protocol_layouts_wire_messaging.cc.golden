@@ -3924,8 +3924,8 @@ void fidl::internal::WireCompleterImpl<
                      ComposedProtocolTwoWayAnonComposedWithErrorResponse
                          ComposedProtocolTwoWayAnonComposedWithErrorResponse) {
   ::test_protocollayouts_imported::wire::
-      ComposedProtocolTwoWayAnonComposedWithErrorResponse _response;
-  _response = std::move(ComposedProtocolTwoWayAnonComposedWithErrorResponse);
+      ComposedProtocolTwoWayAnonComposedWithErrorResponse _response =
+          std::move(ComposedProtocolTwoWayAnonComposedWithErrorResponse);
 
   return Reply(
       ::test_protocollayouts_imported::wire::
@@ -3974,8 +3974,8 @@ void fidl::internal::WireBufferCompleterImpl<
                      ComposedProtocolTwoWayAnonComposedWithErrorResponse
                          ComposedProtocolTwoWayAnonComposedWithErrorResponse) {
   ::test_protocollayouts_imported::wire::
-      ComposedProtocolTwoWayAnonComposedWithErrorResponse _response;
-  _response = std::move(ComposedProtocolTwoWayAnonComposedWithErrorResponse);
+      ComposedProtocolTwoWayAnonComposedWithErrorResponse _response =
+          std::move(ComposedProtocolTwoWayAnonComposedWithErrorResponse);
 
   return Reply(
       ::test_protocollayouts_imported::wire::
@@ -4060,8 +4060,8 @@ void fidl::internal::WireCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>::
     ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload
                      ImportUnionPayload) {
-  ::test_protocollayouts_imported::wire::ImportUnionPayload _response;
-  _response = std::move(ImportUnionPayload);
+  ::test_protocollayouts_imported::wire::ImportUnionPayload _response =
+      std::move(ImportUnionPayload);
 
   return Reply(
       ::test_protocollayouts_imported::wire::
@@ -4107,8 +4107,8 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>::
     ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload
                      ImportUnionPayload) {
-  ::test_protocollayouts_imported::wire::ImportUnionPayload _response;
-  _response = std::move(ImportUnionPayload);
+  ::test_protocollayouts_imported::wire::ImportUnionPayload _response =
+      std::move(ImportUnionPayload);
 
   return Reply(
       ::test_protocollayouts_imported::wire::
@@ -4192,8 +4192,8 @@ void fidl::internal::WireCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload
                      ImportUnionPayload) {
-  ::test_protocollayouts_imported::wire::ImportUnionPayload _response;
-  _response = std::move(ImportUnionPayload);
+  ::test_protocollayouts_imported::wire::ImportUnionPayload _response =
+      std::move(ImportUnionPayload);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult::
@@ -4239,8 +4239,8 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(::test_protocollayouts_imported::wire::ImportUnionPayload
                      ImportUnionPayload) {
-  ::test_protocollayouts_imported::wire::ImportUnionPayload _response;
-  _response = std::move(ImportUnionPayload);
+  ::test_protocollayouts_imported::wire::ImportUnionPayload _response =
+      std::move(ImportUnionPayload);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult::
@@ -4322,8 +4322,8 @@ void fidl::internal::WireCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(
         ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload) {
-  ::test_protocollayouts::wire::LocalUnionPayload _response;
-  _response = std::move(LocalUnionPayload);
+  ::test_protocollayouts::wire::LocalUnionPayload _response =
+      std::move(LocalUnionPayload);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult::
@@ -4368,8 +4368,8 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(
         ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload) {
-  ::test_protocollayouts::wire::LocalUnionPayload _response;
-  _response = std::move(LocalUnionPayload);
+  ::test_protocollayouts::wire::LocalUnionPayload _response =
+      std::move(LocalUnionPayload);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult::
@@ -4454,8 +4454,7 @@ void fidl::internal::WireCompleterImpl<
         ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
             MainProtocolTwoWayAnonWithErrorResponse) {
   ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-      _response;
-  _response = std::move(MainProtocolTwoWayAnonWithErrorResponse);
+      _response = std::move(MainProtocolTwoWayAnonWithErrorResponse);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult::
@@ -4503,8 +4502,7 @@ void fidl::internal::WireBufferCompleterImpl<
         ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
             MainProtocolTwoWayAnonWithErrorResponse) {
   ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse
-      _response;
-  _response = std::move(MainProtocolTwoWayAnonWithErrorResponse);
+      _response = std::move(MainProtocolTwoWayAnonWithErrorResponse);
 
   return Reply(
       ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult::

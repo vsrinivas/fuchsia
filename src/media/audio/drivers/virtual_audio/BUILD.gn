@@ -51,6 +51,10 @@ fuchsia_driver("virtual_audio_driver-driver") {
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("virtual_audio_driver") {

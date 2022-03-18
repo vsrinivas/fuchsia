@@ -413,6 +413,74 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
   }
 }
 
+// Some helpers to test equality of buffer collection infos and related types.
+template <typename T, size_t S>
+bool ArrayEqual(const ::fidl::Array<T, S>& a, const ::fidl::Array<T, S>& b);
+
+bool Equal(const fuchsia_sysmem::wire::VmoBuffer& a, const fuchsia_sysmem::wire::VmoBuffer& b) {
+  return a.vmo == b.vmo && a.vmo_usable_start == b.vmo_usable_start;
+}
+
+bool Equal(const fuchsia_sysmem::wire::PixelFormat& a, const fuchsia_sysmem::wire::PixelFormat& b) {
+  return a.type == b.type && a.has_format_modifier == b.has_format_modifier &&
+         a.format_modifier.value == b.format_modifier.value;
+}
+
+bool Equal(const fuchsia_sysmem::wire::ImageFormatConstraints& a,
+           const fuchsia_sysmem::wire::ImageFormatConstraints& b) {
+  return Equal(a.pixel_format, b.pixel_format) && a.color_spaces_count == b.color_spaces_count &&
+         ArrayEqual(a.color_space, b.color_space) && a.min_coded_width == b.min_coded_width &&
+         a.max_coded_width == b.max_coded_width && a.min_coded_height == b.min_coded_height &&
+         a.max_coded_height == b.max_coded_height && a.min_bytes_per_row == b.min_bytes_per_row &&
+         a.max_bytes_per_row == b.max_bytes_per_row &&
+         a.max_coded_width_times_coded_height == b.max_coded_width_times_coded_height &&
+         a.layers == b.layers && a.coded_width_divisor == b.coded_width_divisor &&
+         a.coded_height_divisor == b.coded_height_divisor &&
+         a.bytes_per_row_divisor == b.bytes_per_row_divisor &&
+         a.start_offset_divisor == b.start_offset_divisor &&
+         a.display_width_divisor == b.display_width_divisor &&
+         a.display_height_divisor == b.display_height_divisor &&
+         a.required_min_coded_width == b.required_min_coded_width &&
+         a.required_max_coded_width == b.required_max_coded_width &&
+         a.required_min_coded_height == b.required_min_coded_height &&
+         a.required_max_coded_height == b.required_max_coded_height &&
+         a.required_min_bytes_per_row == b.required_min_bytes_per_row &&
+         a.required_max_bytes_per_row == b.required_max_bytes_per_row;
+}
+
+bool Equal(const fuchsia_sysmem::wire::BufferMemorySettings& a,
+           const fuchsia_sysmem::wire::BufferMemorySettings& b) {
+  return a.size_bytes == b.size_bytes && a.is_physically_contiguous == b.is_physically_contiguous &&
+         a.is_secure == b.is_secure && a.coherency_domain == b.coherency_domain && a.heap == b.heap;
+}
+
+bool Equal(const fuchsia_sysmem::wire::SingleBufferSettings& a,
+           const fuchsia_sysmem::wire::SingleBufferSettings& b) {
+  return Equal(a.buffer_settings, b.buffer_settings) &&
+         a.has_image_format_constraints == b.has_image_format_constraints &&
+         Equal(a.image_format_constraints, b.image_format_constraints);
+}
+
+bool Equal(const fuchsia_sysmem::wire::BufferCollectionInfo2& a,
+           const fuchsia_sysmem::wire::BufferCollectionInfo2& b) {
+  return a.buffer_count == b.buffer_count && Equal(a.settings, b.settings) &&
+         ArrayEqual(a.buffers, b.buffers);
+}
+
+bool Equal(const fuchsia_sysmem::wire::ColorSpace& a, const fuchsia_sysmem::wire::ColorSpace& b) {
+  return a.type == b.type;
+}
+
+template <typename T, size_t S>
+bool ArrayEqual(const ::fidl::Array<T, S>& a, const ::fidl::Array<T, S>& b) {
+  for (size_t i = 0; i < S; i++) {
+    if (!Equal(a[i], b[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool AttachTokenSucceeds(
     bool attach_before_also, bool fail_attached_early,
     fit::function<void(fuchsia_sysmem::wire::BufferCollectionConstraints& to_modify)>
@@ -817,25 +885,21 @@ bool AttachTokenSucceeds(
     }
   }
 
-  // Clear out vmo handles and memcmp all three collections
+  // Clear out vmo handles and compare all three collections
   for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
     buffer_collection_info_1->buffers[i].vmo.reset();
     buffer_collection_info_2->buffers[i].vmo.reset();
     buffer_collection_info_3.buffers[i].vmo.reset();
   }
 
-  int32_t memcmp_result = memcmp(buffer_collection_info_1, buffer_collection_info_2,
-                                 sizeof(fuchsia_sysmem::wire::BufferCollectionInfo2));
   // Check that buffer_collection_info_1 and buffer_collection_info_2 are
   // consistent.
-  EXPECT_EQ(memcmp_result, 0, "");
+  EXPECT_TRUE(Equal(*buffer_collection_info_1, *buffer_collection_info_2), "");
   IF_FAILURES_RETURN_FALSE();
 
-  memcmp_result = memcmp(buffer_collection_info_1, &buffer_collection_info_3,
-                         sizeof(fuchsia_sysmem::wire::BufferCollectionInfo2));
   // Check that buffer_collection_info_1 and buffer_collection_info_3 are
   // consistent.
-  EXPECT_EQ(memcmp_result, 0, "");
+  EXPECT_TRUE(Equal(*buffer_collection_info_1, buffer_collection_info_3), "");
   IF_FAILURES_RETURN_FALSE();
 
   return true;

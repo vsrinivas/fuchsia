@@ -70,6 +70,13 @@ class MainProtocolOnLocalWithErrorResult;
 }  // namespace wire
 }  // namespace test_protocollayouts
 template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>;
+
+template <>
 struct ::fidl::WireTableFrame<
     ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
     final {
@@ -91,6 +98,14 @@ struct ::fidl::WireTableFrame<
 
   friend class ::test_protocollayouts::wire::
       MainProtocolOnAnonWithErrorResponse;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
 };
 
 namespace test_protocollayouts {
@@ -100,11 +115,36 @@ extern "C" const fidl_type_t
 
 class MainProtocolOnAnonWithErrorResponse {
  public:
+  MainProtocolOnAnonWithErrorResponse() = default;
+  MainProtocolOnAnonWithErrorResponse(
+      const MainProtocolOnAnonWithErrorResponse& other) noexcept = default;
+  MainProtocolOnAnonWithErrorResponse& operator=(
+      const MainProtocolOnAnonWithErrorResponse& other) noexcept = default;
+  MainProtocolOnAnonWithErrorResponse(
+      MainProtocolOnAnonWithErrorResponse&& other) noexcept = default;
+  MainProtocolOnAnonWithErrorResponse& operator=(
+      MainProtocolOnAnonWithErrorResponse&& other) noexcept = default;
+
+  ~MainProtocolOnAnonWithErrorResponse() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>
+          frame);
 
   const uint16_t& a() const {
     ZX_ASSERT(has_a());
@@ -115,6 +155,12 @@ class MainProtocolOnAnonWithErrorResponse {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   MainProtocolOnAnonWithErrorResponse& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
@@ -128,7 +174,6 @@ class MainProtocolOnAnonWithErrorResponse {
     return *this;
   }
 
-  MainProtocolOnAnonWithErrorResponse() = default;
   explicit MainProtocolOnAnonWithErrorResponse(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
                        ::test_protocollayouts::wire::
@@ -142,15 +187,6 @@ class MainProtocolOnAnonWithErrorResponse {
           ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~MainProtocolOnAnonWithErrorResponse() = default;
-  MainProtocolOnAnonWithErrorResponse(
-      const MainProtocolOnAnonWithErrorResponse& other) noexcept = default;
-  MainProtocolOnAnonWithErrorResponse& operator=(
-      const MainProtocolOnAnonWithErrorResponse& other) noexcept = default;
-  MainProtocolOnAnonWithErrorResponse(
-      MainProtocolOnAnonWithErrorResponse&& other) noexcept = default;
-  MainProtocolOnAnonWithErrorResponse& operator=(
-      MainProtocolOnAnonWithErrorResponse&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -167,14 +203,138 @@ class MainProtocolOnAnonWithErrorResponse {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_protocollayouts
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+    BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse t =
+        std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(uint16_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>&&
+          frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+          ::fidl::WireTableBuilder<::test_protocollayouts::wire::
+                                       MainProtocolOnAnonWithErrorResponse>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
+
+ public:
+ private:
+  friend class ::test_protocollayouts::wire::
+      MainProtocolOnAnonWithErrorResponse;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_protocollayouts::wire::
+                                        MainProtocolOnAnonWithErrorResponse>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+          ::fidl::WireTableExternalBuilder<
+              ::test_protocollayouts::wire::
+                  MainProtocolOnAnonWithErrorResponse>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>;
+
+ private:
+  friend class ::test_protocollayouts::wire::
+      MainProtocolOnAnonWithErrorResponse;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>*
+          frame)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_protocollayouts::wire::
+                                        MainProtocolOnAnonWithErrorResponse>>::
+                 FromExternal(frame)) {}
+};
+namespace test_protocollayouts {
+namespace wire {
+inline ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+MainProtocolOnAnonWithErrorResponse::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>
+MainProtocolOnAnonWithErrorResponse::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>;
+
 template <>
 struct ::fidl::WireTableFrame<
     ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
@@ -197,6 +357,15 @@ struct ::fidl::WireTableFrame<
 
   friend class ::test_protocollayouts::wire::
       MainProtocolTwoWayAnonWithErrorRequest;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableBuilder<::test_protocollayouts::wire::
+                                   MainProtocolTwoWayAnonWithErrorRequest>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::
+              MainProtocolTwoWayAnonWithErrorRequest>>;
 };
 
 namespace test_protocollayouts {
@@ -206,11 +375,36 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonWithErrorRequest {
  public:
+  MainProtocolTwoWayAnonWithErrorRequest() = default;
+  MainProtocolTwoWayAnonWithErrorRequest(
+      const MainProtocolTwoWayAnonWithErrorRequest& other) noexcept = default;
+  MainProtocolTwoWayAnonWithErrorRequest& operator=(
+      const MainProtocolTwoWayAnonWithErrorRequest& other) noexcept = default;
+  MainProtocolTwoWayAnonWithErrorRequest(
+      MainProtocolTwoWayAnonWithErrorRequest&& other) noexcept = default;
+  MainProtocolTwoWayAnonWithErrorRequest& operator=(
+      MainProtocolTwoWayAnonWithErrorRequest&& other) noexcept = default;
+
+  ~MainProtocolTwoWayAnonWithErrorRequest() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>>
+          frame);
 
   const uint16_t& a() const {
     ZX_ASSERT(has_a());
@@ -221,6 +415,12 @@ class MainProtocolTwoWayAnonWithErrorRequest {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   MainProtocolTwoWayAnonWithErrorRequest& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
@@ -234,7 +434,6 @@ class MainProtocolTwoWayAnonWithErrorRequest {
     return *this;
   }
 
-  MainProtocolTwoWayAnonWithErrorRequest() = default;
   explicit MainProtocolTwoWayAnonWithErrorRequest(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -249,15 +448,6 @@ class MainProtocolTwoWayAnonWithErrorRequest {
           ::test_protocollayouts::wire::
               MainProtocolTwoWayAnonWithErrorRequest>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~MainProtocolTwoWayAnonWithErrorRequest() = default;
-  MainProtocolTwoWayAnonWithErrorRequest(
-      const MainProtocolTwoWayAnonWithErrorRequest& other) noexcept = default;
-  MainProtocolTwoWayAnonWithErrorRequest& operator=(
-      const MainProtocolTwoWayAnonWithErrorRequest& other) noexcept = default;
-  MainProtocolTwoWayAnonWithErrorRequest(
-      MainProtocolTwoWayAnonWithErrorRequest&& other) noexcept = default;
-  MainProtocolTwoWayAnonWithErrorRequest& operator=(
-      MainProtocolTwoWayAnonWithErrorRequest&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -273,14 +463,140 @@ class MainProtocolTwoWayAnonWithErrorRequest {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableBuilder<::test_protocollayouts::wire::
+                                   MainProtocolTwoWayAnonWithErrorRequest>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::
+              MainProtocolTwoWayAnonWithErrorRequest>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<
       ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_protocollayouts
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+    BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest t =
+        std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(uint16_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                           ::test_protocollayouts::wire::
+                               MainProtocolTwoWayAnonWithErrorRequest>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+          ::fidl::WireTableBuilder<
+              ::test_protocollayouts::wire::
+                  MainProtocolTwoWayAnonWithErrorRequest>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableBuilder<::test_protocollayouts::wire::
+                                   MainProtocolTwoWayAnonWithErrorRequest>>;
+
+ public:
+ private:
+  friend class ::test_protocollayouts::wire::
+      MainProtocolTwoWayAnonWithErrorRequest;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::
+                     MainProtocolTwoWayAnonWithErrorRequest>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+          ::fidl::WireTableExternalBuilder<
+              ::test_protocollayouts::wire::
+                  MainProtocolTwoWayAnonWithErrorRequest>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::
+              MainProtocolTwoWayAnonWithErrorRequest>>;
+
+ private:
+  friend class ::test_protocollayouts::wire::
+      MainProtocolTwoWayAnonWithErrorRequest;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>*
+          frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::
+                     MainProtocolTwoWayAnonWithErrorRequest>>::
+                 FromExternal(frame)) {}
+};
+namespace test_protocollayouts {
+namespace wire {
+inline ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+MainProtocolTwoWayAnonWithErrorRequest::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>(
+      arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>
+MainProtocolTwoWayAnonWithErrorRequest::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>;
+
 template <>
 struct ::fidl::WireTableFrame<
     ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
@@ -302,6 +618,14 @@ struct ::fidl::WireTableFrame<
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
 };
 
 namespace test_protocollayouts {
@@ -311,11 +635,36 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonResponse {
  public:
+  MainProtocolTwoWayAnonResponse() = default;
+  MainProtocolTwoWayAnonResponse(
+      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse& operator=(
+      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse(
+      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
+  MainProtocolTwoWayAnonResponse& operator=(
+      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
+
+  ~MainProtocolTwoWayAnonResponse() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>
+          frame);
 
   const uint16_t& a() const {
     ZX_ASSERT(has_a());
@@ -326,6 +675,12 @@ class MainProtocolTwoWayAnonResponse {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   MainProtocolTwoWayAnonResponse& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
@@ -339,7 +694,6 @@ class MainProtocolTwoWayAnonResponse {
     return *this;
   }
 
-  MainProtocolTwoWayAnonResponse() = default;
   explicit MainProtocolTwoWayAnonResponse(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -354,15 +708,6 @@ class MainProtocolTwoWayAnonResponse {
           ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>&&
           frame)
       : frame_ptr_(std::move(frame)) {}
-  ~MainProtocolTwoWayAnonResponse() = default;
-  MainProtocolTwoWayAnonResponse(
-      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
-  MainProtocolTwoWayAnonResponse& operator=(
-      const MainProtocolTwoWayAnonResponse& other) noexcept = default;
-  MainProtocolTwoWayAnonResponse(
-      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
-  MainProtocolTwoWayAnonResponse& operator=(
-      MainProtocolTwoWayAnonResponse&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -378,14 +723,132 @@ class MainProtocolTwoWayAnonResponse {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<
       ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_protocollayouts
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse t =
+        std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(uint16_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>&&
+          frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+          ::fidl::WireTableBuilder<
+              ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
+
+ public:
+ private:
+  friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+          ::fidl::WireTableExternalBuilder<
+              ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>;
+
+ private:
+  friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>* frame)
+      : Base(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>::
+                FromExternal(frame)) {}
+};
+namespace test_protocollayouts {
+namespace wire {
+inline ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+MainProtocolTwoWayAnonResponse::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>
+MainProtocolTwoWayAnonResponse::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>;
+
 template <>
 struct ::fidl::WireTableFrame<
     ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
@@ -407,6 +870,14 @@ struct ::fidl::WireTableFrame<
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
 };
 
 namespace test_protocollayouts {
@@ -416,11 +887,36 @@ extern "C" const fidl_type_t
 
 class MainProtocolOneWayAnonRequest {
  public:
+  MainProtocolOneWayAnonRequest() = default;
+  MainProtocolOneWayAnonRequest(
+      const MainProtocolOneWayAnonRequest& other) noexcept = default;
+  MainProtocolOneWayAnonRequest& operator=(
+      const MainProtocolOneWayAnonRequest& other) noexcept = default;
+  MainProtocolOneWayAnonRequest(
+      MainProtocolOneWayAnonRequest&& other) noexcept = default;
+  MainProtocolOneWayAnonRequest& operator=(
+      MainProtocolOneWayAnonRequest&& other) noexcept = default;
+
+  ~MainProtocolOneWayAnonRequest() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>
+          frame);
 
   const uint16_t& a() const {
     ZX_ASSERT(has_a());
@@ -431,6 +927,12 @@ class MainProtocolOneWayAnonRequest {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   MainProtocolOneWayAnonRequest& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
@@ -444,7 +946,6 @@ class MainProtocolOneWayAnonRequest {
     return *this;
   }
 
-  MainProtocolOneWayAnonRequest() = default;
   explicit MainProtocolOneWayAnonRequest(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -458,15 +959,6 @@ class MainProtocolOneWayAnonRequest {
       ::fidl::ObjectView<::fidl::WireTableFrame<
           ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~MainProtocolOneWayAnonRequest() = default;
-  MainProtocolOneWayAnonRequest(
-      const MainProtocolOneWayAnonRequest& other) noexcept = default;
-  MainProtocolOneWayAnonRequest& operator=(
-      const MainProtocolOneWayAnonRequest& other) noexcept = default;
-  MainProtocolOneWayAnonRequest(
-      MainProtocolOneWayAnonRequest&& other) noexcept = default;
-  MainProtocolOneWayAnonRequest& operator=(
-      MainProtocolOneWayAnonRequest&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -482,14 +974,129 @@ class MainProtocolOneWayAnonRequest {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<
       ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_protocollayouts
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest t =
+        std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(uint16_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+          ::fidl::WireTableBuilder<
+              ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
+
+ public:
+ private:
+  friend class ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+    final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+          ::fidl::WireTableExternalBuilder<
+              ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>;
+
+ private:
+  friend class ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>::
+                 FromExternal(frame)) {}
+};
+namespace test_protocollayouts {
+namespace wire {
+inline ::fidl::WireTableBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+MainProtocolOneWayAnonRequest::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>
+MainProtocolOneWayAnonRequest::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+template <>
+class ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::LocalTablePayload>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>
     final {
@@ -510,6 +1117,14 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::LocalTablePayload;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
 };
 
 namespace test_protocollayouts {
@@ -518,11 +1133,32 @@ extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 class LocalTablePayload {
  public:
+  LocalTablePayload() = default;
+  LocalTablePayload(const LocalTablePayload& other) noexcept = default;
+  LocalTablePayload& operator=(const LocalTablePayload& other) noexcept =
+      default;
+  LocalTablePayload(LocalTablePayload&& other) noexcept = default;
+  LocalTablePayload& operator=(LocalTablePayload&& other) noexcept = default;
+
+  ~LocalTablePayload() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload>
+  ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                      ::test_protocollayouts::wire::LocalTablePayload>>
+                      frame);
 
   const uint16_t& a() const {
     ZX_ASSERT(has_a());
@@ -533,6 +1169,12 @@ class LocalTablePayload {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   LocalTablePayload& set_a(uint16_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(std::move(elem));
@@ -546,7 +1188,6 @@ class LocalTablePayload {
     return *this;
   }
 
-  LocalTablePayload() = default;
   explicit LocalTablePayload(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -559,12 +1200,6 @@ class LocalTablePayload {
       ::fidl::ObjectView<::fidl::WireTableFrame<
           ::test_protocollayouts::wire::LocalTablePayload>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~LocalTablePayload() = default;
-  LocalTablePayload(const LocalTablePayload& other) noexcept = default;
-  LocalTablePayload& operator=(const LocalTablePayload& other) noexcept =
-      default;
-  LocalTablePayload(LocalTablePayload&& other) noexcept = default;
-  LocalTablePayload& operator=(LocalTablePayload&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -578,11 +1213,113 @@ class LocalTablePayload {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_protocollayouts
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_protocollayouts::wire::LocalTablePayload, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_protocollayouts::wire::LocalTablePayload Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_protocollayouts::wire::LocalTablePayload t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(uint16_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_protocollayouts::wire::LocalTablePayload>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_protocollayouts::wire::LocalTablePayload table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_protocollayouts::wire::LocalTablePayload,
+                ::fidl::WireTableBuilder<
+                    ::test_protocollayouts::wire::LocalTablePayload>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
+
+ public:
+ private:
+  friend class ::test_protocollayouts::wire::LocalTablePayload;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::LocalTablePayload>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::LocalTablePayload>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_protocollayouts::wire::LocalTablePayload,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_protocollayouts::wire::LocalTablePayload>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload,
+      ::fidl::WireTableExternalBuilder<
+          ::test_protocollayouts::wire::LocalTablePayload>>;
+
+ private:
+  friend class ::test_protocollayouts::wire::LocalTablePayload;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>*
+          frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_protocollayouts::wire::LocalTablePayload>>::
+                 FromExternal(frame)) {}
+};
+namespace test_protocollayouts {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload>
+LocalTablePayload::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_protocollayouts::wire::LocalTablePayload>
+LocalTablePayload::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_protocollayouts::wire::LocalTablePayload>(std::move(frame));
+}
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_TwoWayImportWithError_ResultTable;

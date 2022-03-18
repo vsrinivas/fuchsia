@@ -123,6 +123,10 @@ test("blobfs_unittest") {
   # FIXME(fxbug.dev/95558): Fix instances of VLAs with a non-positive size detected by UBSan.
   configs +=
       [ "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_component("blobfs-unittest") {

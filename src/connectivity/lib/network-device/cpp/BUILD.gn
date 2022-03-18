@@ -21,6 +21,10 @@ source_set("cpp") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 executable("cpp-test") {
@@ -37,6 +41,10 @@ executable("cpp-test") {
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_component("cpp-test-component") {

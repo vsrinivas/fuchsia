@@ -747,7 +747,6 @@ class SetSockOptProcessor {
  private:
   const void* const optval_;
   socklen_t const optlen_;
-  fsocket::wire::Empty empty_;
 };
 
 template <>

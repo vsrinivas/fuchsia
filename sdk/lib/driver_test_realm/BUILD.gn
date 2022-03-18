@@ -57,6 +57,10 @@ executable("bin") {
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/svc",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_component("driver_test_realm_component") {

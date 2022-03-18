@@ -57,6 +57,10 @@ fuchsia_driver("control_driver-driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver_component("control_driver") {
@@ -97,6 +101,10 @@ test("goldfish-control-device-test") {
          ]
 
   configs += [ "//build/config:all_source" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("goldfish-control-device-test-package") {

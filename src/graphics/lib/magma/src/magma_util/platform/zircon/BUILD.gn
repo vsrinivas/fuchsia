@@ -100,12 +100,20 @@ entry_deps = [
 source_set("entry") {
   sources = [ "zircon_entry.cc" ]
   deps = entry_deps
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 source_set("entry_test") {
   sources = [ "zircon_entry.cc" ]
   defines = [ "MAGMA_TEST_DRIVER=1" ]
   deps = entry_deps
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 source_set("interrupt") {
@@ -246,6 +254,10 @@ source_set("sysmem_connection") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 source_set("thread") {

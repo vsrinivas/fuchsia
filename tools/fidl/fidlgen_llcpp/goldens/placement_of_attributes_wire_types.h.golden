@@ -55,6 +55,13 @@ struct ExampleProtocolMethodRequest {
 }  // namespace wire
 }  // namespace test_placementofattributes
 template <>
+class ::fidl::WireTableBuilder<
+    ::test_placementofattributes::wire::ExampleTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_placementofattributes::wire::ExampleTable>;
+
+template <>
 struct ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>
     final {
  public:
@@ -74,6 +81,14 @@ struct ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>
   ::fidl::Envelope<uint32_t> member_;
 
   friend class ::test_placementofattributes::wire::ExampleTable;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
 };
 
 namespace test_placementofattributes {
@@ -82,11 +97,31 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 
 class ExampleTable {
  public:
+  ExampleTable() = default;
+  ExampleTable(const ExampleTable& other) noexcept = default;
+  ExampleTable& operator=(const ExampleTable& other) noexcept = default;
+  ExampleTable(ExampleTable&& other) noexcept = default;
+  ExampleTable& operator=(ExampleTable&& other) noexcept = default;
+
+  ~ExampleTable() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<
+      ::test_placementofattributes::wire::ExampleTable>
+  Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<
+      ::test_placementofattributes::wire::ExampleTable>
+  ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<
+                      ::test_placementofattributes::wire::ExampleTable>>
+                      frame);
 
   const uint32_t& member() const {
     ZX_ASSERT(has_member());
@@ -99,6 +134,12 @@ class ExampleTable {
   bool has_member() const {
     return max_ordinal_ >= 1 && frame_ptr_->member_.has_data();
   }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   ExampleTable& set_member(uint32_t elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.set_data(std::move(elem));
@@ -112,7 +153,6 @@ class ExampleTable {
     return *this;
   }
 
-  ExampleTable() = default;
   explicit ExampleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -126,11 +166,6 @@ class ExampleTable {
       ::fidl::ObjectView<::fidl::WireTableFrame<
           ::test_placementofattributes::wire::ExampleTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~ExampleTable() = default;
-  ExampleTable(const ExampleTable& other) noexcept = default;
-  ExampleTable& operator=(const ExampleTable& other) noexcept = default;
-  ExampleTable(ExampleTable&& other) noexcept = default;
-  ExampleTable& operator=(ExampleTable&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -145,11 +180,114 @@ class ExampleTable {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_placementofattributes
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_placementofattributes::wire::ExampleTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_placementofattributes::wire::ExampleTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_placementofattributes::wire::ExampleTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& member(uint32_t elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->member_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::test_placementofattributes::wire::ExampleTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_placementofattributes::wire::ExampleTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_placementofattributes::wire::ExampleTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_placementofattributes::wire::ExampleTable,
+                ::fidl::WireTableBuilder<
+                    ::test_placementofattributes::wire::ExampleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
+
+ public:
+ private:
+  friend class ::test_placementofattributes::wire::ExampleTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_placementofattributes::wire::ExampleTable>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<
+    ::test_placementofattributes::wire::ExampleTable>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_placementofattributes::wire::ExampleTable,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_placementofattributes::wire::ExampleTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_placementofattributes::wire::ExampleTable,
+      ::fidl::WireTableExternalBuilder<
+          ::test_placementofattributes::wire::ExampleTable>>;
+
+ private:
+  friend class ::test_placementofattributes::wire::ExampleTable;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>*
+          frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_placementofattributes::wire::ExampleTable>>::
+                 FromExternal(frame)) {}
+};
+namespace test_placementofattributes {
+namespace wire {
+inline ::fidl::WireTableBuilder<
+    ::test_placementofattributes::wire::ExampleTable>
+ExampleTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<
+      ::test_placementofattributes::wire::ExampleTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<
+    ::test_placementofattributes::wire::ExampleTable>
+ExampleTable::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::test_placementofattributes::wire::ExampleTable>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<
+      ::test_placementofattributes::wire::ExampleTable>(std::move(frame));
+}
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 

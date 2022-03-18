@@ -38,6 +38,11 @@ class UnionLargeArray;
 }  // namespace wire
 }  // namespace test_arrays
 template <>
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>;
+
+template <>
 struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
  public:
   WireTableFrame() = default;
@@ -56,6 +61,12 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
   ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
   friend class ::test_arrays::wire::TableSmallArray;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
 };
 
 namespace test_arrays {
@@ -64,11 +75,29 @@ extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
 class TableSmallArray {
  public:
+  TableSmallArray() = default;
+  TableSmallArray(const TableSmallArray& other) noexcept = default;
+  TableSmallArray& operator=(const TableSmallArray& other) noexcept = default;
+  TableSmallArray(TableSmallArray&& other) noexcept = default;
+  TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
+
+  ~TableSmallArray() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
+                      frame);
 
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
@@ -79,6 +108,12 @@ class TableSmallArray {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   TableSmallArray& set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(elem);
@@ -105,7 +140,6 @@ class TableSmallArray {
     return *this;
   }
 
-  TableSmallArray() = default;
   explicit TableSmallArray(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<
@@ -119,11 +153,6 @@ class TableSmallArray {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~TableSmallArray() = default;
-  TableSmallArray(const TableSmallArray& other) noexcept = default;
-  TableSmallArray& operator=(const TableSmallArray& other) noexcept = default;
-  TableSmallArray(TableSmallArray&& other) noexcept = default;
-  TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -138,14 +167,122 @@ class TableSmallArray {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_arrays
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_arrays::wire::TableSmallArray, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_arrays::wire::TableSmallArray Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_arrays::wire::TableSmallArray t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_arrays::wire::TableSmallArray table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_arrays::wire::TableSmallArray,
+          ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>>;
+
+ public:
+  using Base::a;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>& a(
+      Args&&... args_) {
+    a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_arrays::wire::TableSmallArray;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_arrays::wire::TableSmallArray,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_arrays::wire::TableSmallArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableSmallArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>>;
+
+ private:
+  friend class ::test_arrays::wire::TableSmallArray;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_arrays::wire::TableSmallArray>>::FromExternal(frame)) {}
+};
+namespace test_arrays {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>
+TableSmallArray::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>
+TableSmallArray::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray>(
+      std::move(frame));
+}
 
 }  // namespace wire
 }  // namespace test_arrays
+template <>
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>;
+
 template <>
 struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
  public:
@@ -165,6 +302,12 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
   ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
   friend class ::test_arrays::wire::TableLargeArray;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
 };
 
 namespace test_arrays {
@@ -173,11 +316,29 @@ extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
 class TableLargeArray {
  public:
+  TableLargeArray() = default;
+  TableLargeArray(const TableLargeArray& other) noexcept = default;
+  TableLargeArray& operator=(const TableLargeArray& other) noexcept = default;
+  TableLargeArray(TableLargeArray&& other) noexcept = default;
+  TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
+
+  ~TableLargeArray() = default;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // Returns whether the table references unknown fields.
   bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
+  ExternalBuilder(::fidl::ObjectView<
+                  ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
+                      frame);
 
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());
@@ -188,6 +349,12 @@ class TableLargeArray {
     return frame_ptr_->a_.get_data();
   }
   bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
   TableLargeArray& set_a(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -215,7 +382,6 @@ class TableLargeArray {
     return *this;
   }
 
-  TableLargeArray() = default;
   explicit TableLargeArray(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<
@@ -229,11 +395,6 @@ class TableLargeArray {
       ::fidl::ObjectView<
           ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  ~TableLargeArray() = default;
-  TableLargeArray(const TableLargeArray& other) noexcept = default;
-  TableLargeArray& operator=(const TableLargeArray& other) noexcept = default;
-  TableLargeArray(TableLargeArray&& other) noexcept = default;
-  TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -248,11 +409,114 @@ class TableLargeArray {
   }
 
  private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
+
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
       ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
       frame_ptr_;
 };
+}  // namespace wire
+}  // namespace test_arrays
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<
+    ::test_arrays::wire::TableLargeArray, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_arrays::wire::TableLargeArray Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_arrays::wire::TableLargeArray t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->a_.set_data(elem);
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_arrays::wire::TableLargeArray table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_arrays::wire::TableLargeArray,
+          ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>>;
+
+ public:
+  using Base::a;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>& a(
+      Args&&... args_) {
+    a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_arrays::wire::TableLargeArray;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
+            arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
+    final : public ::fidl::internal::WireTableBaseBuilder<
+                ::test_arrays::wire::TableLargeArray,
+                ::fidl::WireTableExternalBuilder<
+                    ::test_arrays::wire::TableLargeArray>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_arrays::wire::TableLargeArray,
+      ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>>;
+
+ private:
+  friend class ::test_arrays::wire::TableLargeArray;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_arrays::wire::TableLargeArray>>::FromExternal(frame)) {}
+};
+namespace test_arrays {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>
+TableLargeArray::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>
+TableLargeArray::ExternalBuilder(
+    ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray>(
+      std::move(frame));
+}
 
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 

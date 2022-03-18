@@ -560,15 +560,17 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                         EchoTablePayloadCompleter::Sync& completer) override {
     if (!request->has_forward_to_server()) {
       fidl::Arena allocator;
-      fidl_test_compatibility::wire::ResponseTable resp(allocator);
-      resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
-      completer.Reply(std::move(resp));
+      completer.Reply(fidl_test_compatibility::wire::ResponseTable::Builder(allocator)
+                          .value(request->value())
+                          .Build());
     } else {
       EchoClientApp app(request->forward_to_server());
       fidl::Arena allocator;
-      fidl_test_compatibility::wire::RequestTable req(allocator);
-      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
-      auto result = app.EchoTablePayload(req);
+      ;
+      auto result =
+          app.EchoTablePayload(fidl_test_compatibility::wire::RequestTable::Builder(allocator)
+                                   .value(request->value())
+                                   .Build());
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
       completer.Reply(std::move(*result.Unwrap()));
@@ -582,24 +584,24 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplyError(request->result_err());
       } else {
         fidl::Arena allocator;
-        fidl_test_compatibility::wire::ResponseTable resp(allocator);
-        resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
-        wire::EchoEchoTablePayloadWithErrorResult res;
-        res.set_response(allocator, std::move(resp));
+
+        wire::EchoEchoTablePayloadWithErrorResult res =
+            wire::EchoEchoTablePayloadWithErrorResult::WithResponse(
+                allocator, wire::ResponseTable::Builder(allocator).value(request->value()).Build());
         completer.Reply(std::move(res));
       }
     } else {
       EchoClientApp app(request->forward_to_server());
       fidl::Arena allocator;
-      fidl_test_compatibility::wire::EchoEchoTablePayloadWithErrorRequest req(allocator);
-      req.set_result_variant(request->result_variant());
-      if (req.result_variant() == wire::RespondWith::kErr) {
-        req.set_result_err(request->result_err());
+      auto builder = wire::EchoEchoTablePayloadWithErrorRequest::Builder(allocator);
+      builder.result_variant(request->result_variant());
+      if (request->result_variant() == wire::RespondWith::kErr) {
+        builder.result_err(request->result_err());
       } else {
-        req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+        builder.value(request->value());
       }
 
-      auto result = app.EchoTablePayloadWithError(req);
+      auto result = app.EchoTablePayloadWithError(builder.Build());
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
@@ -610,10 +612,10 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                                 EchoTablePayloadNoRetValCompleter::Sync&) override {
     if (!request->has_forward_to_server()) {
       fidl::Arena allocator;
-      fidl_test_compatibility::wire::ResponseTable resp(allocator);
-      resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
       fidl::Status result =
-          fidl::WireSendEvent(server_binding_.value())->OnEchoTablePayloadEvent(std::move(resp));
+          fidl::WireSendEvent(server_binding_.value())
+              ->OnEchoTablePayloadEvent(
+                  wire::ResponseTable::Builder(allocator).value(request->value()).Build());
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
@@ -642,9 +644,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       EchoClientApp app(request->forward_to_server());
       EventHandler event_handler(this);
       fidl::Arena allocator;
-      fidl_test_compatibility::wire::RequestTable req(allocator);
-      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
-      zx_status_t status = app.EchoTablePayloadNoRetVal(req, event_handler);
+      zx_status_t status = app.EchoTablePayloadNoRetVal(
+          wire::RequestTable::Builder(allocator).value(request->value()).Build(), event_handler);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
@@ -660,10 +661,11 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     } else {
       EchoClientApp app(request->forward_to_server());
       fidl::Arena allocator;
-      ::fidl_test_imported::wire::ComposedEchoTableRequestComposedRequest req(allocator);
-      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
 
-      auto result = app.EchoTableRequestComposed(req);
+      auto result = app.EchoTableRequestComposed(
+          fidl_test_imported::wire::ComposedEchoTableRequestComposedRequest::Builder(allocator)
+              .value(request->value())
+              .Build());
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));

@@ -282,6 +282,7 @@ func init() {
 	fidlNames := []string{"FidlType", "HandleEvents",
 		"has_invalid_tag", "IsEmpty", "New", "Tag", "unknown", "Unknown",
 		"UnknownBytes", "UnknownData", "which", "Which"}
+	// TODO: Add "Builder", "ExternalBuilder"
 
 	// Names used by ZX_ macros
 	zxNames := []string{

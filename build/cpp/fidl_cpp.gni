@@ -198,9 +198,15 @@ template("_fidl_cpp_library_impl") {
       configs += invoker.additional_configs
     }
 
+    if (defined(invoker.public_configs)) {
+      public_configs = invoker.public_configs
+    } else {
+      public_configs = []
+    }
+
     if (defined(invoker.generated_headers)) {
       # Let dependencies use `#include "$file_stem.h"`.
-      public_configs = [ ":$config_target_name" ]
+      public_configs += [ ":$config_target_name" ]
     }
 
     public_deps = [
@@ -442,6 +448,7 @@ template("fidl_cpp_family") {
       layer = "wire_types"
       headers = [ "fidl/$library_name/cpp/wire_types.h" ]
       sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
+
       layer_deps = [ "common" ]
       if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
         public_deps = [ "//sdk/lib/fidl_driver" ]
@@ -505,6 +512,7 @@ template("fidl_cpp_family") {
       fidl_cpp_library(layer_target_prefix + layer.layer) {
         forward_variables_from(invoker,
                                [
+                                 "public_configs",
                                  "public_deps",
                                  "visibility",
                                ])

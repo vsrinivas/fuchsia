@@ -58,13 +58,10 @@ fidl_cpp_wire_interop_test::Node MockData::MakeNaturalFile() {
 }
 
 fidl_cpp_wire_interop_test::wire::Node MockData::MakeWireFile(fidl::AnyArena& arena) {
-  fidl_cpp_wire_interop_test::wire::Node node(arena);
-  node.set_name(arena, kFileName);
-  fidl_cpp_wire_interop_test::wire::Kind kind;
-  kind.set_file(arena);
+  auto kind = fidl_cpp_wire_interop_test::wire::Kind::WithFile(arena);
   kind.file().content = fidl::VectorView<uint8_t>::FromExternal(kFileContent);
-  node.set_kind(arena, kind);
-  return node;
+
+  return fidl_cpp_wire_interop_test::wire::Node::Builder(arena).name(kFileName).kind(kind).Build();
 }
 
 void MockData::CheckNaturalFile(const fidl_cpp_wire_interop_test::Node& node) {
@@ -98,13 +95,13 @@ fidl_cpp_wire_interop_test::Node MockData::MakeNaturalDir() {
 }
 
 fidl_cpp_wire_interop_test::wire::Node MockData::MakeWireDir(fidl::AnyArena& arena) {
-  fidl_cpp_wire_interop_test::wire::Node node(arena);
-  node.set_name(arena, kDirName);
-  fidl_cpp_wire_interop_test::wire::Kind kind;
-  kind.set_directory(arena);
-  node.set_kind(arena, kind);
+  auto node = fidl_cpp_wire_interop_test::wire::Node::Builder(arena)
+                  .name(kDirName)
+                  .kind(fidl_cpp_wire_interop_test::wire::Kind::WithDirectory(arena))
+                  .Build();
+
   fidl::ObjectView<fidl_cpp_wire_interop_test::wire::Children>& children =
-      kind.directory().children;
+      node.kind().directory().children;
   children.Allocate(arena);
   children->elements.Allocate(arena, 1);
   children->elements[0] = MakeWireFile(arena);

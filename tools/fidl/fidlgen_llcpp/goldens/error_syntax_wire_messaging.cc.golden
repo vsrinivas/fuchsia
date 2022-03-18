@@ -708,8 +708,11 @@ void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response;
-  _response.value = std::move(value);
+      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response =
+          ::test_errorsyntax_parent::wire::
+              ParentUsesErrorSyntaxComposedCallWhichMayFailResponse{
+                  .value = std::move(value),
+              };
 
   return Reply(
       ::test_errorsyntax_parent::wire::
@@ -757,8 +760,11 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
-      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response;
-  _response.value = std::move(value);
+      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response =
+          ::test_errorsyntax_parent::wire::
+              ParentUsesErrorSyntaxComposedCallWhichMayFailResponse{
+                  .value = std::move(value),
+              };
 
   return Reply(
       ::test_errorsyntax_parent::wire::
@@ -800,8 +806,10 @@ void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
-      _response;
-  _response.value = std::move(value);
+      _response = ::test_errorsyntax::wire::
+          ExampleUseOfErrorSyntaxCallWhichMayFailResponse{
+              .value = std::move(value),
+          };
 
   return Reply(
       ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
@@ -848,8 +856,10 @@ void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
-      _response;
-  _response.value = std::move(value);
+      _response = ::test_errorsyntax::wire::
+          ExampleUseOfErrorSyntaxCallWhichMayFailResponse{
+              .value = std::move(value),
+          };
 
   return Reply(
       ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
