@@ -845,7 +845,7 @@ impl BinderDriver {
             | binder_driver_command_protocol_BC_ACQUIRE
             | binder_driver_command_protocol_BC_DECREFS
             | binder_driver_command_protocol_BC_RELEASE => {
-                self.handle_refcount_operation(command, binder_proc, cursor)
+                self.handle_refcount_operation(command, binder_proc, binder_thread, cursor)
             }
             binder_driver_command_protocol_BC_INCREFS_DONE
             | binder_driver_command_protocol_BC_ACQUIRE_DONE => {
@@ -891,6 +891,7 @@ impl BinderDriver {
         &self,
         command: binder_driver_command_protocol,
         binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
         cursor: &mut UserMemoryCursor<'a>,
     ) -> Result<(), Errno> {
         // TODO: Keep track of reference counts internally and only send a command to the owning
@@ -910,10 +911,23 @@ impl BinderDriver {
         };
 
         // Select a thread to handle this refcount task.
-        let target_thread = target_proc.thread_pool.find_available_thread().expect(concat!(
-            "no thread available for command. ",
-            "process-level command queuing not implemented."
-        ));
+        let target_thread = {
+            // Prefer using a thread that is part of this transaction, if it exists.
+            if let Some(tid) = binder_thread.transactions.read().last().and_then(|transaction| {
+                if transaction.peer_pid == target_proc.pid {
+                    Some(transaction.peer_tid)
+                } else {
+                    None
+                }
+            }) {
+                target_proc.thread_pool.find_thread(tid)?
+            } else {
+                target_proc.thread_pool.find_available_thread().expect(concat!(
+                    "no thread available for command. ",
+                    "process-level command queuing not implemented.",
+                ))
+            }
+        };
 
         target_thread.enqueue_command(match command {
             binder_driver_command_protocol_BC_INCREFS => Command::AcquireRef(Ref::Weak, object),
