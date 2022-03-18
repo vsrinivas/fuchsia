@@ -898,6 +898,12 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 }
                 .await;
 
+                // If we started the server, make sure we've registered all the repositories on our
+                // targets.
+                if res.is_ok() {
+                    load_registrations_from_config(cx, &self.inner, None).await;
+                }
+
                 responder.send(&mut res)?;
 
                 Ok(())
@@ -1128,6 +1134,41 @@ async fn load_repositories_from_config(inner: &Arc<RwLock<RepoInner>>) {
     }
 }
 
+async fn load_registrations_from_config(
+    cx: &Context,
+    inner: &Arc<RwLock<RepoInner>>,
+    target_identifier: Option<String>,
+) {
+    // Find any saved registrations for this target and register them on the device.
+    for (repo_name, targets) in pkg::config::get_registrations().await {
+        for (target_nodename, target_info) in targets {
+            if let Some(ref target_identifier) = target_identifier {
+                if target_identifier != &target_nodename {
+                    continue;
+                }
+            }
+
+            if let Err(err) =
+                register_target(&cx, target_info, SaveConfig::DoNotSave, Arc::clone(&inner)).await
+            {
+                log::warn!(
+                    "failed to register target {:?} {:?}: {:?}",
+                    repo_name,
+                    target_nodename,
+                    err
+                );
+                continue;
+            } else {
+                log::info!(
+                    "successfully registered repository {:?} on target {:?}",
+                    repo_name,
+                    target_nodename,
+                );
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 struct DaemonEventHandler {
     cx: Context,
@@ -1209,38 +1250,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
             return Ok(EventStatus::Waiting);
         };
 
-        // Find any saved registrations for this target and register them on the device.
-        for (repo_name, targets) in pkg::config::get_registrations().await {
-            log::info!("registrations {:?} {:?}", repo_name, targets);
-            for (target_nodename, target_info) in targets {
-                if target_nodename != source_nodename {
-                    continue;
-                }
-
-                if let Err(err) = register_target(
-                    &self.cx,
-                    target_info,
-                    SaveConfig::DoNotSave,
-                    Arc::clone(&self.inner),
-                )
-                .await
-                {
-                    log::warn!(
-                        "failed to register target {:?} {:?}: {:?}",
-                        repo_name,
-                        target_nodename,
-                        err
-                    );
-                    continue;
-                } else {
-                    log::info!(
-                        "successfully registered repository {:?} on target {:?}",
-                        repo_name,
-                        target_nodename,
-                    );
-                }
-            }
-        }
+        load_registrations_from_config(&self.cx, &self.inner, Some(source_nodename)).await;
 
         Ok(EventStatus::Waiting)
     }
@@ -1653,6 +1663,7 @@ mod tests {
             let _ = pkg::config::remove_registration(REPO_NAME, TARGET_NODENAME).await;
 
             // Most tests want the server to be running.
+            pkg_config::set_repository_server_enabled(true).await.unwrap();
             ffx_config::set(("repository.server.mode", ConfigLevel::User), "ffx".into())
                 .await
                 .unwrap();
@@ -1715,6 +1726,7 @@ mod tests {
                         }
                     },
                     "server": {
+                        "enabled": true,
                         "mode": "ffx",
                         "listen": SocketAddr::from((Ipv4Addr::LOCALHOST, 0)).to_string(),
                     },
@@ -1745,6 +1757,12 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+            // The server should have started.
+            {
+                let inner = Arc::clone(&repo.borrow().inner);
+                assert_matches!(inner.read().await.server, ServerState::Running(_));
+            }
 
             // Make sure we set up the repository and rewrite rules on the device.
             assert_eq!(
@@ -1790,6 +1808,127 @@ mod tests {
                     storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
                     ..bridge::RepositoryTarget::EMPTY
                 }],
+            );
+        });
+    }
+
+    #[test]
+    fn test_load_from_config_with_disabled_server() {
+        run_test(async {
+            // Initialize a simple repository.
+            let repo_path =
+                fs::canonicalize(EMPTY_REPO_PATH).unwrap().to_str().unwrap().to_string();
+
+            ffx_config::set(
+                ("repository", ConfigLevel::User),
+                serde_json::json!({
+                    "repositories": {
+                        REPO_NAME: {
+                            "type": "pm",
+                            "path": repo_path
+                        },
+                    },
+                    "registrations": {
+                        REPO_NAME: {
+                            TARGET_NODENAME: {
+                                "repo_name": REPO_NAME,
+                                "target_identifier": TARGET_NODENAME,
+                                "aliases": [ "fuchsia.com", "example.com" ],
+                                "storage_type": "ephemeral",
+                            },
+                        }
+                    },
+                    "server": {
+                        "enabled": false,
+                        "mode": "ffx",
+                        "listen": SocketAddr::from((Ipv4Addr::LOCALHOST, 0)).to_string(),
+                    },
+                }),
+            )
+            .await
+            .unwrap();
+
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
+            let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
+            let (fake_engine, fake_engine_closure) = FakeEngine::new();
+
+            let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
+                .register_instanced_protocol_closure::<RepositoryManagerMarker, _>(
+                    fake_repo_manager_closure,
+                )
+                .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
+                .inject_fidl_protocol(Rc::clone(&repo))
+                .target(bridge::TargetInfo {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::TargetInfo::EMPTY
+                })
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+            // The server should be stopped.
+            {
+                let inner = Arc::clone(&repo.borrow().inner);
+                assert_matches!(inner.read().await.server, ServerState::Stopped(_));
+            }
+
+            // Make sure we can read back the repositories.
+            assert_eq!(
+                get_repositories(&proxy).await,
+                vec![bridge::RepositoryConfig {
+                    name: REPO_NAME.to_string(),
+                    spec: bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
+                        path: Some(repo_path.clone()),
+                        ..bridge::PmRepositorySpec::EMPTY
+                    }),
+                }]
+            );
+
+            // Make sure we can read back the target registrations.
+            assert_eq!(
+                get_target_registrations(&proxy).await,
+                vec![bridge::RepositoryTarget {
+                    repo_name: Some(REPO_NAME.to_string()),
+                    target_identifier: Some(TARGET_NODENAME.to_string()),
+                    aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
+                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    ..bridge::RepositoryTarget::EMPTY
+                }],
+            );
+
+            // We should not have tried to register any repositories on the device since the server
+            // has not been started.
+            assert_eq!(fake_repo_manager.take_events(), vec![]);
+            assert_eq!(fake_engine.take_events(), vec![]);
+
+            // Start the server.
+            proxy.server_start().await.unwrap().unwrap();
+
+            // Make sure we set up the repository and rewrite rules on the device.
+            assert_eq!(
+                fake_repo_manager.take_events(),
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }],
+            );
+
+            assert_eq!(
+                fake_engine.take_events(),
+                vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("example.com" => REPO_NAME, "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionCommit,
+                ],
             );
         });
     }

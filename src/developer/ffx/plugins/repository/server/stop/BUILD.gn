@@ -12,6 +12,13 @@ ffx_plugin("ffx_repository_server_stop") {
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
 
-  deps = [ "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext" ]
-  test_deps = [ "//third_party/rust_crates:serde_json" ]
+  deps = [
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
+    "//src/developer/ffx/lib/pkg",
+  ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:serde_json",
+  ]
 }
