@@ -33,8 +33,8 @@ ways to circumvent the interface.
 <span class="compare-worse">Not recommended</span>: Avoid exposing your clients
 to your implementation details that are not contractual. Common mistakes include
 exposing broadly-scoped capabilities or namespaces, and leaking implementation
-details via [component identifiers][identifiers] and
-[diagnostics selectors][selectors].
+details via [component identifiers][identifiers] (such as `fuchsia-pkg://` URLs)
+and [diagnostics selectors][selectors].
 
 [fidl]: /docs/concepts/fidl/overview.md
 [fidl-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
