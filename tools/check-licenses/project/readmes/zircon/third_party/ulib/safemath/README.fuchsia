@@ -1,0 +1,11 @@
+Name: safemath
+Source: https://chromium.googlesource.com/chromium/src/+/refs/heads/master/base/numerics/
+Git Commit: df5f81c3a2dfc4351210b9278a5fcfd2aa0fc444
+License File: LICENSE
+
+Modifications:
+
+Updated using do-updates.sh, which performs trivial renames (namespace, header
+guards, etc.) and generates an appropriate BUILD.gn file.
+
+Upstream changes should be preferred and mirrored here.

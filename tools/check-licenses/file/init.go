@@ -6,9 +6,11 @@ package file
 
 var AllFiles map[string]*File
 
-func Initialize(c *FileConfig) error {
+func init() {
 	AllFiles = make(map[string]*File, 0)
+}
 
+func Initialize(c *FileConfig) error {
 	Config = c
 	return nil
 }

@@ -7,71 +7,82 @@ package project
 import (
 	"flag"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 )
 
 var testDataDir = flag.String("test_data_dir", "", "Path to test data directory")
 
 func TestEmptyReadmeFile(t *testing.T) {
-	path := filepath.Join(*testDataDir, "README.empty")
-	_, err := NewProject(path)
+	setup()
+	path := filepath.Join(*testDataDir, "empty", "README.fuchsia")
+	_, err := NewProject(path, filepath.Dir(path))
 	if err == nil {
 		t.Errorf("%v: expected error, got nil.", t.Name())
 	}
 }
 
 func TestEmptyNameField(t *testing.T) {
-	path := filepath.Join(*testDataDir, "README.noname")
-	_, err := NewProject(path)
+	setup()
+	path := filepath.Join(*testDataDir, "noname", "README.fuchsia")
+	_, err := NewProject(path, filepath.Dir(path))
 	if err == nil {
 		t.Errorf("%v: expected error, got nil.", t.Name())
 	}
 }
 
 func TestEmptyLicenseField(t *testing.T) {
-	path := filepath.Join(*testDataDir, "README.nolicense")
-	_, err := NewProject(path)
+	setup()
+	path := filepath.Join(*testDataDir, "nolicense", "README.fuchsia")
+	_, err := NewProject(path, filepath.Dir(path))
 	if err == nil {
 		t.Errorf("%v: expected error, got nil.", t.Name())
 	}
 }
 
 func TestMissingLicenseFile(t *testing.T) {
-	path := filepath.Join(*testDataDir, "README.missinglicense")
-	_, err := NewProject(path)
+	setup()
+	path := filepath.Join(*testDataDir, "missinglicense", "README.fuchsia")
+	_, err := NewProject(path, filepath.Dir(path))
 	if err == nil {
 		t.Errorf("%v: expected error, got nil.", t.Name())
 	}
 }
 
 func TestIncorrectFormat(t *testing.T) {
-	path := filepath.Join(*testDataDir, "README.incorrectformat")
-	_, err := NewProject(path)
+	setup()
+	path := filepath.Join(*testDataDir, "incorrectformat", "README.fuchsia")
+	_, err := NewProject(path, filepath.Dir(path))
 	if err == nil {
 		t.Errorf("%v: expected error, got nil.", t.Name())
 	}
 }
 
 func TestNameLicenseProvided(t *testing.T) {
+	setup()
 	name := "Test Readme Project"
-	licenseFile := "README.happy"
+	licenseFile := "README.fuchsia"
 
-	path := filepath.Join(*testDataDir, "README.happy")
-	p, err := NewProject(path)
+	path := filepath.Join(*testDataDir, "happy", "README.fuchsia")
+	p, err := NewProject(path, filepath.Dir(path))
 	if err != nil {
 		t.Errorf("%v: expected no error, got %v.", t.Name(), err)
 	}
 	if p.Name != name {
 		t.Errorf("%v: expected Name == \"%v\", got %v.", t.Name(), name, p.Name)
 	}
-	if len(p.LicenseFile) != 1 || p.LicenseFile[0] != licenseFile {
-		t.Errorf("%v: expected License file == \"%v\", got %v.", t.Name(), licenseFile, p.LicenseFile)
+	if len(p.LicenseFile) != 1 || p.LicenseFile[0].Name != licenseFile {
+		t.Errorf("%v: expected License file == \"%v\", got %v.", t.Name(), licenseFile, p.LicenseFile[0].Name)
 	}
 }
 
 func TestMultiLineFields(t *testing.T) {
+	setup()
+
 	name := "Test Readme Project"
-	licenseFile := "README.multiline"
+	licenseFile := "README.fuchsia"
 	description := "\n"
 	description += "\n"
 	description += "This is a test of the multiline description field.\n"
@@ -85,27 +96,32 @@ func TestMultiLineFields(t *testing.T) {
 	localmods += "\n"
 	version := "2.0"
 
-	path := filepath.Join(*testDataDir, "README.multiline")
-	p, err := NewProject(path)
+	path := filepath.Join(*testDataDir, "multiline", "README.fuchsia")
+	p, err := NewProject(path, filepath.Dir(path))
 	if err != nil {
 		t.Errorf("%v: expected no error, got %v.", t.Name(), err)
 	}
 	if p.Name != name {
 		t.Errorf("%v: expected Name == \"%v\", got %v.", t.Name(), name, p.Name)
 	}
-	if len(p.LicenseFile) != 1 || p.LicenseFile[0] != licenseFile {
-		t.Errorf("%v: expected License file == \"%v\", got %v.", t.Name(), licenseFile, p.LicenseFile)
+	if len(p.LicenseFile) != 1 || p.LicenseFile[0].Name != licenseFile {
+		t.Errorf("%v: expected License file == \"%v\", got %v.", t.Name(), licenseFile, p.LicenseFile[0].Name)
 	}
-	if p.Description != description {
+	if strings.TrimSpace(p.Description) != strings.TrimSpace(description) {
 		t.Errorf("%v: expected Description == \"%v\", got %v.", t.Name(), description, p.Description)
 	}
 	if p.License != license {
 		t.Errorf("%v: expected License == \"%v\", got %v.", t.Name(), license, p.License)
 	}
-	if p.LocalModifications != localmods {
+	if strings.TrimSpace(p.LocalModifications) != strings.TrimSpace(localmods) {
 		t.Errorf("%v: expected Local Modifications == \"%v\", got %v.", t.Name(), localmods, p.LocalModifications)
 	}
 	if p.Version != version {
 		t.Errorf("%v: expected Version == \"%v\", got %v.", t.Name(), version, p.Version)
 	}
+}
+
+func setup() {
+	file.Config = file.NewFileConfig()
+	Config = NewProjectConfig()
 }

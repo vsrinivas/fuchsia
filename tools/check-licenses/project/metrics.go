@@ -10,7 +10,11 @@ type ProjectMetrics struct {
 }
 
 const (
-	NumProjects = "Project Count"
+	NumProjects                 = "Project Count"
+	NumInitCustomProjects       = "Initialized Custom Project Count"
+	NumPreviousProjectRetrieved = "Initialized Custom Project Retrieval Count"
+	DuplicateReadmeFiles        = "Duplicate README.fuchsia Files"
+	UnknownReadmeLines          = "Unexpected Line Found In README.fuchsia File"
 
 	MissingName        = "Projects Missing Names"
 	MissingLicenseFile = "Projects Missing License Files"

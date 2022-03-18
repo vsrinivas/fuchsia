@@ -13,9 +13,9 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	/*
 		"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
-		"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 		"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
 	*/)
 
@@ -34,9 +34,9 @@ type CheckLicensesConfig struct {
 
 	File    *file.FileConfig       `json:"file"`
 	License *license.LicenseConfig `json:"license"`
+	Project *project.ProjectConfig `json:"project"`
 	/*
 		FileTree *filetree.FileTreeConfig `json:"filetree"`
-		Project  *project.ProjectConfig   `json:"project"`
 		Result   *result.ResultConfig     `json:"result"`
 	*/
 
@@ -61,9 +61,9 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 	c := &CheckLicensesConfig{
 		File:    &file.FileConfig{},
 		License: &license.LicenseConfig{},
+		Project: &project.ProjectConfig{},
 		/*
 			FileTree: &filetree.FileTreeConfig{},
-			Project:  &project.ProjectConfig{},
 			Result:   &result.ResultConfig{},
 		*/
 	}

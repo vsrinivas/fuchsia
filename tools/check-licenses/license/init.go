@@ -20,11 +20,13 @@ var (
 	unrecognized *Pattern
 )
 
-func Initialize(c *LicenseConfig) error {
+func init() {
 	AllPatterns = make([]*Pattern, 0)
 	AllCopyrightPatterns = make([]*Pattern, 0)
 	AllSearchResults = make(map[string]*SearchResult, 0)
+}
 
+func Initialize(c *LicenseConfig) error {
 	// Initialize all license patterns.
 	for _, pr := range c.PatternRoots {
 		for _, root := range pr.Paths {

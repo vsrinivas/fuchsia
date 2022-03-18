@@ -7,12 +7,19 @@ import("//build/go/go_test.gni")
 
 go_library("project") {
   sources = [
+    "analyze.go",
     "config.go",
+    "init.go",
     "metrics.go",
     "project.go",
     "project_test.go",
   ]
-  deps = [ "//tools/lib/logger" ]
+  deps = [
+    "//third_party/golibs:golang.org/x/sync",
+    "//tools/check-licenses/file",
+    "//tools/check-licenses/license",
+    "//tools/lib/logger",
+  ]
 }
 
 group("tests") {

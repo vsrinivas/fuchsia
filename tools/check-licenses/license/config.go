@@ -15,6 +15,12 @@ type PatternRoot struct {
 
 var Config *LicenseConfig
 
+func NewLicenseConfig() *LicenseConfig {
+	return &LicenseConfig{
+		PatternRoots: make([]*PatternRoot, 0),
+	}
+}
+
 func (c *LicenseConfig) Merge(other *LicenseConfig) {
 	if c.PatternRoots == nil {
 		c.PatternRoots = make([]*PatternRoot, 0)
