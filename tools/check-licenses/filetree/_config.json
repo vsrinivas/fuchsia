@@ -1,0 +1,61 @@
+{
+    "filetree": {
+        "fuchsiaDir": "{FUCHSIA_DIR}",
+        "exitOnMissingProject": false,
+        "skips": [
+            {
+                "paths": [
+                    "prebuilt/go.mod"
+                ],
+                "notes": [
+                    "This is a part of the Fuchsia project,",
+                    "but it is in the root prebuilt directory.",
+                    "It's hard to properly assign it to the parent project without",
+                    "accidentally also including subdirectories in the parent project.",
+                    "TODO(jcecil): remove the need for this section."
+                ]
+            },
+            {
+                "paths": [
+                    ".clang-format",
+                    ".git",
+                    ".build_id",
+                    ".versions",
+                    ".github",
+                    ".gradle",
+                    ".idea",
+                    ".vscode",
+                    ".hidden",
+                    ".circleci",
+                    ".cargo",
+                    ".clang-tidy",
+                    ".fx-build-dir",
+                    ".fx-metrics-config",
+                    ".fx-ssh-path",
+                    ".git-blame-ignore-revs",
+                    ".gitattributes",
+                    ".cipd",
+                    ".gn",
+                    ".fx",
+                    ".gitignore",
+                    ".jiri_root",
+                    ".jiri_manifest",
+                    ".style.yapf",
+                    ".ssh"
+                ],
+                "notes": [
+                    "Skip these hidden directories that host infrastructure files."
+                ],
+                "skipAnywhere": true
+            },
+            {
+                "paths": [
+                    "out"
+                ],
+                "notes": [
+                    "Don't check the fuchsia build out directory for licenses."
+                ]
+            }
+        ]
+    }
+}
