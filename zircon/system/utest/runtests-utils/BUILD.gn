@@ -110,11 +110,9 @@ template("runtests_test_script") {
   }
 
   genfile = "$target_out_dir/test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
-  rebased_genfile = rebase_path(genfile)
+  rebased_genfile = rebase_path(genfile, root_build_dir)
 
   action("${target_name}.txt") {
-    no_output_dir_leaks = false
-
     testonly = true
     script = "/bin/bash"
     args = [ "-c" ]
