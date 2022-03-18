@@ -139,12 +139,21 @@ void Union::DecodeTypes() {
   }
 }
 
-const UnionMember* Union::MemberWithOrdinal(Ordinal64 ordinal) const {
+const UnionMember* Union::MemberFromOrdinal(Ordinal64 ordinal) const {
   for (const auto& member : members_) {
     if (member->ordinal() == ordinal) {
       if (member->reserved()) {
         return nullptr;
       }
+      return member.get();
+    }
+  }
+  return nullptr;
+}
+
+UnionMember* Union::SearchMember(std::string_view name) const {
+  for (const auto& member : members_) {
+    if (member->name() == name) {
       return member.get();
     }
   }
@@ -170,10 +179,12 @@ StructMember::~StructMember() = default;
 
 void StructMember::reset_type() { type_ = nullptr; }
 
+const Struct Struct::Empty = Struct();
+
+Struct::Struct(std::string_view name) : name_(name) {}
+
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
-
-const Struct Struct::Empty = Struct();
 
 void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id) {
   members_.emplace_back(std::make_unique<StructMember>(name, std::move(type), id));
@@ -215,14 +226,27 @@ void Struct::DecodeTypes() {
   }
 }
 
-void Struct::VisitAsType(TypeVisitor* visitor) const {
-  StructType type(*this, false);
-  type.Visit(visitor);
+StructMember* Struct::SearchMember(std::string_view name, uint32_t id) const {
+  for (const auto& member : members_) {
+    if (member->name() == name && member->id() == id) {
+      return member.get();
+    }
+  }
+  return nullptr;
+}
+
+uint32_t Struct::Size(WireVersion version) const {
+  return (version == WireVersion::kWireV1) ? size_v1_ : size_v2_;
 }
 
 std::string Struct::ToString(bool expand) const {
   StructType type(*this, false);
   return type.ToString(expand);
+}
+
+void Struct::VisitAsType(TypeVisitor* visitor) const {
+  StructType type(*this, false);
+  type.Visit(visitor);
 }
 
 TableMember::TableMember(Library* enclosing_library, const rapidjson::Value* json_definition)
@@ -240,8 +264,6 @@ TableMember::~TableMember() = default;
 
 Table::Table(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
-
-Table::~Table() = default;
 
 void Table::DecodeTypes() {
   if (json_definition_ == nullptr) {
@@ -265,6 +287,22 @@ void Table::DecodeTypes() {
       members_[ordinal] = std::move(table_member);
     }
   }
+}
+
+const TableMember* Table::MemberFromOrdinal(Ordinal64 ordinal) const {
+  if (ordinal >= members_.size()) {
+    return nullptr;
+  }
+  return members_[ordinal].get();
+}
+
+const TableMember* Table::SearchMember(std::string_view name) const {
+  for (const auto& member : members_) {
+    if ((member != nullptr) && (member->name() == name)) {
+      return member.get();
+    }
+  }
+  return nullptr;
 }
 
 InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& interface,
@@ -326,8 +364,8 @@ StructMember* InterfaceMethod::SearchMember(std::string_view name) const {
 }
 
 void Interface::AddMethodsToIndex(LibraryLoader* library_loader) {
-  for (size_t i = 0; i < interface_methods_.size(); i++) {
-    library_loader->AddMethod(interface_methods_[i].get());
+  for (auto& interface_method : interface_methods_) {
+    library_loader->AddMethod(interface_method.get());
   }
 }
 

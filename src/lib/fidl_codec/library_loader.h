@@ -41,8 +41,8 @@ namespace fidl_codec {
 
 constexpr int kDecimalBase = 10;
 
-typedef uint32_t Ordinal32;
-typedef uint64_t Ordinal64;
+using Ordinal32 = uint32_t;
+using Ordinal64 = uint64_t;
 
 enum class WireVersion { kWireV1, kWireV2 };
 
@@ -64,7 +64,6 @@ class MessageDecoder;
 class Struct;
 class StructValue;
 class Table;
-class Type;
 class TypeVisitor;
 class Union;
 
@@ -105,7 +104,7 @@ class EnumOrBits {
   }
 
  protected:
-  EnumOrBits(const rapidjson::Value* json_definition);
+  explicit EnumOrBits(const rapidjson::Value* json_definition);
 
   // Decode all the values from the JSON definition.
   void DecodeTypes(bool is_scalar, const std::string& supertype_name, Library* enclosing_library);
@@ -137,7 +136,7 @@ class Enum : public EnumOrBits {
   std::string GetName(uint64_t absolute_value, bool negative) const;
 
  private:
-  Enum(const rapidjson::Value* json_definition) : EnumOrBits(json_definition) {}
+  explicit Enum(const rapidjson::Value* json_definition) : EnumOrBits(json_definition) {}
 
   void DecodeTypes(Library* enclosing_library) {
     return EnumOrBits::DecodeTypes(true, "enum", enclosing_library);
@@ -153,7 +152,7 @@ class Bits : public EnumOrBits {
   std::string GetName(uint64_t absolute_value, bool negative) const;
 
  private:
-  Bits(const rapidjson::Value* json_definition) : EnumOrBits(json_definition) {}
+  explicit Bits(const rapidjson::Value* json_definition) : EnumOrBits(json_definition) {}
 
   void DecodeTypes(Library* enclosing_library) {
     return EnumOrBits::DecodeTypes(false, "bits", enclosing_library);
@@ -188,16 +187,8 @@ class Union {
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<UnionMember>>& members() const { return members_; }
 
-  const UnionMember* MemberWithOrdinal(Ordinal64 ordinal) const;
-
-  UnionMember* SearchMember(std::string_view name) const {
-    for (const auto& member : members_) {
-      if (member->name() == name) {
-        return member.get();
-      }
-    }
-    return nullptr;
-  }
+  const UnionMember* MemberFromOrdinal(Ordinal64 ordinal) const;
+  UnionMember* SearchMember(std::string_view name) const;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value* json_definition);
@@ -240,36 +231,24 @@ class Struct {
   friend class Library;
   friend class InterfaceMethod;
 
-  Struct() = default;
-
   static const Struct Empty;
 
-  explicit Struct(std::string_view name) : name_(name) {}
+  Struct() = default;
+  explicit Struct(std::string_view name);
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
-  uint32_t Size(WireVersion version) const {
-    return (version == WireVersion::kWireV1) ? size_v1_ : size_v2_;
-  }
-
   void AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id = 0);
-
-  StructMember* SearchMember(std::string_view name, uint32_t id = 0) const {
-    for (const auto& member : members_) {
-      if (member->name() == name && member->id() == id) {
-        return member.get();
-      }
-    }
-    return nullptr;
-  }
-
-  // Wrap this Struct in a non-nullable type and use the given visitor on it.
-  void VisitAsType(TypeVisitor* visitor) const;
+  StructMember* SearchMember(std::string_view name, uint32_t id = 0) const;
+  uint32_t Size(WireVersion version) const;
 
   // Get a string representation for this struct.
   std::string ToString(bool expand = false) const;
+
+  // Wrap this Struct in a non-nullable type and use the given visitor on it.
+  void VisitAsType(TypeVisitor* visitor) const;
 
  private:
   Struct(Library* enclosing_library, const rapidjson::Value* json_definition);
@@ -306,29 +285,16 @@ class Table {
  public:
   friend class Library;
 
-  Table(Library* enclosing_library, const rapidjson::Value* json_definition);
-  ~Table();
-
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<TableMember>>& members() const { return members_; }
 
-  const TableMember* GetMember(uint64_t ordinal) const {
-    if (ordinal >= members_.size()) {
-      return nullptr;
-    }
-    return members_[ordinal].get();
-  }
-  const TableMember* GetMember(std::string_view name) const {
-    for (const auto& member : members_) {
-      if ((member != nullptr) && (member->name() == name)) {
-        return member.get();
-      }
-    }
-    return nullptr;
-  }
+  const TableMember* MemberFromOrdinal(Ordinal64 ordinal) const;
+  const TableMember* SearchMember(std::string_view name) const;
 
  private:
+  Table(Library* enclosing_library, const rapidjson::Value* json_definition);
+
   // Decode all the values from the JSON definition.
   void DecodeTypes();
 

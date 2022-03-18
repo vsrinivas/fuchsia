@@ -13,11 +13,16 @@ protocol Echo {
     });
 };
 
+type Named = struct {
+    s string:200;
+};
+
 protocol FidlCodecTestInterface {
     Empty();
     String(struct {
         s string:100;
     });
+    Named(Named);
     Bool(struct {
         b bool;
     });

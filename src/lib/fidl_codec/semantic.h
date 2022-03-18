@@ -16,9 +16,9 @@
 
 namespace fidl_codec {
 
-class Value;
-class StructValue;
 class Type;
+class StructValue;
+class Value;
 
 namespace semantic {
 

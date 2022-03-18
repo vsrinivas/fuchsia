@@ -359,6 +359,8 @@ TEST_DECODE_WIRE(Empty, Empty, "{}", "{}")
 
 TEST_SINGLE(String, String, s, string, "Hello World!")
 
+TEST_SINGLE(Named, Named, s, string, "Hello World!")
+
 TEST_DECODE_WIRE_PATCHED(StringBadSize, String, 16, 100, "{\"s\":\"(invalid)\"}",
                          "{ s: #gre#string#rst# = #red#invalid#rst# }", "Hello World!")
 

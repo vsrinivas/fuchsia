@@ -861,7 +861,7 @@ std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offse
     return std::make_unique<NullValue>();
   }
 
-  const UnionMember* member = union_definition_.MemberWithOrdinal(ordinal);
+  const UnionMember* member = union_definition_.MemberFromOrdinal(ordinal);
   if (member == nullptr) {
     return std::make_unique<InvalidValue>();
   }
@@ -1008,7 +1008,7 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
   }
   auto result = std::make_unique<TableValue>(table_definition_);
   for (uint64_t i = 1; i <= member_count; ++i) {
-    const TableMember* member = table_definition_.GetMember(i);
+    const TableMember* member = table_definition_.MemberFromOrdinal(i);
     if ((member == nullptr) || member->reserved()) {
       decoder->SkipEnvelope(nullable_offset);
     } else {

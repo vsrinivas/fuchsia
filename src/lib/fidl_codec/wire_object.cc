@@ -389,7 +389,7 @@ void VectorValue::Visit(Visitor* visitor, const Type* for_type) const {
 }
 
 bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) {
-  const TableMember* member = table_definition_.GetMember(name);
+  const TableMember* member = table_definition_.SearchMember(name);
   if (member == nullptr) {
     return false;
   }

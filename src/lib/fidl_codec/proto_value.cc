@@ -256,7 +256,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       auto table_value = std::make_unique<fidl_codec::TableValue>(table_type->table_definition());
       for (const auto& proto_member : proto_value.table_value().members()) {
         const fidl_codec::TableMember* member =
-            table_type->table_definition().GetMember(proto_member.first);
+            table_type->table_definition().SearchMember(proto_member.first);
         if (member == nullptr) {
           FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_member.first << " not found in "
                                     << table_type->table_definition().name() << '.';
