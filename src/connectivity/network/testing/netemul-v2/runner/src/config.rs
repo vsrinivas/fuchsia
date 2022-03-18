@@ -53,7 +53,7 @@ pub(crate) enum EndpointBacking {
 
 impl Default for EndpointBacking {
     fn default() -> Self {
-        Self::Ethertap
+        Self::NetworkDevice
     }
 }
 
@@ -383,7 +383,7 @@ mod tests {
                         mac: Some(fidl_mac!("aa:bb:cc:dd:ee:ff").into()),
                         mtu: 999,
                         up: false,
-                        backing: EndpointBacking::NetworkDevice,
+                        backing: EndpointBacking::Ethertap,
                     },
                     Endpoint {
                         name: "local-ep2".to_string(),
@@ -443,7 +443,7 @@ mod tests {
                     "mac": "aa:bb:cc:dd:ee:ff",
                     "mtu": 999,
                     "up": false,
-                    "backing": "network_device"
+                    "backing": "ethertap"
                 },
                 {
                     "name": "local-ep2"
