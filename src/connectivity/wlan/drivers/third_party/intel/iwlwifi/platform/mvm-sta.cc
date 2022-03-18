@@ -35,12 +35,13 @@ MvmSta::~MvmSta() {
   if (iwl_mvm_sta_ != nullptr) {
     zx_status_t status = ZX_OK;
 
+    iwl_mvm_vif* mvmvif = iwl_mvm_sta_->mvmvif;
+
     for (auto& key_conf : ieee80211_key_confs_) {
       if (key_conf == nullptr) {
         continue;
       }
-      if ((status = iwl_mvm_mac_remove_key(iwl_mvm_sta_->mvmvif, iwl_mvm_sta_.get(),
-                                           key_conf.get())) != ZX_OK) {
+      if ((status = iwl_mvm_mac_remove_key(mvmvif, iwl_mvm_sta_.get(), key_conf.get())) != ZX_OK) {
         IWL_ERR(iwl_mvm_vif_, "iwl_mvm_mac_remove_key() failed for keyidx %d: %s\n",
                 key_conf->keyidx, zx_status_get_string(status));
       }
@@ -49,6 +50,12 @@ MvmSta::~MvmSta() {
 
     if ((status = ChangeState(iwl_sta_state::IWL_STA_NOTEXIST)) != ZX_OK) {
       IWL_ERR(iwl_mvm_vif_, "ChangeState() failed: %s\n", zx_status_get_string(status));
+    }
+    if ((mvmvif) && (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA)) {
+      // STA is still in a connected state, clean it up.
+      if (mac_clear_assoc(mvmvif, mvmvif->addr) != ZX_OK) {
+        IWL_ERR(mvmvif, "Unable to clear assoc during sta delete");
+      }
     }
 
     iwl_rcu_call_sync(
@@ -185,9 +192,7 @@ zx_status_t MvmSta::ChangeState(enum iwl_sta_state state) {
   return ZX_OK;
 }
 
-struct iwl_mvm_sta* MvmSta::iwl_mvm_sta() {
-  return iwl_mvm_sta_.get();
-}
+struct iwl_mvm_sta* MvmSta::iwl_mvm_sta() { return iwl_mvm_sta_.get(); }
 
 const struct iwl_mvm_sta* MvmSta::iwl_mvm_sta() const { return iwl_mvm_sta_.get(); }
 

@@ -18,6 +18,22 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 
+#define CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif)                \
+  do {                                                                  \
+    if (mvmvif->delete_in_progress) {                                   \
+      IWL_WARN(mvmvif, "Interface is in the process of being deleted"); \
+      return;                                                           \
+    }                                                                   \
+  } while (0)
+
+#define CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif)                   \
+  do {                                                                  \
+    if (mvmvif->delete_in_progress) {                                   \
+      IWL_WARN(mvmvif, "Interface is in the process of being deleted"); \
+      return ZX_ERR_BAD_STATE;                                          \
+    }                                                                   \
+  } while (0)
+
 namespace wlan::iwlwifi {
 
 WlanSoftmacDevice::WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id,
@@ -30,28 +46,34 @@ WlanSoftmacDevice::WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint
 WlanSoftmacDevice::~WlanSoftmacDevice() = default;
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacQuery(wlan_softmac_info_t* out_info) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_query(mvmvif_, out_info);
 }
 
 void WlanSoftmacDevice::WlanSoftmacQueryDiscoverySupport(discovery_support_t* out_resp) {
+  CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif_);
   mac_query_discovery_support(out_resp);
 }
 
 void WlanSoftmacDevice::WlanSoftmacQueryMacSublayerSupport(mac_sublayer_support_t* out_resp) {
+  CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif_);
   mac_query_mac_sublayer_support(out_resp);
 }
 
 void WlanSoftmacDevice::WlanSoftmacQuerySecuritySupport(security_support_t* out_resp) {
+  CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif_);
   mac_query_security_support(out_resp);
 }
 
 void WlanSoftmacDevice::WlanSoftmacQuerySpectrumManagementSupport(
     spectrum_management_support_t* out_resp) {
+  CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif_);
   mac_query_spectrum_management_support(out_resp);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
                                                 zx::channel* out_mlme_channel) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_start(mvmvif_, ifc, (zx_handle_t*)out_mlme_channel);
 }
 
@@ -68,6 +90,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
 
   if (packet->mac_frame_size > WLAN_MSDU_MAX_LEN) {
     IWL_ERR(mvmvif_, "Frame size is to large (%lu). expect less than %lu.\n",
@@ -107,6 +130,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet
 zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(const wlan_channel_t* channel) {
   zx_status_t status = ZX_OK;
 
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   // If the AP sta already exists, it probably was left from the previous association attempt.
   // Remove it first.
   if (ap_mvm_sta_ != nullptr) {
@@ -123,6 +147,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(const bss_config_t* confi
   if (ap_mvm_sta_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   if ((status = mac_configure_bss(mvmvif_, config)) != ZX_OK) {
     return status;
   }
@@ -138,10 +163,12 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(const bss_config_t* confi
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacEnableBeaconing(const wlan_bcn_config_t* bcn_cfg) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_enable_beaconing(mvmvif_, bcn_cfg);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBeacon(const wlan_tx_packet_t* pkt) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_configure_beacon(mvmvif_, pkt);
 }
 
@@ -149,6 +176,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(const wlan_key_config_t* key_co
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return ap_mvm_sta_->SetKey(key_config);
 }
 
@@ -156,6 +184,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureAssoc(const wlan_assoc_ctx_t*
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_configure_assoc(mvmvif_, assoc_ctx);
 }
 
@@ -166,6 +195,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacClearAssoc(
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
 
   // Mark the station is no longer associated. This must be set before we start operating on the STA
   // instance.
@@ -181,17 +211,20 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacClearAssoc(
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacStartPassiveScan(
     const wlan_softmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_start_passive_scan(mvmvif_, passive_scan_args, out_scan_id);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacStartActiveScan(
     const wlan_softmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return mac_start_active_scan(mvmvif_, active_scan_args, out_scan_id);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacUpdateWmmParams(wlan_ac_t ac,
                                                           const wlan_wmm_params_t* params) {
   IWL_ERR(this, "%s() needs porting\n", __func__);
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
   return ZX_ERR_NOT_SUPPORTED;
 }
 

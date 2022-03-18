@@ -706,6 +706,12 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
       nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
   std::swap(device_, devices.back());
   ASSERT_EQ(ZX_ERR_NO_RESOURCES, ConfigureBss(&kBssConfig));
+  // iwl_mvm_add_sta(), called by ConfigureBss(), has an assumption that each interface has only one
+  // AP sta (for WLAN_MAC_ROLE_CLIENT). However, in this case, we break the assumption so that the
+  // ap_sta_id was populated with the last successful STA ID. Thus, we reset the mvmvif_->ap_sta_id
+  // so that the SoftMacDevices destructor will not release the resource twice by calling
+  // ClearAssoc().
+  mvmvif_->ap_sta_id = IWL_MVM_INVALID_STA;
 }
 
 // The test is used to test the typical procedure to connect to an open network.

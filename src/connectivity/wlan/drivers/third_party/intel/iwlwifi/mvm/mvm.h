@@ -387,6 +387,8 @@ struct iwl_mvm_vif {
   uint8_t low_latency;
   bool ps_disabled;
   bool p2p;
+  // Set this to true if this interface is in the process of being deleted.
+  bool delete_in_progress;
   struct iwl_mvm_vif_bf_data bf_data;
 
   struct {
