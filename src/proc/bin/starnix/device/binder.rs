@@ -258,6 +258,16 @@ impl SharedMemory {
         }
         error!(ENOMEM)
     }
+
+    // This temporary allocator implementation does not reclaim free buffers.
+    fn free_buffer(&mut self, buffer: UserAddress) -> Result<(), Errno> {
+        // Sanity check that the buffer being freed came from this memory region.
+        if buffer < self.user_address || buffer >= self.user_address + self.length {
+            return error!(EINVAL);
+        }
+        // Bump allocators don't reclaim memory.
+        Ok(())
+    }
 }
 
 /// A buffer of memory allocated from a binder process' [`SharedMemory`].
@@ -850,6 +860,14 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_INCREFS_DONE
             | binder_driver_command_protocol_BC_ACQUIRE_DONE => {
                 self.handle_refcount_operation_done(command, binder_thread, cursor)
+            }
+            binder_driver_command_protocol_BC_FREE_BUFFER => {
+                // A binder thread is done reading a buffer allocated to a transaction. The binder
+                // driver can reclaim this buffer.
+                let buffer_ptr = UserAddress::from(cursor.read_object::<binder_uintptr_t>()?);
+                let mut shared_memory_lock = binder_proc.shared_memory.lock();
+                let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
+                shared_memory.free_buffer(buffer_ptr)
             }
             binder_driver_command_protocol_BC_TRANSACTION => {
                 self.handle_transaction(current_task, binder_proc, binder_thread, cursor)
