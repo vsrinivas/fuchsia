@@ -849,7 +849,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:70
+From //build/toolchain/rbe.gni:85
 
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
@@ -874,7 +874,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:62
+From //build/toolchain/rbe.gni:77
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1404,6 +1404,7 @@ From //build/images/args.gni:77
 
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
+This may affect Rust and C++ compiles.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
@@ -1411,7 +1412,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:28
+From //build/toolchain/rbe.gni:34
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1419,7 +1420,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:28
+From //build/toolchain/rbe.gni:34
 
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
@@ -2063,7 +2064,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value (from the default):** `"//prebuilt/third_party/goma/linux-x64"`
 
-From //build/toolchain/goma.gni:15
+From //build/toolchain/goma.gni:17
 
 ### gpt_image
 GUID Partition Table (GPT) image.
@@ -3609,7 +3610,7 @@ One of {local,remote}:
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:37
+From //build/toolchain/rbe.gni:52
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -4459,6 +4460,8 @@ From //build/images/args.gni:26
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
+This has lower precedence than `use_reclient_cxx` in
+//build/toolchain/rbe.gni.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
@@ -4466,7 +4469,7 @@ From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/goma.gni:11
+From //build/toolchain/goma.gni:13
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -4474,7 +4477,7 @@ From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/goma.gni:11
+From //build/toolchain/goma.gni:13
 
 ### use_lto
 Use link time optimization (LTO).
@@ -4531,6 +4534,19 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 **Current value (from the default):** `true`
 
 From //src/media/lib/ffmpeg/BUILD.gn:21
+
+### use_reclient_cxx_experimental
+Set to true to distribute C++ compiles remotely using RBE.
+This takes precedence over `use_goma` in //build/toolchain/goma.gni.
+This feature is experimental and will be likely renamed later.
+
+Requires GN args:
+  `enable_rbe = true`
+
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:43
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
