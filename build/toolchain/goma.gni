@@ -8,6 +8,8 @@ prebuilt_goma_dir = "//prebuilt/third_party/goma/$host_platform"
 
 declare_args() {
   # Set to true to enable distributed compilation using Goma.
+  # This has lower precedence than `use_reclient_cxx` in
+  # //build/toolchain/rbe.gni.
   use_goma = false
 
   # Directory containing the Goma source code.  This can be a GN

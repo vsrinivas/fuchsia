@@ -23,9 +23,24 @@ rustc_remote_wrapper = "//build/rbe/rustc-remote-wrapper.sh"
 # Dependencies for all RBE-enabled rust actions.
 rust_rbe_deps = rbe_common_tools + rbe_common_scripts + [ rustc_remote_wrapper ]
 
+cxx_remote_wrapper = "//build/rbe/cxx-remote-wrapper.sh"
+
+# Dependencies for all RBE-enabled C++ actions.
+cxx_rbe_deps = rbe_common_tools + rbe_common_scripts + [ cxx_remote_wrapper ]
+
 declare_args() {
   # Set to true to enable distributed compilation using RBE.
+  # This may affect Rust and C++ compiles.
   enable_rbe = false
+
+  # Set to true to distribute C++ compiles remotely using RBE.
+  # This takes precedence over `use_goma` in //build/toolchain/goma.gni.
+  # This feature is experimental and will be likely renamed later.
+  #
+  # Requires GN args:
+  #   `enable_rbe = true`
+  #
+  use_reclient_cxx_experimental = false
 
   # One of {local,remote}:
   #   * remote: Execute action remotely on cache miss.

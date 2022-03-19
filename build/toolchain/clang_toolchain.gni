@@ -44,7 +44,7 @@ import("//build/toolchain/restat.gni")
 #   strip
 #     Optional: Override default tool names.
 #
-#   use_ccache, use_goma
+#   use_ccache, use_goma, use_reclient_cxx_experimental
 #     Optional: Override the global setting, useful to opt out of
 #     ccache/goma in a particular toolchain.
 #
@@ -62,10 +62,19 @@ template("clang_toolchain") {
            "clang_toolchain() must specify a \"toolchain_os\"")
 
     compiler_prefix = ""
+    if (defined(invoker.use_reclient_cxx_experimental)) {
+      use_reclient_cxx_experimental = invoker.use_reclient_cxx_experimental
+    }
     if (defined(invoker.use_goma)) {
       use_goma = invoker.use_goma
     }
-    if (use_goma) {
+    if (use_reclient_cxx_experimental) {
+      assert(enable_rbe,
+             "enable_rbe=true is required with use_reclient_cxx_experimental")
+      compiler_prefix =
+          rebase_path("//build/rbe/cxx-remote-wrapper.sh") + " -- "
+      not_needed([ "use_goma" ])
+    } else if (use_goma) {
       compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
     } else {
       if (defined(invoker.use_ccache)) {

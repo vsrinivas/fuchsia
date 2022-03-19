@@ -9,6 +9,7 @@ import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
+import("//build/toolchain/rbe.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/gcc.gni")
 import("//build/zircon/build_args.gni")
@@ -162,10 +163,18 @@ template("zircon_toolchain") {
 
   # Cached and distributed wrappers just go on the front of compiler commands.
   compiler_prefix = ""
+  if (defined(invoker.use_reclient_cxx_experimental)) {
+    use_reclient_cxx_experimental = invoker.use_reclient_cxx_experimental
+  }
   if (defined(invoker.use_goma)) {
     use_goma = invoker.use_goma
   }
-  if (use_goma) {
+  if (use_reclient_cxx_experimental) {
+    assert(enable_rbe,
+           "enable_rbe=true is required with use_reclient_cxx_experimental")
+    compiler_prefix = rebase_path("//build/rbe/cxx-remote-wrapper.sh") + " -- "
+    not_needed([ "use_goma" ])
+  } else if (use_goma) {
     compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
   } else {
     if (defined(invoker.use_ccache)) {
