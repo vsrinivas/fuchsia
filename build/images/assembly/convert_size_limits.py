@@ -52,9 +52,7 @@ def convert_budget_format(component, all_manifests):
     dictionary, new configuration with a name, a maximum size and the list of
     packages manifest to fit in the budget.
   """
-    # Ensures each directories is suffixed with exactly one '/',
-    # so that 'abc/d' does not match 'abc/def/g.json'
-    prefixes = tuple(os.path.join("obj", src, "") for src in component["src"])
+    prefixes = tuple(os.path.join("obj", src) for src in component["src"])
     # Finds all package manifest files located bellow the directories
     # listed by the component `src` field.
     packages = sorted(m for m in all_manifests if m.startswith(prefixes))
