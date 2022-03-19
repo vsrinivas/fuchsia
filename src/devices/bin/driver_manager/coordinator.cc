@@ -1214,12 +1214,6 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
-void Coordinator::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {
-  suspend_resume_manager_->Suspend(
-      request->flags,
-      [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
-}
-
 void Coordinator::UnregisterSystemStorageForShutdown(
     UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {
@@ -1254,9 +1248,6 @@ zx::status<> Coordinator::PublishDriverDevelopmentService(
 }
 
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
-  static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
-
   const auto admin = [this](fidl::ServerEnd<fdm::Administrator> request) {
     fidl::BindServer<fidl::WireServer<fdm::Administrator>>(dispatcher_, std::move(request), this);
     return ZX_OK;

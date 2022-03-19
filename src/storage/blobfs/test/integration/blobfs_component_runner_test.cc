@@ -25,10 +25,6 @@ constexpr uint32_t kNumBlocks = 8192;
 class FakeDriverManagerAdmin final
     : public fidl::WireServer<fuchsia_device_manager::Administrator> {
  public:
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-  }
-
   void UnregisterSystemStorageForShutdown(
       UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
