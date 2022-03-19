@@ -11,7 +11,6 @@
         "dev": [
             "class/temperature",
             "class/wlanphy",
-            "ft5726-touch",
             "sys/platform",
             "wifi"
         ],

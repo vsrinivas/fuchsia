@@ -10,13 +10,12 @@ use serde_json::{to_value, Value};
 
 #[async_trait(?Send)]
 impl Facade for DeviceFacade {
-    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+    async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
         match method.parse()? {
             DeviceMethod::GetDeviceName => {
                 let result = self.get_device_name().await?;
                 Ok(to_value(result)?)
             }
-            DeviceMethod::Rebind => Ok(to_value(self.rebind(args).await?)?),
         }
     }
 }

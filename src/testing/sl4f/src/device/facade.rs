@@ -4,10 +4,9 @@
 
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
-use fidl_fuchsia_device::{ControllerMarker, NameProviderMarker, DEFAULT_DEVICE_NAME};
+use fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME};
 use fuchsia_component::client;
 use fuchsia_syslog::macros::*;
-use serde_json::Value;
 
 /// Perform Fuchsia Device fidl operations.
 ///
@@ -37,39 +36,5 @@ impl DeviceFacade {
             .map_err(|e| format_err!("failed to obtain device name: {:?}", e));
         let device_name = name.unwrap_or(DEFAULT_DEVICE_NAME.to_string());
         Ok(device_name)
-    }
-
-    pub async fn rebind(&self, args: Value) -> Result<(), Error> {
-        let tag = "DeviceFacade::rebind";
-
-        let device = args
-            .get("device")
-            .ok_or(format_err!("No device argument specified"))?
-            .as_str()
-            .ok_or(format_err!("device argument must be a string"))?;
-
-        let driver = args
-            .get("driver")
-            .ok_or(format_err!("No driver argument specified"))?
-            .as_str()
-            .ok_or(format_err!("driver argument must be a string"))?;
-
-        let (proxy, server) = match fidl::endpoints::create_proxy::<ControllerMarker>() {
-            Ok(r) => r,
-            Err(e) => fx_err_and_bail!(
-                &with_line!(tag),
-                format_err!("Failed to get device proxy: {:?}", e)
-            ),
-        };
-
-        match fdio::service_connect(device, server.into_channel()) {
-            Ok(r) => r,
-            Err(e) => fx_err_and_bail!(
-                &with_line!(tag),
-                format_err!("Failed to connect to device {}: {:?}", device, e)
-            ),
-        }
-
-        proxy.rebind(driver).await?.map_err(|e| format_err!("Rebind failed: {:?}", e))
     }
 }
