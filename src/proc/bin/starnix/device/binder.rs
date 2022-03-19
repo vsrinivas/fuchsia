@@ -869,6 +869,19 @@ impl BinderDriver {
                 let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
                 shared_memory.free_buffer(buffer_ptr)
             }
+            binder_driver_command_protocol_BC_REQUEST_DEATH_NOTIFICATION => {
+                // A binder thread is requesting to be sent a notification when a remote binder
+                // object dies.
+                let handle = cursor.read_object::<u32>()?;
+                let cookie = cursor.read_object::<binder_uintptr_t>()?;
+                not_implemented!(
+                    "binder thread {} BC_REQUEST_DEATH_NOTIFICATION for handle {} (cookie={:?})",
+                    binder_thread.tid,
+                    handle,
+                    UserAddress::from(cookie)
+                );
+                Ok(())
+            }
             binder_driver_command_protocol_BC_TRANSACTION => {
                 self.handle_transaction(current_task, binder_proc, binder_thread, cursor)
             }
