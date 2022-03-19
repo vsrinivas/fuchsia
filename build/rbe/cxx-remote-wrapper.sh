@@ -49,6 +49,7 @@ dry_run=0
 local_only=0
 verbose=0
 project_root="$default_project_root"
+canonicalize_working_dir=true
 rewrapper_options=()
 
 # Extract script options before --
@@ -138,6 +139,11 @@ Please rewrite the command without absolute paths.
 EOF
       exit 1
       ;;
+
+    # TODO(https://bugs.chromium.org/p/gn/issues/detail?id=280): remove this
+    # after all object files are located under paths without redundant output
+    # dir.
+    *"$project_root_rel"*) canonicalize_working_dir=false ;;
   esac
 
   case "$opt" in
@@ -294,10 +300,16 @@ exec_root_flag=()
 [[ "$project_root" == "$default_project_root" ]] || \
   exec_root_flag=( "--exec_root=$project_root" )
 
+# --canonicalize_working_dir: coerce the output dir to a constant.
+#   This requires that the command be insensitive to output dir, and
+#   that its outputs do not leak the remote output dir.
+#   Ensuring that the results reproduce consistently across different
+#   build directories helps with caching.
 remote_cc_command=(
   "$remote_action_wrapper"
   --labels=type=compile,compiler=clang,lang=cpp
   "${exec_root_flag[@]}"
+  --canonicalize_working_dir="$canonicalize_working_dir"
 #  "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
   --output_files="$remote_outputs_joined"
