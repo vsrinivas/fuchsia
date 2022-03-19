@@ -3,11 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """
-Process build landmines. If it detects that the build should be clobbered,
+Process build "force clean fences". If it detects that the build should be clobbered,
 it will run `gn clean`.
 
-A landmine is tripped when a machine checks out a different revision and
-there is a diff between $BUILD_DIR/.landmines and the output of get_landmines.py.
+A fence is crossed when a machine checks out a different revision and
+there is a diff between $BUILD_DIR/.force_clean_fences and the output of get_fences.py.
 """
 
 import argparse
@@ -18,7 +18,8 @@ import sys
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Process build landmines.")
+    parser = argparse.ArgumentParser(
+        description="Process build force-clean fences.")
     parser.add_argument(
         "--gn-bin",
         type=pathlib.Path,
@@ -45,38 +46,37 @@ def main():
     if not args.build_dir.is_dir():
         raise RuntimeError(f"{args.build_dir} is not a directory")
 
-    get_landmines_script = args.checkout_dir / "build" / "landmines" / "get_landmines.py"
-    existing_landmines_path = args.build_dir / ".landmines"
+    get_fences_script = args.checkout_dir / "build" / "force_clean" / "get_fences.py"
+    existing_fences_path = args.build_dir / ".force_clean_fences"
 
-    # create an empty landmines file if it doesn't exist
-    if not existing_landmines_path.exists():
-        with open(existing_landmines_path, "w") as f:
+    # create an empty fences file if it doesn't exist
+    if not existing_fences_path.exists():
+        with open(existing_fences_path, "w") as f:
             if args.verbose:
                 print("created empty landmine file")
-    # read existing landmines
+    # read existing fences
     if args.verbose:
-        print("reading existing build dir's landmines")
-    with open(existing_landmines_path, "r") as f:
-        existing_landmines = f.read()
+        print("reading existing build dir's force-clean fences")
+    with open(existing_fences_path, "r") as f:
+        existing_fences = f.read()
 
-    # execute new landmines script using the same interpreter as us
+    # execute new fences script using the same interpreter as us
     if args.verbose:
-        print("generating current landmines from script")
-    current_landmines = subprocess.run(
-        [sys.executable, get_landmines_script],
-        stdout=subprocess.PIPE,
+        print("generating current fences from script")
+    current_fences = subprocess.run(
+        [sys.executable, get_fences_script], stdout=subprocess.PIPE,
         text=True).stdout
 
     # clobber if needed
-    if existing_landmines != current_landmines:
+    if existing_fences != current_fences:
         if args.verbose:
-            print(f"cleaning build and updating `{existing_landmines_path}`")
-        with open(existing_landmines_path, "w") as f:
-            f.write(current_landmines)
+            print(f"cleaning build and updating `{existing_fences_path}`")
+        with open(existing_fences_path, "w") as f:
+            f.write(current_fences)
         subprocess.run([args.gn_bin, "clean", args.build_dir])
     else:
         if args.verbose:
-            print("landmines up-to-date, not clobbering")
+            print("force_clean fences up-to-date, not clobbering")
 
     return 0
 

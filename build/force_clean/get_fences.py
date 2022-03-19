@@ -3,7 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """
-List build landmines. Every line should include a reference to a bug which justifies the addition.
+List clean build fences. Every line should include a reference to a bug which justifies the
+addition.
 
 WARNING: Exercise great caution when adding to this file, as the consequences are
 significant and widespread. Every Fuchsia developer and builder will have their incremental
@@ -15,15 +16,15 @@ issues within the dependency graph.
 import sys
 
 
-def print_landmines():
+def print_fences():
     """
-    All landmines are emitted from here.
+    All fences are emitted from here.
     """
     pass
 
 
 def main():
-    print_landmines()
+    print_fences()
     return 0
 
 

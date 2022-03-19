@@ -31,8 +31,8 @@ var (
 	// Path within a checkout to script which will run a hermetic Python interpreter.
 	vendoredPythonScriptPath = []string{"scripts", "fuchsia-vendored-python3.8"}
 
-	// Path within a checkout to script which will clobber a build when new landmines appear.
-	landmineScript = []string{"build", "landmines", "check_landmines.py"}
+	// Path within a checkout to script which will clobber a build when new fences appear.
+	forceCleanScript = []string{"build", "force_clean", "force_clean_if_needed.py"}
 )
 
 // Set runs `gn gen` given a static and context spec. It's intended to be
@@ -44,7 +44,7 @@ func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Con
 	}
 
 	// TODO move to setImpl, add unit tests
-	if err := checkLandmines(ctx, contextSpec, platform); err != nil {
+	if err := forceCleanIfNeeded(ctx, contextSpec, platform); err != nil {
 		return nil, err
 	}
 
@@ -126,9 +126,9 @@ func setImpl(
 	return artifacts, err
 }
 
-// checkLandmines clobbers the build dir if new build landmines are found, see
-// //build/landmines/README.md for details.
-func checkLandmines(ctx context.Context, contextSpec *fintpb.Context, platform string) (err error) {
+// forceCleanIfNeeded clobbers the build dir if new clean build fences are found, see
+// //build/force_clean/README.md for details.
+func forceCleanIfNeeded(ctx context.Context, contextSpec *fintpb.Context, platform string) (err error) {
 	if _, err := os.Stat(contextSpec.BuildDir); os.IsNotExist(err) {
 		// no need to clean anything if there's nothing there
 		return nil
@@ -137,7 +137,7 @@ func checkLandmines(ctx context.Context, contextSpec *fintpb.Context, platform s
 	scriptRunner.Dir = contextSpec.CheckoutDir
 	return scriptRunner.Run(ctx, []string{
 		filepath.Join(append([]string{contextSpec.CheckoutDir}, vendoredPythonScriptPath...)...),
-		filepath.Join(append([]string{contextSpec.CheckoutDir}, landmineScript...)...),
+		filepath.Join(append([]string{contextSpec.CheckoutDir}, forceCleanScript...)...),
 		"--gn-bin",
 		thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn"),
 		"--checkout-dir",
