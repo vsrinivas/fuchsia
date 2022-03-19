@@ -71,9 +71,9 @@ def main():
     if existing_fences != current_fences:
         if args.verbose:
             print(f"cleaning build and updating `{existing_fences_path}`")
+        subprocess.run([args.gn_bin, "clean", args.build_dir])
         with open(existing_fences_path, "w") as f:
             f.write(current_fences)
-        subprocess.run([args.gn_bin, "clean", args.build_dir])
     else:
         if args.verbose:
             print("force_clean fences up-to-date, not clobbering")
