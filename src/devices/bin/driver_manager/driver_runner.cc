@@ -527,6 +527,10 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
                     fidl::StringView(child->arena_, property.key().string_value().get())));
             break;
           }
+          default:
+            LOGF(ERROR, "NodeProperty has unknown key tag '0x%lx'", property.key().Which());
+            completer.ReplyError(fdf::wire::NodeError::kInternal);
+            return;
         }
       }
       if (property.has_value()) {
@@ -553,6 +557,10 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
 
             break;
           }
+          default:
+            LOGF(ERROR, "NodeProperty has unknown value tag '0x%lx'", property.value().Which());
+            completer.ReplyError(fdf::wire::NodeError::kInternal);
+            return;
         }
       }
       child->properties_.push_back(std::move(node_property));
