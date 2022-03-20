@@ -168,6 +168,37 @@ void RxCapacity(int fd, size_t& out_capacity) {
 #endif
 }
 
+template <typename T>
+void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg_type,
+                  T cmsg_value) {
+  iovec iov = {
+      .iov_base = buf,
+      .iov_len = buf_size,
+  };
+
+  std::array<uint8_t, CMSG_SPACE(sizeof(cmsg_value))> control;
+  msghdr msg = {
+      .msg_iov = &iov,
+      .msg_iovlen = 1,
+      .msg_control = control.data(),
+      .msg_controllen = CMSG_LEN(sizeof(cmsg_value)),
+  };
+
+  // Manually add control message.
+  cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+  ASSERT_NE(cmsg, nullptr);
+  *cmsg = {
+      .cmsg_len = CMSG_LEN(sizeof(cmsg_value)),
+      .cmsg_level = cmsg_level,
+      .cmsg_type = cmsg_type,
+  };
+  memcpy(CMSG_DATA(cmsg), &cmsg_value, sizeof(cmsg_value));
+
+  const ssize_t r = sendmsg(sock, &msg, 0);
+  ASSERT_NE(r, -1) << strerror(errno);
+  ASSERT_EQ(r, ssize_t(buf_size));
+}
+
 TEST(LocalhostTest, SendToZeroPort) {
   sockaddr_in addr = {
       .sin_family = AF_INET,
@@ -6397,26 +6428,9 @@ TEST_P(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
 TEST_P(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
   constexpr uint8_t tos = 42;
   char send_buf[] = "hello";
-  iovec iovec = {
-      .iov_base = send_buf,
-      .iov_len = sizeof(send_buf),
-  };
-  uint8_t send_control[CMSG_SPACE(sizeof(tos))];
-  const msghdr send_msghdr = {
-      .msg_iov = &iovec,
-      .msg_iovlen = 1,
-      .msg_control = send_control,
-      .msg_controllen = sizeof(send_control),
-  };
-  cmsghdr* cmsg = CMSG_FIRSTHDR(&send_msghdr);
-  ASSERT_NE(cmsg, nullptr);
-  cmsg->cmsg_level = SOL_IP;
-  cmsg->cmsg_type = IP_TOS;
-  cmsg->cmsg_len = CMSG_LEN(sizeof(tos));
-  memcpy(CMSG_DATA(cmsg), &tos, sizeof(tos));
+  ASSERT_NO_FATAL_FAILURE(
+      SendWithCmsg(connected().get(), send_buf, sizeof(send_buf), SOL_IP, IP_TOS, tos));
 
-  ASSERT_EQ(sendmsg(connected().get(), &send_msghdr, 0), ssize_t(sizeof(send_buf)))
-      << strerror(errno);
   char recv_control[CMSG_SPACE(sizeof(tos)) + 1];
   ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(
       send_buf, sizeof(send_buf), recv_control, sizeof(recv_control), [tos](msghdr& recv_msghdr) {
