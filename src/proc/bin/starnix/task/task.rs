@@ -102,7 +102,7 @@ pub struct Task {
     pub abstract_socket_namespace: Arc<AbstractSocketNamespace>,
 
     /// The IDs used to perform shell job control.
-    pub shell_job_control: ShellJobControl,
+    pub job_control: Mutex<ShellJobControl>,
 
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
@@ -179,7 +179,7 @@ impl Task {
         signal_actions: Arc<SignalActions>,
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractSocketNamespace>,
-        sjc: ShellJobControl,
+        jc: ShellJobControl,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
         CurrentTask::new(Task {
@@ -195,7 +195,7 @@ impl Task {
             fs,
             creds: RwLock::new(creds),
             abstract_socket_namespace,
-            shell_job_control: sjc,
+            job_control: Mutex::new(jc),
             clear_child_tid: Mutex::new(UserRef::default()),
             signal_actions,
             signals: Default::default(),
@@ -232,7 +232,7 @@ impl Task {
             SignalActions::default(),
             Credentials::default(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
-            ShellJobControl { sid: pid, pgrp: pid },
+            ShellJobControl { sid: pid, pgid: pid },
             None,
         );
 
@@ -330,7 +330,7 @@ impl Task {
             signal_actions,
             self.creds.read().clone(),
             self.abstract_socket_namespace.clone(),
-            self.shell_job_control.clone(),
+            self.job_control.lock().clone(),
             child_exit_signal,
         );
         pids.add_task(&child.task);
@@ -396,17 +396,8 @@ impl Task {
         self.thread_group.leader
     }
 
-    pub fn get_sid(&self) -> pid_t {
-        self.shell_job_control.sid
-    }
-
     pub fn get_tid(&self) -> pid_t {
         self.id
-    }
-
-    pub fn get_pgrp(&self) -> pid_t {
-        // TODO: Implement process groups.
-        1
     }
 
     pub fn as_ucred(&self) -> ucred {

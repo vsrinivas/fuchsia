@@ -166,6 +166,7 @@ pub fn dispatch_syscall(
         set_tid_address[1],
         setgroups[2],
         setitimer[3],
+        setpgid[2],
         setsockopt[5],
         shutdown[2],
         sigaltstack[2],

@@ -78,5 +78,5 @@ pub struct ShellJobControl {
     /// The process session ID of a task.
     pub sid: pid_t,
     /// The process group ID of a task.
-    pub pgrp: pid_t,
+    pub pgid: pid_t,
 }

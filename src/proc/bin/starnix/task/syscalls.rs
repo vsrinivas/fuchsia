@@ -5,12 +5,14 @@
 use fuchsia_zircon as zx;
 use log::info;
 use std::ffi::CString;
+use std::sync::Arc;
 use zerocopy::AsBytes;
 
 use crate::execution::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::*;
 use crate::syscalls::*;
+use crate::task::Task;
 use crate::types::*;
 
 pub fn sys_clone(
@@ -86,13 +88,6 @@ pub fn sys_getpid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
     Ok(current_task.get_pid())
 }
 
-pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    if pid == 0 {
-        return Ok(current_task.get_sid());
-    }
-    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_sid())
-}
-
 pub fn sys_gettid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
     Ok(current_task.get_tid())
 }
@@ -101,15 +96,36 @@ pub fn sys_getppid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
     Ok(current_task.parent)
 }
 
+fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Task>, Errno> {
+    if pid == 0 {
+        Ok(current_task.task_arc_clone())
+    } else {
+        current_task.get_task(pid).ok_or(errno!(ESRCH))
+    }
+}
+
+pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
+    Ok(get_task_or_current(current_task, pid)?.job_control.lock().sid)
+}
+
 pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.get_pgrp())
+    Ok(current_task.job_control.lock().pgid)
 }
 
 pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    if pid == 0 {
-        return Ok(current_task.get_pgrp());
-    }
-    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_pgrp())
+    Ok(get_task_or_current(current_task, pid)?.job_control.lock().pgid)
+}
+
+pub fn sys_setpgid(
+    current_task: &CurrentTask,
+    pid: pid_t,
+    pgid: pid_t,
+) -> Result<SyscallResult, Errno> {
+    let task = get_task_or_current(current_task, pid)?;
+    let pgid = if pgid == 0 { task.get_pid() } else { pgid };
+    // TODO(security): check permissions
+    task.job_control.lock().pgid = pgid;
+    Ok(SUCCESS)
 }
 
 pub fn sys_getuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
