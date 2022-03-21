@@ -1430,8 +1430,31 @@ func TestParseSucceedsHandles(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
+func TestParseSucceedsHandlesBeforeBytes(t *testing.T) {
+	gidl := `
+	success("HasHandles") {
+		handle_defs = {
+			#0 = event(),
+		},
+		value = HasHandles { h: #0 },
+		handles = {
+			v1 = [ #0 ],
+		},
+		bytes = {
+			v1 = [ repeat(0xff):4, padding:4 ],
+		},
+	}`
+	p := NewParser("", strings.NewReader(gidl), Config{
+		WireFormats: []ir.WireFormat{ir.V1WireFormat},
+	})
+	var all ir.All
+	err := p.parseSection(&all)
+	if err != nil {
+		t.Error(err)
+	}
+}
 
-func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
+func TestParseSucceedsHandlesDefsAfterHandles(t *testing.T) {
 	gidl := `
 	success("HasHandles") {
 		value = HasHandles { h: #0 },

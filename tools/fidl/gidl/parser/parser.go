@@ -261,7 +261,7 @@ func (b *body) addEncoding(e encodingData) error {
 	for i := range b.Encodings {
 		if b.Encodings[i].WireFormat == e.WireFormat {
 			if e.Bytes != nil {
-				if b.Encodings[i].Bytes == nil {
+				if b.Encodings[i].Bytes != nil {
 					return fmt.Errorf("bytes already set")
 				}
 				b.Encodings[i].Bytes = e.Bytes
