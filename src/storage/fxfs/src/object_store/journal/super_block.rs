@@ -31,6 +31,7 @@ use {
         sync::Arc,
     },
     storage_device::Device,
+    uuid::Uuid,
 };
 
 /// The block size used when reading and writing journal entries.
@@ -44,9 +45,6 @@ const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 
 /// All superblocks start with the magic bytes "FxfsSupr".
 const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxfsSupr";
-
-pub const SUPER_BLOCK_MAJOR_VERSION: u32 = 1;
-const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
 
 /// An enum representing one of our [SuperBlock] copies.
 ///
@@ -84,6 +82,42 @@ impl SuperBlockCopy {
     }
 }
 
+#[derive(Serialize, Deserialize, Versioned)]
+pub struct SuperBlockV1 {
+    major_version: u32,
+    oldest_minor_version: u32,
+    generation: u64,
+    root_parent_store_object_id: u64,
+    root_parent_graveyard_directory_object_id: u64,
+    root_store_object_id: u64,
+    allocator_object_id: u64,
+    journal_object_id: u64,
+    journal_checkpoint: JournalCheckpoint,
+    super_block_journal_file_offset: u64,
+    journal_file_offsets: HashMap<u64, u64>,
+    borrowed_metadata_space: u64,
+}
+
+impl From<SuperBlockV1> for SuperBlock {
+    fn from(other: SuperBlockV1) -> Self {
+        Self {
+            oldest_minor_version: other.oldest_minor_version,
+            generation: other.generation,
+            root_parent_store_object_id: other.root_parent_store_object_id,
+            root_parent_graveyard_directory_object_id: other
+                .root_parent_graveyard_directory_object_id,
+            root_store_object_id: other.root_store_object_id,
+            allocator_object_id: other.allocator_object_id,
+            journal_object_id: other.journal_object_id,
+            journal_checkpoint: other.journal_checkpoint,
+            super_block_journal_file_offset: other.super_block_journal_file_offset,
+            journal_file_offsets: other.journal_file_offsets,
+            borrowed_metadata_space: other.borrowed_metadata_space,
+            ..Self::default()
+        }
+    }
+}
+
 /// A super-block structure describing the filesystem.
 ///
 /// We currently store two of these super blocks (A/B) located in two logical consecutive
@@ -96,11 +130,10 @@ impl SuperBlockCopy {
 /// Super blocks are updated alternately with a monotonically increasing generation number.
 /// At mount time, the super block used is the valid `SuperBlock` with the highest generation
 /// number.
-// TODO(csuter): Add a UUID
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Versioned)]
 pub struct SuperBlock {
-    /// The major version of the super-block's format.
-    pub major_version: u32,
+    /// The globally unique identifier for the filesystem.
+    guid: [u8; 16],
 
     /// The minor version of the oldest driver which touched the super-block in writeable mode.
     /// See //src/storage/docs/versioning.md.
@@ -171,9 +204,10 @@ impl SuperBlock {
         journal_object_id: u64,
         journal_checkpoint: JournalCheckpoint,
     ) -> Self {
+        let uuid = Uuid::new_v4();
         SuperBlock {
-            major_version: SUPER_BLOCK_MAJOR_VERSION,
-            oldest_minor_version: SUPER_BLOCK_MINOR_VERSION,
+            guid: *uuid.as_bytes(),
+            oldest_minor_version: 0,
             generation: 1u64,
             root_parent_store_object_id,
             root_parent_graveyard_directory_object_id,
@@ -213,7 +247,7 @@ impl SuperBlock {
         );
 
         reader.fill_buf().await?;
-        let super_block;
+        let mut super_block;
         let version;
         reader.consume({
             let mut cursor = std::io::Cursor::new(reader.buffer());
@@ -226,6 +260,11 @@ impl SuperBlock {
             (super_block, version) = SuperBlock::deserialize_with_version(&mut cursor)?;
             cursor.position() as usize
         });
+        // If guid is zeroed (e.g. in a newly imaged system), assign one randomly.
+        if super_block.guid == [0; 16] {
+            let uuid = Uuid::new_v4();
+            super_block.guid = *uuid.as_bytes();
+        }
         reader.set_version(version);
         Ok((super_block, ItemReader { reader }))
     }
@@ -469,6 +508,9 @@ mod tests {
         super_block_b.journal_file_offsets.insert(1, 2);
         super_block_b.generation += 1;
 
+        // Check that a non-zero GUID has been assigned.
+        assert_ne!(super_block_a.guid, [0; 16]);
+
         let layer_set = fs.object_manager().root_parent_store().tree().layer_set();
         let mut merger = layer_set.merger();
 
@@ -494,6 +536,7 @@ mod tests {
 
         let mut written_super_block_a =
             SuperBlock::read(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+
         assert_eq!(written_super_block_a.0, super_block_a);
         let written_super_block_b =
             SuperBlock::read(fs.device(), SuperBlockCopy::B).await.expect("read failed");
@@ -518,5 +561,29 @@ mod tests {
         } else {
             panic!("unexpected extra item: {:?}", written_item);
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_guid_assign_on_read() {
+        let (fs, handle_a, _handle_b) = filesystem_and_super_block_handles().await;
+        const JOURNAL_OBJECT_ID: u64 = 5;
+        let mut super_block_a = SuperBlock::new(
+            fs.object_manager().root_parent_store().store_object_id(),
+            /* root_parent_graveyard_directory_object_id: */ 1000,
+            fs.root_store().store_object_id(),
+            fs.allocator().object_id(),
+            JOURNAL_OBJECT_ID,
+            JournalCheckpoint { file_offset: 1234, checksum: 5678, version: LATEST_VERSION },
+        );
+        // Ensure the superblock has no set GUID.
+        super_block_a.guid = [0; 16];
+        super_block_a
+            .write(fs.object_manager().root_parent_store().as_ref(), handle_a)
+            .await
+            .expect("write failed");
+        let super_block =
+            SuperBlock::read(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+        // Ensure a GUID has been assigned.
+        assert_ne!(super_block.0.guid, [0; 16]);
     }
 }

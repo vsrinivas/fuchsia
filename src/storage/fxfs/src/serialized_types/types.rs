@@ -7,6 +7,7 @@ use crate::{
     object_store::{
         transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
         JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
+        SuperBlockV1,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -19,7 +20,7 @@ use crate::{
 /// Last breaking change:
 ///  v5:  Recombining extents from their own tree into the object tree.
 ///       This can't be done with on-the-fly struct upgrading because we removed structs.
-pub const LATEST_VERSION: Version = Version { major: 5, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 6, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,
@@ -52,7 +53,8 @@ versioned_type! {
     5.. => StoreInfo,
 }
 versioned_type! {
-    1.. => SuperBlock,
+    6.. => SuperBlock,
+    1.. => SuperBlockV1,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

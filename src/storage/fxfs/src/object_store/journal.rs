@@ -72,7 +72,7 @@ use {
 };
 
 // Exposed for serialized_types.
-pub use super_block::{SuperBlock, SuperBlockRecord};
+pub use super_block::{SuperBlock, SuperBlockRecord, SuperBlockV1};
 
 // The journal file is written to in blocks of this size.
 const BLOCK_SIZE: u64 = 8192;
@@ -265,17 +265,6 @@ impl Journal {
         let (super_block, mut reader) = SuperBlock::read(device, target_super_block)
             .await
             .context("Failed to read superblocks")?;
-
-        // Sanity-check the super-block before we attempt to use it. Further validation has to be
-        // done after we replay the items in |reader|, since they could involve super-block
-        // mutations.
-        if super_block.major_version != super_block::SUPER_BLOCK_MAJOR_VERSION {
-            return Err(anyhow!(FxfsError::InvalidVersion)).context(format!(
-                "Invalid version (has {}, want {})",
-                super_block.major_version,
-                super_block::SUPER_BLOCK_MAJOR_VERSION
-            ));
-        }
 
         let root_parent = ObjectStore::new_empty(
             None,
