@@ -183,20 +183,6 @@ async fn create_realm_instance(
     // Keep track of all components with modified program arguments, so that once the realm is built
     // those components can be extracted and modified.
     let mut modified_program_args = HashMap::new();
-    // Keep track of components that use netemul's devfs, in order to properly route it to those
-    // components after the realm has been built.
-    //
-    // TODO(https://fxbug.dev/78757): RealmBuilder doesn't natively supports routing aliased
-    // subdirectories (e.g. with `RealmBuilder::add_route`), so we have to do this by plumbing the
-    // relevant capabilities manually by editing component declarations once the realm has already
-    // been created. Once subdirectories are natively supported in its API, we should route `devfs`
-    // that way.
-    struct DevfsUsage {
-        component: String,
-        capability_name: String,
-        subdir: Option<String>,
-    }
-    let mut components_using_devfs = Vec::new();
 
     let builder = RealmBuilder::new_with_collection(REALM_COLLECTION_NAME.to_string()).await?;
     let netemul_services = builder
@@ -317,11 +303,23 @@ async fn create_realm_instance(
                                         )
                                     })?;
                                 }
-                                let () = components_using_devfs.push(DevfsUsage {
-                                    component: name.clone(),
-                                    capability_name: capability_name.clone(),
-                                    subdir,
-                                });
+                                let mut capability = Capability::directory(DEVFS)
+                                    // TODO(https://fxbug.dev/77059): remove write permissions once
+                                    // they are no longer required to connect to services.
+                                    .rights(fio::RW_STAR_DIR)
+                                    .path(DEVFS_PATH)
+                                    .as_(capability_name.clone());
+                                if let Some(subdir) = subdir {
+                                    capability = capability.subdir(subdir);
+                                }
+                                builder
+                                    .add_route(
+                                        Route::new()
+                                            .capability(capability)
+                                            .from(&netemul_services)
+                                            .to(&child_ref),
+                                    )
+                                    .await?;
                                 UniqueCapability::DevFs { name: capability_name.into() }
                             }
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
@@ -447,25 +445,6 @@ async fn create_realm_instance(
                 .to(Ref::parent()),
         )
         .await?;
-    for DevfsUsage { component, capability_name, subdir } in components_using_devfs {
-        let mut capability = Capability::directory(DEVFS)
-            // TODO(https://fxbug.dev/77059): remove write permissions once they
-            // are no longer required to connect to services.
-            .rights(fio::RW_STAR_DIR)
-            .path(DEVFS_PATH)
-            .as_(capability_name);
-        if let Some(subdir) = subdir {
-            capability = capability.subdir(subdir);
-        }
-        let () = builder
-            .add_route(
-                Route::new()
-                    .capability(capability)
-                    .from(&netemul_services)
-                    .to(Ref::child(component)),
-            )
-            .await?;
-    }
 
     let name =
         name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
