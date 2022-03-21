@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/95933): Extend parent items when extending non-deprecated works.
+
+library bindlib.to.fidl.testlib;
+
+using fuchsia.pci;
+
+string kinglet;
+uint bobolink;
+enum Moon {
+    Half,
+    Full,
+};
+
+bool flag {
+  ENABLE = true,
+  DISABLE = false,
+};
+
+extend uint fuchsia.BIND_PCI_VID {
+  PIE = 0x314,
+};

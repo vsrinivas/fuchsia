@@ -163,8 +163,8 @@ bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
 
       switch (str_props[i].value.index()) {
         case StrPropValueType::Integer: {
-          auto* prop_val = std::get_if<StrPropValueType::Integer>(&str_props[i].value);
-          str_properties[i] = str_property_with_int(str_props[i].key.c_str(), *prop_val);
+          const auto prop_val = std::get<StrPropValueType::Integer>(str_props[i].value);
+          str_properties[i] = str_property_with_int(str_props[i].key.c_str(), prop_val);
           break;
         }
         case StrPropValueType::String: {
@@ -177,8 +177,8 @@ bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
           break;
         }
         case StrPropValueType::Bool: {
-          auto* prop_val = std::get_if<StrPropValueType::Bool>(&str_props[i].value);
-          str_properties[i] = str_property_with_bool(str_props[i].key.c_str(), *prop_val);
+          const auto prop_val = std::get<StrPropValueType::Bool>(str_props[i].value);
+          str_properties[i] = str_property_with_bool(str_props[i].key.c_str(), prop_val);
           break;
         }
         case StrPropValueType::Enum: {

@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework bind test child driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

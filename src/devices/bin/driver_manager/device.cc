@@ -604,15 +604,15 @@ zx_status_t Device::SetStrProps(fbl::Array<const StrProperty> str_props) {
     }
 
     if (str_prop.value.index() == StrPropValueType::String) {
-      auto* str_value = std::get_if<StrPropValueType::String>(&str_prop.value);
-      if (str_value && !fxl::IsStringUTF8(*str_value)) {
+      const auto str_value = std::get<StrPropValueType::String>(str_prop.value);
+      if (!fxl::IsStringUTF8(str_value)) {
         return ZX_ERR_INVALID_ARGS;
       }
     }
 
     if (str_prop.value.index() == StrPropValueType::Enum) {
-      auto* enum_value = std::get_if<StrPropValueType::Enum>(&str_prop.value);
-      if (enum_value && !fxl::IsStringUTF8(*enum_value)) {
+      const auto enum_value = std::get<StrPropValueType::Enum>(str_prop.value);
+      if (!fxl::IsStringUTF8(enum_value)) {
         return ZX_ERR_INVALID_ARGS;
       }
     }

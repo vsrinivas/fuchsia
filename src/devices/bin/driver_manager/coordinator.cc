@@ -1122,25 +1122,25 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
 
       switch (str_prop.value.index()) {
         case StrPropValueType::Integer: {
-          auto* prop_val = std::get_if<StrPropValueType::Integer>(&str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithIntValue(*prop_val);
+          const auto prop_val = std::get<StrPropValueType::Integer>(str_prop.value);
+          fidl_str_prop.value = fdm::wire::PropertyValue::WithIntValue(prop_val);
           break;
         }
         case StrPropValueType::String: {
-          auto* prop_val = std::get_if<StrPropValueType::String>(&str_prop.value);
+          const auto prop_val = std::get<StrPropValueType::String>(str_prop.value);
           fidl_str_prop.value = fdm::wire::PropertyValue::WithStrValue(
-              allocator, fidl::StringView(allocator, *prop_val));
+              allocator, fidl::StringView(allocator, prop_val));
           break;
         }
         case StrPropValueType::Bool: {
-          auto* prop_val = std::get_if<StrPropValueType::Bool>(&str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithBoolValue(*prop_val);
+          const auto prop_val = std::get<StrPropValueType::Bool>(str_prop.value);
+          fidl_str_prop.value = fdm::wire::PropertyValue::WithBoolValue(prop_val);
           break;
         }
         case StrPropValueType::Enum: {
-          auto* prop_val = std::get_if<StrPropValueType::Enum>(&str_prop.value);
+          const auto prop_val = std::get<StrPropValueType::Enum>(str_prop.value);
           fidl_str_prop.value = fdm::wire::PropertyValue::WithEnumValue(
-              allocator, fidl::StringView(allocator, *prop_val));
+              allocator, fidl::StringView(allocator, prop_val));
           break;
         }
       }
