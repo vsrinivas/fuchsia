@@ -17,7 +17,6 @@
         {
             event: "started_nested",
             from: "parent",
-            modes: [ "async" ],
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
@@ -25,10 +24,7 @@
         {
             event_stream_deprecated: "StartedEventStream",
             subscriptions: [
-                {
-                    event: "started_nested",
-                    mode: "async",
-                },
+                { event: "started_nested" },
             ],
         },
     ],

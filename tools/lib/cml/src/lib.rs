@@ -452,15 +452,6 @@ impl fmt::Display for CapabilityId {
 )]
 pub struct Rights(pub Vec<Right>);
 
-/// A list of event modes.
-#[derive(CheckedVec, Debug, PartialEq, Clone)]
-#[checked_vec(
-    expected = "a nonempty array of event modes, with unique elements",
-    min_length = 1,
-    unique_items = true
-)]
-pub struct EventModes(pub Vec<EventMode>);
-
 /// Generates deserializer for `OneOrMany<Name>`.
 #[derive(OneOrMany, Debug, Clone)]
 #[one_or_many(
@@ -716,18 +707,10 @@ pub enum RegistrationRef {
     Self_,
 }
 
-#[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
-#[serde(rename_all = "snake_case")]
-pub enum EventMode {
-    /// Async events are allowed.
-    Async,
-}
-
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EventSubscription {
     pub event: OneOrMany<Name>,
-    pub mode: Option<EventMode>,
 }
 
 /// A right or bundle of rights to apply to a directory.
@@ -2046,7 +2029,6 @@ pub struct Use {
     pub event_stream: Option<OneOrMany<Name>>,
     pub scope: Option<OneOrMany<EventScope>>,
     pub filter: Option<Map<String, Value>>,
-    pub modes: Option<EventModes>,
     pub subscriptions: Option<EventSubscriptions>,
     pub dependency: Option<DependencyType>,
 }
@@ -2123,9 +2105,6 @@ pub struct Expose {
     /// (`directory` only) the relative path of a subdirectory within the source directory
     /// capability to route.
     pub subdir: Option<RelativePath>,
-
-    /// TODO(fxbug.dev/95553): Add documentation here when appropriate.
-    pub modes: Option<EventModes>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -2145,7 +2124,6 @@ pub struct Offer {
     pub subdir: Option<RelativePath>,
     pub dependency: Option<DependencyType>,
     pub filter: Option<Map<String, Value>>,
-    pub modes: Option<EventModes>,
 }
 
 /// Example:
@@ -2268,10 +2246,6 @@ pub trait PathClause {
 
 pub trait FilterClause {
     fn filter(&self) -> Option<&Map<String, Value>>;
-}
-
-pub trait EventModesClause {
-    fn event_modes(&self) -> Option<&EventModes>;
 }
 
 pub trait EventSubscriptionsClause {
@@ -2516,12 +2490,6 @@ impl RightsClause for Use {
     }
 }
 
-impl EventModesClause for Use {
-    fn event_modes(&self) -> Option<&EventModes> {
-        self.modes.as_ref()
-    }
-}
-
 impl EventSubscriptionsClause for Use {
     fn event_subscriptions(&self) -> Option<&EventSubscriptions> {
         self.subscriptions.as_ref()
@@ -2603,12 +2571,6 @@ impl RightsClause for Expose {
     }
 }
 
-impl EventModesClause for Expose {
-    fn event_modes(&self) -> Option<&EventModes> {
-        self.modes.as_ref()
-    }
-}
-
 impl FromClause for Offer {
     fn from_(&self) -> OneOrMany<AnyRef<'_>> {
         one_or_many_from_impl(&self.from)
@@ -2685,12 +2647,6 @@ impl PathClause for Offer {
 impl FilterClause for Offer {
     fn filter(&self) -> Option<&Map<String, Value>> {
         self.filter.as_ref()
-    }
-}
-
-impl EventModesClause for Offer {
-    fn event_modes(&self) -> Option<&EventModes> {
-        self.modes.as_ref()
     }
 }
 
@@ -2930,7 +2886,6 @@ mod tests {
             subdir: None,
             dependency: None,
             filter: None,
-            modes: None,
         }
     }
 
@@ -2950,7 +2905,6 @@ mod tests {
             event_stream_deprecated: None,
             event_stream: None,
             filter: None,
-            modes: None,
             subscriptions: None,
             dependency: None,
         }

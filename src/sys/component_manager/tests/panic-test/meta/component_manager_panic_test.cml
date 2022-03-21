@@ -22,15 +22,11 @@
         {
             event: [ "stopped" ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "panic_test_event_stream",
             subscriptions: [
-                {
-                    event: "stopped",
-                    mode: "async",
-                },
+                { event: "stopped" },
             ],
         },
         {

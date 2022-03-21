@@ -34,39 +34,28 @@
                 "started",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event: [ "capability_requested" ],
             from: "parent",
             filter: { name: "fidl.test.components.Trigger" },
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "EventStream",
             subscriptions: [
-                {
-                    event: "capability_requested",
-                    mode: "async",
-                },
+                { event: "capability_requested" },
             ],
         },
         {
             event_stream_deprecated: "second_stream",
             subscriptions: [
-                {
-                    event: "capability_requested",
-                    mode: "async",
-                },
+                { event: "capability_requested" },
             ],
         },
         {
             event_stream_deprecated: "resolved_stream",
             subscriptions: [
-                {
-                    event: "resolved",
-                    mode: "async",
-                },
+                { event: "resolved" },
             ],
         },
     ],

@@ -16,7 +16,6 @@
         {
             event: "started",
             from: "framework",
-            modes: [ "async" ],
         },
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],

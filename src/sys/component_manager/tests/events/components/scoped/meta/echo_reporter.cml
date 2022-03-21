@@ -20,19 +20,12 @@
                 "stopped",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "ScopedEventStream",
             subscriptions: [
-                {
-                    event: "started",
-                    mode: "async",
-                },
-                {
-                    event: "stopped",
-                    mode: "async",
-                },
+                { event: "started" },
+                { event: "stopped" },
             ],
         },
     ],

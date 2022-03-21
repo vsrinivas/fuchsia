@@ -24,15 +24,11 @@
         {
             event: [ "stopped" ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "StoppedEventStream",
             subscriptions: [
-                {
-                    event: "stopped",
-                    mode: "async",
-                },
+                { event: "stopped" },
             ],
         },
     ],

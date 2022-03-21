@@ -40,14 +40,12 @@
             ],
             from: "framework",
             to: "#archivist",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "framework",
             to: "#archivist",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
         {
             event: "capability_requested",

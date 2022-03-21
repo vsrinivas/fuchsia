@@ -23,7 +23,6 @@
         {
             event: [ "destroyed" ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             protocol: "fuchsia.sys2.EventSource",
@@ -32,10 +31,7 @@
         {
             event_stream_deprecated: "DestroyedEventStream",
             subscriptions: [
-                {
-                    event: "destroyed",
-                    mode: "async",
-                },
+                { event: "destroyed" },
             ],
         },
     ],

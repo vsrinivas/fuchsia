@@ -24,7 +24,6 @@
                 "started",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             directory: "hub",

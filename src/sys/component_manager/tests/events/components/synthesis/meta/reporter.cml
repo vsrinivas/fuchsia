@@ -28,13 +28,11 @@
                 "started",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "framework",
             filter: { name: "normal" },
-            modes: [ "async" ],
         },
     ],
 }

@@ -33,15 +33,11 @@
         {
             event: [ "purged" ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "PurgedStorageEventStream",
             subscriptions: [
-                {
-                    event: "purged",
-                    mode: "async",
-                },
+                { event: "purged" },
             ],
         },
     ],

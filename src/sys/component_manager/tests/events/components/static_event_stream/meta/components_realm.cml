@@ -34,7 +34,6 @@
             from: "framework",
             to: "#trigger_server",
             filter: { name: "fidl.test.components.Trigger" },
-            modes: [ "async" ],
         },
     ],
 }

@@ -33,33 +33,21 @@
             from: "parent",
             as: "debug_data_requested",
             filter: { name: "fuchsia.debugdata.DebugData" },
-            modes: [ "async" ],
         },
         {
             event: "started",
             from: "parent",
-            modes: [ "async" ],
         },
         {
             event: "destroyed",
             from: "parent",
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "EventStream",
             subscriptions: [
-                {
-                    event: "debug_data_requested",
-                    mode: "async",
-                },
-                {
-                    event: "started",
-                    mode: "async",
-                },
-                {
-                    event: "destroyed",
-                    mode: "async",
-                },
+                { event: "debug_data_requested" },
+                { event: "started" },
+                { event: "destroyed" },
             ],
         },
         {

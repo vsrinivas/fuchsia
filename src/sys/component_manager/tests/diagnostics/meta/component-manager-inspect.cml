@@ -47,7 +47,6 @@
             from: "parent",
             to: "#archivist",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
 
         // These events are not needed for the test to pass, but including them
@@ -60,7 +59,6 @@
             ],
             from: "framework",
             to: "#archivist",
-            modes: [ "async" ],
         },
         {
             event: "capability_requested",

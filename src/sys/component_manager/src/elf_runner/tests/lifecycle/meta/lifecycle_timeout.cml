@@ -24,7 +24,6 @@
                 "stopped",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],

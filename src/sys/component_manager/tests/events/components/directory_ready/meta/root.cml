@@ -27,15 +27,11 @@
                     "normal",
                 ],
             },
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "DirectoryReadyStream",
             subscriptions: [
-                {
-                    event: "directory_ready",
-                    mode: "async",
-                },
+                { event: "directory_ready" },
             ],
         },
     ],

@@ -207,14 +207,12 @@
             ],
             from: "framework",
             to: "#bootstrap",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "parent",
             to: "#bootstrap",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
         {
             event: "capability_requested",

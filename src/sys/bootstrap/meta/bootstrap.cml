@@ -821,14 +821,12 @@
             ],
             from: "parent",
             to: "#archivist",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "parent",
             to: "#archivist",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
         {
             event: "capability_requested",

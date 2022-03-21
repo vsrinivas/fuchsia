@@ -38,14 +38,12 @@
             ],
             from: "framework",
             to: "#archivist",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "framework",
             to: "#archivist",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
         {
             directory: "config-data",

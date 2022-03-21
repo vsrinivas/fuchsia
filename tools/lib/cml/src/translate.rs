@@ -6,10 +6,9 @@ use {
     crate::{
         error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child, Collection, ConfigKey,
         ConfigNestedValueType, ConfigValueType, DebugRegistration, Document, Environment,
-        EnvironmentExtends, EnvironmentRef, EventMode, EventModesClause, EventScope,
-        EventSubscriptionsClause, Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany,
-        Path, PathClause, Program, ResolverRegistration, RightsClause, RunnerRegistration, Use,
-        UseFromRef,
+        EnvironmentExtends, EnvironmentRef, EventScope, EventSubscriptionsClause, Expose,
+        ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause, Program,
+        ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
     },
     cm_types::{self as cm, Name},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
@@ -308,7 +307,6 @@ fn translate_use(
                     subscriptions
                         .iter()
                         .flat_map(|subscription| {
-                            let mode = subscription.mode.as_ref();
                             subscription.event.iter().map(move |event| fdecl::EventSubscription {
                                 event_name: Some(event.to_string()),
                                 mode: Some(fdecl::EventMode::Async),
@@ -1453,9 +1451,9 @@ mod tests {
         crate::{
             error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child, Collection,
             DebugRegistration, Document, Environment, EnvironmentExtends, EnvironmentRef,
-            EventMode, EventModesClause, EventSubscriptionsClause, Expose, ExposeFromRef,
-            ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause, Program,
-            ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
+            EventSubscriptionsClause, Expose, ExposeFromRef, ExposeToRef, FromClause, Offer,
+            OneOrMany, Path, PathClause, Program, ResolverRegistration, RightsClause,
+            RunnerRegistration, Use, UseFromRef,
         },
         cm_types::{self as cm, Name},
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
@@ -1676,11 +1674,9 @@ mod tests {
                         "subscriptions": [
                             {
                                 "event": [ "started", "diagnostics" ],
-                                "mode": "async",
                             },
                             {
                                 "event": [ "destroyed" ],
-                                "mode": "async"
                             }
                         ]
                     },

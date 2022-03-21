@@ -449,7 +449,6 @@ One and only one of the capability type keys (`protocol`, `directory`, `service`
   the exposed directory capability.
 - `subdir`: (_optional `string`_) (`directory` only) the relative path of a subdirectory within the source directory
   capability to route.
-- `modes`: (_optional `string`_) TODO(fxbug.dev/95553): Add documentation here when appropriate.
 Example:
 
 ```json5

@@ -23,7 +23,6 @@
                 "stopped",
             ],
             from: "framework",
-            modes: [ "async" ],
         },
     ],
     offer: [

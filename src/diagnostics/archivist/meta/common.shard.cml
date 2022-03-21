@@ -26,45 +26,27 @@
                 "stopped",
             ],
             from: "parent",
-            modes: [ "async" ],
         },
         {
             event: "directory_ready",
             from: "parent",
             as: "diagnostics_ready",
             filter: { name: "diagnostics" },
-            modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "parent",
             as: "log_sink_requested",
             filter: { name: "fuchsia.logger.LogSink" },
-            modes: [ "async" ],
         },
         {
             event_stream_deprecated: "EventStream",
             subscriptions: [
-                {
-                    event: "diagnostics_ready",
-                    mode: "async",
-                },
-                {
-                    event: "log_sink_requested",
-                    mode: "async",
-                },
-                {
-                    event: "running",
-                    mode: "async",
-                },
-                {
-                    event: "started",
-                    mode: "async",
-                },
-                {
-                    event: "stopped",
-                    mode: "async",
-                },
+                { event: "diagnostics_ready" },
+                { event: "log_sink_requested" },
+                { event: "running" },
+                { event: "started" },
+                { event: "stopped" },
             ],
         },
     ],

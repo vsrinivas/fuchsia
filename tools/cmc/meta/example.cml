@@ -89,18 +89,9 @@
         {
             event_stream_deprecated: "my_stream",
             subscriptions: [
-                {
-                    event: "began",
-                    mode: "async",
-                },
-                {
-                    event: "destroyed",
-                    mode: "async",
-                },
-                {
-                    event: "diagnostics_ready",
-                    mode: "async",
-                },
+                { event: "began" },
+                { event: "destroyed" },
+                { event: "diagnostics_ready" },
             ],
         },
         {
