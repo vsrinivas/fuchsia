@@ -377,7 +377,7 @@ of an existing upstream release, that adds new commits. The following graphics
 illustrates a situation when an 'upstream' history is branched into a 'fuchsia'
 branch which adds 3 commits on top of them:
 
-```
+```none
 upstream  ___U1__U2___
                       \
 fuchsia                \__F1__F2__F3
@@ -386,7 +386,7 @@ fuchsia                \__F1__F2__F3
 Commits are added to the upstream project by its maintainers. The upstream and
 fuchsia history have now diverged, as in:
 
-```
+```none
 upstream  ___U1__U2______U3__U4__U5
                       \
 fuchsia                \__F1__F2__F3
@@ -396,7 +396,7 @@ A simple way to get upstream changes into the fuchsia branch is to perform a
 merge operation, which may reveal conflicts between commits that need to be
 resolved manually, which can be seen as:
 
-```
+```none
 upstream  ___U1__U2______U3__U4___U5___
                       \                \
 fuchsia                \__F1__F2__F3____\F4__
@@ -412,7 +412,7 @@ rebase it on top of `U5`, solving any conflict on the way (this can be done
 locally first with a `git rebase` operation). Let's call this branch
 `upstream-sync-U5` as in:
 
-```
+```none
 upstream  ___U1__U2______U3__U4__U5
                       \            \
 upstream-sync-U5       \            \__F1'__F2'__F3'
@@ -428,7 +428,7 @@ resolved.
 It is now possible to merge the latter into the former (resolving any
 conflict by simply taking the changes from `upstream-sync-U5`) as in:
 
-```
+```none
 upstream  ___U1__U2______U3__U4__U5
                       \            \
 upstream-sync-U5       \            \__F1'__F2'__F3'
@@ -439,7 +439,7 @@ fuchsia                  \__F1__F2__F3_______________\F4
 This can be repeated later when syncing with other upstream changes, as
 in:
 
-```
+```none
 upstream  ___U1__U2______U3__U4__U5__________________U6__U7
                       \            \                       \
 upstream-sync-U5       \            \__F1'__F2'__F3'        \
