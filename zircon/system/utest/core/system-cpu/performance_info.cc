@@ -401,6 +401,9 @@ TEST(SystemCpu, TargetPreemptionTimeAssert) {
 }
 
 TEST(SystemCpu, ScaleBandwidth) {
+  // TODO(fxbug.dev/85846): Disabled while flakeds are investigated.
+  return;
+
   if (GetCpuCount() < kTestThreadCpu + 1) {
     return;
   }
