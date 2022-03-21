@@ -27,6 +27,9 @@ pub struct ListComponent {
     // Name of the component. This is the full path in the component hierarchy.
     pub name: String,
 
+    // URL of the component.
+    pub url: String,
+
     // True if component is of appmgr/CMX type.
     // False if it is of the component_manager/CML type.
     pub is_cmx: bool,
@@ -37,9 +40,9 @@ pub struct ListComponent {
 }
 
 impl ListComponent {
-    fn new(leading: &str, own_name: &str, is_cmx: bool, is_running: bool) -> Self {
+    fn new(leading: &str, own_name: &str, url: String, is_cmx: bool, is_running: bool) -> Self {
         let name = join_names(leading, own_name);
-        Self { name, is_cmx, is_running }
+        Self { name, url, is_cmx, is_running }
     }
 }
 
@@ -114,10 +117,10 @@ fn expand_component_rec(
     result: &mut Vec<ListComponent>,
 ) {
     let should_include_this = component.should_include(list_filter);
-    let Component { name, is_cmx, is_running, children, .. } = component;
+    let Component { name, is_cmx, is_running, children, url, .. } = component;
 
     if should_include_this {
-        result.push(ListComponent::new(leading, &name, is_cmx, is_running));
+        result.push(ListComponent::new(leading, &name, url, is_cmx, is_running));
     }
 
     let new_leading = join_names(leading, &name);
@@ -134,7 +137,6 @@ pub fn print_component_tree(
     writer: &Writer,
 ) -> Result<()> {
     let space = SPACER.repeat(indent);
-
     if component.should_include(&list_filter) {
         if verbose {
             let component_type = if component.is_cmx { "CMX" } else { "CML" };
@@ -142,13 +144,15 @@ pub fn print_component_tree(
             let state = if component.is_running { "Running" } else { "Stopped" };
 
             writer.line(format!(
-                "{:<width_type$}{:<width_state$}{}{}",
+                "{:<width_type$}{:<width_state$}{}{:<width_name$}{}",
                 component_type,
                 state,
                 space,
                 component.name,
+                component.url,
                 width_type = WIDTH_CS_TREE,
-                width_state = WIDTH_CS_TREE
+                width_state = WIDTH_CS_TREE,
+                width_name = (WIDTH_CS_TREE - indent) * 2
             ))?;
         } else {
             writer.line(format!("{}{}", space, component.name))?;
@@ -187,7 +191,13 @@ mod test {
         let leading = "/";
         let name = "foo.cmx";
 
-        let list_component = ListComponent::new(leading, name, true, true);
+        let list_component = ListComponent::new(
+            leading,
+            name,
+            "fuchsia-test://test.com/foo".to_string(),
+            true,
+            true,
+        );
 
         assert_eq!(list_component.name, "/foo.cmx");
     }
@@ -196,18 +206,21 @@ mod test {
         Component {
             name: "/".to_owned(),
             is_cmx: false,
+            url: "".to_owned(),
             is_running: false,
             ancestors: vec![],
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
                     is_cmx: false,
+                    url: "".to_owned(),
                     is_running: true,
                     ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
                             is_cmx: true,
+                            url: "".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
@@ -215,6 +228,7 @@ mod test {
                         Component {
                             name: "bar.cmx".to_owned(),
                             is_cmx: true,
+                            url: "".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "appmgr".to_owned()],
                             children: vec![],
@@ -224,12 +238,14 @@ mod test {
                 Component {
                     name: "sys".to_owned(),
                     is_cmx: false,
+                    url: "".to_owned(),
                     is_running: false,
                     ancestors: vec!["/".to_owned()],
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
                             is_cmx: false,
+                            url: "".to_owned(),
                             is_running: true,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![],
@@ -237,11 +253,13 @@ mod test {
                         Component {
                             name: "fuzz".to_owned(),
                             is_cmx: false,
+                            url: "".to_owned(),
                             is_running: false,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
                                 is_cmx: false,
+                                url: "".to_owned(),
                                 is_running: false,
                                 ancestors: vec![
                                     "/".to_owned(),

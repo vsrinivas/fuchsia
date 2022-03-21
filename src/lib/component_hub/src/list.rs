@@ -68,6 +68,9 @@ pub struct Component {
     // Always true for CMX components.
     pub is_running: bool,
 
+    // URL of the component
+    pub url: String,
+
     // Children of this component.
     pub children: Vec<Component>,
 
@@ -84,6 +87,8 @@ impl Component {
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
             let is_running = hub_dir.exists("exec").await?;
+
+            let url = hub_dir.read_file("url").await?;
 
             // Add this component to the list of ancestors for its children.
             let mut child_ancestors = ancestors.clone();
@@ -109,12 +114,17 @@ impl Component {
             if name == "appmgr" {
                 // Get all CMX components + realms
                 let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
-                let component =
-                    Component::parse_cmx_realm("".to_string(), realm_dir, child_ancestors).await?;
+                let component = Component::parse_cmx_realm(
+                    "".to_string(),
+                    url.clone(),
+                    realm_dir,
+                    child_ancestors,
+                )
+                .await?;
                 children.extend(component.children);
             }
 
-            Ok(Component { name, children, is_cmx: false, is_running, ancestors: ancestors })
+            Ok(Component { name, children, is_cmx: false, url, is_running, ancestors })
         }
         .boxed()
     }
@@ -130,6 +140,9 @@ impl Component {
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
             // Runner CMX components may have child components
+
+            let url = dir.read_file("url").await?;
+
             let children = if dir.exists("c").await? {
                 let children_dir = dir.open_dir_readable("c")?;
 
@@ -142,13 +155,14 @@ impl Component {
             };
 
             // CMX components are always running if they exist in tree.
-            Ok(Component { name, children, is_cmx: true, is_running: true, ancestors })
+            Ok(Component { name, children, is_cmx: true, url, is_running: true, ancestors })
         }
         .boxed()
     }
 
     fn parse_cmx_realm(
         realm_name: String,
+        url: String,
         realm_dir: Directory,
         ancestors: Vec<String>,
     ) -> BoxFuture<'static, Result<Component>> {
@@ -168,7 +182,14 @@ impl Component {
 
             // Consider a realm as a CMX component that has children.
             // This is not technically true, but works as a generalization.
-            Ok(Component { name: realm_name, children, is_cmx: true, is_running: true, ancestors })
+            Ok(Component {
+                name: realm_name,
+                children,
+                is_cmx: true,
+                url,
+                is_running: true,
+                ancestors,
+            })
         }
         .boxed()
     }
@@ -209,6 +230,7 @@ impl Component {
             for child_realm_dir in child_realm_dirs {
                 let future_realm = Component::parse_cmx_realm(
                     child_realm_name.clone(),
+                    "".to_string(), // cmx realms don't have a url
                     child_realm_dir,
                     ancestors.clone(),
                 );
@@ -301,7 +323,9 @@ mod tests {
         // Create the following structure
         // .
         // |- children
+        // |- url
         fs::create_dir(root.join("children")).unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
@@ -309,6 +333,7 @@ mod tests {
         assert!(!component.is_cmx);
         assert!(!component.is_running);
         assert_eq!(component.name, "/");
+        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
         assert!(component.ancestors.is_empty());
     }
 
@@ -320,15 +345,18 @@ mod tests {
         // Create the following structure
         // .
         // |- children
+        // |- url
         // |- exec
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir(root.join("exec")).unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(component.is_running);
         assert_eq!(component.name, "/");
+        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
         assert!(component.ancestors.is_empty());
     }
 
@@ -340,6 +368,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -347,20 +376,26 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(component.is_running);
         assert_eq!(component.name, "appmgr");
+        assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
         assert_eq!(component.children.len(), 1);
         assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo.cmx");
+        assert_eq!(child.url, "fuchsia-test://test.com/foo.cmx");
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert!(child.children.is_empty());
@@ -375,6 +410,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -382,23 +418,35 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
         //                   |- c
         //                      |- bar.cmx
         //                         |- 456
+        //                            |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
+        fs::write(
+            root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456/url"),
+            "fuchsia-test://test.com/bar.cmx",
+        )
+        .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(component.is_running);
         assert_eq!(component.name, "appmgr");
+        assert_eq!(component.url, "fuchsia-test://test.com/appmgr");
         assert_eq!(component.children.len(), 1);
         assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo.cmx");
+        assert_eq!(child.url, "fuchsia-test://test.com/foo.cmx");
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert_eq!(child.children.len(), 1);
@@ -406,6 +454,7 @@ mod tests {
 
         let child = child.children.get(0).unwrap();
         assert_eq!(child.name, "bar.cmx");
+        assert_eq!(child.url, "fuchsia-test://test.com/bar.cmx");
         assert!(child.is_running);
         assert!(child.is_cmx);
         assert_eq!(child.children.len(), 0);
@@ -419,21 +468,27 @@ mod tests {
 
         // Create the following structure
         // .
+        // |- url
         // |- children
-        //    |- test
+        //    |- foo
+        //       |- url
         //       |- children
         fs::create_dir_all(root.join("children/foo/children")).unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
+        fs::write(root.join("children/foo/url"), "fuchsia-test://test.com/foo").unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("/".to_string(), root_dir).await.unwrap();
 
         assert!(!component.is_cmx);
         assert!(!component.is_running);
         assert_eq!(component.name, "/");
+        assert_eq!(component.url, "fuchsia-test://test.com/tmp");
         assert_eq!(component.children.len(), 1);
         assert!(component.ancestors.is_empty());
 
         let child = component.children.get(0).unwrap();
         assert_eq!(child.name, "foo");
+        assert_eq!(child.url, "fuchsia-test://test.com/foo");
         assert!(!child.is_running);
         assert!(!child.is_cmx);
         assert!(child.children.is_empty());
@@ -448,6 +503,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -455,12 +511,22 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
         //                   |- c
         //                      |- bar.cmx
         //                         |- 456
+        //                            |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
+        fs::write(
+            root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456/url"),
+            "fuchsia-test://test.com/bar.cmx",
+        )
+        .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
@@ -475,6 +541,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -482,12 +549,22 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
         //                   |- c
         //                      |- bar.cmx
         //                         |- 456
+        //                            |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
+        fs::write(
+            root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456/url"),
+            "fuchsia-test://test.com/bar.cmx",
+        )
+        .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
@@ -502,6 +579,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -509,12 +587,22 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
         //                   |- c
         //                      |- bar.cmx
         //                         |- 456
+        //                            |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
+        fs::write(
+            root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456/url"),
+            "fuchsia-test://test.com/bar.cmx",
+        )
+        .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
@@ -532,6 +620,7 @@ mod tests {
         // Create the following structure
         // appmgr
         // |- children
+        // |- url
         // |- exec
         //    |- out
         //       |- hub
@@ -539,12 +628,22 @@ mod tests {
         //          |- c
         //             |- foo.cmx
         //                |- 123
+        //                   |- url
         //                   |- c
         //                      |- bar.cmx
         //                         |- 456
+        //                            |- url
+        fs::write(root.join("url"), "fuchsia-test://test.com/appmgr").unwrap();
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456")).unwrap();
         fs::create_dir_all(root.join("exec/out/hub/r")).unwrap();
+        fs::write(root.join("exec/out/hub/c/foo.cmx/123/url"), "fuchsia-test://test.com/foo.cmx")
+            .unwrap();
+        fs::write(
+            root.join("exec/out/hub/c/foo.cmx/123/c/bar.cmx/456/url"),
+            "fuchsia-test://test.com/bar.cmx",
+        )
+        .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let component = Component::parse("appmgr".to_string(), root_dir).await.unwrap();
 
@@ -558,22 +657,31 @@ mod tests {
 
         // Create the following structure
         // ancestor
+        // |- url
         // |- children
         //    |- branch1
+        //        |- url
         //        |- children
         //    |- parent
+        //        |- url
         //        |- children
         //            |- branch2
+        //                |- url
         //                |- children
         //            |- foo
+        //                |- url
         //                |- children
         //                    |- branch3
+        //                        |- url
         //                        |- children
         //                    |- child
+        //                        |- url
         //                        |- children
         //                            |- branch4
+        //                                |- url
         //                                |- children
         //                            |- descendant
+        //                                |- url
         //                                |- children
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/descendant/children"),
@@ -585,6 +693,36 @@ mod tests {
             .unwrap();
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/branch4/children"),
+        )
+        .unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/ancestor").unwrap();
+        fs::write(root.join("children/branch1/url"), "fuchsia-test://test.com/branch1").unwrap();
+        fs::write(root.join("children/parent/url"), "fuchsia-test://test.com/parent").unwrap();
+        fs::write(
+            root.join("children/parent/children/branch2/url"),
+            "fuchsia-test://test.com/branch2",
+        )
+        .unwrap();
+        fs::write(root.join("children/parent/children/foo/url"), "fuchsia-test://test.com/foo")
+            .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/branch3/url"),
+            "fuchsia-test://test.com/branch3",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/url"),
+            "fuchsia-test://test.com/child",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/branch4/url"),
+            "fuchsia-test://test.com/branch4",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/descendant/url"),
+            "fuchsia-test://test.com/descendant",
         )
         .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -603,22 +741,31 @@ mod tests {
 
         // Create the following structure
         // ancestor
+        // |- url
         // |- children
         //    |- branch1
+        //        |- url
         //        |- children
         //    |- parent
+        //        |- url
         //        |- children
         //            |- branch2
+        //                |- url
         //                |- children
         //            |- foo
+        //                |- url
         //                |- children
         //                    |- branch3
+        //                        |- url
         //                        |- children
         //                    |- child
+        //                        |- url
         //                        |- children
         //                            |- branch4
+        //                                |- url
         //                                |- children
         //                            |- descendant
+        //                                |- url
         //                                |- children
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/descendant/children"),
@@ -630,6 +777,36 @@ mod tests {
             .unwrap();
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/branch4/children"),
+        )
+        .unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
+        fs::write(root.join("children/branch1/url"), "fuchsia-test://test.com/branch1").unwrap();
+        fs::write(root.join("children/parent/url"), "fuchsia-test://test.com/parent").unwrap();
+        fs::write(
+            root.join("children/parent/children/branch2/url"),
+            "fuchsia-test://test.com/branch2",
+        )
+        .unwrap();
+        fs::write(root.join("children/parent/children/foo/url"), "fuchsia-test://test.com/foo")
+            .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/branch3/url"),
+            "fuchsia-test://test.com/branch3",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/url"),
+            "fuchsia-test://test.com/child",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/branch4/url"),
+            "fuchsia-test://test.com/branch4",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/descendant/url"),
+            "fuchsia-test://test.com/descendant",
         )
         .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -648,22 +825,31 @@ mod tests {
 
         // Create the following structure
         // ancestor
+        // |- url
         // |- children
         //    |- branch1
+        //        |- url
         //        |- children
         //    |- parent
+        //        |- url
         //        |- children
         //            |- branch2
+        //                |- url
         //                |- children
         //            |- foo
+        //                |- url
         //                |- children
         //                    |- branch3
+        //                        |- url
         //                        |- children
         //                    |- child
+        //                        |- url
         //                        |- children
         //                            |- branch4
+        //                                |- url
         //                                |- children
         //                            |- descendant
+        //                                |- url
         //                                |- children
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/descendant/children"),
@@ -675,6 +861,40 @@ mod tests {
             .unwrap();
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/branch4/children"),
+        )
+        .unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
+        fs::write(root.join("children/branch1/url"), "fuchsia-test://test.com/branch1").unwrap();
+        fs::write(root.join("children/parent/url"), "fuchsia-test://test.com/parent").unwrap();
+        fs::write(
+            root.join("children/parent/children/branch2/url"),
+            "fuchsia-test://test.com/branch2",
+        )
+        .unwrap();
+        fs::write(root.join("children/parent/children/foo/url"), "fuchsia-test://test.com/foo")
+            .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/branch3/url"),
+            "fuchsia-test://test.com/branch3",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/url"),
+            "fuchsia-test://test.com/child",
+        )
+        .unwrap();
+        fs::write(
+            root.join(
+                root.join("children/parent/children/foo/children/child/children/branch4/url"),
+            ),
+            "fuchsia-test://test.com/branch4",
+        )
+        .unwrap();
+        fs::write(
+            root.join(
+                root.join("children/parent/children/foo/children/child/children/descendant/url"),
+            ),
+            "fuchsia-test://test.com/descendant",
         )
         .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -703,22 +923,31 @@ mod tests {
 
         // Create the following structure
         // ancestor
+        // |- url
         // |- children
         //    |- branch1
+        //        |- url
         //        |- children
         //    |- parent
+        //        |- url
         //        |- children
         //            |- branch2
+        //                |- url
         //                |- children
         //            |- foo
+        //                |- url
         //                |- children
         //                    |- branch3
+        //                        |- url
         //                        |- children
         //                    |- child
+        //                        |- url
         //                        |- children
         //                            |- branch4
+        //                                |- url
         //                                |- children
         //                            |- descendant
+        //                                |- url
         //                                |- children
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/descendant/children"),
@@ -730,6 +959,36 @@ mod tests {
             .unwrap();
         fs::create_dir_all(
             root.join("children/parent/children/foo/children/child/children/branch4/children"),
+        )
+        .unwrap();
+        fs::write(root.join("url"), "fuchsia-test://test.com/tmp").unwrap();
+        fs::write(root.join("children/branch1/url"), "fuchsia-test://test.com/branch1").unwrap();
+        fs::write(root.join("children/parent/url"), "fuchsia-test://test.com/parent").unwrap();
+        fs::write(
+            root.join("children/parent/children/branch2/url"),
+            "fuchsia-test://test.com/branch2",
+        )
+        .unwrap();
+        fs::write(root.join("children/parent/children/foo/url"), "fuchsia-test://test.com/foo")
+            .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/branch3/url"),
+            "fuchsia-test://test.com/branch3",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/url"),
+            "fuchsia-test://test.com/child",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/branch4/url"),
+            "fuchsia-test://test.com/branch4",
+        )
+        .unwrap();
+        fs::write(
+            root.join("children/parent/children/foo/children/child/children/descendant/url"),
+            "fuchsia-test://test.com/descendant",
         )
         .unwrap();
         let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();

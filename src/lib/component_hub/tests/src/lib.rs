@@ -6,26 +6,33 @@ use {
     component_hub::io::Directory,
     component_hub::{list, select, show},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    regex::Regex,
     std::path::PathBuf,
 };
+
+const URL_REGEX: &str = r"fuchsia-pkg://fuchsia\.com/component_hub_integration_tests(\?hash=[0-9a-f]{64})?#meta/test\.cm";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn list() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let component = list::Component::parse("test".to_string(), hub_dir).await.unwrap();
+    let list::Component { name, is_cmx, is_running, url, children, ancestors: _ancestors } =
+        list::Component::parse("test".to_string(), hub_dir).await.unwrap();
 
-    assert!(!component.is_cmx);
-    assert!(component.is_running);
-    assert_eq!(component.name, "test");
-    assert_eq!(component.children.len(), 1);
+    assert!(!is_cmx);
+    assert!(is_running);
+    assert_eq!(name, "test");
+    assert!(Regex::new(URL_REGEX).unwrap().is_match(&url));
+    assert_eq!(children.len(), 1);
 
-    let child = component.children.get(0).unwrap();
-    assert_eq!(child.name, "foo");
-    assert!(!child.is_running);
-    assert!(!child.is_cmx);
-    assert!(child.children.is_empty());
+    let list::Component { name, is_cmx, is_running, url, children, ancestors: _ancestors } =
+        children.get(0).unwrap();
+    assert_eq!(name, "foo");
+    assert!(!is_running);
+    assert!(!is_cmx);
+    assert_eq!(url, "#meta/foo.cm");
+    assert!(children.is_empty());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -38,9 +45,7 @@ async fn show() {
     assert_eq!(components.len(), 1);
     let component = &components[0];
 
-    // The test runner may include a specific hash in the component URL
-    assert!(component.url.starts_with("fuchsia-pkg://fuchsia.com/component_hub_integration_test"));
-    assert!(component.url.ends_with("#meta/test.cm"));
+    assert!(Regex::new(URL_REGEX).unwrap().is_match(&component.url));
 
     assert!(component.moniker.is_root());
     assert_eq!(component.component_type, "CML static component");
