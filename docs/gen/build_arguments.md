@@ -350,7 +350,7 @@ context.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:52
+From //build/board.gni:54
 
 ### board_description
 Human readable board description corresponding to the board name.
@@ -392,12 +392,12 @@ board's fastboot protocol.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:56
+From //build/board.gni:58
 
 ### board_fshost_config
 A list of fshost options to add to the fshost config.
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `{ }`
 
 From //build/board.gni:42
 
@@ -419,7 +419,7 @@ From //boards/arm64.gni:43
 
 **Overridden from the default:** `false`
 
-From //build/board.gni:75
+From //build/board.gni:77
 
 **Current value for `target_cpu = "x64"`:** `true`
 
@@ -427,7 +427,7 @@ From //boards/x64.gni:80
 
 **Overridden from the default:** `false`
 
-From //build/board.gni:75
+From //build/board.gni:77
 
 ### board_is_phys
 
@@ -437,11 +437,11 @@ From //boards/arm64.gni:44
 
 **Overridden from the default:** `true`
 
-From //build/board.gni:76
+From //build/board.gni:78
 
 **Current value (from the default):** `true`
 
-From //build/board.gni:76
+From //build/board.gni:78
 
 ### board_name
 Board name used for paving and amber updates.
@@ -514,7 +514,7 @@ Whether or not the board pulls in the system-update-configurator component.
 
 **Current value (from the default):** `false`
 
-From //build/board.gni:70
+From //build/board.gni:72
 
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -525,7 +525,7 @@ From //boards/arm64.gni:27
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:48
+From //build/board.gni:50
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
@@ -533,7 +533,7 @@ From //boards/common/x64-common.gni:50
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:48
+From //build/board.gni:50
 
 ### board_tools
 List of paths to board-specific tools to include in the build output.
@@ -548,7 +548,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:67
+From //build/board.gni:69
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -581,9 +581,9 @@ From //build/board.gni:33
 ### board_zedboot_fshost_config
 A list of fshost options to add to the fshost config in the zedboot image.
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `{ }`
 
-From //build/board.gni:45
+From //build/board.gni:46
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
