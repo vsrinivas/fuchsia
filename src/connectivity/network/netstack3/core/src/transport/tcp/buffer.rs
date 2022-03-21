@@ -413,7 +413,7 @@ mod test {
     mod assembler {
         use super::*;
         pub(super) fn insertions() -> impl Strategy<Value = Range<SeqNum>> {
-            (0..=u32::from(WindowSize::MAX)).prop_flat_map(|start| {
+            (0..u32::from(WindowSize::MAX)).prop_flat_map(|start| {
                 (start + 1..=u32::from(WindowSize::MAX)).prop_flat_map(move |end| {
                     Just(Range { start: SeqNum::new(start), end: SeqNum::new(end) })
                 })
