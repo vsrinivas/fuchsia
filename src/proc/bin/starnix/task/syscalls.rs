@@ -122,9 +122,7 @@ pub fn sys_setpgid(
     pgid: pid_t,
 ) -> Result<SyscallResult, Errno> {
     let task = get_task_or_current(current_task, pid)?;
-    let pgid = if pgid == 0 { task.get_pid() } else { pgid };
-    // TODO(security): check permissions
-    task.job_control.write().pgid = pgid;
+    current_task.setpgid(&task, pgid)?;
     Ok(SUCCESS)
 }
 

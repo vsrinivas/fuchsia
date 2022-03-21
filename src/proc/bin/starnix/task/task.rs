@@ -515,6 +515,60 @@ impl Task {
         *self.job_control.write() = job_control;
         Ok(())
     }
+
+    pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
+        // The target task must be either the current task of a child of the current task
+        if target != self && target.parent != self.get_pid() {
+            return error!(ESRCH);
+        }
+
+        // If the target task is a child of the current task, it must not have executed one of the exec
+        // function. Keep target_did_exec lock until the end of this function to prevent a race.
+        let target_did_exec;
+        if target.parent == self.get_pid() {
+            target_did_exec = target.did_exec.read();
+            if *target_did_exec {
+                return error!(EACCES);
+            }
+        }
+
+        let mut pids = self.thread_group.kernel.pids.write();
+        let sid;
+        let target_pgid;
+        {
+            let current_job_control = self.job_control.read();
+            let target_job_control = target.job_control.read();
+
+            // The target task must not be a session leader and must be in the same session as the current task.
+            if target.id == target_job_control.sid
+                || current_job_control.sid != target_job_control.sid
+            {
+                return error!(EPERM);
+            }
+
+            target_pgid = if pgid == 0 { target.get_pid() } else { pgid };
+            if target_pgid < 0 {
+                return error!(EINVAL);
+            }
+
+            // If pgid is not equal to the target process id, the associated process group must exist
+            // and be in the same session as the target process.
+            if target_pgid != target.id {
+                let process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
+                if process_group.sid != target_job_control.sid {
+                    return error!(EPERM);
+                }
+            }
+
+            sid = target_job_control.sid;
+        }
+
+        let new_job_control = ShellJobControl { sid: sid, pgid: target_pgid };
+        pids.set_job_control(target.id, &new_job_control);
+        *target.job_control.write() = new_job_control;
+
+        Ok(())
+    }
 }
 
 impl CurrentTask {
@@ -975,5 +1029,61 @@ mod test {
 
         assert_eq!(child_task.setsid(), Ok(()));
         assert_eq!(child_task.job_control.read().sid, child_task.get_pid());
+    }
+
+    #[test]
+    fn test_setgpid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        assert_eq!(current_task.setsid(), error!(EPERM));
+
+        let child_task1 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *child_task1.exit_code.lock() = Some(0);
+        let child_task2 = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *child_task2.exit_code.lock() = Some(0);
+        let execd_child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *execd_child_task.exit_code.lock() = Some(0);
+        *execd_child_task.did_exec.write() = true;
+        let other_session_child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *other_session_child_task.exit_code.lock() = Some(0);
+        assert_eq!(other_session_child_task.setsid(), Ok(()));
+
+        assert_eq!(child_task1.setpgid(&current_task, 0), error!(ESRCH));
+        assert_eq!(current_task.setpgid(&execd_child_task, 0), error!(EACCES));
+        assert_eq!(current_task.setpgid(&current_task, 0), error!(EPERM));
+        assert_eq!(current_task.setpgid(&other_session_child_task, 0), error!(EPERM));
+        assert_eq!(current_task.setpgid(&child_task1, -1), error!(EINVAL));
+        assert_eq!(current_task.setpgid(&child_task1, 255), error!(EPERM));
+        assert_eq!(current_task.setpgid(&child_task1, other_session_child_task.id), error!(EPERM));
+
+        assert_eq!(child_task1.setpgid(&child_task1, 0), Ok(()));
+        assert_eq!(child_task1.job_control.read().sid, current_task.id);
+        assert_eq!(child_task1.job_control.read().pgid, child_task1.id);
+
+        assert_eq!(current_task.setpgid(&child_task2, child_task1.id), Ok(()));
+        assert_eq!(child_task2.job_control.read().pgid, child_task1.id);
     }
 }
