@@ -157,7 +157,7 @@ int main() {
                     component.Dispatcher(), component.Services(), component.Clock(),
                     component.InspectRoot(), cobalt.get(), startup_annotations,
                     MainService::Options{
-                        kDeviceIdPath,
+                        local_device_id_path,
                         LastReboot::Options{
                             .is_first_instance = component.IsFirstInstance(),
                             .reboot_log = reboot_log,
