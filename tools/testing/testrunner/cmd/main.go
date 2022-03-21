@@ -578,7 +578,7 @@ func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTeste
 		multiTests = retryTests
 	}
 	if skippedTests > 0 {
-		logger.Errorf(ctx, "%s: %d total tests skipped", constants.SkippedRunningTestsMsg, skippedTests)
+		return fmt.Errorf("%s: %d total tests skipped", constants.SkippedRunningTestsMsg, skippedTests)
 	}
 	return nil
 }
