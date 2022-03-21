@@ -5,7 +5,9 @@
 #include "src/lib/fidl_codec/library_loader.h"
 
 #include <fstream>
+#include <ios>
 #include <set>
+#include <sstream>
 
 #include <rapidjson/error/en.h>
 
@@ -83,22 +85,34 @@ std::string Enum::GetName(uint64_t absolute_value, bool negative) const {
 Bits::~Bits() = default;
 
 std::string Bits::GetName(uint64_t absolute_value, bool negative) const {
-  std::string returned_value;
+  std::ostringstream os;
+  auto emit = [&os, first = true]() mutable -> std::ostringstream& {
+    if (!first) {
+      os << '|';
+    }
+    first = false;
+    return os;
+  };
   if (!negative) {
-    for (auto& member : members()) {
-      if (((absolute_value & member.absolute_value()) != 0) && !member.negative()) {
-        if (!returned_value.empty()) {
-          returned_value += "|";
-        }
-        returned_value += member.name();
+    for (const auto& member : members()) {
+      if (member.negative()) {
+        continue;
       }
+      if (absolute_value & member.absolute_value()) {
+        emit() << member.name();
+      }
+      absolute_value &= ~member.absolute_value();
+    }
+    if (absolute_value) {
+      emit() << std::hex << std::showbase << absolute_value;
     }
   }
 
-  if (returned_value.empty()) {
-    return "<none>";
+  std::string str = os.str();
+  if (!str.empty()) {
+    return str;
   }
-  return returned_value;
+  return "<none>";
 }
 
 UnionMember::UnionMember(const Union& union_definition, Library* enclosing_library,
