@@ -4,8 +4,14 @@
 
 //! IEEE Std 802.11-2016 WEP descriptors and credentials.
 //!
+//! **WEP is insecure and support will be removed. This module is provided for legacy support only
+//! and its use should be avoided.**
+//!
 //! WEP has no dedicated descriptor data. Only WEP-40 and WEP-104 are supported and key size is not
 //! negotiated with remote stations.
+
+// TODO(fxbug.dev/96000): Name items in this module in a way that makes it clear that they
+//                        implement an insecure security protocol.
 
 use fidl_fuchsia_wlan_common_security as fidl_security;
 use hex;

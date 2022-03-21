@@ -128,7 +128,7 @@ impl From<fidl_security::Protocol> for SecurityDescriptor {
             fidl_security::Protocol::Open => SecurityDescriptor::Open,
             fidl_security::Protocol::Wep => SecurityDescriptor::Wep,
             fidl_security::Protocol::Wpa1 => {
-                SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa1 { authentication: () })
+                SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa1 { credentials: () })
             }
             fidl_security::Protocol::Wpa2Personal => {
                 SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa2 {
@@ -322,9 +322,9 @@ impl TryFrom<fidl_security::Authentication> for SecurityAuthenticator {
             fidl_security::Protocol::Wpa1 => credentials
                 .ok_or_else(|| SecurityError::Incompatible)? // No credentials.
                 .into_wpa()
-                .map(wpa::Wpa1PersonalCredentials::try_from)
+                .map(wpa::Wpa1Credentials::try_from)
                 .transpose()? // Conversion failure.
-                .map(|authentication| wpa::WpaAuthenticator::Wpa1 { authentication })
+                .map(|credentials| wpa::WpaAuthenticator::Wpa1 { credentials })
                 .map(From::from)
                 .ok_or_else(|| SecurityError::Incompatible), // Non-WPA credentials.
             fidl_security::Protocol::Wpa2Personal => credentials

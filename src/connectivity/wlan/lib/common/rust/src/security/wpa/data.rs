@@ -15,9 +15,7 @@
 
 use std::fmt::Debug;
 
-use crate::security::wpa::{
-    Wpa1PersonalCredentials, Wpa2PersonalCredentials, Wpa3PersonalCredentials,
-};
+use crate::security::wpa::{Wpa1Credentials, Wpa2PersonalCredentials, Wpa3PersonalCredentials};
 
 /// Defines the credential data used by [`WpaAuthenticator`].
 ///
@@ -62,7 +60,7 @@ impl PersonalData for () {
 }
 
 impl PersonalData for AuthenticatorData {
-    type Wpa1 = Wpa1PersonalCredentials;
+    type Wpa1 = Wpa1Credentials;
     type Wpa2 = Wpa2PersonalCredentials;
     type Wpa3 = Wpa3PersonalCredentials;
 }

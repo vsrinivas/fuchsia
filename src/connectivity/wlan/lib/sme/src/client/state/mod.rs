@@ -27,12 +27,15 @@ use {
     log::{error, info, warn},
     static_assertions::assert_eq_size,
     std::convert::TryInto,
-    wep_deprecated,
     wlan_common::{
         bss::BssDescription,
         capabilities::{derive_join_capabilities, ClientCapabilities},
         format::MacFmt as _,
-        ie::{self, rsn::cipher},
+        ie::{
+            self,
+            rsn::{cipher, suite_selector::OUI},
+        },
+        security::wep::WepKey,
         timer::EventId,
     },
     wlan_rsn::{
@@ -307,7 +310,7 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Associated, Idle> {
-        let auth_method = self.cmd.protection.get_rsn_auth_method();
+        let auth_method = self.cmd.protection.rsn_auth_method();
         let wmm_param =
             conf.wmm_param.as_ref().and_then(|p| match ie::parse_wmm_param(&p.bytes[..]) {
                 Ok(param) => Some(*param),
@@ -1227,10 +1230,10 @@ fn log_state_change(
     }
 }
 
-fn install_wep_key(context: &mut Context, bssid: Bssid, key: &wep_deprecated::Key) {
+fn install_wep_key(context: &mut Context, bssid: Bssid, key: &WepKey) {
     let cipher_suite = match key {
-        wep_deprecated::Key::Bits40(_) => cipher::WEP_40,
-        wep_deprecated::Key::Bits104(_) => cipher::WEP_104,
+        WepKey::Wep40(_) => cipher::WEP_40,
+        WepKey::Wep104(_) => cipher::WEP_104,
     };
     // unwrap() is safe, OUI is defined in RSN and always compatible with ciphers.
     let cipher = cipher::Cipher::new_dot11(cipher_suite);
@@ -1239,9 +1242,18 @@ fn install_wep_key(context: &mut Context, bssid: Bssid, key: &wep_deprecated::Ke
         cipher: format!("{:?}", cipher),
         key_index: 0,
     });
-    context
-        .mlme_sink
-        .send(MlmeRequest::SetKeys(wep_deprecated::make_mlme_set_keys_request(bssid.0, key)));
+    let request = MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
+        keylist: vec![fidl_mlme::SetKeyDescriptor {
+            key_type: fidl_mlme::KeyType::Pairwise,
+            key: key.clone().into(),
+            key_id: 0,
+            address: bssid.0,
+            cipher_suite_oui: OUI.into(),
+            cipher_suite_type: cipher_suite,
+            rsc: 0,
+        }],
+    });
+    context.mlme_sink.send(request)
 }
 
 /// Custom logging for ConnectCommand because its normal full debug string is too large, and we
@@ -3049,7 +3061,7 @@ mod tests {
         let cmd = ConnectCommand {
             bss: Box::new(fake_bss_description!(Wep, ssid: Ssid::try_from("wep").unwrap())),
             connect_txn_sink,
-            protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
+            protection: Protection::Wep(WepKey::Wep40([3; 5])),
         };
         (cmd, connect_txn_stream)
     }
@@ -3158,7 +3170,7 @@ mod tests {
     }
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> ClientState {
-        let auth_method = cmd.protection.get_rsn_auth_method();
+        let auth_method = cmd.protection.rsn_auth_method();
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
         let link_state = testing::new_state(EstablishingRsna {
             rsna,
@@ -3188,7 +3200,7 @@ mod tests {
     }
 
     fn link_up_state_with_wmm(cmd: ConnectCommand, wmm_param: Option<ie::WmmParam>) -> ClientState {
-        let auth_method = cmd.protection.get_rsn_auth_method();
+        let auth_method = cmd.protection.rsn_auth_method();
         let link_state =
             testing::new_state(LinkUp { protection: cmd.protection, since: now() }).into();
         testing::new_state(Associated {

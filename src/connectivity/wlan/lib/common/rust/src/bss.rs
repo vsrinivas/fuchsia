@@ -31,10 +31,14 @@ use {
 };
 
 // TODO(fxbug.dev/29885): Represent this as bitfield instead.
+// TODO(fxbug.dev/29877): Move all ordering logic to SME.
+/// Supported wireless network protection.
+///
+/// Describes the protection configured for a BSS. The tags of each variant are ordered such that
+/// greater tags are preferred over lower tags. For example, `Wpa2Personal` is preferred over
+/// `Wep`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Protection {
-    /// Higher number on Protection enum indicates a more preferred protection type for our SME.
-    /// TODO(fxbug.dev/29877): Move all ordering logic to SME.
     Unknown = 0,
     Open = 1,
     Wep = 2,
@@ -487,6 +491,35 @@ impl BssDescription {
             self.channel.primary,
             self.rssi_dbm,
         )
+    }
+
+    pub fn is_open(&self) -> bool {
+        matches!(self.protection(), Protection::Open)
+    }
+
+    pub fn has_wep_configured(&self) -> bool {
+        matches!(self.protection(), Protection::Wep)
+    }
+
+    pub fn has_wpa1_configured(&self) -> bool {
+        matches!(
+            self.protection(),
+            Protection::Wpa1 | Protection::Wpa1Wpa2PersonalTkipOnly | Protection::Wpa1Wpa2Personal
+        )
+    }
+
+    pub fn has_wpa2_personal_configured(&self) -> bool {
+        matches!(
+            self.protection(),
+            Protection::Wpa1Wpa2PersonalTkipOnly
+                | Protection::Wpa1Wpa2Personal
+                | Protection::Wpa2Personal
+                | Protection::Wpa2Wpa3Personal
+        )
+    }
+
+    pub fn has_wpa3_personal_configured(&self) -> bool {
+        matches!(self.protection(), Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal)
     }
 }
 

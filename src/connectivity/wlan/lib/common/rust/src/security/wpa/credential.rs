@@ -75,6 +75,12 @@ impl From<Psk> for [u8; PSK_SIZE_BYTES] {
     }
 }
 
+impl From<Psk> for Box<[u8]> {
+    fn from(psk: Psk) -> Self {
+        Vec::from(psk).into_boxed_slice()
+    }
+}
+
 impl From<Psk> for Vec<u8> {
     fn from(psk: Psk) -> Self {
         psk.0.into()

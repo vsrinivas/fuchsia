@@ -48,7 +48,7 @@ use crate::security::{
 
 pub use crate::security::wpa::data::AuthenticatorData;
 
-pub const WPA1: WpaDescriptor = WpaDescriptor::Wpa1 { authentication: () };
+pub const WPA1: WpaDescriptor = WpaDescriptor::Wpa1 { credentials: () };
 pub const WPA2_PERSONAL_TKIP: WpaDescriptor = WpaDescriptor::Wpa2 {
     cipher: Some(Wpa2Cipher::TKIP),
     authentication: Authentication::Personal(()),
@@ -155,9 +155,15 @@ impl Default for Authentication<(), ()> {
     }
 }
 
-// TODO(fxbug.dev/92693): Specify the WPA1 Enterprise type.
-impl From<Wpa1PersonalCredentials> for Authentication<Wpa1PersonalCredentials, ()> {
-    fn from(credentials: Wpa1PersonalCredentials) -> Self {
+impl From<Wpa1Credentials> for Authentication<Wpa1Credentials, ()> {
+    fn from(credentials: Wpa1Credentials) -> Self {
+        Authentication::Personal(credentials)
+    }
+}
+
+// TODO(fxbug.dev/92693): Specify the WPA2 Enterprise type.
+impl From<Wpa2PersonalCredentials> for Authentication<Wpa2PersonalCredentials, ()> {
+    fn from(credentials: Wpa2PersonalCredentials) -> Self {
         Authentication::Personal(credentials)
     }
 }
@@ -221,11 +227,20 @@ impl AsRef<[u8]> for PersonalCredentials {
     }
 }
 
-impl From<Wpa1PersonalCredentials> for PersonalCredentials {
-    fn from(credentials: Wpa1PersonalCredentials) -> Self {
+impl From<Wpa1Credentials> for PersonalCredentials {
+    fn from(credentials: Wpa1Credentials) -> Self {
         match credentials {
-            Wpa1PersonalCredentials::Psk(psk) => PersonalCredentials::Psk(psk),
-            Wpa1PersonalCredentials::Passphrase(passphrase) => {
+            Wpa1Credentials::Psk(psk) => PersonalCredentials::Psk(psk),
+            Wpa1Credentials::Passphrase(passphrase) => PersonalCredentials::Passphrase(passphrase),
+        }
+    }
+}
+
+impl From<Wpa2PersonalCredentials> for PersonalCredentials {
+    fn from(credentials: Wpa2PersonalCredentials) -> Self {
+        match credentials {
+            Wpa2PersonalCredentials::Psk(psk) => PersonalCredentials::Psk(psk),
+            Wpa2PersonalCredentials::Passphrase(passphrase) => {
                 PersonalCredentials::Passphrase(passphrase)
             }
         }
@@ -254,34 +269,34 @@ impl From<PersonalCredentials> for fidl_security::WpaCredentials {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Wpa1PersonalCredentials {
+pub enum Wpa1Credentials {
     Psk(Psk),
     Passphrase(Passphrase),
 }
 
-impl AsRef<[u8]> for Wpa1PersonalCredentials {
+impl AsRef<[u8]> for Wpa1Credentials {
     fn as_ref(&self) -> &[u8] {
         match self {
-            Wpa1PersonalCredentials::Psk(ref psk) => psk.as_ref(),
-            Wpa1PersonalCredentials::Passphrase(ref passphrase) => passphrase.as_ref(),
+            Wpa1Credentials::Psk(ref psk) => psk.as_ref(),
+            Wpa1Credentials::Passphrase(ref passphrase) => passphrase.as_ref(),
         }
     }
 }
 
-impl From<Passphrase> for Wpa1PersonalCredentials {
+impl From<Passphrase> for Wpa1Credentials {
     fn from(passphrase: Passphrase) -> Self {
-        Wpa1PersonalCredentials::Passphrase(passphrase)
+        Wpa1Credentials::Passphrase(passphrase)
     }
 }
 
-impl From<Psk> for Wpa1PersonalCredentials {
+impl From<Psk> for Wpa1Credentials {
     fn from(psk: Psk) -> Self {
-        Wpa1PersonalCredentials::Psk(psk)
+        Wpa1Credentials::Psk(psk)
     }
 }
 
-impl From<Wpa1PersonalCredentials> for fidl_security::WpaCredentials {
-    fn from(credentials: Wpa1PersonalCredentials) -> Self {
+impl From<Wpa1Credentials> for fidl_security::WpaCredentials {
+    fn from(credentials: Wpa1Credentials) -> Self {
         PersonalCredentials::from(credentials).into()
     }
 }
@@ -289,37 +304,99 @@ impl From<Wpa1PersonalCredentials> for fidl_security::WpaCredentials {
 // This is implemented (infallibly) via `TryFrom`, because the set of accepted WPA credentials may
 // expand with revisions to IEEE Std 802.11 and conversions from the general enumeration to the
 // specific enumeration should be handled in a fallible and defensive way by client code.
-impl TryFrom<PersonalCredentials> for Wpa1PersonalCredentials {
+impl TryFrom<PersonalCredentials> for Wpa1Credentials {
     type Error = SecurityError;
 
     fn try_from(credentials: PersonalCredentials) -> Result<Self, Self::Error> {
         match credentials {
-            PersonalCredentials::Psk(psk) => Ok(Wpa1PersonalCredentials::Psk(psk)),
+            PersonalCredentials::Psk(psk) => Ok(Wpa1Credentials::Psk(psk)),
             PersonalCredentials::Passphrase(passphrase) => {
-                Ok(Wpa1PersonalCredentials::Passphrase(passphrase))
+                Ok(Wpa1Credentials::Passphrase(passphrase))
             }
         }
     }
 }
 
-impl TryFrom<fidl_security::WpaCredentials> for Wpa1PersonalCredentials {
+impl TryFrom<fidl_security::WpaCredentials> for Wpa1Credentials {
     type Error = SecurityError;
 
     fn try_from(credentials: fidl_security::WpaCredentials) -> Result<Self, Self::Error> {
         match credentials {
-            fidl_security::WpaCredentials::Psk(psk) => {
-                Ok(Wpa1PersonalCredentials::Psk(Psk::from(psk)))
-            }
+            fidl_security::WpaCredentials::Psk(psk) => Ok(Wpa1Credentials::Psk(Psk::from(psk))),
             fidl_security::WpaCredentials::Passphrase(passphrase) => {
                 let passphrase = Passphrase::try_from(passphrase)?;
-                Ok(Wpa1PersonalCredentials::Passphrase(passphrase))
+                Ok(Wpa1Credentials::Passphrase(passphrase))
             }
             _ => panic!("unknown FIDL credentials variant"),
         }
     }
 }
 
-pub type Wpa2PersonalCredentials = Wpa1PersonalCredentials;
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Wpa2PersonalCredentials {
+    Psk(Psk),
+    Passphrase(Passphrase),
+}
+
+impl AsRef<[u8]> for Wpa2PersonalCredentials {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Wpa2PersonalCredentials::Psk(ref psk) => psk.as_ref(),
+            Wpa2PersonalCredentials::Passphrase(ref passphrase) => passphrase.as_ref(),
+        }
+    }
+}
+
+impl From<Passphrase> for Wpa2PersonalCredentials {
+    fn from(passphrase: Passphrase) -> Self {
+        Wpa2PersonalCredentials::Passphrase(passphrase)
+    }
+}
+
+impl From<Psk> for Wpa2PersonalCredentials {
+    fn from(psk: Psk) -> Self {
+        Wpa2PersonalCredentials::Psk(psk)
+    }
+}
+
+impl From<Wpa2PersonalCredentials> for fidl_security::WpaCredentials {
+    fn from(credentials: Wpa2PersonalCredentials) -> Self {
+        PersonalCredentials::from(credentials).into()
+    }
+}
+
+// This is implemented (infallibly) via `TryFrom`, because the set of accepted WPA credentials may
+// expand with revisions to IEEE Std 802.11 and conversions from the general enumeration to the
+// specific enumeration should be handled in a fallible and defensive way by client code.
+impl TryFrom<PersonalCredentials> for Wpa2PersonalCredentials {
+    type Error = SecurityError;
+
+    fn try_from(credentials: PersonalCredentials) -> Result<Self, Self::Error> {
+        match credentials {
+            PersonalCredentials::Psk(psk) => Ok(Wpa2PersonalCredentials::Psk(psk)),
+            PersonalCredentials::Passphrase(passphrase) => {
+                Ok(Wpa2PersonalCredentials::Passphrase(passphrase))
+            }
+        }
+    }
+}
+
+impl TryFrom<fidl_security::WpaCredentials> for Wpa2PersonalCredentials {
+    type Error = SecurityError;
+
+    fn try_from(credentials: fidl_security::WpaCredentials) -> Result<Self, Self::Error> {
+        match credentials {
+            fidl_security::WpaCredentials::Psk(psk) => {
+                Ok(Wpa2PersonalCredentials::Psk(Psk::from(psk)))
+            }
+            fidl_security::WpaCredentials::Passphrase(passphrase) => {
+                let passphrase = Passphrase::try_from(passphrase)?;
+                Ok(Wpa2PersonalCredentials::Passphrase(passphrase))
+            }
+            _ => panic!("unknown FIDL credentials variant"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Wpa3PersonalCredentials {
@@ -510,7 +587,7 @@ where
     C: CredentialData,
 {
     Wpa1 {
-        authentication: <C::Personal as PersonalData>::Wpa1,
+        credentials: <C::Personal as PersonalData>::Wpa1,
     },
     Wpa2 {
         cipher: Option<Wpa2Cipher>,
@@ -536,7 +613,7 @@ where
     /// credentials) are dropped.
     pub fn into_descriptor(self) -> Wpa<()> {
         match self {
-            Wpa::Wpa1 { .. } => Wpa::Wpa1 { authentication: () },
+            Wpa::Wpa1 { .. } => Wpa::Wpa1 { credentials: () },
             Wpa::Wpa2 { cipher, authentication } => {
                 Wpa::Wpa2 { cipher, authentication: authentication.into_descriptor() }
             }
@@ -599,10 +676,14 @@ impl WpaAuthenticator {
     /// Converts a WPA authenticator into its credentials.
     ///
     /// The output of this function is general and describes all versions of WPA. This means it
-    /// cannot be used to determine which version of WPA has been specified.
+    /// cannot be used to determine which version of WPA has been specified. Note that WPA1
+    /// specifies its credentials as WPA1 Personal via [`Authentication::Personal`] even though
+    /// WPA1 has no Enterprise suite.
+    ///
+    /// [`Authentication::Personal`]: crate::security::wpa::Authentication::Personal
     pub fn into_credentials(self) -> Credentials {
         match self {
-            Wpa::Wpa1 { authentication: personal } => Authentication::Personal(personal.into()),
+            Wpa::Wpa1 { credentials } => Authentication::Personal(credentials.into()),
             Wpa::Wpa2 { authentication, .. } => authentication.into_credentials(),
             Wpa::Wpa3 { authentication, .. } => authentication.into_credentials(),
         }
@@ -610,9 +691,7 @@ impl WpaAuthenticator {
 
     pub fn to_credentials(&self) -> Credentials {
         match self {
-            Wpa::Wpa1 { authentication: ref personal } => {
-                Authentication::Personal(personal.clone().into())
-            }
+            Wpa::Wpa1 { ref credentials } => Authentication::Personal(credentials.clone().into()),
             Wpa::Wpa2 { ref authentication, .. } => authentication.clone().into_credentials(),
             Wpa::Wpa3 { ref authentication, .. } => authentication.clone().into_credentials(),
         }
@@ -660,14 +739,23 @@ mod tests {
         }
     }
 
-    // Note that `Wpa1PersonalCredentials` and `Wpa2PersonalCredentials` are the same type.
-    #[test_case(WpaCredentialsTestCase::psk() => matches Ok(wpa::Wpa1PersonalCredentials::Psk(_)))]
+    #[test_case(WpaCredentialsTestCase::psk() => matches Ok(wpa::Wpa1Credentials::Psk(_)))]
     #[test_case(WpaCredentialsTestCase::passphrase() => matches
-        Ok(wpa::Wpa1PersonalCredentials::Passphrase(_))
+        Ok(wpa::Wpa1Credentials::Passphrase(_))
     )]
-    fn wpa1_personal_credentials_from_credentials_fidl(
+    fn wpa1_credentials_from_credentials_fidl(
         credentials: fidl_security::WpaCredentials,
-    ) -> Result<wpa::Wpa1PersonalCredentials, SecurityError> {
+    ) -> Result<wpa::Wpa1Credentials, SecurityError> {
+        credentials.try_into()
+    }
+
+    #[test_case(WpaCredentialsTestCase::psk() => matches Ok(wpa::Wpa2PersonalCredentials::Psk(_)))]
+    #[test_case(WpaCredentialsTestCase::passphrase() => matches
+        Ok(wpa::Wpa2PersonalCredentials::Passphrase(_))
+    )]
+    fn wpa2_personal_credentials_from_credentials_fidl(
+        credentials: fidl_security::WpaCredentials,
+    ) -> Result<wpa::Wpa2PersonalCredentials, SecurityError> {
         credentials.try_into()
     }
 
@@ -681,14 +769,13 @@ mod tests {
         credentials.try_into()
     }
 
-    // Note that `Wpa1PersonalCredentials` and `Wpa2PersonalCredentials` are the same type.
-    #[test_case(PersonalCredentialsTestCase::psk() => matches Ok(wpa::Wpa1PersonalCredentials::Psk(_)))]
+    #[test_case(PersonalCredentialsTestCase::psk() => matches Ok(wpa::Wpa1Credentials::Psk(_)))]
     #[test_case(PersonalCredentialsTestCase::passphrase() => matches
-        Ok(wpa::Wpa1PersonalCredentials::Passphrase(_))
+        Ok(wpa::Wpa1Credentials::Passphrase(_))
     )]
     fn wpa1_personal_credentials_from_personal_credentials(
         credentials: wpa::PersonalCredentials,
-    ) -> Result<wpa::Wpa1PersonalCredentials, SecurityError> {
+    ) -> Result<wpa::Wpa1Credentials, SecurityError> {
         credentials.try_into()
     }
 

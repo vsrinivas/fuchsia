@@ -17,14 +17,12 @@ pub mod test_utils;
 use {
     self::{
         event::Event,
-        protection::Protection,
-        rsn::{get_wpa2_rsna, get_wpa3_rsna},
+        protection::{Protection, SecurityContext},
         scan::{DiscoveryScan, ScanScheduler},
         state::{ClientState, ConnectCommand},
-        wpa::get_legacy_wpa_association,
     },
     crate::{responder::Responder, Config, MlmeRequest, MlmeSink, MlmeStream},
-    anyhow::{bail, format_err, Context as _},
+    fidl_fuchsia_wlan_common_security::Authentication,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::auto_persist::{self, AutoPersist},
@@ -32,8 +30,10 @@ use {
     futures::channel::{mpsc, oneshot},
     ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
-    std::{convert::TryInto, sync::Arc},
-    wep_deprecated,
+    std::{
+        convert::{TryFrom, TryInto},
+        sync::Arc,
+    },
     wlan_common::{
         self,
         bss::{BssDescription, Protection as BssProtection},
@@ -42,6 +42,7 @@ use {
         hasher::WlanHasher,
         ie::{self, rsn::rsne, wsc},
         scan::ScanResult,
+        security::SecurityAuthenticator,
         sink::UnboundedSink,
         timer::{self, TimedEvent},
     },
@@ -508,17 +509,42 @@ impl ClientSme {
                 .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
             return connect_txn_stream;
         }
-        // We can connect directly now.
-        let protection = match get_protection(
-            &self.context.device_info,
-            &self.cfg,
-            &req.credential,
-            &bss_description,
-            &self.context.inspect.hasher,
-        ) {
+
+        // TODO(fxbug.dev/95873): This code is temporary. It attempts to construct an
+        //                        `Authentication` message from a security context using the
+        //                        `Credential` in the `ConnectRequest` message. In the future, the
+        //                        `Credential` field will be replaced with an `Authentication`
+        //                        field and this step will no longer be needed.
+        let authentication = Authentication::try_from(SecurityContext {
+            security: &req.credential,
+            device: &self.context.device_info,
+            config: &self.cfg,
+            bss: &bss_description,
+        });
+        let protection = match authentication
+            .map_err(From::from)
+            .and_then(|authentication| {
+                SecurityAuthenticator::try_from(authentication).map_err(From::from)
+            })
+            .and_then(|authenticator| {
+                Protection::try_from(SecurityContext {
+                    security: &authenticator,
+                    device: &self.context.device_info,
+                    config: &self.cfg,
+                    bss: &bss_description,
+                })
+            }) {
             Ok(protection) => protection,
             Err(error) => {
-                warn!("{:?}", error);
+                warn!(
+                    "{:?}",
+                    format!(
+                        "Failed to configure protection for network {} ({}): {:?}",
+                        self.context.inspect.hasher.hash_ssid(&bss_description.ssid),
+                        self.context.inspect.hasher.hash_mac_addr(&bss_description.bssid.0),
+                        error
+                    )
+                );
                 connect_txn_sink
                     .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
                 return connect_txn_stream;
@@ -679,101 +705,12 @@ fn report_connect_finished(connect_txn_sink: &mut ConnectTransactionSink, result
     connect_txn_sink.send_connect_result(result);
 }
 
-enum SelectedAssocType {
-    Open,
-    Wep,
-    Wpa1,
-    Wpa2,
-    Wpa3,
-}
-
-fn get_protection(
-    device_info: &fidl_mlme::DeviceInfo,
-    client_config: &ClientConfig,
-    credential: &fidl_sme::Credential,
-    bss: &BssDescription,
-    hasher: &WlanHasher,
-) -> Result<Protection, anyhow::Error> {
-    let ssid_hash = hasher.hash_ssid(&bss.ssid);
-    let bssid_hash = hasher.hash_mac_addr(&bss.bssid.0);
-
-    let selected_assoc_type = match bss.protection() {
-        wlan_common::bss::Protection::Open => SelectedAssocType::Open,
-        wlan_common::bss::Protection::Wep => SelectedAssocType::Wep,
-        wlan_common::bss::Protection::Wpa1 => SelectedAssocType::Wpa1,
-        wlan_common::bss::Protection::Wpa3Personal if client_config.wpa3_supported => {
-            SelectedAssocType::Wpa3
-        }
-        // Only a password credential is valid for Wpa3, so downgrade to Wpa2 in other
-        // cases if possible.
-        wlan_common::bss::Protection::Wpa2Wpa3Personal => match credential {
-            fidl_sme::Credential::Password(_) if client_config.wpa3_supported => {
-                SelectedAssocType::Wpa3
-            }
-            _ => SelectedAssocType::Wpa2,
-        },
-        wlan_common::bss::Protection::Wpa1Wpa2PersonalTkipOnly
-        | wlan_common::bss::Protection::Wpa2PersonalTkipOnly
-        | wlan_common::bss::Protection::Wpa1Wpa2Personal
-        | wlan_common::bss::Protection::Wpa2Personal => SelectedAssocType::Wpa2,
-        wlan_common::bss::Protection::Unknown => {
-            bail!("Unknown protection type for {} ({})", ssid_hash, bssid_hash)
-        }
-        _ => bail!("Unsupported protection type for {} ({})", ssid_hash, bssid_hash),
-    };
-
-    match selected_assoc_type {
-        SelectedAssocType::Open => match credential {
-            fidl_sme::Credential::None(_) => Ok(Protection::Open),
-            _ => Err(format_err!(
-                "Open network {} ({}) not compatible with credentials.",
-                ssid_hash,
-                bssid_hash
-            )),
-        },
-        SelectedAssocType::Wep => match credential {
-            fidl_sme::Credential::Password(pwd) => {
-                wep_deprecated::derive_key(&pwd[..]).map(Protection::Wep).with_context(|| {
-                    format!(
-                        "WEP network {} ({}) protection cannot be retrieved with credential {:?}",
-                        ssid_hash, bssid_hash, credential,
-                    )
-                })
-            }
-            _ => Err(format_err!(
-                "WEP network {} ({}) not compatible with credential {:?}",
-                ssid_hash,
-                bssid_hash,
-                credential
-            )),
-        },
-        SelectedAssocType::Wpa1 => get_legacy_wpa_association(device_info, credential, bss)
-            .with_context(|| {
-                format!(
-                    "WPA1 network {} ({}) protection cannot be retrieved with credential {:?}",
-                    ssid_hash, bssid_hash, credential
-                )
-            }),
-        SelectedAssocType::Wpa2 => get_wpa2_rsna(device_info, credential, bss).with_context(|| {
-            format!(
-                "WPA2 network {} ({}) protection cannot be retrieved with credential {:?}",
-                ssid_hash, bssid_hash, credential
-            )
-        }),
-        SelectedAssocType::Wpa3 => get_wpa3_rsna(device_info, credential, bss).with_context(|| {
-            format!(
-                "WPA3 network {} ({}) protection cannot be retrieved with credential {:?}:",
-                ssid_hash, bssid_hash, credential
-            )
-        }),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_common as fidl_common;
+    use fidl_fuchsia_wlan_common_security as fidl_security;
     use fidl_fuchsia_wlan_internal as fidl_internal;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_async as fasync;
@@ -784,7 +721,8 @@ mod tests {
         assert_variant,
         channel::Cbw,
         fake_bss_description, fake_fidl_bss_description,
-        ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
+        ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, /*rsn::akm,*/ IeType},
+        security::{wep::WEP40_KEY_BYTES, wpa::credential::PSK_SIZE_BYTES, SecurityAuthenticator},
         test_utils::fake_stas::IesOverrides,
     };
 
@@ -795,6 +733,50 @@ mod tests {
 
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const DUMMY_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
+
+    fn authentication_open() -> fidl_security::Authentication {
+        fidl_security::Authentication { protocol: fidl_security::Protocol::Open, credentials: None }
+    }
+
+    fn authentication_wep40() -> fidl_security::Authentication {
+        fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wep,
+            credentials: Some(Box::new(fidl_security::Credentials::Wep(
+                fidl_security::WepCredentials { key: [1; WEP40_KEY_BYTES].into() },
+            ))),
+        }
+    }
+
+    fn authentication_wpa2_personal_psk() -> fidl_security::Authentication {
+        fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa2Personal,
+            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                fidl_security::WpaCredentials::Psk([1; PSK_SIZE_BYTES].into()),
+            ))),
+        }
+    }
+
+    fn authentication_wpa2_personal_passphrase() -> fidl_security::Authentication {
+        fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa2Personal,
+            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                fidl_security::WpaCredentials::Passphrase(
+                    b"password".as_slice().try_into().unwrap(),
+                ),
+            ))),
+        }
+    }
+
+    fn authentication_wpa3_personal_passphrase() -> fidl_security::Authentication {
+        fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa3Personal,
+            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                fidl_security::WpaCredentials::Passphrase(
+                    b"password".as_slice().try_into().unwrap(),
+                ),
+            ))),
+        }
+    }
 
     fn report_fake_scan_result(
         sme: &mut ClientSme,
@@ -959,118 +941,67 @@ mod tests {
     }
 
     #[test]
-    fn test_get_protection() {
-        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
-        let client_config = Default::default();
-        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
+    fn test_protection_from_authentication() {
+        let device = test_utils::fake_device_info(CLIENT_ADDR);
+        let config = Default::default();
 
-        // Open network without credentials:
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        // Open BSS with open authentication:
+        let authenticator = SecurityAuthenticator::try_from(authentication_open()).unwrap();
         let bss = fake_bss_description!(Open);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
+        let protection = Protection::try_from(SecurityContext {
+            security: &authenticator,
+            device: &device,
+            config: &config,
+            bss: &bss,
+        });
         assert_variant!(protection, Ok(Protection::Open));
 
-        // Open network with credentials:
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        // Open BSS with WPA2 Personal and passphrase authentication:
+        let authenticator =
+            SecurityAuthenticator::try_from(authentication_wpa2_personal_passphrase()).unwrap();
         let bss = fake_bss_description!(Open);
-        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
-            .expect_err("unprotected network cannot use password");
+        Protection::try_from(SecurityContext {
+            security: &authenticator,
+            device: &device,
+            config: &config,
+            bss: &bss,
+        })
+        .expect_err("cannot associate with open network using WPA");
 
-        // RSN with user entered password:
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        // RSN BSS with WPA2 Personal and passphrase authentication:
+        let authenticator =
+            SecurityAuthenticator::try_from(authentication_wpa2_personal_passphrase()).unwrap();
         let bss = fake_bss_description!(Wpa2);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
+        let protection = Protection::try_from(SecurityContext {
+            security: &authenticator,
+            device: &device,
+            config: &config,
+            bss: &bss,
+        });
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
-        // RSN with user entered PSK:
-        let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
+        // RSN BSS with WPA2 Personal and PSK authentication:
+        let authenticator =
+            SecurityAuthenticator::try_from(authentication_wpa2_personal_psk()).unwrap();
         let bss = fake_bss_description!(Wpa2);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
+        let protection = Protection::try_from(SecurityContext {
+            security: &authenticator,
+            device: &device,
+            config: &config,
+            bss: &bss,
+        });
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
-        // RSN without credentials:
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        // RSN BSS with open authentication:
+        let authenticator = SecurityAuthenticator::try_from(authentication_open()).unwrap();
         let bss = fake_bss_description!(Wpa2);
-        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
-            .expect_err("protected network requires password");
-    }
-
-    #[test]
-    fn test_get_protection_wep() {
-        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
-        let client_config = ClientConfig::from_config(SmeConfig::default().with_wep(), false);
-        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
-
-        // WEP-40 with credentials:
-        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let bss = fake_bss_description!(Wep);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Wep(_)));
-
-        // WEP-104 with credentials:
-        let credential = fidl_sme::Credential::Password(b"superinsecure".to_vec());
-        let bss = fake_bss_description!(Wep);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Wep(_)));
-
-        // WEP without credentials:
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss = fake_bss_description!(Wep);
-        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
-            .expect_err("WEP network not supported");
-
-        // WEP with invalid credentials:
-        let credential = fidl_sme::Credential::Password(b"wep".to_vec());
-        let bss = fake_bss_description!(Wep);
-        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
-            .expect_err("expected error for invalid WEP credentials");
-    }
-
-    #[test]
-    fn test_get_protection_sae() {
-        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
-        let mut client_config = ClientConfig::from_config(SmeConfig::default(), true);
-        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
-
-        // WPA3, supported
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_bss_description!(Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
-            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
-        });
-
-        // WPA2/3, supported
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_bss_description!(Wpa2Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
-            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
-        });
-
-        client_config.wpa3_supported = false;
-
-        // WPA3, unsupported
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_bss_description!(Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Err(_));
-
-        // WPA2/3, WPA3 supported but PSK credential, downgrade to WPA2
-        let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
-        let bss = fake_bss_description!(Wpa2Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
-            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
-        });
-
-        // WPA2/3, WPA3 unsupported, downgrade to WPA2
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss = fake_bss_description!(Wpa2Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
-        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
-            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
-        });
+        Protection::try_from(SecurityContext {
+            security: &authenticator,
+            device: &device,
+            config: &config,
+            bss: &bss,
+        })
+        .expect_err("cannot associate with secure network using no security protocol");
     }
 
     #[test]
@@ -1080,13 +1011,12 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         let _recv = sme.on_connect_command(connect_req(
             Ssid::try_from("foo").unwrap(),
             bss_description,
-            credential,
+            authentication_open(),
         ));
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
@@ -1097,13 +1027,12 @@ mod tests {
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
         // As soon as connect command is issued for "bar", the status changes immediately
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap());
         let _recv2 = sme.on_connect_command(connect_req(
             Ssid::try_from("bar").unwrap(),
             bss_description,
-            credential,
+            authentication_open(),
         ));
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bar").unwrap()), sme.status());
     }
@@ -1126,9 +1055,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
         let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req =
+            connect_req(Ssid::try_from("foo").unwrap(), bss_description, authentication_wep40());
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
@@ -1141,9 +1070,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
         let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req =
+            connect_req(Ssid::try_from("foo").unwrap(), bss_description, authentication_wep40());
         let mut _connect_fut = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
     }
@@ -1155,10 +1084,13 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            authentication_wpa2_personal_passphrase(),
+        );
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
@@ -1172,20 +1104,13 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-
-        // IEEE Std 802.11-2016, J.4.2, Test case 1
-        // PSK for SSID "IEEE" and password "password".
-        #[rustfmt::skip]
-        let psk = vec![
-            0xf4, 0x2c, 0x6f, 0xc5, 0x2d, 0xf0, 0xeb, 0xef,
-            0x9e, 0xbb, 0x4b, 0x90, 0xb3, 0x8a, 0x5f, 0x90,
-            0x2e, 0x83, 0xfe, 0x1b, 0x13, 0x5a, 0x70, 0xe2,
-            0x3a, 0xed, 0x76, 0x2e, 0x97, 0x10, 0xa1, 0x2e,
-        ];
-        let credential = fidl_sme::Credential::Psk(psk);
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("IEEE").unwrap());
-        let req = connect_req(Ssid::try_from("IEEE").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("IEEE").unwrap(),
+            bss_description,
+            authentication_wpa2_personal_psk(),
+        );
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("IEEE").unwrap()), sme.status());
 
@@ -1198,10 +1123,13 @@ mod tests {
         let (mut sme, mut _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            authentication_wpa2_personal_passphrase(),
+        );
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
@@ -1220,10 +1148,13 @@ mod tests {
         let (mut sme, mut _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::Psk(b"somepass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            authentication_wpa2_personal_psk(),
+        );
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
@@ -1242,10 +1173,10 @@ mod tests {
         let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
-        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
+        let req =
+            connect_req(Ssid::try_from("foo").unwrap(), bss_description, authentication_open());
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
@@ -1267,10 +1198,10 @@ mod tests {
         let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
-        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
+        let req =
+            connect_req(Ssid::try_from("bssname").unwrap(), bss_description, authentication_open());
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
@@ -1285,10 +1216,13 @@ mod tests {
         let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("bssname").unwrap());
-        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("bssname").unwrap(),
+            bss_description,
+            authentication_wpa2_personal_passphrase(),
+        );
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
@@ -1303,10 +1237,10 @@ mod tests {
         let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("bssname").unwrap());
-        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
+        let req =
+            connect_req(Ssid::try_from("bssname").unwrap(), bss_description, authentication_open());
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1327,10 +1261,13 @@ mod tests {
         let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Wpa3Enterprise, ssid: Ssid::try_from("bssname").unwrap());
-        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
+        let req = connect_req(
+            Ssid::try_from("bssname").unwrap(),
+            bss_description,
+            authentication_wpa3_personal_passphrase(),
+        );
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1350,7 +1287,6 @@ mod tests {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
         let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
 
-        let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let bss_description = fake_fidl_bss_description!(
             Wpa2,
             ssid: Ssid::try_from("foo").unwrap(),
@@ -1366,9 +1302,66 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(connect_req(
             Ssid::try_from("foo").unwrap(),
             bss_description,
-            credential,
+            authentication_wpa2_personal_passphrase(),
         ));
 
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
+        );
+    }
+
+    #[test]
+    fn connecting_mismatched_security_protocol() {
+        let executor = fuchsia_async::TestExecutor::new().unwrap();
+        let (mut sme, _mlme_stream, _time_stream) = create_sme(&executor);
+
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("wpa2").unwrap());
+        let mut connect_txn_stream = sme.on_connect_command(connect_req(
+            Ssid::try_from("wpa2").unwrap(),
+            bss_description,
+            authentication_wep40(),
+        ));
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
+        );
+
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("wpa2").unwrap());
+        let mut connect_txn_stream = sme.on_connect_command(connect_req(
+            Ssid::try_from("wpa2").unwrap(),
+            bss_description,
+            // TODO(fxbug.dev/95873): The more interesting test case here is a WPA1 using
+            //                        credentials that are compatible with both WPA1 and WPA2.
+            //                        However, because the `Authentication`'s security protocol is
+            //                        ignored, this fails, because a passphrase is compatible with
+            //                        WPA2. Change this test case once `Authentication` is part of
+            //                        the SME `Connect` FIDL API.
+            //authentication_wpa1_passphrase(),
+            authentication_open(),
+        ));
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
+        );
+
+        let bss_description =
+            fake_fidl_bss_description!(Wpa3, ssid: Ssid::try_from("wpa3").unwrap());
+        let mut connect_txn_stream = sme.on_connect_command(connect_req(
+            Ssid::try_from("wpa3").unwrap(),
+            bss_description,
+            // TODO(fxbug.dev/95873): See the TODO above.
+            //authentication_wpa2_personal_passphrase(),
+            authentication_wpa2_personal_psk(),
+        ));
         assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
@@ -1382,13 +1375,19 @@ mod tests {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
         let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
 
-        let credential = fidl_sme::Credential::Password(b"pass".to_vec());
         let bss_description =
             fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
         let mut connect_txn_stream = sme.on_connect_command(connect_req(
             Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
-            credential,
+            fidl_security::Authentication {
+                protocol: fidl_security::Protocol::Wpa2Personal,
+                credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                    fidl_security::WpaCredentials::Passphrase(
+                        b"nope".as_slice().try_into().unwrap(),
+                    ),
+                ))),
+            },
         ));
         report_fake_scan_result(&mut sme, zx::Time::get_monotonic().into_nanos(), bss_description);
 
@@ -1410,14 +1409,14 @@ mod tests {
         let req = connect_req(
             Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
-            fidl_sme::Credential::None(fidl_sme::Empty),
+            authentication_open(),
         );
         let mut connect_txn_stream1 = sme.on_connect_command(req);
 
         let req2 = connect_req(
             Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
-            fidl_sme::Credential::None(fidl_sme::Empty),
+            authentication_open(),
         );
         let mut connect_txn_stream2 = sme.on_connect_command(req2);
 
@@ -1438,11 +1437,8 @@ mod tests {
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
         );
 
-        let req3 = connect_req(
-            Ssid::try_from("foo").unwrap(),
-            bss_description,
-            fidl_sme::Credential::None(fidl_sme::Empty),
-        );
+        let req3 =
+            connect_req(Ssid::try_from("foo").unwrap(), bss_description, authentication_open());
         let mut _connect_fut3 = sme.on_connect_command(req3);
 
         // Verify that second connection attempt is canceled as new connect request comes in
@@ -1603,14 +1599,41 @@ mod tests {
     fn connect_req(
         ssid: Ssid,
         bss_description: fidl_internal::BssDescription,
-        credential: fidl_sme::Credential,
+        authentication: fidl_security::Authentication,
     ) -> fidl_sme::ConnectRequest {
+        // TODO(fxbug.dev/95873): This code is temporary and allows tests to be written against
+        //                        `Authentication` rather than `Credential` prior to changes to the
+        //                        SME FIDL API. This should be removed once the `credential` field
+        //                        in `ConnectRequest` is replaced with an `authentication` field.
+        //                        Note that this means that security protocols specified in test
+        //                        code are not subject to the given `Authentication` but rather the
+        //                        heuristics used in `on_connect_command`.
+        // Discard information regarding security protocol.
+        let credential = if let Some(credentials) = authentication.credentials {
+            match *credentials {
+                fidl_security::Credentials::Wep(fidl_security::WepCredentials { key }) => {
+                    fidl_sme::Credential::Password(key)
+                }
+                fidl_security::Credentials::Wpa(wpa) => match wpa {
+                    fidl_security::WpaCredentials::Passphrase(passphrase) => {
+                        fidl_sme::Credential::Password(passphrase)
+                    }
+                    fidl_security::WpaCredentials::Psk(psk) => {
+                        fidl_sme::Credential::Psk(psk.to_vec())
+                    }
+                    _ => panic!("Unkown `WpaCredentials` variant"),
+                },
+                _ => panic!("Unknown `Credentials` variant"),
+            }
+        } else {
+            fidl_sme::Credential::None(fidl_sme::Empty)
+        };
         fidl_sme::ConnectRequest {
             ssid: ssid.to_vec(),
             bss_description,
+            multiple_bss_candidates: true,
             credential,
             deprecated_scan_type: fidl_common::ScanType::Passive,
-            multiple_bss_candidates: true,
         }
     }
 

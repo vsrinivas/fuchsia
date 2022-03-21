@@ -20,19 +20,40 @@ pub trait ToPsk {
     fn to_psk(&self, ssid: &Ssid) -> CommonPsk;
 }
 
-// Note that `Wpa1PersonalCredentials` is the same type as `Wpa2PersonalCredentials`. WPA3 does not
-// derive a PSK, so this trait is not implemented for `Wpa3PersonalCredentials`.
-/// Conversion of WPA1 and WPA2 Personal credentials to a PSK.
+/// Conversion of WPA1 credentials to a PSK.
 ///
 /// RSN specifies that PSKs are used as-is and passphrases are transformed into a PSK. This
-/// implementation performs this transformation when necessary for WPA1 Personal and WPA2 Personal
-/// credentials.
-impl ToPsk for wpa::Wpa1PersonalCredentials {
+/// implementation performs this transformation when necessary for WPA1 credentials.
+impl ToPsk for wpa::Wpa1Credentials {
     fn to_psk(&self, ssid: &Ssid) -> CommonPsk {
         match self {
-            wpa::Wpa1PersonalCredentials::Psk(ref psk) => psk.clone(),
-            wpa::Wpa1PersonalCredentials::Passphrase(ref passphrase) => {
-                // TODO(seanolson): Unify the representation of PSKs. There can only be one...!
+            wpa::Wpa1Credentials::Psk(ref psk) => psk.clone(),
+            wpa::Wpa1Credentials::Passphrase(ref passphrase) => {
+                // TODO(fxbug.dev/95934): Unify the representation of PSKs. There can only be
+                //                        one...!
+                CommonPsk(
+                    compute(passphrase.as_ref(), ssid)
+                        .expect("invalid WPA passphrase data")
+                        .as_ref()
+                        .try_into()
+                        .expect("invalid derived PSK data"),
+                )
+            }
+        }
+    }
+}
+
+/// Conversion of WPA2 Personal credentials to a PSK.
+///
+/// RSN specifies that PSKs are used as-is and passphrases are transformed into a PSK. This
+/// implementation performs this transformation when necessary for WPA2 Personal credentials.
+impl ToPsk for wpa::Wpa2PersonalCredentials {
+    fn to_psk(&self, ssid: &Ssid) -> CommonPsk {
+        match self {
+            wpa::Wpa2PersonalCredentials::Psk(ref psk) => psk.clone(),
+            wpa::Wpa2PersonalCredentials::Passphrase(ref passphrase) => {
+                // TODO(fxbug.dev/95934): Unify the representation of PSKs. There can only be
+                //                        one...!
                 CommonPsk(
                     compute(passphrase.as_ref(), ssid)
                         .expect("invalid WPA passphrase data")
@@ -160,16 +181,31 @@ mod tests {
         assert!(compute(&[0xFFu8; 32], &Ssid::try_from("Some SSID").unwrap()).is_err());
     }
 
-    // Note that `Wpa1PersonalCredentials` is the same type as `Wpa2PersonalCredentials`.
     #[test]
-    fn wpa1_personal_credentials_to_psk() {
+    fn wpa1_credentials_to_psk() {
         let ssid = Ssid::try_from("IEEE").unwrap();
 
-        let credentials = wpa::Wpa1PersonalCredentials::Psk(CommonPsk::from([0u8; 32]));
+        let credentials = wpa::Wpa1Credentials::Psk(CommonPsk::from([0u8; 32]));
         assert_eq!(CommonPsk::from([0u8; 32]), credentials.to_psk(&ssid));
 
         let credentials =
-            wpa::Wpa1PersonalCredentials::Passphrase(Passphrase::try_from("password").unwrap());
+            wpa::Wpa1Credentials::Passphrase(Passphrase::try_from("password").unwrap());
+        assert_eq!(
+            CommonPsk::parse("f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e")
+                .unwrap(),
+            credentials.to_psk(&ssid),
+        );
+    }
+
+    #[test]
+    fn wpa2_personal_credentials_to_psk() {
+        let ssid = Ssid::try_from("IEEE").unwrap();
+
+        let credentials = wpa::Wpa2PersonalCredentials::Psk(CommonPsk::from([0u8; 32]));
+        assert_eq!(CommonPsk::from([0u8; 32]), credentials.to_psk(&ssid));
+
+        let credentials =
+            wpa::Wpa2PersonalCredentials::Passphrase(Passphrase::try_from("password").unwrap());
         assert_eq!(
             CommonPsk::parse("f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e")
                 .unwrap(),
