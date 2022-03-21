@@ -157,7 +157,8 @@ void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
 
 void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
                                 ScheduleUnbindCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  dev_->Remove();
+  completer.ReplySuccess();
 }
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,

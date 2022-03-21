@@ -221,6 +221,8 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   ASSERT_EQ(epitaph.error, ZX_ERR_IO_NOT_PRESENT);
 }
 
+#endif
+
 TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
   fidl::WireCall<Controller>(fidl::UnownedClientEnd<Controller>(chan_.channel().borrow()))
       ->ScheduleUnbind();
@@ -228,8 +230,6 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
   ASSERT_OK(chan_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
 }
-
-#endif
 
 // Tests that the child device is removed if init fails.
 TEST_F(LifecycleTest, FailedInit) {

@@ -146,7 +146,8 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child) {
   if (!child->dev_vnode()) {
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  auto protocol = OwnedProtocol::Create(outgoing_->svc_dir(), child->name(), child->dev_vnode());
+  auto protocol = OwnedProtocol::Create(&outgoing_->vfs(), outgoing_->svc_dir(), child->name(),
+                                        child->dev_vnode());
   if (protocol.is_error()) {
     return fpromise::make_error_promise(protocol.error_value());
   }

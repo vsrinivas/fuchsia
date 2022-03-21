@@ -10,6 +10,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace compat {
 
@@ -67,26 +68,32 @@ class OwnedProtocol {
   OwnedProtocol& operator=(OwnedProtocol&& other) = default;
 
   ~OwnedProtocol() {
+    if (vfs && protocol_) {
+      vfs->CloseAllConnectionsForVnode(*protocol_, {});
+    }
     if (parent_) {
       parent_->RemoveEntry(name_);
     }
   }
 
-  static zx::status<OwnedProtocol> Create(fbl::RefPtr<fs::PseudoDir> parent, std::string_view name,
+  static zx::status<OwnedProtocol> Create(fs::SynchronousVfs* vfs,
+                                          fbl::RefPtr<fs::PseudoDir> parent, std::string_view name,
                                           fbl::RefPtr<fs::Vnode> protocol) {
     zx_status_t status = parent->AddEntry(name, protocol);
     if (status != ZX_OK) {
       return zx::error(status);
     }
 
-    return zx::ok(OwnedProtocol(std::move(parent), name, std::move(protocol)));
+    return zx::ok(OwnedProtocol(vfs, std::move(parent), name, std::move(protocol)));
   }
 
  private:
-  OwnedProtocol(fbl::RefPtr<fs::PseudoDir> parent, std::string_view name,
+  OwnedProtocol(fs::SynchronousVfs* vfs, fbl::RefPtr<fs::PseudoDir> parent, std::string_view name,
                 fbl::RefPtr<fs::Vnode> protocol)
-      : name_(name), parent_(std::move(parent)), protocol_(std::move(protocol)) {}
+      : name_(name), vfs(vfs), parent_(std::move(parent)), protocol_(std::move(protocol)) {}
   std::string name_;
+
+  fs::SynchronousVfs* vfs = nullptr;
   fbl::RefPtr<fs::PseudoDir> parent_;
   fbl::RefPtr<fs::Vnode> protocol_;
 };
