@@ -44,7 +44,7 @@ import("//build/toolchain/rbe.gni")
 #   metadata (optional)
 #     Metadata to apply to the primary wrapped target.
 #
-#   inputs
+#   inputs (optional)
 #     List of additional non-source files read by the compiler. These are typically
 #     configuration or test-data files included in the build with the `include_str!`
 #     macro.
