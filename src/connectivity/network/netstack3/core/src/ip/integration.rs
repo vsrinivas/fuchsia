@@ -13,12 +13,12 @@ use packet::{BufferMut, Serializer};
 use crate::{
     context::StateContext,
     ip::{
-        device::IpDeviceContext,
+        self,
         icmp::{Icmpv4State, Icmpv6State},
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
-        socket::{BufferIpSocketContext, IpSock},
-        BufferIpLayerContext, IpLayerContext, IpLayerStateIpExt, IpPacketFragmentCache,
-        IpStateInner, SendIpPacketMeta,
+        socket::{BufferIpSocketContext, IpSock, IpSocketContext},
+        IpLayerContext, IpLayerStateIpExt, IpPacketFragmentCache, IpStateContext, IpStateInner,
+        SendIpPacketMeta,
     },
 };
 
@@ -64,8 +64,10 @@ impl<C: IpLayerContext<Ipv6>> StateContext<Icmpv6State<C::Instant, IpSock<Ipv6, 
     }
 }
 
-impl<B: BufferMut, C: BufferIpLayerContext<Ipv4, B> + IpDeviceContext<Ipv4>>
-    BufferIpSocketContext<Ipv4, B> for C
+impl<
+        B: BufferMut,
+        C: ip::BufferIpDeviceContext<Ipv4, B> + IpStateContext<Ipv4> + IpSocketContext<Ipv4>,
+    > BufferIpSocketContext<Ipv4, B> for C
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
@@ -76,8 +78,10 @@ impl<B: BufferMut, C: BufferIpLayerContext<Ipv4, B> + IpDeviceContext<Ipv4>>
     }
 }
 
-impl<B: BufferMut, C: BufferIpLayerContext<Ipv6, B> + IpDeviceContext<Ipv6>>
-    BufferIpSocketContext<Ipv6, B> for C
+impl<
+        B: BufferMut,
+        C: ip::BufferIpDeviceContext<Ipv6, B> + IpStateContext<Ipv6> + IpSocketContext<Ipv6>,
+    > BufferIpSocketContext<Ipv6, B> for C
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,

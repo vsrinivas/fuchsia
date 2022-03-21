@@ -16,7 +16,7 @@ use core::{num::NonZeroU8, time::Duration};
 use net_types::ip::{Ip, IpVersion};
 use net_types::{
     ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    LinkLocalAddress as _, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
+    MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
 
@@ -285,20 +285,6 @@ pub(super) fn get_ipv4_addr_subnet<C: IpDeviceContext<Ipv4>>(
     device_id: C::DeviceId,
 ) -> Option<AddrSubnet<Ipv4Addr>> {
     get_assigned_ipv4_addr_subnets(ctx, device_id).nth(0)
-}
-
-/// Gets a single non-link-local IPv6 address and subnet for a device.
-///
-/// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not be returned by this method.
-pub(super) fn get_ipv6_addr_subnet<C: IpDeviceContext<Ipv6>>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> Option<AddrSubnet<Ipv6Addr>> {
-    get_assigned_ipv6_addr_subnets(ctx, device_id).find(|a| {
-        let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
-        !addr.is_link_local()
-    })
 }
 
 /// Gets the state associated with an IPv4 device.
@@ -599,36 +585,4 @@ pub(crate) fn set_ipv6_configuration<C: IpDeviceContext<Ipv6>>(
     config: Ipv6DeviceConfiguration,
 ) {
     ctx.get_ip_device_state_mut(device_id).config = config;
-}
-
-#[cfg(test)]
-mod tests {
-    use alloc::vec::Vec;
-
-    use net_types::{
-        ip::{Ip as _, Ipv6},
-        Witness,
-    };
-
-    use super::*;
-    use crate::testutil::{DummyEventDispatcherBuilder, TestIpExt as _};
-
-    /// Test that `get_ipv6_addr_subnet` only returns non-local IPv6 addresses.
-    #[test]
-    fn test_get_ipv6_addr_subnet() {
-        let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
-        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-
-        // `initialize_device` adds the MAC-derived link-local IPv6 address.
-        crate::device::initialize_device(&mut ctx, device);
-        // Verify that there is a single assigned address - the MAC-derived
-        // link-local.
-        let state = IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device);
-        assert_eq!(
-            state.ip_state.iter_addrs().map(|entry| entry.addr_sub().addr()).collect::<Vec<_>>(),
-            [config.local_mac.to_ipv6_link_local().addr().get()]
-        );
-        assert_eq!(get_ipv6_addr_subnet(&ctx, device.into()), None);
-    }
 }
