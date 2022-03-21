@@ -5,13 +5,14 @@
 use std::collections::VecDeque;
 
 use fidl::prelude::*;
-use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
-use fidl_fuchsia_hardware_network as fidl_netdev;
+use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
+use fidl_fuchsia_hardware_network as fhardware_network;
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces::{
-    self as fidl_interfaces, StateRequest, StateRequestStream, WatcherOptions, WatcherRequest,
+    self as finterfaces, StateRequest, StateRequestStream, WatcherOptions, WatcherRequest,
     WatcherRequestStream, WatcherWatchResponder,
 };
-use fidl_fuchsia_net_interfaces_ext as fidl_interfaces_ext;
+use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
 use fuchsia_zircon as zx;
 use futures::{
     ready, sink::Sink, sink::SinkExt as _, task::Poll, Future, StreamExt as _, TryFutureExt as _,
@@ -30,7 +31,6 @@ use super::{
 #[todo_unused("https://fxbug.dev/60923")]
 use {
     super::devices::BindingId,
-    fidl_fuchsia_net as fidl_net,
     futures::{channel::mpsc, FutureExt},
     net_types::ip::{InterfaceAddr, IpVersion},
     std::collections::HashMap,
@@ -91,23 +91,19 @@ where
                 // TODO(https://fxbug.dev/60923): Don't store addresses as subnets in Core.
                 get_all_ip_addr_subnets(&ctx, id)
                     .map(IntoFidl::into_fidl)
-                    .map(|fidl_fuchsia_net::Subnet { addr, prefix_len }| {
+                    .map(|fnet::Subnet { addr, prefix_len }| {
                         let value = match addr {
-                            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                                fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                                    fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
-                                )
+                            fnet::IpAddress::Ipv4(addr) => {
+                                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
+                                    addr,
+                                    prefix_len,
+                                })
                             }
-                            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                                fidl_fuchsia_net::InterfaceAddress::Ipv6(addr)
-                            }
+                            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
                         };
-                        fidl_interfaces_ext::Address {
-                            value,
-                            valid_until: zx::sys::ZX_TIME_INFINITE,
-                        }
+                        finterfaces_ext::Address { value, valid_until: zx::sys::ZX_TIME_INFINITE }
                     })
-                    .collect::<Vec<fidl_interfaces_ext::Address>>()
+                    .collect::<Vec<finterfaces_ext::Address>>()
             })
             .unwrap_or(Vec::new());
 
@@ -119,16 +115,16 @@ where
                 features,
                 phy_up,
             }) => {
-                let device_class = if features.contains(fidl_ethernet::Features::LOOPBACK) {
-                    fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty)
-                } else if features.contains(fidl_ethernet::Features::SYNTHETIC) {
-                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Virtual)
-                } else if features.contains(fidl_ethernet::Features::WLAN_AP) {
-                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::WlanAp)
-                } else if features.contains(fidl_ethernet::Features::WLAN) {
-                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Wlan)
+                let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK) {
+                    finterfaces::DeviceClass::Loopback(finterfaces::Empty)
+                } else if features.contains(fhardware_ethernet::Features::SYNTHETIC) {
+                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Virtual)
+                } else if features.contains(fhardware_ethernet::Features::WLAN_AP) {
+                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::WlanAp)
+                } else if features.contains(fhardware_ethernet::Features::WLAN) {
+                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan)
                 } else {
-                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Ethernet)
+                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet)
                 };
 
                 let (has_default_ipv4_route, has_default_ipv6_route) = {
@@ -164,7 +160,7 @@ where
                     (has_default_ipv4_route, has_default_ipv6_route)
                 };
 
-                fidl_interfaces_ext::Properties {
+                finterfaces_ext::Properties {
                     id: info.id(),
                     addresses: addrs,
                     online: *admin_enabled && *phy_up,
@@ -177,11 +173,11 @@ where
             }
             DeviceSpecificInfo::Loopback(LoopbackInfo {
                 common_info: CommonInfo { admin_enabled, mtu: _ },
-            }) => fidl_interfaces_ext::Properties {
+            }) => finterfaces_ext::Properties {
                 id: info.id(),
                 addresses: addrs,
                 online: *admin_enabled,
-                device_class: fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty),
+                device_class: finterfaces::DeviceClass::Loopback(finterfaces::Empty),
                 has_default_ipv4_route: false,
                 has_default_ipv6_route: false,
                 name: LOOPBACK_DEVICE_NAME.to_string(),
@@ -198,7 +194,7 @@ const MAX_EVENTS: usize = 128;
 
 /// A bounded queue of [`Events`] for `fuchsia.net.interfaces/Watcher` protocol.
 struct EventQueue {
-    events: VecDeque<fidl_interfaces::Event>,
+    events: VecDeque<finterfaces::Event>,
 }
 
 impl EventQueue {
@@ -207,13 +203,13 @@ impl EventQueue {
     // TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked
     // up to NS3.
     fn existing(
-        existing: impl IntoIterator<Item = fidl_interfaces_ext::Properties>,
+        existing: impl IntoIterator<Item = finterfaces_ext::Properties>,
     ) -> Result<Self, zx::Status> {
         let events = existing
             .into_iter()
-            .map(|p| fidl_interfaces::Event::Existing(p.into()))
-            .chain(std::iter::once(fidl_interfaces::Event::Idle(fidl_interfaces::Empty)))
-            .collect::<VecDeque<fidl_interfaces::Event>>();
+            .map(|p| finterfaces::Event::Existing(p.into()))
+            .chain(std::iter::once(finterfaces::Event::Idle(finterfaces::Empty)))
+            .collect::<VecDeque<finterfaces::Event>>();
         if events.len() > MAX_EVENTS {
             return Err(zx::Status::BUFFER_TOO_SMALL);
         }
@@ -221,8 +217,8 @@ impl EventQueue {
     }
 
     /// Creates a new event queue containing all the interfaces in `state`
-    /// wrapped in a [`fidl_interfaces::Event::Existing`] followed by a
-    /// [`fidl_interfaces::Event::Idle`].
+    /// wrapped in a [`finterfaces::Event::Existing`] followed by a
+    /// [`finterfaces::Event::Idle`].
     #[todo_unused("https://fxbug.dev/60923")]
     fn from_state(state: &HashMap<BindingId, InterfaceState>) -> Result<Self, zx::Status> {
         // NB: Leave room for idle event.
@@ -238,8 +234,8 @@ impl EventQueue {
                 has_default_ipv6_route,
                 online,
             } = state;
-            fidl_interfaces::Event::Existing(
-                fidl_interfaces_ext::Properties {
+            finterfaces::Event::Existing(
+                finterfaces_ext::Properties {
                     id: *id,
                     name: name.clone(),
                     device_class: device_class.clone(),
@@ -255,14 +251,14 @@ impl EventQueue {
             events: state
                 .iter()
                 .map(state_to_event)
-                .chain(std::iter::once(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {})))
+                .chain(std::iter::once(finterfaces::Event::Idle(finterfaces::Empty {})))
                 .collect(),
         })
     }
 
-    /// Adds a [`fidl_interfaces::Event`] to the back of the queue.
+    /// Adds a [`finterfaces::Event`] to the back of the queue.
     #[todo_unused("https://fxbug.dev/60923")]
-    fn push(&mut self, event: fidl_interfaces::Event) -> Result<(), fidl_interfaces::Event> {
+    fn push(&mut self, event: finterfaces::Event) -> Result<(), finterfaces::Event> {
         let Self { events } = self;
         if events.len() >= MAX_EVENTS {
             return Err(event);
@@ -275,7 +271,7 @@ impl EventQueue {
     }
 
     /// Removes an [`Event`] from the front of the queue.
-    fn pop_front(&mut self) -> Option<fidl_interfaces::Event> {
+    fn pop_front(&mut self) -> Option<finterfaces::Event> {
         let Self { events } = self;
         events.pop_front()
     }
@@ -321,7 +317,7 @@ impl Future for Watcher {
 
 #[todo_unused("https://fxbug.dev/60923")]
 impl Watcher {
-    fn push(&mut self, mut event: fidl_interfaces::Event) {
+    fn push(&mut self, mut event: finterfaces::Event) {
         let Self { stream, events, responder } = self;
         if let Some(responder) = responder.take() {
             match responder.send(&mut event) {
@@ -358,7 +354,7 @@ pub enum InterfaceUpdate {
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct InterfaceProperties {
     pub name: String,
-    pub device_class: fidl_fuchsia_net_interfaces::DeviceClass,
+    pub device_class: finterfaces::DeviceClass,
 }
 
 /// Cached interface state by the worker.
@@ -446,7 +442,7 @@ pub enum WorkerError {
 #[todo_unused("https://fxbug.dev/60923")]
 pub struct Worker {
     events: mpsc::UnboundedReceiver<InterfaceEvent>,
-    watchers: mpsc::Receiver<fidl_interfaces::WatcherRequestStream>,
+    watchers: mpsc::Receiver<finterfaces::WatcherRequestStream>,
 }
 
 /// Arbitrarily picked constant to force backpressure on FIDL requests.
@@ -478,7 +474,7 @@ impl Worker {
         let mut interface_state = HashMap::new();
 
         enum SinkAction {
-            NewWatcher(fidl_interfaces::WatcherRequestStream),
+            NewWatcher(finterfaces::WatcherRequestStream),
             Event(InterfaceEvent),
         }
         let mut sink_actions = futures::stream::select(
@@ -548,7 +544,7 @@ impl Worker {
     fn consume_event(
         state: &mut HashMap<BindingId, InterfaceState>,
         event: InterfaceEvent,
-    ) -> Result<Option<fidl_interfaces::Event>, WorkerError> {
+    ) -> Result<Option<finterfaces::Event>, WorkerError> {
         match event {
             InterfaceEvent::Added {
                 id,
@@ -568,8 +564,8 @@ impl Worker {
                     },
                 ) {
                     Some(old) => Err(WorkerError::AddedDuplicateInterface { interface: id, old }),
-                    None => Ok(Some(fidl_interfaces::Event::Added(
-                        fidl_interfaces_ext::Properties {
+                    None => Ok(Some(finterfaces::Event::Added(
+                        finterfaces_ext::Properties {
                             id,
                             name,
                             device_class,
@@ -583,7 +579,7 @@ impl Worker {
                 }
             }
             InterfaceEvent::Removed(rm) => match state.remove(&rm) {
-                Some(InterfaceState { .. }) => Ok(Some(fidl_interfaces::Event::Removed(rm))),
+                Some(InterfaceState { .. }) => Ok(Some(finterfaces::Event::Removed(rm))),
                 None => Err(WorkerError::RemoveNonexistentInterface(rm)),
             },
             InterfaceEvent::Changed { id, event } => {
@@ -604,20 +600,18 @@ impl Worker {
                         Some(AddressState { .. }) => {
                             Err(WorkerError::AssignExistingAddr { interface: id, addr })
                         }
-                        None => {
-                            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
-                                id: Some(id),
-                                addresses: Some(Self::collect_addresses(addresses)),
-                                ..fidl_interfaces::Properties::EMPTY
-                            })))
-                        }
+                        None => Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
+                            id: Some(id),
+                            addresses: Some(Self::collect_addresses(addresses)),
+                            ..finterfaces::Properties::EMPTY
+                        }))),
                     },
                     InterfaceUpdate::AddressUnassigned(addr) => match addresses.remove(&addr) {
                         Some(AddressState { .. }) => {
-                            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                                 id: Some(id),
                                 addresses: (Some(Self::collect_addresses(addresses))),
-                                ..fidl_interfaces::Properties::EMPTY
+                                ..finterfaces::Properties::EMPTY
                             })))
                         }
                         None => Err(WorkerError::UnassignNonexistentAddr { interface: id, addr }),
@@ -626,9 +620,9 @@ impl Worker {
                         version,
                         has_default_route: new_value,
                     } => {
-                        let mut table = fidl_interfaces::Properties {
+                        let mut table = finterfaces::Properties {
                             id: Some(id),
-                            ..fidl_interfaces::Properties::EMPTY
+                            ..finterfaces::Properties::EMPTY
                         };
                         let (state, prop) = match version {
                             IpVersion::V4 => {
@@ -643,15 +637,15 @@ impl Worker {
                                 *state = new_value;
                                 *prop = Some(new_value);
                             })
-                            .map(move |()| fidl_interfaces::Event::Changed(table)))
+                            .map(move |()| finterfaces::Event::Changed(table)))
                     }
                     InterfaceUpdate::OnlineChanged(new_online) => {
                         Ok((*online != new_online).then(|| {
                             *online = new_online;
-                            fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                            finterfaces::Event::Changed(finterfaces::Properties {
                                 id: Some(id),
                                 online: Some(new_online),
-                                ..fidl_interfaces::Properties::EMPTY
+                                ..finterfaces::Properties::EMPTY
                             })
                         }))
                     }
@@ -666,7 +660,7 @@ impl Worker {
         let mut addrs = addrs
             .iter()
             .map(|(addr, AddressState { valid_until })| {
-                fidl_interfaces_ext::Address {
+                finterfaces_ext::Address {
                     value: addr.clone().into_fidl(),
                     valid_until: valid_until.into_nanos(),
                 }
@@ -683,23 +677,23 @@ impl Worker {
 /// agnostic to extension and pure FIDL types, it is not meant to be used in
 /// other contexts.
 #[todo_unused("https://fxbug.dev/60923")]
-trait SortableInterfaceAddress: From<fidl_interfaces_ext::Address> {
+trait SortableInterfaceAddress: From<finterfaces_ext::Address> {
     type Key: Ord;
     fn get_sort_key(&self) -> Self::Key;
 }
 
 #[todo_unused("https://fxbug.dev/60923")]
-impl SortableInterfaceAddress for fidl_interfaces_ext::Address {
-    type Key = fidl_net::InterfaceAddress;
-    fn get_sort_key(&self) -> fidl_net::InterfaceAddress {
+impl SortableInterfaceAddress for finterfaces_ext::Address {
+    type Key = fnet::InterfaceAddress;
+    fn get_sort_key(&self) -> fnet::InterfaceAddress {
         self.value.clone()
     }
 }
 
 #[todo_unused("https://fxbug.dev/60923")]
-impl SortableInterfaceAddress for fidl_interfaces::Address {
-    type Key = Option<fidl_net::InterfaceAddress>;
-    fn get_sort_key(&self) -> Option<fidl_net::InterfaceAddress> {
+impl SortableInterfaceAddress for finterfaces::Address {
+    type Key = Option<fnet::InterfaceAddress>;
+    fn get_sort_key(&self) -> Option<fnet::InterfaceAddress> {
         self.value.clone()
     }
 }
@@ -711,7 +705,7 @@ pub struct WorkerClosedError {}
 #[todo_unused("https://fxbug.dev/60923")]
 #[derive(Clone)]
 pub struct WorkerWatcherSink {
-    sender: mpsc::Sender<fidl_interfaces::WatcherRequestStream>,
+    sender: mpsc::Sender<finterfaces::WatcherRequestStream>,
 }
 
 #[todo_unused("https://fxbug.dev/60923")]
@@ -719,7 +713,7 @@ impl WorkerWatcherSink {
     /// Adds a new interface watcher to be operated on by [`Worker`].
     pub async fn add_watcher(
         &mut self,
-        watcher: fidl_interfaces::WatcherRequestStream,
+        watcher: finterfaces::WatcherRequestStream,
     ) -> Result<(), WorkerClosedError> {
         self.sender.send(watcher).await.map_err(|_: mpsc::SendError| WorkerClosedError {})
     }
@@ -771,9 +765,9 @@ mod tests {
     use test_case::test_case;
 
     impl WorkerWatcherSink {
-        fn create_watcher(&mut self) -> fidl_interfaces::WatcherProxy {
+        fn create_watcher(&mut self) -> finterfaces::WatcherProxy {
             let (watcher, stream) =
-                fidl::endpoints::create_proxy_and_stream::<fidl_interfaces::WatcherMarker>()
+                fidl::endpoints::create_proxy_and_stream::<finterfaces::WatcherMarker>()
                     .expect("create proxy");
             self.add_watcher(stream)
                 .now_or_never()
@@ -784,7 +778,7 @@ mod tests {
 
         fn create_watcher_event_stream(
             &mut self,
-        ) -> impl Stream<Item = fidl_interfaces::Event> + Unpin {
+        ) -> impl Stream<Item = finterfaces::Event> + Unpin {
             futures::stream::unfold(self.create_watcher(), |watcher| {
                 watcher.watch().map(move |e| match e {
                     Ok(event) => Some((event, watcher)),
@@ -803,7 +797,7 @@ mod tests {
     #[test]
     fn test_events_idle() {
         let mut events = EventQueue::existing(std::iter::empty()).expect("failed to create Events");
-        assert_eq!(events.pop_front(), Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty)));
+        assert_eq!(events.pop_front(), Some(finterfaces::Event::Idle(finterfaces::Empty)));
         assert_eq!(events.pop_front(), None);
     }
 
@@ -822,13 +816,13 @@ mod tests {
 
     const IFACE1_ID: BindingId = 111;
     const IFACE1_NAME: &str = "iface1";
-    const IFACE1_CLASS: fidl_interfaces::DeviceClass =
-        fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Ethernet);
+    const IFACE1_CLASS: finterfaces::DeviceClass =
+        finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet);
 
     const IFACE2_ID: BindingId = 222;
     const IFACE2_NAME: &str = "iface2";
-    const IFACE2_CLASS: fidl_interfaces::DeviceClass =
-        fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty {});
+    const IFACE2_CLASS: finterfaces::DeviceClass =
+        finterfaces::DeviceClass::Loopback(finterfaces::Empty {});
 
     /// Tests full integration between [`Worker`] and [`Watcher`]s through basic
     /// state updates.
@@ -839,10 +833,7 @@ mod tests {
         interface_sink: WorkerInterfaceSink,
     ) {
         let mut watcher = watcher_sink.create_watcher_event_stream();
-        assert_eq!(
-            watcher.next().await,
-            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_eq!(watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
 
         let producer = interface_sink
             .add_interface(
@@ -853,8 +844,8 @@ mod tests {
 
         assert_eq!(
             watcher.next().await,
-            Some(fidl_interfaces::Event::Added(
-                fidl_interfaces_ext::Properties {
+            Some(finterfaces::Event::Added(
+                finterfaces_ext::Properties {
                     id: IFACE1_ID,
                     addresses: Vec::new(),
                     online: false,
@@ -869,10 +860,8 @@ mod tests {
 
         const ADDR1: InterfaceAddr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
         const ADDR_VALID_UNTIL: zx::Time = zx::Time::from_nanos(12345);
-        const BASE_PROPERTIES: fidl_interfaces::Properties = fidl_interfaces::Properties {
-            id: Some(IFACE1_ID),
-            ..fidl_interfaces::Properties::EMPTY
-        };
+        const BASE_PROPERTIES: finterfaces::Properties =
+            finterfaces::Properties { id: Some(IFACE1_ID), ..finterfaces::Properties::EMPTY };
 
         for (event, expect) in [
             (
@@ -880,8 +869,8 @@ mod tests {
                     addr: ADDR1,
                     properties: AddressState { valid_until: ADDR_VALID_UNTIL },
                 },
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
-                    addresses: Some(vec![fidl_interfaces_ext::Address {
+                finterfaces::Event::Changed(finterfaces::Properties {
+                    addresses: Some(vec![finterfaces_ext::Address {
                         value: ADDR1.into_fidl(),
                         valid_until: ADDR_VALID_UNTIL.into_nanos(),
                     }
@@ -894,7 +883,7 @@ mod tests {
                     version: IpVersion::V4,
                     has_default_route: true,
                 },
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                finterfaces::Event::Changed(finterfaces::Properties {
                     has_default_ipv4_route: Some(true),
                     ..BASE_PROPERTIES
                 }),
@@ -904,7 +893,7 @@ mod tests {
                     version: IpVersion::V6,
                     has_default_route: true,
                 },
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                finterfaces::Event::Changed(finterfaces::Properties {
                     has_default_ipv6_route: Some(true),
                     ..BASE_PROPERTIES
                 }),
@@ -914,14 +903,14 @@ mod tests {
                     version: IpVersion::V6,
                     has_default_route: false,
                 },
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                finterfaces::Event::Changed(finterfaces::Properties {
                     has_default_ipv6_route: Some(false),
                     ..BASE_PROPERTIES
                 }),
             ),
             (
                 InterfaceUpdate::OnlineChanged(true),
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                finterfaces::Event::Changed(finterfaces::Properties {
                     online: Some(true),
                     ..BASE_PROPERTIES
                 }),
@@ -935,13 +924,13 @@ mod tests {
         let mut new_watcher = watcher_sink.create_watcher_event_stream();
         assert_eq!(
             new_watcher.next().await,
-            Some(fidl_interfaces::Event::Existing(
-                fidl_interfaces_ext::Properties {
+            Some(finterfaces::Event::Existing(
+                finterfaces_ext::Properties {
                     id: IFACE1_ID,
                     name: IFACE1_NAME.to_string(),
                     device_class: IFACE1_CLASS,
                     online: true,
-                    addresses: vec![fidl_interfaces_ext::Address {
+                    addresses: vec![finterfaces_ext::Address {
                         value: ADDR1.into_fidl(),
                         valid_until: ADDR_VALID_UNTIL.into_nanos()
                     }
@@ -952,10 +941,7 @@ mod tests {
                 .into()
             ))
         );
-        assert_eq!(
-            new_watcher.next().await,
-            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_eq!(new_watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
     }
 
     /// Tests [`Drop`] implementation for [`InterfaceEventProducer`].
@@ -966,10 +952,7 @@ mod tests {
         interface_sink: WorkerInterfaceSink,
     ) {
         let mut watcher = watcher_sink.create_watcher_event_stream();
-        assert_eq!(
-            watcher.next().await,
-            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_eq!(watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
         let producer1 = interface_sink
             .add_interface(
                 IFACE1_ID,
@@ -982,37 +965,34 @@ mod tests {
         );
         assert_matches!(
             watcher.next().await,
-            Some(fidl_interfaces::Event::Added(
-                fidl_interfaces::Properties {
+            Some(finterfaces::Event::Added(
+                finterfaces::Properties {
                     id: Some(id),
                     ..
                 })) if id == IFACE1_ID
         );
         assert_matches!(
             watcher.next().await,
-            Some(fidl_interfaces::Event::Added(
-                fidl_interfaces::Properties {
+            Some(finterfaces::Event::Added(
+                finterfaces::Properties {
                     id: Some(id),
                     ..
                 })) if id == IFACE2_ID
         );
         std::mem::drop(producer1);
-        assert_eq!(watcher.next().await, Some(fidl_interfaces::Event::Removed(IFACE1_ID)));
+        assert_eq!(watcher.next().await, Some(finterfaces::Event::Removed(IFACE1_ID)));
 
         // Create new watcher and enumerate, only interface 2 should be
         // around now.
         let mut new_watcher = watcher_sink.create_watcher_event_stream();
         assert_matches!(
             new_watcher.next().await,
-            Some(fidl_interfaces::Event::Existing(fidl_interfaces::Properties {
+            Some(finterfaces::Event::Existing(finterfaces::Properties {
                 id: Some(id),
                 ..
             })) if id == IFACE2_ID
         );
-        assert_eq!(
-            new_watcher.next().await,
-            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_eq!(new_watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
     }
 
     fn iface1_initial_state() -> (BindingId, InterfaceState) {
@@ -1041,8 +1021,8 @@ mod tests {
         // Add interface.
         assert_eq!(
             Worker::consume_event(&mut state, event.clone()),
-            Ok(Some(fidl_interfaces::Event::Added(
-                fidl_interfaces_ext::Properties {
+            Ok(Some(finterfaces::Event::Added(
+                finterfaces_ext::Properties {
                     id,
                     name: initial_state.properties.name.clone(),
                     device_class: initial_state.properties.device_class.clone(),
@@ -1073,7 +1053,7 @@ mod tests {
         // Remove interface.
         assert_eq!(
             Worker::consume_event(&mut state, InterfaceEvent::Removed(id)),
-            Ok(Some(fidl_interfaces::Event::Removed(id)))
+            Ok(Some(finterfaces::Event::Removed(id)))
         );
         // State is updated.
         assert_eq!(state.get(&id), None);
@@ -1119,14 +1099,14 @@ mod tests {
         // Add address.
         assert_eq!(
             Worker::consume_event(&mut state, event.clone()),
-            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                 id: Some(id),
-                addresses: Some(vec![fidl_interfaces_ext::Address {
+                addresses: Some(vec![finterfaces_ext::Address {
                     value: addr.clone().into_fidl(),
                     valid_until: valid_until.into_nanos()
                 }
                 .into()]),
-                ..fidl_interfaces::Properties::EMPTY
+                ..finterfaces::Properties::EMPTY
             })))
         );
         // Check state is updated.
@@ -1158,10 +1138,10 @@ mod tests {
         // Add address.
         assert_eq!(
             Worker::consume_event(&mut state, event.clone()),
-            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                 id: Some(id),
                 addresses: Some(Vec::new()),
-                ..fidl_interfaces::Properties::EMPTY
+                ..finterfaces::Properties::EMPTY
             })))
         );
         // Check state is updated.
@@ -1184,10 +1164,10 @@ mod tests {
                 &mut state,
                 InterfaceEvent::Changed { id, event: InterfaceUpdate::OnlineChanged(true) }
             ),
-            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                 id: Some(id),
                 online: Some(true),
-                ..fidl_interfaces::Properties::EMPTY
+                ..finterfaces::Properties::EMPTY
             })))
         );
         // Check state is updated.
@@ -1209,13 +1189,13 @@ mod tests {
         let mut state = HashMap::from([(id, initial_state)]);
 
         let expect_set_props = match version {
-            IpVersion::V4 => fidl_interfaces::Properties {
+            IpVersion::V4 => finterfaces::Properties {
                 has_default_ipv4_route: Some(true),
-                ..fidl_interfaces::Properties::EMPTY
+                ..finterfaces::Properties::EMPTY
             },
-            IpVersion::V6 => fidl_interfaces::Properties {
+            IpVersion::V6 => finterfaces::Properties {
                 has_default_ipv6_route: Some(true),
-                ..fidl_interfaces::Properties::EMPTY
+                ..finterfaces::Properties::EMPTY
             },
         };
 
@@ -1231,7 +1211,7 @@ mod tests {
                     }
                 }
             ),
-            Ok(Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                 id: Some(id),
                 ..expect_set_props
             })))
@@ -1268,7 +1248,7 @@ mod tests {
             async move {
                 assert_eq!(
                     watcher.next().await,
-                    Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
+                    Some(finterfaces::Event::Idle(finterfaces::Empty {}))
                 );
                 watcher
             }
@@ -1294,7 +1274,7 @@ mod tests {
             .map(|(event, (producer, i))| {
                 assert_matches!(
                     event,
-                    fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                    finterfaces::Event::Added(finterfaces::Properties {
                         id: Some(id),
                         ..
                     }) if id == i
@@ -1310,7 +1290,7 @@ mod tests {
             .fold(None, |_, (event, i)| {
                 assert_matches!(
                     event,
-                    fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                    finterfaces::Event::Added(finterfaces::Properties {
                         id: Some(id),
                         ..
                     }) if id == i
@@ -1351,10 +1331,7 @@ mod tests {
         let sink_keep = watcher_sink.clone();
         let create_watchers = fuchsia_async::Task::spawn(async move {
             let mut watcher = watcher_sink.create_watcher_event_stream();
-            assert_eq!(
-                watcher.next().await,
-                Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-            );
+            assert_eq!(watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
         });
 
         // NB: Map the output of the worker future so we can assert equality on
@@ -1380,14 +1357,11 @@ mod tests {
         interface_sink: WorkerInterfaceSink,
     ) {
         let mut watcher = watcher_sink.create_watcher_event_stream();
-        assert_eq!(
-            watcher.next().await,
-            Some(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_eq!(watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
 
-        const ADDR1: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("2000::1");
-        const ADDR2: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.1/24");
-        const ADDR3: fidl_net::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.2/24");
+        const ADDR1: fnet::InterfaceAddress = net_declare::fidl_if_addr!("2000::1");
+        const ADDR2: fnet::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.1/24");
+        const ADDR3: fnet::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.2/24");
 
         for addrs in IntoIterator::into_iter([ADDR1, ADDR2, ADDR3]).permutations(3) {
             let producer = interface_sink
@@ -1401,7 +1375,7 @@ mod tests {
                 .expect("failed to add interface");
             assert_matches!(
                 watcher.next().await,
-                Some(fidl_interfaces::Event::Added(fidl_interfaces::Properties {
+                Some(finterfaces::Event::Added(finterfaces::Properties {
                     id: Some(id), .. }
                 )) if id == IFACE1_ID
             );
@@ -1419,7 +1393,7 @@ mod tests {
 
                 let addresses = assert_matches!(
                     watcher.next().await,
-                    Some(fidl_interfaces::Event::Changed(fidl_interfaces::Properties{
+                    Some(finterfaces::Event::Changed(finterfaces::Properties{
                         id: Some(IFACE1_ID),
                         addresses: Some(addresses),
                         ..
@@ -1427,14 +1401,12 @@ mod tests {
                 );
                 let addresses = addresses
                     .into_iter()
-                    .map(|fidl_interfaces::Address { value, .. }| {
-                        value.expect("missing address value")
-                    })
+                    .map(|finterfaces::Address { value, .. }| value.expect("missing address value"))
                     .collect::<Vec<_>>();
                 assert_eq!(addresses, expect);
             }
             std::mem::drop(producer);
-            assert_eq!(watcher.next().await, Some(fidl_interfaces::Event::Removed(IFACE1_ID)));
+            assert_eq!(watcher.next().await, Some(finterfaces::Event::Removed(IFACE1_ID)));
         }
     }
 
@@ -1445,10 +1417,7 @@ mod tests {
         _interface_sink: WorkerInterfaceSink,
     ) {
         let watcher = watcher_sink.create_watcher();
-        assert_matches!(
-            watcher.watch().await,
-            Ok(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}))
-        );
+        assert_matches!(watcher.watch().await, Ok(finterfaces::Event::Idle(finterfaces::Empty {})));
 
         let (r1, r2) = futures::future::join(watcher.watch(), watcher.watch()).await;
         for r in [r1, r2] {
@@ -1464,7 +1433,7 @@ mod tests {
         let mut executor =
             fuchsia_async::TestExecutor::new_with_fake_time().expect("failed to create executor");
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_interfaces::WatcherMarker>()
+            fidl::endpoints::create_proxy_and_stream::<finterfaces::WatcherMarker>()
                 .expect("failed to create watcher");
         let mut watcher =
             Watcher { stream, events: EventQueue { events: Default::default() }, responder: None };
@@ -1473,12 +1442,12 @@ mod tests {
         assert_matches!(executor.run_until_stalled(&mut watcher), std::task::Poll::Pending);
         // Got a responder, we're pending.
         assert_matches!(watcher.responder, Some(_));
-        watcher.push(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}));
+        watcher.push(finterfaces::Event::Idle(finterfaces::Empty {}));
         // Responder is executed.
         assert_matches!(watcher.responder, None);
         assert_matches!(
             executor.run_until_stalled(&mut watch_fut),
-            std::task::Poll::Ready(Ok(fidl_interfaces::Event::Idle(fidl_interfaces::Empty {})))
+            std::task::Poll::Ready(Ok(finterfaces::Event::Idle(finterfaces::Empty {})))
         );
     }
 }
