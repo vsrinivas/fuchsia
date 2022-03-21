@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::installer::BootloaderType,
-    anyhow::{anyhow, Context, Error},
+    crate::installer::{BlockDevice, BootloaderType},
+    anyhow::{Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
@@ -178,30 +178,29 @@ impl Partition {
     /// and return them.
     ///
     /// # Arguments
-    /// * `block_device` - the topological path of the block device (must not be
-    ///     the /dev/class/block path!)
+    /// * `block_device` - the |BlockDevice| to get partitions from.
+    /// * `all_devices` - All known block devices in the system.
     /// * `bootloader` - the |BootloaderType| of this device.
     pub async fn get_partitions(
-        block_device: &str,
+        block_device: &BlockDevice,
+        all_devices: &Vec<BlockDevice>,
         bootloader: BootloaderType,
     ) -> Result<Vec<Self>, Error> {
         let mut partitions = Vec::new();
 
-        let block_path = Path::new(&block_device);
-        for entry in fs::read_dir(block_path).context("Read dir")? {
-            let entry = entry?;
-            let mut path = entry.path().to_path_buf();
-            path.push("block");
-            let path = path.as_path();
-
-            let block_path = path.to_str().ok_or(anyhow!("Invalid path"))?;
+        for entry in all_devices {
+            if !entry.topo_path.starts_with(&block_device.topo_path) || entry == block_device {
+                // Skip partitions that are not children of this block device, and skip the block
+                // device itself.
+                continue;
+            }
             let (local, remote) = zx::Channel::create().context("Creating channel")?;
-            fdio::service_connect(&block_path, remote).context("Connecting to partition")?;
+            fdio::service_connect(&entry.class_path, remote).context("Connecting to partition")?;
             let local = fidl::AsyncChannel::from_channel(local).context("Creating AsyncChannel")?;
 
             let proxy = PartitionProxy::from_channel(local);
             if let Some(partition) =
-                Partition::new(block_path.to_string(), proxy, bootloader).await?
+                Partition::new(entry.class_path.clone(), proxy, bootloader).await?
             {
                 partitions.push(partition);
             }
@@ -222,28 +221,30 @@ impl Partition {
             }
             PartitionPaveType::Volume => {
                 let pauser = BlockWatcherPauser::new().await.context("Pausing block watcher")?;
-                // Set up a PayloadStream to serve the data sink.
-                let file =
-                    Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
-                let payload_stream = PayloadStreamer::new(file, self.size);
-                let (client_end, server_end) =
-                    fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
-                let mut stream = server_end.into_stream()?;
-
-                fasync::Task::spawn(async move {
-                    while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
-                        payload_stream
-                            .handle_request(req)
-                            .await
-                            .expect("Failed to handle request!");
-                    }
-                })
-                .detach();
-                // Tell the data sink to use our PayloadStream.
-                data_sink.write_volumes(client_end).await?;
+                let result = self.pave_volume_paused(data_sink).await;
                 pauser.resume().await.context("Resuming block watcher")?;
+                result?;
             }
         };
+        Ok(())
+    }
+
+    /// Pave a volume while the block watcher is paused.
+    async fn pave_volume_paused(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
+        // Set up a PayloadStream to serve the data sink.
+        let file = Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
+        let payload_stream = PayloadStreamer::new(file, self.size);
+        let (client_end, server_end) = fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
+        let mut stream = server_end.into_stream()?;
+
+        fasync::Task::spawn(async move {
+            while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
+                payload_stream.handle_request(req).await.expect("Failed to handle request!");
+            }
+        })
+        .detach();
+        // Tell the data sink to use our PayloadStream.
+        data_sink.write_volumes(client_end).await?;
         Ok(())
     }
 

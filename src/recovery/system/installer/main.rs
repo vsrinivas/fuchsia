@@ -34,7 +34,7 @@ use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
 pub mod installer;
 use installer::{
     find_install_source, get_block_devices, get_bootloader_type, paver_connect,
-    set_active_configuration, BootloaderType,
+    set_active_configuration, BlockDevice, BootloaderType,
 };
 
 pub mod partition;
@@ -58,9 +58,10 @@ enum InstallerMessages {
     MenuDown,
     MenuEnter,
     Error(String),
-    GotInstallSource(String),
+    GotInstallSource(BlockDevice),
     GotBootloaderType(BootloaderType),
-    GotInstallDestinations(Vec<String>),
+    GotInstallDestinations(Vec<BlockDevice>),
+    GotBlockDevices(Vec<BlockDevice>),
     ProgressUpdate(String),
 }
 
@@ -74,19 +75,21 @@ struct Args {
 }
 #[derive(Clone, Debug, PartialEq)]
 struct InstallationPaths {
-    install_source: String,
-    install_target: String,
+    install_source: Option<BlockDevice>,
+    install_target: Option<BlockDevice>,
     bootloader_type: Option<BootloaderType>,
-    install_destinations: Vec<String>,
+    install_destinations: Vec<BlockDevice>,
+    available_disks: Vec<BlockDevice>,
 }
 
 impl InstallationPaths {
     pub fn new() -> InstallationPaths {
         InstallationPaths {
-            install_source: String::new(),
-            install_target: String::new(),
+            install_source: None,
+            install_target: None,
             bootloader_type: None,
             install_destinations: Vec::new(),
+            available_disks: Vec::new(),
         }
     }
 }
@@ -245,10 +248,9 @@ impl InstallerViewAssistant {
                         ))
                         .detach();
                     }
-                    MenuButtonType::Disk => {
+                    MenuButtonType::Disk(target) => {
                         // Disk was selected as installation target
-                        self.installation_paths.install_target =
-                            self.menu_state_machine.get_selected_button_text();
+                        self.installation_paths.install_target = Some(target.clone());
                         self.menu_state_machine.handle_event(MenuEvent::Enter);
                     }
                     MenuButtonType::Yes => {
@@ -270,16 +272,19 @@ impl InstallerViewAssistant {
                 self.menu_state_machine.handle_event(MenuEvent::Error(error_msg.clone()));
             }
             InstallerMessages::GotInstallSource(install_source_path) => {
-                self.installation_paths.install_source = install_source_path.clone();
+                self.installation_paths.install_source = Some(install_source_path.clone());
             }
             InstallerMessages::GotBootloaderType(bootloader_type) => {
                 self.installation_paths.bootloader_type = Some(bootloader_type.clone());
             }
             InstallerMessages::GotInstallDestinations(destinations) => {
-                self.installation_paths.install_destinations = destinations.to_vec();
+                self.installation_paths.install_destinations = destinations.clone();
                 // Send disks to menu
                 self.menu_state_machine
-                    .handle_event(MenuEvent::GotBlockDevices(destinations.to_vec()));
+                    .handle_event(MenuEvent::GotBlockDevices(destinations.clone()));
+            }
+            InstallerMessages::GotBlockDevices(devices) => {
+                self.installation_paths.available_disks = devices.clone();
             }
             InstallerMessages::ProgressUpdate(string) => {
                 self.menu_state_machine.handle_event(MenuEvent::ProgressUpdate(string.clone()));
@@ -544,9 +549,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     );
 
     // Find the location of the installer
-    let install_source =
-        find_install_source(block_devices.iter().map(|(part, _)| part).collect(), bootloader_type)
-            .await?;
+    let install_source = find_install_source(&block_devices, bootloader_type).await?;
 
     // Send got installer messgae
     app_sender.clone().queue_message(
@@ -557,8 +560,8 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     // Make list of available destinations for installation
     let mut destinations = Vec::new();
     for block_device in block_devices.iter() {
-        if &block_device.0 != install_source {
-            destinations.push(block_device.0.clone());
+        if block_device != install_source {
+            destinations.push(block_device.clone());
         }
     }
 
@@ -568,10 +571,17 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
         return Err(anyhow!("Found no block devices for installation."));
     };
 
+    app_sender.queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::GotBlockDevices(block_devices)),
+    );
+
     // Else end destinations
     app_sender.clone().queue_message(
         MessageTarget::View(view_key),
-        make_message(InstallerMessages::GotInstallDestinations(destinations.clone())),
+        make_message(InstallerMessages::GotInstallDestinations(
+            destinations.into_iter().filter(|d| d.is_disk()).collect(),
+        )),
     );
 
     Ok(())
@@ -598,36 +608,24 @@ async fn fuchsia_install(
     view_key: ViewKey,
     installation_paths: InstallationPaths,
 ) {
-    let block_device_path = installation_paths.install_target.clone();
-
-    // Check that block device path is OK
-    if !block_device_path.starts_with("/dev/") {
-        app_sender.clone().queue_message(
-            MessageTarget::View(view_key),
-            make_message(InstallerMessages::Error(String::from("Invalid block device path!"))),
-        );
-    } else {
-        // Execute install
-        match do_install(app_sender.clone(), view_key, installation_paths).await {
-            Ok(_) => {
-                print!("INSTALL SUCCESS");
-                app_sender.clone().queue_message(
-                    MessageTarget::View(view_key),
-                    make_message(InstallerMessages::ProgressUpdate(String::from(
-                        "Success! Please restart your computer",
-                    ))),
-                );
-            }
-            Err(e) => {
-                print!("ERROR INSTALLING: {}", e);
-                app_sender.clone().queue_message(
-                    MessageTarget::View(view_key),
-                    make_message(InstallerMessages::Error(String::from(format!(
-                        "Error {}, please restart",
-                        e
-                    )))),
-                );
-            }
+    // Execute install
+    match do_install(app_sender.clone(), view_key, installation_paths).await {
+        Ok(_) => {
+            app_sender.clone().queue_message(
+                MessageTarget::View(view_key),
+                make_message(InstallerMessages::ProgressUpdate(String::from(
+                    "Success! Please restart your computer",
+                ))),
+            );
+        }
+        Err(e) => {
+            app_sender.clone().queue_message(
+                MessageTarget::View(view_key),
+                make_message(InstallerMessages::Error(String::from(format!(
+                    "Error {}, please restart",
+                    e
+                )))),
+            );
         }
     }
 }
@@ -637,12 +635,14 @@ async fn do_install(
     view_key: ViewKey,
     installation_paths: InstallationPaths,
 ) -> Result<(), Error> {
-    let block_device_path = installation_paths.install_target;
-    let install_source = installation_paths.install_source;
+    let install_target =
+        installation_paths.install_target.ok_or(anyhow!("No installation target?"))?;
+    let install_source =
+        installation_paths.install_source.ok_or(anyhow!("No installation source?"))?;
     let bootloader_type = installation_paths.bootloader_type.unwrap();
 
     let (paver, data_sink) =
-        paver_connect(&block_device_path).context("Could not contact paver")?;
+        paver_connect(&install_target.class_path).context("Could not contact paver")?;
 
     println!("Wiping old partition tables...");
     app_sender.clone().queue_message(
@@ -666,9 +666,13 @@ async fn do_install(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from("Getting source partitions"))),
     );
-    let to_install = Partition::get_partitions(&install_source, bootloader_type)
-        .await
-        .context("Getting source partitions")?;
+    let to_install = Partition::get_partitions(
+        &install_source,
+        &installation_paths.available_disks,
+        bootloader_type,
+    )
+    .await
+    .context("Getting source partitions")?;
 
     let num_partitions = to_install.len();
     let mut current_partition = 1;
@@ -684,8 +688,8 @@ async fn do_install(
 
         print!("{:?}... ", part);
         io::stdout().flush()?;
-        if part.pave(&data_sink).await.is_err() {
-            println!("Failed");
+        if let Err(e) = part.pave(&data_sink).await {
+            println!("Failed ({:?})", e);
         } else {
             println!("OK");
             if part.is_ab() {

@@ -39,15 +39,6 @@ async fn block_device_get_info(
     let (maybe_path, block_channel) = get_topological_path(block_channel).await?;
     let topo_path = maybe_path.ok_or(anyhow!("Failed to get topo path for device"))?;
 
-    // partitions have paths like this:
-    // /dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-000/block
-    // while disks are like this:
-    // /dev/sys/platform/pci/00:17.0/ahci/sata2/block
-    if topo_path.contains("/block/part-") {
-        // This is probably a partition, skip it
-        return Ok(None);
-    }
-
     if topo_path.contains("/ramdisk-") {
         // This is probably ram, skip it
         return Ok(None);
@@ -74,31 +65,56 @@ async fn get_topological_path(
     Ok((topo_resp.ok(), controller.into_channel().unwrap()))
 }
 
-pub async fn get_block_devices() -> Result<Vec<(String, u64)>, Error> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct BlockDevice {
+    /// Topological path of the block device.
+    pub topo_path: String,
+    /// Path to the block device under /dev/class/block.
+    pub class_path: String,
+    /// Size of the block device, in bytes.
+    pub size: u64,
+}
+
+impl BlockDevice {
+    /// Returns true if this block device is a disk.
+    pub fn is_disk(&self) -> bool {
+        // partitions have paths like this:
+        // /dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-000/block
+        // while disks are like this:
+        // /dev/sys/platform/pci/00:17.0/ahci/sata2/block
+        !self.topo_path.contains("/block/part-")
+    }
+}
+
+pub async fn get_block_devices() -> Result<Vec<BlockDevice>, Error> {
     let block_dir = Path::new("/dev/class/block");
-    let mut devices: Vec<(String, u64)> = Vec::new();
+    let mut devices = Vec::new();
     for entry in fs::read_dir(block_dir)? {
-        let block_channel = connect_to_service(entry?.path().to_str().unwrap()).await?;
-        let result = block_device_get_info(block_channel).await?;
-        if let Some(device) = result {
-            devices.push(device);
+        let name = entry?.path().to_str().unwrap().to_owned();
+        let block_channel = connect_to_service(&name).await?;
+        let result =
+            block_device_get_info(block_channel).await.context("Getting block device info")?;
+        if let Some((topo_path, size)) = result {
+            devices.push(BlockDevice { topo_path, class_path: name, size });
+        } else {
+            println!("Bad disk: {:?}", name);
         }
     }
     Ok(devices)
 }
 
 pub async fn find_install_source(
-    block_devices: Vec<&String>,
+    block_devices: &Vec<BlockDevice>,
     bootloader: BootloaderType,
-) -> Result<&String, Error> {
+) -> Result<&BlockDevice, Error> {
     let mut candidate = Err(anyhow!("Could not find the installer disk. Is it plugged in?"));
-    for device in block_devices.iter() {
+    for device in block_devices.iter().filter(|d| d.is_disk()) {
         // get_partitions returns an empty vector if it doesn't find any partitions
         // with the workstation-installer GUID on the disk.
-        let partitions = Partition::get_partitions(&device, bootloader).await?;
+        let partitions = Partition::get_partitions(device, block_devices, bootloader).await?;
         if !partitions.is_empty() {
             if candidate.is_err() {
-                candidate = Ok(*device);
+                candidate = Ok(device);
             } else {
                 return Err(anyhow!(
                     "Please check you only have one installation disk plugged in!"
