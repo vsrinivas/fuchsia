@@ -62,12 +62,6 @@ template("cvf") {
       "--output",
       rebase_path(compiled_output, root_build_dir),
     ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-
-    deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
   }
 }
 
@@ -133,10 +127,7 @@ template("fidl_config_client_lib_source") {
       deps = []
     }
 
-    deps += [
-      "//tools/cmc/build/restricted_features:structured_config",
-      "//tools/fidl/fidlc:fidl-format($host_toolchain)",
-    ]
+    deps += [ "//tools/fidl/fidlc:fidl-format($host_toolchain)" ]
 
     outputs = [ source_file_path ]
 
@@ -210,12 +201,6 @@ template("rust_config_client_lib_source") {
       "--rustfmt-config",
       rebase_path("//rustfmt.toml", root_build_dir),
     ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-
-    deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
 
     outputs = [ source_file_path ]
 
@@ -296,12 +281,6 @@ template("cpp_elf_config_client_lib_source") {
       "--clang-format",
       "${rebased_clang_prefix}/clang-format",
     ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-
-    deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
 
     outputs = [
       cc_source_file_path,
