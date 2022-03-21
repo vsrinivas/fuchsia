@@ -535,8 +535,9 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
                       child->Remove();
                     }
                   })
-                  .or_else([this](const zx_status_t& status) {
+                  .or_else([this, child](const zx_status_t& status) {
                     FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
+                    child->Remove();
                     return ok();
                   })
                   .wrap_with(child->scope())

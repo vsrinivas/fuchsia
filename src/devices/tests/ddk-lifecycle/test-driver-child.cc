@@ -11,9 +11,15 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+namespace {
+uint32_t device_index = 0;
+}  // namespace
+
 void TestLifecycleDriverChild::DdkRelease() {
   // Release the reference now that devmgr no longer has a pointer to this object.
-  __UNUSED bool dummy = Release();
+  if (Release()) {
+    delete this;
+  }
 }
 
 void TestLifecycleDriverChild::AsyncRemove(fit::function<void()> callback) {
@@ -36,8 +42,9 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_
 
   *out_device = device;
 
-  zx_status_t status = device->DdkAdd(
-      ddk::DeviceAddArgs("ddk-lifecycle-test-child").set_flags(DEVICE_ADD_NON_BINDABLE));
+  std::string name = "ddk-lifecycle-test-child-" + std::to_string(device_index++);
+  zx_status_t status =
+      device->DdkAdd(ddk::DeviceAddArgs(name.data()).set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     out_device->reset();
     return status;

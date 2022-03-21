@@ -33,6 +33,10 @@ class LifecycleTest : public zxtest::Test {
   void SetUp() override {
     IsolatedDevmgr::Args args;
 
+#ifdef DFV2
+    args.use_driver_framework_v2 = true;
+#endif
+
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;
     dev.pid = PDEV_PID_LIFECYCLE_TEST;
@@ -140,6 +144,7 @@ TEST_F(LifecycleTest, Init) {
   ASSERT_NO_FATAL_FAILURE(WaitPreRelease(child_id));
 }
 
+#ifndef DFV2
 TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
                                                             ZX_OK /* init_status */);
@@ -148,7 +153,7 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   auto child_id = result->result.response().child_id;
   fbl::unique_fd fd;
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
-      devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child",
+      devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child-0",
       &fd));
   ASSERT_TRUE(fd.get() > 0);
   zx::channel chan;
@@ -170,7 +175,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   fbl::unique_fd fd;
 
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
-      devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child",
+      devmgr_.devfs_root(), "sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child-0",
       &fd));
   ASSERT_TRUE(fd.get() > 0);
   fidl::ClientEnd<File> chan;
@@ -193,7 +198,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
     ASSERT_TRUE(response.result.is_err());
     ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
   }
-  int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child", O_RDWR);
+  int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child-0", O_RDWR);
   ASSERT_EQ(fd2, -1);
   ASSERT_EQ(fidl::WireCall<Device>(fidl::UnownedClientEnd<Device>(chan.channel().borrow()))
                 ->GetClass()
@@ -223,6 +228,8 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
   ASSERT_OK(chan_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
 }
+
+#endif
 
 // Tests that the child device is removed if init fails.
 TEST_F(LifecycleTest, FailedInit) {

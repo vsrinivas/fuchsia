@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/compiler.h>
@@ -76,6 +77,13 @@ Device::~Device() {
     if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
       ops_->unbind(compat_symbol_.context);
     }
+
+    // Call the parent's pre-release.
+    if (HasOp((*parent_)->ops_, &zx_protocol_device_t::child_pre_release)) {
+      (*parent_)->ops_->child_pre_release((*parent_)->compat_symbol_.context,
+                                          compat_symbol_.context);
+    }
+
     if (HasOp(ops_, &zx_protocol_device_t::release)) {
       ops_->release(compat_symbol_.context);
     }
@@ -310,22 +318,34 @@ zx_status_t Device::CreateNode() {
 }
 
 void Device::Remove() {
-  if (!controller_) {
-    FDF_LOG(ERROR, "Failed to remove device '%s', invalid node controller", Name());
-    if (parent_.has_value()) {
-      auto ptr = shared_from_this();
-      (*parent_)->RemoveChild(ptr);
-    }
-    return;
-  }
-  auto result = controller_->Remove();
-  if (!result.ok() && !result.is_peer_closed()) {
-    FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(), result.FormatDescription().data());
-    if (parent_.has_value()) {
-      auto ptr = shared_from_this();
-      (*parent_)->RemoveChild(ptr);
-    }
-  }
+  executor_.schedule_task(
+      WaitForInitToComplete().then([this](fpromise::result<void, zx_status_t>& init) {
+        // This should be called if we hit an error trying to remove the controller.
+        auto schedule_removal = fit::defer([this]() {
+          if (parent_.has_value()) {
+            auto shared = shared_from_this();
+            // We schedule our removal on our parent's executor because we can't be removed
+            // while being run in a promise on our own executor.
+            (*parent_)->executor_.schedule_task(
+                fpromise::make_promise([parent = *parent_, shared = std::move(shared)]() mutable {
+                  parent->RemoveChild(shared);
+                }));
+          }
+        });
+
+        if (!controller_) {
+          FDF_LOG(ERROR, "Failed to remove device '%s', invalid node controller", Name());
+          return;
+        }
+        auto result = controller_->Remove();
+        if (!result.ok() && !result.is_peer_closed()) {
+          FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(),
+                  result.FormatDescription().data());
+          if (parent_.has_value()) {
+          }
+        }
+        schedule_removal.cancel();
+      }));
 }
 
 void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
+import("//build/drivers/driver_compat_test.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
@@ -48,7 +49,7 @@ fuchsia_driver_component("ddk-lifecycle-test") {
   colocate = true
 }
 
-test("ddk-lifecycle") {
+driver_compat_test("ddk-lifecycle") {
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.device.lifecycle.test_llcpp",
@@ -65,9 +66,20 @@ test("ddk-lifecycle") {
   ]
 }
 
-fuchsia_unittest_package("ddk-lifecycle-test-package") {
+fuchsia_unittest_component("ddk-lifecycle-dfv1") {
+  deps = [ ":ddk-lifecycle_dfv1" ]
+}
+
+fuchsia_unittest_component("ddk-lifecycle-dfv2") {
+  deps = [ ":ddk-lifecycle_dfv2" ]
+}
+
+fuchsia_test_package("ddk-lifecycle-test-package") {
+  test_components = [
+    ":ddk-lifecycle-dfv1",
+    ":ddk-lifecycle-dfv2",
+  ]
   deps = [
-    ":ddk-lifecycle",
     ":ddk-lifecycle-test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
