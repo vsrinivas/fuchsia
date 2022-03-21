@@ -1,0 +1,66 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+declare_args() {
+  # Set this in args.gn to override the greeting emitted by this example.
+  config_example_rust_greeting = "World"
+}
+
+rustc_binary("bin") {
+  output_name = "config_example_rust"
+  sources = [ "src/main.rs" ]
+  deps = [
+    ":example_config",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "config_rust"
+  manifest = "meta/config_rust.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("component") {
+  cm_target = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_rust_lib("example_config") {
+  cm_target = ":manifest"
+}
+
+fuchsia_structured_config_values("values") {
+  cm_target = ":manifest"
+  values = {
+    greeting = config_example_rust_greeting
+  }
+}
+
+fuchsia_structured_config_values("values_from_json_file") {
+  cm_target = ":manifest"
+  values_source = "../config_example_default_values.json5"
+}
+
+group("rust") {
+  deps = [
+    ":component",
+    ":values",
+  ]
+}
+
+group("rust_with_json_values") {
+  deps = [
+    ":component",
+    ":values_from_json_file",
+  ]
+}

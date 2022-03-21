@@ -1,0 +1,4 @@
+{
+    // Print "Hello, World!" by default.
+    greeting: "World",
+}

@@ -32,6 +32,8 @@ group("dynamic_offers") {
 group("structured_config") {
   visibility = [
     # components
+    "//examples/components/config/cpp:*",
+    "//examples/components/config/rust:*",
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
     "//src/session/bin/session_manager:*",

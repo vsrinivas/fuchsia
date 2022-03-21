@@ -1,0 +1,64 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+declare_args() {
+  # Set this in args.gn to override the greeting emitted by this example.
+  config_example_cpp_greeting = "World"
+}
+
+executable("bin") {
+  output_name = "config_example_cpp"
+  sources = [ "main.cc" ]
+  deps = [
+    ":example_config",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "config_cpp"
+  manifest = "meta/config_cpp.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("component") {
+  cm_target = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_cpp_elf_lib("example_config") {
+  cm_target = ":manifest"
+}
+
+fuchsia_structured_config_values("values_from_gn") {
+  cm_target = ":manifest"
+  values = {
+    greeting = config_example_cpp_greeting
+  }
+}
+
+fuchsia_structured_config_values("values_from_json_file") {
+  cm_target = ":manifest"
+  values_source = "../config_example_default_values.json5"
+}
+
+group("cpp") {
+  deps = [
+    ":component",
+    ":values_from_gn",
+  ]
+}
+
+group("cpp_with_json_values") {
+  deps = [
+    ":component",
+    ":values_from_json_file",
+  ]
+}

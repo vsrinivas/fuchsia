@@ -5,6 +5,7 @@
 group("components") {
   testonly = true
   deps = [
+    "config",
     "echo:echo-example",
     "lifecycle:lifecycle-example",
     "routing:components-routing-example",
@@ -16,6 +17,7 @@ group("components") {
 group("tests") {
   testonly = true
   deps = [
+    "config:tests",
     "echo:tests",
     "realm_builder:tests",
     "routing:tests",

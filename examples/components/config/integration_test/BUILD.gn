@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "config_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("config_integration_test_component") {
+  testonly = true
+  component_name = "config_integration_test"
+  manifest = "meta/config_integration_test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("config_integration_test") {
+  test_components = [ ":config_integration_test_component" ]
+  deps = [
+    "//examples/components/config/cpp",
+    "//examples/components/config/rust",
+  ]
+}
+
+fuchsia_test_package("config_integration_test_with_json_values") {
+  test_components = [ ":config_integration_test_component" ]
+  deps = [
+    "//examples/components/config/cpp:cpp_with_json_values",
+    "//examples/components/config/rust:rust_with_json_values",
+  ]
+}
+
+group("integration_test") {
+  testonly = true
+  deps = [
+    ":config_integration_test",
+    ":config_integration_test_with_json_values",
+  ]
+}
