@@ -127,7 +127,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
     decoded_initialize_later.emplace(std::move(incoming));
   } else {
     // TODO(fxbug.dev/45252): Use FIDL at rest.
-    decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1, std::move(incoming));
+    decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2, std::move(incoming));
   }
   fidl::unstable::DecodedMessage<T>& decoded = decoded_initialize_later.value();
 
@@ -143,7 +143,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // passing, which uses multiple iovecs referencing input objects instead of copying.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{},
-                                                 fidl::internal::WireFormatVersion::kV1, value);
+                                                 fidl::internal::WireFormatVersion::kV2, value);
 
   if (encoded.status() != ZX_OK) {
     status.status = encoded.status();
@@ -169,7 +169,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   if constexpr (kTransactionalMessage) {
     decoded2_initialize_later.emplace(std::move(conversion.incoming_message()));
   } else {
-    decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1,
+    decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2,
                                       std::move(conversion.incoming_message()));
   }
   fidl::unstable::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
@@ -185,7 +185,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // in-process messaging.
   T* value2 = decoded2.PrimaryObject();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV1, value2);
+  fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV2, value2);
 
   if (encoded2.status() != ZX_OK) {
     status.status = encoded2.status();

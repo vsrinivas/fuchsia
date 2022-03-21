@@ -30,8 +30,8 @@ type testCase struct {
 
 func getEncoding(encodings []gidlir.Encoding) (gidlir.Encoding, bool) {
 	for _, encoding := range encodings {
-		// Only supported encoding wire format: v1.
-		if encoding.WireFormat == gidlir.V1WireFormat {
+		// Only supported encoding wire format: v2.
+		if encoding.WireFormat == gidlir.V2WireFormat {
 			return encoding, true
 		}
 	}
@@ -41,8 +41,8 @@ func getEncoding(encodings []gidlir.Encoding) (gidlir.Encoding, bool) {
 
 func getHandleDispositionEncoding(encodings []gidlir.HandleDispositionEncoding) (gidlir.HandleDispositionEncoding, bool) {
 	for _, encoding := range encodings {
-		// Only supported encoding wire format: v1.
-		if encoding.WireFormat == gidlir.V1WireFormat {
+		// Only supported encoding wire format: v2.
+		if encoding.WireFormat == gidlir.V2WireFormat {
 			return encoding, true
 		}
 	}
