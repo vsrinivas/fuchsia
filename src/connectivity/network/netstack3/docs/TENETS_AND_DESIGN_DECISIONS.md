@@ -119,5 +119,101 @@ trait Context {
 }
 ```
 
+## Do not hold prefix length for IPv6 addresses
+
+Generic IPv6 address state will not hold a prefix length. The prefix length may
+still be held by other protocol-specific state for an IPv6 address such as
+SLAAC.
+
+During investigation/research, it was determined that although IPv4 depends on
+the prefix length to determine whether an address is unicast in the context of
+its subnet, and the broadcast and network address for the address's subnet, IPv6
+does not depend on the prefix length in the same way. Unicast-ness of an IPv6
+address may be determined by observing the address itself and IPv6 does not have
+a notion of broadcast addresses. IPv6 does make use of the "network address" to
+support a [subnet-router anycast address] but adding an anycast address will be
+an explicit operation - in the same way multicast addresses/groups are
+explicitly added/joined.
+
+It should be noted that, on Fuchsia, adding an address with the
+`fuchsia.net.interfaces.admin` FIDL library does not implicitly create
+an on-link route for the prefix. This is similar to adding an address on Linux
+using `ip-address(8)` with the `noprefixroute` flag. Note that previous
+(deprecated) iterations of network configuration FIDL libraries such as
+`fuchsia.netstack` and `fuchsia.net.stack` did not have the same opinion.
+
+Given that the prefix of an address will not be used to implicitly manipulate
+on-link subnet routes or anycast addresses, there is no need to hold the prefix
+length with all IPv6 addresses.
+
+### Default address selection
+
+Per [RFC 6724 Section 2.2],
+
+    We define the common prefix length CommonPrefixLen(S, D) of a source
+    address S and a destination address D as the length of the longest
+    prefix (looking at the most significant, or leftmost, bits) that the
+    two addresses have in common, up to the length of S's prefix (i.e.,
+    the portion of the address not including the interface ID).  For
+    example, CommonPrefixLen(fe80::1, fe80::2) is 64.
+
+Our policy of not storing the prefix introduces a conflict with this definition
+of `CommonPrefixLen(S, D)` - by not holding the prefix length, we can no longer
+cap `CommonPrefixLen(S, D)` to the length of `S`'s prefix.
+
+For source address selection, per [RFC 6724 Section 5],
+
+    ...
+
+    Rule 8: Use longest matching prefix.
+    If CommonPrefixLen(SA, D) > CommonPrefixLen(SB, D), then prefer SA.
+    Similarly, if CommonPrefixLen(SB, D) > CommonPrefixLen(SA, D), then
+    prefer SB.
+
+    Rule 8 MAY be superseded if the implementation has other means of
+    choosing among source addresses.  For example, if the implementation
+    somehow knows which source address will result in the "best"
+    communications performance.
+
+For destination address selection per [RFC 6724 Section 6],
+
+    ...
+
+    Rule 9: Use longest matching prefix.
+    When DA and DB belong to the same address family (both are IPv6 or
+    both are IPv4): If CommonPrefixLen(Source(DA), DA) >
+    CommonPrefixLen(Source(DB), DB), then prefer DA.  Similarly, if
+    CommonPrefixLen(Source(DA), DA) < CommonPrefixLen(Source(DB), DB),
+    then prefer DB.
+
+    Rule 10: Otherwise, leave the order unchanged.
+    If DA preceded DB in the original list, prefer DA.  Otherwise, prefer
+    DB.
+
+    Rules 9 and 10 MAY be superseded if the implementation has other
+    means of sorting destination addresses.  For example, if the
+    implementation somehow knows which destination addresses will result
+    in the "best" communications performance.
+
+This is not an issue because for both source and destination address selection:
+
+- The limit of the source address's prefix length is irrelevant when
+  communicating with a remote destination on a different subnet as different
+  subnets will have different prefixes.
+- Rules affecting interoperability precede rules 8 and 9 for source and
+  destination address selection, respectively.
+- The rule that requires using the longest prefix match, CommonPrefixLen(S, D),
+  is allowed to be superseded by the implementation which will not limit the
+  common prefix length to the source address's prefix length.
+
+### FIDL
+
+The decision to not include a prefix length for an interface's IPv6 address
+state is captured by `fuchsia.net/InterfaceAddress`.
+
 [DAD implementation]: https://fuchsia-review.googlesource.com/c/fuchsia/+/648202
 [Originally in Netstack3]: https://cs.opensource.google/fuchsia/fuchsia/+/07b825aab40438237b2c47239786aae08c179139:src/connectivity/network/netstack3/
+[subnet-router anycast address]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.6.1
+[RFC 6724 Section 2.2]: https://datatracker.ietf.org/doc/html/rfc6724#section-2.2
+[RFC 6724 Section 5]: https://datatracker.ietf.org/doc/html/rfc6724#section-5
+[RFC 6724 Section 6]: https://datatracker.ietf.org/doc/html/rfc6724#section-6
