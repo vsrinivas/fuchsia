@@ -44,6 +44,7 @@ group("structured_config") {
     # must be defined in the same file as the generated values)
     "//build/images/*",
     "//src/security/pkg_test/tests:*",
+    "//third_party/network-conformance/images:*",
     "//vendor/google/build/pre_migration:*",
     "//vendor/google/build/recovery:*",
     "//vendor/google/build/reverse_migration:*",
