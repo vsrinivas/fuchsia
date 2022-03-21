@@ -73,8 +73,9 @@ fuchsia_unittest_package("gtest-runner-tests") {
   deps = [
     ":bin_test",
     "test_data:all_bins",
+    "//src/sys/test_runners/lib_loader_cache:lib_loader_runner_cache_cmp",
   ]
-  manifest = "meta/gtest_runner_bin_test.cmx"
+  manifest = "meta/gtest_runner_bin_test.cml"
 }
 
 group("tests") {
