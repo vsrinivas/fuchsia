@@ -213,10 +213,16 @@ TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
   uint8_t port;
   bool connected_to_hub = false;
   {
-    fbl::AutoLock _(&device_state_[slot_id - 1].transaction_lock());
-    device_state_[slot_id - 1].Disconnect();
-    port = device_state_[slot_id - 1].GetPort();
-    connected_to_hub = static_cast<bool>(device_state_[slot_id - 1].GetHubLocked());
+    auto& state = device_state_[slot_id - 1];
+    fbl::AutoLock _(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return fpromise::make_result_promise(
+                 fpromise::result<TRB*, zx_status_t>(fpromise::error(ZX_ERR_BAD_STATE)))
+          .box();
+    }
+    state.Disconnect();
+    port = state.GetPort();
+    connected_to_hub = static_cast<bool>(state.GetHubLocked());
   }
   DisableSlot cmd;
   cmd.set_slot(slot_id);
@@ -278,16 +284,19 @@ TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id) {
   return SubmitCommand(cmd, command_ring_.AllocateContext());
 }
 
-usb_speed_t UsbXhci::GetDeviceSpeed(uint8_t slot) {
+std::optional<usb_speed_t> UsbXhci::GetDeviceSpeed(uint8_t slot) {
+  auto& state = device_state_[slot - 1];
   {
-    fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-    if (device_state_[slot - 1].GetHubLocked()) {
-      return device_state_[slot - 1].GetHubLocked()->speed;
+    fbl::AutoLock _(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return std::nullopt;
+    }
+    if (state.GetHubLocked()) {
+      return state.GetHubLocked()->speed;
     }
   }
-  return static_cast<usb_speed_t>(PORTSC::Get(cap_length_, device_state_[slot - 1].GetPort())
-                                      .ReadFrom(&mmio_.value())
-                                      .PortSpeed());
+  return static_cast<usb_speed_t>(
+      PORTSC::Get(cap_length_, state.GetPort()).ReadFrom(&mmio_.value()).PortSpeed());
 }
 
 usb_speed_t UsbXhci::GetPortSpeed(uint8_t port_id) const {
@@ -303,12 +312,20 @@ TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id, uint8_t port_id,
 }
 
 void UsbXhci::SetDeviceInformation(uint8_t slot, uint8_t port, const std::optional<HubInfo>& hub) {
-  fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-  device_state_[slot - 1].SetDeviceInformation(slot, port, hub);
+  auto& state = device_state_[slot - 1];
+  fbl::AutoLock _(&state.transaction_lock());
+  state.SetDeviceInformation(slot, port, hub);
   if (hub) {
     uint8_t hub_id = hub->hub_id;
-    fbl::AutoLock _(&device_state_[hub_id].transaction_lock());
-    device_state_[hub_id].GetHubLocked()->port_to_device[port - 1] = static_cast<uint8_t>(slot - 1);
+    // Here, the hub_id is expected to be different from the device,
+    // otherwise a double-acquire occurs.
+    ZX_ASSERT(hub_id != slot - 1);
+    auto& state = device_state_[hub_id];
+    fbl::AutoLock _(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return;
+    }
+    state.GetHubLocked()->port_to_device[port - 1] = static_cast<uint8_t>(slot - 1);
   }
 }
 
@@ -317,6 +334,9 @@ TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketS
   usb_xhci::AddressDeviceStruct cmd;
   {
     fbl::AutoLock _(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     auto control = reinterpret_cast<uint32_t*>(state.GetInputContext()->virt());
     auto endpoint_context = reinterpret_cast<EndpointContext*>(
         reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * 2));
@@ -333,19 +353,27 @@ TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketS
 zx_status_t UsbXhci::DeviceOnline(uint32_t slot, uint16_t port, usb_speed_t speed) {
   bool is_usb_3 = false;
   {
-    fbl::AutoLock transaction_lock(&device_state_[slot - 1].transaction_lock());
-    if (device_state_[slot - 1].GetHubLocked()) {
+    auto& state = device_state_[slot - 1];
+    fbl::AutoLock transaction_lock(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return ZX_ERR_IO_NOT_PRESENT;
+    }
+    if (state.GetHubLocked()) {
       transaction_lock.release();
       PostCallback([=](const ddk::UsbBusInterfaceProtocolClient& bus) {
         uint32_t hub_id;
         {
-          fbl::AutoLock _(&GetDeviceState()[slot - 1].transaction_lock());
-          if (!GetDeviceState()[slot - 1].GetHubLocked()) {
+          auto& state = device_state_[slot - 1];
+          fbl::AutoLock _(&state.transaction_lock());
+          if (state.IsDisconnecting()) {
+            return ZX_ERR_IO_NOT_PRESENT;
+          }
+          if (!state.GetHubLocked()) {
             // Race condition -- device was unplugged before we got a chance to notify the bus
             // driver.
             return ZX_OK;
           }
-          hub_id = GetDeviceState()[slot - 1].GetHubLocked()->hub_id;
+          hub_id = state.GetHubLocked()->hub_id;
         }
         bus.AddDevice(slot - 1, hub_id, speed);
         return ZX_OK;
@@ -365,8 +393,14 @@ zx_status_t UsbXhci::DeviceOnline(uint32_t slot, uint16_t port, usb_speed_t spee
 }
 
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
-  fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-  device_state_[slot - 1].Disconnect();
+  auto& state = device_state_[slot - 1];
+  {
+    fbl::AutoLock _(&state.transaction_lock());
+    if (state.IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
+    state.Disconnect();
+  }
   fpromise::bridge<TRB*, zx_status_t> bridge;
   PostCallback([this, slot, cb = std::move(bridge.completer),
                 continuation](const ddk::UsbBusInterfaceProtocolClient& bus) mutable {
@@ -437,6 +471,9 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
   std::unique_ptr<TRBContext> context;
   {
     fbl::AutoLock _(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     hub.hub_id = static_cast<uint8_t>(device_id);
     hub.speed = speed;
     hub.hub_speed = speed;
@@ -492,6 +529,9 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
           request->setup.bm_request_type = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE;
           {
             fbl::AutoLock _(&state->transaction_lock());
+            if (state->IsDisconnecting()) {
+              return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+            }
             request->setup.w_value = state->GetHubLocked()->hub_depth;
           }
           request->setup.w_index = 0;
@@ -608,13 +648,13 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request_,
     request.Complete(ZX_ERR_INVALID_ARGS, 0);
     return;
   }
-  auto* state = GetDeviceState(request.request()->header.device_id);
-  if (!state) {
-    request.Complete(ZX_ERR_IO, 0);
-    return;
-  }
+  auto* state = &device_state_[request.request()->header.device_id];
   {
     fbl::AutoLock _(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+      return;
+    }
     if (!state->GetSlot()) {
       request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
       return;
@@ -817,6 +857,11 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   uint8_t index = static_cast<uint8_t>(XhciEndpointIndex(request.request()->header.ep_address) - 1);
   auto& state = device_state_[request.request()->header.device_id];
   fbl::AutoLock transaction_lock(&state.transaction_lock());
+  if (state.IsDisconnecting()) {
+    transaction_lock.release();
+    request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+    return;
+  }
   if (state.GetTransferRing(index).stalled()) {
     transaction_lock.release();
     request.Complete(ZX_ERR_IO_REFUSED, 0);
@@ -837,8 +882,7 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   pending_transfer.index = index;
   pending_transfer.context = state.GetTransferRing(index).AllocateContext();
   pending_transfer.context->request = std::move(request);
-  pending_transfer.slot =
-      device_state_[pending_transfer.context->request->request()->header.device_id].GetSlot();
+  pending_transfer.slot = state.GetSlot();
   if (!pending_transfer.context) {
     transaction_lock.release();
     pending_transfer.context->request->Complete(ZX_ERR_NO_MEMORY, 0);
@@ -884,6 +928,13 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
 void UsbXhci::UsbHciControlRequestQueue(Request req) {
   auto device_state = &device_state_[req.request()->header.device_id];
   fbl::AutoLock transaction_lock(&device_state->transaction_lock());
+  if (device_state->IsDisconnecting()) {
+    // Device is disconnecting. Release lock because we no longer will be using device_state,
+    // complete request, and return from function.
+    transaction_lock.release();
+    req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+    return;
+  }
   if (device_state->GetTransferRing().stalled()) {
     transaction_lock.release();
     req.Complete(ZX_ERR_IO_REFUSED, 0);
@@ -1120,6 +1171,9 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
   uint8_t index;
   {
     fbl::AutoLock _(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     auto control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
 
     // Initialize input slot context data structure (6.2.2) with 1 context entry
@@ -1216,6 +1270,9 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
   uint32_t* control;
   {
     fbl::AutoLock _(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
     // Initialize input slot context data structure (6.2.2) with 1 context entry
     // Set root hub port number to port number and context entries to 1
@@ -1244,6 +1301,9 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
                 reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + index)));
             endpoint_context->Deinit();
             fbl::AutoLock _(&state->transaction_lock());
+            if (state->IsDisconnecting()) {
+              return fpromise::error(ZX_ERR_IO_NOT_PRESENT);
+            }
             zx_status_t status = state->GetTransferRing(index - 1).Deinit();
             // If we can't deinit the ring something is seriously wrong.
             if (status != ZX_OK) {
@@ -1395,6 +1455,9 @@ TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_addr
   ResetEndpoint reset_command;
   {
     fbl::AutoLock _(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     reset_command.set_ENDPOINT(XhciEndpointIndex(ep_address) + 1);
     reset_command.set_SLOT(state->GetSlot());
   }
@@ -1466,6 +1529,9 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
   auto state = &device_state_[device_id];
 
   fbl::AutoLock _(&state->transaction_lock());
+  if (state->IsDisconnecting()) {
+    return 0;
+  }
   auto control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
   uint8_t index = XhciEndpointIndex(ep_address);
   auto endpoint_context = reinterpret_cast<EndpointContext*>(
@@ -1478,13 +1544,14 @@ zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 }
 
 TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address) {
-  auto* state = GetDeviceState(device_id);
-  if (!state) {
-    return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
-  }
+  auto* state = &device_state_[device_id];
+
   StopEndpoint stop;
   {
     fbl::AutoLock state_lock(&state->transaction_lock());
+    if (state->IsDisconnecting()) {
+      return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+    }
     uint8_t index = static_cast<uint8_t>(XhciEndpointIndex(ep_address) + 1);
     stop.set_ENDPOINT(index);
     stop.set_SLOT(state->GetSlot());
@@ -1509,6 +1576,9 @@ TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address)
         {
           TRB* new_ptr = nullptr;
           fbl::AutoLock _(&state->transaction_lock());
+          if (state->IsDisconnecting()) {
+            return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+          }
           index = static_cast<uint8_t>(XhciEndpointIndex(ep_address) - 1);
           if (!state->GetTransferRing(index).active()) {
             return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);

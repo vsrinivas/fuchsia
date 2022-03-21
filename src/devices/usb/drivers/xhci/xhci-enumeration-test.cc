@@ -139,7 +139,7 @@ void UsbXhci::SetDeviceInformation(uint8_t slot, uint8_t port, const std::option
   state->pending_operations.push_back(std::move(context));
 }
 
-usb_speed_t UsbXhci::GetDeviceSpeed(uint8_t slot) {
+std::optional<usb_speed_t> UsbXhci::GetDeviceSpeed(uint8_t slot) {
   auto state = reinterpret_cast<TestState*>(parent_);
   return state->speeds[slot - 1];
 }

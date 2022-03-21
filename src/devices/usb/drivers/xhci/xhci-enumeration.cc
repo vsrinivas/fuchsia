@@ -181,7 +181,11 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
   // We're NOT being invoked from a retry context -- finish device initialization
   return address_device
       .and_then([=](TRB*& result) -> TRBPromise {
-        if (hci->GetDeviceSpeed(state->slot) != USB_SPEED_SUPER) {
+        auto speed = hci->GetDeviceSpeed(state->slot);
+        if (!speed.has_value()) {
+          return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
+        }
+        if (speed.value() != USB_SPEED_SUPER) {
           // See USB 2.0 specification (revision 2.0) section 9.2.6
           return hci->Timeout(kPrimaryInterrupter, zx::deadline_after(zx::msec(10)));
         }
@@ -197,14 +201,22 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
       })
       .and_then([=](uint8_t& result) -> TRBPromise {
         // Set the max packet size if the device is a full speed device.
-        if (hci->GetDeviceSpeed(state->slot) == USB_SPEED_FULL) {
+        auto speed = hci->GetDeviceSpeed(state->slot);
+        if (!speed.has_value()) {
+          return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
+        }
+        if (speed.value() == USB_SPEED_FULL) {
           return hci->SetMaxPacketSizeCommand(state->slot, result);
         }
         return fpromise::make_ok_promise((TRB*)nullptr);
       })
       .and_then([=](TRB*& result) -> fpromise::result<TRB*, zx_status_t> {
         // Online the device, making it visible to the DDK (enumeration has completed)
-        zx_status_t status = hci->DeviceOnline(state->slot, port, hci->GetDeviceSpeed(state->slot));
+        auto speed = hci->GetDeviceSpeed(state->slot);
+        if (!speed.has_value()) {
+          return fpromise::error(ZX_ERR_BAD_STATE);
+        }
+        zx_status_t status = hci->DeviceOnline(state->slot, port, speed.value());
         if (status == ZX_OK) {
           error_handler->Cancel();
           return fpromise::ok(result);

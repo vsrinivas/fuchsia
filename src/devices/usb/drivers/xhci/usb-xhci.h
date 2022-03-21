@@ -170,7 +170,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   TRBPromise SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketSize0);
 
-  usb_speed_t GetDeviceSpeed(uint8_t slot_id);
+  std::optional<usb_speed_t> GetDeviceSpeed(uint8_t slot_id);
 
   usb_speed_t GetPortSpeed(uint8_t port_id) const;
 
@@ -206,16 +206,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   CommandRing* GetCommandRing() { return &command_ring_; }
 
   DeviceState* GetDeviceState() { return device_state_.get(); }
-  DeviceState* GetDeviceState(uint32_t device_id) {
-    auto* state = &device_state_[device_id];
-    {
-      fbl::AutoLock _(&state->transaction_lock());
-      if (state->IsDisconnecting()) {
-        return nullptr;
-      }
-    }
-    return state;
-  }
 
   PortState* GetPortState() { return port_state_.get(); }
   // Indicates whether or not the controller supports cache coherency

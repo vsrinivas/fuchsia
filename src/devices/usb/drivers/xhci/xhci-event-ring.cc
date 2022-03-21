@@ -543,11 +543,11 @@ zx_status_t EventRing::HandleIRQ() {
         } break;
         case Control::TransferEvent: {
           auto completion = static_cast<TransferEvent*>(erdp_virt_);
-          auto state = hci_->GetDeviceState(completion->SlotID() - 1);
-          if (!state) {
+          auto state = &hci_->GetDeviceState()[completion->SlotID() - 1];
+          fbl::AutoLock l(&state->transaction_lock());
+          if (state->IsDisconnecting()) {
             break;
           }
-          fbl::AutoLock l(&state->transaction_lock());
           std::unique_ptr<TRBContext> context;
           TransferRing* ring;
           uint8_t endpoint_id = static_cast<uint8_t>(completion->EndpointID() - 1);
