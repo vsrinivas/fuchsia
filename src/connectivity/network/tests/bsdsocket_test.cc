@@ -2045,7 +2045,7 @@ TEST_P(HangupTest, DuringConnect) {
         SCOPED_TRACE("i=" + std::to_string(i));
 
         const auto& expected = expectations[i];
-        AssertExpectedReventsAfterPeerShutdown(expected.fd.get());
+        ASSERT_NO_FATAL_FAILURE(AssertExpectedReventsAfterPeerShutdown(expected.fd.get()));
         EXPECT_EQ(connect(expected.fd.get(), addr, addr_len), -1);
         EXPECT_EQ(errno, expected.connect_result)
             << " errno=" << strerror(errno) << " expected=" << strerror(expected.connect_result);
@@ -3843,7 +3843,7 @@ void TestListenWhileConnect(const IOMethod& io_method, void (*stopListen)(fbl::u
   for (size_t i = 0; i < sockets.size(); i++) {
     SCOPED_TRACE("i=" + std::to_string(i));
     auto [fd, expected_errno] = sockets[i];
-    AssertExpectedReventsAfterPeerShutdown(fd);
+    ASSERT_NO_FATAL_FAILURE(AssertExpectedReventsAfterPeerShutdown(fd));
 
     char c;
     EXPECT_EQ(io_method.ExecuteIO(fd, &c, sizeof(c)), -1);
