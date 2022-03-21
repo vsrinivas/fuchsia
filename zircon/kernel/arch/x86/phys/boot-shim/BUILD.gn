@@ -223,6 +223,7 @@ if (toolchain_environment == "kernel.phys32") {
     deps = [
       ":legacy-boot-shim",
       "..:multiboot",
+      "//sdk/lib/fit",
       "//zircon/kernel/phys:symbolize",
     ]
   }

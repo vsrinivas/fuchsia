@@ -7,6 +7,7 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/test-serial-number.h>
+#include <lib/fit/defer.h>
 #include <lib/memalloc/pool.h>
 #include <lib/zbitl/image.h>
 #include <stdlib.h>
@@ -87,6 +88,8 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
                       zbi.Append(header, payload));
   };
 
+  auto cleanup = fit::defer([&shim]() { shim.input_zbi().ignore_error(); });
+
   for (auto it = shim.input_zbi().begin(); it != kernel_item; ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
@@ -141,6 +144,7 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
         break;
     }
   }
+
   return true;
 }
 
