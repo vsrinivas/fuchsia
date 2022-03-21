@@ -45,7 +45,6 @@ static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* dispatcher,
 
 static const async_ops_t async_loop_ops = {
     .version = ASYNC_OPS_V2,
-    .reserved = 0,
     .v1 =
         {
             .now = async_loop_now,
@@ -56,12 +55,14 @@ static const async_ops_t async_loop_ops = {
             .queue_packet = async_loop_queue_packet,
             .set_guest_bell_trap = async_loop_set_guest_bell_trap,
         },
-    .v2 = {
-        .bind_irq = async_loop_bind_irq,
-        .unbind_irq = async_loop_unbind_irq,
-        .create_paged_vmo = async_loop_create_paged_vmo,
-        .detach_paged_vmo = async_loop_detach_paged_vmo,
-    }};
+    .v2 =
+        {
+            .bind_irq = async_loop_bind_irq,
+            .unbind_irq = async_loop_unbind_irq,
+            .create_paged_vmo = async_loop_create_paged_vmo,
+            .detach_paged_vmo = async_loop_detach_paged_vmo,
+        },
+};
 
 typedef struct thread_record {
   list_node_t node;

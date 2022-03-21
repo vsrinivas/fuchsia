@@ -60,7 +60,6 @@ zx_status_t stub_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vm
 
 const async_ops_t g_stub_ops = {
     .version = ASYNC_OPS_V2,
-    .reserved = 0,
     .v1 =
         {
             .now = stub_now,

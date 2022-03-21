@@ -17,10 +17,18 @@ extern "C" zx_status_t fasync_executor_cancel_task(void* executor, async_task_t*
 namespace fuchsia_async {
 
 const async_ops_t Executor::ops_ = {
-    ASYNC_OPS_V1,
-    0,
-    {now, begin_wait, cancel_wait, post_task, cancel_task, queue_packet, set_guest_bell_trap},
-    {nullptr, nullptr, nullptr, nullptr}};
+    .version = ASYNC_OPS_V1,
+    .v1 =
+        {
+            .now = now,
+            .begin_wait = begin_wait,
+            .cancel_wait = cancel_wait,
+            .post_task = post_task,
+            .cancel_task = cancel_task,
+            .queue_packet = queue_packet,
+            .set_guest_bell_trap = set_guest_bell_trap,
+        },
+};
 
 Executor::Executor() : dispatcher_{&ops_}, impl_(fasync_executor_create(this)) {}
 
