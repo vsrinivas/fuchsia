@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
-    fidl_fuchsia_power_clientlevel as fidl_lp,
+    fidl_fuchsia_power_clientlevel as fidl_lp, fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
@@ -38,11 +38,16 @@ use {
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy::{self, device, IfaceRef},
         mode_management::{
-            create_iface_manager, iface_manager_api::IfaceManagerApi,
-            low_power_manager::PowerModeManager, phy_manager::PhyManager,
+            create_iface_manager,
+            iface_manager_api::IfaceManagerApi,
+            low_power_manager::PowerModeManager,
+            phy_manager::{PhyManager, PhyManagerApi},
         },
         regulatory_manager::RegulatoryManager,
-        telemetry::{connect_to_metrics_logger_factory, create_metrics_logger, serve_telemetry},
+        telemetry::{
+            connect_to_metrics_logger_factory, create_metrics_logger, serve_telemetry,
+            TelemetrySender,
+        },
         util,
     },
 };
@@ -221,7 +226,10 @@ async fn run_regulatory_manager(
 // service is not available, wlancfg will simply disable power save.  If the service is available,
 // wlancfg will listen for updates to WLAN power level and apply the desired power configuration
 // to all PHYs.
-async fn run_low_power_manager(phy_manager: Arc<Mutex<PhyManager>>) -> Result<(), Error> {
+async fn run_low_power_manager(
+    phy_manager: Arc<Mutex<PhyManager>>,
+    telemetry_sender: TelemetrySender,
+) -> Result<(), Error> {
     // Check if the low power service is offered to wlancfg.
     let req = match fuchsia_component::client::new_protocol_connector::<fidl_lp::ConnectorMarker>()
     {
@@ -239,6 +247,16 @@ async fn run_low_power_manager(phy_manager: Arc<Mutex<PhyManager>>) -> Result<()
         return Ok(());
     }
 
+    // To ensure that the policy layer starts off in a known power state, set the PHYs to
+    // performance mode.
+    let mut phy_manager_lock = phy_manager.lock().await;
+    if let Err(e) =
+        phy_manager_lock.set_power_state(fidl_common::PowerSaveType::PsModePerformance).await
+    {
+        warn!("Failed to initialize PHYs to performance mode: {:?}", e);
+    }
+    drop(phy_manager_lock);
+
     // At this point, the low power service is known to exist and wlancfg will attempt to monitor
     // for low power updates and to apply the low power settings to all PHYs as new updates and
     // new PHYs are discovered.  Any error in this process should be considered fatal.
@@ -250,7 +268,7 @@ async fn run_low_power_manager(phy_manager: Arc<Mutex<PhyManager>>) -> Result<()
         return Ok(());
     }
 
-    let lp_manager = PowerModeManager::new(watcher_proxy, phy_manager);
+    let lp_manager = PowerModeManager::new(watcher_proxy, phy_manager, telemetry_sender);
     lp_manager.run().await;
     Ok(())
 }
@@ -388,7 +406,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
     let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
-    let low_power_fut = run_low_power_manager(phy_manager.clone());
+    let low_power_fut = run_low_power_manager(phy_manager.clone(), telemetry_sender);
 
     let _ = futures::try_join!(
         fidl_fut,

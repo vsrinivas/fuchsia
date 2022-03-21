@@ -286,6 +286,11 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  zx_status_t SetPsMode(const wlanphy_ps_mode_t* ps_mode) {
+    zxlogf(ERROR, "SetPsMode not implemented");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // wlantap::WlantapPhy impl
 
   virtual void Shutdown(ShutdownCallback callback) override {
@@ -452,6 +457,9 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     },
     .get_country = [](void* ctx, wlanphy_country_t* out_country) -> zx_status_t {
       return DEV(ctx)->GetCountry(out_country);
+    },
+    .set_ps_mode = [](void* ctx, const wlanphy_ps_mode_t* ps_mode) -> zx_status_t {
+      return DEV(ctx)->SetPsMode(ps_mode);
     },
 };
 #undef DEV

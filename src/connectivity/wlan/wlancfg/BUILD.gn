@@ -142,6 +142,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.product.deprecatedclient:fuchsia.wlan.product.deprecatedclient-rustc",

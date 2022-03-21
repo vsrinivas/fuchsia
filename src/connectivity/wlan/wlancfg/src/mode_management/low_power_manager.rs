@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mode_management::phy_manager::PhyManagerApi,
+    crate::{mode_management::phy_manager::PhyManagerApi, telemetry},
     fidl_fuchsia_power_clientlevel as fidl_power, fidl_fuchsia_wlan_common as fidl_common,
     futures::lock::Mutex,
     log::{info, warn},
@@ -25,14 +25,21 @@ fn power_level_to_mode(level: u64) -> fidl_common::PowerSaveType {
 pub struct PowerModeManager<P: PhyManagerApi + ?Sized> {
     power_watcher: fidl_power::WatcherProxy,
     phy_manager: Arc<Mutex<P>>,
+    telemetry_sender: telemetry::TelemetrySender,
 }
 
 impl<P: PhyManagerApi + ?Sized> PowerModeManager<P> {
-    pub fn new(power_watcher: fidl_power::WatcherProxy, phy_manager: Arc<Mutex<P>>) -> Self {
-        PowerModeManager { power_watcher, phy_manager }
+    pub fn new(
+        power_watcher: fidl_power::WatcherProxy,
+        phy_manager: Arc<Mutex<P>>,
+        telemetry_sender: telemetry::TelemetrySender,
+    ) -> Self {
+        PowerModeManager { power_watcher, phy_manager, telemetry_sender }
     }
 
     pub async fn run(&self) {
+        let mut current_power_mode = None;
+
         loop {
             // Per the API specification, if a system does not have a WLAN power mode
             // configuration, it will simply drop the channel.
@@ -51,6 +58,14 @@ impl<P: PhyManagerApi + ?Sized> PowerModeManager<P> {
             let mut phy_manager = self.phy_manager.lock().await;
             if let Err(e) = phy_manager.set_power_state(power_mode).await {
                 warn!("Failed to apply power mode {:?}: {:?}", power_mode, e);
+                continue;
+            }
+
+            if Some(power_mode) != current_power_mode {
+                self.telemetry_sender.send(telemetry::TelemetryEvent::UpdateExperiment {
+                    experiment: telemetry::experiment::ExperimentUpdate::Power(power_mode),
+                });
+                current_power_mode = Some(power_mode);
             }
         }
     }
@@ -68,7 +83,7 @@ mod tests {
         async_trait::async_trait,
         eui48::MacAddress,
         fuchsia_async, fuchsia_zircon as zx,
-        futures::{task::Poll, StreamExt},
+        futures::{channel::mpsc, task::Poll, StreamExt},
         pin_utils::pin_mut,
         std::unimplemented,
         test_case::test_case,
@@ -86,6 +101,8 @@ mod tests {
 
     struct TestValues {
         phy_manager: FakePhyManager,
+        telemetry_sender: telemetry::TelemetrySender,
+        telemetry_receiver: mpsc::Receiver<telemetry::TelemetryEvent>,
         watcher_proxy: fidl_power::WatcherProxy,
         watcher_svc: fidl_power::WatcherRequestStream,
     }
@@ -96,8 +113,10 @@ mod tests {
                 .expect("failed to create watcher.");
         let watcher_svc = watcher_svc.into_stream().expect("failed to create watcher stream.");
         let phy_manager = FakePhyManager::new();
+        let (mpsc_sender, telemetry_receiver) = mpsc::channel(10);
+        let telemetry_sender = telemetry::TelemetrySender::new(mpsc_sender);
 
-        TestValues { phy_manager, watcher_proxy, watcher_svc }
+        TestValues { phy_manager, telemetry_sender, telemetry_receiver, watcher_proxy, watcher_svc }
     }
 
     #[test]
@@ -112,6 +131,7 @@ mod tests {
         let lpm = PowerModeManager::new(
             test_vals.watcher_proxy,
             Arc::new(Mutex::new(test_vals.phy_manager)),
+            test_vals.telemetry_sender,
         );
         let fut = lpm.run();
         pin_mut!(fut);
@@ -130,6 +150,7 @@ mod tests {
         let lpm = PowerModeManager::new(
             test_vals.watcher_proxy,
             Arc::new(Mutex::new(test_vals.phy_manager)),
+            test_vals.telemetry_sender,
         );
         let fut = lpm.run();
         pin_mut!(fut);
@@ -153,6 +174,16 @@ mod tests {
         // The future should exit since this is presumed to be a platform for which WLAN power
         // updates are available.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // Make sure the update to performance mode came through.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_vals.telemetry_receiver.next()),
+            Poll::Ready(Some(telemetry::TelemetryEvent::UpdateExperiment {
+                experiment: telemetry::experiment::ExperimentUpdate::Power(
+                    fidl_common::PowerSaveType::PsModePerformance,
+                )
+            }))
+        );
     }
 
     #[test]
@@ -166,7 +197,11 @@ mod tests {
         let desired_power_state = fidl_common::PowerSaveType::PsModePerformance;
 
         // Create a PowerModeManager and run it.
-        let lpm = PowerModeManager::new(test_vals.watcher_proxy, phy_manager.clone());
+        let lpm = PowerModeManager::new(
+            test_vals.watcher_proxy,
+            phy_manager.clone(),
+            test_vals.telemetry_sender,
+        );
         let fut = lpm.run();
         pin_mut!(fut);
 
@@ -185,17 +220,29 @@ mod tests {
 
         // The future should process the reply, fail to apply the change, and continue running.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // There should not be a power state update since setting the power state failed.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_vals.telemetry_receiver.next()),
+            Poll::Pending
+        );
     }
 
-    #[test]
-    fn test_applying_power_setting_succeeds() {
+    #[test_case(fidl_common::PowerSaveType::PsModePerformance)]
+    #[test_case(fidl_common::PowerSaveType::PsModeBalanced)]
+    #[test_case(fidl_common::PowerSaveType::PsModeLowPower)]
+    #[test_case(fidl_common::PowerSaveType::PsModeUltraLowPower)]
+    fn test_applying_power_setting_succeeds(desired_power_state: fidl_common::PowerSaveType) {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
         let mut test_vals = test_setup();
         let phy_manager = Arc::new(Mutex::new(test_vals.phy_manager));
-        let desired_power_state = fidl_common::PowerSaveType::PsModePerformance;
 
         // Create a PowerModeManager and run it.
-        let lpm = PowerModeManager::new(test_vals.watcher_proxy, phy_manager.clone());
+        let lpm = PowerModeManager::new(
+            test_vals.watcher_proxy,
+            phy_manager.clone(),
+            test_vals.telemetry_sender,
+        );
         let fut = lpm.run();
         pin_mut!(fut);
 
@@ -222,6 +269,17 @@ mod tests {
             exec.run_until_stalled(&mut phy_manager_fut),
             Poll::Ready(phy_manager) => {
                 assert_eq!(phy_manager.power_state, Some(desired_power_state))
+            }
+        );
+
+        // There should be a power state update indicating that the power mode has been changed.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_vals.telemetry_receiver.next()),
+            Poll::Ready(Some(telemetry::TelemetryEvent::UpdateExperiment { experiment })) => {
+                assert_eq!(
+                    telemetry::experiment::ExperimentUpdate::Power(desired_power_state),
+                    experiment
+                );
             }
         );
     }

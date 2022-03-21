@@ -58,7 +58,7 @@ pub fn default_experiments() -> Vec<u32> {
 // communicate changes to experiment status to the telemetry module.  The rest of the policy layer
 // will be able to construct this enum with other publicly visible FIDL enums or structs and this
 // mod will deal with the translation to experiment IDs.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExperimentUpdate {
     Power(fidl_common::PowerSaveType),
 }
