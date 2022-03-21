@@ -168,11 +168,6 @@ class RequestBase {
   // function succeeds.
   zx_status_t Mmap(void** data) { return usb_request_mmap(request(), data); }
 
-  // Performs a cache maintenance op against the request's internal buffer.
-  zx_status_t CacheOp(uint32_t op, size_t offset, size_t length) {
-    return usb_request_cacheop(request(), op, offset, length);
-  }
-
   // Performs a cache flush on a range of memory in the request's buffer.
   zx_status_t CacheFlush(zx_off_t offset, size_t length) {
     return usb_request_cache_flush(request(), offset, length);

@@ -661,20 +661,6 @@ TEST(UsbRequestTest, Mmap) {
   EXPECT_EQ(memcmp(&static_cast<uint8_t*>(data)[10], kSampleData, sizeof(kSampleData)), 0);
 }
 
-TEST(UsbRequestTest, CacheOp) {
-  std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
-
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 0, 0), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 10, 10), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_CLEAN, 0, 0), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_CLEAN, 10, 10), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_CLEAN_INVALIDATE, 0, 0), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_CLEAN_INVALIDATE, 10, 10), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_SYNC, 0, 0), ZX_OK);
-  EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_SYNC, 10, 10), ZX_OK);
-}
-
 TEST(UsbRequestTest, CacheFlush) {
   std::optional<Request> request;
   EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);

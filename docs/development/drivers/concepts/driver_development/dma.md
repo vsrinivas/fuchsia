@@ -338,11 +338,9 @@ so that no stale data will be accessed.
 
 To invoke cache operations on the memory represented by
 [VMO](/docs/reference/kernel_objects/vm_object.md)s, use the
-[`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md)
-syscall.
-Prior to a peripheral-read
-(driver-write) operation, clean the cache using `ZX_VMO_OP_CACHE_CLEAN` to write out dirty
-data to main memory. Prior to a peripheral-write (driver-read), mark the cache lines
-as invalid using `ZX_VMO_OP_CACHE_INVALIDATE` to ensure data is fetched from main
-memory on the next access.
+[`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) syscall. Prior to a peripheral-read
+(driver-write) operation, clean the cache using `ZX_VMO_OP_CACHE_CLEAN` to write out dirty data to
+main memory. Prior to a peripheral-write (driver-read), use `ZX_VMO_OP_CACHE_CLEAN_INVALIDATE` to
+clean the cache lines and mark them as invalid ensuring data is fetched from main memory on the next
+access.
 

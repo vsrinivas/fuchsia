@@ -216,15 +216,6 @@ __EXPORT zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
   return ZX_OK;
 }
 
-__EXPORT zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset,
-                                         size_t length) {
-  if (length > 0) {
-    return zx_vmo_op_range(req->vmo_handle, op, req->offset + offset, length, NULL, 0);
-  } else {
-    return ZX_OK;
-  }
-}
-
 __EXPORT zx_status_t usb_request_cache_flush(usb_request_t* req, zx_off_t offset, size_t length) {
   if (offset + length < offset || offset + length > req->size) {
     return ZX_ERR_OUT_OF_RANGE;
