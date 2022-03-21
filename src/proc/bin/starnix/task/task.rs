@@ -122,6 +122,8 @@ pub struct Task {
 
     /// Child tasks that have exited, but not yet been waited for.
     pub zombie_children: Mutex<Vec<ZombieTask>>,
+
+    pub did_exec: RwLock<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -202,6 +204,7 @@ impl Task {
             exit_signal,
             exit_code: Mutex::new(None),
             zombie_children: Mutex::new(vec![]),
+            did_exec: RwLock::new(false),
         })
     }
 
@@ -814,6 +817,7 @@ impl CurrentTask {
     ) -> Result<(), Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
         let resolved_elf = resolve_executable(self, executable, path.clone(), argv, environ)?;
+        *self.did_exec.write() = true;
         if let Err(err) = self.finish_exec(path, resolved_elf) {
             // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
             panic!("{:?} unrecoverable error in exec: {}", self, err);
