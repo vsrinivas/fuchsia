@@ -16,6 +16,7 @@
 #include <map>
 #include <memory>
 
+#include <fshost_config/config.h>
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
 
@@ -138,7 +139,7 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsDefaults) {
   std::map<std::string, std::string> boot_config = {};
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
 
-  Config fshost_config(Config::DefaultOptions());
+  auto fshost_config = DefaultConfig();
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
@@ -152,7 +153,7 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsUncompressedNoEvictNoSandbox) {
       {"blobfs.cache-eviction-policy", "NEVER_EVICT"}};
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
 
-  Config fshost_config(Config::DefaultOptions());
+  auto fshost_config = DefaultConfig();
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm,
@@ -168,7 +169,8 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsChunkedEvictSandbox) {
       {"blobfs.cache-eviction-policy", "EVICT_IMMEDIATELY"}};
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
 
-  Config fshost_config({{Config::kSandboxDecompression, ""}});
+  auto fshost_config = EmptyConfig();
+  fshost_config.sandbox_decompression = true;
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
@@ -186,7 +188,8 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsGarbage) {
   // The fshost config implementation should pick up on this as "set" even if there is a value we
   // don't care about. This is the equivalent of putting "sandbox-decompression=GARBAGE_VALUE" in
   // the fshost config file.
-  Config fshost_config({{Config::kSandboxDecompression, "GARBAGE_VALUE"}});
+  auto fshost_config = EmptyConfig();
+  fshost_config.sandbox_decompression = true;
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);

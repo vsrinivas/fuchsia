@@ -150,7 +150,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   }
 
   fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
-  std::string binary_path = config_.ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+  std::string binary_path = config_.data_filesystem_binary_path;
   // Config overrides passed in format.
   if (binary_path.empty()) {
     switch (format) {

@@ -21,6 +21,7 @@
 #include "src/lib/testing/predicates/status.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
+#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
@@ -36,7 +37,8 @@ std::unique_ptr<FsHostMetrics> MakeMetrics() {
 
 class FilesystemMounterHarness : public testing::Test {
  public:
-  FilesystemMounterHarness() : manager_(FshostBootArgs::Create(), MakeMetrics()) {}
+  FilesystemMounterHarness()
+      : config_(DefaultConfig()), manager_(FshostBootArgs::Create(), MakeMetrics()) {}
 
  protected:
   FsManager& manager() {
@@ -49,7 +51,7 @@ class FilesystemMounterHarness : public testing::Test {
     return manager_;
   }
 
-  Config config_;
+  fshost_config::Config config_;
 
  private:
   FsManager manager_;
@@ -178,7 +180,8 @@ TEST_F(MounterTest, FactoryMount) {
 }
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
-  config_ = Config(Config::Options{{Config::kWaitForData, {}}});
+  config_ = EmptyConfig();
+  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
@@ -203,7 +206,8 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
 }
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
-  config_ = Config(Config::Options{{Config::kWaitForData, {}}});
+  config_ = EmptyConfig();
+  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
@@ -217,7 +221,8 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
 }
 
 TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
-  config_ = Config(Config::Options{{Config::kWaitForData, {}}});
+  config_ = EmptyConfig();
+  config_.wait_for_data = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);

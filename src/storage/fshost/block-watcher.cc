@@ -65,7 +65,7 @@ constexpr zx_signals_t kSignalWatcherShutDown = ZX_USER_SIGNAL_1;
 
 }  // namespace
 
-BlockWatcher::BlockWatcher(FsManager& fshost, const Config* config)
+BlockWatcher::BlockWatcher(FsManager& fshost, const fshost_config::Config* config)
     : mounter_(fshost, config), device_manager_(config) {
   zx_status_t status = zx::event::create(0, &pause_event_);
   if (status != ZX_OK) {

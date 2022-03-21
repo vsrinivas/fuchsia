@@ -31,10 +31,12 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
+#include <fshost_config/config.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zstd/zstd.h>
 
 #include "block-watcher.h"
+#include "config.h"
 #include "fs-manager.h"
 #include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
@@ -173,26 +175,6 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
   return ZX_OK;
 }
 
-Config GetConfig(const FshostBootArgs& boot_args) {
-  std::ifstream file("/pkg/config/fshost");
-  Config::Options options;
-  if (file) {
-    options = Config::ReadOptions(file);
-  } else {
-    options = Config::DefaultOptions();
-  }
-  if (boot_args.netboot()) {
-    options[Config::kNetboot] = std::string();
-  }
-  if (boot_args.check_filesystems()) {
-    options[Config::kCheckFilesystems] = std::string();
-  }
-  if (boot_args.wait_for_data()) {
-    options[Config::kWaitForData] = std::string();
-  }
-  return Config(std::move(options));
-}
-
 std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop& loop) {
   // Set up the fshost loader service, which can load libraries from either /system/lib or
   // /boot/lib.
@@ -223,15 +205,19 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
   return loader;
 }
 
-int Main(bool disable_block_watcher) {
+int Main(bool disable_block_watcher, bool ignore_component_config) {
   auto boot_args = FshostBootArgs::Create();
-  Config config = GetConfig(*boot_args);
+  auto config = DefaultConfig();
+  if (!ignore_component_config) {
+    config = fshost_config::Config::from_args();
+  }
+  ApplyBootArgsToConfig(config, *boot_args);
 
   FX_LOGS(INFO) << "Config: " << config;
 
   async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   std::shared_ptr<loader::LoaderServiceBase> loader;
-  if (!config.is_set(Config::kUseDefaultLoader)) {
+  if (!config.use_default_loader) {
     zx_status_t status = loader_loop.StartThread("fshost-loader");
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to start loader thread: " << zx_status_get_string(status);
@@ -250,7 +236,7 @@ int Main(bool disable_block_watcher) {
   auto metrics = DefaultMetrics();
   FsManager fs_manager(boot_args, std::move(metrics));
 
-  if (config.netboot()) {
+  if (config.netboot) {
     FX_LOGS(INFO) << "disabling automount";
   }
 
@@ -315,11 +301,14 @@ int Main(bool disable_block_watcher) {
 
 int main(int argc, char** argv) {
   int disable_block_watcher = false;
+  int ignore_component_config = false;
   option options[] = {
       {"disable-block-watcher", no_argument, &disable_block_watcher, true},
+      // TODO(https://fxbug.dev/95600) delete, needed for isolated_devmgr to launch as a bare binary
+      {"ignore-component-config", no_argument, &ignore_component_config, true},
   };
   while (getopt_long(argc, argv, "", options, nullptr) != -1) {
   }
 
-  return fshost::Main(disable_block_watcher);
+  return fshost::Main(disable_block_watcher, ignore_component_config);
 }

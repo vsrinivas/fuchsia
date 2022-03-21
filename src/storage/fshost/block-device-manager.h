@@ -11,8 +11,9 @@
 #include <string_view>
 #include <vector>
 
+#include <fshost_config/config.h>
+
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/config.h"
 
 namespace fshost {
 
@@ -38,16 +39,16 @@ class BlockDeviceManager {
 
   // Does not take ownership of |config|, which must refer to a valid object that outlives this
   // object.
-  explicit BlockDeviceManager(const Config* config);
+  explicit BlockDeviceManager(const fshost_config::Config* config);
 
   // Attempts to match the device against configured matchers and proceeds to add the device if
   // it does.
   zx_status_t AddDevice(BlockDeviceInterface& device);
 
-  const Config* config() const { return &config_; }
+  const fshost_config::Config* config() const { return &config_; }
 
  private:
-  const Config& config_;
+  const fshost_config::Config& config_;
 
   // A vector of configured matchers.  First-to-match wins.
   std::vector<std::unique_ptr<Matcher>> matchers_;

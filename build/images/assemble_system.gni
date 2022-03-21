@@ -109,8 +109,8 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     These arguments come after synthesized arguments to configure blobfs and
 #     pkgfs.
 #
-#   fshost_config (default: [])
-#     [list of strings] List of arguments to add to /boot/config/fshost. These
+#   fshost_config (default: {})
+#     [scope] Arguments to add to fshost's configuration. These
 #     arguments come before other arguments set by build args.
 #
 #   cmdline (optional)
@@ -348,7 +348,8 @@ template("assemble_system") {
     devmgr_config = invoker.devmgr_config
   }
 
-  fshost_config = []
+  fshost_config = {
+  }
   if (defined(invoker.fshost_config)) {
     fshost_config = invoker.fshost_config
   }

@@ -1,0 +1,92 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    config: {
+        // Disables zxcrypt for minfs partitions.
+        no_zxcrypt: { type: "bool" },
+
+        // FVM is in a ram-disk, thus minfs doesn't require zxcrypt.
+        fvm_ramdisk: { type: "bool" },
+
+        // When set, allows zxcrypt to attach and unseal minfs partitions not in a ram-disk (but
+        // don't mount).
+        zxcrypt_non_ramdisk: { type: "bool" },
+
+        // Enables all GPT devices.
+        gpt_all: { type: "bool" },
+
+        // Use the default loader rather than a custom one.
+        use_default_loader: { type: "bool" },
+
+        // Perform decompression in a sandboxed component.
+        sandbox_decompression: { type: "bool" },
+
+        // Normally the partition limits (minfs-max-bytes and blofs-max-bytes) apply only to
+        // non-ramdisk devices. This is to prevent device hardware configuration from leaking into
+        // ramdisk uses. When present, this flag makes them apply to all partitions of the
+        // corresponding type (this use used for tests).
+        apply_limits_to_ramdisk: { type: "bool" },
+
+        // Enables checking filesystems before mounting (if supported).
+        check_filesystems: { type: "bool" },
+
+        // Maximum number of bytes a blobfs partition can grow to. This applies only to non-ramdisk
+        // partitions unless "apply-limits-to-ramdisk" is set.
+        blobfs_max_bytes: { type: "uint64" },
+
+        // Maximum number of bytes a minfs partition can grow to. This applies only to non-ramdisk
+        // partitions unless "apply-limits-to-ramdisk" is set.
+        minfs_max_bytes: { type: "uint64" },
+
+        // Automatically formats minfs if it is found to be corrupted.
+        format_minfs_on_corruption: { type: "bool" },
+
+        // If enabled, users can change the data partition from the default minfs filesystem to
+        // either fxfs or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
+        fs_switch: { type: "bool" },
+
+        // Use the given binary as the filesystem for the data partition.
+        data_filesystem_binary_path: {
+            type: "string",
+            max_size: 64,
+        },
+
+        // Allow legacy names for the data partition.
+        allow_legacy_data_partition_names: { type: "bool" },
+
+        // Enables NAND devices.
+        nand: { type: "bool" },
+
+        // Enables blobfs partitions.
+        blobfs: { type: "bool" },
+
+        // Enables bootpart partitions.
+        bootpart: { type: "bool" },
+
+        // Enables the durable partition (small partition of settings that survives factory resets).
+        durable: { type: "bool" },
+
+        // Enables the factory partition (small partition of settings set in the factory and never
+        // written to otherwise).
+        factory: { type: "bool" },
+
+        // Enables a single FVM device.
+        fvm: { type: "bool" },
+
+        // Enables a single GPT device.
+        gpt: { type: "bool" },
+
+        // Enables MBR devices.
+        mbr: { type: "bool" },
+
+        // Enables minfs partition.
+        minfs: { type: "bool" },
+
+        // Disables everything except fvm, gpt and bootpart.
+        netboot: { type: "bool" },
+
+        // Wait for data before launching pkgfs.
+        wait_for_data: { type: "bool" },
+    },
+}

@@ -22,6 +22,7 @@
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
+#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/extract-metadata.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
@@ -67,7 +68,9 @@ std::unique_ptr<FsHostMetrics> MakeMetrics(std::atomic<uint32_t>* corruption_cou
 class BlockDeviceTest : public testing::Test {
  public:
   BlockDeviceTest()
-      : manager_(nullptr, MakeMetrics(&minfs_corruption_count_)), watcher_(manager_, &config_) {}
+      : manager_(nullptr, MakeMetrics(&minfs_corruption_count_)),
+        config_(EmptyConfig()),
+        watcher_(manager_, &config_) {}
 
   void SetUp() override {
     // Initialize FilesystemMounter.
@@ -117,7 +120,7 @@ class BlockDeviceTest : public testing::Test {
 
  protected:
   FsManager manager_;
-  Config config_;
+  fshost_config::Config config_;
 
  private:
   // This counts number of minfs corruptions events seen.
@@ -209,7 +212,8 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
 }
 
 TEST_F(BlockDeviceTest, TestMinfsReformat) {
-  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  auto config = EmptyConfig();
+  config.check_filesystems = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -231,7 +235,8 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
 }
 
 TEST_F(BlockDeviceTest, TestBlobfs) {
-  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  auto config = EmptyConfig();
+  config.check_filesystems = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -253,7 +258,8 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
 }
 
 TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
-  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  auto config = EmptyConfig();
+  config.check_filesystems = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -320,7 +326,8 @@ std::pair<fbl::unique_fd, fbl::unique_fd> SetupLog() {
 
 TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
   auto fd_pair = SetupLog();
-  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  auto config = EmptyConfig();
+  config.check_filesystems = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.

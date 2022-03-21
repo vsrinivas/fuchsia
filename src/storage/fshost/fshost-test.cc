@@ -24,6 +24,7 @@
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>
 
+#include "config.h"
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -49,7 +50,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
 
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
-  Config config;
+  auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
@@ -87,7 +88,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
-  Config config;
+  auto config = DefaultConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
@@ -142,7 +143,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
 
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
-  Config config;
+  auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
@@ -176,7 +177,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
 
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
-  Config config;
+  auto config = EmptyConfig();
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),

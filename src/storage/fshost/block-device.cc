@@ -228,13 +228,11 @@ std::string GetTopologicalPath(int fd) {
 }
 
 fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
+    const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
   fuchsia_fs_startup::wire::StartOptions options;
   options.collect_metrics = true;
   options.write_compression_level = -1;
-  if (config->is_set(Config::kSandboxDecompression)) {
-    options.sandbox_decompression = true;
-  }
+  options.sandbox_decompression = config->sandbox_decompression;
   if (boot_args) {
     std::optional<std::string> algorithm = boot_args->blobfs_write_compression_algorithm();
     if (algorithm == "UNCOMPRESSED") {
@@ -262,7 +260,8 @@ fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
   return options;
 }
 
-BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config)
+BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
+                         const fshost_config::Config* device_config)
     : mounter_(mounter),
       fd_(std::move(fd)),
       device_config_(device_config),
@@ -568,9 +567,8 @@ zx_status_t BlockDevice::CheckFilesystem() {
       });
       FX_LOGS(INFO) << "fsck of data partition started";
 
-      if (device_config_->is_set(Config::kDataFilesystemBinaryPath)) {
-        std::string binary_path =
-            device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+      if (!device_config_->data_filesystem_binary_path.empty()) {
+        std::string binary_path = device_config_->data_filesystem_binary_path;
         FX_LOGS(INFO) << "Using " << binary_path;
         status = CheckCustomFilesystem(std::move(binary_path));
       } else {
@@ -633,8 +631,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
       return ZX_ERR_NOT_SUPPORTED;
     }
     case fs_management::kDiskFormatMinfs: {
-      const auto binary_path =
-          device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+      const auto binary_path = device_config_->data_filesystem_binary_path;
       if (!binary_path.empty()) {
         FX_LOGS(INFO) << "Formatting using " << binary_path;
         status = FormatCustomFilesystem(binary_path);
@@ -798,8 +795,7 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    if (device_config_->is_set(Config::kFsSwitch) &&
-        content_format() == fs_management::kDiskFormatMinfs) {
+    if (device_config_->fs_switch && content_format() == fs_management::kDiskFormatMinfs) {
       MaybeChangeDataPartitionFormat();
     }
     return mounter_->MountData(std::move(block_device), *options, content_format());
@@ -1016,8 +1012,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     }
   }
 
-  uint64_t slice_count =
-      device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size;
+  uint64_t slice_count = device_config_->minfs_max_bytes / slice_size;
 
   if (slice_count == 0) {
     auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();

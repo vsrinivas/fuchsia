@@ -31,14 +31,30 @@ group("dynamic_offers") {
 # The allowlist of components that can use the "structured_config" feature in CML.
 group("structured_config") {
   visibility = [
+    # components
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
+    "//src/session/bin/session_manager:*",
+    "//src/storage/fshost:*",
+
+    # locations where assemble_system() (transitively) invokes generated_fshost_config()
+    # (generating an fshost configuration file requires access to a compiled manifest, which
+    # must be defined in the same file as the generated values)
+    "//build/images/*",
+    "//src/security/pkg_test/tests:*",
+    "//vendor/google/build/pre_migration:*",
+    "//vendor/google/build/recovery:*",
+    "//vendor/google/build/reverse_migration:*",
+
+    # locations where session_manager_package() is invoked:
     "//src/experiences/session_shells/ermine/session:*",
+    "//src/session/examples/hello-world-session:*",
+    "//vendor/google/sessions:*",
+
+    # tests
     "//src/lib/assembly/structured_config:*",
     "//src/lib/component_hub/tests:*",
     "//src/lib/fuchsia-component-test/tests/echo_client_sc:*",
-    "//src/session/bin/session_manager:*",
-    "//src/session/examples/hello-world-session:*",
     "//src/sys/component_manager/tests/hub:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_elf:*",
@@ -46,7 +62,6 @@ group("structured_config") {
     "//src/sys/component_manager/tests/structured_config/different_values:*",
     "//tools/cmc:*",
     "//tools/configc:*",
-    "//vendor/google/sessions:*",
   ]
 }
 

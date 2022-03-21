@@ -145,6 +145,8 @@ zx_status_t LaunchFshost(const Args& args, zx::job& job, zx::channel svc_client,
   if (args.disable_block_watcher) {
     argv.push_back("--disable-block-watcher");
   }
+  // we don't want to have to provide an encoded configuration vmo to the binary
+  argv.push_back("--ignore-component-config");
   argv.push_back(nullptr);
 
   FdioSpawnActions actions;

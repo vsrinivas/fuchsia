@@ -25,7 +25,7 @@ class BlockWatcher {
  public:
   // Does not take ownership of |config|, which must refer to a valid object that outlives this
   // object.
-  BlockWatcher(FsManager& fshost, const Config* config);
+  BlockWatcher(FsManager& fshost, const fshost_config::Config* config);
   ~BlockWatcher() { ShutDown(); }
 
   // Run the block watcher on a separate thread.

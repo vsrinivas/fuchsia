@@ -16,10 +16,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
+#include <fshost_config/config.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 
 namespace fshost {
@@ -29,14 +29,15 @@ std::string GetTopologicalPath(int fd);
 
 // Collect and synthesize the blobfs startup options.
 fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost::Config* config, std::shared_ptr<FshostBootArgs> boot_args);
+    const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args);
 
 // A concrete implementation of the block device interface.
 //
 // Used by fshost to attach either drivers or filesystems to incoming block devices.
 class BlockDevice : public BlockDeviceInterface {
  public:
-  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config);
+  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
+              const fshost_config::Config* device_config);
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
@@ -74,7 +75,7 @@ class BlockDevice : public BlockDeviceInterface {
 
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
-  const Config* device_config_;
+  const fshost_config::Config* device_config_;
   mutable std::optional<fuchsia_hardware_block_BlockInfo> info_;
   mutable fs_management::DiskFormat content_format_;
   fs_management::DiskFormat format_ = fs_management::kDiskFormatUnknown;

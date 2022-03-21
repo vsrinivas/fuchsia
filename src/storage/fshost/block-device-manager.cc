@@ -231,15 +231,15 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
         variant_(variant),
         limit_(limit) {}
 
-  static Variant GetVariantFromConfig(const Config& config) {
+  static Variant GetVariantFromConfig(const fshost_config::Config& config) {
     Variant variant;
-    if (config.is_set(Config::kNoZxcrypt)) {
+    if (config.no_zxcrypt) {
       variant.zxcrypt = ZxcryptVariant::kNoZxcrypt;
     } else {
       variant.zxcrypt = ZxcryptVariant::kNormal;
     }
 
-    variant.format_minfs_on_corruption = config.is_set(Config::kFormatMinfsOnCorruption);
+    variant.format_minfs_on_corruption = config.format_minfs_on_corruption;
     return variant;
   }
 
@@ -404,37 +404,35 @@ MinfsMatcher::PartitionNames GetMinfsPartitionNames(bool include_legacy) {
 
 }  // namespace
 
-BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) {
+BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : config_(*config) {
   static constexpr fuchsia_hardware_block_partition::wire::Guid minfs_type_guid = GUID_DATA_VALUE;
 
-  if (config_.is_set(Config::kBootpart)) {
+  if (config_.bootpart) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
   }
-  if (config_.is_set(Config::kNand)) {
+  if (config_.nand) {
     matchers_.push_back(std::make_unique<NandMatcher>());
   }
 
-  auto gpt = std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatGpt,
-                                                   config_.is_set(Config::kGptAll), "",
-                                                   /*ramdisk_required=*/false);
-  auto fvm =
-      std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatFvm, /*allow_multiple=*/false,
-                                            "/fvm", config_.is_set(Config::kFvmRamdisk));
+  auto gpt =
+      std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatGpt, config_.gpt_all, "",
+                                            /*ramdisk_required=*/false);
+  auto fvm = std::make_unique<PartitionMapMatcher>(
+      fs_management::kDiskFormatFvm, /*allow_multiple=*/false, "/fvm", config_.fvm_ramdisk);
 
-  bool gpt_required = config_.is_set(Config::kGpt) || config_.is_set(Config::kGptAll);
-  bool fvm_required = config_.is_set(Config::kFvm);
+  bool gpt_required = config_.gpt || config_.gpt_all;
+  bool fvm_required = config_.fvm;
 
   // Maximum partition limits. The limits only apply to physical devices (not ramdisks) unless
   // apply_limits_to_ramdisk is set.
-  PartitionLimit blobfs_limit{
-      .apply_to_ramdisk = config_.is_set(Config::kApplyLimitsToRamdisk),
-      .max_bytes = config_.ReadUint64OptionValue(Config::kBlobfsMaxBytes, 0)};
-  PartitionLimit minfs_limit{.apply_to_ramdisk = config_.is_set(Config::kApplyLimitsToRamdisk),
-                             .max_bytes = config_.ReadUint64OptionValue(Config::kMinfsMaxBytes, 0)};
+  PartitionLimit blobfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
+                              .max_bytes = config_.blobfs_max_bytes};
+  PartitionLimit minfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
+                             .max_bytes = config_.minfs_max_bytes};
 
-  if (!config_.is_set(Config::kNetboot)) {
+  if (!config_.netboot) {
     // GPT partitions:
-    if (config_.is_set(Config::kDurable)) {
+    if (config_.durable) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<MinfsMatcher>(
@@ -442,13 +440,13 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
           durable_type_guid, MinfsMatcher::GetVariantFromConfig(config_), PartitionLimit()));
       gpt_required = true;
     }
-    if (config_.is_set(Config::kFactory)) {
+    if (config_.factory) {
       matchers_.push_back(std::make_unique<FactoryfsMatcher>(*gpt));
       gpt_required = true;
     }
 
     // FVM partitions:
-    if (config_.is_set(Config::kBlobfs)) {
+    if (config_.blobfs) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid blobfs_type_guid =
           GUID_BLOB_VALUE;
       matchers_.push_back(std::make_unique<SimpleMatcher>(
@@ -456,9 +454,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
           fs_management::kDiskFormatBlobfs, blobfs_limit));
       fvm_required = true;
     }
-    if (config_.is_set(Config::kMinfs)) {
+    if (config_.minfs) {
       matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *fvm, GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
+          *fvm, GetMinfsPartitionNames(config_.allow_legacy_data_partition_names),
           kDataPartitionLabel, minfs_type_guid, MinfsMatcher::GetVariantFromConfig(config_),
           minfs_limit));
       fvm_required = true;
@@ -468,16 +466,15 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
   // The partition map matchers go last because they match on content.
   if (fvm_required) {
     std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
-    if (config_.is_set(Config::kFvmRamdisk)) {
+    if (config_.fvm_ramdisk) {
       // Add another matcher for the non-ramdisk version of FVM.
       non_ramdisk_fvm = std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatFvm,
                                                               /*allow_multiple=*/false, "/fvm",
                                                               /*ramdisk_required=*/false);
 
-      if (config_.is_set(Config::kAttachZxcryptToNonRamdisk)) {
+      if (config_.zxcrypt_non_ramdisk) {
         matchers_.push_back(std::make_unique<MinfsMatcher>(
-            *non_ramdisk_fvm,
-            GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
+            *non_ramdisk_fvm, GetMinfsPartitionNames(config_.allow_legacy_data_partition_names),
             kDataPartitionLabel, minfs_type_guid,
             MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
             minfs_limit));
@@ -491,12 +488,13 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
   if (gpt_required) {
     matchers_.push_back(std::move(gpt));
   }
-  if (config_.is_set(Config::kMbr)) {
-    // Default to allowing multiple devices because mbr support is disabled by default and if it's
-    // enabled, it's likely required for removable devices and so supporting multiple devices is
-    // probably appropriate.
-    matchers_.push_back(std::make_unique<PartitionMapMatcher>(
-        fs_management::kDiskFormatMbr, /*allow_multiple=*/true, "", /*ramdisk_required=*/false));
+  if (config_.mbr) {
+    // Default to allowing multiple devices because mbr support is disabled by default and if
+    // it's enabled, it's likely required for removable devices and so supporting multiple
+    // devices is probably appropriate.
+    matchers_.push_back(std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatMbr,
+                                                              /*allow_multiple=*/true, "",
+                                                              /*ramdisk_required=*/false));
   }
 }
 

@@ -44,8 +44,7 @@ declare_args() {
   fshost_watch_for_nand = false
 }
 
-# Generates an fshost config file that will appear in config/fshost. If no configuration file is
-# present, a default config is used (see block-device-manager.cc).
+# Generates a structured config value file for fshost.
 #
 # Some of the configuration settings are build args, and some are parameters passed in to the
 # template by the invoker. A few allow overriding by the invoker but fall back to the global build
@@ -53,11 +52,13 @@ declare_args() {
 #
 # Parameters:
 #
+#   component_name (optional)
+#     [string] The name of the component for which to produce config, defaults to "fshost".
+#
 #   options (optional)
-#     [list of strings] A list of fshost configuration options to include in the config file.
-#     Unrecognized options are ignored. Later options override earlier options. Options with a
-#     minus in front remove the option if previously set. The options are put in after the template
-#     argument options but before the build arg options.
+#     [scope] A block of fshost configuration options to include in the config file.
+#     Unrecognized options cause errors. Later options override earlier options. The provided
+#     values override the defaults and template args but are overridden by global build args.
 #
 #   no_minfs_zxcrypt (optional; default: false)
 #     [boolean] If set, fshost will look for a data partition that doesn't have zxcrypt set up, and
@@ -95,79 +96,102 @@ declare_args() {
 #     command line argument (it can't be disabled via one).
 #
 template("generated_fshost_config") {
-  generated_resource(target_name) {
-    contents = [ "default" ]
-    deps = []
+  _manifest_target = "${target_name}_manifest"
+  _component_name = "fshost"
+  if (defined(invoker.component_name)) {
+    _component_name = invoker.component_name
+  }
 
-    # Template arguments
-    if (defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt) {
-      contents += [ "no-zxcrypt" ]
+  fuchsia_component_manifest(_manifest_target) {
+    component_name = _component_name
+    manifest = "//src/storage/fshost/meta/config.cml"
+    restricted_features = [ "structured_config" ]
+    metadata = {
+      # we don't want this in the packaged output, it's just to give cmc something to work with
+      distribution_entries_barrier = []
+    }
+  }
+
+  fuchsia_structured_config_values(target_name) {
+    cm_target = ":$_manifest_target"
+    values = {
+      # Defaults
+      blobfs = true
+      blobfs_max_bytes = 0
+      bootpart = true
+      data_filesystem_binary_path = ""
+      durable = false
+      factory = false
+      format_minfs_on_corruption = true
+      fs_switch = false
+      fvm = true
+      gpt = true
+      mbr = false
+      minfs = true
+      minfs_max_bytes = 0
+      nand = false
+      netboot = false
+      wait_for_data = false
+
+      # Template arguments
+      allow_legacy_data_partition_names =
+          defined(invoker.allow_legacy_data_partition_names) &&
+          invoker.allow_legacy_data_partition_names
+      apply_limits_to_ramdisk = defined(invoker.apply_limits_to_ramdisk) &&
+                                invoker.apply_limits_to_ramdisk
+      check_filesystems =
+          defined(invoker.check_filesystems) && invoker.check_filesystems
+      gpt_all = defined(invoker.gpt_all) && invoker.gpt_all
+      no_zxcrypt = defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt
+      fvm_ramdisk = defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk
+      sandbox_decompression = !defined(invoker.sandbox_decompression) ||
+                              invoker.sandbox_decompression
+      use_default_loader =
+          defined(invoker.use_default_loader) && invoker.use_default_loader
+      zxcrypt_non_ramdisk = fvm_ramdisk
+
+      # Final template argument allows setting arbitrary values which need to override
+      # template arguments but be overridden by build arguments.
+      if (defined(invoker.options)) {
+        forward_variables_from(invoker.options, "*")
+      }
+
+      # Build args
+      if (blobfs_maximum_runtime_bytes != "") {
+        blobfs_max_bytes = blobfs_maximum_runtime_bytes
+      }
+      if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
+        # This can be overridden by the invoker but defaults to the file one if undefined.
+        minfs_max_bytes = invoker.minfs_maximum_runtime_bytes_override
+      } else if (minfs_maximum_runtime_bytes != "") {
+        minfs_max_bytes = minfs_maximum_runtime_bytes
+      }
+      if (!format_minfs_on_corruption) {
+        format_minfs_on_corruption = false
+      }
+      if (invoker.fs_switch) {
+        fs_switch = true
+      }
+      if (invoker.data_filesystem_format == "fxfs") {
+        data_filesystem_binary_path = "/pkg/bin/fxfs"
+      } else if (invoker.data_filesystem_format == "f2fs") {
+        data_filesystem_binary_path = "/pkg/bin/f2fs"
+      } else if (invoker.data_filesystem_format != "minfs") {
+        assert(false,
+               "Invalid data_filesystem_format: '" +
+                   invoker.data_filesystem_format + "'")
+      }
+      if (fshost_watch_for_nand) {
+        nand = true
+      }
+    }
+
+    # Don't allow these configurations into production.
+    if (values.no_zxcrypt || values.gpt_all) {
+      if (!defined(deps)) {
+        deps = []
+      }
       deps += [ "//build/validate:non_production_tag" ]
     }
-    if (defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk) {
-      contents += [
-        "fvm-ramdisk",
-        "zxcrypt-non-ramdisk",
-      ]
-    }
-    if (defined(invoker.gpt_all) && invoker.gpt_all) {
-      contents += [ "gpt-all" ]
-      deps += [ "//build/validate:non_production_tag" ]
-    }
-    if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
-      contents += [ "use-default-loader" ]
-    }
-    if (!defined(invoker.sandbox_decompression) ||
-        invoker.sandbox_decompression) {
-      contents += [ "sandbox-decompression" ]
-    }
-    if (defined(invoker.apply_limits_to_ramdisk) &&
-        invoker.apply_limits_to_ramdisk) {
-      contents += [ "apply-limits-to-ramdisk" ]
-    }
-    if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
-      contents += [ "check-filesystems" ]
-    }
-
-    # Custom options
-    if (defined(invoker.options)) {
-      contents += invoker.options
-    }
-
-    # Build args
-    if (blobfs_maximum_runtime_bytes != "") {
-      contents += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
-    }
-    if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
-      # This can be overridden by the invoker but defaults to the file one if undefined.
-      contents +=
-          [ "minfs-max-bytes=${invoker.minfs_maximum_runtime_bytes_override}" ]
-    } else if (minfs_maximum_runtime_bytes != "") {
-      contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
-    }
-    if (!format_minfs_on_corruption) {
-      contents += [ "-format-minfs-on-corruption" ]
-    }
-    if (invoker.fs_switch) {
-      contents += [ "fs-switch" ]
-    }
-    if (invoker.data_filesystem_format == "fxfs") {
-      contents += [ "data-filesystem-binary-path=/pkg/bin/fxfs" ]
-    } else if (invoker.data_filesystem_format == "f2fs") {
-      contents += [ "data-filesystem-binary-path=/pkg/bin/f2fs" ]
-    } else if (invoker.data_filesystem_format != "minfs") {
-      assert(false,
-             "Invalid data_filesystem_format: '" +
-                 invoker.data_filesystem_format + "'")
-    }
-    if (invoker.allow_legacy_data_partition_names) {
-      contents += [ "allow-legacy-data-partition-names" ]
-    }
-    if (fshost_watch_for_nand) {
-      contents += [ "nand" ]
-    }
-
-    output_conversion = "list lines"
-    outputs = [ "config/fshost" ]
   }
 }

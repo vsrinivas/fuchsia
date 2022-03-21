@@ -14,9 +14,9 @@
 #include <memory>
 
 #include <fbl/unique_fd.h>
+#include <fshost_config/config.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/inspect-manager.h"
@@ -28,7 +28,8 @@ namespace fshost {
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
  public:
-  FilesystemMounter(FsManager& fshost, const Config* config) : fshost_(fshost), config_(*config) {}
+  FilesystemMounter(FsManager& fshost, const fshost_config::Config* config)
+      : fshost_(fshost), config_(*config) {}
 
   virtual ~FilesystemMounter() = default;
 
@@ -47,8 +48,8 @@ class FilesystemMounter {
     return fshost_.InstallFs(point, device_path, std::move(export_root), std::move(root_directory));
   }
 
-  bool Netbooting() const { return config_.netboot(); }
-  bool ShouldCheckFilesystems() const { return config_.check_filesystems(); }
+  bool Netbooting() const { return config_.netboot; }
+  bool ShouldCheckFilesystems() const { return config_.check_filesystems; }
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
@@ -105,7 +106,7 @@ class FilesystemMounter {
                                zx::channel block_device_client, uint32_t fs_flags,
                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
 
-  bool WaitForData() const { return config_.wait_for_data(); }
+  bool WaitForData() const { return config_.wait_for_data; }
 
   // Actually launches the filesystem process.
   //
@@ -124,7 +125,7 @@ class FilesystemMounter {
                                          const std::string& fs_name);
 
   FsManager& fshost_;
-  const Config& config_;
+  const fshost_config::Config& config_;
   bool data_mounted_ = false;
   bool durable_mounted_ = false;
   bool install_mounted_ = false;

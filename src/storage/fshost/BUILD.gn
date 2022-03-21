@@ -40,6 +40,7 @@ source_set("fshost-registry") {
     "lifecycle.cc",
   ]
   public_deps = [
+    ":config",
     ":inspect",
     ":launcher",
     ":metrics",
@@ -130,7 +131,6 @@ source_set("block-watcher") {
     "block-device-manager.cc",
     "block-device.cc",
     "block-watcher.cc",
-    "config.cc",
     "copier.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
@@ -141,6 +141,7 @@ source_set("block-watcher") {
     "watcher.cc",
   ]
   public_deps = [
+    ":config",
     ":fshost-registry",
     ":launcher",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
@@ -215,6 +216,15 @@ source_set("block-watcher") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+source_set("config") {
+  sources = [ "config.cc" ]
+  public_deps = [
+    ":fshost_config",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 executable("fshost") {
   if (is_fuchsia) {
     configs += [ "//build/config:all_source" ]
@@ -228,6 +238,7 @@ executable("fshost") {
   sources = [ "main.cc" ]
   deps = [
     ":block-watcher",
+    ":config",
     ":fshost-registry",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
@@ -265,6 +276,7 @@ test("fshost_test") {
   ]
   deps = [
     ":block-watcher",
+    ":config",
     ":fshost-registry",
     ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
@@ -368,6 +380,7 @@ test("fshost_integration_test") {
   ]
   deps = [
     ":block-watcher",
+    ":config",
     ":headers",
     ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
@@ -408,28 +421,45 @@ test("fshost_integration_test") {
 cmc_merge("test-fshost.cml") {
   sources = [
     "meta/base_fshost.cml",
+    "meta/config.cml",
     "meta/core_fshost.cml",
     "meta/cpp_fshost.cml",
     "meta/fxfs_fshost.cml",
   ]
 }
 
-# This is a test version of fshost, not a component with fshost tests.
-fuchsia_component("test-fshost") {
+fuchsia_component_manifest("test-fshost-manifest") {
   testonly = true
-
+  component_name = "test-fshost"
   manifest_outputs = get_target_outputs(":test-fshost.cml")
   manifest = manifest_outputs[0]
+  deps = [ ":test-fshost.cml" ]
+  restricted_features = [ "structured_config" ]
+}
+
+# This is a test version of fshost, not a component with fshost tests.
+fuchsia_component("test-fshost-comp") {
+  testonly = true
+
   deps = [
     ":fshost",
     "//src/security/policy/zxcrypt:null",
   ]
-  manifest_deps = [ ":test-fshost.cml" ]
+  cm_target = ":test-fshost-manifest"
+}
+
+group("test-fshost") {
+  testonly = true
+  deps = [
+    ":integration_test_config",
+    ":test-fshost-comp",
+  ]
 }
 
 cmc_merge("test-fshost-no-watcher.cml") {
   sources = [
     "meta/base_fshost.cml",
+    "meta/config.cml",
     "meta/core_fshost.cml",
     "meta/cpp_fshost.cml",
     "meta/fxfs_fshost.cml",
@@ -437,17 +467,32 @@ cmc_merge("test-fshost-no-watcher.cml") {
   ]
 }
 
-# This is a test version of fshost with no block watcher.
-fuchsia_component("test-fshost-no-watcher") {
+fuchsia_component_manifest("test-fshost-no-watcher-manifest") {
   testonly = true
-
+  component_name = "test-fshost-no-watcher"
   manifest_outputs = get_target_outputs(":test-fshost-no-watcher.cml")
   manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-no-watcher.cml" ]
+  restricted_features = [ "structured_config" ]
+}
+
+# This is a test version of fshost with no block watcher.
+fuchsia_component("test-fshost-no-watcher-comp") {
+  testonly = true
+
   deps = [
     ":fshost",
     "//src/security/policy/zxcrypt:null",
   ]
-  manifest_deps = [ ":test-fshost-no-watcher.cml" ]
+  cm_target = ":test-fshost-no-watcher-manifest"
+}
+
+group("test-fshost-no-watcher") {
+  testonly = true
+  deps = [
+    ":integration_test_config_no_watcher",
+    ":test-fshost-no-watcher-comp",
+  ]
 }
 
 test("copier_test") {
@@ -474,7 +519,6 @@ fuchsia_component("fshost-integration-test") {
   manifest = "meta/fshost_integration_test.cml"
   deps = [
     ":fshost_integration_test",
-    ":integration_test_config",
     "//src/storage/testing:storage_driver_test_realm",
   ]
 }
@@ -506,6 +550,7 @@ fuchsia_test_package("fshost-tests") {
 cmc_merge("fshost.cml") {
   sources = [
     "meta/base_fshost.cml",
+    "meta/config.cml",
     "meta/cpp_fshost.cml",
     "meta/fxfs_fshost.cml",
     "meta/real_fshost.cml",
@@ -515,19 +560,26 @@ cmc_merge("fshost.cml") {
   }
 }
 
-component_manifest_resources("meta") {
-  sources = get_target_outputs(":fshost.cml")
+fuchsia_component_manifest("fshost_manifest") {
+  component_name = "fshost"
+  manifest = get_target_outputs(":fshost.cml")
+  manifest = manifest[0]
   deps = [ ":fshost.cml" ]
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_structured_config_cpp_elf_lib("fshost_config") {
+  cm_target = ":fshost_manifest"
 }
 
 group("bootfs") {
   deps = [
     ":fshost",
-    ":meta",
+    ":fshost_manifest",
   ]
 }
 
-generated_fshost_config("integration_test_config") {
+integration_test_config = {
   # Some of the tests require us to be able to match against multiple GPT devices.
   gpt_all = true
 
@@ -543,4 +595,14 @@ generated_fshost_config("integration_test_config") {
 
   apply_limits_to_ramdisk = true
   check_filesystems = true
+}
+
+generated_fshost_config("integration_test_config") {
+  component_name = "test-fshost"
+  forward_variables_from(integration_test_config, "*")
+}
+
+generated_fshost_config("integration_test_config_no_watcher") {
+  component_name = "test-fshost-no-watcher"
+  forward_variables_from(integration_test_config, "*")
 }

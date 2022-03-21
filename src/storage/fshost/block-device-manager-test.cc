@@ -20,6 +20,7 @@
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
@@ -39,9 +40,8 @@ using ::testing::ContainerEq;
 using BlockDeviceManagerIntegration = FshostIntegrationTest;
 
 TEST(BlockDeviceManager, BlobfsLimit) {
-  Config::Options options = Config::DefaultOptions();
-  options[Config::kBlobfsMaxBytes] = "7654321";
-  Config config(options);
+  auto config = DefaultConfig();
+  config.blobfs_max_bytes = 7654321;
   BlockDeviceManager manager(&config);
 
   // When there's no FVM we expect no match and no max size call.
@@ -66,9 +66,8 @@ TEST(BlockDeviceManager, BlobfsLimit) {
 }
 
 TEST(BlockDeviceManager, MinfsLimit) {
-  Config::Options options = Config::DefaultOptions();
-  options[Config::kMinfsMaxBytes] = "7654321";
-  Config config(options);
+  auto config = DefaultConfig();
+  config.minfs_max_bytes = 7654321;
   BlockDeviceManager manager(&config);
 
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
@@ -83,34 +82,6 @@ TEST(BlockDeviceManager, MinfsLimit) {
   EXPECT_EQ(manager.AddDevice(minfs_device), ZX_OK);
   ASSERT_TRUE(minfs_device.max_size());
   EXPECT_EQ(7654321u, *minfs_device.max_size());
-}
-
-TEST(BlockDeviceManager, ReadOptions) {
-  std::stringstream stream;
-  stream << "# A comment" << std::endl
-         << Config::kDefault << std::endl
-         << Config::kNoZxcrypt
-         << std::endl
-         // Duplicate keys should be de-duped.
-         << Config::kNoZxcrypt << std::endl
-         << Config::kMinfsMaxBytes << "=1"
-         << std::endl
-         // Duplicates should overwrite the value.
-         << Config::kMinfsMaxBytes << "=12345"
-         << std::endl
-         // Empty value.
-         << Config::kBlobfsMaxBytes << "=" << std::endl
-         << "-" << Config::kBlobfs << std::endl
-         << "-" << Config::kFormatMinfsOnCorruption;
-
-  auto expected_options = Config::DefaultOptions();
-  expected_options[Config::kNoZxcrypt] = std::string();
-  expected_options[Config::kMinfsMaxBytes] = "12345";
-  expected_options[Config::kBlobfsMaxBytes] = std::string();
-  expected_options.erase(Config::kBlobfs);
-  expected_options.erase(Config::kFormatMinfsOnCorruption);
-
-  EXPECT_THAT(Config::ReadOptions(stream), ContainerEq(expected_options));
 }
 
 // The component for the fshost integration test sets the fshost config:

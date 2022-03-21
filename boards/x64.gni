@@ -42,7 +42,7 @@ board_zedboot_bootfs_labels += _bootfs_deps
 # Some users leave a USB key (containing zedboot) plugged into their
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
-board_fshost_config += [ "gpt-all" ]
+board_fshost_config.gpt_all = true
 
 use_vbmeta = true
 build_uefi_disk = true
