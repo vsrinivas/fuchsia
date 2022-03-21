@@ -64,7 +64,7 @@ TEST(AllocatedExtentIteratorTest, Null) {
   constexpr size_t kAllocatedExtents = 0;
   constexpr size_t kAllocatedNodes = 1;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/false, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -90,7 +90,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents;
   constexpr size_t kAllocatedNodes = 1;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/true, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -130,7 +130,7 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 3;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/true, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -178,7 +178,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 4;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/true, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -245,7 +245,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 3;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/true, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -292,7 +292,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   constexpr size_t kAllocatedBlocks = 100;
   constexpr size_t kAllocatedNodes = 1;
 
-  TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/false, &space_manager, &allocator,
+  TestSetup(kAllocatedBlocks, kAllocatedNodes, /*fragmented=*/false, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
@@ -352,7 +352,7 @@ TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + (2 * kContainerMaxExtents) + 1;
   constexpr size_t kAllocatedNodes = 4;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /*fragmented=*/true, &space_manager, &allocator,
             &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.

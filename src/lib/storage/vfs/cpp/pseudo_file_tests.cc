@@ -70,12 +70,12 @@ class VectorWriter {
 
 void CheckRead(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, size_t length, size_t offset,
                std::string_view expected) {
-  uint8_t buf[length];
-  memset(buf, '!', length);
+  std::vector<uint8_t> buf(length, '!');
   size_t actual = 0u;
-  EXPECT_EQ(status, file->Read(buf, length, offset, &actual));
+  EXPECT_EQ(status, file->Read(buf.data(), length, offset, &actual));
   EXPECT_EQ(expected.size(), actual);
-  EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected.data()), buf, expected.size(), "");
+  EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected.data()), buf.data(), expected.size(),
+                  "");
 }
 
 void CheckWrite(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, size_t offset,

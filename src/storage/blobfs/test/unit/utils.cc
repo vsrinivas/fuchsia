@@ -114,7 +114,7 @@ void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
 // Force the allocator to become maximally fragmented by allocating
 // every-other block within up to |blocks|.
 void ForceFragmentation(Allocator* allocator, size_t blocks) {
-  std::vector<ReservedExtent> extents[blocks];
+  std::vector<std::vector<ReservedExtent>> extents(blocks);
   for (size_t i = 0; i < blocks; i++) {
     ASSERT_EQ(allocator->ReserveBlocks(1, &extents[i]), ZX_OK);
     ASSERT_EQ(1ul, extents[i].size());

@@ -38,7 +38,7 @@ TEST(VectorExtentIteratorTest, Null) {
   constexpr size_t kAllocatedExtents = 0;
   constexpr size_t kAllocatedNodes = 1;
 
-  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/false, &space_manager, &allocator);
 
   std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
