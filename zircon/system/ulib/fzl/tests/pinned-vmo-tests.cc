@@ -43,9 +43,11 @@ class PinnedVmoTester : public zxtest::Test {
   }
 
   // Check that the PinnedVmo is pinned; that it has only one region
-  // and the region is of non-zero size
+  // and the region is equivalent to the vmo size.
   void CheckContiguousPinned() const {
     ASSERT_EQ(pinned_vmo_.region_count(), 1);
+    fzl::PinnedVmo::Region r = pinned_vmo_.region(0);
+    EXPECT_EQ(r.size, kVmoTestSize);
     CheckPinned();
   }
 

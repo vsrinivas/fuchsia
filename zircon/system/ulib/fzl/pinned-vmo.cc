@@ -80,6 +80,21 @@ zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo&
   // up.  Setup an autocall to take care of this for us.
   auto cleanup = fit::defer([&]() { UnpinInternal(); });
 
+  if (options & ZX_BTI_CONTIGUOUS) {
+    // We can do less work in the contiguous case.
+    regions_.reset(new (&ac) Region[1]);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    region_count_ = 1;
+    regions_[0].phys_addr = addrs[0];
+    // The region is the size of the entire vmo in the contiguous case.
+    regions_[0].size = len;
+    cleanup.cancel();
+    return ZX_OK;
+  }
+
   // Do a quick pass over the pages to figure out how many adjacent pages we
   // can merge.  This will let us know how many regions we will need storage
   // for our regions array.
