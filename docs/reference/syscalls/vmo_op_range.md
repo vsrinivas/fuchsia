@@ -101,7 +101,9 @@ visible to instruction fetches.
 Requires the **ZX_RIGHT_READ** right.
 
 **ZX_VMO_OP_CACHE_INVALIDATE** - Performs a cache invalidation operation so that future reads see
-external changes to main memory.
+external changes to main memory. Note, this operation is only available when
+`kernel.enable-debugging-syscalls` is true. When debugging syscalls are not enabled, this operation
+will fail with **ZX_ERR_NOT_SUPPORTED**
 Requires the **ZX_RIGHT_WRITE** right.
 
 **ZX_VMO_OP_CACHE_CLEAN** - Clean (write back) data caches, so previous writes are visible in main
@@ -173,7 +175,8 @@ and range was not page aligned.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was **ZX_VMO_OP_LOCK**, **ZX_VMO_OP_TRY_LOCK** or
 **ZX_VMO_OP_UNLOCK** and the VMO is not discardable, or *op* was **ZX_VMO_OP_DECOMMIT** and the
-underlying VMO does not allow decommiting.
+underlying VMO does not allow decommiting, or *op* was **ZX_VMO_OP_CACHE_INVALIDATE** and
+`kernel.enable-debugging-syscalls` is false.
 
 **ZX_ERR_UNAVAILABLE** *op* was **ZX_VMO_OP_TRY_LOCK**, the VMO was discardable and the VMO has been
 discarded by the kernel.

@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -23,8 +24,6 @@
 
 KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create")
 KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy")
-// TODO(fxbug.dev/60795): Remove ZX_VMO_OP_CACHE_INVALIDATE
-KCOUNTER(dispatcher_vmo_op_cache_invalidate, "dispatcher.vmo.op_cache_invalidate")
 
 zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags) {
   uint32_t res = 0;
@@ -323,7 +322,9 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
       }
       return vmo_->SyncCache(offset, size);
     case ZX_VMO_OP_CACHE_INVALIDATE:
-      kcounter_add(dispatcher_vmo_op_cache_invalidate, 1);
+      if (!gBootOptions->enable_debugging_syscalls) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
       // A straight invalidate op requires the write right since
       // it may drop dirty cache lines, thus modifying the contents
       // of the VMO.

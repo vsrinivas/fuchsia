@@ -432,7 +432,8 @@ When disabled, certain debugging-related syscalls will fail with
 * `zx_process_write_memory()`
 * `zx_system_mexec()`
 * `zx_system_mexec_payload_get()`
-* `sys_thread_write_state()` (When using the `ZX_THREAD_STATE_DEBUG_REGS` kind.)
+* `zx_thread_write_state()` (When using the `ZX_THREAD_STATE_DEBUG_REGS` kind.)
+* `zx_vmo_op_range()` with `ZX_VMO_OP_CACHE_INVALIDATE`
 )""")
 
 DEFINE_OPTION("kernel.enable-serial-syscalls", SerialDebugSyscalls, enable_serial_syscalls,

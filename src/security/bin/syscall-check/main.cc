@@ -32,6 +32,8 @@ int main(int argc, char** argv) {
   SYSCALL_STATUS(zx_system_mexec_payload_get, (ZX_HANDLE_INVALID, nullptr, 0));
   SYSCALL_STATUS(zx_thread_write_state,
                  (ZX_HANDLE_INVALID, ZX_THREAD_STATE_DEBUG_REGS, nullptr, 0));
+  SYSCALL_STATUS(zx_vmo_op_range,
+                 (ZX_HANDLE_INVALID, ZX_VMO_OP_CACHE_INVALIDATE, 0, 0, nullptr, 0));
 
 #undef SYSCALL_STATUS
 
