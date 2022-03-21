@@ -33,6 +33,10 @@ mkfs /dev/sys/platform/pci/00:1f.2/ahci/sata0/block <fs_type>
 
 ## Mounting a filesystem
 
+A limited version of command line filesystem mounting is supported on Fuchsia for debugging
+purposes. The mount command can launch filesystems and place them in the `/mnt` directory, where
+they can be accessed with that path prefix.
+
 Note that this can only be done on a block device which isn't currently mounted, and which is
 formatted appropriately.
 
@@ -45,15 +49,17 @@ lsblk
 001  64M                                              /dev/sys/platform/pci/00:1f.2/ahci/sata0/block
 ...
 
-# Create a mount point. There are many limitations on where this can be; a new dir in /tmp is a safe
-# bet.
-mkdir /tmp/mount
-
 # Mount it!
-mount /dev/sys/platform/pci/00:1f.2/ahci/sata0/block /tmp/mount
+mount /dev/sys/platform/pci/00:1f.2/ahci/sata0/block /mnt/minfs
+
+# Use it!
+echo "hello world!" >> /mnt/minfs/file
+mkdir /mnt/minfs/dir
+cat /mnt/minfs/file
+ls /mnt/minfs
 
 # When you're done, you can unmount it.
-umount /tmp/mount
+umount /mnt/minfs
 ```
 
 ## Increasing the size of QEMU images
