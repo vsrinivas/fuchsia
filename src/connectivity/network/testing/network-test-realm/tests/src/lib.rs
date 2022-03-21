@@ -486,6 +486,52 @@ async fn add_interface<E: netemul::Endpoint>(name: &str) {
     .await;
 }
 
+#[variants_test]
+async fn add_interface_already_exists<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = create_netstack_realm(name, &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface1: netemul::TestInterface<'_> = add_interface_to_netstack_and_devfs::<E>(
+        INTERFACE1_MAC_ADDRESS,
+        INTERFACE1_NAME,
+        &sandbox,
+        &realm,
+    )
+    .await;
+
+    let _interface2: netemul::TestInterface<'_> = add_interface_to_netstack_and_devfs::<E>(
+        INTERFACE2_MAC_ADDRESS,
+        INTERFACE2_NAME,
+        &sandbox,
+        &realm,
+    )
+    .await;
+
+    network_test_realm
+        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), INTERFACE1_NAME)
+        .await
+        .expect("add_interface failed")
+        .expect("add_interface error");
+
+    assert_eq!(
+        network_test_realm
+            .add_interface(&mut INTERFACE2_MAC_ADDRESS.clone(), INTERFACE1_NAME)
+            .await
+            .expect("add_interface failed"),
+        Err(fntr::Error::AlreadyExists)
+    );
+}
+
 // Tests the case where the MAC address provided to `Controller.AddInterface`
 // does not match any of the interfaces on the system.
 #[variants_test]

@@ -223,14 +223,25 @@ async fn install_netdevice(
     let _did_enable = control
         .enable()
         .await
-        // TODO(https://fxbug.dev/95432): Define more granular error types for
-        // the interface being removed.
-        .map_err(|e| {
-            error!("enable failed: {:?}", e);
-            fntr::Error::Internal
+        .map_err(|e| match e {
+            fnet_interfaces_ext::admin::TerminalError::Fidl(e) => {
+                error!("enable interface failed: {:?}", e);
+                fntr::Error::Internal
+            }
+            fnet_interfaces_ext::admin::TerminalError::Terminal(removed_reason) => {
+                match removed_reason {
+                    fnet_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
+                        fntr::Error::AlreadyExists
+                    }
+                    e => {
+                        error!("interface removed: {:?}", e);
+                        fntr::Error::Internal
+                    }
+                }
+            }
         })?
         .map_err(|e| {
-            error!("enable error: {:?}", e);
+            error!("enable interface error: {:?}", e);
             fntr::Error::Internal
         })?;
 
@@ -329,10 +340,12 @@ async fn install_eth_device(
             error!("add_ethernet_device failed: {:?}", e);
             fntr::Error::Internal
         })?
-        // TODO(https://fxbug.dev/95432): Define more granular error types.
-        .map_err(|e| {
-            error!("add_ethernet_device error: {:?}", e);
-            fntr::Error::Internal
+        .map_err(|e| match zx::Status::from_raw(e) {
+            zx::Status::ALREADY_EXISTS => fntr::Error::AlreadyExists,
+            status => {
+                error!("add_ethernet_device error: {:?}", status);
+                fntr::Error::Internal
+            }
         })?;
 
     // Enable the interface that was newly added to the hermetic Netstack.
@@ -1070,6 +1083,7 @@ impl Controller {
                 }
                 fntr::Error::AddressInUse
                 | fntr::Error::AddressNotAvailable
+                | fntr::Error::AlreadyExists
                 | fntr::Error::ComponentNotFound
                 | fntr::Error::HermeticNetworkRealmNotRunning
                 | fntr::Error::Internal
@@ -1236,6 +1250,7 @@ impl Controller {
                 }
                 fntr::Error::AddressInUse
                 | fntr::Error::AddressNotAvailable
+                | fntr::Error::AlreadyExists
                 | fntr::Error::ComponentNotFound
                 | fntr::Error::Internal
                 | fntr::Error::InterfaceNotFound

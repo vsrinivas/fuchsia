@@ -32,6 +32,8 @@ type Error = strict enum {
     ADDRESS_NOT_AVAILABLE = 9;
     /// The requested address is in use.
     ADDRESS_IN_USE = 10;
+    /// The resource already exists.
+    ALREADY_EXISTS = 11;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -90,6 +92,8 @@ protocol Controller {
     /// + request `mac_address` address of the interface to be added to the
     ///     hermetic Netstack.
     /// + request `name` the name to assign to the new interface.
+    /// * error `ALREADY_EXISTS` if an interface with `name` already exists on
+    ///     the hermetic Netstack.
     /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
     ///     hermetic network realm.
     /// * error `INTERFACE_NOT_FOUND` if an interface with `mac_address` could
