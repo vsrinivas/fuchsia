@@ -280,13 +280,13 @@ impl LocalComponentRunner {
                         .program
                         .ok_or(format_err!("program is missing from start_info"))?;
                     let namespace =
-                        start_info.ns.ok_or(format_err!("program is missing from start_info"))?;
+                        start_info.ns.ok_or(format_err!("namespace is missing from start_info"))?;
                     let outgoing_dir = start_info
                         .outgoing_dir
-                        .ok_or(format_err!("program is missing from start_info"))?;
+                        .ok_or(format_err!("outgoing_dir is missing from start_info"))?;
                     let runtime_dir_server_end = start_info
                         .runtime_dir
-                        .ok_or(format_err!("program is missing from start_info"))?;
+                        .ok_or(format_err!("runtime_dir is missing from start_info"))?;
 
                     let local_component_name = extract_local_component_name(program)?;
                     let local_component_implementation = self

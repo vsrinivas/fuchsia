@@ -159,10 +159,12 @@ RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
   exposed_dir.Connect(factory_proxy.NewRequest());
   fuchsia::component::test::BuilderSyncPtr builder_proxy;
   fuchsia::component::test::RealmSyncPtr test_realm_proxy;
-  ZX_COMPONENT_ASSERT_STATUS_OK(
+  fuchsia::component::test::RealmBuilderFactory_Create_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "RealmBuilderFactory/Create",
       factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
-                            builder_proxy.NewRequest()));
+                            builder_proxy.NewRequest(), &result),
+      result);
   return RealmBuilder(svc, std::move(builder_proxy), std::move(test_realm_proxy));
 }
 

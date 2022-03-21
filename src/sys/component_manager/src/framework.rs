@@ -241,7 +241,11 @@ impl RealmCapabilityHost {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 // Resolve child in order to instantiate exposed_dir.
-                child.resolve().await.map_err(|_| {
+                child.resolve().await.map_err(|e| {
+                    warn!(
+                        "resolve failed for child {:?} of component {}: {}",
+                        child, component.abs_moniker, e
+                    );
                     return fcomponent::Error::InstanceCannotResolve;
                 })?;
                 let mut exposed_dir = exposed_dir.into_channel();

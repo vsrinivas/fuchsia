@@ -32,7 +32,7 @@ protocol RealmBuilderFactory {
         pkg_dir_handle client_end:fuchsia.io.Directory;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
-    }) -> ();
+    }) -> (struct {}) error RealmBuilderError2;
 
     /// Identical to `Create`, but instead of the realm being empty by default
     /// it contains the contents of the manifest located at `relative_url`

@@ -122,6 +122,10 @@ impl RealmBuilderFactory {
                             return Err(e);
                         }
                     };
+                    if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                        return Err(e);
+                    }
                     let realm_node = match RealmNode2::load_from_pkg(
                         relative_url.clone(),
                         Clone::clone(&pkg_dir),
@@ -152,13 +156,17 @@ impl RealmBuilderFactory {
                     let pkg_dir = pkg_dir_handle
                         .into_proxy()
                         .context("failed to convert pkg_dir ClientEnd to proxy")?;
+                    if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                        return Err(e);
+                    }
                     self.create_realm_and_builder(
                         RealmNode2::new(),
                         pkg_dir,
                         realm_server_end,
                         builder_server_end,
                     )?;
-                    responder.send()?;
+                    responder.send(&mut Ok(()))?;
                 }
             }
         }

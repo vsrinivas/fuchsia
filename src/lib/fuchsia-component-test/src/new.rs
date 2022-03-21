@@ -414,7 +414,7 @@ pub struct ServiceCapability {
 }
 
 impl ServiceCapability {
-    /// The name the targets will see the directory capability as.
+    /// The name the targets will see the service capability as.
     pub fn as_(mut self, as_: impl Into<String>) -> Self {
         self.as_ = Some(as_.into());
         self
@@ -649,7 +649,7 @@ impl RealmBuilder {
                         realm_server_end,
                         builder_server_end,
                     )
-                    .await?;
+                    .await??;
             }
         }
         Self::build_struct(realm_proxy, builder_proxy, collection_name)
