@@ -430,7 +430,7 @@ func init() {
 		"hashCode", "int", "noSuchMethod", "num", "runtimeType", "toString"})
 	tableMemberContext.ReserveNames([]string{"bool", "double", "dynamic",
 		"hashCode", "int", "noSuchMethod", "num", "runtimeType", "toString"})
-	unionMemberContext.ReserveNames([]string{"dynamic", "hashCode", "int",
+	unionMemberContext.ReserveNames([]string{"bool", "dynamic", "hashCode", "int",
 		"noSuchMethod", "num", "runtimeType", "toString"})
 	unionMemberTagContext.ReserveNames([]string{"index", "values"})
 }
