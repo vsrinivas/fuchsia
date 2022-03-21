@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod wire;
+
 use {
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
@@ -10,8 +12,6 @@ use {
     fuchsia_syslog::{self as syslog},
     futures::{StreamExt, TryStreamExt},
 };
-
-const VIRTIO_BLOCK_REQUEST_QUEUE: u16 = 0;
 
 async fn run_virtio_block(
     mut virtio_block_fidl: VirtioBlockRequestStream,
@@ -34,14 +34,14 @@ async fn run_virtio_block(
     let (device, ready_responder) = machina_virtio_device::config_builder_from_stream(
         device_builder,
         &mut virtio_device_fidl,
-        &[VIRTIO_BLOCK_REQUEST_QUEUE][..],
+        &[wire::VIRTIO_BLOCK_REQUEST_QUEUE][..],
         &guest_mem,
     )
     .await
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let _request_stream = device.take_stream(VIRTIO_BLOCK_REQUEST_QUEUE)?;
+    let _request_stream = device.take_stream(wire::VIRTIO_BLOCK_REQUEST_QUEUE)?;
     ready_responder.send()?;
 
     // TODO(fxbug.dev/95529): Read and process descriptors from the request queue.
