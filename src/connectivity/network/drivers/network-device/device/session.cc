@@ -475,57 +475,63 @@ cpp20::span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
 zx_status_t Session::AttachPort(netdev::wire::PortId port_id,
                                 cpp20::span<const netdev::wire::FrameType> frame_types) {
   size_t attached_count;
-  {
-    fbl::AutoLock lock(&parent_->control_lock());
+  parent_->control_lock().Acquire();
 
-    if (port_id.base >= attached_ports_.size()) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    std::optional<AttachedPort>& slot = attached_ports_[port_id.base];
-    if (slot.has_value()) {
-      return ZX_ERR_ALREADY_EXISTS;
-    }
-
-    zx::status<AttachedPort> acquire_port = parent_->AcquirePort(port_id, frame_types);
-    if (acquire_port.is_error()) {
-      return acquire_port.status_value();
-    }
-    AttachedPort& port = acquire_port.value();
-    port.AssertParentControlLockShared(*parent_);
-    port.WithPort([](DevicePort& p) { p.SessionAttached(); });
-    slot = port;
-
-    // Count how many ports we have attached now so we know if we need to notify the parent of
-    // changes to our state.
-    attached_count =
-        std::count_if(attached_ports_.begin(), attached_ports_.end(),
-                      [](const std::optional<AttachedPort>& p) { return p.has_value(); });
+  if (port_id.base >= attached_ports_.size()) {
+    parent_->control_lock().Release();
+    return ZX_ERR_INVALID_ARGS;
   }
+  std::optional<AttachedPort>& slot = attached_ports_[port_id.base];
+  if (slot.has_value()) {
+    parent_->control_lock().Release();
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+
+  zx::status<AttachedPort> acquire_port = parent_->AcquirePort(port_id, frame_types);
+  if (acquire_port.is_error()) {
+    parent_->control_lock().Release();
+    return acquire_port.status_value();
+  }
+  AttachedPort& port = acquire_port.value();
+  port.AssertParentControlLockShared(*parent_);
+  port.WithPort([](DevicePort& p) { p.SessionAttached(); });
+  slot = port;
+
+  // Count how many ports we have attached now so we know if we need to notify the parent of
+  // changes to our state.
+  attached_count =
+      std::count_if(attached_ports_.begin(), attached_ports_.end(),
+                    [](const std::optional<AttachedPort>& p) { return p.has_value(); });
   // The newly attached port is the only port we're attached to, notify the parent that we want to
   // start up and kick the tx thread.
   if (attached_count == 1) {
     paused_.store(false);
+    // NB: SessionStarted releases the control lock.
     parent_->SessionStarted(*this);
     parent_->tx_queue().Resume();
+  } else {
+    parent_->control_lock().Release();
   }
 
   return ZX_OK;
 }
 
 zx_status_t Session::DetachPort(netdev::wire::PortId port_id) {
-  bool stop_session;
-  {
-    fbl::AutoLock lock(&parent_->control_lock());
-    auto result = DetachPortLocked(port_id.base, port_id.salt);
-    if (result.is_error()) {
-      return result.error_value();
-    }
-    stop_session = result.value();
+  parent_->control_lock().Acquire();
+  auto result = DetachPortLocked(port_id.base, port_id.salt);
+  if (result.is_error()) {
+    parent_->control_lock().Release();
+    return result.error_value();
   }
+  bool stop_session = result.value();
+
   // The newly detached port was the last one standing, notify parent we're a stopped session now.
   if (stop_session) {
     paused_.store(true);
+    // NB: SessionStopped releases the control lock.
     parent_->SessionStopped(*this);
+  } else {
+    parent_->control_lock().Release();
   }
   return ZX_OK;
 }

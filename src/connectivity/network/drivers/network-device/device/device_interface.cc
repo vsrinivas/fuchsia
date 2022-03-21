@@ -558,29 +558,29 @@ uint16_t DeviceInterface::tx_fifo_depth() const {
 
 void DeviceInterface::SessionStarted(Session& session) {
   bool should_start = false;
-  {
-    fbl::AutoLock lock(&control_lock_);
-    if (session.IsListen()) {
-      has_listen_sessions_.store(true, std::memory_order_relaxed);
+  if (session.IsListen()) {
+    has_listen_sessions_.store(true, std::memory_order_relaxed);
+  }
+  if (session.IsPrimary()) {
+    active_primary_sessions_++;
+    if (session.ShouldTakeOverPrimary(primary_session_.get())) {
+      // Push primary session to sessions list.
+      sessions_.push_back(std::move(primary_session_));
+      // Find the session in the list and promote it to primary.
+      primary_session_ = sessions_.erase(session);
+      ZX_ASSERT(primary_session_);
+      // Notify rx queue of primary session change.
+      rx_queue_->TriggerSessionChanged();
     }
-    if (session.IsPrimary()) {
-      active_primary_sessions_++;
-      if (session.ShouldTakeOverPrimary(primary_session_.get())) {
-        // Push primary session to sessions list.
-        sessions_.push_back(std::move(primary_session_));
-        // Find the session in the list and promote it to primary.
-        primary_session_ = sessions_.erase(session);
-        ZX_ASSERT(primary_session_);
-        // Notify rx queue of primary session change.
-        rx_queue_->TriggerSessionChanged();
-      }
-      should_start = active_primary_sessions_ != 0;
-    }
+    should_start = active_primary_sessions_ != 0;
   }
 
   if (should_start) {
     // Start the device if we haven't done so already.
-    StartDevice();
+    // NB: StartDeviceLocked releases the control lock.
+    StartDeviceLocked();
+  } else {
+    control_lock_.Release();
   }
 
   if (evt_session_started_) {
@@ -628,7 +628,6 @@ bool DeviceInterface::SessionStoppedInner(Session& session) {
 }
 
 void DeviceInterface::SessionStopped(Session& session) {
-  control_lock_.Acquire();
   if (SessionStoppedInner(session)) {
     // Stop the device, no more sessions are running.
     StopDevice();
@@ -639,29 +638,33 @@ void DeviceInterface::SessionStopped(Session& session) {
 
 void DeviceInterface::StartDevice() {
   LOGF_TRACE("network-device: %s", __FUNCTION__);
+  control_lock_.Acquire();
+  StartDeviceLocked();
+}
+
+void DeviceInterface::StartDeviceLocked() {
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
 
   bool start = false;
-  {
-    fbl::AutoLock lock(&control_lock_);
-    // Start the device if we haven't done so already.
-    switch (device_status_) {
-      case DeviceStatus::STARTED:
-      case DeviceStatus::STARTING:
-        // Remove any pending operations we may have.
-        pending_device_op_ = PendingDeviceOperation::NONE;
-        break;
-      case DeviceStatus::STOPPING:
-        // Device is currently stopping, let's record that we want to start it.
-        pending_device_op_ = PendingDeviceOperation::START;
-        break;
-      case DeviceStatus::STOPPED:
-        // Device is in STOPPED state, start it.
-        device_status_ = DeviceStatus::STARTING;
-        start = true;
-        break;
-    }
+  // Start the device if we haven't done so already.
+  switch (device_status_) {
+    case DeviceStatus::STARTED:
+    case DeviceStatus::STARTING:
+      // Remove any pending operations we may have.
+      pending_device_op_ = PendingDeviceOperation::NONE;
+      break;
+    case DeviceStatus::STOPPING:
+      // Device is currently stopping, let's record that we want to start it.
+      pending_device_op_ = PendingDeviceOperation::START;
+      break;
+    case DeviceStatus::STOPPED:
+      // Device is in STOPPED state, start it.
+      device_status_ = DeviceStatus::STARTING;
+      start = true;
+      break;
   }
 
+  control_lock_.Release();
   if (start) {
     StartDeviceInner();
   }
@@ -1000,8 +1003,11 @@ void DeviceInterface::NotifyDeadSession(Session& dead_session) {
   // First of all, stop all data-plane operations with stopped session.
   if (!dead_session.IsPaused()) {
     // Stop the session.
+    // NB: SessionStopped releases the control lock.
+    control_lock_.Acquire();
     SessionStopped(dead_session);
   }
+
   if (dead_session.IsPrimary()) {
     // Tell rx queue this session can't be used anymore.
     rx_queue_->PurgeSession(dead_session);

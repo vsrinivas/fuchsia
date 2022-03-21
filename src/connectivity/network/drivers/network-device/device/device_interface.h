@@ -102,11 +102,11 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // Operates workflow for when a session is started. If the session is eligible to take over the
   // primary spot, it'll be elected the new primary session. If there was no primary session before,
   // the data path will be started BEFORE the new session is elected as primary,
-  void SessionStarted(Session& session);
+  void SessionStarted(Session& session) __TA_RELEASE(control_lock_);
   // Operates workflow for when a session is stopped. If there's another session that is eligible to
   // take over the primary spot, it'll be elected the new primary session. Otherwise, the data path
   // will be stopped.
-  void SessionStopped(Session& session);
+  void SessionStopped(Session& session) __TA_RELEASE(control_lock_);
 
   // If a primary session exists, primary_rx_fifo returns a reference-counted pointer to the primary
   // session's Rx FIFO. Otherwise, the returned pointer is null.
@@ -200,6 +200,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
 
   // Starts the data path with the device implementation.
   void StartDevice() __TA_EXCLUDES(control_lock_, tx_lock_, rx_lock_);
+  void StartDeviceLocked() __TA_RELEASE(control_lock_) __TA_EXCLUDES(tx_lock_, rx_lock_);
   // Stops the data path with the device implementation.
   //
   // If continue_teardown is provided, teardown continuation will be attempted before notifying the
