@@ -20,7 +20,9 @@ def print_fences():
     """
     All fences are emitted from here.
     """
-    pass
+    print(
+        "fxb/91927 Moving manifest validation 'earlier' in the graph hits incremental bugs."
+    )
 
 
 def main():
