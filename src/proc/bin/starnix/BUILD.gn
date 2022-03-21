@@ -180,6 +180,8 @@ if (target_cpu == "x64") {
       "task/kernel.rs",
       "task/mod.rs",
       "task/pid_table.rs",
+      "task/process_group.rs",
+      "task/session.rs",
       "task/syscalls.rs",
       "task/task.rs",
       "task/thread_group.rs",

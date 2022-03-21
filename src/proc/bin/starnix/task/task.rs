@@ -102,7 +102,7 @@ pub struct Task {
     pub abstract_socket_namespace: Arc<AbstractSocketNamespace>,
 
     /// The IDs used to perform shell job control.
-    pub job_control: Mutex<ShellJobControl>,
+    pub job_control: RwLock<ShellJobControl>,
 
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
@@ -195,7 +195,7 @@ impl Task {
             fs,
             creds: RwLock::new(creds),
             abstract_socket_namespace,
-            job_control: Mutex::new(jc),
+            job_control: RwLock::new(jc),
             clear_child_tid: Mutex::new(UserRef::default()),
             signal_actions,
             signals: Default::default(),
@@ -330,7 +330,7 @@ impl Task {
             signal_actions,
             self.creds.read().clone(),
             self.abstract_socket_namespace.clone(),
-            self.job_control.lock().clone(),
+            self.job_control.read().clone(),
             child_exit_signal,
         );
         pids.add_task(&child.task);
@@ -499,6 +499,18 @@ impl Task {
 
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
+    }
+
+    pub fn setsid(&self) -> Result<(), Errno> {
+        let pid = self.get_pid();
+        let mut pids = self.thread_group.kernel.pids.write();
+        if !pids.get_process_group(pid).is_none() {
+            return error!(EPERM);
+        }
+        let job_control = ShellJobControl { sid: pid, pgid: pid };
+        pids.set_job_control(pid, &job_control);
+        *self.job_control.write() = job_control;
+        Ok(())
     }
 }
 
@@ -921,6 +933,7 @@ mod test {
                 UserRef::new(UserAddress::default()),
             )
             .expect("clone thread");
+        // Set an exit code to not panic when task is dropped and moved to the zombie state.
         *thread.exit_code.lock() = Some(0);
         assert_eq!(current_task.get_pid(), thread.get_pid());
         assert_ne!(current_task.get_tid(), thread.get_tid());
@@ -933,9 +946,30 @@ mod test {
                 UserRef::new(UserAddress::default()),
             )
             .expect("clone process");
+        // Set an exit code to not panic when task is dropped and moved to the zombie state.
         *child_task.exit_code.lock() = Some(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
         assert_eq!(current_task.get_pid(), child_task.parent);
+    }
+
+    #[test]
+    fn test_setsid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        assert_eq!(current_task.setsid(), error!(EPERM));
+
+        let child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        // Set an exit code to not panic when task is dropped and moved to the zombie state.
+        *child_task.exit_code.lock() = Some(0);
+        assert_eq!(current_task.job_control.read().sid, child_task.job_control.read().sid);
+
+        assert_eq!(child_task.setsid(), Ok(()));
+        assert_eq!(child_task.job_control.read().sid, child_task.get_pid());
     }
 }

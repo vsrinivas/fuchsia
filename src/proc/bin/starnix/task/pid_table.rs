@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
+use crate::auth::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -13,6 +14,8 @@ use crate::types::*;
 struct PidEntry {
     task: Option<Weak<Task>>,
     group: Option<Weak<ThreadGroup>>,
+    process_group: Option<ProcessGroup>,
+    session: Option<Session>,
 }
 
 pub struct PidTable {
@@ -39,6 +42,10 @@ impl PidTable {
         self.get_entry(pid).and_then(|entry| entry.task.as_ref()).and_then(|task| task.upgrade())
     }
 
+    pub fn get_process_group(&self, pid: pid_t) -> Option<&ProcessGroup> {
+        self.get_entry(pid).and_then(|entry| entry.process_group.as_ref())
+    }
+
     pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
         self.table
             .iter()
@@ -56,6 +63,7 @@ impl PidTable {
         let entry = self.get_entry_mut(task.id);
         assert!(entry.task.is_none());
         self.get_entry_mut(task.id).task = Some(Arc::downgrade(task));
+        self.register_job_control(task.id, &task.job_control.read());
     }
 
     pub fn add_thread_group(&mut self, thread_group: &Arc<ThreadGroup>) {
@@ -64,10 +72,16 @@ impl PidTable {
         entry.group = Some(Arc::downgrade(thread_group));
     }
 
+    pub fn set_job_control(&mut self, pid: pid_t, job_control: &ShellJobControl) {
+        let task = self.get_task(pid).unwrap();
+        self.cleanup_job_control(pid, &task.as_ref().job_control.read());
+        self.register_job_control(pid, job_control);
+    }
+
     pub fn remove_task(&mut self, pid: pid_t) {
         let entry = self.get_entry_mut(pid);
-        assert!(entry.task.is_some());
-        entry.task = None;
+        let task = entry.task.take().unwrap().upgrade();
+        self.cleanup_job_control(pid, &task.unwrap().job_control.read());
     }
 
     pub fn remove_thread_group(&mut self, pid: pid_t) {
@@ -79,5 +93,55 @@ impl PidTable {
     /// Returns the task ids for all the currently running tasks.
     pub fn task_ids(&self) -> Vec<pid_t> {
         self.table.iter().flat_map(|(pid, entry)| entry.task.as_ref().and(Some(*pid))).collect()
+    }
+
+    fn cleanup_job_control(&mut self, pid: pid_t, job_control: &ShellJobControl) {
+        let remove_process_group;
+        {
+            let process_group_entry = self.get_entry_mut(job_control.pgid);
+            assert!(process_group_entry.process_group.is_some());
+            remove_process_group = process_group_entry.process_group.as_mut().unwrap().remove(pid);
+            if remove_process_group {
+                process_group_entry.process_group = None;
+            }
+        }
+        if remove_process_group {
+            let session_entry = self.get_entry_mut(job_control.sid);
+            assert!(session_entry.session.is_some());
+            if session_entry.session.as_mut().unwrap().remove(job_control.pgid) {
+                session_entry.session = None;
+            }
+        }
+    }
+
+    fn register_job_control(&mut self, pid: pid_t, job_control: &ShellJobControl) {
+        {
+            let process_group_entry = self.get_entry_mut(job_control.pgid);
+            match &process_group_entry.process_group {
+                None => {
+                    assert!(pid == job_control.pgid);
+                    process_group_entry.process_group =
+                        Some(ProcessGroup::new(job_control.sid, job_control.pgid));
+                }
+
+                Some(process_group) => {
+                    assert!(process_group.sid == job_control.sid);
+                    process_group.tasks.write().insert(pid);
+                }
+            };
+        }
+        {
+            let session_entry = self.get_entry_mut(job_control.sid);
+            match &session_entry.session {
+                None => {
+                    assert!(job_control.sid == job_control.pgid);
+                    assert!(pid == job_control.sid);
+                    session_entry.session = Some(Session::new(job_control.sid));
+                }
+                Some(session) => {
+                    session.process_groups.write().insert(job_control.pgid);
+                }
+            };
+        }
     }
 }

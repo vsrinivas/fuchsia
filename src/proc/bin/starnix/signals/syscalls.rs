@@ -227,7 +227,7 @@ pub fn sys_kill(
             // "If pid is less than -1, then sig is sent to every process in the
             // process group whose ID is -pid."
             let process_group_id = match pid {
-                0 => current_task.job_control.lock().pgid,
+                0 => current_task.job_control.read().pgid,
                 _ => -pid,
             };
 
@@ -236,7 +236,7 @@ pub fn sys_kill(
                 &current_task,
                 &unchecked_signal,
                 thread_groups.into_iter().filter(|thread_group| {
-                    current_task.get_task(thread_group.leader).unwrap().job_control.lock().pgid
+                    current_task.get_task(thread_group.leader).unwrap().job_control.read().pgid
                         == process_group_id
                 }),
             )?;

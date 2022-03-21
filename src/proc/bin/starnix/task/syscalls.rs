@@ -105,15 +105,15 @@ fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Tas
 }
 
 pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.job_control.lock().sid)
+    Ok(get_task_or_current(current_task, pid)?.job_control.read().sid)
 }
 
 pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.job_control.lock().pgid)
+    Ok(current_task.job_control.read().pgid)
 }
 
 pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.job_control.lock().pgid)
+    Ok(get_task_or_current(current_task, pid)?.job_control.read().pgid)
 }
 
 pub fn sys_setpgid(
@@ -124,7 +124,7 @@ pub fn sys_setpgid(
     let task = get_task_or_current(current_task, pid)?;
     let pgid = if pgid == 0 { task.get_pid() } else { pgid };
     // TODO(security): check permissions
-    task.job_control.lock().pgid = pgid;
+    task.job_control.write().pgid = pgid;
     Ok(SUCCESS)
 }
 
@@ -482,6 +482,11 @@ pub fn sys_getgroups(
         current_task.mm.write_memory(groups_addr, groups.as_slice().as_bytes())?;
     }
     Ok(groups.len())
+}
+
+pub fn sys_setsid(current_task: &mut CurrentTask) -> Result<pid_t, Errno> {
+    current_task.setsid()?;
+    Ok(current_task.get_pid())
 }
 
 #[cfg(test)]
