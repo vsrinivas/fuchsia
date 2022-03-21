@@ -46,6 +46,11 @@ pub struct Color {
 }
 
 impl Color {
+    #[cfg(test)]
+    pub const fn to_array(self) -> [f32; 4] {
+        [self.r, self.g, self.b, self.a]
+    }
+
     pub(crate) fn max(&self) -> f32 {
         self.r.max(self.g.max(self.b))
     }
@@ -386,10 +391,10 @@ impl BlendMode {
         }
 
         fn hard_light(dst: f32, src: f32) -> f32 {
-            if dst <= 0.5 {
-                multiply(2.0 * dst, src)
+            if src <= 0.5 {
+                multiply(dst, 2.0 * src)
             } else {
-                screen(2.0 * dst - 1.0, src)
+                screen(dst, 2.0 * src - 1.0)
             }
         }
 
@@ -449,39 +454,39 @@ impl BlendMode {
             Self::Darken => |c, dst, src| dst.channel(c).min(src.channel(c)),
             Self::Lighten => |c, dst, src| dst.channel(c).max(src.channel(c)),
             Self::ColorDodge => |c, dst, src| {
-                if src.channel(c) == 0.0 {
+                if dst.channel(c) == 0.0 {
                     0.0
-                } else if dst.channel(c) == 1.0 {
+                } else if src.channel(c) == 1.0 {
                     1.0
                 } else {
-                    1.0f32.min(src.channel(c) / (1.0 - dst.channel(c)))
+                    1.0f32.min(dst.channel(c) / (1.0 - src.channel(c)))
                 }
             },
             Self::ColorBurn => |c, dst, src| {
-                if src.channel(c) == 1.0 {
+                if dst.channel(c) == 1.0 {
                     1.0
-                } else if dst.channel(c) == 0.0 {
+                } else if src.channel(c) == 0.0 {
                     0.0
                 } else {
-                    1.0 - 1.0f32.min((1.0 - src.channel(c)) / dst.channel(c))
+                    1.0 - 1.0f32.min((1.0 - dst.channel(c)) / src.channel(c))
                 }
             },
             Self::HardLight => |c, dst, src| hard_light(dst.channel(c), src.channel(c)),
             Self::SoftLight => |c, dst, src| {
-                fn d(src: f32) -> f32 {
-                    if src <= 0.25 {
-                        ((16.0 * src - 12.0) * src + 4.0) * src
+                fn d(dst: f32) -> f32 {
+                    if dst <= 0.25 {
+                        ((16.0 * dst - 12.0) * dst + 4.0) * dst
                     } else {
-                        src.sqrt()
+                        dst.sqrt()
                     }
                 }
 
-                if dst.channel(c) <= 0.5 {
-                    src.channel(c)
-                        - (1.0 - 2.0 * dst.channel(c)) * src.channel(c) * (1.0 - src.channel(c))
+                if src.channel(c) <= 0.5 {
+                    dst.channel(c)
+                        - (1.0 - 2.0 * src.channel(c)) * dst.channel(c) * (1.0 - dst.channel(c))
                 } else {
-                    src.channel(c)
-                        + (2.0 * dst.channel(c) - 1.0) * (d(src.channel(c)) - src.channel(c))
+                    dst.channel(c)
+                        + (2.0 * src.channel(c) - 1.0) * (d(dst.channel(c)) - dst.channel(c))
                 }
             },
             Self::Difference => |c, dst, src| (dst.channel(c) - src.channel(c)).abs(),
@@ -498,18 +503,20 @@ impl BlendMode {
     pub(crate) fn blend(self, dst: Color, src: Color) -> Color {
         let f = self.blend_fn();
 
-        let alpha = src.a;
-        let inv_alpha = 1.0 - alpha;
+        let inv_dst_a = 1.0 - dst.a;
+        let inv_dst_a_src_a = inv_dst_a * src.a;
+        let inv_src_a = 1.0 - src.a;
+        let dst_a_src_a = dst.a * src.a;
 
-        let current_red = f(Channel::Red, dst, src) * alpha;
-        let current_green = f(Channel::Green, dst, src) * alpha;
-        let current_blue = f(Channel::Blue, dst, src) * alpha;
+        let current_r = src.r.mul_add(inv_dst_a_src_a, f(Channel::Red, dst, src) * dst_a_src_a);
+        let current_g = src.g.mul_add(inv_dst_a_src_a, f(Channel::Green, dst, src) * dst_a_src_a);
+        let current_b = src.b.mul_add(inv_dst_a_src_a, f(Channel::Blue, dst, src) * dst_a_src_a);
 
         Color {
-            r: dst.r.mul_add(inv_alpha, current_red),
-            g: dst.g.mul_add(inv_alpha, current_green),
-            b: dst.b.mul_add(inv_alpha, current_blue),
-            a: dst.a.mul_add(inv_alpha, alpha),
+            r: dst.r.mul_add(inv_src_a, current_r),
+            g: dst.g.mul_add(inv_src_a, current_g),
+            b: dst.b.mul_add(inv_src_a, current_b),
+            a: dst.a.mul_add(inv_src_a, src.a),
         }
     }
 }
@@ -588,17 +595,17 @@ macro_rules! blend_function {
                 let sat_max = $sat_dst.select(f32x8::splat(0.0), min_lt_max);
 
                 [
-                    sat_mid.select(
-                        f32x8::splat(0.0).select(sat_max, $s_r.eq(src_min)),
-                        $s_r.eq(src_mid),
+                    sat_max.select(
+                        f32x8::splat(0.0).select(sat_mid, $s_r.eq(src_min)),
+                        $s_r.eq(src_max),
                     ),
-                    sat_mid.select(
-                        f32x8::splat(0.0).select(sat_max, $s_g.eq(src_min)),
-                        $s_g.eq(src_mid),
+                    sat_max.select(
+                        f32x8::splat(0.0).select(sat_mid, $s_g.eq(src_min)),
+                        $s_g.eq(src_max),
                     ),
-                    sat_mid.select(
-                        f32x8::splat(0.0).select(sat_max, $s_b.eq(src_min)),
-                        $s_b.eq(src_mid),
+                    sat_max.select(
+                        f32x8::splat(0.0).select(sat_mid, $s_b.eq(src_min)),
+                        $s_b.eq(src_max),
                     ),
                 ]
             }};
@@ -615,108 +622,108 @@ macro_rules! blend_function {
             BlendMode::Overlay => [
                 ($dst_r * $src_r * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_r + $dst_r - $src_r.mul_add($dst_r, f32x8::splat(0.5))),
-                    $src_r.le(f32x8::splat(0.5)),
+                        * ($dst_r + $src_r - $dst_r.mul_add($src_r, f32x8::splat(0.5))),
+                    $dst_r.le(f32x8::splat(0.5)),
                 ),
                 ($dst_g * $src_g * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_g + $dst_g - $src_g.mul_add($dst_g, f32x8::splat(0.5))),
-                    $src_g.le(f32x8::splat(0.5)),
+                        * ($dst_g + $src_g - $dst_g.mul_add($src_g, f32x8::splat(0.5))),
+                    $dst_g.le(f32x8::splat(0.5)),
                 ),
                 ($dst_b * $src_b * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_b + $dst_b - $src_b.mul_add($dst_b, f32x8::splat(0.5))),
-                    $src_b.le(f32x8::splat(0.5)),
+                        * ($dst_b + $src_b - $dst_b.mul_add($src_b, f32x8::splat(0.5))),
+                    $dst_b.le(f32x8::splat(0.5)),
                 ),
             ],
             BlendMode::Darken => [$dst_r.min($src_r), $dst_g.min($src_g), $dst_b.min($src_b)],
             BlendMode::Lighten => [$dst_r.max($src_r), $dst_g.max($src_g), $dst_b.max($src_b)],
             BlendMode::ColorDodge => [
-                f32x8::splat(0.0).select(
-                    f32x8::splat(1.0).min($src_r / (f32x8::splat(1.0) - $dst_r)),
-                    $src_r.eq(f32x8::splat(0.0)),
-                ),
-                f32x8::splat(0.0).select(
-                    f32x8::splat(1.0).min($src_g / (f32x8::splat(1.0) - $dst_g)),
-                    $src_g.eq(f32x8::splat(0.0)),
-                ),
-                f32x8::splat(0.0).select(
-                    f32x8::splat(1.0).min($src_b / (f32x8::splat(1.0) - $dst_b)),
-                    $src_b.eq(f32x8::splat(0.0)),
-                ),
-            ],
-            BlendMode::ColorBurn => [
                 f32x8::splat(1.0).select(
-                    f32x8::splat(1.0)
-                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src_r) / $dst_r),
+                    f32x8::splat(1.0).min($dst_r / (f32x8::splat(1.0) - $src_r)),
                     $src_r.eq(f32x8::splat(1.0)),
                 ),
                 f32x8::splat(1.0).select(
-                    f32x8::splat(1.0)
-                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src_g) / $dst_g),
+                    f32x8::splat(1.0).min($dst_g / (f32x8::splat(1.0) - $src_g)),
                     $src_g.eq(f32x8::splat(1.0)),
                 ),
                 f32x8::splat(1.0).select(
-                    f32x8::splat(1.0)
-                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $src_b) / $dst_b),
+                    f32x8::splat(1.0).min($dst_b / (f32x8::splat(1.0) - $src_b)),
                     $src_b.eq(f32x8::splat(1.0)),
+                ),
+            ],
+            BlendMode::ColorBurn => [
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0)
+                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $dst_r) / $src_r),
+                    $src_r.eq(f32x8::splat(0.0)),
+                ),
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0)
+                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $dst_g) / $src_g),
+                    $src_g.eq(f32x8::splat(0.0)),
+                ),
+                f32x8::splat(0.0).select(
+                    f32x8::splat(1.0)
+                        - f32x8::splat(1.0).min((f32x8::splat(1.0) - $dst_b) / $src_b),
+                    $src_b.eq(f32x8::splat(0.0)),
                 ),
             ],
             BlendMode::HardLight => [
                 ($dst_r * $src_r * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_r + $dst_r - $src_r.mul_add($dst_r, f32x8::splat(0.5))),
-                    $dst_r.le(f32x8::splat(0.5)),
+                        * ($dst_r + $src_r - $dst_r.mul_add($src_r, f32x8::splat(0.5))),
+                    $src_r.le(f32x8::splat(0.5)),
                 ),
                 ($dst_g * $src_g * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_g + $dst_g - $src_g.mul_add($dst_g, f32x8::splat(0.5))),
-                    $dst_g.le(f32x8::splat(0.5)),
+                        * ($dst_g + $src_g - $dst_g.mul_add($src_g, f32x8::splat(0.5))),
+                    $src_g.le(f32x8::splat(0.5)),
                 ),
                 ($dst_b * $src_b * f32x8::splat(2.0)).select(
                     f32x8::splat(2.0)
-                        * ($src_b + $dst_b - $src_b.mul_add($dst_b, f32x8::splat(0.5))),
-                    $dst_b.le(f32x8::splat(0.5)),
+                        * ($dst_b + $src_b - $dst_b.mul_add($src_b, f32x8::splat(0.5))),
+                    $src_b.le(f32x8::splat(0.5)),
                 ),
             ],
             BlendMode::SoftLight => {
                 let d0 = (f32x8::splat(16.0)
-                    .mul_add($src_r, f32x8::splat(-12.0))
-                    .mul_add($src_r, f32x8::splat(4.0))
-                    * $src_r)
-                    .select($src_r.sqrt(), $src_r.le(f32x8::splat(0.25)));
+                    .mul_add($dst_r, f32x8::splat(-12.0))
+                    .mul_add($dst_r, f32x8::splat(4.0))
+                    * $dst_r)
+                    .select($dst_r.sqrt(), $dst_r.le(f32x8::splat(0.25)));
                 let d1 = (f32x8::splat(16.0)
-                    .mul_add($src_g, f32x8::splat(-12.0))
-                    .mul_add($src_g, f32x8::splat(4.0))
-                    * $src_g)
-                    .select($src_g.sqrt(), $src_g.le(f32x8::splat(0.25)));
+                    .mul_add($dst_g, f32x8::splat(-12.0))
+                    .mul_add($dst_g, f32x8::splat(4.0))
+                    * $dst_g)
+                    .select($dst_g.sqrt(), $dst_g.le(f32x8::splat(0.25)));
                 let d2 = (f32x8::splat(16.0)
-                    .mul_add($src_b, f32x8::splat(-12.0))
-                    .mul_add($src_b, f32x8::splat(4.0))
-                    * $src_b)
-                    .select($src_b.sqrt(), $src_b.le(f32x8::splat(0.25)));
+                    .mul_add($dst_b, f32x8::splat(-12.0))
+                    .mul_add($dst_b, f32x8::splat(4.0))
+                    * $dst_b)
+                    .select($dst_b.sqrt(), $dst_b.le(f32x8::splat(0.25)));
 
                 [
-                    (($src_r * (f32x8::splat(1.0) - $src_r))
-                        .mul_add(f32x8::splat(2.0).mul_add($dst_r, f32x8::splat(-1.0)), $src_r))
+                    (($dst_r * (f32x8::splat(1.0) - $dst_r))
+                        .mul_add(f32x8::splat(2.0).mul_add($src_r, f32x8::splat(-1.0)), $dst_r))
                     .select(
-                        (d0 - $src_r)
-                            .mul_add(f32x8::splat(2.0).mul_add($dst_r, f32x8::splat(-1.0)), $src_r),
-                        $dst_r.le(f32x8::splat(0.5)),
+                        (d0 - $dst_r)
+                            .mul_add(f32x8::splat(2.0).mul_add($src_r, f32x8::splat(-1.0)), $dst_r),
+                        $src_r.le(f32x8::splat(0.5)),
                     ),
-                    (($src_g * (f32x8::splat(1.0) - $src_g))
-                        .mul_add(f32x8::splat(2.0).mul_add($dst_g, f32x8::splat(-1.0)), $src_g))
+                    (($dst_g * (f32x8::splat(1.0) - $dst_g))
+                        .mul_add(f32x8::splat(2.0).mul_add($src_g, f32x8::splat(-1.0)), $dst_g))
                     .select(
-                        (d1 - $src_g)
-                            .mul_add(f32x8::splat(2.0).mul_add($dst_g, f32x8::splat(-1.0)), $src_g),
-                        $dst_g.le(f32x8::splat(0.5)),
+                        (d1 - $dst_g)
+                            .mul_add(f32x8::splat(2.0).mul_add($src_g, f32x8::splat(-1.0)), $dst_g),
+                        $src_g.le(f32x8::splat(0.5)),
                     ),
-                    (($src_b * (f32x8::splat(1.0) - $src_b))
-                        .mul_add(f32x8::splat(2.0).mul_add($dst_b, f32x8::splat(-1.0)), $src_b))
+                    (($dst_b * (f32x8::splat(1.0) - $dst_b))
+                        .mul_add(f32x8::splat(2.0).mul_add($src_b, f32x8::splat(-1.0)), $dst_b))
                     .select(
-                        (d2 - $src_b)
-                            .mul_add(f32x8::splat(2.0).mul_add($dst_b, f32x8::splat(-1.0)), $src_b),
-                        $dst_b.le(f32x8::splat(0.5)),
+                        (d2 - $dst_b)
+                            .mul_add(f32x8::splat(2.0).mul_add($src_b, f32x8::splat(-1.0)), $dst_b),
+                        $src_b.le(f32x8::splat(0.5)),
                     ),
                 ]
             }

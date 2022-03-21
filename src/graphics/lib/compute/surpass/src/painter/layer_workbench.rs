@@ -849,9 +849,9 @@ mod tests {
         assert_eq!(
             workbench.skip_fully_covered_layers(&context),
             ControlFlow::Break(TileWriteOp::Solid(Color {
-                r: 0.1875,
-                g: 0.1875,
-                b: 0.1875,
+                r: 0.28125,
+                g: 0.28125,
+                b: 0.28125,
                 a: 0.75,
             }))
         );

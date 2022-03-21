@@ -301,15 +301,6 @@ impl f32x4 {
         u32x4(unsafe { _mm_castps_si128(self.0) })
     }
 
-    pub fn insert<const INDEX: i32>(self, val: f32) -> Self {
-        Self(unsafe {
-            _mm_castsi128_ps(_mm_insert_epi32::<INDEX>(
-                _mm_castps_si128(self.0),
-                val.to_bits() as i32,
-            ))
-        })
-    }
-
     pub fn le(self, other: Self) -> m32x4 {
         m32x4(unsafe { _mm_castps_si128(_mm_cmp_ps(self.0, other.0, _CMP_LE_OQ)) })
     }

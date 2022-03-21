@@ -304,10 +304,6 @@ impl f32x4 {
         u32x4(unsafe { vreinterpretq_u32_f32(self.0) })
     }
 
-    pub fn insert<const INDEX: i32>(self, val: f32) -> Self {
-        Self(unsafe { vsetq_lane_f32::<INDEX>(val, self.0) })
-    }
-
     pub fn le(self, other: Self) -> m32x4 {
         m32x4(unsafe { vcleq_f32(self.0, other.0) })
     }

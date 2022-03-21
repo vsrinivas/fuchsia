@@ -148,17 +148,7 @@ fn to_u32x4(val: f32x4) -> u32x4 {
 
 #[inline]
 fn to_srgb_bytes(color: [f32; 4]) -> [u8; 4] {
-    let alpha_recip = color[3].recip();
-    let srgb = linear_to_srgb_approx_simdx4(f32x4::new([
-        color[0] * alpha_recip,
-        color[1] * alpha_recip,
-        color[2] * alpha_recip,
-        0.0,
-    ]));
-
-    let srgb = to_u32x4(srgb.insert::<3>(color[3]));
-
-    srgb.into()
+    to_u32x4(linear_to_srgb_approx_simdx4(f32x4::new([color[0], color[1], color[2], 1.0]))).into()
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -405,33 +395,38 @@ impl Painter {
         fill: [f32x8; 4],
         blend_mode: BlendMode,
     ) {
-        let red = cols!(&mut self.red, x, x + 1);
-        let green = cols!(&mut self.green, x, x + 1);
-        let blue = cols!(&mut self.blue, x, x + 1);
-        let alpha = cols!(&mut self.alpha, x, x + 1);
+        let dst_r = &mut cols!(&mut self.red, x, x + 1)[y];
+        let dst_g = &mut cols!(&mut self.green, x, x + 1)[y];
+        let dst_b = &mut cols!(&mut self.blue, x, x + 1)[y];
+        let dst_a = &mut cols!(&mut self.alpha, x, x + 1)[y];
 
-        let mut alphas = fill[3] * coverages[y];
+        let src_r = fill[0];
+        let src_g = fill[1];
+        let src_b = fill[2];
+        let mut src_a = fill[3] * coverages[y];
 
         if is_clipped {
             if let Some((mask, _)) = self.clip {
-                alphas *= cols!(&mask, x, x + 1)[y];
+                src_a *= cols!(&mask, x, x + 1)[y];
             }
         }
 
-        let inv_alphas = f32x8::splat(1.0) - alphas;
+        let [blended_r, blended_g, blended_b] =
+            blend_function!(blend_mode, *dst_r, *dst_g, *dst_b, src_r, src_g, src_b);
 
-        let [mut current_red, mut current_green, mut current_blue] =
-            blend_function!(blend_mode, red[y], green[y], blue[y], fill[0], fill[1], fill[2],);
+        let inv_dst_a = f32x8::splat(1.0) - *dst_a;
+        let inv_dst_a_src_a = inv_dst_a * src_a;
+        let inv_src_a = f32x8::splat(1.0) - src_a;
+        let dst_a_src_a = *dst_a * src_a;
 
-        current_red *= alphas;
-        current_green *= alphas;
-        current_blue *= alphas;
-        let current_alpha = alphas;
+        let current_r = src_r.mul_add(inv_dst_a_src_a, blended_r * dst_a_src_a);
+        let current_g = src_g.mul_add(inv_dst_a_src_a, blended_g * dst_a_src_a);
+        let current_b = src_b.mul_add(inv_dst_a_src_a, blended_b * dst_a_src_a);
 
-        red[y] = red[y].mul_add(inv_alphas, current_red);
-        green[y] = green[y].mul_add(inv_alphas, current_green);
-        blue[y] = blue[y].mul_add(inv_alphas, current_blue);
-        alpha[y] = alpha[y].mul_add(inv_alphas, current_alpha);
+        *dst_r = dst_r.mul_add(inv_src_a, current_r);
+        *dst_g = dst_g.mul_add(inv_src_a, current_g);
+        *dst_b = dst_b.mul_add(inv_src_a, current_b);
+        *dst_a = dst_a.mul_add(inv_src_a, src_a);
     }
 
     fn clip_at(
@@ -448,25 +443,21 @@ impl Painter {
     }
 
     fn compute_srgb(&mut self, channels: [Channel; 4]) {
-        for (channel, alpha) in self.red.iter_mut().zip(self.alpha.iter()) {
-            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
+        for channel in self.red.iter_mut() {
+            *channel = linear_to_srgb_approx_simdx8(*channel);
         }
-        for (channel, alpha) in self.green.iter_mut().zip(self.alpha.iter()) {
-            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
+        for channel in self.green.iter_mut() {
+            *channel = linear_to_srgb_approx_simdx8(*channel);
         }
-        for (channel, alpha) in self.blue.iter_mut().zip(self.alpha.iter()) {
-            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
+        for channel in self.blue.iter_mut() {
+            *channel = linear_to_srgb_approx_simdx8(*channel);
         }
 
-        for ((((&red, &green), &blue), &alpha), srgb) in self
-            .red
-            .iter()
-            .zip(self.green.iter())
-            .zip(self.blue.iter())
-            .zip(self.alpha.iter())
-            .zip(self.srgb.iter_mut())
+        for (((&red, &green), &blue), srgb) in
+            self.red.iter().zip(self.green.iter()).zip(self.blue.iter()).zip(self.srgb.iter_mut())
         {
-            let unpacked = channels.map(|c| to_u32x8(c.select(red, green, blue, alpha)));
+            let unpacked =
+                channels.map(|c| to_u32x8(c.select(red, green, blue, f32x8::splat(1.0))));
 
             *srgb = u8x32::from_u32_interleaved(unpacked);
         }
@@ -702,24 +693,22 @@ mod tests {
         LinesBuilder, TILE_SIZE,
     };
 
-    const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-    const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-    const RED_50: [f32; 4] = [0.5, 0.0, 0.0, 1.0];
-    const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-    const GREEN_50: [f32; 4] = [0.0, 0.5, 0.0, 1.0];
-    const RED_GREEN_50: [f32; 4] = [0.5, 0.5, 0.0, 1.0];
+    const RED: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
+    const RED_GREEN_50: Color = Color { r: 1.0, g: 0.5, b: 0.0, a: 1.0 };
+    const RED_50: Color = Color { r: 0.5, g: 0.0, b: 0.0, a: 1.0 };
+    const RED_50_GREEN_50: Color = Color { r: 0.5, g: 0.5, b: 0.0, a: 1.0 };
+    const GREEN: Color = Color { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };
+    const GREEN_50: Color = Color { r: 0.0, g: 0.5, b: 0.0, a: 1.0 };
+    const BLUE: Color = Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
+    const WHITE: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+    const BLACK: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };
+    const BLACK_ALPHA_50: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 };
+    const BLACK_ALPHA_0: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+
     const BLACK_RGBA: [u8; 4] = [0, 0, 0, 255];
     const RED_RGBA: [u8; 4] = [255, 0, 0, 255];
     const GREEN_RGBA: [u8; 4] = [0, 255, 0, 255];
     const BLUE_RGBA: [u8; 4] = [0, 0, 255, 255];
-
-    const BLACK_TRANSPARENTF: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 };
-
-    const REDF: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
-    const GREENF: Color = Color { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };
-    const BLUEF: Color = Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
-    const BLACKF: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };
-    const WHITEF: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
 
     impl LayerProps for HashMap<u32, Style> {
         fn get(&self, layer_id: u32) -> Cow<'_, Props> {
@@ -802,6 +791,7 @@ mod tests {
         cover_carries: impl IntoIterator<Item = CoverCarry>,
         segments: &[PixelSegment],
         props: &impl LayerProps,
+        clear_color: Color,
     ) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
         let mut painter = Painter::new();
         let mut workbench = LayerWorkbench::new();
@@ -812,7 +802,7 @@ mod tests {
             segments,
             props,
             previous_layers: Cell::new(None),
-            clear_color: BLACKF,
+            clear_color,
         };
 
         workbench.init(cover_carries);
@@ -832,10 +822,13 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(0, Style { fill: Fill::Solid(GREENF), ..Default::default() });
-        styles.insert(1, Style { fill: Fill::Solid(REDF), ..Default::default() });
+        styles.insert(0, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        assert_eq!(paint_tile([cover_carry], &segments, &styles)[0..2], [GREEN, RED]);
+        assert_eq!(
+            paint_tile([cover_carry], &segments, &styles, BLACK)[0..2],
+            [GREEN, RED].map(Color::to_array),
+        );
     }
 
     #[test]
@@ -850,25 +843,37 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(0, Style { fill: Fill::Solid(GREENF), ..Default::default() });
-        styles.insert(1, Style { fill: Fill::Solid(REDF), ..Default::default() });
+        styles.insert(0, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        let colors = paint_tile([], &segments, &styles);
+        let colors = paint_tile([], &segments, &styles, BLACK);
 
         let row_start = TILE_SIZE / 2 - 2;
         let row_end = TILE_SIZE / 2 + 2;
 
         let mut column = (TILE_SIZE / 2 - 2) * TILE_SIZE;
-        assert_eq!(colors[column + row_start..column + row_end], [GREEN_50, BLACK, BLACK, RED_50]);
+        assert_eq!(
+            colors[column + row_start..column + row_end],
+            [GREEN_50, BLACK, BLACK, RED_50].map(Color::to_array),
+        );
 
         column += TILE_SIZE;
-        assert_eq!(colors[column + row_start..column + row_end], [GREEN, GREEN_50, RED_50, RED]);
+        assert_eq!(
+            colors[column + row_start..column + row_end],
+            [GREEN, GREEN_50, RED_50, RED].map(Color::to_array),
+        );
 
         column += TILE_SIZE;
-        assert_eq!(colors[column + row_start..column + row_end], [GREEN, RED_GREEN_50, RED, RED]);
+        assert_eq!(
+            colors[column + row_start..column + row_end],
+            [GREEN, RED_50_GREEN_50, RED, RED].map(Color::to_array),
+        );
 
         column += TILE_SIZE;
-        assert_eq!(colors[column + row_start..column + row_end], [RED_GREEN_50, RED, RED, RED]);
+        assert_eq!(
+            colors[column + row_start..column + row_end],
+            [RED_50_GREEN_50, RED, RED, RED].map(Color::to_array),
+        );
     }
 
     #[test]
@@ -883,10 +888,97 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(0, Style { fill: Fill::Solid(REDF), ..Default::default() });
-        styles.insert(1, Style { fill: Fill::Solid(BLACK_TRANSPARENTF), ..Default::default() });
+        styles.insert(0, Style { fill: Fill::Solid(RED), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(BLACK_ALPHA_50), ..Default::default() });
 
-        assert_eq!(paint_tile([], &segments, &styles)[0], RED_50);
+        assert_eq!(paint_tile([], &segments, &styles, BLACK)[0], RED_50.to_array());
+    }
+
+    #[test]
+    fn linear_blend_over() {
+        let segments = line_segments(
+            &[
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            ],
+            false,
+        );
+
+        let mut styles = HashMap::new();
+
+        styles.insert(0, Style { fill: Fill::Solid(RED), ..Default::default() });
+        styles.insert(
+            1,
+            Style { fill: Fill::Solid(Color { a: 0.5, ..GREEN }), ..Default::default() },
+        );
+
+        assert_eq!(paint_tile([], &segments, &styles, BLACK)[0], RED_50_GREEN_50.to_array());
+    }
+
+    #[test]
+    fn linear_blend_difference() {
+        let segments = line_segments(
+            &[
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            ],
+            false,
+        );
+
+        let mut styles = HashMap::new();
+
+        styles.insert(0, Style { fill: Fill::Solid(RED), ..Default::default() });
+        styles.insert(
+            1,
+            Style {
+                fill: Fill::Solid(Color { a: 0.5, ..GREEN }),
+                blend_mode: BlendMode::Difference,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(paint_tile([], &segments, &styles, BLACK)[0], RED_GREEN_50.to_array());
+    }
+
+    #[test]
+    fn linear_blend_hue_white_opaque_brackground() {
+        let segments =
+            line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))], false);
+
+        let mut styles = HashMap::new();
+
+        styles.insert(
+            0,
+            Style {
+                fill: Fill::Solid(Color { a: 0.5, ..GREEN }),
+                blend_mode: BlendMode::Hue,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(paint_tile([], &segments, &styles, WHITE)[0], WHITE.to_array());
+    }
+
+    #[test]
+    fn linear_blend_hue_white_transparent_brackground() {
+        let segments =
+            line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))], false);
+
+        let mut styles = HashMap::new();
+
+        styles.insert(
+            0,
+            Style {
+                fill: Fill::Solid(Color { a: 0.5, ..GREEN }),
+                blend_mode: BlendMode::Hue,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(
+            paint_tile([], &segments, &styles, Color { a: 0.0, ..WHITE })[0],
+            [0.5, 1.0, 0.5, 0.5],
+        );
     }
 
     #[test]
@@ -946,7 +1038,7 @@ mod tests {
             Props {
                 fill_rule: FillRule::NonZero,
                 func: Func::Draw(Style {
-                    fill: Fill::Solid(GREENF),
+                    fill: Fill::Solid(GREEN),
                     is_clipped: true,
                     ..Default::default()
                 }),
@@ -957,7 +1049,7 @@ mod tests {
             Props {
                 fill_rule: FillRule::NonZero,
                 func: Func::Draw(Style {
-                    fill: Fill::Solid(REDF),
+                    fill: Fill::Solid(RED),
                     is_clipped: true,
                     ..Default::default()
                 }),
@@ -967,7 +1059,7 @@ mod tests {
             3,
             Props {
                 fill_rule: FillRule::NonZero,
-                func: Func::Draw(Style { fill: Fill::Solid(GREENF), ..Default::default() }),
+                func: Func::Draw(Style { fill: Fill::Solid(GREEN), ..Default::default() }),
             },
         );
 
@@ -980,19 +1072,19 @@ mod tests {
             segments: &segments,
             props: &props,
             previous_layers: Cell::new(None),
-            clear_color: BLACKF,
+            clear_color: BLACK,
         };
 
         workbench.drive_tile_painting(&mut painter, &context);
 
         let colors = painter.colors();
-        let mut col = [BLACK; TILE_SIZE];
+        let mut col = [BLACK.to_array(); TILE_SIZE];
 
         for i in 0..TILE_SIZE {
             col[i] = [0.5, 0.25, 0.0, 1.0];
 
             if i >= 1 {
-                col[i - 1] = RED;
+                col[i - 1] = RED.to_array();
             }
 
             assert_eq!(colors[i * TILE_SIZE..(i + 1) * TILE_SIZE], col);
@@ -1008,7 +1100,7 @@ mod tests {
 
         workbench.drive_tile_painting(&mut painter, &context);
 
-        assert_eq!(painter.colors(), [RED; TILE_SIZE * TILE_SIZE]);
+        assert_eq!(painter.colors(), [RED.to_array(); TILE_SIZE * TILE_SIZE]);
     }
 
     #[test]
@@ -1038,7 +1130,7 @@ mod tests {
             // Should convert linearly.
             0.5,
         ];
-        assert_eq!(to_srgb_bytes(premultiplied), [3, 124, 187, 128]);
+        assert_eq!(to_srgb_bytes(premultiplied), [2, 89, 137, 255]);
     }
 
     #[test]
@@ -1073,7 +1165,7 @@ mod tests {
             Some(&WhiteFlusher),
             None,
             segments,
-            WHITEF,
+            BLACK_ALPHA_0,
             &None,
             &|_| Style::default(),
         );
@@ -1104,7 +1196,7 @@ mod tests {
             Some(&WhiteFlusher),
             None,
             &[],
-            WHITEF,
+            BLACK_ALPHA_0,
             &None,
             &|_| Style::default(),
         );
@@ -1150,9 +1242,9 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(0, Style { fill: Fill::Solid(BLUEF), ..Default::default() });
-        styles.insert(1, Style { fill: Fill::Solid(GREENF), ..Default::default() });
-        styles.insert(2, Style { fill: Fill::Solid(REDF), ..Default::default() });
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(2, Style { fill: Fill::Solid(RED), ..Default::default() });
 
         for_each_row(
             &mut buffer_layout,
@@ -1161,7 +1253,7 @@ mod tests {
             None,
             None,
             &segments,
-            BLACKF,
+            BLACK,
             &None,
             &|layer| styles[&layer].clone(),
         );
@@ -1212,7 +1304,7 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(0, Style { fill: Fill::Solid(BLUEF), ..Default::default() });
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
 
         for_each_row(
             &mut buffer_layout,
@@ -1221,7 +1313,7 @@ mod tests {
             None,
             None,
             &segments,
-            REDF,
+            RED,
             &Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
             &|layer| styles[&layer].clone(),
         );

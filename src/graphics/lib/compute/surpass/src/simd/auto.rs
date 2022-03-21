@@ -361,11 +361,6 @@ impl f32x4 {
         u32x4([self.0[0].to_bits(), self.0[1].to_bits(), self.0[2].to_bits(), self.0[3].to_bits()])
     }
 
-    pub fn insert<const INDEX: i32>(mut self, val: f32) -> Self {
-        self.0[INDEX as usize] = val;
-        self
-    }
-
     pub fn le(self, other: Self) -> m32x4 {
         m32x4([
             if self.0[0] <= other.0[0] { u32::MAX } else { 0 },
