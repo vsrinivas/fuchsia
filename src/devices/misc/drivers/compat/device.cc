@@ -185,6 +185,16 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 
   children_.push_back(std::move(device));
 
+  // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
+  // init task after adding the device.
+  if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
+    executor_.schedule_task(fpromise::make_promise([device_ptr]() {
+                              device_ptr->ops_->init(device_ptr->compat_symbol_.context);
+                            }).wrap_with(device_ptr->scope_));
+  } else {
+    device_ptr->InitReply(ZX_OK);
+  }
+
   if (out) {
     *out = device_ptr->ZxDevice();
   }
@@ -285,13 +295,6 @@ zx_status_t Device::CreateNode() {
                               std::move(node_server), std::move(callback));
 
   auto task = bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
-                  .and_then([this]() {
-                    // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
-                    // init task after adding the device.
-                    if (HasOp(ops_, &zx_protocol_device_t::init)) {
-                      ops_->init(compat_symbol_.context);
-                    }
-                  })
                   .or_else([this](std::variant<zx_status_t, fdf::NodeError>& status) {
                     if (std::holds_alternative<zx_status_t>(status)) {
                       FDF_LOG(ERROR, "Failed to add device: status: '%s': %u", Name(),
@@ -403,6 +406,32 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ops_->message(compat_symbol_.context, msg, txn);
+}
+
+void Device::InitReply(zx_status_t status) {
+  init_is_finished_ = true;
+  init_status_ = status;
+  for (auto& waiter : init_waiters_) {
+    if (status == ZX_OK) {
+      waiter.complete_ok();
+    } else {
+      waiter.complete_error(init_status_);
+    }
+  }
+  init_waiters_.clear();
+}
+
+fpromise::promise<void, zx_status_t> Device::WaitForInitToComplete() {
+  if (init_is_finished_) {
+    if (init_status_ == ZX_OK) {
+      return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+    }
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::error(init_status_));
+  }
+  fpromise::bridge<void, zx_status_t> bridge;
+  init_waiters_.push_back(std::move(bridge.completer));
+
+  return bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE));
 }
 
 constexpr char kCompatKey[] = "fuchsia.compat.LIBNAME";

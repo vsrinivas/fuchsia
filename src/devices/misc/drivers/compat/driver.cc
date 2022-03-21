@@ -515,12 +515,15 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
     return status;
   }
 
-  auto devfs_name = std::string(child->topological_path());
-  // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print this.
-  FDF_LOG(INFO, "Created /dev/%s", devfs_name.data());
-
-  // Export the device's devfs entry.
-  auto task = interop_.ExportChild(&child->compat_child())
+  // Wait for the device to initialize, then export to dev, then
+  // create the device's Node.
+  auto task = child->WaitForInitToComplete()
+                  .and_then([this, child]() {
+                    // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
+                    // this.
+                    FDF_LOG(INFO, "Created /dev/%s", child->topological_path().data());
+                    interop_.ExportChild(&child->compat_child());
+                  })
                   .and_then([this, child]() {
                     // We have to create the node for the device after we've exported the
                     // /dev/ entry. Otherwise, we will race any child that's bound to us

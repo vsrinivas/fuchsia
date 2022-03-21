@@ -18,7 +18,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 }
 
 __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
-                                const device_init_reply_args_t* args) {}
+                                const device_init_reply_args_t* args) {
+  dev->InitReply(status);
+}
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
 

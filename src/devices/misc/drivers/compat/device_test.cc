@@ -76,6 +76,8 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
     add_child_hook_.emplace(std::move(func));
   }
 
+  bool HasChildren() { return !nodes_.empty(); }
+
  private:
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override {
     if (add_child_hook_) {
@@ -381,6 +383,18 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
   EXPECT_FALSE(child_ctx);
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(child_ctx);
+
+  // Check that init promise hasn't finished yet.
+  bool init_is_finished = false;
+  child->executor().schedule_task(child->WaitForInitToComplete().and_then(
+      [&init_is_finished]() mutable { init_is_finished = true; }));
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_FALSE(init_is_finished);
+
+  // Reply to init and check that the promise finishes.
+  device_init_reply(child, ZX_OK, nullptr);
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(init_is_finished);
 }
 
 TEST_F(DeviceTest, AddAndRemoveChildDevice) {

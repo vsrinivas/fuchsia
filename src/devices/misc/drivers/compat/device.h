@@ -60,8 +60,11 @@ class Device : public std::enable_shared_from_this<Device> {
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  void InitReply(zx_status_t status);
 
   fpromise::promise<void, zx_status_t> RebindToLibname(std::string_view libname);
+
+  fpromise::promise<void, zx_status_t> WaitForInitToComplete();
 
   zx_status_t CreateNode();
 
@@ -98,6 +101,10 @@ class Device : public std::enable_shared_from_this<Device> {
   // This device's driver. The driver owns all of its Device objects, so it
   // is garaunteed to outlive the Device.
   Driver* driver_ = nullptr;
+
+  bool init_is_finished_ = false;
+  zx_status_t init_status_ = ZX_OK;
+  std::vector<fpromise::completer<void, zx_status_t>> init_waiters_;
 
   bool pending_rebind_ = false;
 
