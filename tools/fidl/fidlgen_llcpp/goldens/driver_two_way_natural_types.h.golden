@@ -163,14 +163,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_drivertwoway::TwoWayAddTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_drivertwoway::TwoWayAddTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
-
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
 template <>
@@ -191,13 +183,5 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_drivertwoway::TwoWayAddRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_drivertwoway::TwoWayAddRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
 }  // namespace fidl

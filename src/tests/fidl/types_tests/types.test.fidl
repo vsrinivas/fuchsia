@@ -17,6 +17,18 @@ type VectorStruct = struct {
     v vector<uint32>;
 };
 
+type StructWithPadding = struct {
+    a uint8;
+    b uint32;
+};
+
+type StructWithoutPadding = struct {
+    a uint8;
+    b uint8;
+    c uint16;
+    d uint32;
+};
+
 /// Verifies that user code can manipulate these union payloads.
 type TestUnion = strict resource union {
     1: primitive int32;

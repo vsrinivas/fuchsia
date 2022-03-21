@@ -258,15 +258,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocolrequest::ParentTakeChildRequestRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocolrequest::ParentTakeChildRequestRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -295,15 +286,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocolrequest::ParentTakeChildRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocolrequest::ParentTakeChildRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -335,15 +317,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocolrequest::ParentGetChildTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocolrequest::ParentGetChildTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -374,16 +347,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocolrequest::ParentGetChildRequestTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocolrequest::ParentGetChildRequestTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
 
 #endif  // __Fuchsia__
 

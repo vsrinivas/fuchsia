@@ -34,6 +34,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_bitsconstants::BitsType* value, size_t offset,

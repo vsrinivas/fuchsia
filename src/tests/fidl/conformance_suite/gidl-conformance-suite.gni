@@ -14,7 +14,11 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/golden.gidl",
   "//src/tests/fidl/conformance_suite/handles.gidl",
   "//src/tests/fidl/conformance_suite/integer.gidl",
+  "//src/tests/fidl/conformance_suite/memcpy_compatibility.gidl",
   "//src/tests/fidl/conformance_suite/padding.gidl",
+  "//src/tests/fidl/conformance_suite/ported_from_walker_handles.gidl",
+  "//src/tests/fidl/conformance_suite/ported_from_walker_strings.gidl",
+  "//src/tests/fidl/conformance_suite/ported_from_walker_vectors.gidl",
   "//src/tests/fidl/conformance_suite/recursive_depth.gidl",
   "//src/tests/fidl/conformance_suite/recursive_types.gidl",
   "//src/tests/fidl/conformance_suite/strings.gidl",
@@ -24,12 +28,6 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/transformer2.gidl",
   "//src/tests/fidl/conformance_suite/union.gidl",
   "//src/tests/fidl/conformance_suite/vectors.gidl",
-]
-
-conformance_suite_gidl_files += [
-  "//src/tests/fidl/conformance_suite/ported_from_walker_handles.gidl",
-  "//src/tests/fidl/conformance_suite/ported_from_walker_strings.gidl",
-  "//src/tests/fidl/conformance_suite/ported_from_walker_vectors.gidl",
 ]
 
 conformance_suite_fidl_target =

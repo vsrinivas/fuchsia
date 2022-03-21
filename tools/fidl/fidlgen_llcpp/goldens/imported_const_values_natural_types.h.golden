@@ -102,11 +102,4 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_importedconstvalues::MyStruct, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_importedconstvalues::MyStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_importedconstvalues::MyStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 }  // namespace fidl

@@ -118,17 +118,4 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_vectors::ExampleUseOfVectors, 32, 32> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_vectors::ExampleUseOfVectors>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_vectors::ExampleUseOfVectors>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_vectors::ExampleUseOfVectors>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::vector<::std::vector<bool>>>::value> {};
-
 }  // namespace fidl

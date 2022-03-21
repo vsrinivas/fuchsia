@@ -149,15 +149,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driverhandle::ServerEndWrapper, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_driverhandle::ServerEndWrapper>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_driverhandle::ServerEndWrapper>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -185,15 +176,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driverhandle::ClientEndWrapper, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_driverhandle::ClientEndWrapper>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_driverhandle::ClientEndWrapper>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::value> {};
 
 #endif  // __Fuchsia__
 

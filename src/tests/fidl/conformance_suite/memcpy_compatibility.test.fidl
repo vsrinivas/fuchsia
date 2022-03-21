@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.conformance;
+
+// This file contains tests that cover situations that can be misimplemented
+// when implementing memcpy optimizations on structs.
+
+type OneLayerStructNoPaddingAlign4 = struct {
+    a uint16;
+    b uint8;
+    c uint8;
+    d uint32;
+};
+
+type OneLayerStructWithPaddingAlign4 = struct {
+    a uint16;
+    b uint8;
+    c uint32;
+};
+
+type TwoLayerStructNoPaddingAlign4 = struct {
+    s OneLayerStructNoPaddingAlign4;
+    a uint32;
+};
+
+type TwoLayerStructInnerPaddingAlign4 = struct {
+    s OneLayerStructWithPaddingAlign4;
+    a uint32;
+};
+
+type OneLayerStructNoPaddingAlign8 = struct {
+    a uint32;
+    b uint16;
+    c uint16;
+    d uint64;
+};
+
+type OneLayerStructWithPaddingAlign8 = struct {
+    a uint32;
+    b uint16;
+    c uint64;
+};
+
+type TwoLayerStructNoPaddingAlign8 = struct {
+    s OneLayerStructNoPaddingAlign8;
+    a uint64;
+};
+
+type TwoLayerStructInnerPaddingAlign8 = struct {
+    s OneLayerStructWithPaddingAlign8;
+    a uint64;
+};
+
+type OneLayerStructWithBool = struct {
+    a bool;
+    b uint8;
+    c uint16;
+    d uint32;
+};
+
+type TwoLayerStructInnerBool = struct {
+    s OneLayerStructWithBool;
+    a uint64;
+};

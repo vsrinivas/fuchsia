@@ -396,15 +396,6 @@ struct internal::NaturalCodingTraits<
           ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
           8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_errorsyntax::
-                  ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
@@ -431,22 +422,6 @@ struct internal::NaturalCodingTraits<
                     ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
                 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_errorsyntax::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_errorsyntax::
-                  ExampleUseOfErrorSyntax_CallWhichMayFail_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
@@ -472,20 +447,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
           16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_errorsyntax::
-                  ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;

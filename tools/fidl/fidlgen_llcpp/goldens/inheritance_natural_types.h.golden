@@ -152,14 +152,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritance::SuperFooTopResponse, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_inheritance::SuperFooTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_inheritance::SuperFooTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 template <>
@@ -179,16 +171,5 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritance::SuperFooRequest, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_inheritance::SuperFooRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_inheritance::SuperFooRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_inheritance::SuperFooRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 }  // namespace fidl

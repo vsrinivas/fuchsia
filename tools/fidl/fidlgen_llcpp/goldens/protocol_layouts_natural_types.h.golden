@@ -1937,22 +1937,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::
-                  MainProtocolTwoWayImportWithErrorTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::
-                  MainProtocol_TwoWayImportWithError_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
@@ -1979,22 +1963,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::
-                  MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result>::
-              value> {};
-
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
 
@@ -2018,22 +1986,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::MainProtocol_OnImportWithError_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
@@ -2059,22 +2011,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24, 16> {
 };
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::MainProtocol_OnAnonWithError_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
@@ -2102,22 +2038,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::
-                  MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::
-                  MainProtocol_TwoWayLocalWithError_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
 
@@ -2142,22 +2062,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24, 16> {
 };
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocollayouts::MainProtocol_OnLocalWithError_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnAnonWithError_ResponseTable;

@@ -3280,15 +3280,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntax_HandleInResult_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntax_HandleInResult_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::zx::handle>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3319,22 +3310,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
-};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::WithErrorSyntax_HandleInResult_Result>::value> {
 };
 
 #endif  // __Fuchsia__
@@ -3370,15 +3345,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
                 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3409,15 +3375,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::HandleRightsProtocolResponseMethodRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -3451,15 +3408,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3490,14 +3438,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::HandleRightsProtocolAnEventRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::HandleRightsProtocolAnEventRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3527,14 +3467,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolTakeHandleRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolTakeHandleRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::handle>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -3567,15 +3499,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolMutateSocketTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3605,14 +3528,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolMutateSocketRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolMutateSocketRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::socket>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -3645,15 +3560,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::WithProtocolEndsServerEndsTopResponse, 4, 4> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsServerEndsTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithProtocolEndsServerEndsTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ServerEnd<
-              ::test_protocols::DiscoverableProtocol>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3683,15 +3589,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsServerEndsRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsServerEndsRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithProtocolEndsServerEndsRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ServerEnd<
-              ::test_protocols::DiscoverableProtocol>>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -3724,15 +3621,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::WithProtocolEndsClientEndsTopResponse, 4, 4> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsClientEndsTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithProtocolEndsClientEndsTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ClientEnd<
-              ::test_protocols::DiscoverableProtocol>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3763,15 +3651,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsClientEndsRequest, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsClientEndsRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithProtocolEndsClientEndsRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ClientEnd<
-              ::test_protocols::DiscoverableProtocol>>::value> {};
-
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
@@ -3799,15 +3678,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24, 24> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
@@ -3831,22 +3701,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
@@ -3872,15 +3726,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
@@ -3905,22 +3750,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse,
                 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>::
-              value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
@@ -3944,14 +3773,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
 };
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
@@ -3983,23 +3804,6 @@ struct internal::NaturalCodingTraits<
               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
           16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
@@ -4029,23 +3833,6 @@ struct internal::NaturalCodingTraits<
                     WithAndWithoutRequestResponseWithRequestWithResponseRequest,
                 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseWithRequestWithResponseRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
@@ -4071,21 +3858,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::
                     WithAndWithoutRequestResponseWithRequestNoResponseRequest,
                 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseWithRequestNoResponseRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
@@ -4117,23 +3889,6 @@ struct internal::NaturalCodingTraits<
               WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
           16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
@@ -4159,20 +3914,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
           16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseOnWithResponseRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
@@ -4204,23 +3945,6 @@ struct internal::NaturalCodingTraits<
               WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
           16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
 
 template <>
@@ -4242,14 +3966,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalRequestTopResponse, 8, 8> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::TransitionalRequestTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::TransitionalRequestTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
@@ -4273,14 +3989,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalRequestRequest, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::TransitionalRequestRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::TransitionalRequestRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
 template <>
@@ -4302,14 +4010,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalOneWayRequest, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::TransitionalOneWayRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::TransitionalOneWayRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 template <>
@@ -4330,14 +4030,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalEventRequest, 8, 8> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::TransitionalEventRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::TransitionalEventRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestTable;
@@ -4362,20 +4054,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::MethodWithUnionUnionMethodRequest, 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::MethodWithUnionUnionMethodRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::MethodWithUnionUnionMethodRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::MethodWithUnionUnionMethodRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::TheUnion>::value> {};
-
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 
 template <>
@@ -4397,14 +4075,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::SyscallProtocolMethodCRequest, 16, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::SyscallProtocolMethodCRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::SyscallProtocolMethodCRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 #ifdef __Fuchsia__
 
@@ -4428,15 +4098,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ProtocolEnds, 16, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_protocols::ProtocolEnds>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_protocols::ProtocolEnds>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ClientEnd<
-              ::test_protocols::DiscoverableProtocol>>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ServerEnd<
-              ::test_protocols::DiscoverableProtocol>>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -4472,16 +4133,6 @@ struct internal::NaturalCodingTraits<
           ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16,
           16> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::
-                  WithProtocolEndsStructContainingEndsTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::ProtocolEnds>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4513,16 +4164,6 @@ struct internal::NaturalCodingTraits<
                 ::test_protocols::WithProtocolEndsStructContainingEndsRequest,
                 16, 16> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithProtocolEndsStructContainingEndsRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::ProtocolEnds>::value> {};
-
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
@@ -4546,14 +4187,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ManyParametersFifteenRequest, 15, 15> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ManyParametersFifteenRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ManyParametersFifteenRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
@@ -4579,20 +4212,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
 
@@ -4616,14 +4235,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolMethodBTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolMethodBTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
 template <>
@@ -4645,14 +4256,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodBRequest, 16, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolMethodBRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolMethodBRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
@@ -4676,14 +4279,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodARequest, 16, 16> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolMethodARequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolMethodARequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
 
 template <>
@@ -4705,14 +4300,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolEventARequest, 16, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_protocols::ChannelProtocolEventARequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_protocols::ChannelProtocolEventARequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 #ifdef __Fuchsia__
 
@@ -4850,6 +4437,7 @@ struct internal::NaturalCodingTraits<
     ::test_protocols::rights, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_protocols::rights* value, size_t offset,
@@ -4875,6 +4463,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_protocols::obj_type* value, size_t offset,
@@ -4909,6 +4498,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_protocols::ErrorEnum* value, size_t offset,

@@ -1,0 +1,151 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("TwoLayerStructNoPaddingAlign4") {
+    value = TwoLayerStructNoPaddingAlign4{
+        s: OneLayerStructNoPaddingAlign4{
+            a: 1,
+            b: 2,
+            c: 3,
+            d: 4,
+        },
+        a: 5,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):2,
+            num(2):1,
+            num(3):1,
+            num(4):4,
+            num(5):4,
+            padding:4,
+        ],
+    },
+}
+
+success("TwoLayerStructInnerPaddingAlign4") {
+    value = TwoLayerStructInnerPaddingAlign4{
+        s: OneLayerStructWithPaddingAlign4{
+            a: 1,
+            b: 2,
+            c: 3,
+        },
+        a: 4,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):2,
+            num(2):1,
+            padding:1,
+            num(3):4,
+            num(4):4,
+            padding:4,
+        ],
+    },
+}
+
+decode_failure("TwoLayerStructInnerPaddingAlign4BadPadding") {
+    type = TwoLayerStructInnerPaddingAlign4,
+    bytes = {
+        v1, v2 = [
+            num(1):2,
+            num(2):1,
+            num(100):1,
+            num(3):4,
+            num(4):4,
+            padding:4,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+success("TwoLayerStructNoPaddingAlign8") {
+    value = TwoLayerStructNoPaddingAlign8{
+        s: OneLayerStructNoPaddingAlign8{
+            a: 1,
+            b: 2,
+            c: 3,
+            d: 4,
+        },
+        a: 5,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):4,
+            num(2):2,
+            num(3):2,
+            num(4):8,
+            num(5):8,
+        ],
+    },
+}
+
+success("TwoLayerStructInnerPaddingAlign8") {
+    value = TwoLayerStructInnerPaddingAlign8{
+        s: OneLayerStructWithPaddingAlign8{
+            a: 1,
+            b: 2,
+            c: 3,
+        },
+        a: 4,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):4,
+            num(2):2,
+            padding:2,
+            num(3):8,
+            num(4):8,
+        ],
+    },
+}
+
+decode_failure("TwoLayerStructInnerPaddingAlign8BadPadding") {
+    type = TwoLayerStructInnerPaddingAlign8,
+    bytes = {
+        v1, v2 = [
+            num(1):4,
+            num(2):2,
+            num(100):2,
+            num(3):8,
+            num(4):8,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+success("TwoLayerStructInnerBool") {
+    value = TwoLayerStructInnerBool{
+        s: OneLayerStructWithBool{
+            a: true,
+            b: 2,
+            c: 3,
+            d: 4,
+        },
+        a: 5,
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):1,
+            num(2):1,
+            num(3):2,
+            num(4):4,
+            num(5):8,
+        ],
+    },
+}
+
+decode_failure("TwoLayerStructInnerBoolBadValue") {
+    type = TwoLayerStructInnerBool,
+    bytes = {
+        v1, v2 = [
+            num(100):1,
+            num(2):1,
+            num(3):2,
+            num(4):4,
+            num(5):8,
+        ],
+    },
+    err = INVALID_BOOLEAN,
+}

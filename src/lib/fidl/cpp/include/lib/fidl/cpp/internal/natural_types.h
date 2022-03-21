@@ -281,8 +281,9 @@ struct MemberVisitor {
 
 // This holds metadata about a struct member: a member pointer to the member's value in
 // the struct's Storage_ type, offsets, and optionally handle information.
-template <typename T, typename Field, typename Constraint_>
+template <typename T, typename Field_, typename Constraint_>
 struct NaturalStructMember final {
+  using Field = Field_;
   using Constraint = Constraint_;
   Field T::*member_ptr;
   size_t offset_v1;
@@ -292,43 +293,19 @@ struct NaturalStructMember final {
       : member_ptr(member_ptr), offset_v1(offset_v1), offset_v2(offset_v2) {}
 };
 
-// Performs generic operations on tuples by visiting each node.
 struct TupleVisitor {
  public:
   // Returns true iff the |func| is satified on all items of |tuple|.
   //
   // e.g. TupleVisitor::All(std::make_tuple(1, 2, 3), [](int v) { return v > 0; })
   // returns true because 1, 2, 3 are all > 0.
-  template <typename Tuple, typename Fn>
-  static bool All(Tuple tuple, Fn func) {
-    return Reduce(tuple, true, [&func](auto input, bool last) { return last && func(input); });
-  }
-
-  // Perform a reduce operation over the values of the tuple, by applying the function
-  // iteratively to each aggregate result, starting with |initial|.
-  //
-  // e.g. TupleVisitor::Reduce(std::make_tuple(1, 2, 3), 0, [](int v, int agg) { return v + agg })
-  // implements a sum operation.
-  //
-  // |tuple|   is the tuple to process.
-  // |initial| is the initial value of the aggregate type.
-  // |func|    is a function with two arguments - the first is the tuple value being
-  //           processed and the second is the previous value of the aggregate type.
-  template <typename Tuple, typename Agg, typename Fn>
-  static Agg Reduce(Tuple tuple, Agg initial, Fn func) {
-    if constexpr (std::tuple_size_v<Tuple> == 0) {
-      return initial;
+  template <typename Tuple, typename Fn, size_t I = 0>
+  static constexpr auto All(Tuple tuple, Fn func) {
+    if constexpr (I == std::tuple_size_v<Tuple>) {
+      return true;
     } else {
-      return ReduceOp(tuple, initial, func,
-                      std::make_index_sequence<std::tuple_size_v<Tuple> - 1>());
+      return func(std::get<I>(tuple)) && All<Tuple, Fn, I + 1>(tuple, func);
     }
-  }
-
- private:
-  template <typename Tuple, typename Agg, typename Fn, std::size_t... Is>
-  static Agg ReduceOp(Tuple tuple, Agg last, Fn func, std::index_sequence<Is...> indexes) {
-    return Reduce(std::make_tuple(std::get<1 + Is>(tuple)...), func(std::get<0>(tuple), last),
-                  func);
   }
 };
 
@@ -347,41 +324,60 @@ template <typename T, size_t V1, size_t V2>
 struct NaturalStructCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = V1;
   static constexpr size_t inline_size_v2 = V2;
+  // True iff all fields are memcpy compatible.
+  static constexpr bool are_members_memcpy_compatible =
+      TupleVisitor::All(T::kMembers, [](auto member_info) {
+        using Field = typename std::remove_reference_t<decltype(member_info)>::Field;
+        using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
+        return NaturalIsMemcpyCompatible<Field, Constraint>();
+      });
+  // True iff fields are memcpy compatible and there is no padding.
+  static constexpr bool is_memcpy_compatible = are_members_memcpy_compatible &&
+                                               std::tuple_size_v<decltype(T::kPaddingV1)> == 0 &&
+                                               std::tuple_size_v<decltype(T::kPaddingV2)> == 0;
 
   static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
-    const auto wire_format = encoder->wire_format();
-    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) -> void {
-      size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
-                                ? member_info.offset_v1
-                                : member_info.offset_v2;
-      using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-      fidl::internal::NaturalEncode<Constraint>(encoder, member, offset + field_offset,
-                                                recursion_depth);
-    });
+    if constexpr (is_memcpy_compatible) {
+      memcpy(encoder->GetPtr<T>(offset), value, sizeof(T));
+    } else {
+      const auto wire_format = encoder->wire_format();
+      MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) -> void {
+        size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
+                                  ? member_info.offset_v1
+                                  : member_info.offset_v2;
+        using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
+        fidl::internal::NaturalEncode<Constraint>(encoder, member, offset + field_offset,
+                                                  recursion_depth);
+      });
+    }
   }
 
   static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
-    const auto wire_format = decoder->wire_format();
-    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
-      size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
-                                ? member_info.offset_v1
-                                : member_info.offset_v2;
-      using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-      fidl::internal::NaturalDecode<Constraint>(decoder, member, offset + field_offset,
-                                                recursion_depth);
-    });
-
-    bool padding_valid;
-    auto valid_padding_predicate = [decoder, offset](auto padding) {
-      return padding.ValidatePadding(decoder, offset);
-    };
-    if (wire_format == ::fidl::internal::WireFormatVersion::kV1) {
-      padding_valid = TupleVisitor::All(T::kPaddingV1, valid_padding_predicate);
+    if constexpr (is_memcpy_compatible) {
+      memcpy(value, decoder->GetPtr<T>(offset), sizeof(T));
     } else {
-      padding_valid = TupleVisitor::All(T::kPaddingV2, valid_padding_predicate);
-    }
-    if (!padding_valid) {
-      decoder->SetError(kCodingErrorInvalidPaddingBytes);
+      const auto wire_format = decoder->wire_format();
+      MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
+        size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
+                                  ? member_info.offset_v1
+                                  : member_info.offset_v2;
+        using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
+        fidl::internal::NaturalDecode<Constraint>(decoder, member, offset + field_offset,
+                                                  recursion_depth);
+      });
+
+      bool padding_valid;
+      auto valid_padding_predicate = [decoder, offset](auto padding) {
+        return padding.ValidatePadding(decoder, offset);
+      };
+      if (wire_format == ::fidl::internal::WireFormatVersion::kV1) {
+        padding_valid = TupleVisitor::All(T::kPaddingV1, valid_padding_predicate);
+      } else {
+        padding_valid = TupleVisitor::All(T::kPaddingV2, valid_padding_predicate);
+      }
+      if (!padding_valid) {
+        decoder->SetError(kCodingErrorInvalidPaddingBytes);
+      }
     }
   }
 
@@ -414,6 +410,7 @@ template <typename T>
 struct NaturalTableCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+  static constexpr bool is_memcpy_compatible = false;
 
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset, size_t recursion_depth) {
@@ -516,6 +513,7 @@ template <typename T>
 struct NaturalUnionCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
     const size_t index = value->storage_->index();

@@ -562,23 +562,6 @@ struct internal::NaturalCodingTraits<
                     ProtocolRequestStrictResponseFlexibleRequest,
                 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleRequest> : public std::true_type {
-};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestStrictResponseFlexibleRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::StrictFoo>::value> {};
-
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
@@ -606,23 +589,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestFlexibleResponseStrictTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::StrictFoo>::value> {};
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
@@ -652,23 +618,6 @@ struct internal::NaturalCodingTraits<
                     ProtocolRequestStrictResponseFlexibleTopResponse,
                 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestStrictResponseFlexibleTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
-
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
@@ -696,23 +645,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictRequest,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictRequest> : public std::true_type {
-};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestFlexibleResponseStrictRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 

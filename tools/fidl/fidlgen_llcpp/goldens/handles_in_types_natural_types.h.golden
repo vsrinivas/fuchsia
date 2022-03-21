@@ -310,28 +310,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_handlesintypes::HandlesInTypes, 104, 96> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_handlesintypes::HandlesInTypes>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_handlesintypes::HandlesInTypes>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_handlesintypes::HandlesInTypes>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::vmo>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::vector<::zx::vmo>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<::zx::vmo, 5>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::vector<::std::array<::zx::vmo, 5>>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_handlesintypes::TableWithHandle>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_handlesintypes::UnionWithHandle>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -399,6 +377,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_handlesintypes::obj_type* value, size_t offset,

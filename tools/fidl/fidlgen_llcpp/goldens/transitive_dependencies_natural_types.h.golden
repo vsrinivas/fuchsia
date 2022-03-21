@@ -94,11 +94,4 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_transitivedependencies::Baz, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_transitivedependencies::Baz>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_transitivedependencies::Baz>::value &&
-          internal::NaturalIsMemcpyCompatible<::test_middle::Bar>::value> {};
-
 }  // namespace fidl

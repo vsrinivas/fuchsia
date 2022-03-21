@@ -484,21 +484,6 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {
 };
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::NonInlineStructTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::unique_ptr<
-              ::test_encapsulatedstructs::Int16Int8>>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::handle>::value> {};
-
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
@@ -522,19 +507,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_encapsulatedstructs::Int8Int32>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::Int8Int32>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::Int8Int32>::value &&
-          internal::NaturalIsMemcpyCompatible<int8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
 template <>
@@ -556,19 +528,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_encapsulatedstructs::Int16Int8>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::Int16Int8>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::Int16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<int16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<int8_t>::value> {};
-
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
 template <>
@@ -589,20 +548,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_encapsulatedstructs::ArrayInt16Int8>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::ArrayInt16Int8>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::ArrayInt16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::value> {
-};
 
 extern "C" const fidl_type_t
     test_encapsulatedstructs_StructPaddingTestStructTable;
@@ -626,24 +571,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_encapsulatedstructs::StructPaddingTestStruct>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::StructPaddingTestStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::Int16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::Int8Int32>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::ArrayInt16Int8>::value> {};
 
 #ifdef __Fuchsia__
 
@@ -670,21 +597,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_encapsulatedstructs::TopLevelStruct>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::TopLevelStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_encapsulatedstructs::TopLevelStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::NonInlineStructTestStruct>::value> {};
 
 #endif  // __Fuchsia__
 

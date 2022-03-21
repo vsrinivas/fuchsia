@@ -735,19 +735,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableVector, 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_nullable::StructWithNullableVector>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableVector>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableVector>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::cpp17::optional<::std::vector<int32_t>>>::value> {};
-
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
 template <>
@@ -768,19 +755,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableUnion, 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_nullable::StructWithNullableUnion>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableUnion>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableUnion>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::unique_ptr<::test_nullable::SimpleUnion>>::value> {};
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
@@ -803,19 +777,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableStruct, 8, 8> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_nullable::StructWithNullableStruct>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::unique_ptr<::test_nullable::Int32Wrapper>>::value> {};
-
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 template <>
@@ -836,19 +797,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableString, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_nullable::StructWithNullableString>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableString>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableString>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::cpp17::optional<::std::string>>::value> {};
 
 #ifdef __Fuchsia__
 
@@ -875,15 +823,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableRequest, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -913,15 +852,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableProtocol, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableProtocol>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableProtocol>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -950,14 +880,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableHandle, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::StructWithNullableHandle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::StructWithNullableHandle>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::vmo>::value> {};
-
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
@@ -982,14 +904,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::SimpleProtocolAddTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::SimpleProtocolAddTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
 template <>
@@ -1011,14 +925,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_nullable::SimpleProtocolAddRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_nullable::SimpleProtocolAddRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 template <>
@@ -1037,12 +943,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::Int32Wrapper, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_nullable::Int32Wrapper>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_nullable::Int32Wrapper>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
 
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 

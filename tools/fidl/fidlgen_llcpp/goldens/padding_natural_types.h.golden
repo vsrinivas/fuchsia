@@ -1271,18 +1271,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding7ByteMiddle, 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding7ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding7ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
 template <>
@@ -1301,18 +1289,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding7ByteEnd, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding7ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding7ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
@@ -1334,18 +1310,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding6ByteMiddle, 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding6ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding6ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
 template <>
@@ -1364,18 +1328,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding6ByteEnd, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding6ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding6ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
@@ -1397,19 +1349,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding5ByteMiddle, 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding5ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding5ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
 template <>
@@ -1428,19 +1367,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding5ByteEnd, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding5ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding5ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
@@ -1462,18 +1388,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding4ByteMiddle, 16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding4ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding4ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
 template <>
@@ -1492,18 +1406,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding4ByteEnd, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding4ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding4ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
@@ -1527,20 +1429,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_padding::Padding4ByteAlignmentLength12> : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_padding::Padding4ByteAlignmentLength12>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding4ByteAlignmentLength12>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
 template <>
@@ -1561,18 +1449,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding3ByteMiddle, 8, 8> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding3ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding3ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
 template <>
@@ -1591,18 +1467,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding3ByteEnd, 8, 8> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding3ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding3ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
@@ -1624,18 +1488,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding2ByteMiddle, 8, 8> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding2ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding2ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
 template <>
@@ -1654,18 +1506,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding2ByteEnd, 8, 8> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding2ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding2ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
@@ -1689,19 +1529,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding2ByteAlignmentLength6>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_padding::Padding2ByteAlignmentLength6>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding2ByteAlignmentLength6>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
 template <>
@@ -1722,18 +1549,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding1ByteMiddle, 4, 4> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding1ByteMiddle>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteMiddle>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding1ByteMiddle>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
-
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
 template <>
@@ -1752,17 +1567,5 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding1ByteEnd, 4, 4> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_padding::Padding1ByteEnd>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteEnd>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_padding::Padding1ByteEnd>::value &&
-          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 }  // namespace fidl

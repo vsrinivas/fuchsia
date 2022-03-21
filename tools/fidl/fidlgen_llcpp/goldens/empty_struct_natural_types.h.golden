@@ -348,12 +348,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::Empty, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_emptystruct::Empty>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_emptystruct::Empty>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 template <>
@@ -375,15 +369,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_emptystruct::EmptyProtocolSendRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_emptystruct::EmptyProtocolSendRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_emptystruct::Empty>::value> {};
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
@@ -409,16 +394,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_emptystruct::Empty>::value> {};
-
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
@@ -443,15 +418,6 @@ struct internal::NaturalCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_emptystruct::Empty>::value> {};
-
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 template <>
@@ -473,14 +439,5 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_emptystruct::EmptyProtocolReceiveRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_emptystruct::EmptyProtocolReceiveRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_emptystruct::Empty>::value> {};
 
 }  // namespace fidl

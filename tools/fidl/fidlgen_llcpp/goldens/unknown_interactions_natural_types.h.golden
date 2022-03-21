@@ -303,15 +303,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_unknowninteractions::Example_FlexibleTwoWay_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_unknowninteractions::Example_FlexibleTwoWay_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
 
@@ -335,22 +326,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_unknowninteractions::Example_FlexibleTwoWay_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;

@@ -47,29 +47,6 @@ template <> struct NaturalIsPrimitive<float> : public std::true_type {};
 template <> struct NaturalIsPrimitive<double> : public std::true_type {};
 // clang-format on
 
-// The type be directly copied with memcpy to/from the wire format representation.
-template <typename T>
-struct NaturalIsMemcpyCompatible : public std::false_type {};
-
-// clang-format off
-template <> struct NaturalIsMemcpyCompatible<uint8_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<uint16_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<uint32_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<uint64_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<int8_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<int16_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<int32_t> : public std::true_type {};
-template <> struct NaturalIsMemcpyCompatible<int64_t> : public std::true_type {};
-// clang-format on
-
-template <typename T, size_t N>
-struct NaturalIsMemcpyCompatible<std::array<T, N>> : public NaturalIsMemcpyCompatible<T> {};
-
-// True if a struct has padding.
-// Does not include inner structs or other types recursively.
-template <typename T>
-struct NaturalHasPadding : public std::false_type {};
-
 }  // namespace internal
 
 // A type trait that indicates whether the given type is a request/response type

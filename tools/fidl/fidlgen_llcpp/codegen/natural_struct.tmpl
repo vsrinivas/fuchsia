@@ -154,21 +154,6 @@ class {{ .Name }} {
     : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
         {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 
-  {{ if .TypeShapeV1.HasPadding }}
-  template<>
-  struct internal::NaturalHasPadding<{{ . }}> : public std::true_type {};
-  {{ end }}
-
-  {{ if .FullDeclMemcpyCompatibleDeps }}
-  template<>
-  struct internal::NaturalIsMemcpyCompatible<{{ . }}> : public std::bool_constant<
-      !internal::NaturalHasPadding<{{ . }}>::value
-  {{- range .FullDeclMemcpyCompatibleDeps }}
-      && internal::NaturalIsMemcpyCompatible<{{ .Unified }}>::value
-    {{- end -}}
-  > {};
-  {{ end }}
-
   {{ if .IsResourceType }}
   {{- EndifFuchsia -}}
   {{ end }}

@@ -2838,19 +2838,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_union::StructWithNullableXUnion, 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_union::StructWithNullableXUnion>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_union::StructWithNullableXUnion>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_union::StructWithNullableXUnion>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::unique_ptr<::test_union::OlderSimpleUnion>>::value> {};
-
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
@@ -2881,24 +2868,6 @@ struct internal::NaturalCodingTraits<
               TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_union::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_union::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_union::
-                  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_union::StrictBoundedXUnion>::value> {};
-
 extern "C" const fidl_type_t test_union_PizzaTable;
 
 template <>
@@ -2917,17 +2886,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                          16, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_union::Pizza>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_union::Pizza>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_union::Pizza>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::vector<::std::string>>::value> {};
-
 extern "C" const fidl_type_t test_union_PastaTable;
 
 template <>
@@ -2945,16 +2903,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                          16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_union::Pasta>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_union::Pasta>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_union::Pasta>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
@@ -2986,24 +2934,6 @@ struct internal::NaturalCodingTraits<
               TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_union::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_union::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_union::
-                  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_union::OlderSimpleUnion>::value> {};
-
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
 template <>
@@ -3023,18 +2953,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_union::NullableUnionStruct, 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_union::NullableUnionStruct>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_union::NullableUnionStruct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_union::NullableUnionStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::unique_ptr<::test_union::Union>>::value> {};
-
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
 template <>
@@ -3053,18 +2971,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_union::UnionSandwich, 40, 32> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_union::UnionSandwich>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_union::UnionSandwich>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_union::UnionSandwich>::value &&
-          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_union::ExplicitXUnion>::value> {};
-
 extern "C" const fidl_type_t test_union_EmptyTable;
 
 template <>
@@ -3082,12 +2988,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
                                                          1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_union::Empty>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_union::Empty>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 

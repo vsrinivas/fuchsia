@@ -319,13 +319,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_error::Example_foo_Response, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::Example_foo_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_error::Example_foo_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 template <>
@@ -346,18 +339,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_error::ExampleFooTopResponse, 24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_error::ExampleFooTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_error::ExampleFooTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_error::Example_foo_Result>::value> {};
-
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
 template <>
@@ -376,17 +357,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_error::ExampleFooRequest, 16, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<::test_error::ExampleFooRequest>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_error::ExampleFooRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 

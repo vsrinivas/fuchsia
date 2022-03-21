@@ -148,18 +148,4 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_byteandbytes::ByteAndBytes, 56, 56> {};
 
-template <>
-struct internal::NaturalHasPadding<::test_byteandbytes::ByteAndBytes>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_byteandbytes::ByteAndBytes>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_byteandbytes::ByteAndBytes>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::cpp17::optional<::std::vector<uint8_t>>>::value> {};
-
 }  // namespace fidl

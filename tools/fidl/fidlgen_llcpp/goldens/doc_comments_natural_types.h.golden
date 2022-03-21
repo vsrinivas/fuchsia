@@ -350,12 +350,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_doccomments::Struct, 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_doccomments::Struct>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<::test_doccomments::Struct>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t test_doccomments_TableTable;
 
 template <>
@@ -422,6 +416,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyStrictBits* value, size_t offset,
@@ -448,6 +443,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyFlexibleBits* value, size_t offset,
@@ -469,6 +465,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyStrictEnum* value, size_t offset,
@@ -505,6 +502,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyFlexibleEnum* value, size_t offset,

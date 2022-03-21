@@ -1959,15 +1959,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
 
@@ -1991,16 +1982,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
 };
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
@@ -2028,15 +2009,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
           4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBinding_OnlyDenySyzkaller_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
@@ -2063,22 +2035,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBindingOnlyDenySyzkallerTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::
-                  DenyEachBinding_OnlyDenySyzkaller_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
 
@@ -2104,15 +2060,6 @@ struct internal::NaturalCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
                 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 
@@ -2137,22 +2084,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
@@ -2180,15 +2111,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
           4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBinding_OnlyDenyLibfuzzer_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 
@@ -2215,22 +2137,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
           24, 16> {};
 
-template <>
-struct internal::NaturalHasPadding<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBindingOnlyDenyLibfuzzerTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::
-                  DenyEachBinding_OnlyDenyLibfuzzer_Result>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
 
@@ -2256,15 +2162,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4> {
 };
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 
@@ -2288,22 +2185,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
@@ -2330,15 +2211,6 @@ struct internal::NaturalCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
                 4, 4> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 
@@ -2363,22 +2235,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalHasPadding<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
-    : public std::true_type {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>::
-              value> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
@@ -2406,15 +2262,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
           1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBindingOnlyDenySyzkallerRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 
@@ -2438,15 +2285,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
@@ -2474,15 +2312,6 @@ struct internal::NaturalCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
           1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::
-                  DenyEachBindingOnlyDenyLibfuzzerRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 
@@ -2507,15 +2336,6 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
-
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 
@@ -2539,15 +2359,6 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
-    : public std::bool_constant<
-          !internal::NaturalHasPadding<
-              ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>::
-              value &&
-          internal::NaturalIsMemcpyCompatible<bool>::value> {};
 
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 

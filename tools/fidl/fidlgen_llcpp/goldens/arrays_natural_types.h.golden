@@ -426,13 +426,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_arrays::StructSmallArray, 8, 8> {};
 
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructSmallArray>
-    : public std::bool_constant<!internal::NaturalHasPadding<
-                                    ::test_arrays::StructSmallArray>::value &&
-                                internal::NaturalIsMemcpyCompatible<
-                                    ::std::array<uint32_t, 2>>::value> {};
-
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 template <>
@@ -451,13 +444,6 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_arrays::StructLargeArray, 400, 400> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructLargeArray>
-    : public std::bool_constant<!internal::NaturalHasPadding<
-                                    ::test_arrays::StructLargeArray>::value &&
-                                internal::NaturalIsMemcpyCompatible<
-                                    ::std::array<uint32_t, 100>>::value> {};
 
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 

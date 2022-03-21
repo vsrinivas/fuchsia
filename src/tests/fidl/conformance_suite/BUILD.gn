@@ -19,6 +19,7 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/enums_strict.test.fidl",
     "//src/tests/fidl/conformance_suite/golden.test.fidl",
     "//src/tests/fidl/conformance_suite/handles.test.fidl",
+    "//src/tests/fidl/conformance_suite/memcpy_compatibility.test.fidl",
     "//src/tests/fidl/conformance_suite/mix_and_match.test.fidl",
     "//src/tests/fidl/conformance_suite/optionals.test.fidl",
     "//src/tests/fidl/conformance_suite/padding.test.fidl",
