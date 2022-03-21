@@ -183,7 +183,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   zx_device_t* dev_node_ = nullptr;
 
   // PCI Registers
-  std::optional<ddk::MmioBuffer> mapped_regs_;
+  std::optional<fdf::MmioBuffer> mapped_regs_;
 
   // A handle to the Bus Transaction Initiator for this PCI device.  Used to
   // grant access to specific regions of physical mememory to the controller

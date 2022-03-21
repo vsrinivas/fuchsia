@@ -169,7 +169,7 @@ zx_status_t AmlCanvas::Setup(zx_device_t* parent) {
   }
 
   // Map all MMIOs
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     CANVAS_ERROR("Could not map DMC registers %d\n", status);

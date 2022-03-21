@@ -16,7 +16,7 @@
 //#define ENABLE_BT_LOOPBACK
 
 // static
-std::unique_ptr<AmlTdmDevice> AmlTdmInDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
+std::unique_ptr<AmlTdmDevice> AmlTdmInDevice::Create(fdf::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                                      aml_tdm_in_t tdm, aml_toddr_t toddr,
                                                      aml_tdm_mclk_t mclk,
                                                      metadata::AmlVersion version) {

@@ -131,9 +131,9 @@ class HdmiHost {
 
   fidl::WireSyncClient<fuchsia_hardware_hdmi::Hdmi> hdmi_;
 
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
-  std::optional<ddk::MmioBuffer> cbus_mmio_;
+  std::optional<fdf::MmioBuffer> vpu_mmio_;
+  std::optional<fdf::MmioBuffer> hhi_mmio_;
+  std::optional<fdf::MmioBuffer> cbus_mmio_;
 
   hdmi_param p_;
   ColorParam color_{

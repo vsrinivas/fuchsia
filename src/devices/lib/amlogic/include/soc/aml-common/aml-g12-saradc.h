@@ -62,7 +62,7 @@ class AmlSaradcDevice : public fbl::RefCounted<AmlSaradcDevice> {
  public:
   enum ClkSrc { CLK_SRC_OSCIN, CLK_SRC_CLK81 };
 
-  explicit AmlSaradcDevice(ddk::MmioBuffer adc_mmio, ddk::MmioBuffer ao_mmio, zx::interrupt irq)
+  explicit AmlSaradcDevice(fdf::MmioBuffer adc_mmio, fdf::MmioBuffer ao_mmio, zx::interrupt irq)
       : adc_mmio_(std::move(adc_mmio)), ao_mmio_(std::move(ao_mmio)), irq_(std::move(irq)) {}
 
   virtual ~AmlSaradcDevice() = default;
@@ -81,8 +81,8 @@ class AmlSaradcDevice : public fbl::RefCounted<AmlSaradcDevice> {
   void SetClock(uint32_t src, uint32_t div);
   void Stop();
 
-  const ddk::MmioBuffer adc_mmio_;
-  const ddk::MmioBuffer ao_mmio_;
+  const fdf::MmioBuffer adc_mmio_;
+  const fdf::MmioBuffer ao_mmio_;
   const zx::interrupt irq_;
 
   fbl::Mutex lock_;

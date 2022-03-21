@@ -21,7 +21,7 @@ void NopHotplugCb(registers::Ddi, bool) {}
 void NopIrqCb(void*, uint32_t, uint64_t) {}
 
 zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, pci::FakePciProtocol* pci,
-                           ddk::MmioBuffer* mmio) {
+                           fdf::MmioBuffer* mmio) {
   return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, &pci->get_protocol(), mmio);
 }
 
@@ -29,7 +29,7 @@ zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, pci::FakePciPr
 TEST(InterruptTest, Init) {
   constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::vector<uint32_t> regs(kMinimumRegCount);
-  ddk::MmioBuffer mmio_space({
+  fdf::MmioBuffer mmio_space({
       .vaddr = FakeMmioPtr(regs.data()),
       .offset = 0,
       .size = regs.size() * sizeof(uint32_t),

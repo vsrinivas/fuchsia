@@ -35,7 +35,7 @@ class Interrupts {
   // The lifetimes of |dev|, |pci|, and |mmio_space| must outlast the initialized Interrupts
   // instance.
   zx_status_t Init(PipeVsyncCallback pipe_vsync_callback, HotplugCallback hotplug_callback,
-                   zx_device_t* dev, const pci_protocol_t* pci, ddk::MmioBuffer* mmio_space);
+                   zx_device_t* dev, const pci_protocol_t* pci, fdf::MmioBuffer* mmio_space);
   void FinishInit();
   void Resume();
   void Destroy();
@@ -54,7 +54,7 @@ class Interrupts {
 
   PipeVsyncCallback pipe_vsync_callback_;
   HotplugCallback hotplug_callback_;
-  ddk::MmioBuffer* mmio_space_ = nullptr;
+  fdf::MmioBuffer* mmio_space_ = nullptr;
 
   mtx_t lock_;
 

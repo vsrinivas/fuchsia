@@ -218,7 +218,7 @@ class IntelI2cController : public IntelI2cControllerType,
   mtx_t mutex_;
   uint8_t rx_fifo_depth_;
 
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
 
   uint32_t controller_freq_;
   uint32_t bus_freq_;

@@ -1604,7 +1604,7 @@ zx_status_t UsbXhci::InitPci() {
   // PCIe interface supports cache snooping
   has_coherent_cache_ = true;
   // Initialize MMIO
-  std::optional<ddk::MmioBuffer> buffer;
+  std::optional<fdf::MmioBuffer> buffer;
   zx_status_t status = pci_.MapMmio(0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &buffer);
   if (status != ZX_OK) {
     return status;
@@ -1644,7 +1644,7 @@ zx_status_t UsbXhci::InitMmio() {
   if (!pdev_.is_valid()) {
     return ZX_ERR_IO_INVALID;
   }
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "UsbXhci: failed to map MMIO registers (%s)", zx_status_get_string(status));

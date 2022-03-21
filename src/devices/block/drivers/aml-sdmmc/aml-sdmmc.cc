@@ -66,8 +66,8 @@ zx_paddr_t PageMask() {
 
 namespace sdmmc {
 
-AmlSdmmc::AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
-                   ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
+AmlSdmmc::AmlSdmmc(zx_device_t* parent, zx::bti bti, fdf::MmioBuffer mmio,
+                   fdf::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
                    const ddk::GpioProtocolClient& gpio)
     : AmlSdmmcType(parent),
       mmio_(std::move(mmio)),
@@ -1536,7 +1536,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     AML_SDMMC_ERROR("Failed to get mmio: %d", status);
@@ -1544,7 +1544,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Pin the mmio
-  std::optional<ddk::MmioPinnedBuffer> pinned_mmio;
+  std::optional<fdf::MmioPinnedBuffer> pinned_mmio;
   status = mmio->Pin(bti, &pinned_mmio);
   if (status != ZX_OK) {
     AML_SDMMC_ERROR("Failed to pin mmio: %d", status);

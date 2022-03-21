@@ -62,7 +62,7 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   }
 
   ddk::PDev pdev(parent);
-  std::optional<ddk::MmioBuffer> mmio_gpio, mmio_gpio_a0, mmio_interrupt;
+  std::optional<fdf::MmioBuffer> mmio_gpio, mmio_gpio_a0, mmio_interrupt;
   if ((status = pdev.MapMmio(MMIO_GPIO, &mmio_gpio)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::Create: MapMmio failed");
     return status;

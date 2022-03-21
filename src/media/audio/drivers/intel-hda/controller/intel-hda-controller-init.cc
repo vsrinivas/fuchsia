@@ -263,7 +263,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   }
 
   // Fetch the BAR which holds our main registers.
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   res = pci.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch and map registers from PCI (res %d)", res);

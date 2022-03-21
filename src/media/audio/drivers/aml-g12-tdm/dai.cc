@@ -103,7 +103,7 @@ zx_status_t AmlG12TdmDai::InitPDev() {
     zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not get mmio %d", status);

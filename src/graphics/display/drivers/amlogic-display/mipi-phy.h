@@ -57,7 +57,7 @@ class MipiPhy {
 
   void PhyInit();
 
-  std::optional<ddk::MmioBuffer> dsi_phy_mmio_;
+  std::optional<fdf::MmioBuffer> dsi_phy_mmio_;
   uint32_t num_of_lanes_;
   DsiPhyConfig dsi_phy_cfg_;
   ddk::DsiImplProtocolClient dsiimpl_;

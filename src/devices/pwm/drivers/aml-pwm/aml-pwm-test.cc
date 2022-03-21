@@ -21,9 +21,9 @@ namespace pwm {
 
 class FakeAmlPwmDevice : public AmlPwmDevice {
  public:
-  static std::unique_ptr<FakeAmlPwmDevice> Create(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1,
-                                                  ddk::MmioBuffer mmio2, ddk::MmioBuffer mmio3,
-                                                  ddk::MmioBuffer mmio4,
+  static std::unique_ptr<FakeAmlPwmDevice> Create(fdf::MmioBuffer mmio0, fdf::MmioBuffer mmio1,
+                                                  fdf::MmioBuffer mmio2, fdf::MmioBuffer mmio3,
+                                                  fdf::MmioBuffer mmio4,
                                                   std::vector<pwm_id_t> ids) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlPwmDevice>(&ac);
@@ -110,11 +110,11 @@ class AmlPwmDeviceTest : public zxtest::Test {
     (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
     (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
-    ddk::MmioBuffer mmio0(mock_mmio0_->GetMmioBuffer());
-    ddk::MmioBuffer mmio1(mock_mmio1_->GetMmioBuffer());
-    ddk::MmioBuffer mmio2(mock_mmio2_->GetMmioBuffer());
-    ddk::MmioBuffer mmio3(mock_mmio3_->GetMmioBuffer());
-    ddk::MmioBuffer mmio4(mock_mmio4_->GetMmioBuffer());
+    fdf::MmioBuffer mmio0(mock_mmio0_->GetMmioBuffer());
+    fdf::MmioBuffer mmio1(mock_mmio1_->GetMmioBuffer());
+    fdf::MmioBuffer mmio2(mock_mmio2_->GetMmioBuffer());
+    fdf::MmioBuffer mmio3(mock_mmio3_->GetMmioBuffer());
+    fdf::MmioBuffer mmio4(mock_mmio4_->GetMmioBuffer());
     // Protect channel 3 for protect tests
     std::vector<pwm_id_t> ids = {{0}, {1}, {2}, {3, true}, {4}, {5}, {6}, {7}, {8}, {9}};
     pwm_ = FakeAmlPwmDevice::Create(std::move(mmio0), std::move(mmio1), std::move(mmio2),

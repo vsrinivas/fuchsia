@@ -810,14 +810,14 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     LOG(INFO, "amlogic-video: Unable to get secure monitor handle, assuming no protected memory");
   }
 
-  std::optional<ddk::MmioBuffer> cbus_mmio;
+  std::optional<fdf::MmioBuffer> cbus_mmio;
   status = pdev_.MapMmio(kCbus, &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
 
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev_.MapMmio(kDosbus, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");

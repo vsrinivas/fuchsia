@@ -364,21 +364,21 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  sensor_base_mmio_ = ddk::MmioBuffer(mmio);
+  sensor_base_mmio_ = fdf::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kTrimMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  trim_mmio_ = ddk::MmioBuffer(mmio);
+  trim_mmio_ = fdf::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  hiu_mmio_ = ddk::MmioBuffer(mmio);
+  hiu_mmio_ = fdf::MmioBuffer(mmio);
 
   // Map tsensor interrupt.
   status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());

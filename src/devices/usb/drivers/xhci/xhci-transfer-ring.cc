@@ -268,7 +268,7 @@ void TransferRing::RestoreLocked(const State& state) {
 }
 
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
-                               ddk::MmioBuffer* mmio, const UsbXhci& hci) {
+                               fdf::MmioBuffer* mmio, const UsbXhci& hci) {
   fbl::AutoLock l(&mutex_);
   if (trbs_ != nullptr) {
     return ZX_ERR_BAD_STATE;

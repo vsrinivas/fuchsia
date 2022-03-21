@@ -119,7 +119,7 @@ class AmlHdmiDevice : public DeviceType,
   };
 
   // For unit testing
-  AmlHdmiDevice(zx_device_t* parent, ddk::MmioBuffer mmio, std::unique_ptr<hdmi_dw::HdmiDw> hdmi_dw)
+  AmlHdmiDevice(zx_device_t* parent, fdf::MmioBuffer mmio, std::unique_ptr<hdmi_dw::HdmiDw> hdmi_dw)
       : DeviceType(parent),
         pdev_(parent),
         hdmi_dw_(std::move(hdmi_dw)),
@@ -144,7 +144,7 @@ class AmlHdmiDevice : public DeviceType,
   std::unique_ptr<hdmi_dw::HdmiDw> hdmi_dw_ TA_GUARDED(dw_lock_);
 
   fbl::Mutex register_lock_;
-  std::optional<ddk::MmioBuffer> hdmitx_mmio_ TA_GUARDED(register_lock_);
+  std::optional<fdf::MmioBuffer> hdmitx_mmio_ TA_GUARDED(register_lock_);
 
   bool is_powered_up_ = false;
   bool loop_started_ = false;

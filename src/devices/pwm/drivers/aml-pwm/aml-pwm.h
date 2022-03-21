@@ -28,7 +28,7 @@ using AmlPwmDeviceType = ddk::Device<AmlPwmDevice>;
 
 class AmlPwm {
  public:
-  explicit AmlPwm(ddk::MmioBuffer mmio, pwm_id_t id1, pwm_id_t id2)
+  explicit AmlPwm(fdf::MmioBuffer mmio, pwm_id_t id1, pwm_id_t id2)
       : ids_{id1, id2}, enabled_{false, false}, mmio_(std::move(mmio)) {}
 
   void Init() {
@@ -76,7 +76,7 @@ class AmlPwm {
   std::array<pwm_config_t, 2> configs_;
   std::array<mode_config, 2> mode_configs_;
   std::array<fbl::Mutex, REG_COUNT> locks_;
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
 };
 
 class AmlPwmDevice : public AmlPwmDeviceType,
@@ -94,8 +94,8 @@ class AmlPwmDevice : public AmlPwmDeviceType,
  protected:
   // For unit testing
   explicit AmlPwmDevice() : AmlPwmDeviceType(nullptr) {}
-  zx_status_t Init(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1, ddk::MmioBuffer mmio2,
-                   ddk::MmioBuffer mmio3, ddk::MmioBuffer mmio4, std::vector<pwm_id_t> ids) {
+  zx_status_t Init(fdf::MmioBuffer mmio0, fdf::MmioBuffer mmio1, fdf::MmioBuffer mmio2,
+                   fdf::MmioBuffer mmio3, fdf::MmioBuffer mmio4, std::vector<pwm_id_t> ids) {
     pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio0), ids.at(0), ids.at(1)));
     pwms_.back()->Init();
     pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio1), ids.at(2), ids.at(3)));

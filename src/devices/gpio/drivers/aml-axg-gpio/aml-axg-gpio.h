@@ -65,8 +65,8 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
 
  protected:
   // for AmlAxgGpioTest
-  explicit AmlAxgGpio(pdev_protocol_t* proto, ddk::MmioBuffer mmio_gpio,
-                      ddk::MmioBuffer mmio_gpio_a0, ddk::MmioBuffer mmio_interrupt,
+  explicit AmlAxgGpio(pdev_protocol_t* proto, fdf::MmioBuffer mmio_gpio,
+                      fdf::MmioBuffer mmio_gpio_a0, fdf::MmioBuffer mmio_interrupt,
                       const AmlGpioBlock* gpio_blocks, const AmlGpioInterrupt* gpio_interrupt,
                       size_t block_count, pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : DeviceType(nullptr),
@@ -81,8 +81,8 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
         irq_status_(0) {}
 
  private:
-  explicit AmlAxgGpio(zx_device_t* parent, ddk::MmioBuffer mmio_gpio, ddk::MmioBuffer mmio_gpio_a0,
-                      ddk::MmioBuffer mmio_interrupt, const AmlGpioBlock* gpio_blocks,
+  explicit AmlAxgGpio(zx_device_t* parent, fdf::MmioBuffer mmio_gpio, fdf::MmioBuffer mmio_gpio_a0,
+                      fdf::MmioBuffer mmio_interrupt, const AmlGpioBlock* gpio_blocks,
                       const AmlGpioInterrupt* gpio_interrupt, size_t block_count,
                       pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : DeviceType(parent),
@@ -103,8 +103,8 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
 
   ddk::PDev pdev_;
   fbl::Mutex mmio_lock_;
-  std::array<ddk::MmioBuffer, 2> mmios_ TA_GUARDED(mmio_lock_);  // separate MMIO for AO domain
-  ddk::MmioBuffer mmio_interrupt_ TA_GUARDED(mmio_lock_);
+  std::array<fdf::MmioBuffer, 2> mmios_ TA_GUARDED(mmio_lock_);  // separate MMIO for AO domain
+  fdf::MmioBuffer mmio_interrupt_ TA_GUARDED(mmio_lock_);
   const AmlGpioBlock* gpio_blocks_;
   const AmlGpioInterrupt* gpio_interrupt_;
   size_t block_count_;

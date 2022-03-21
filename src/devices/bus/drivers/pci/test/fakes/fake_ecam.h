@@ -233,9 +233,9 @@ class FakeEcam {
     const size_t bytes = sizeof(FakeDeviceConfig) * config_cnt_;
 
     zx::vmo vmo;
-    std::optional<ddk::MmioBuffer> mmio;
+    std::optional<fdf::MmioBuffer> mmio;
     ZX_ASSERT(zx::vmo::create(bytes, 0, &vmo) == ZX_OK);
-    ZX_ASSERT(ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    ZX_ASSERT(fdf::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                       &mmio) == ZX_OK);
     mmio_ = std::move(*mmio);
     // Most access will be done via config objects using MmioViews, but the pointer is cast here
@@ -245,7 +245,7 @@ class FakeEcam {
     reset();
   }
 
-  ddk::MmioBuffer CopyEcam() {
+  fdf::MmioBuffer CopyEcam() {
     mmio_buffer_t buffer = {
         .vaddr = mmio_->get(),
         .offset = mmio_->get_offset(),
@@ -253,7 +253,7 @@ class FakeEcam {
         .vmo = mmio_->get_vmo()->get(),
     };
 
-    return ddk::MmioBuffer(buffer);
+    return fdf::MmioBuffer(buffer);
   }
 
   // Provide ways to access individual devices in the ecam by BDF address.
@@ -273,7 +273,7 @@ class FakeEcam {
 
   uint8_t bus_start() const { return bus_start_; }
   uint8_t bus_end() const { return bus_end_; }
-  ddk::MmioBuffer& mmio() { return *mmio_; }
+  fdf::MmioBuffer& mmio() { return *mmio_; }
   void reset() {
     // Memset optimizations cause faults on uncached memory, so zero out
     // the memory by hand.
@@ -295,7 +295,7 @@ class FakeEcam {
   uint8_t bus_start_;
   uint8_t bus_end_;
   size_t config_cnt_;
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
   FakeDeviceConfig* configs_;
 };
 

@@ -30,8 +30,8 @@ namespace pci {
 class PciCapabilityTests : public zxtest::Test {
  public:
   PciCapabilityTests() = default;
-  ddk::MmioBuffer& mmio() { return *mmio_; }
-  ddk::MmioView view() { return mmio_->View(0, mmio_->get_size()); }
+  fdf::MmioBuffer& mmio() { return *mmio_; }
+  fdf::MmioView view() { return mmio_->View(0, mmio_->get_size()); }
   static pci_bdf_t bdf() { return {0, 0, 0}; }
   static Bar CreateBar(uint8_t bar_id, size_t size) {
     Bar bar = {
@@ -63,14 +63,14 @@ class PciCapabilityTests : public zxtest::Test {
   void SetUp() final {
     zx::vmo vmo;
     ZX_ASSERT(zx::vmo::create(PCI_BASE_CONFIG_SIZE, /*options=*/0, &vmo) == ZX_OK);
-    ZX_ASSERT(ddk::MmioBuffer::Create(0, PCI_BASE_CONFIG_SIZE, std::move(vmo),
+    ZX_ASSERT(fdf::MmioBuffer::Create(0, PCI_BASE_CONFIG_SIZE, std::move(vmo),
                                       ZX_CACHE_POLICY_UNCACHED, &mmio_) == ZX_OK);
   }
 
   void TearDown() final { mmio_->reset(); }
 
  private:
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
 };
 
 TEST_F(PciCapabilityTests, FixtureTest) {

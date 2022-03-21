@@ -125,8 +125,8 @@ zx_status_t Nelson::SpiInit() {
   {
     // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx::unowned_resource resource(get_root_resource());
-    std::optional<ddk::MmioBuffer> buf;
-    zx_status_t status = ddk::MmioBuffer::Create(S905D3_HIU_BASE, S905D3_HIU_LENGTH, *resource,
+    std::optional<fdf::MmioBuffer> buf;
+    zx_status_t status = fdf::MmioBuffer::Create(S905D3_HIU_BASE, S905D3_HIU_LENGTH, *resource,
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: MmioBuffer::Create failed %d", __func__, status);

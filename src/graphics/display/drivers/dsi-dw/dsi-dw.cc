@@ -877,7 +877,7 @@ zx_status_t DsiDw::Bind() {
     return status;
   }
 
-  dsi_mmio_ = ddk::MmioBuffer(mmio);
+  dsi_mmio_ = fdf::MmioBuffer(mmio);
 
   status = DdkAdd("dw-dsi");
   if (status != ZX_OK) {

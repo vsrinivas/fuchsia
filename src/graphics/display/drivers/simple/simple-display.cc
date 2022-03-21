@@ -380,7 +380,7 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
 }
 
 SimpleDisplay::SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem,
-                             ddk::MmioBuffer framebuffer_mmio, uint32_t width, uint32_t height,
+                             fdf::MmioBuffer framebuffer_mmio, uint32_t width, uint32_t height,
                              uint32_t stride, zx_pixel_format_t format)
     : DeviceType(parent),
       sysmem_(std::move(sysmem)),
@@ -445,7 +445,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
     printf("%s: failed to map pci bar %d: %d\n", name, bar, status);
     return status;
   }
-  ddk::MmioBuffer framebuffer_mmio(mmio);
+  fdf::MmioBuffer framebuffer_mmio(mmio);
 
   fbl::AllocChecker ac;
   std::unique_ptr<SimpleDisplay> display(new (&ac) SimpleDisplay(

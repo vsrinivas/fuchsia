@@ -38,7 +38,7 @@ class SimpleDisplay : public DeviceType,
                       public HeapServer,
                       public ddk::DisplayControllerImplProtocol<SimpleDisplay, ddk::base_protocol> {
  public:
-  SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem, ddk::MmioBuffer framebuffer_mmio,
+  SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem, fdf::MmioBuffer framebuffer_mmio,
                 uint32_t width, uint32_t height, uint32_t stride, zx_pixel_format_t format);
   ~SimpleDisplay() = default;
 
@@ -92,7 +92,7 @@ class SimpleDisplay : public DeviceType,
   fbl::Mutex mtx_;
   config_stamp_t config_stamp_ TA_GUARDED(mtx_) = {.value = INVALID_CONFIG_STAMP_VALUE};
 
-  const ddk::MmioBuffer framebuffer_mmio_;
+  const fdf::MmioBuffer framebuffer_mmio_;
   const uint32_t width_;
   const uint32_t height_;
   const uint32_t stride_;

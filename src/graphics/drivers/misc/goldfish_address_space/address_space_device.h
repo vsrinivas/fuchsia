@@ -85,7 +85,7 @@ class AddressSpaceDevice
   uint64_t dma_region_paddr_;
 
   fbl::Mutex mmio_lock_;
-  std::optional<ddk::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
+  std::optional<fdf::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AddressSpaceDevice);
 };

@@ -18,7 +18,7 @@ namespace designware {
 
 class DwPcie {
  protected:
-  DwPcie(ddk::MmioBuffer dbi, ddk::MmioBuffer cfg, const uint32_t nLanes)
+  DwPcie(fdf::MmioBuffer dbi, fdf::MmioBuffer cfg, const uint32_t nLanes)
       : dbi_(std::move(dbi)), cfg_(std::move(cfg)), nLanes_(nLanes) {}
   virtual ~DwPcie() {}
 
@@ -31,8 +31,8 @@ class DwPcie {
                                const iatu_translation_entry_t* io,
                                const iatu_translation_entry_t* mem);
 
-  ddk::MmioBuffer dbi_;
-  ddk::MmioBuffer cfg_;
+  fdf::MmioBuffer dbi_;
+  fdf::MmioBuffer cfg_;
   const uint32_t nLanes_;
 
  private:

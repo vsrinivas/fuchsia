@@ -78,7 +78,7 @@ constexpr virtio_pci_cap_t kCapabilities[5] = {
 
 class TestLegacyIoInterface : public virtio::PciLegacyIoInterface {
  public:
-  explicit TestLegacyIoInterface(ddk::MmioView view) : view_(view) {}
+  explicit TestLegacyIoInterface(fdf::MmioView view) : view_(view) {}
   ~TestLegacyIoInterface() override = default;
 
   void Read(uint16_t offset, uint8_t* val) const final {
@@ -107,7 +107,7 @@ class TestLegacyIoInterface : public virtio::PciLegacyIoInterface {
   }
 
  private:
-  ddk::MmioView view_;
+  fdf::MmioView view_;
 };
 
 fx_log_severity_t kTestLogLevel = FX_LOG_INFO;
@@ -122,7 +122,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
 
   void TearDown() final { fake_pci_.Reset(); }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
-  std::array<std::optional<ddk::MmioBuffer>, PCI_MAX_BAR_REGS>& bars() { return bars_; }
+  std::array<std::optional<fdf::MmioBuffer>, PCI_MAX_BAR_REGS>& bars() { return bars_; }
 
   void CleanUp() {
     DeviceAsyncRemove(fake_ddk::kFakeDevice);
@@ -180,7 +180,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
     ZX_ASSERT(fake_pci().GetBar(kLegacyBar).duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo) == ZX_OK);
     size_t size = 0;
     vmo.get_size(&size);
-    zx_status_t status = ddk::MmioBuffer::Create(
+    zx_status_t status = fdf::MmioBuffer::Create(
         0, size, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE, &bars_[kLegacyBar]);
     ZX_ASSERT_MSG(status == ZX_OK, "Mapping BAR %u failed: %s", kLegacyBar,
                   zx_status_get_string(status));
@@ -196,7 +196,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   void SetUpLegacyQueue() { bars_[kLegacyBar]->Write(kQueueSize, VIRTIO_PCI_QUEUE_SIZE); }
 
  private:
-  std::array<std::optional<ddk::MmioBuffer>, PCI_MAX_BAR_REGS> bars_;
+  std::array<std::optional<fdf::MmioBuffer>, PCI_MAX_BAR_REGS> bars_;
   pci::FakePciProtocol fake_pci_;
 };
 

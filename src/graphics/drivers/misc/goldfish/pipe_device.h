@@ -79,7 +79,7 @@ class PipeDevice : public DeviceType {
   int32_t next_pipe_id_ TA_GUARDED(pipes_lock_) = 1;
 
   fbl::Mutex mmio_lock_;
-  std::optional<ddk::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
+  std::optional<fdf::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
 
   fbl::Mutex pipes_lock_;
   // TODO(fxbug.dev/3213): This should be std::unordered_map.

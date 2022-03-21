@@ -163,13 +163,13 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
   gpio_impl_.SetAltFunction(S905D2_GPIOC(5), 0);
 
   zx_status_t status;
-  std::optional<ddk::MmioBuffer> gpio_base;
+  std::optional<fdf::MmioBuffer> gpio_base;
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource resource(get_root_resource());
 
   size_t aligned_size = ZX_ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
 
-  status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
+  status = fdf::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Create(gpio) error: %d", __func__, status);
@@ -202,8 +202,8 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
       .WriteTo(&(*gpio_base));
 
   // Configure clock settings
-  std::optional<ddk::MmioBuffer> hiu_base;
-  status = ddk::MmioBuffer::Create(S905D2_HIU_BASE, S905D2_HIU_LENGTH, *resource,
+  std::optional<fdf::MmioBuffer> hiu_base;
+  status = fdf::MmioBuffer::Create(S905D2_HIU_BASE, S905D2_HIU_LENGTH, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &hiu_base);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Create(hiu) error: %d", __func__, status);

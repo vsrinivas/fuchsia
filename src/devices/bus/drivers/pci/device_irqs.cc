@@ -160,7 +160,7 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
       break;
     }
     case PCI_IRQ_MODE_MSI: {
-      zx::status<ddk::MmioView> view_res = cfg_->get_view();
+      zx::status<fdf::MmioView> view_res = cfg_->get_view();
       if (!view_res.is_ok()) {
         return view_res.take_error();
       }

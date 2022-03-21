@@ -70,7 +70,7 @@ NtcInfo ntc_info[] = {
 class TestSarAdc : public AmlSaradcDevice {
  public:
   static constexpr uint32_t kMaxChannels = 4;
-  TestSarAdc(ddk::MmioBuffer adc_mmio, ddk::MmioBuffer ao_mmio, zx::interrupt irq)
+  TestSarAdc(fdf::MmioBuffer adc_mmio, fdf::MmioBuffer ao_mmio, zx::interrupt irq)
       : AmlSaradcDevice(std::move(adc_mmio), std::move(ao_mmio), std::move(irq)) {}
   void HwInit() override {}
   void Shutdown() override {}

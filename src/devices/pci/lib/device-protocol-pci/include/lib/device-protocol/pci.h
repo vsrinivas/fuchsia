@@ -25,9 +25,11 @@ __END_CDECLS
 
 #include <optional>
 
-namespace ddk {
-
+namespace fdf {
 class MmioBuffer;
+}
+
+namespace ddk {
 
 class Pci : public ddk::PciProtocolClient {
  public:
@@ -46,7 +48,7 @@ class Pci : public ddk::PciProtocolClient {
   ~Pci() = default;
 
   zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode);
-  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<MmioBuffer>* mmio);
+  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<fdf::MmioBuffer>* mmio);
 };
 
 }  // namespace ddk

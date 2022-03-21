@@ -126,7 +126,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   zx_status_t HandleSetupRequest(size_t* out_actual);
   void SetAddress(uint8_t address);
 
-  inline ddk::MmioBuffer* get_mmio() { return &*mmio_; }
+  inline fdf::MmioBuffer* get_mmio() { return &*mmio_; }
 
   Endpoint endpoints_[DWC_MAX_EPS];
 
@@ -147,7 +147,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   std::optional<ddk::UsbDciInterfaceProtocolClient> dci_intf_;
   std::optional<ddk::UsbPhyProtocolClient> usb_phy_;
 
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
 
   zx::interrupt irq_;
   thrd_t irq_thread_;

@@ -75,7 +75,7 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
     return st;
   }
 
-  st = ddk::MmioBuffer::Create(table_offset_, table_bytes, std::move(table_vmo),
+  st = fdf::MmioBuffer::Create(table_offset_, table_bytes, std::move(table_vmo),
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &table_mmio_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "[%s] Couldn't map MSI-X table: %d", addr(), st);
@@ -83,7 +83,7 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
   }
   table_ = static_cast<MMIO_PTR MsixTable*>(table_mmio_->get());
 
-  st = ddk::MmioBuffer::Create(pba_offset_, pba_bytes, std::move(pba_vmo),
+  st = fdf::MmioBuffer::Create(pba_offset_, pba_bytes, std::move(pba_vmo),
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &pba_mmio_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "[%s] Couldn't map MSI-X pba: %d", addr(), st);

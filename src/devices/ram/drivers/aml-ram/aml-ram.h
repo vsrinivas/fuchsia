@@ -77,7 +77,7 @@ class AmlRam : public DeviceType {
 
   static zx_status_t Create(void* context, zx_device_t* parent);
 
-  AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
+  AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
          uint32_t device_pid);
   ~AmlRam();
   void DdkRelease();
@@ -111,7 +111,7 @@ class AmlRam : public DeviceType {
   void Shutdown();
   uint64_t ReadFrequency() const;
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   zx::interrupt irq_;
   zx::port port_;
   std::thread thread_;

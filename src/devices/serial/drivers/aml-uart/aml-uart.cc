@@ -52,7 +52,7 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d", __func__, status);

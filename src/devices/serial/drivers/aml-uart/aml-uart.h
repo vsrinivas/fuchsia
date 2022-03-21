@@ -52,7 +52,7 @@ class AmlUart : public DeviceType,
   zx_status_t Init();
 
   explicit AmlUart(zx_device_t* parent, const ddk::PDev& pdev,
-                   const serial_port_info_t& serial_port_info, ddk::MmioBuffer mmio)
+                   const serial_port_info_t& serial_port_info, fdf::MmioBuffer mmio)
       : DeviceType(parent),
         pdev_(pdev),
         serial_port_info_(serial_port_info),
@@ -77,7 +77,7 @@ class AmlUart : public DeviceType,
 
   ddk::PDev pdev_;
   const serial_port_info_t serial_port_info_;
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   zx::interrupt irq_;
 
   thrd_t irq_thread_ TA_GUARDED(enable_lock_);

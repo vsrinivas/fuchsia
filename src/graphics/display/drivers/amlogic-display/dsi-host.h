@@ -55,8 +55,8 @@ class DsiHost {
   // identification was wrong.
   void FixupPanelType();
 
-  std::optional<ddk::MmioBuffer> mipi_dsi_mmio_;
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
+  std::optional<fdf::MmioBuffer> mipi_dsi_mmio_;
+  std::optional<fdf::MmioBuffer> hhi_mmio_;
 
   ddk::PDev pdev_;
 

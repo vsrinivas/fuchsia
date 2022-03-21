@@ -61,7 +61,7 @@ struct __attribute__((__packed__)) Registers {
 // we cannot block MMIO reads / writes or have callbacks, thus we can only feed
 // one host command to device at a time.
 //
-// TODO(67846): Allow injection of ddk::MmioBuffers to test devices so that we
+// TODO(67846): Allow injection of fdf::MmioBuffers to test devices so that we
 // can add hooks to MMIO register read / write operations, which will better
 // simulate the real device.
 class TestDevice : public SyncDevice {

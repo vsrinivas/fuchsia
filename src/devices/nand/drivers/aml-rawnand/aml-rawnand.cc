@@ -1034,14 +1034,14 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
 
   static constexpr uint32_t NandRegWindow = 0;
   static constexpr uint32_t ClockRegWindow = 1;
-  std::optional<ddk::MmioBuffer> mmio_nandreg;
+  std::optional<fdf::MmioBuffer> mmio_nandreg;
   status = pdev.MapMmio(NandRegWindow, &mmio_nandreg);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev.MapMmio nandreg failed", __FILE__);
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> mmio_clockreg;
+  std::optional<fdf::MmioBuffer> mmio_clockreg;
   status = pdev.MapMmio(ClockRegWindow, &mmio_clockreg);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev.MapMmio clockreg failed", __FILE__);

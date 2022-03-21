@@ -1057,8 +1057,8 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "sdhci: error %d in get_mmio", status);
     return status;
   }
-  std::optional<ddk::MmioBuffer> regs_mmio_buffer;
-  status = ddk::MmioBuffer::Create(vmo_offset, kRegisterSetSize, std::move(vmo),
+  std::optional<fdf::MmioBuffer> regs_mmio_buffer;
+  status = fdf::MmioBuffer::Create(vmo_offset, kRegisterSetSize, std::move(vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &regs_mmio_buffer);
   if (status != ZX_OK) {
     zxlogf(ERROR, "sdhci: error %d in mmio_buffer_init", status);

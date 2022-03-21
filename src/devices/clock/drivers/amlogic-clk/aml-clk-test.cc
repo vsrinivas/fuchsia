@@ -38,7 +38,7 @@ constexpr uint32_t kCpuClkSupportedFrequencies[] = {
 class AmlClockTest : public AmlClock {
  public:
   AmlClockTest(mmio_buffer_t mmio_buffer, mmio_buffer_t dosbus_buffer, uint32_t did)
-      : AmlClock(nullptr, ddk::MmioBuffer(mmio_buffer), ddk::MmioBuffer(dosbus_buffer),
+      : AmlClock(nullptr, fdf::MmioBuffer(mmio_buffer), fdf::MmioBuffer(dosbus_buffer),
                  std::nullopt, did) {}
   ~AmlClockTest() = default;
 

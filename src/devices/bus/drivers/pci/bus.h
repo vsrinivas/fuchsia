@@ -74,14 +74,14 @@ class Bus : public PciBusType,
  public:
   static zx_status_t Create(zx_device_t* parent);
   Bus(zx_device_t* parent, const pciroot_protocol_t* pciroot, const pci_platform_info_t info,
-      std::optional<ddk::MmioBuffer> ecam)
+      std::optional<fdf::MmioBuffer> ecam)
       : PciBusType(parent),  // fulfills the DDK mixins
         pciroot_(pciroot),
         info_(info),
         ecam_(std::move(ecam)) {}
   ~Bus() override;
   // Map an ecam VMO for Bus and Config use.
-  static zx::status<ddk::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
+  static zx::status<fdf::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
 
   zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
   // Bus Device Interface implementation
@@ -138,7 +138,7 @@ class Bus : public PciBusType,
   // members
   ddk::PcirootProtocolClient pciroot_;
   const pci_platform_info_t info_;
-  std::optional<ddk::MmioBuffer> ecam_;
+  std::optional<fdf::MmioBuffer> ecam_;
   cpp20::span<const pci_legacy_irq> irqs_{};
   cpp20::span<const pci_bdf_t> acpi_devices_{};
   cpp20::span<const pci_irq_routing_entry_t> irq_routing_entries_{};

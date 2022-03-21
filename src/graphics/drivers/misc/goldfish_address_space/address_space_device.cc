@@ -99,7 +99,7 @@ zx_status_t AddressSpaceDevice::Bind() {
   ZX_DEBUG_ASSERT(control_bar.handle != ZX_HANDLE_INVALID);
 
   fbl::AutoLock lock(&mmio_lock_);
-  status = ddk::MmioBuffer::Create(0, control_bar.size, zx::vmo(control_bar.handle),
+  status = fdf::MmioBuffer::Create(0, control_bar.size, zx::vmo(control_bar.handle),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create MMIO buffer: %d", kTag, status);

@@ -45,7 +45,7 @@ class AmlCanvasTest : public zxtest::Test {
  public:
   AmlCanvasTest()
       : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)) {
-    ddk::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
+    fdf::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
 
     zx::bti bti;
     EXPECT_OK(fake_bti_create(bti.reset_and_get_address()));

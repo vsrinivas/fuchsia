@@ -35,7 +35,7 @@ class DpAux : public DpcdChannel {
   bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) final override;
   bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) final override;
 
-  void set_mmio_space(ddk::MmioBuffer* mmio_space) {
+  void set_mmio_space(fdf::MmioBuffer* mmio_space) {
     fbl::AutoLock lock(&lock_);
     mmio_space_ = mmio_space;
   }
@@ -43,7 +43,7 @@ class DpAux : public DpcdChannel {
  private:
   const registers::Ddi ddi_;
   // The lock protects the registers this class writes to, not the whole register io space.
-  ddk::MmioBuffer* mmio_space_ __TA_GUARDED(lock_);
+  fdf::MmioBuffer* mmio_space_ __TA_GUARDED(lock_);
   mtx_t lock_;
 
   zx_status_t DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size)

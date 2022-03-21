@@ -72,7 +72,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
         mmio_buffer_init(&mmio, 0, kSharedMemorySize, fake_vmo_.get(), ZX_CACHE_POLICY_CACHED));
 
     shared_memory_vaddr_ = reinterpret_cast<zx_vaddr_t>(mmio.vaddr);
-    EXPECT_OK(SharedMemoryManager::Create(ddk::MmioBuffer(mmio), shared_memory_paddr_,
+    EXPECT_OK(SharedMemoryManager::Create(fdf::MmioBuffer(mmio), shared_memory_paddr_,
                                           &shared_memory_manager_));
   }
 

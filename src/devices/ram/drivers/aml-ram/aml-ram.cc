@@ -68,7 +68,7 @@ zx_status_t ValidateRequest(const ram_metrics::wire::BandwidthMeasurementConfig&
 zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   zx_status_t status;
   ddk::PDev pdev(parent);
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
     zxlogf(ERROR, "aml-ram: Failed to map mmio, st = %d", status);
     return status;
@@ -122,7 +122,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   return ZX_OK;
 }
 
-AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
+AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
                uint32_t device_pid)
     : DeviceType(parent), mmio_(std::move(mmio)), irq_(std::move(irq)), port_(std::move(port)) {
   // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.

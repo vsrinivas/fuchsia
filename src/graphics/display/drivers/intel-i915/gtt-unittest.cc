@@ -24,8 +24,8 @@ void Configure2MbGtt(pci::FakePciProtocol* pci) {
   pci->PciConfigWrite16(registers::GmchGfxControl::kAddr, 0x40);
 }
 
-ddk::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {
-  return ddk::MmioBuffer({
+fdf::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {
+  return fdf::MmioBuffer({
       .vaddr = FakeMmioPtr(buffer),
       .offset = 0,
       .size = size,
@@ -36,7 +36,7 @@ ddk::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {
 TEST(GttTest, InitWithZeroSizeGtt) {
   pci::FakePciProtocol pci;
   uint8_t buffer = 0;
-  ddk::MmioBuffer mmio = MakeMmioBuffer(&buffer, 0);
+  fdf::MmioBuffer mmio = MakeMmioBuffer(&buffer, 0);
 
   i915::Gtt gtt;
   EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));
@@ -51,7 +51,7 @@ TEST(GttTest, InitGtt) {
 
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
   memset(buffer.get(), 0, kTableSize);
-  ddk::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
+  fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));
@@ -82,7 +82,7 @@ TEST(GttTest, InitGttWithFramebufferOffset) {
   constexpr uint8_t kJunk = 0xFF;
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
   memset(buffer.get(), kJunk, kTableSize);
-  ddk::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
+  fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), kFbOffset));
@@ -112,7 +112,7 @@ TEST(GttTest, SetupForMexec) {
   pci::FakePciProtocol pci;
   Configure2MbGtt(&pci);
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
-  ddk::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
+  fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));

@@ -18,8 +18,8 @@ TEST(MockMmioReg, CopyFrom) {
   ddk_fake::FakeMmioRegRegion reg_region_1(reg_array_1, sizeof(uint32_t), std::size(reg_array_1));
   ddk_fake::FakeMmioRegRegion reg_region_2(reg_array_2, sizeof(uint32_t), std::size(reg_array_2));
 
-  ddk::MmioBuffer dut_1(reg_region_1.GetMmioBuffer());
-  ddk::MmioBuffer dut_2(reg_region_2.GetMmioBuffer());
+  fdf::MmioBuffer dut_1(reg_region_1.GetMmioBuffer());
+  fdf::MmioBuffer dut_2(reg_region_2.GetMmioBuffer());
 
   const uint32_t reg_values[] = {0xdb5a95fd, 0xc1c8f880, 0x733c2bed, 0xf74e857c};
   uint32_t written_values[kRegArrayLength];

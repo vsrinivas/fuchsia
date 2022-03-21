@@ -67,7 +67,7 @@ class DeviceState {
 
   void set_irq_signaller(zx::unowned_interrupt signaller) { irq_signaller_ = std::move(signaller); }
 
-  ddk::MmioBuffer GetMmio() { return region_->GetMmioBuffer(); }
+  fdf::MmioBuffer GetMmio() { return region_->GetMmioBuffer(); }
 
   bool PortResetRX() {
     bool reset = reset_rx_;

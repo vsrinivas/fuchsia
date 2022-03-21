@@ -231,7 +231,7 @@ class TaskTest : public zxtest::Test {
     EXPECT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq));
 
     ge2d_device_ = std::make_unique<Ge2dDevice>(
-        nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq), std::move(bti_handle_),
+        nullptr, fdf::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq), std::move(bti_handle_),
         std::move(port), std::move(watermark_input_contiguous_vmos_),
         std::move(watermark_blended_contiguous_vmo_), fake_canvas);
 

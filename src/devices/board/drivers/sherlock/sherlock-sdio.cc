@@ -167,13 +167,13 @@ zx_status_t Sherlock::SdioInit() {
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> buf;
+  std::optional<fdf::MmioBuffer> buf;
   zx::unowned_resource res(get_root_resource());
-  status = ddk::MmioBuffer::Create(kGpioBase, kGpioBaseOffset + T931_GPIO_LENGTH, *res,
+  status = fdf::MmioBuffer::Create(kGpioBase, kGpioBaseOffset + T931_GPIO_LENGTH, *res,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d", __func__, status);
+    zxlogf(ERROR, "%s: fdf::MmioBuffer::Create() error: %d", __func__, status);
     return status;
   }
 

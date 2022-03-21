@@ -422,7 +422,7 @@ zx_status_t AmlPwmDevice::Init(zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   for (uint32_t i = 0;; i++) {
-    std::optional<ddk::MmioBuffer> mmio;
+    std::optional<fdf::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
       break;
     }

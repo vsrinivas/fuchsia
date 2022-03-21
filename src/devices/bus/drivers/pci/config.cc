@@ -16,14 +16,14 @@
 namespace pci {
 
 // MMIO Config Implementation
-zx_status_t MmioConfig::Create(pci_bdf_t bdf, ddk::MmioBuffer* ecam, uint8_t start_bus,
+zx_status_t MmioConfig::Create(pci_bdf_t bdf, fdf::MmioBuffer* ecam, uint8_t start_bus,
                                uint8_t end_bus, std::unique_ptr<Config>* config) {
   if (bdf.bus_id < start_bus || bdf.bus_id > end_bus || bdf.device_id >= PCI_MAX_DEVICES_PER_BUS ||
       bdf.function_id >= PCI_MAX_FUNCTIONS_PER_DEVICE) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ddk::MmioView view = ecam->View(bdf_to_ecam_offset(bdf, start_bus), PCIE_EXTENDED_CONFIG_SIZE);
+  fdf::MmioView view = ecam->View(bdf_to_ecam_offset(bdf, start_bus), PCIE_EXTENDED_CONFIG_SIZE);
   *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, std::move(view)));
   return ZX_OK;
 }

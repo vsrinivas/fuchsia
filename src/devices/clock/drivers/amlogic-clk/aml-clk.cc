@@ -139,7 +139,7 @@ zx_status_t MesonPllClock::Toggle(const bool enable) {
 
 class MesonCpuClock : public MesonRateClock {
  public:
-  explicit MesonCpuClock(const ddk::MmioBuffer* hiu, const uint32_t offset, MesonPllClock* sys_pll,
+  explicit MesonCpuClock(const fdf::MmioBuffer* hiu, const uint32_t offset, MesonPllClock* sys_pll,
                          const uint32_t initial_rate)
       : hiu_(hiu), offset_(offset), sys_pll_(sys_pll), current_rate_hz_(initial_rate) {}
   ~MesonCpuClock() = default;
@@ -162,7 +162,7 @@ class MesonCpuClock : public MesonRateClock {
   static constexpr uint32_t kSysCpuWaitBusyRetries = 5;
   static constexpr uint32_t kSysCpuWaitBusyTimeoutUs = 10'000;
 
-  const ddk::MmioBuffer* hiu_;
+  const fdf::MmioBuffer* hiu_;
   const uint32_t offset_;
 
   MesonPllClock* sys_pll_;
@@ -356,8 +356,8 @@ zx_status_t MesonCpuClock::WaitForBusyCpu() {
 
 AmlClock::~AmlClock() = default;
 
-AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,
-                   std::optional<ddk::MmioBuffer> msr_mmio, uint32_t device_id)
+AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer dosbus_mmio,
+                   std::optional<fdf::MmioBuffer> msr_mmio, uint32_t device_id)
     : DeviceType(device),
       hiu_mmio_(std::move(hiu_mmio)),
       dosbus_mmio_(std::move(dosbus_mmio)),
@@ -449,9 +449,9 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> hiu_mmio = std::nullopt;
-  std::optional<ddk::MmioBuffer> dosbus_mmio = std::nullopt;
-  std::optional<ddk::MmioBuffer> msr_mmio = std::nullopt;
+  std::optional<fdf::MmioBuffer> hiu_mmio = std::nullopt;
+  std::optional<fdf::MmioBuffer> dosbus_mmio = std::nullopt;
+  std::optional<fdf::MmioBuffer> msr_mmio = std::nullopt;
 
   // All AML clocks have HIU and dosbus regs but only some support MSR regs.
   // Figure out which of the varieties we're dealing with.
@@ -553,7 +553,7 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, bool enable) {
 
 void AmlClock::ClkToggleHw(const meson_clk_gate_t* gate, bool enable) {
   uint32_t mask = gate->mask ? gate->mask : (1 << gate->bit);
-  ddk::MmioBuffer* mmio;
+  fdf::MmioBuffer* mmio;
   switch (gate->register_set) {
     case kMesonRegisterSetHiu:
       mmio = &hiu_mmio_;

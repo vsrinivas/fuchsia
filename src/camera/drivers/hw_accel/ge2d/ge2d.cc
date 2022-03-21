@@ -935,7 +935,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> ge2d_mmio;
+  std::optional<fdf::MmioBuffer> ge2d_mmio;
   zx_status_t status = pdev.MapMmio(kGe2d, &ge2d_mmio);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "pdev_.MapMmio failed";

@@ -39,7 +39,7 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name, uint8_t
 // Creates a device, seeding the configuration space with a given buffer if provided.
 zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t base_cfg_size,
                                         uint16_t vid, uint16_t did) {
-  ddk::MmioView view =
+  fdf::MmioView view =
       bus_.pciroot().ecam().mmio().View(bdf_to_ecam_offset(bdf, 0), zx_system_get_page_size());
   for (uint32_t off = 0; off < base_cfg_size; off++) {
     view.Write(base_cfg[off], off);

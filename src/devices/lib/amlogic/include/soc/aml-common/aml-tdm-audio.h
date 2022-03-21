@@ -20,7 +20,7 @@ class AmlTdmDevice {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlTdmDevice);
 
   static std::unique_ptr<AmlTdmDevice> Create(
-      ddk::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_out_t tdm, aml_frddr_t frddr,
+      fdf::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_out_t tdm, aml_frddr_t frddr,
       aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   // Configure an mclk channel divider
@@ -74,7 +74,7 @@ class AmlTdmDevice {
 
   virtual uint32_t fifo_depth() const = 0;
 
-  virtual const ddk::MmioBuffer& GetMmio() const = 0;
+  virtual const fdf::MmioBuffer& GetMmio() const = 0;
 
  protected:
   friend class std::default_delete<AmlTdmDevice>;
@@ -102,7 +102,7 @@ class AmlTdmDevice {
 class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
  public:
   static std::unique_ptr<AmlTdmDevice> Create(
-      ddk::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_out_t tdm, aml_frddr_t frddr,
+      fdf::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_out_t tdm, aml_frddr_t frddr,
       aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
@@ -121,7 +121,7 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
   uint32_t fifo_depth() const override { return fifo_depth_; }
 
  protected:
-  AmlTdmOutDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
+  AmlTdmOutDevice(fdf::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
                   metadata::AmlVersion version)
       : AmlTdmDevice(mclk, clk_src, version),
@@ -135,7 +135,7 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
         version_(version) {}
 
  private:
-  const ddk::MmioBuffer& GetMmio() const override { return mmio_; }
+  const fdf::MmioBuffer& GetMmio() const override { return mmio_; }
 
   /* Get the register block offset for our ddr block */
   zx_off_t GetFrddrBase(aml_frddr_t ch) {
@@ -182,14 +182,14 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
   const aml_tdm_mclk_t mclk_ch_;  // mclk channel used by this instance
   const zx_off_t frddr_base_;     // base offset of frddr ch used by this instance
   const zx_off_t tdm_base_;       // base offset of our tdmout block
-  const ddk::MmioBuffer mmio_;
+  const fdf::MmioBuffer mmio_;
   const metadata::AmlVersion version_;
 };
 
 class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
  public:
   static std::unique_ptr<AmlTdmDevice> Create(
-      ddk::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_in_t tdm, aml_toddr_t toddr,
+      fdf::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_in_t tdm, aml_toddr_t toddr,
       aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
@@ -208,7 +208,7 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
   uint32_t fifo_depth() const override { return fifo_depth_; }
 
  protected:
-  AmlTdmInDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_in_t tdm,
+  AmlTdmInDevice(fdf::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_in_t tdm,
                  aml_toddr_t toddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
                  metadata::AmlVersion version)
       : AmlTdmDevice(mclk, clk_src, version),
@@ -222,7 +222,7 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
         version_(version) {}
 
  private:
-  const ddk::MmioBuffer& GetMmio() const override { return mmio_; }
+  const fdf::MmioBuffer& GetMmio() const override { return mmio_; }
 
   /* Get the register block offset for our ddr block */
   static zx_off_t GetToddrBase(aml_toddr_t ch) {
@@ -269,7 +269,7 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
   const aml_tdm_mclk_t mclk_ch_;  // mclk channel used by this instance
   const zx_off_t toddr_base_;     // base offset of toddr ch used by this instance
   const zx_off_t tdm_base_;       // base offset of our tdmin block
-  const ddk::MmioBuffer mmio_;
+  const fdf::MmioBuffer mmio_;
   const metadata::AmlVersion version_;
 };
 

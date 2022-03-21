@@ -49,8 +49,8 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
     uint32_t clock_control_offset;
   };
 
-  explicit AmlNnaDevice(zx_device_t* parent, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer power_mmio,
-                        ddk::MmioBuffer memory_pd_mmio, zx::channel reset, ddk::PDev pdev,
+  explicit AmlNnaDevice(zx_device_t* parent, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer power_mmio,
+                        fdf::MmioBuffer memory_pd_mmio, zx::channel reset, ddk::PDev pdev,
                         NnaBlock nna_block)
       : AmlNnaDeviceType(parent),
         pdev_(std::move(pdev)),
@@ -70,9 +70,9 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
 
  private:
   ddk::PDev pdev_;
-  ddk::MmioBuffer hiu_mmio_;
-  ddk::MmioBuffer power_mmio_;
-  ddk::MmioBuffer memory_pd_mmio_;
+  fdf::MmioBuffer hiu_mmio_;
+  fdf::MmioBuffer power_mmio_;
+  fdf::MmioBuffer memory_pd_mmio_;
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_;
 
   pdev_protocol_t parent_pdev_;

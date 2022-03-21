@@ -48,7 +48,7 @@ Gtt::~Gtt() {
   }
 }
 
-zx_status_t Gtt::Init(const pci_protocol_t* pci, ddk::MmioBuffer buffer, uint32_t fb_offset) {
+zx_status_t Gtt::Init(const pci_protocol_t* pci, fdf::MmioBuffer buffer, uint32_t fb_offset) {
   ZX_DEBUG_ASSERT(pci);
   buffer_ = std::move(buffer);
 

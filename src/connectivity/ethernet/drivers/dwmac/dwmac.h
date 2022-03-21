@@ -175,7 +175,7 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable, ddk::Suspen
   ddk::PDev pdev_;
   ddk::EthBoardProtocolClient eth_board_;
 
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
 
   fbl::Mutex lock_;
   ddk::EthernetIfcProtocolClient ethernet_client_ __TA_GUARDED(lock_);

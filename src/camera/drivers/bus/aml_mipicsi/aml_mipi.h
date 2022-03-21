@@ -93,11 +93,11 @@ class AmlMipiDevice : public DeviceType,
   void DumpPixelRegs();
   void DumpMiscRegs();
 
-  std::optional<ddk::MmioBuffer> csi_phy0_mmio_;
-  std::optional<ddk::MmioBuffer> aphy0_mmio_;
-  std::optional<ddk::MmioBuffer> csi_host0_mmio_;
-  std::optional<ddk::MmioBuffer> mipi_adap_mmio_;
-  std::optional<ddk::MmioBuffer> hiu_mmio_;
+  std::optional<fdf::MmioBuffer> csi_phy0_mmio_;
+  std::optional<fdf::MmioBuffer> aphy0_mmio_;
+  std::optional<fdf::MmioBuffer> csi_host0_mmio_;
+  std::optional<fdf::MmioBuffer> mipi_adap_mmio_;
+  std::optional<fdf::MmioBuffer> hiu_mmio_;
 
   ddk::PDev pdev_;
 

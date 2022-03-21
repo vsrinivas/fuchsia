@@ -137,7 +137,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   MMIO_PTR hda_pp_registers_t* pp_regs_ = nullptr;
 
   // PCI registers
-  std::optional<ddk::MmioBuffer> mapped_regs_;
+  std::optional<fdf::MmioBuffer> mapped_regs_;
 
   // IPC Channel and controller for DSP hardware.
   std::unique_ptr<DspChannel> ipc_;

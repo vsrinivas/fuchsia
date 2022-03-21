@@ -180,8 +180,8 @@ class TaskTest : public zxtest::Test {
     zx::interrupt irq;
     EXPECT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq));
 
-    gdc_device_ = std::make_unique<GdcDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                                              ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+    gdc_device_ = std::make_unique<GdcDevice>(nullptr, fdf::MmioBuffer(fake_regs.GetMmioBuffer()),
+                                              fdf::MmioBuffer(fake_regs.GetMmioBuffer()),
                                               std::move(config_contig_vmos_), std::move(irq),
                                               std::move(bti_handle_), std::move(port));
 

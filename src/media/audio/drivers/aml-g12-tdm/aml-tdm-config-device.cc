@@ -10,7 +10,7 @@
 
 namespace audio::aml_g12 {
 
-AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, ddk::MmioBuffer mmio) {
+AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf::MmioBuffer mmio) {
   if (metadata.is_input) {
     aml_tdm_in_t tdm = {};
     aml_toddr_t ddr = {};

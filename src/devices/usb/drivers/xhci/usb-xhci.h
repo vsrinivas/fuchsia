@@ -87,7 +87,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Constructor for unit testing (to allow interception of MMIO read/write)
-  explicit UsbXhci(zx_device_t* parent, ddk::MmioBuffer buffer)
+  explicit UsbXhci(zx_device_t* parent, fdf::MmioBuffer buffer)
       : UsbXhciType(parent),
         ddk_interaction_loop_(&kAsyncLoopConfigNeverAttachToThread),
         ddk_interaction_executor_(ddk_interaction_loop_.dispatcher()) {}
@@ -378,7 +378,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // MMIO buffer for communicating with the physical hardware
   // Must be optional to allow for asynchronous initialization,
   // since an MmioBuffer has no default constructor.
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
 
   // The number of IRQs supported by the HCI
   uint16_t irq_count_;

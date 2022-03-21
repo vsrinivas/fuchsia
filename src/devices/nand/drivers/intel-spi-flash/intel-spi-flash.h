@@ -27,7 +27,7 @@ using DeviceType = ddk::Device<SpiFlashDevice, ddk::Unbindable>;
 class SpiFlashDevice : public DeviceType,
                        public ddk::NandProtocol<SpiFlashDevice, ddk::base_protocol> {
  public:
-  SpiFlashDevice(zx_device_t* parent, ddk::MmioBuffer mmio)
+  SpiFlashDevice(zx_device_t* parent, fdf::MmioBuffer mmio)
       : DeviceType(parent), mmio_(std::move(mmio)) {}
 
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -64,7 +64,7 @@ class SpiFlashDevice : public DeviceType,
   zx_status_t NandWriteBytes(uint64_t address, size_t length, size_t vmo_offset,
                              zx::unowned_vmo dst_vmo);
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   inspect::Inspector inspect_;
 
   std::optional<FlashChipInfo> flash_chip_;

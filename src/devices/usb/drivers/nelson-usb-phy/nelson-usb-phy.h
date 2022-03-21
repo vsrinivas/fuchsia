@@ -50,7 +50,7 @@ class NelsonUsbPhy : public NelsonUsbPhyType,
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NelsonUsbPhy);
 
-  void InitPll(ddk::MmioBuffer* mmio);
+  void InitPll(fdf::MmioBuffer* mmio);
   zx_status_t InitPhy();
   zx_status_t InitOtg();
   void SetMode(UsbMode mode) __TA_REQUIRES(lock_);
@@ -64,12 +64,12 @@ class NelsonUsbPhy : public NelsonUsbPhyType,
   int IrqThread();
 
   ddk::PDev pdev_;
-  std::optional<ddk::MmioBuffer> reset_mmio_;
-  std::optional<ddk::MmioBuffer> usbctrl_mmio_;
-  std::optional<ddk::MmioBuffer> usbphy20_mmio_;
-  std::optional<ddk::MmioBuffer> usbphy21_mmio_;
-  std::optional<ddk::MmioBuffer> power_mmio_;
-  std::optional<ddk::MmioBuffer> sleep_mmio_;
+  std::optional<fdf::MmioBuffer> reset_mmio_;
+  std::optional<fdf::MmioBuffer> usbctrl_mmio_;
+  std::optional<fdf::MmioBuffer> usbphy20_mmio_;
+  std::optional<fdf::MmioBuffer> usbphy21_mmio_;
+  std::optional<fdf::MmioBuffer> power_mmio_;
+  std::optional<fdf::MmioBuffer> sleep_mmio_;
 
   zx::interrupt irq_;
   thrd_t irq_thread_;

@@ -107,21 +107,21 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   }
   reset.Connect(std::move(server_end));
 
-  std::optional<ddk::MmioBuffer> hiu_mmio;
+  std::optional<fdf::MmioBuffer> hiu_mmio;
   status = pdev.MapMmio(kHiu, &hiu_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> power_mmio;
+  std::optional<fdf::MmioBuffer> power_mmio;
   status = pdev.MapMmio(kPowerDomain, &power_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> memory_pd_mmio;
+  std::optional<fdf::MmioBuffer> memory_pd_mmio;
   status = pdev.MapMmio(kMemoryDomain, &memory_pd_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);

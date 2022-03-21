@@ -155,7 +155,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     }
 
     // Map AOBUS registers
-    std::optional<ddk::MmioBuffer> mmio_buffer;
+    std::optional<fdf::MmioBuffer> mmio_buffer;
 
     if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
       zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);

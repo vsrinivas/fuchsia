@@ -27,7 +27,7 @@ using DeviceType = ddk::Device<GspiDevice, ddk::Initializable, ddk::Unbindable>;
 // Actual virtio console implementation
 class GspiDevice : public DeviceType, public ddk::SpiImplProtocol<GspiDevice, ddk::base_protocol> {
  public:
-  GspiDevice(zx_device_t* device, ddk::MmioBuffer mmio, zx::interrupt interrupt, acpi::Client acpi,
+  GspiDevice(zx_device_t* device, fdf::MmioBuffer mmio, zx::interrupt interrupt, acpi::Client acpi,
              zx::duration irq_timeout = kIrqTimeout)
       : DeviceType(device),
         pci_(device, "pci"),
@@ -77,7 +77,7 @@ class GspiDevice : public DeviceType, public ddk::SpiImplProtocol<GspiDevice, dd
 
   ddk::Pci pci_;
   std::mutex lock_;
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   zx::interrupt irq_;
   acpi::Client acpi_;
   std::thread irq_thread_;

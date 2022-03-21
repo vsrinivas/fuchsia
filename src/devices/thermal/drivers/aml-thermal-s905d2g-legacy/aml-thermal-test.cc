@@ -262,8 +262,8 @@ namespace thermal {
 // Temperature Sensor
 class FakeAmlTSensor : public AmlTSensor {
  public:
-  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
-                                                ddk::MmioBuffer hiu_mmio, bool less) {
+  static std::unique_ptr<FakeAmlTSensor> Create(fdf::MmioBuffer pll_mmio, fdf::MmioBuffer trim_mmio,
+                                                fdf::MmioBuffer hiu_mmio, bool less) {
     fbl::AllocChecker ac;
 
     auto test = fbl::make_unique_checked<FakeAmlTSensor>(&ac, std::move(pll_mmio),
@@ -282,8 +282,8 @@ class FakeAmlTSensor : public AmlTSensor {
     return test;
   }
 
-  explicit FakeAmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
-                          ddk::MmioBuffer hiu_mmio)
+  explicit FakeAmlTSensor(fdf::MmioBuffer pll_mmio, fdf::MmioBuffer trim_mmio,
+                          fdf::MmioBuffer hiu_mmio)
       : AmlTSensor(std::move(pll_mmio), std::move(trim_mmio), std::move(hiu_mmio)) {}
 };
 
@@ -381,9 +381,9 @@ class AmlTSensorTest : public zxtest::Test {
     (*mock_pll_mmio_)[(0x2 << 2)].ExpectRead(0x0);
     (*mock_pll_mmio_)[(0x2 << 2)].ExpectWrite(0xc0ff2880);
 
-    ddk::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
     tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(trim_mmio),
                                       std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);
@@ -593,7 +593,7 @@ TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
 // CPU Frequency and Scaling
 class FakeAmlCpuFrequency : public AmlCpuFrequency {
  public:
-  static std::unique_ptr<FakeAmlCpuFrequency> Create(ddk::MmioBuffer hiu_mmio,
+  static std::unique_ptr<FakeAmlCpuFrequency> Create(fdf::MmioBuffer hiu_mmio,
                                                      mmio_buffer_t mock_hiu_internal_mmio,
                                                      uint32_t pid) {
     const auto& config = (pid == 4 ? sherlock_thermal_config : astro_thermal_config);
@@ -609,7 +609,7 @@ class FakeAmlCpuFrequency : public AmlCpuFrequency {
     return test;
   }
 
-  FakeAmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
+  FakeAmlCpuFrequency(fdf::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
                       const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
                       const aml_thermal_info_t& thermal_info)
       : AmlCpuFrequency(std::move(hiu_mmio), std::move(hiu_internal_mmio), thermal_config,
@@ -679,7 +679,7 @@ class AmlCpuFrequencyTest : public zxtest::Test {
         return;
     }
 
-    ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
     cpufreq_scaling_ =
         FakeAmlCpuFrequency::Create(std::move(hiu_mmio), mock_hiu_internal_mmio_, pid);
     ASSERT_TRUE(cpufreq_scaling_ != nullptr);
@@ -816,9 +816,9 @@ TEST_F(AmlCpuFrequencyTest, AstroSetFrequencyTest1) {
 class FakeAmlThermal : public AmlThermal {
  public:
   static std::unique_ptr<FakeAmlThermal> Create(
-      ddk::MmioBuffer tsensor_pll_mmio, ddk::MmioBuffer tsensor_trim_mmio,
-      ddk::MmioBuffer tsensor_hiu_mmio, const pwm_protocol_t* big_cluster_pwm,
-      const pwm_protocol_t* little_cluster_pwm, ddk::MmioBuffer cpufreq_scaling_hiu_mmio,
+      fdf::MmioBuffer tsensor_pll_mmio, fdf::MmioBuffer tsensor_trim_mmio,
+      fdf::MmioBuffer tsensor_hiu_mmio, const pwm_protocol_t* big_cluster_pwm,
+      const pwm_protocol_t* little_cluster_pwm, fdf::MmioBuffer cpufreq_scaling_hiu_mmio,
       mmio_buffer_t cpufreq_scaling_mock_hiu_internal_mmio, uint32_t pid) {
     fbl::AllocChecker ac;
 
@@ -1084,12 +1084,12 @@ class AmlThermalTest : public zxtest::Test {
         return;
     }
 
-    ddk::MmioBuffer tsensor_pll_mmio(tsensor_mock_pll_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer tsensor_trim_mmio(tsensor_mock_trim_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer tsensor_hiu_mmio(tsensor_mock_hiu_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer tsensor_pll_mmio(tsensor_mock_pll_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer tsensor_trim_mmio(tsensor_mock_trim_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer tsensor_hiu_mmio(tsensor_mock_hiu_mmio_->GetMmioBuffer());
     auto big_cluster_pwm = big_cluster_pwm_.GetProto();
     auto little_cluster_pwm = little_cluster_pwm_.GetProto();
-    ddk::MmioBuffer cpufreq_scaling_hiu_mmio(cpufreq_scaling_mock_hiu_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer cpufreq_scaling_hiu_mmio(cpufreq_scaling_mock_hiu_mmio_->GetMmioBuffer());
     thermal_device_ = FakeAmlThermal::Create(
         std::move(tsensor_pll_mmio), std::move(tsensor_trim_mmio), std::move(tsensor_hiu_mmio),
         big_cluster_pwm, little_cluster_pwm, std::move(cpufreq_scaling_hiu_mmio),

@@ -117,8 +117,8 @@ class PcieBuscore : public RegisterWindowProviderInterface, public DmaBufferProv
 
   // Data members.
   std::unique_ptr<ddk::PciProtocolClient> pci_proto_;
-  std::unique_ptr<ddk::MmioBuffer> regs_mmio_;
-  std::unique_ptr<ddk::MmioBuffer> tcm_mmio_;
+  std::unique_ptr<fdf::MmioBuffer> regs_mmio_;
+  std::unique_ptr<fdf::MmioBuffer> tcm_mmio_;
   std::unique_ptr<Backplane> backplane_;
 
   // BAR0 window mapping state.

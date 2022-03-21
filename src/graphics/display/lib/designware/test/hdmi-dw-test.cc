@@ -22,18 +22,18 @@ using fuchsia_hardware_hdmi::wire::StandardDisplayMode;
 
 class FakeHdmiIpBase : public HdmiIpBase {
  public:
-  explicit FakeHdmiIpBase(ddk::MmioBuffer mmio) : HdmiIpBase(), mmio_(std::move(mmio)) {}
+  explicit FakeHdmiIpBase(fdf::MmioBuffer mmio) : HdmiIpBase(), mmio_(std::move(mmio)) {}
 
   void WriteIpReg(uint32_t addr, uint32_t data) { mmio_.Write8(data, addr); }
   uint32_t ReadIpReg(uint32_t addr) { return mmio_.Read8(addr); }
 
  private:
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
 };
 
 class FakeHdmiDw : public HdmiDw {
  public:
-  static std::unique_ptr<FakeHdmiDw> Create(ddk::MmioBuffer mmio) {
+  static std::unique_ptr<FakeHdmiDw> Create(fdf::MmioBuffer mmio) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeHdmiDw>(&ac, std::move(mmio));
     if (!ac.check()) {
@@ -44,7 +44,7 @@ class FakeHdmiDw : public HdmiDw {
     return device;
   }
 
-  explicit FakeHdmiDw(ddk::MmioBuffer mmio) : HdmiDw(&base_), base_(std::move(mmio)) {}
+  explicit FakeHdmiDw(fdf::MmioBuffer mmio) : HdmiDw(&base_), base_(std::move(mmio)) {}
 
  private:
   FakeHdmiIpBase base_;
@@ -67,7 +67,7 @@ class HdmiDwTest : public zxtest::Test {
       return;
     }
 
-    hdmi_dw_ = FakeHdmiDw::Create(ddk::MmioBuffer(mock_mmio_->GetMmioBuffer()));
+    hdmi_dw_ = FakeHdmiDw::Create(fdf::MmioBuffer(mock_mmio_->GetMmioBuffer()));
     ASSERT_NOT_NULL(hdmi_dw_);
   }
 

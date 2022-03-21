@@ -32,7 +32,7 @@ class Pl031 : public RtcDeviceType {
  public:
   static zx_status_t Bind(void*, zx_device_t* dev);
 
-  Pl031(zx_device_t* parent, ddk::MmioBuffer mmio);
+  Pl031(zx_device_t* parent, fdf::MmioBuffer mmio);
   ~Pl031() = default;
 
   // fidl::WireServer<FidlRtc::Device>:
@@ -45,7 +45,7 @@ class Pl031 : public RtcDeviceType {
  private:
   zx_status_t SetRtc(FidlRtc::wire::Time rtc);
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   MMIO_PTR Pl031Regs* regs_;
 };
 

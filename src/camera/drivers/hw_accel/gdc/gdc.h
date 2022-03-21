@@ -45,7 +45,7 @@ using GdcDeviceType = ddk::Device<GdcDevice, ddk::Unbindable>;
 class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GdcDevice);
-  explicit GdcDevice(zx_device_t* parent, ddk::MmioBuffer clk_mmio, ddk::MmioBuffer gdc_mmio,
+  explicit GdcDevice(zx_device_t* parent, fdf::MmioBuffer clk_mmio, fdf::MmioBuffer gdc_mmio,
                      std::stack<zx::vmo> gdc_config_contig_vmos, zx::interrupt gdc_irq, zx::bti bti,
                      zx::port port)
       : GdcDeviceType(parent),
@@ -86,7 +86,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx_status_t GdcSetOutputResolution(uint32_t task_index, uint32_t new_output_image_format_index);
 
   // Used for unit tests.
-  const ddk::MmioBuffer* gdc_mmio() const { return &gdc_mmio_; }
+  const fdf::MmioBuffer* gdc_mmio() const { return &gdc_mmio_; }
   zx_status_t StartThread();
   zx_status_t StopThread();
 
@@ -133,8 +133,8 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   fbl::Mutex interface_lock_;
 
   // HHI register block has the clock registers
-  ddk::MmioBuffer clock_mmio_;
-  ddk::MmioBuffer gdc_mmio_;
+  fdf::MmioBuffer clock_mmio_;
+  fdf::MmioBuffer gdc_mmio_;
   zx::interrupt gdc_irq_;
   zx::bti bti_;
 

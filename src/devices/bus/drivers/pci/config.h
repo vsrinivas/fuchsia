@@ -188,7 +188,7 @@ class Config {
   inline const char* addr() const { return addr_; }
   virtual const char* type() const = 0;
   // Return a copy of the MmioView backing the Config's MMIO space, if supported.
-  virtual zx::status<ddk::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  virtual zx::status<fdf::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   // Virtuals
   void DumpConfig(uint16_t len) const;
@@ -215,7 +215,7 @@ class Config {
 // ecam and can be directly accessed with standard IO operations.t
 class MmioConfig : public Config {
  public:
-  static zx_status_t Create(pci_bdf_t bdf, ddk::MmioBuffer* ecam_, uint8_t start_bus,
+  static zx_status_t Create(pci_bdf_t bdf, fdf::MmioBuffer* ecam_, uint8_t start_bus,
                             uint8_t end_bus, std::unique_ptr<Config>* config);
   uint8_t Read(PciReg8 addr) const final;
   uint16_t Read(PciReg16 addr) const final;
@@ -224,12 +224,12 @@ class MmioConfig : public Config {
   void Write(PciReg16 addr, uint16_t val) const final;
   void Write(PciReg32 addr, uint32_t val) const override;
   const char* type() const override;
-  zx::status<ddk::MmioView> get_view() const final { return zx::ok(ddk::MmioView(view_)); }
+  zx::status<fdf::MmioView> get_view() const final { return zx::ok(fdf::MmioView(view_)); }
 
  private:
   friend class FakeMmioConfig;
-  MmioConfig(pci_bdf_t bdf, ddk::MmioView&& view) : Config(bdf), view_(view) {}
-  const ddk::MmioView view_;
+  MmioConfig(pci_bdf_t bdf, fdf::MmioView&& view) : Config(bdf), view_(view) {}
+  const fdf::MmioView view_;
 };
 
 // ProxyConfig is used with PCI buses that do not support MMIO config space,

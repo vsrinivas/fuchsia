@@ -115,7 +115,7 @@ zx_status_t DeviceState::InitializeOutputContextBuffer(
 TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t port,
                                              std::optional<HubInfo> hub_info, uint64_t* dcbaa,
                                              uint16_t interrupter_target, CommandRing* command_ring,
-                                             ddk::MmioBuffer* mmio, bool bsr) {
+                                             fdf::MmioBuffer* mmio, bool bsr) {
   if (!hub_info.has_value()) {
     hci->GetPortState()[port - 1].slot_id = slot;
   }

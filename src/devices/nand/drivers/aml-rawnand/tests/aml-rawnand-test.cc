@@ -288,8 +288,8 @@ class FakeAmlRawNand : public AmlRawNand {
                  std::unique_ptr<ddk_mock::MockMmioReg[]> mock_clock_regs,
                  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_clock_reg_region,
                  std::unique_ptr<Onfi> onfi, bool rand_mode)
-      : AmlRawNand(fake_ddk::kFakeParent, ddk::MmioBuffer(mock_nand_reg_region->GetMmioBuffer()),
-                   ddk::MmioBuffer(mock_clock_reg_region->GetMmioBuffer()), std::move(bti),
+      : AmlRawNand(fake_ddk::kFakeParent, fdf::MmioBuffer(mock_nand_reg_region->GetMmioBuffer()),
+                   fdf::MmioBuffer(mock_clock_reg_region->GetMmioBuffer()), std::move(bti),
                    std::move(interrupt), std::move(onfi)),
         rand_mode_(rand_mode),
         mock_nand_regs_(std::move(mock_nand_regs)),

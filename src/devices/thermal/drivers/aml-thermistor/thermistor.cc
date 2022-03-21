@@ -49,12 +49,12 @@ zx_status_t AmlThermistor::InitPdev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> adc_mmio;
+  std::optional<fdf::MmioBuffer> adc_mmio;
   status = pdev.MapMmio(0, &adc_mmio);
   if (status != ZX_OK) {
     return status;
   }
-  std::optional<ddk::MmioBuffer> ao_mmio;
+  std::optional<fdf::MmioBuffer> ao_mmio;
   status = pdev.MapMmio(1, &ao_mmio);
   if (status != ZX_OK) {
     return status;

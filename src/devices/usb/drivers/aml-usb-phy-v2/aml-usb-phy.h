@@ -60,7 +60,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlUsbPhy);
 
-  void InitPll(ddk::MmioBuffer* mmio);
+  void InitPll(fdf::MmioBuffer* mmio);
   zx_status_t InitPhy();
   zx_status_t InitOtg();
 
@@ -78,9 +78,9 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
 
   ddk::PDev pdev_;
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_register_;
-  std::optional<ddk::MmioBuffer> usbctrl_mmio_;
-  std::optional<ddk::MmioBuffer> usbphy20_mmio_;
-  std::optional<ddk::MmioBuffer> usbphy21_mmio_;
+  std::optional<fdf::MmioBuffer> usbctrl_mmio_;
+  std::optional<fdf::MmioBuffer> usbphy20_mmio_;
+  std::optional<fdf::MmioBuffer> usbphy21_mmio_;
 
   zx::interrupt irq_;
   thrd_t irq_thread_;

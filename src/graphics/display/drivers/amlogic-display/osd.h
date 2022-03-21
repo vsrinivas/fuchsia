@@ -246,7 +246,7 @@ class Osd {
   void DumpNonRdmaRegisters();
   void DumpRdmaState() __TA_REQUIRES(rdma_lock_);
 
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
+  std::optional<fdf::MmioBuffer> vpu_mmio_;
   zx::bti bti_;
 
   // RDMA IRQ handle and thread used for diagnostic purposes.

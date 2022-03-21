@@ -11,7 +11,7 @@
 
 namespace usb_xhci {
 
-zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, fdf::MmioBuffer* buffer,
                               const RuntimeRegisterOffset& offset, uint32_t erst_max,
                               DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
                               uint64_t* dcbaa) {
@@ -29,7 +29,7 @@ zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioB
                           doorbell_offset, hci, hcc_params_1, dcbaa, interrupter_);
 }
 
-zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset, ddk::MmioView mmio_view) {
+zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset, fdf::MmioView mmio_view) {
   if (active_) {
     // Already active;
     return ZX_OK;

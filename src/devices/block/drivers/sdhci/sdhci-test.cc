@@ -27,7 +27,7 @@ namespace sdhci {
 
 class TestSdhci : public Sdhci {
  public:
-  TestSdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti,
+  TestSdhci(zx_device_t* parent, fdf::MmioBuffer regs_mmio_buffer, zx::bti bti,
             const ddk::SdhciProtocolClient sdhci, uint64_t quirks, uint64_t dma_boundary_alignment)
       : Sdhci(parent, std::move(regs_mmio_buffer), std::move(bti), {}, sdhci, quirks,
               dma_boundary_alignment) {}
@@ -147,7 +147,7 @@ class SdhciTest : public zxtest::Test {
   void CreateDut(uint64_t quirks = 0, uint64_t dma_boundary_alignment = 0) {
     memset(registers_.get(), 0, kRegisterSetSize);
 
-    dut_.emplace(fake_ddk::kFakeParent, ddk::MmioView(mmio_), std::move(fake_bti_),
+    dut_.emplace(fake_ddk::kFakeParent, fdf::MmioView(mmio_), std::move(fake_bti_),
                  ddk::SdhciProtocolClient(mock_sdhci_.GetProto()), quirks, dma_boundary_alignment);
 
     HostControllerVersion::Get()
@@ -161,7 +161,7 @@ class SdhciTest : public zxtest::Test {
   ddk::MockSdhci mock_sdhci_;
   zx::interrupt irq_;
   std::optional<TestSdhci> dut_;
-  ddk::MmioView mmio_;
+  fdf::MmioView mmio_;
   zx::bti fake_bti_;
 };
 

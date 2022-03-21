@@ -123,7 +123,7 @@ zx_status_t AudioStreamIn::InitPDev() {
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> mmio0, mmio1;
+  std::optional<fdf::MmioBuffer> mmio0, mmio1;
   status = pdev2.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not map mmio0 %d", status);

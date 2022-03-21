@@ -97,7 +97,7 @@ void EventRing::ScheduleTask(fpromise::promise<TRB*, zx_status_t> promise) {
 
 void EventRing::RunUntilIdle() { executor_.run_until_idle(); }
 
-zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, fdf::MmioBuffer* buffer,
                               const RuntimeRegisterOffset& offset, uint32_t erst_max,
                               DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
                               uint64_t* dcbaa) {
@@ -106,7 +106,7 @@ zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioB
 }
 
 zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
-                               ddk::MmioView interrupter_regs) {
+                               fdf::MmioView interrupter_regs) {
   return ZX_OK;
 }
 
@@ -334,7 +334,7 @@ int UsbXhci::InitThread() {
   };
   invalid_mmio.size = 4;
   interrupters_[0].Start(RuntimeRegisterOffset::Get().FromValue(0),
-                         ddk::MmioView(invalid_mmio, 0, 1));
+                         fdf::MmioView(invalid_mmio, 0, 1));
   device_state_ = fbl::MakeArray<DeviceState>(32);
   return 0;
 }

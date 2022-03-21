@@ -62,7 +62,7 @@ struct CanvasEntry {
 class AmlCanvas : public DeviceType,
                   public ddk::AmlogicCanvasProtocol<AmlCanvas, ddk::base_protocol> {
  public:
-  AmlCanvas(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti)
+  AmlCanvas(zx_device_t* parent, fdf::MmioBuffer mmio, zx::bti bti)
       : DeviceType(parent), dmc_regs_(std::move(mmio)), bti_(std::move(bti)) {}
 
   // This function is called from the c-bind function upon driver matching
@@ -80,7 +80,7 @@ class AmlCanvas : public DeviceType,
   inspect::Inspector inspector_;
   inspect::Node inspect_root_;
   fbl::Mutex lock_;
-  ddk::MmioBuffer dmc_regs_ __TA_GUARDED(lock_);
+  fdf::MmioBuffer dmc_regs_ __TA_GUARDED(lock_);
   zx::bti bti_ __TA_GUARDED(lock_);
   std::array<CanvasEntry, kNumCanvasEntries> entries_ __TA_GUARDED(lock_);
 

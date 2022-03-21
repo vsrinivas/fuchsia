@@ -135,7 +135,7 @@ zx_status_t PipeDevice::Bind() {
 
   fbl::AutoLock lock(&mmio_lock_);
   auto& mmio = mmio_result->result.response().mmio;
-  zx_status_t status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
+  zx_status_t status = fdf::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: mmiobuffer create failed: %d", kTag, status);

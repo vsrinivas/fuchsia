@@ -492,14 +492,14 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> clk_mmio;
+  std::optional<fdf::MmioBuffer> clk_mmio;
   zx_status_t status = pdev.MapMmio(kHiu, &clk_mmio);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "pdev_.MapMmio failed";
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> gdc_mmio;
+  std::optional<fdf::MmioBuffer> gdc_mmio;
   status = pdev.MapMmio(kGdc, &gdc_mmio);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "pdev_.MapMmio failed";

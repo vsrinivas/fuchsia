@@ -54,7 +54,7 @@ using Ge2dDeviceType = ddk::Device<Ge2dDevice, ddk::Unbindable>;
 class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Ge2dDevice);
-  explicit Ge2dDevice(zx_device_t* parent, ddk::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
+  explicit Ge2dDevice(zx_device_t* parent, fdf::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
                       zx::bti bti, zx::port port,
                       std::vector<zx::vmo> watermark_input_contiguous_vmos,
                       zx::vmo watermark_blended_contiguous_vmo, amlogic_canvas_protocol_t canvas)
@@ -122,7 +122,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void Ge2dSetCropRect(uint32_t task_index, const rect_t* crop);
 
   // Used for unit tests.
-  const ddk::MmioBuffer* ge2d_mmio() const { return &ge2d_mmio_; }
+  const fdf::MmioBuffer* ge2d_mmio() const { return &ge2d_mmio_; }
   zx_status_t StartThread();
   zx_status_t StopThread();
   const zx::bti& bti() const { return bti_; }
@@ -188,7 +188,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   // Used to access the GE2D's banjo interface.
   fbl::Mutex interface_lock_;
 
-  ddk::MmioBuffer ge2d_mmio_;
+  fdf::MmioBuffer ge2d_mmio_;
   zx::interrupt ge2d_irq_;
   zx::bti bti_;
 

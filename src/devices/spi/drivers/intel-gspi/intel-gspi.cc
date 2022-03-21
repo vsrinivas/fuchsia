@@ -27,7 +27,7 @@ constexpr size_t kWordSizeBits = 8;
 
 zx_status_t GspiDevice::Create(void* ctx, zx_device_t* parent) {
   ddk::Pci pci(parent, "pci");
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   zx_status_t status = pci.MapMmio(0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "gspi Failed to map mmio: %d\n", status);

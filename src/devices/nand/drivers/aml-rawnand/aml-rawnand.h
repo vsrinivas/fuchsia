@@ -79,8 +79,8 @@ using DeviceType = ddk::Device<AmlRawNand, ddk::Unbindable, ddk::Suspendable>;
 
 class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, ddk::base_protocol> {
  public:
-  explicit AmlRawNand(zx_device_t* parent, ddk::MmioBuffer mmio_nandreg,
-                      ddk::MmioBuffer mmio_clockreg, zx::bti bti, zx::interrupt irq,
+  explicit AmlRawNand(zx_device_t* parent, fdf::MmioBuffer mmio_nandreg,
+                      fdf::MmioBuffer mmio_clockreg, zx::bti bti, zx::interrupt irq,
                       std::unique_ptr<Onfi> onfi)
       : DeviceType(parent),
         onfi_(std::move(onfi)),
@@ -143,8 +143,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
   fbl::Mutex mutex_;
   std::optional<Buffers> buffers_ __TA_GUARDED(mutex_);
-  ddk::MmioBuffer mmio_nandreg_;
-  ddk::MmioBuffer mmio_clockreg_;
+  fdf::MmioBuffer mmio_nandreg_;
+  fdf::MmioBuffer mmio_clockreg_;
 
   zx::bti bti_;
   zx::interrupt irq_;

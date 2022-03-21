@@ -85,7 +85,7 @@ class PciBusTests : public zxtest::Test {
 class TestBus : public pci::Bus {
  public:
   TestBus(zx_device_t* parent, const pciroot_protocol_t* pciroot, const pci_platform_info_t info,
-          std::optional<ddk::MmioBuffer> ecam)
+          std::optional<fdf::MmioBuffer> ecam)
       : pci::Bus(parent, pciroot, info, std::move(ecam)) {}
 
   size_t GetDeviceCount() {

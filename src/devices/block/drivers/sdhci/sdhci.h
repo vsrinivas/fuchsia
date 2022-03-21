@@ -44,7 +44,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   } __PACKED;
   static_assert(sizeof(AdmaDescriptor64) == 8, "unexpected ADMA2 descriptor size");
 
-  Sdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti, zx::interrupt irq,
+  Sdhci(zx_device_t* parent, fdf::MmioBuffer regs_mmio_buffer, zx::bti bti, zx::interrupt irq,
         const ddk::SdhciProtocolClient sdhci, uint64_t quirks, uint64_t dma_boundary_alignment)
       : DeviceType(parent),
         regs_mmio_buffer_(std::move(regs_mmio_buffer)),
@@ -120,7 +120,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     return RequestStatus::IDLE;
   }
 
-  ddk::MmioBuffer regs_mmio_buffer_;
+  fdf::MmioBuffer regs_mmio_buffer_;
 
   // DMA descriptors, visible for testing
   ddk::IoBuffer iobuf_ = {};

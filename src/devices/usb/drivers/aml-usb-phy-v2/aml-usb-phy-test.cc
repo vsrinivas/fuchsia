@@ -79,8 +79,8 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
     return ZX_OK;
   }
 
-  ddk::MmioBuffer mmio(RegisterIndex index) {
-    return ddk::MmioBuffer(regions_[static_cast<size_t>(index)]->GetMmioBuffer());
+  fdf::MmioBuffer mmio(RegisterIndex index) {
+    return fdf::MmioBuffer(regions_[static_cast<size_t>(index)]->GetMmioBuffer());
   }
 
   zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
@@ -306,7 +306,7 @@ TEST_F(AmlUsbPhyTest, SetMode) {
   ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::HOST);
 
   ddk::PDev client(pdev_.proto());
-  std::optional<ddk::MmioBuffer> usbctrl_mmio;
+  std::optional<fdf::MmioBuffer> usbctrl_mmio;
   ASSERT_OK(client.MapMmio(0, &usbctrl_mmio));
 
   // Switch to peripheral mode. This will be read by the irq thread.

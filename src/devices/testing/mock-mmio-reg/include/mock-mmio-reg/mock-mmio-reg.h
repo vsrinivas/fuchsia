@@ -15,14 +15,14 @@
 
 namespace ddk_mock {
 
-// Mocks a single MMIO register. This class is intended to be used with a ddk::MmioBuffer;
+// Mocks a single MMIO register. This class is intended to be used with a fdf::MmioBuffer;
 // operations on an instance of that class will be directed to the mock if the mock-mmio-reg library
 // is a dependency of the test. The base address used by the MmioBuffer should be an array of
 // MockMmioReg objects. See the following example test:
 //
 // ddk_mock::MockMmioReg register_array[number_of_registers];
 // ddk_mock::MockMmioRegRegion mock_registers(register_array, register_size, number_of_registers);
-// ddk::MmioBuffer mmio_buffer(mock_registers.GetMmioBuffer());
+// fdf::MmioBuffer mmio_buffer(mock_registers.GetMmioBuffer());
 //
 // SomeDriver dut(mmio_buffer);
 // mock_registers[0]
@@ -173,8 +173,8 @@ class MockMmioRegRegion {
     }
   }
 
-  ddk::MmioBuffer GetMmioBuffer() {
-    return ddk::MmioBuffer(
+  fdf::MmioBuffer GetMmioBuffer() {
+    return fdf::MmioBuffer(
         mmio_buffer_t{
             .vaddr = FakeMmioPtr(this),
             .offset = 0,
@@ -222,7 +222,7 @@ class MockMmioRegRegion {
     reg_region[offs + mmio.offset].Write(val);
   }
 
-  static constexpr ddk::MmioBufferOps kMockMmioOps = {
+  static constexpr fdf::MmioBufferOps kMockMmioOps = {
       .Read8 = Read8,
       .Read16 = Read16,
       .Read32 = Read32,

@@ -122,8 +122,8 @@ namespace thermal {
 // Temperature Sensor
 class FakeAmlTSensor : public AmlTSensor {
  public:
-  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer sensor_base_mmio,
-                                                ddk::MmioBuffer trim_mmio, ddk::MmioBuffer hiu_mmio,
+  static std::unique_ptr<FakeAmlTSensor> Create(fdf::MmioBuffer sensor_base_mmio,
+                                                fdf::MmioBuffer trim_mmio, fdf::MmioBuffer hiu_mmio,
                                                 bool less) {
     fbl::AllocChecker ac;
 
@@ -143,8 +143,8 @@ class FakeAmlTSensor : public AmlTSensor {
     return test;
   }
 
-  explicit FakeAmlTSensor(ddk::MmioBuffer sensor_base_mmio, ddk::MmioBuffer trim_mmio,
-                          ddk::MmioBuffer hiu_mmio)
+  explicit FakeAmlTSensor(fdf::MmioBuffer sensor_base_mmio, fdf::MmioBuffer trim_mmio,
+                          fdf::MmioBuffer hiu_mmio)
       : AmlTSensor(std::move(sensor_base_mmio), std::move(trim_mmio), std::move(hiu_mmio)) {}
 };
 
@@ -242,9 +242,9 @@ class AmlTSensorTest : public zxtest::Test {
     (*mock_sensor_base_mmio_)[(0x2 << 2)].ExpectRead(0x0);
     (*mock_sensor_base_mmio_)[(0x2 << 2)].ExpectWrite(0xc0ff2880);
 
-    ddk::MmioBuffer sensor_base_mmio(mock_sensor_base_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer sensor_base_mmio(mock_sensor_base_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
     tsensor_ = FakeAmlTSensor::Create(std::move(sensor_base_mmio), std::move(trim_mmio),
                                       std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);

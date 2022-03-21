@@ -81,7 +81,7 @@ class TransferRingHarness : public zxtest::Test {
 
   std::optional<Request> pending_req_;
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> pending_contexts_;
-  std::optional<ddk::MmioBuffer> buffer_;
+  std::optional<fdf::MmioBuffer> buffer_;
   UsbXhci hci_;
   TransferRing* ring_;
   EventRing event_ring_;

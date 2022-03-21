@@ -32,7 +32,7 @@ std::optional<SharedMemoryView> SharedMemoryRangeTraits::SliceByPaddr(zx_paddr_t
   return std::make_optional(SharedMemoryView(vaddr() + offset, start, end - start));
 }
 
-zx_status_t SharedMemoryManager::Create(ddk::MmioBuffer shared_memory,
+zx_status_t SharedMemoryManager::Create(fdf::MmioBuffer shared_memory,
                                         zx_paddr_t shared_memory_paddr,
                                         std::unique_ptr<SharedMemoryManager>* out_manager) {
   ZX_DEBUG_ASSERT(out_manager != nullptr);
@@ -59,7 +59,7 @@ zx_status_t SharedMemoryManager::Create(ddk::MmioBuffer shared_memory,
   return ZX_OK;
 }
 
-SharedMemoryManager::SharedMemoryManager(ddk::MmioBuffer shared_memory,
+SharedMemoryManager::SharedMemoryManager(fdf::MmioBuffer shared_memory,
                                          PoolConfig driver_pool_config,
                                          PoolConfig client_pool_config)
     : shared_memory_(std::move(shared_memory)),

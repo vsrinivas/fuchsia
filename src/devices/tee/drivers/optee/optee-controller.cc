@@ -306,7 +306,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
 
   // Take ownership of the PMT so that we can explicitly unpin.
   pmt_ = zx::pmt(pinned_mmio.pmt);
-  status = SharedMemoryManager::Create(ddk::MmioBuffer(mmio), pinned_mmio.paddr,
+  status = SharedMemoryManager::Create(fdf::MmioBuffer(mmio), pinned_mmio.paddr,
                                        &shared_memory_manager_);
 
   if (status != ZX_OK) {

@@ -77,9 +77,9 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
       irq_info[i] = 255 + 1;
     }  // initialize irq_info
 
-    ddk::MmioBuffer mmio_gpio(mock_mmio_gpio->GetMmioBuffer());
-    ddk::MmioBuffer mmio_gpio_a0(mock_mmio_gpio_a0->GetMmioBuffer());
-    ddk::MmioBuffer mmio_interrupt(mock_mmio_interrupt->GetMmioBuffer());
+    fdf::MmioBuffer mmio_gpio(mock_mmio_gpio->GetMmioBuffer());
+    fdf::MmioBuffer mmio_gpio_a0(mock_mmio_gpio_a0->GetMmioBuffer());
+    fdf::MmioBuffer mmio_interrupt(mock_mmio_interrupt->GetMmioBuffer());
 
     FakeAmlAxgGpio *device(new (&ac) FakeAmlAxgGpio(
         std::move(mmio_gpio), std::move(mmio_gpio_a0), std::move(mmio_interrupt), gpio_blocks,
@@ -93,8 +93,8 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
   }
 
  private:
-  explicit FakeAmlAxgGpio(ddk::MmioBuffer mock_mmio_gpio, ddk::MmioBuffer mock_mmio_gpio_a0,
-                          ddk::MmioBuffer mock_mmio_interrupt, const AmlGpioBlock *gpio_blocks,
+  explicit FakeAmlAxgGpio(fdf::MmioBuffer mock_mmio_gpio, fdf::MmioBuffer mock_mmio_gpio_a0,
+                          fdf::MmioBuffer mock_mmio_interrupt, const AmlGpioBlock *gpio_blocks,
                           const AmlGpioInterrupt *gpio_interrupt, size_t block_count,
                           pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : AmlAxgGpio(&fake_proto, std::move(mock_mmio_gpio), std::move(mock_mmio_gpio_a0),

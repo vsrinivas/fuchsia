@@ -12,7 +12,7 @@
 #include <soc/aml-common/aml-tdm-audio.h>
 
 // static
-std::unique_ptr<AmlTdmDevice> AmlTdmOutDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
+std::unique_ptr<AmlTdmDevice> AmlTdmOutDevice::Create(fdf::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                                       aml_tdm_out_t tdm, aml_frddr_t frddr,
                                                       aml_tdm_mclk_t mclk,
                                                       metadata::AmlVersion version) {

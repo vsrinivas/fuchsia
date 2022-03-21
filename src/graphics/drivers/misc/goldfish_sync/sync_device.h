@@ -111,7 +111,7 @@ class SyncDevice : public SyncDeviceType,
 
   fbl::Mutex cmd_lock_ TA_ACQ_BEFORE(mmio_lock_);
   fbl::Mutex mmio_lock_ TA_ACQ_AFTER(cmd_lock_);
-  std::optional<ddk::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
+  std::optional<fdf::MmioBuffer> mmio_ TA_GUARDED(mmio_lock_);
 
   async::Loop loop_;
 

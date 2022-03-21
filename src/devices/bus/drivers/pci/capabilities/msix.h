@@ -81,8 +81,8 @@ class MsixCapability : public Capability {
   static constexpr uint16_t kMaxMsixVectors = 8u;
   // Mapped tables for the capability. They may share the same page, but it's impossible
   // to know until runtime.
-  std::optional<ddk::MmioBuffer> table_mmio_;
-  std::optional<ddk::MmioBuffer> pba_mmio_;
+  std::optional<fdf::MmioBuffer> table_mmio_;
+  std::optional<fdf::MmioBuffer> pba_mmio_;
   MMIO_PTR MsixTable* table_;
   MMIO_PTR uint64_t* pba_;
   // Registers for capability configuration and control.

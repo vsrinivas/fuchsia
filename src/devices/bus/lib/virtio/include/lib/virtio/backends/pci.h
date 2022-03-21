@@ -194,7 +194,7 @@ class PciModernBackend : public PciBackend {
  private:
   zx_status_t MapBar(uint8_t bar);
 
-  std::optional<ddk::MmioBuffer> bar_[6];
+  std::optional<fdf::MmioBuffer> bar_[6];
 
   uintptr_t notify_base_ = 0;
   volatile uint32_t* isr_status_ = nullptr;

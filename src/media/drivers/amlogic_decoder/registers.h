@@ -25,11 +25,11 @@ class TypedRegisterBase : public hwreg::RegisterBase<DerivedType, IntType, Print
   using AddrType = TypedRegisterAddr<SelfType>;
   SelfType& ReadFrom(MmioType* reg_io) {
     return hwreg::RegisterBase<DerivedType, IntType, PrinterState>::ReadFrom(
-        static_cast<ddk::MmioBuffer*>(reg_io));
+        static_cast<fdf::MmioBuffer*>(reg_io));
   }
   SelfType& WriteTo(MmioType* reg_io) {
     return hwreg::RegisterBase<DerivedType, IntType, PrinterState>::WriteTo(
-        static_cast<ddk::MmioBuffer*>(reg_io));
+        static_cast<fdf::MmioBuffer*>(reg_io));
   }
 };
 
@@ -48,48 +48,48 @@ class TypedRegisterAddr : public hwreg::RegisterAddr<RegType> {
 
 // Cbus does a lot of things, but mainly seems to handle audio and video
 // processing.
-class CbusRegisterIo : public ddk::MmioBuffer {
+class CbusRegisterIo : public fdf::MmioBuffer {
  public:
-  CbusRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
+  CbusRegisterIo(fdf::MmioBuffer mmio) : fdf::MmioBuffer(std::move(mmio)) {}
 };
 
 // The DOS bus mainly seems to handle video decoding.
-class DosRegisterIo : public ddk::MmioBuffer {
+class DosRegisterIo : public fdf::MmioBuffer {
  public:
-  DosRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
+  DosRegisterIo(fdf::MmioBuffer mmio) : fdf::MmioBuffer(std::move(mmio)) {}
 };
 
 // Aobus communicates with the always-on power management processor.
-class AoRegisterIo : public ddk::MmioBuffer {
+class AoRegisterIo : public fdf::MmioBuffer {
  public:
-  AoRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
+  AoRegisterIo(fdf::MmioBuffer mmio) : fdf::MmioBuffer(std::move(mmio)) {}
 };
 
 // Hiubus mainly seems to handle clock control and gating.
-class HiuRegisterIo : public ddk::MmioBuffer {
+class HiuRegisterIo : public fdf::MmioBuffer {
  public:
-  HiuRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
+  HiuRegisterIo(fdf::MmioBuffer mmio) : fdf::MmioBuffer(std::move(mmio)) {}
 };
 
 // The DMC is the DDR memory controller.
-class DmcRegisterIo : public ddk::MmioBuffer {
+class DmcRegisterIo : public fdf::MmioBuffer {
  public:
-  DmcRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
+  DmcRegisterIo(fdf::MmioBuffer mmio) : fdf::MmioBuffer(std::move(mmio)) {}
 };
 
-class ResetRegisterIo : public ddk::MmioView {
+class ResetRegisterIo : public fdf::MmioView {
  public:
-  ResetRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
+  ResetRegisterIo(const fdf::MmioBuffer& mmio, zx_off_t off) : fdf::MmioView(mmio.View(off)) {}
 };
 
-class ParserRegisterIo : public ddk::MmioView {
+class ParserRegisterIo : public fdf::MmioView {
  public:
-  ParserRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
+  ParserRegisterIo(const fdf::MmioBuffer& mmio, zx_off_t off) : fdf::MmioView(mmio.View(off)) {}
 };
 
-class DemuxRegisterIo : public ddk::MmioView {
+class DemuxRegisterIo : public fdf::MmioView {
  public:
-  DemuxRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
+  DemuxRegisterIo(const fdf::MmioBuffer& mmio, zx_off_t off) : fdf::MmioView(mmio.View(off)) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \

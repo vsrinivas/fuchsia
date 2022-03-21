@@ -24,7 +24,7 @@ class AmlPdmDevice {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlPdmDevice);
 
   static std::unique_ptr<AmlPdmDevice> Create(
-      ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
+      fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
       uint32_t sclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev,
       metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
@@ -81,7 +81,7 @@ class AmlPdmDevice {
   void SetRate(uint32_t frames_per_second);
 
  protected:
-  AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
+  AmlPdmDevice(fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
                uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth,
                metadata::AmlVersion version)
       : fifo_depth_(fifo_depth),
@@ -131,8 +131,8 @@ class AmlPdmDevice {
   const uint32_t sysclk_div_;
   const uint32_t dclk_div_;
   const zx_off_t toddr_base_;  // base offset of frddr ch used by this instance
-  const ddk::MmioBuffer pdm_mmio_;
-  const ddk::MmioBuffer audio_mmio_;
+  const fdf::MmioBuffer pdm_mmio_;
+  const fdf::MmioBuffer audio_mmio_;
   const metadata::AmlVersion version_;
 };
 

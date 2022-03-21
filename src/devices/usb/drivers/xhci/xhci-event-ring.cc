@@ -19,7 +19,7 @@ static constexpr uint16_t kMinERSTEntries = 16;
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
                                         const dma_buffer::BufferFactory& factory,
-                                        ddk::MmioBuffer* mmio) {
+                                        fdf::MmioBuffer* mmio) {
   erst_size_ = erst_size;
   bti_ = &bti;
   page_size_ = page_size;
@@ -60,7 +60,7 @@ zx_status_t EventRingSegmentTable::AddSegment(zx_paddr_t paddr) {
   return ZX_OK;
 }
 
-zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffer* buffer,
+zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffer* buffer,
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,

@@ -38,7 +38,7 @@ class EventRingSegmentTable {
  public:
   zx_status_t Init(size_t page_size, const zx::bti& bti, bool is_32bit, uint32_t erst_max,
                    ERSTSZ erst_size, const dma_buffer::BufferFactory& factory,
-                   ddk::MmioBuffer* mmio);
+                   fdf::MmioBuffer* mmio);
   zx_status_t AddSegment(zx_paddr_t paddr);
   ERSTEntry* entries() { return entries_; }
   zx_paddr_t erst() { return erst_->phys()[0]; }
@@ -67,7 +67,7 @@ class EventRingSegmentTable {
   const zx::bti* bti_;
   size_t page_size_;
   bool is_32bit_;
-  std::optional<ddk::MmioView> mmio_;
+  std::optional<fdf::MmioView> mmio_;
 };
 
 struct PortStatusChangeState : public fbl::RefCounted<PortStatusChangeState> {
@@ -82,7 +82,7 @@ class CommandRing;
 class EventRing {
  public:
   // Adds a segment to the event ring.
-  zx_status_t Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffer* buffer, bool is_32bit,
+  zx_status_t Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffer* buffer, bool is_32bit,
                    uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg, IMAN iman_reg,
                    uint8_t cap_length, HCSPARAMS1 hcs_params_1, CommandRing* command_ring,
                    DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
@@ -170,7 +170,7 @@ class EventRing {
   // Pointer to the MMIO buffer for writing to xHCI registers
   // This is valid for the lifetime of the UsbXhci driver,
   // and is owned by UsbXhci.
-  ddk::MmioBuffer* mmio_;
+  fdf::MmioBuffer* mmio_;
 
   // Event ring dequeue pointer register
   ERDP erdp_reg_;

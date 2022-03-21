@@ -29,7 +29,7 @@ zx_status_t Pl031::Bind(void* /*unused*/, zx_device_t* dev) {
   }
 
   // Carve out some address space for this device.
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to map mmio: %s", __func__, zx_status_get_string(status));
@@ -59,7 +59,7 @@ zx_status_t Pl031::Bind(void* /*unused*/, zx_device_t* dev) {
   return status;
 }
 
-Pl031::Pl031(zx_device_t* parent, ddk::MmioBuffer mmio)
+Pl031::Pl031(zx_device_t* parent, fdf::MmioBuffer mmio)
     : RtcDeviceType(parent),
       mmio_(std::move(mmio)),
       regs_(reinterpret_cast<MMIO_PTR Pl031Regs*>(mmio_.get())) {}

@@ -56,8 +56,8 @@ class AmlEthernet : public DeviceType,
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient gpios_[GPIO_COUNT];
 
-  std::optional<ddk::MmioBuffer> periph_mmio_;
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
+  std::optional<fdf::MmioBuffer> periph_mmio_;
+  std::optional<fdf::MmioBuffer> hhi_mmio_;
 };
 
 }  // namespace eth

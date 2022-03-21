@@ -70,7 +70,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     zxlogf(ERROR, "Failed to get platform device fragment");
     return ZX_ERR_NO_RESOURCES;
   }
-  std::optional<ddk::MmioBuffer> mmio_buffer;
+  std::optional<fdf::MmioBuffer> mmio_buffer;
   if ((st = pdev.MapMmio(0, &mmio_buffer)) != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", st);
     return st;

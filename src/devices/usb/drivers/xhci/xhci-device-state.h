@@ -75,7 +75,7 @@ class DeviceState {
   TRBPromise AddressDeviceCommand(UsbXhci* hci, uint8_t slot_id, uint8_t port_id,
                                   std::optional<HubInfo> hub_info, uint64_t* dcbaa,
                                   uint16_t interrupter_target, CommandRing* command_ring,
-                                  ddk::MmioBuffer* mmio, bool bsr);
+                                  fdf::MmioBuffer* mmio, bool bsr);
 
   fbl::Mutex& transaction_lock() __TA_RETURN_CAPABILITY(transaction_lock_) {
     return transaction_lock_;

@@ -81,7 +81,7 @@ class Lp8556Device : public DeviceType,
                      public fidl::WireServer<FidlBacklight::Device>,
                      public fidl::WireServer<FidlPowerSensor::Device> {
  public:
-  Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
+  Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, fdf::MmioBuffer mmio)
       : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
 
   zx_status_t Init();
@@ -159,7 +159,7 @@ class Lp8556Device : public DeviceType,
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
   // Needs a PWM driver.
   ddk::I2cChannel i2c_;
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
 
   // brightness is set to maximum from bootloader if the persistent brightness sticky register is
   // not set.

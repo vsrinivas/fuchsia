@@ -50,7 +50,8 @@ zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id, uint3
 
 namespace ddk {
 
-zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy, std::optional<MmioBuffer>* mmio) {
+zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
+                         std::optional<fdf::MmioBuffer>* mmio) {
   pci_bar_t bar;
   zx_status_t status = GetBar(index, &bar);
   if (status != ZX_OK) {
@@ -70,7 +71,7 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy, std::optional<Mm
     return status;
   }
 
-  return MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
+  return fdf::MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
 }
 
 zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {

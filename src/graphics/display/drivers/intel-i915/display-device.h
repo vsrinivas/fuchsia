@@ -134,7 +134,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   virtual bool PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe pipe,
                                   registers::Trans trans) = 0;
 
-  ddk::MmioBuffer* mmio_space() const;
+  fdf::MmioBuffer* mmio_space() const;
 
  private:
   bool CheckNeedsModeset(const display_mode_t* mode);

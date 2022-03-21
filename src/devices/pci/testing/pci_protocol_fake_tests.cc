@@ -395,7 +395,7 @@ TEST_F(FakePciProtocolTests, MapMmio) {
   // Ensure that our fake implementation / backend for the BAR methods still works with
   // the MapMmio helper method added to device-protocol.
   ddk::Pci dp_pci(fake_pci().get_protocol());
-  std::optional<ddk::MmioBuffer> mmio = std::nullopt;
+  std::optional<fdf::MmioBuffer> mmio = std::nullopt;
   ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
   ASSERT_TRUE(MatchKoids(borrowed, *mmio->get_vmo()));
 }

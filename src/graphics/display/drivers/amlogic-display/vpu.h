@@ -55,10 +55,10 @@ class Vpu {
   // and/or clock initialization sequences
   void ConfigureClock();
 
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
-  std::optional<ddk::MmioBuffer> aobus_mmio_;
-  std::optional<ddk::MmioBuffer> cbus_mmio_;
+  std::optional<fdf::MmioBuffer> vpu_mmio_;
+  std::optional<fdf::MmioBuffer> hhi_mmio_;
+  std::optional<fdf::MmioBuffer> aobus_mmio_;
+  std::optional<fdf::MmioBuffer> cbus_mmio_;
 
   bool initialized_ = false;
 

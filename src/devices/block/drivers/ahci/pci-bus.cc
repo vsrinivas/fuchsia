@@ -38,7 +38,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
     zxlogf(ERROR, "ahci: error %d mapping pci register window", status);
     return status;
   }
-  mmio_ = ddk::MmioBuffer(buf);
+  mmio_ = fdf::MmioBuffer(buf);
 
   pcie_device_info_t config;
   status = pci_get_device_info(&pci_, &config);

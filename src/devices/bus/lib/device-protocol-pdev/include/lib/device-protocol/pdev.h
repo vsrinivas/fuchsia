@@ -12,9 +12,11 @@
 
 #include <optional>
 
-namespace ddk {
-
+namespace fdf {
 class MmioBuffer;
+}
+
+namespace ddk {
 
 class PDev : public PDevProtocolClient {
  public:
@@ -45,7 +47,7 @@ class PDev : public PDevProtocolClient {
   // Prints out information about the platform device.
   void ShowInfo();
 
-  zx_status_t MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio,
+  zx_status_t MapMmio(uint32_t index, std::optional<fdf::MmioBuffer>* mmio,
                       uint32_t cache_policy = ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
   zx_status_t GetInterrupt(uint32_t index, zx::interrupt* out) {
@@ -84,8 +86,8 @@ class PDev : public PDevProtocolClient {
 //    return ZX_OK;
 //  }
 //
-zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio, std::optional<MmioBuffer>* mmio,
-                                   uint32_t cache_policy);
+zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
+                                   std::optional<fdf::MmioBuffer>* mmio, uint32_t cache_policy);
 
 }  // namespace ddk
 

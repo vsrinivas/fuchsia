@@ -58,7 +58,7 @@ class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
 
   bool ChannelDone(uint8_t chan) const { return done() & (1 << chan); }
 
-  static bool ChannelDone(uint8_t chan, ddk::MmioBuffer* mmio) {
+  static bool ChannelDone(uint8_t chan, fdf::MmioBuffer* mmio) {
     return Get().ReadFrom(mmio).ChannelDone(chan);
   }
 
@@ -81,7 +81,7 @@ class RdmaCtrlReg : public hwreg::RegisterBase<RdmaCtrlReg, uint32_t> {
   DEF_BIT(6, read_urgent);
   static auto Get() { return hwreg::RegisterAddr<RdmaCtrlReg>(VPU_RDMA_CTRL); }
 
-  static void ClearInterrupt(uint8_t chan, ddk::MmioBuffer* mmio) {
+  static void ClearInterrupt(uint8_t chan, fdf::MmioBuffer* mmio) {
     Get().ReadFrom(mmio).set_clear_done(1 << chan).WriteTo(mmio);
   }
 };

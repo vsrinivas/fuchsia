@@ -24,7 +24,7 @@ class TestAmlGpu {
     zx::vmo vmo;
     constexpr uint32_t kHiuRegisterSize = 1024 * 16;
     ASSERT_OK(zx::vmo::create(kHiuRegisterSize, 0, &vmo));
-    ASSERT_OK(ddk::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
+    ASSERT_OK(fdf::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
                                       &aml_gpu.hiu_buffer_));
     aml_gpu.SetClkFreqSource(1);
     uint32_t value = aml_gpu.hiu_buffer_->Read32(0x6c << 2);
@@ -45,10 +45,10 @@ class TestAmlGpu {
     zx::vmo vmo;
     constexpr uint32_t kHiuRegisterSize = 1024 * 16;
     ASSERT_OK(zx::vmo::create(kHiuRegisterSize, 0, &vmo));
-    ASSERT_OK(ddk::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
+    ASSERT_OK(fdf::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
                                       &aml_gpu.hiu_buffer_));
     ASSERT_OK(zx::vmo::create(kHiuRegisterSize, 0, &vmo));
-    ASSERT_OK(ddk::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
+    ASSERT_OK(fdf::MmioBuffer::Create(0, kHiuRegisterSize, std::move(vmo), ZX_CACHE_POLICY_CACHED,
                                       &aml_gpu.gpu_buffer_));
     async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
     loop.StartThread();

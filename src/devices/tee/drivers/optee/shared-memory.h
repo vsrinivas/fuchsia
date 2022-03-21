@@ -180,7 +180,7 @@ class SharedMemoryManager {
   using DriverMemoryPool = SharedMemoryPool<DriverPoolTraits>;
   using ClientMemoryPool = SharedMemoryPool<ClientPoolTraits>;
 
-  static zx_status_t Create(ddk::MmioBuffer shared_memory, zx_paddr_t shared_memory_paddr,
+  static zx_status_t Create(fdf::MmioBuffer shared_memory, zx_paddr_t shared_memory_paddr,
                             std::unique_ptr<SharedMemoryManager>* out_manager);
   ~SharedMemoryManager() = default;
 
@@ -197,10 +197,10 @@ class SharedMemoryManager {
   static constexpr size_t kNumDriverSharedMemoryPages = 4;
   static constexpr size_t kDriverPoolSize = 4 * PAGE_SIZE;
 
-  explicit SharedMemoryManager(ddk::MmioBuffer shared_memory, PoolConfig driver_pool_config,
+  explicit SharedMemoryManager(fdf::MmioBuffer shared_memory, PoolConfig driver_pool_config,
                                PoolConfig client_pool_config);
 
-  ddk::MmioBuffer shared_memory_;
+  fdf::MmioBuffer shared_memory_;
   DriverMemoryPool driver_pool_;
   ClientMemoryPool client_pool_;
 };

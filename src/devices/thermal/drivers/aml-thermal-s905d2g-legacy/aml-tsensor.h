@@ -25,7 +25,7 @@ class AmlTSensor {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
   AmlTSensor() {}
   // For testing
-  AmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio, ddk::MmioBuffer hiu_mmio)
+  AmlTSensor(fdf::MmioBuffer pll_mmio, fdf::MmioBuffer trim_mmio, fdf::MmioBuffer hiu_mmio)
       : pll_mmio_(std::move(pll_mmio)),
         trim_mmio_(std::move(trim_mmio)),
         hiu_mmio_(std::move(hiu_mmio)) {}
@@ -47,9 +47,9 @@ class AmlTSensor {
   void UpdateRiseThresholdIrq(uint32_t irq);
 
   uint32_t trim_info_;
-  std::optional<ddk::MmioBuffer> pll_mmio_;
-  std::optional<ddk::MmioBuffer> trim_mmio_;
-  std::optional<ddk::MmioBuffer> hiu_mmio_;
+  std::optional<fdf::MmioBuffer> pll_mmio_;
+  std::optional<fdf::MmioBuffer> trim_mmio_;
+  std::optional<fdf::MmioBuffer> hiu_mmio_;
   zx::interrupt tsensor_irq_;
   std::optional<thrd_t> irq_thread_;
   std::atomic<bool> running_;

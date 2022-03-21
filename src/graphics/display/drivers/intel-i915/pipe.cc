@@ -73,7 +73,7 @@ uint32_t encode_pipe_color_component(uint8_t component) {
 
 namespace i915 {
 
-Pipe::Pipe(ddk::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power)
+Pipe::Pipe(fdf::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power)
     : mmio_space_(mmio_space), pipe_(pipe), pipe_power_(std::move(pipe_power)) {}
 
 void Pipe::Reset(Controller* controller) {

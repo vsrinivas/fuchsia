@@ -25,8 +25,8 @@ namespace sdmmc {
 class TestAmlSdmmc : public AmlSdmmc {
  public:
   TestAmlSdmmc(const mmio_buffer_t& mmio, zx::bti bti)
-      : AmlSdmmc(fake_ddk::kFakeParent, std::move(bti), ddk::MmioBuffer(mmio),
-                 ddk::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
+      : AmlSdmmc(fake_ddk::kFakeParent, std::move(bti), fdf::MmioBuffer(mmio),
+                 fdf::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                  aml_sdmmc_config_t{
                      .supports_dma = true,
                      .min_freq = 400000,
@@ -121,7 +121,7 @@ class AmlSdmmcTest : public zxtest::Test {
         .vmo = ZX_HANDLE_INVALID,
     };
 
-    mmio_ = ddk::MmioBuffer(mmio_buffer);
+    mmio_ = fdf::MmioBuffer(mmio_buffer);
 
     memset(bti_paddrs_, 0, sizeof(bti_paddrs_));
     // This is used by AmlSdmmc::Init() to create the descriptor buffer -- can be any nonzero paddr.
@@ -197,7 +197,7 @@ class AmlSdmmcTest : public zxtest::Test {
 
   zx_paddr_t bti_paddrs_[64] = {};
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   TestAmlSdmmc* dut_ = nullptr;
 
  private:

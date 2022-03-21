@@ -146,7 +146,7 @@ class Controller : public DeviceType,
   zx_status_t SetBitrate(uint32_t bus_id, uint32_t bitrate);
   zx_status_t Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
 
-  ddk::MmioBuffer* mmio_space() { return mmio_space_.has_value() ? &*mmio_space_ : nullptr; }
+  fdf::MmioBuffer* mmio_space() { return mmio_space_.has_value() ? &*mmio_space_ : nullptr; }
   Interrupts* interrupts() { return &interrupts_; }
   uint16_t device_id() const { return device_id_; }
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
@@ -169,7 +169,7 @@ class Controller : public DeviceType,
   registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
 
-  void SetMmioForTesting(ddk::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
+  void SetMmioForTesting(fdf::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
 
@@ -262,7 +262,7 @@ class Controller : public DeviceType,
   mtx_t bar_lock_;
   // The mmio_space_ is read only. The internal registers are guarded by various locks where
   // appropriate.
-  std::optional<ddk::MmioBuffer> mmio_space_;
+  std::optional<fdf::MmioBuffer> mmio_space_;
 
   // References to displays. References are owned by devmgr, but will always
   // be valid while they are in this vector.

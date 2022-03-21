@@ -53,7 +53,7 @@ class FakeHdmiDw : public hdmi_dw::HdmiDw {
 
 class FakeAmlHdmiDevice : public AmlHdmiDevice {
  public:
-  static std::unique_ptr<FakeAmlHdmiDevice> Create(AmlHdmiTest* test, ddk::MmioBuffer mmio) {
+  static std::unique_ptr<FakeAmlHdmiDevice> Create(AmlHdmiTest* test, fdf::MmioBuffer mmio) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlHdmiDevice>(&ac, test, std::move(mmio));
     if (!ac.check()) {
@@ -63,7 +63,7 @@ class FakeAmlHdmiDevice : public AmlHdmiDevice {
     return device;
   }
 
-  explicit FakeAmlHdmiDevice(AmlHdmiTest* test, ddk::MmioBuffer mmio)
+  explicit FakeAmlHdmiDevice(AmlHdmiTest* test, fdf::MmioBuffer mmio)
       : AmlHdmiDevice(nullptr, std::move(mmio), std::make_unique<FakeHdmiDw>(this, test)) {}
 
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -93,7 +93,7 @@ class AmlHdmiTest : public zxtest::Test {
       return;
     }
 
-    ddk::MmioBuffer mmio(mock_mmio_->GetMmioBuffer());
+    fdf::MmioBuffer mmio(mock_mmio_->GetMmioBuffer());
 
     dut_ = FakeAmlHdmiDevice::Create(this, std::move(mmio));
     ASSERT_NOT_NULL(dut_);

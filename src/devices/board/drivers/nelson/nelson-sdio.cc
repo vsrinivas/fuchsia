@@ -7,7 +7,6 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
 #include <ddk/metadata/init-step.h>

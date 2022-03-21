@@ -2241,7 +2241,7 @@ zx_status_t Controller::Init() {
   {
     fbl::AutoLock lock(&bar_lock_);
     fbl::AllocChecker ac;
-    mmio_space_ = ddk::MmioBuffer(mapped_bars_[0].mmio);
+    mmio_space_ = fdf::MmioBuffer(mapped_bars_[0].mmio);
   }
 
   for (unsigned i = 0; i < registers::kDdiCount; i++) {

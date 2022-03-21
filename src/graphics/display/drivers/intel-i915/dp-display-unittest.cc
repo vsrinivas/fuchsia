@@ -56,14 +56,14 @@ class DpDisplayTest : public ::testing::Test {
 
   i915::Controller* controller() { return &controller_; }
   i915::testing::FakeDpcdChannel* fake_dpcd() { return &fake_dpcd_; }
-  ddk::MmioBuffer* mmio_buffer() { return &mmio_buffer_; }
+  fdf::MmioBuffer* mmio_buffer() { return &mmio_buffer_; }
 
  private:
   // TODO(fxbug.dev/83998): Remove DpDisplay's dependency on i915::Controller which will remove the
   // need for much of what's in SetUp() and TearDown().
   i915::Controller controller_;
   uint8_t buffer_[kMmioSize];
-  ddk::MmioBuffer mmio_buffer_;
+  fdf::MmioBuffer mmio_buffer_;
 
   inspect::Node node_;
   i915::testing::FakeDpcdChannel fake_dpcd_;

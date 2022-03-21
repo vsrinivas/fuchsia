@@ -61,8 +61,8 @@ class HisiClock : public DeviceType, public ddk::ClockImplProtocol<HisiClock, dd
   zx_status_t RegisterClockProtocol();
 
   fbl::Mutex lock_;
-  std::optional<ddk::MmioBuffer> peri_crg_mmio_ __TA_GUARDED(lock_);
-  std::optional<ddk::MmioBuffer> sctrl_mmio_ __TA_GUARDED(lock_);
+  std::optional<fdf::MmioBuffer> peri_crg_mmio_ __TA_GUARDED(lock_);
+  std::optional<fdf::MmioBuffer> sctrl_mmio_ __TA_GUARDED(lock_);
 
   const Gate* const gates_;
   const size_t gate_count_;

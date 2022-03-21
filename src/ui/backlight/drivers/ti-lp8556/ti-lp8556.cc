@@ -512,7 +512,7 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
   }
 
   // Map MMIO
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     LOG_ERROR("Could not map mmio %d\n", status);

@@ -464,7 +464,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to map MMIO: %d", status);

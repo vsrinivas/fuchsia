@@ -35,7 +35,7 @@ class PciBus : public Bus {
  private:
   pci_protocol_t pci_;
   pci_irq_mode_t irq_mode_;
-  std::optional<ddk::MmioBuffer> mmio_;
+  std::optional<fdf::MmioBuffer> mmio_;
   zx::bti bti_;
   zx::interrupt irq_;
 };

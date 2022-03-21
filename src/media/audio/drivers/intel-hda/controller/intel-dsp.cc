@@ -463,7 +463,7 @@ Status IntelDsp::SetupDspDevice() {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
   // Fetch the BAR which holds the Audio DSP registers (BAR 4).
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   ddk::Pci pci(*controller_->pci());
   zx_status_t res = pci.MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {

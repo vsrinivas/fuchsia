@@ -58,7 +58,7 @@ DisplayDevice::~DisplayDevice() {
   }
 }
 
-ddk::MmioBuffer* DisplayDevice::mmio_space() const { return controller_->mmio_space(); }
+fdf::MmioBuffer* DisplayDevice::mmio_space() const { return controller_->mmio_space(); }
 
 bool DisplayDevice::Init() {
   ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);

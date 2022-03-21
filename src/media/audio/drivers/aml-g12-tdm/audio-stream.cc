@@ -132,7 +132,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     }
   }
 
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not get mmio %d", status);

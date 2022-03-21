@@ -40,7 +40,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
         loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void SetUp() {
-    ddk::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
+    fdf::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
 
     fbl::AllocChecker ac;
     dev_ = fbl::make_unique_checked<Lp8556Device>(

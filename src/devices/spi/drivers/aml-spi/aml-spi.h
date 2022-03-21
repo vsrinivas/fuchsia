@@ -66,7 +66,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
     std::optional<SpiVmoStore> registered_vmos;
   };
 
-  AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio,
+  AmlSpi(zx_device_t* device, fdf::MmioBuffer mmio,
          fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset, uint32_t reset_mask,
          fbl::Array<ChipInfo> chips, zx::profile thread_profile, zx::interrupt interrupt,
          const amlspi_config_t& config)
@@ -97,7 +97,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   zx::status<cpp20::span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
                                               uint64_t offset, uint64_t size, uint32_t right);
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_;
   const uint32_t reset_mask_;
   fbl::Array<ChipInfo> chips_;

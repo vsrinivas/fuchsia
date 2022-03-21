@@ -210,7 +210,7 @@ class FakeDevice {
 
   fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
-  ddk::MmioBuffer mmio() { return ddk::MmioBuffer(region_->GetMmioBuffer()); }
+  fdf::MmioBuffer mmio() { return fdf::MmioBuffer(region_->GetMmioBuffer()); }
 
   void set_irq_signaller(zx::unowned_interrupt signaller) { irq_signaller_ = std::move(signaller); }
 
@@ -536,7 +536,7 @@ zx_status_t TransferRing::AssignContext(TRB* trb, std::unique_ptr<TRBContext> co
 zx_status_t xhci_start_root_hubs(UsbXhci* xhci) { return ZX_OK; }
 
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
-                               ddk::MmioBuffer* mmio, const UsbXhci& hci) {
+                               fdf::MmioBuffer* mmio, const UsbXhci& hci) {
   fbl::AutoLock _(&mutex_);
   if (trbs_ != nullptr) {
     return ZX_ERR_BAD_STATE;
@@ -625,7 +625,7 @@ zx_paddr_t TransferRing::VirtToPhys(TRB* trb) {
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
                                         const dma_buffer::BufferFactory& factory,
-                                        ddk::MmioBuffer* mmio) {
+                                        fdf::MmioBuffer* mmio) {
   erst_size_ = erst_size;
   bti_ = &bti;
   page_size_ = page_size;
@@ -644,7 +644,7 @@ zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bo
   return ZX_OK;
 }
 
-zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffer* buffer,
+zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffer* buffer,
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,
@@ -673,7 +673,7 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
 
 size_t EventRing::GetPressure() { return 0; }
 
-zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, fdf::MmioBuffer* buffer,
                               const RuntimeRegisterOffset& offset, uint32_t erst_max,
                               DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
                               uint64_t* dcbaa) {
@@ -683,7 +683,7 @@ zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioB
 }
 
 zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
-                               ddk::MmioView interrupter_regs) {
+                               fdf::MmioView interrupter_regs) {
   return ZX_OK;
 }
 

@@ -35,7 +35,7 @@ class PipeTest : public ::testing::Test {
   constexpr static uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> reg_region_;
   std::vector<ddk_fake::FakeMmioReg> regs_;
-  std::optional<ddk::MmioBuffer> mmio_buffer_;
+  std::optional<fdf::MmioBuffer> mmio_buffer_;
 };
 
 namespace {

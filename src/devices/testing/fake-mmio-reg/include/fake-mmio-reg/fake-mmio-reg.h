@@ -11,14 +11,14 @@
 
 namespace ddk_fake {
 
-// Fakes a single MMIO register. This class is intended to be used with a ddk::MmioBuffer;
+// Fakes a single MMIO register. This class is intended to be used with a fdf::MmioBuffer;
 // operations on an instance of that class will be directed to the fake if the fake-mmio-reg library
 // is a dependency of the test. The base address used by the MmioBuffer should be an array of
 // FakeMmioReg objects. See the following example test:
 //
 // ddk_fake::FakeMmioReg register_array[number_of_registers];
 // ddk_fake::FakeMmioRegRegion fake_registers(register_array, register_size, number_of_registers);
-// ddk::MmioBuffer mmio_buffer(fake_registers.GetMmioBuffer());
+// fdf::MmioBuffer mmio_buffer(fake_registers.GetMmioBuffer());
 // fake_registers[0].SetReadCallback(read_fn);
 // fake_registers[0].SetWriteCallback(write_fn);
 // SomeDriver dut(mmio_buffer);
@@ -68,9 +68,9 @@ class FakeMmioRegRegion {
     return fake_regs_[offset / reg_size_];
   }
 
-  // Returns an mmio_buffer_t that can be used for constructing a ddk::MmioBuffer object.
-  ddk::MmioBuffer GetMmioBuffer() {
-    return ddk::MmioBuffer(
+  // Returns an mmio_buffer_t that can be used for constructing a fdf::MmioBuffer object.
+  fdf::MmioBuffer GetMmioBuffer() {
+    return fdf::MmioBuffer(
         mmio_buffer_t{
             .vaddr = FakeMmioPtr(this),
             .offset = 0,
@@ -118,7 +118,7 @@ class FakeMmioRegRegion {
     reg_region[offs + mmio.offset].Write(val);
   }
 
-  static constexpr ddk::MmioBufferOps kFakeMmioOps = {
+  static constexpr fdf::MmioBufferOps kFakeMmioOps = {
       .Read8 = Read8,
       .Read16 = Read16,
       .Read32 = Read32,

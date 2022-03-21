@@ -17,8 +17,8 @@ TEST(MockMmioReg, CopyFrom) {
   ddk_mock::MockMmioRegRegion reg_region_1(reg_array_1, sizeof(uint32_t), std::size(reg_array_1));
   ddk_mock::MockMmioRegRegion reg_region_2(reg_array_2, sizeof(uint32_t), std::size(reg_array_2));
 
-  ddk::MmioBuffer dut_1 = reg_region_1.GetMmioBuffer();
-  ddk::MmioBuffer dut_2 = reg_region_2.GetMmioBuffer();
+  fdf::MmioBuffer dut_1 = reg_region_1.GetMmioBuffer();
+  fdf::MmioBuffer dut_2 = reg_region_2.GetMmioBuffer();
 
   constexpr uint32_t reg_values[] = {0xdb5a95fd, 0xc1c8f880, 0x733c2bed, 0xf74e857c};
   for (size_t i = 0; i < std::size(reg_values); i++) {
@@ -37,9 +37,9 @@ TEST(MockMmioReg, View) {
 
   ddk_mock::MockMmioRegRegion reg_region(reg_array, sizeof(uint32_t), std::size(reg_array));
 
-  ddk::MmioBuffer dut = reg_region.GetMmioBuffer();
-  ddk::MmioView dut_view_1 = dut.View(0x40);
-  ddk::MmioView dut_view_2 = dut_view_1.View(0x20);
+  fdf::MmioBuffer dut = reg_region.GetMmioBuffer();
+  fdf::MmioView dut_view_1 = dut.View(0x40);
+  fdf::MmioView dut_view_2 = dut_view_1.View(0x20);
 
   reg_region[0x20].ExpectRead(0x8ed43ca9).ExpectWrite(0x7a5da8d8);
   reg_region[0x80].ExpectRead(0x5be3254c).ExpectWrite(0x6ba7d0af);

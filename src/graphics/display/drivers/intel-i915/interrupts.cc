@@ -140,7 +140,7 @@ zx_status_t Interrupts::SetInterruptCallback(const intel_gpu_core_interrupt_t* c
 
 zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
                              HotplugCallback hotplug_callback, zx_device_t* dev,
-                             const pci_protocol_t* pci_proto, ddk::MmioBuffer* mmio_space) {
+                             const pci_protocol_t* pci_proto, fdf::MmioBuffer* mmio_space) {
   ZX_DEBUG_ASSERT(pipe_vsync_callback);
   ZX_DEBUG_ASSERT(hotplug_callback);
   ZX_DEBUG_ASSERT(dev);

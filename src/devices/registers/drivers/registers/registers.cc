@@ -140,7 +140,7 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
   // Get MMIOs
   std::map<uint32_t, std::vector<T>> overlap;
   for (uint32_t i = 0; i < device_info.mmio_count; i++) {
-    std::optional<ddk::MmioBuffer> tmp_mmio;
+    std::optional<fdf::MmioBuffer> tmp_mmio;
     if ((status = pdev.MapMmio(i, &tmp_mmio)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not get mmio regions", __func__);
       return status;

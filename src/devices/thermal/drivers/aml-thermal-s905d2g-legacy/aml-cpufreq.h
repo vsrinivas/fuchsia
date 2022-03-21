@@ -27,7 +27,7 @@ class AmlCpuFrequency {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
   AmlCpuFrequency() = default;
-  AmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
+  AmlCpuFrequency(fdf::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
                   const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
                   const aml_thermal_info_t& thermal_info)
       : hiu_mmio_(std::move(hiu_mmio)),
@@ -60,7 +60,7 @@ class AmlCpuFrequency {
   zx_status_t SetLittleClusterFrequency(uint32_t new_rate, uint32_t offset);
 
   // MMIOS.
-  std::optional<ddk::MmioBuffer> hiu_mmio_;
+  std::optional<fdf::MmioBuffer> hiu_mmio_;
   // HIU Handle.
   aml_hiu_dev_t hiu_;
   // Sys PLL.

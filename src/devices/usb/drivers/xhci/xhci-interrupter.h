@@ -27,12 +27,12 @@ class Interrupter {
     }
   }
 
-  zx_status_t Init(uint16_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+  zx_status_t Init(uint16_t interrupter, size_t page_size, fdf::MmioBuffer* buffer,
                    const RuntimeRegisterOffset& offset, uint32_t erst_max,
                    DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
                    uint64_t* dcbaa);
 
-  zx_status_t Start(const RuntimeRegisterOffset& offset, ddk::MmioView interrupter_regs);
+  zx_status_t Start(const RuntimeRegisterOffset& offset, fdf::MmioView interrupter_regs);
 
   void Stop() {
     if (!active_) {

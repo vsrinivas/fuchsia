@@ -76,9 +76,9 @@ TEST(MmioBuffer, CppLifecycle) {
   zx::vmo vmo = CreateVmo(vmo_sz);
   MMIO_PTR volatile uint8_t* ptr = nullptr;
   {
-    std::optional<ddk::MmioBuffer> mmio = {};
+    std::optional<fdf::MmioBuffer> mmio = {};
     ASSERT_OK(
-        ddk::MmioBuffer::Create(0, vmo_sz, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
+        fdf::MmioBuffer::Create(0, vmo_sz, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
     ptr = reinterpret_cast<MMIO_PTR volatile uint8_t*>(mmio->get());
     // This write should succeed.
     MmioWrite8(0xA5, ptr);

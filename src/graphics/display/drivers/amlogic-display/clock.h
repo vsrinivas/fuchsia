@@ -52,8 +52,8 @@ class Clock {
   // undocumented and comes from U-Boot.
   zx_status_t PllLockWait();
 
-  std::optional<ddk::MmioBuffer> vpu_mmio_;
-  std::optional<ddk::MmioBuffer> hhi_mmio_;
+  std::optional<fdf::MmioBuffer> vpu_mmio_;
+  std::optional<fdf::MmioBuffer> hhi_mmio_;
 
   PllConfig pll_cfg_;
   LcdTiming lcd_timing_;

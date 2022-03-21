@@ -223,7 +223,7 @@ class EventRingHarness : public zxtest::Test {
   TRB* expected_completion_ = nullptr;
   fbl::DoublyLinkedList<std::unique_ptr<Command>> commands_;
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> pending_contexts_;
-  std::optional<ddk::MmioBuffer> buffer_;
+  std::optional<fdf::MmioBuffer> buffer_;
   EventRing* ring_;
   UsbXhci hci_;
   PORTSC port_sc_;
@@ -326,7 +326,7 @@ TRBPromise UsbXhci::Timeout(uint16_t target_interrupter, zx::time deadline) {
 }
 
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
-                               ddk::MmioBuffer* mmio, const UsbXhci& hci) {
+                               fdf::MmioBuffer* mmio, const UsbXhci& hci) {
   fbl::AutoLock _(&mutex_);
   hci_ = &hci;
   return ZX_OK;

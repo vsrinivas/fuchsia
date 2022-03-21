@@ -20,7 +20,7 @@ TEST(PciTest, MapMmio) {
   fake_pci.CreateBar(bar_id, zx_system_get_page_size(), /*is_mmio=*/true);
 
   ddk::Pci pci(fake_pci.get_protocol());
-  std::optional<ddk::MmioBuffer> mmio;
+  std::optional<fdf::MmioBuffer> mmio;
   EXPECT_OK(pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
 }
 

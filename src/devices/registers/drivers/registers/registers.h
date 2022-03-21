@@ -38,7 +38,7 @@ template <typename T>
 using RegistersDeviceType = ddk::Device<RegistersDevice<T>>;
 
 struct MmioInfo {
-  ddk::MmioBuffer mmio;
+  fdf::MmioBuffer mmio;
   std::vector<fbl::Mutex> locks;
 };
 

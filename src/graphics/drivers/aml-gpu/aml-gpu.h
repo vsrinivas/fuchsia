@@ -106,8 +106,8 @@ class AmlGpu final : public DdkDeviceType,
   ddk::PDev pdev_;
   mali_properties_t properties_{};
 
-  std::optional<ddk::MmioBuffer> hiu_buffer_;
-  std::optional<ddk::MmioBuffer> gpu_buffer_;
+  std::optional<fdf::MmioBuffer> hiu_buffer_;
+  std::optional<fdf::MmioBuffer> gpu_buffer_;
 
   fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_register_;
   // Resource used to perform SMC calls. Only needed on SM1.

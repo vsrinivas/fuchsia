@@ -33,7 +33,7 @@ class Pipe {
  public:
   Pipe(i915::Pipe&& other) : Pipe(other.mmio_space_, other.pipe_, std::move(other.pipe_power_)) {}
 
-  Pipe(ddk::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power);
+  Pipe(fdf::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power);
 
   void AttachToDisplay(uint64_t display_id, bool is_edp);
   void Detach();
@@ -66,7 +66,7 @@ class Pipe {
 
  private:
   // Borrowed reference to Controller instance
-  ddk::MmioBuffer* mmio_space_ = nullptr;
+  fdf::MmioBuffer* mmio_space_ = nullptr;
 
   void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary, bool enable_csc,
                              bool* scaler_1_claimed, registers::pipe_arming_regs* regs,

@@ -206,15 +206,15 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   }
 
   // Map the MMIO regions.
-  std::unique_ptr<ddk::MmioBuffer> regs_mmio;
+  std::unique_ptr<fdf::MmioBuffer> regs_mmio;
   {
     size_t vmo_size = 0;
     if ((status = zx_vmo_get_size(bar0_info.handle, &vmo_size)) != ZX_OK) {
       BRCMF_ERR("Failed to get BAR0 VMO size: %s", zx_status_get_string(status));
       return status;
     }
-    std::optional<ddk::MmioBuffer> mmio;
-    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar0_info.handle),
+    std::optional<fdf::MmioBuffer> mmio;
+    if ((status = fdf::MmioBuffer::Create(0, vmo_size, zx::vmo(bar0_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
       BRCMF_ERR("Failed to create BAR0 MmioBuffer: %s", zx_status_get_string(status));
       return status;
@@ -223,22 +223,22 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
       BRCMF_ERR("BAR0 mapped size=%zu, expected %u", mmio->get_size(), BRCMF_PCIE_REG_MAP_SIZE);
       return ZX_ERR_NO_RESOURCES;
     }
-    regs_mmio = std::make_unique<ddk::MmioBuffer>(std::move(mmio.value()));
+    regs_mmio = std::make_unique<fdf::MmioBuffer>(std::move(mmio.value()));
   }
-  std::unique_ptr<ddk::MmioBuffer> tcm_mmio;
+  std::unique_ptr<fdf::MmioBuffer> tcm_mmio;
   {
     size_t vmo_size = 0;
     if ((status = zx_vmo_get_size(bar2_info.handle, &vmo_size)) != ZX_OK) {
       BRCMF_ERR("Failed to get BAR2 VMO size: %s", zx_status_get_string(status));
       return status;
     }
-    std::optional<ddk::MmioBuffer> mmio;
-    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar2_info.handle),
+    std::optional<fdf::MmioBuffer> mmio;
+    if ((status = fdf::MmioBuffer::Create(0, vmo_size, zx::vmo(bar2_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
       BRCMF_ERR("Failed to create BAR2 MmioBuffer: %s", zx_status_get_string(status));
       return status;
     }
-    tcm_mmio = std::make_unique<ddk::MmioBuffer>(std::move(mmio.value()));
+    tcm_mmio = std::make_unique<fdf::MmioBuffer>(std::move(mmio.value()));
   }
 
   auto buscore = std::make_unique<PcieBuscore>();

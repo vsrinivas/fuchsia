@@ -27,7 +27,7 @@ namespace nelson_usb_phy {
 
 constexpr auto kStabilizeTime = zx::sec(1);
 
-void NelsonUsbPhy::InitPll(ddk::MmioBuffer* mmio) {
+void NelsonUsbPhy::InitPll(fdf::MmioBuffer* mmio) {
   PLL_REGISTER_40::Get()
       .FromValue(0)
       .set_value(pll_settings_[0])

@@ -36,8 +36,8 @@ using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable>;
 
 class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::base_protocol> {
  public:
-  AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
-           ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
+  AmlSdmmc(zx_device_t* parent, zx::bti bti, fdf::MmioBuffer mmio,
+           fdf::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
            const ddk::GpioProtocolClient& gpio);
 
   virtual ~AmlSdmmc() = default;
@@ -77,7 +77,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   zx::vmo GetInspectVmo() const { return inspect_.inspector.DuplicateVmo(); }
 
-  ddk::MmioBuffer mmio_;
+  fdf::MmioBuffer mmio_;
 
  private:
   constexpr static size_t kResponseCount = 4;
@@ -199,7 +199,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   zx::bti bti_;
 
-  ddk::MmioPinnedBuffer pinned_mmio_;
+  fdf::MmioPinnedBuffer pinned_mmio_;
   const ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
   aml_sdmmc_config_t board_config_;
