@@ -283,6 +283,28 @@ success("EmptyTable") {
     },
 }
 
+decode_failure("TableWithAbsentAlloc") {
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(0):8, // max ordinal
+            repeat(0x00):8, // alloc absent
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("TableWithInvalidAlloc") {
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(0):8, // max ordinal
+            repeat(0xab):8, // alloc absent
+        ],
+    },
+    err = INVALID_PRESENCE_INDICATOR,
+}
+
 success("SimpleTableEmpty") {
     value = StructOfSimpleTable{
         table: SimpleTable{},

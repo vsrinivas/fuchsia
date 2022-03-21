@@ -17,7 +17,7 @@ extern const char* const kCodingErrorStringLimitExceeded;
 extern const char* const kCodingErrorNullDataReceivedForNonNullableString;
 extern const char* const kCodingErrorNullStringMustHaveSizeZero;
 extern const char* const kCodingErrorStringNotValidUtf8;
-extern const char* const kCodingErrorNullTableMustHaveSizeZero;
+extern const char* const kCodingErrorNullDataReceivedForTable;
 extern const char* const kCodingErrorInvalidNumBytesSpecifiedInEnvelope;
 extern const char* const kCodingErrorInvalidNumHandlesSpecifiedInEnvelope;
 extern const char* const kCodingErrorNonEmptyByteCountInNullEnvelope;

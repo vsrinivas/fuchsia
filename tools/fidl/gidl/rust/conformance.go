@@ -157,12 +157,6 @@ fn test_{{ .Name }}_decode_failure() {
 		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),
 	}
-	{{- if .HandleDefs }}
-	assert_eq!(
-		handle_defs.iter().map(get_info_handle_valid).collect::<Vec<_>>(),
-		std::iter::repeat(Err(Status::BAD_HANDLE)).take(handle_defs.len()).collect::<Vec<_>>(),
-	);
-	{{- end }}
 }
 {{ end }}
 `))
@@ -375,6 +369,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.InvalidNumHandlesInEnvelope:        "InvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:                 "NonZeroPadding",
 	gidlir.InvalidPresenceIndicator:           "InvalidPresenceIndicator",
+	gidlir.InvalidHandlePresenceIndicator:     "InvalidPresenceIndicator",
 	gidlir.MissingRequiredHandleRights:        "MissingExpectedHandleRights",
 	gidlir.NonEmptyStringWithNullBody:         "UnexpectedNullRef",
 	gidlir.NonEmptyVectorWithNullBody:         "UnexpectedNullRef",

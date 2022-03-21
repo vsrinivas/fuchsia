@@ -106,7 +106,7 @@ class Visitor {
     kMemoryError                // overflow/out-of-bounds etc. Non-recoverable.
   };
 
-  enum class PointeeType { kVector, kString, kOther };
+  enum class PointeeType { kVector, kString, kEnvelope, kOther };
 
   // Compile-time interface checking. Code is invisible to the subclass.
  private:

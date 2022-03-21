@@ -18,7 +18,7 @@ const char* const kCodingErrorNullDataReceivedForNonNullableString =
     "null data received for non-nullable string";
 const char* const kCodingErrorNullStringMustHaveSizeZero = "null string must have a size of zero";
 const char* const kCodingErrorStringNotValidUtf8 = "string is not valid utf-8";
-const char* const kCodingErrorNullTableMustHaveSizeZero = "null table must have a size of zero";
+const char* const kCodingErrorNullDataReceivedForTable = "null vector data received for table";
 const char* const kCodingErrorInvalidNumBytesSpecifiedInEnvelope =
     "invalid num bytes specified in envelope";
 const char* const kCodingErrorInvalidNumHandlesSpecifiedInEnvelope =

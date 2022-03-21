@@ -460,11 +460,7 @@ struct NaturalTableCodingTraits {
       case FIDL_ALLOC_PRESENT:
         break;
       case FIDL_ALLOC_ABSENT: {
-        *value = T{};
-        if (encoded->count != 0) {
-          decoder->SetError(kCodingErrorNullTableMustHaveSizeZero);
-          return;
-        }
+        decoder->SetError(kCodingErrorNullDataReceivedForTable);
         return;
       }
       default: {
