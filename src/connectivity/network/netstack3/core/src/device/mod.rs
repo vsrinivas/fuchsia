@@ -478,8 +478,8 @@ impl From<EthernetDeviceId> for DeviceId {
 
 impl DeviceId {
     /// Construct a new `DeviceId` for an Ethernet device.
-    pub(crate) fn new_ethernet(id: usize) -> DeviceId {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)).into()
+    pub(crate) const fn new_ethernet(id: usize) -> DeviceId {
+        DeviceId(DeviceIdInner::Ethernet(EthernetDeviceId(id)))
     }
 
     pub(crate) fn inner(self) -> DeviceIdInner {

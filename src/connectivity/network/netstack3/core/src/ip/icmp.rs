@@ -1306,11 +1306,13 @@ fn send_icmp_reply<
     trace!("send_icmp_reply({:?}, {}, {})", device, original_src_ip, original_dst_ip);
     ctx.increment_counter("send_icmp_reply");
     ctx.send_oneshot_ip_packet(
+        None,
         Some(original_dst_ip),
         original_src_ip,
         I::ICMP_IP_PROTO,
         None,
         get_body_from_src_ip,
+        None,
     )
     .map_err(|(body, err)| {
         error!("failed to send ICMP reply: {}", err);
@@ -2197,6 +2199,7 @@ where
             IcmpUnusedCode,
             IcmpEchoRequest::new(conn.icmp_id, seq_num),
         )),
+        None,
     )
     .map_err(|(encapsulated, err)| (encapsulated.into_inner(), err))
 }
@@ -2241,6 +2244,7 @@ fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
     let ip = ctx.new_ip_socket(
+        None,
         local_addr,
         remote_addr,
         Ipv4Proto::Icmp,
@@ -2278,6 +2282,7 @@ fn new_icmpv6_connection_inner<C: InnerIcmpv6Context>(
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
     let ip = ctx.new_ip_socket(
+        None,
         local_addr,
         remote_addr,
         Ipv6Proto::Icmpv6,

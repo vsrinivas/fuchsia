@@ -405,6 +405,7 @@ impl<
 impl<C: IpLayerContext<Ipv4> + device::IpDeviceContext<Ipv4>> IpSocketContext<Ipv4> for C {
     fn lookup_route(
         &self,
+        device: Option<C::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         addr: SpecifiedAddr<Ipv4Addr>,
     ) -> Result<IpSockRoute<Ipv4, C::DeviceId>, IpSockRouteError> {
@@ -444,7 +445,7 @@ impl<C: IpLayerContext<Ipv4> + device::IpDeviceContext<Ipv4>> IpSocketContext<Ip
             });
         }
 
-        lookup_route(self, addr)
+        lookup_route(self, device, addr)
             .map(|destination| {
                 let Destination { device, next_hop: _ } = &destination;
                 let dev_state = get_ipv4_device_state(self, *device);
@@ -458,6 +459,7 @@ impl<C: IpLayerContext<Ipv4> + device::IpDeviceContext<Ipv4>> IpSocketContext<Ip
 impl<C: IpLayerContext<Ipv6> + device::IpDeviceContext<Ipv6>> IpSocketContext<Ipv6> for C {
     fn lookup_route(
         &self,
+        device: Option<C::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         addr: SpecifiedAddr<Ipv6Addr>,
     ) -> Result<IpSockRoute<Ipv6, C::DeviceId>, IpSockRouteError> {
@@ -527,7 +529,7 @@ impl<C: IpLayerContext<Ipv6> + device::IpDeviceContext<Ipv6>> IpSocketContext<Ip
             });
         }
 
-        lookup_route(self, addr)
+        lookup_route(self, device, addr)
             .map(|destination| {
                 let Destination { device, next_hop: _ } = &destination;
                 Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
@@ -1938,7 +1940,7 @@ fn receive_ip_packet_action_common<
         ctx.increment_counter("receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
-        match lookup_route(ctx, dst_ip) {
+        match lookup_route(ctx, None, dst_ip) {
             Some(dst) => {
                 ctx.increment_counter("receive_ip_packet_action_common::forward");
                 ReceivePacketAction::Forward { dst }
@@ -1954,9 +1956,10 @@ fn receive_ip_packet_action_common<
 // Look up the route to a host.
 fn lookup_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLayerContext<I>>(
     ctx: &C,
+    device: Option<C::DeviceId>,
     dst_ip: SpecifiedAddr<I::Addr>,
 ) -> Option<Destination<I::Addr, C::DeviceId>> {
-    AsRef::<IpStateInner<_, _, _>>::as_ref(ctx.get_ip_layer_state()).table.lookup(dst_ip)
+    AsRef::<IpStateInner<_, _, _>>::as_ref(ctx.get_ip_layer_state()).table.lookup(device, dst_ip)
 }
 
 pub(crate) fn on_routing_state_updated<
@@ -2398,7 +2401,7 @@ fn get_icmp_error_message_destination<
     F: FnOnce(DeviceId) -> Option<AddrSubnet<A>>,
 >(
     ctx: &Ctx<D, C>,
-    _device: DeviceId,
+    device: DeviceId,
     src_ip: SpecifiedAddr<A>,
     _dst_ip: SpecifiedAddr<A>,
     get_ip_addr_subnet: F,
@@ -2412,7 +2415,7 @@ where
     // that the original packet ingressed over? We'll probably want to consult
     // BCP 38 (aka RFC 2827) and RFC 3704.
 
-    if let Some(route) = lookup_route::<A::Version, _>(ctx, src_ip) {
+    if let Some(route) = lookup_route::<A::Version, _>(ctx, Some(device), src_ip) {
         if let Some(local_ip) = get_ip_addr_subnet(route.device).as_ref().map(AddrSubnet::addr) {
             Some((route.device, local_ip, route.next_hop))
         } else {

@@ -838,6 +838,7 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
             Some(local_port),
             remote_port,
         )),
+        None,
     )
     .map_err(|(body, err)| (body.into_inner(), err))
 }
@@ -885,6 +886,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
     let sock = match ctx.new_ip_socket(
+        None,
         local_ip,
         remote_ip,
         IpProto::Udp.into(),
@@ -934,6 +936,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
             Some(local_port),
             remote_port,
         )),
+        None
     )
     .map_err(|(body, err)| (body.into_inner(), match err {
         IpSockSendError::Mtu => UdpSendListenerError::Mtu,
@@ -967,7 +970,14 @@ pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     let ip_sock = ctx
-        .new_ip_socket(local_ip, remote_ip, IpProto::Udp.into(), UnroutableBehavior::StayOpen, None)
+        .new_ip_socket(
+            None,
+            local_ip,
+            remote_ip,
+            IpProto::Udp.into(),
+            UnroutableBehavior::StayOpen,
+            None,
+        )
         .map_err(<IpSockCreationError as Into<UdpSockCreationError>>::into)?;
 
     let local_ip = *ip_sock.local_ip();
