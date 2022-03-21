@@ -352,7 +352,7 @@ fn help(name: &str) -> String {
         Flags:
         --only <comma-separated-words>
             Filter-in lines containing at least one of the specified words.
-            Ineffectve if not set.
+            Ineffective if not set.
 
         --suppress <comma-separated-words>
             Filter-out lines containing any of the specified words
