@@ -222,7 +222,7 @@ class MockMmioRegRegion {
     reg_region[offs + mmio.offset].Write(val);
   }
 
-  static constexpr fdf::MmioBufferOps kMockMmioOps = {
+  static constexpr fdf::internal::MmioBufferOps kMockMmioOps = {
       .Read8 = Read8,
       .Read16 = Read16,
       .Read32 = Read32,

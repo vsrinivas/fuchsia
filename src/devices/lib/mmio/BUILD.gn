@@ -6,10 +6,19 @@ import("//build/zircon/zx_library.gni")
 
 zx_library("mmio") {
   sdk = "source"
-  sdk_headers = [ "lib/mmio/mmio.h" ]
+  sdk_headers = [
+    "lib/mmio/mmio.h",
+    "lib/mmio/mmio-buffer.h",
+    "lib/mmio/mmio-internal.h",
+    "lib/mmio/mmio-pinned-buffer.h",
+    "lib/mmio/mmio-view.h",
+  ]
   sources = []
   public_deps = [
     # <lib/mmio/mmio.h> has #include <lib/mmio-ptr/mmio-ptr.h>.
     "//zircon/system/ulib/mmio-ptr",
+
+    # <lib/mmio/mmio.h> has #include <lib/zx/bti.h>.
+    "//zircon/system/ulib/zx",
   ]
 }
