@@ -24,6 +24,8 @@ TEST_SUITES(                   //
     popcount_tests,            //
     printf_tests,              //
     string_view_tests,         //
+    string_file_tests,         //
+    multi_file_tests,          //
     unittest_tests,            //
     zbitl_tests,               //
     ArchRandomTests,           //

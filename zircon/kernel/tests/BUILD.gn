@@ -24,9 +24,11 @@ source_set("phys") {
   testonly = toolchain_environment != "kernel"
   cflags = [ "-fno-builtin" ]
   sources = [
+    "multi_file_tests.cc",
     "popcount.cc",
     "printf_tests.cc",
     "relocation_tests.cc",
+    "string_file_tests.cc",
     "string_view_tests.cc",
     "unittest_tests.cc",
   ]
@@ -98,7 +100,6 @@ if (toolchain_environment == "kernel") {
       "relocation_tests.cc",
       "resource_tests.cc",
       "sleep_tests.cc",
-      "string_file_tests.cc",
       "string_tests.cc",
       "sync_ipi_tests.cc",
       "tests.cc",
