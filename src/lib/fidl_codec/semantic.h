@@ -17,7 +17,7 @@
 namespace fidl_codec {
 
 class Type;
-class StructValue;
+class PayloadableValue;
 class Value;
 
 namespace semantic {
@@ -32,7 +32,8 @@ enum class ContextType { kRead, kWrite, kCall };
 class SemanticContext {
  public:
   SemanticContext(const HandleSemantic* handle_semantic, zx_koid_t pid, zx_handle_t handle,
-                  const StructValue* request, const StructValue* response, int64_t timestamp)
+                  const PayloadableValue* request, const PayloadableValue* response,
+                  int64_t timestamp)
       : handle_semantic_(handle_semantic),
         pid_(pid),
         handle_(handle),
@@ -43,8 +44,8 @@ class SemanticContext {
   const HandleSemantic* handle_semantic() const { return handle_semantic_; }
   zx_koid_t pid() const { return pid_; }
   zx_handle_t handle() const { return handle_; }
-  const StructValue* request() const { return request_; }
-  const StructValue* response() const { return response_; }
+  const PayloadableValue* request() const { return request_; }
+  const PayloadableValue* response() const { return response_; }
   int64_t timestamp() const { return timestamp_; }
 
  private:
@@ -55,9 +56,9 @@ class SemanticContext {
   // The handle we are reading/writing on.
   const zx_handle_t handle_;
   // The request (can be null).
-  const StructValue* const request_;
+  const PayloadableValue* const request_;
   // The response (can be null).
-  const StructValue* const response_;
+  const PayloadableValue* const response_;
   // The timestamp associated with the context.
   const int64_t timestamp_;
 };
@@ -66,8 +67,8 @@ class SemanticContext {
 class AssignmentSemanticContext : public SemanticContext {
  public:
   AssignmentSemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_koid_t tid,
-                            zx_handle_t handle, ContextType type, const StructValue* request,
-                            const StructValue* response, int64_t timestamp)
+                            zx_handle_t handle, ContextType type, const PayloadableValue* request,
+                            const PayloadableValue* response, int64_t timestamp)
       : SemanticContext(handle_semantic, pid, handle, request, response, timestamp),
         tid_(tid),
         type_(type) {}

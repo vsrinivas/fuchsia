@@ -115,6 +115,58 @@ std::string Bits::GetName(uint64_t absolute_value, bool negative) const {
   return "<none>";
 }
 
+Parameter::Parameter(std::string name, Type* type) : name_(std::move(name)), type_(type) {}
+
+Parameter::~Parameter() = default;
+
+Payloadable::Payloadable(Library* enclosing_library, const rapidjson::Value* json_definition,
+                         std::string name)
+    : enclosing_library_(enclosing_library),
+      json_definition_(json_definition),
+      name_(std::move(name)) {}
+
+Payloadable::~Payloadable() = default;
+
+Payload::Payload(Library* enclosing_library, const InterfaceMethod* method,
+                 const rapidjson::Value* json_type_definition, Payloadable* payloadable)
+    : enclosing_library_(enclosing_library),
+      enclosing_method_(method),
+      type_definition_(json_type_definition),
+      payloadable_(payloadable) {}
+
+Payload::~Payload() = default;
+
+void Payload::DecodeTypes() {
+  if (type_ == nullptr) {
+    type_ = Type::GetType(enclosing_library_->enclosing_loader(), *type_definition_);
+    payloadable_->DecodeTypes();
+  }
+}
+
+std::unique_ptr<PayloadableValue> Payload::Decode(MessageDecoder& decoder) const {
+  return payloadable_->DecodeAsPayload(type_, decoder);
+}
+
+std::unique_ptr<Parameter> Payload::FindParameter(std::string_view name) {
+  return payloadable_->FindParameter(name);
+}
+
+Struct* Payload::AsStruct() {
+  if (type_->AsStructType() != nullptr) {
+    return static_cast<Struct*>(payloadable_);
+  }
+  return nullptr;
+}
+
+const Struct* Payload::AsStruct() const {
+  if (type_->AsStructType() != nullptr) {
+    return static_cast<const Struct*>(payloadable_);
+  }
+  return nullptr;
+}
+
+std::string Payload::ToString(bool expand) const { return payloadable_->ToString(expand); }
+
 UnionMember::UnionMember(const Union& union_definition, Library* enclosing_library,
                          const rapidjson::Value* json_definition)
     : union_definition_(union_definition),
@@ -195,10 +247,12 @@ void StructMember::reset_type() { type_ = nullptr; }
 
 const Struct Struct::Empty = Struct();
 
-Struct::Struct(std::string_view name) : name_(name) {}
-
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
-    : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
+    : Payloadable(enclosing_library, json_definition, "") {}
+
+Struct::Struct(std::string_view name) : Payloadable(nullptr, nullptr, std::string(name)) {}
+
+Struct::~Struct() = default;
 
 void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id) {
   members_.emplace_back(std::make_unique<StructMember>(name, std::move(type), id));
@@ -238,6 +292,19 @@ void Struct::DecodeTypes() {
       members_.push_back(std::make_unique<StructMember>(enclosing_library_, &member));
     }
   }
+}
+
+std::unique_ptr<PayloadableValue> Struct::DecodeAsPayload(const std::unique_ptr<Type>& payload_type,
+                                                          MessageDecoder& decoder) const {
+  decoder.SkipObject(payload_type->InlineSize(decoder.version()));
+  std::unique_ptr<Value> value = payload_type->Decode(&decoder, kTransactionHeaderSize);
+  StructValue* struct_value = static_cast<StructValue*>(value.release());
+  return std::unique_ptr<PayloadableValue>(struct_value);
+}
+
+std::unique_ptr<Parameter> Struct::FindParameter(std::string_view name) {
+  StructMember* found = this->SearchMember(name, 0);
+  return found != nullptr ? std::make_unique<Parameter>(found->name(), found->type()) : nullptr;
 }
 
 StructMember* Struct::SearchMember(std::string_view name, uint32_t id) const {
@@ -339,7 +406,10 @@ InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& in
       if (!payload_type.HasMember("identifier")) {
         enclosing_library_->FieldNotFound("request", name_, "identifier");
       } else {
-        request_ = enclosing_library_->GetPayload(payload_type["identifier"].GetString());
+        auto payload_name = payload_type["identifier"].GetString();
+        auto payloadable = enclosing_library_->GetPayloadable(payload_name);
+        request_ = std::make_unique<Payload>(
+            enclosing_library, this, &(*json_definition)["maybe_request_payload"], payloadable);
       }
     }
   }
@@ -351,11 +421,16 @@ InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& in
       if (!payload_type.HasMember("identifier")) {
         enclosing_library_->FieldNotFound("response", name_, "identifier");
       } else {
-        response_ = enclosing_library_->GetPayload(payload_type["identifier"].GetString());
+        auto payload_name = payload_type["identifier"].GetString();
+        auto payloadable = enclosing_library_->GetPayloadable(payload_name);
+        response_ = std::make_unique<Payload>(
+            enclosing_library, this, &(*json_definition)["maybe_response_payload"], payloadable);
       }
     }
   }
 }
+
+InterfaceMethod::~InterfaceMethod() = default;
 
 std::string InterfaceMethod::fully_qualified_name() const {
   std::string fqn(enclosing_interface_->name());
@@ -364,15 +439,15 @@ std::string InterfaceMethod::fully_qualified_name() const {
   return fqn;
 }
 
-StructMember* InterfaceMethod::SearchMember(std::string_view name) const {
+std::unique_ptr<Parameter> InterfaceMethod::FindParameter(std::string_view name) const {
   if (request_ != nullptr) {
-    StructMember* member = request_->SearchMember(name);
-    if (member != nullptr) {
-      return member;
+    std::unique_ptr<Parameter> param = request_->FindParameter(name);
+    if (param != nullptr) {
+      return param;
     }
   }
   if (response_ != nullptr) {
-    return response_->SearchMember(name);
+    return response_->FindParameter(name);
   }
   return nullptr;
 }
@@ -429,15 +504,15 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     for (auto& str : json_definition_["struct_declarations"].GetArray()) {
       const std::string struct_name = str["name"].GetString();
       if (message_body_type_names.find(struct_name) != message_body_type_names.end()) {
-        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
-                          std::forward_as_tuple(new Struct(this, &str)));
+        payloadables_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
+                              std::forward_as_tuple(new Struct(this, &str)));
       }
     }
     for (auto& str : json_definition_["external_struct_declarations"].GetArray()) {
       const std::string struct_name = str["name"].GetString();
       if (message_body_type_names.find(struct_name) != message_body_type_names.end()) {
-        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
-                          std::forward_as_tuple(new Struct(this, &str)));
+        payloadables_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
+                              std::forward_as_tuple(new Struct(this, &str)));
       }
     }
   }
@@ -534,8 +609,7 @@ bool Library::DecodeAll() {
   }
   for (const auto& interface : interfaces_) {
     for (const auto& method : interface->methods()) {
-      method->request();
-      method->response();
+      method->DecodeTypes();
     }
   }
   return !has_errors_;

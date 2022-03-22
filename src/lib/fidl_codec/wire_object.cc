@@ -158,6 +158,13 @@ void HandleValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitHandleValue(this, for_type);
 }
 
+void PayloadableValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
+                                   rapidjson::Value& result) const {
+  JsonVisitor visitor(&result, &allocator);
+
+  Visit(&visitor, nullptr);
+}
+
 bool UnionValue::NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid,
                                        semantic::HandleSemantic* handle_semantic) const {
   return value_->NeedsToLoadHandleInfo(timestamp, tid, handle_semantic);
@@ -285,13 +292,6 @@ void StructValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
 
 void StructValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitStructValue(this, for_type);
-}
-
-void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::Value& result) const {
-  JsonVisitor visitor(&result, &allocator);
-
-  Visit(&visitor, nullptr);
 }
 
 bool VectorValue::NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid,

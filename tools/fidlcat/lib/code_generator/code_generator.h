@@ -29,17 +29,17 @@ class FidlCallInfo {
  public:
   FidlCallInfo(bool crashed, std::string_view enclosing_interface_name, zx_handle_t handle_id,
                zx_txid_t txid, SyscallKind kind, std::string_view method_name,
-               const fidl_codec::Struct* struct_input, const fidl_codec::Struct* struct_output,
-               const fidl_codec::StructValue* decoded_input_value,
-               const fidl_codec::StructValue* decoded_output_value)
+               const fidl_codec::Payload* payload_input, const fidl_codec::Payload* payload_output,
+               const fidl_codec::PayloadableValue* decoded_input_value,
+               const fidl_codec::PayloadableValue* decoded_output_value)
       : crashed_(crashed),
         enclosing_interface_name_(enclosing_interface_name),
         handle_id_(handle_id),
         txid_(txid),
         kind_(kind),
         method_name_(method_name),
-        struct_input_(struct_input),
-        struct_output_(struct_output),
+        payload_input_(payload_input),
+        payload_output_(payload_output),
         decoded_input_value_(decoded_input_value),
         decoded_output_value_(decoded_output_value) {}
 
@@ -55,13 +55,13 @@ class FidlCallInfo {
 
   const std::string& enclosing_interface_name() const { return enclosing_interface_name_; }
 
-  const fidl_codec::Struct* struct_input() const { return struct_input_; }
+  const fidl_codec::Payload* payload_input() const { return payload_input_; }
 
-  const fidl_codec::Struct* struct_output() const { return struct_output_; }
+  const fidl_codec::Payload* payload_output() const { return payload_output_; }
 
-  const fidl_codec::StructValue* decoded_input_value() const { return decoded_input_value_; }
+  const fidl_codec::PayloadableValue* decoded_input_value() const { return decoded_input_value_; }
 
-  const fidl_codec::StructValue* decoded_output_value() const { return decoded_output_value_; }
+  const fidl_codec::PayloadableValue* decoded_output_value() const { return decoded_output_value_; }
 
   size_t sequence_number() const { return sequence_number_; }
   void SetSequenceNumber(size_t sequence_number) { sequence_number_ = sequence_number; }
@@ -85,17 +85,17 @@ class FidlCallInfo {
   // FIDL method name (e.g. EchoString)
   const std::string method_name_;
 
-  // Input struct definition
-  const fidl_codec::Struct* const struct_input_;
+  // Input payload definition
+  const fidl_codec::Payload* const payload_input_;
 
-  // Output struct definition
-  const fidl_codec::Struct* const struct_output_;
+  // Output payload definition
+  const fidl_codec::Payload* const payload_output_;
 
   // Decoded input value
-  const fidl_codec::StructValue* const decoded_input_value_;
+  const fidl_codec::PayloadableValue* const decoded_input_value_;
 
   // Decoded output value
-  const fidl_codec::StructValue* const decoded_output_value_;
+  const fidl_codec::PayloadableValue* const decoded_output_value_;
 
   // Sequence number in the channel
   size_t sequence_number_;

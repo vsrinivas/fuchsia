@@ -155,7 +155,7 @@ TEST(LibraryLoader, FirstContentWins) {
 
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
   EXPECT_EQ("struct fidl.test.frobinator/FrobinatorFrogRequest {\n  string value;\n}",
-            found_method->request()->ToString());
+            found_method->request()->ToString(false));
   EXPECT_EQ(nullptr, found_method->response());
 }
 

@@ -33,12 +33,12 @@ class SyscallDecoderInterface {
   fidlcat::Thread* fidlcat_thread() const { return fidlcat_thread_; }
   const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
   void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
-  const fidl_codec::StructValue* decoded_request() const { return decoded_request_; }
-  void set_decoded_request(const fidl_codec::StructValue* decoded_request) {
+  const fidl_codec::PayloadableValue* decoded_request() const { return decoded_request_; }
+  void set_decoded_request(const fidl_codec::PayloadableValue* decoded_request) {
     decoded_request_ = decoded_request;
   }
-  const fidl_codec::StructValue* decoded_response() const { return decoded_response_; }
-  void set_decoded_response(const fidl_codec::StructValue* decoded_response) {
+  const fidl_codec::PayloadableValue* decoded_response() const { return decoded_response_; }
+  void set_decoded_response(const fidl_codec::PayloadableValue* decoded_response) {
     decoded_response_ = decoded_response;
   }
 
@@ -65,8 +65,8 @@ class SyscallDecoderInterface {
   const debug::Arch arch_;
   fidlcat::Thread* fidlcat_thread_;
   const fidl_codec::semantic::MethodSemantic* semantic_ = nullptr;
-  const fidl_codec::StructValue* decoded_request_ = nullptr;
-  const fidl_codec::StructValue* decoded_response_ = nullptr;
+  const fidl_codec::PayloadableValue* decoded_request_ = nullptr;
+  const fidl_codec::PayloadableValue* decoded_response_ = nullptr;
 };
 
 }  // namespace fidlcat

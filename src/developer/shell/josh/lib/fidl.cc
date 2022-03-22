@@ -18,6 +18,7 @@
 #include "src/developer/shell/josh/lib/zx.h"
 #include "src/lib/fidl_codec/encoder.h"
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/semantic.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "third_party/quickjs/quickjs.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
@@ -142,7 +143,8 @@ JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowInternalError(ctx, "Method missing request.");
   }
 
-  auto ast = ObjectConverter::Convert(ctx, method->request(), argv[2]);
+  auto req = method->request();
+  auto ast = ObjectConverter::Convert(ctx, req == nullptr ? nullptr : req->AsStruct(), argv[2]);
   if (!ast || !ast->AsStructValue()) {
     return JS_EXCEPTION;
   }
@@ -208,7 +210,7 @@ JSValue DecodeResponse(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       loader->GetByOrdinal(header->ordinal);
   // Test method not found, but...
   const fidl_codec::InterfaceMethod* method = (*methods)[0];
-  std::unique_ptr<fidl_codec::StructValue> object;
+  std::unique_ptr<fidl_codec::PayloadableValue> object;
   std::ostringstream errors;
   if (!fidl_codec::DecodeResponse(method, message_buf, message_len, handle_buf.data(), handles_len,
                                   &object, errors)) {

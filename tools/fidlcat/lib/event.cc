@@ -305,9 +305,10 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
   }
   if ((method != nullptr) && (method->short_display() != nullptr)) {
     fidl_codec::Indent indent(printer);
-    const fidl_codec::StructValue* request = (syscall()->kind() == SyscallKind::kChannelRead)
-                                                 ? GetMessage()->decoded_request()
-                                                 : invoked_event()->GetMessage()->decoded_request();
+    const fidl_codec::PayloadableValue* request =
+        (syscall()->kind() == SyscallKind::kChannelRead)
+            ? GetMessage()->decoded_request()
+            : invoked_event()->GetMessage()->decoded_request();
     fidl_codec::semantic::SemanticContext context(&printer.inference(), printer.process()->koid(),
                                                   (invoked_event()->handle_info() == nullptr)
                                                       ? ZX_HANDLE_INVALID
@@ -329,9 +330,10 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
   printer << '\n';
   if ((method != nullptr) && (method->short_display() != nullptr)) {
     fidl_codec::Indent indent(printer);
-    const fidl_codec::StructValue* request = (syscall()->kind() == SyscallKind::kChannelRead)
-                                                 ? GetMessage()->decoded_request()
-                                                 : invoked_event()->GetMessage()->decoded_request();
+    const fidl_codec::PayloadableValue* request =
+        (syscall()->kind() == SyscallKind::kChannelRead)
+            ? GetMessage()->decoded_request()
+            : invoked_event()->GetMessage()->decoded_request();
     fidl_codec::semantic::SemanticContext context(&printer.inference(), printer.process()->koid(),
                                                   (invoked_event()->handle_info() == nullptr)
                                                       ? ZX_HANDLE_INVALID

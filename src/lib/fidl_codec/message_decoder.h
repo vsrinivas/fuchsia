@@ -26,6 +26,7 @@ namespace fidl_codec {
 struct DecodedMessageData;
 class MessageDecoderDispatcher;
 class Struct;
+class PayloadableValue;
 class StructValue;
 class Type;
 class Value;
@@ -47,9 +48,9 @@ class DecodedMessage {
   uint64_t ordinal() const { return ordinal_; }
   zx_status_t epitaph_error() const { return epitaph_error_; }
   const InterfaceMethod* method() const { return method_; }
-  std::unique_ptr<StructValue>& decoded_request() { return decoded_request_; }
+  std::unique_ptr<PayloadableValue>& decoded_request() { return decoded_request_; }
   std::stringstream& request_error_stream() { return request_error_stream_; }
-  std::unique_ptr<StructValue>& decoded_response() { return decoded_response_; }
+  std::unique_ptr<PayloadableValue>& decoded_response() { return decoded_response_; }
   std::stringstream& response_error_stream() { return response_error_stream_; }
   Direction direction() const { return direction_; }
   bool is_request() const { return is_request_; }
@@ -67,10 +68,10 @@ class DecodedMessage {
   uint64_t ordinal_ = 0;
   zx_status_t epitaph_error_ = ZX_OK;
   const InterfaceMethod* method_ = nullptr;
-  std::unique_ptr<StructValue> decoded_request_;
+  std::unique_ptr<PayloadableValue> decoded_request_;
   std::stringstream request_error_stream_;
   bool matched_request_ = false;
-  std::unique_ptr<StructValue> decoded_response_;
+  std::unique_ptr<PayloadableValue> decoded_response_;
   std::stringstream response_error_stream_;
   bool matched_response_ = false;
   Direction direction_ = Direction::kUnknown;
@@ -119,7 +120,7 @@ class MessageDecoderDispatcher {
   std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions_;
 };
 
-// Helper to decode a message (request or response). It generates a StructValue.
+// Helper to decode a message (request or response). It generates a Value.
 class MessageDecoder {
  public:
   MessageDecoder(const uint8_t* bytes, uint64_t num_bytes, const zx_handle_disposition_t* handles,
@@ -194,13 +195,11 @@ class MessageDecoder {
     return *handle_pos_++;
   }
 
-  // Decodes a whole message (request or response) and return a StructValue.
-  std::unique_ptr<StructValue> DecodeMessage(const Struct* message_format);
+  // Decodes a whole message (request or response) and return a Value.
+  std::unique_ptr<PayloadableValue> DecodeMessage(const Payload* message_format);
 
   // Decodes a field. Used by envelopes.
   std::unique_ptr<Value> DecodeValue(const Type* type, bool is_inline);
-
-  std::unique_ptr<StructValue> DecodeStruct(const Struct& struct_definition, uint64_t offset);
 
   // Decodes the header for a value which can be null.
   bool DecodeNullableHeader(uint64_t offset, uint64_t size, bool* is_null,

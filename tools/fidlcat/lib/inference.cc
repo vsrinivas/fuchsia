@@ -143,8 +143,8 @@ void Inference::InferMessage(const OutputEvent* event,
     }
     const fidl_codec::FidlMessageValue* sent = event->invoked_event()->GetMessage();
     const fidl_codec::FidlMessageValue* received = event->GetMessage();
-    const fidl_codec::StructValue* request = nullptr;
-    const fidl_codec::StructValue* response = nullptr;
+    const fidl_codec::PayloadableValue* request = nullptr;
+    const fidl_codec::PayloadableValue* response = nullptr;
     switch (context_type) {
       case fidl_codec::semantic::ContextType::kRead:
         if (received != nullptr) {

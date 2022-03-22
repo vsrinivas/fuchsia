@@ -71,8 +71,8 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
     return nullptr;
   }
 
-  const fidl_codec::StructValue* decoded_input_value = nullptr;
-  const fidl_codec::StructValue* decoded_output_value = nullptr;
+  const fidl_codec::PayloadableValue* decoded_input_value = nullptr;
+  const fidl_codec::PayloadableValue* decoded_output_value = nullptr;
 
   switch (syscall_kind) {
     case SyscallKind::kChannelWrite:

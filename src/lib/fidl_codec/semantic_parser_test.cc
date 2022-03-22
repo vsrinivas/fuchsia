@@ -5,6 +5,7 @@
 #include "src/lib/fidl_codec/semantic_parser.h"
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -92,15 +93,15 @@ TEST_F(SemanticParserTest, GlobalPrintExample) {
   SemanticParser parser(&library_loader_, text, &parser_errors);
   parser.ParseSemantic();
 
-  StructMember* flags = method->SearchMember("flags");
+  std::unique_ptr<Parameter> flags = method->FindParameter("flags");
   ASSERT_NE(flags, nullptr);
-  Uint32Type* flags_type = flags->type()->AsUint32Type();
+  const Uint32Type* flags_type = flags->type()->AsUint32Type();
   ASSERT_NE(flags_type, nullptr);
   ASSERT_EQ(flags_type->kind(), Uint32Type::Kind::kDirectoryOpenFlags);
 
-  StructMember* mode = method->SearchMember("mode");
+  std::unique_ptr<Parameter> mode = method->FindParameter("mode");
   ASSERT_NE(mode, nullptr);
-  Uint32Type* mode_type = mode->type()->AsUint32Type();
+  const Uint32Type* mode_type = mode->type()->AsUint32Type();
   ASSERT_NE(mode_type, nullptr);
   ASSERT_EQ(mode_type->kind(), Uint32Type::Kind::kDirectoryOpenMode);
 
@@ -736,8 +737,8 @@ TEST_F(SemanticParserTest, TypeNotDefined) {
   ASSERT_NE(interface, nullptr);
   InterfaceMethod* method = interface->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
-  method->Decode();
-  StructMember* flags = method->SearchMember("flags");
+  method->DecodeTypes();
+  StructMember* flags = method->request()->AsStruct()->SearchMember("flags");
   ASSERT_NE(flags, nullptr);
 
   // Reset the type to trigger the error.

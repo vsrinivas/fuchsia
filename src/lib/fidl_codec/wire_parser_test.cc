@@ -111,14 +111,14 @@ TEST_F(WireParserTest, ParseSingleString) {
     }
   }
 
-  std::unique_ptr<fidl_codec::StructValue> decoded_request;
+  std::unique_ptr<fidl_codec::PayloadableValue> decoded_request;
   std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
                             handle_dispositions, message.handles().size(), &decoded_request,
                             error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
-    decoded_request->ExtractJson(actual.GetAllocator(), actual);
+    decoded_request->AsStructValue()->ExtractJson(actual.GetAllocator(), actual);
   }
 
   rapidjson::Document expected;
@@ -181,14 +181,14 @@ TEST_F(WireParserTest, ParseSingleString) {
     MessageDecoder decoder(message.bytes().data(),                                                \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes,                \
                            handle_dispositions, message.handles().size(), error_stream);          \
-    std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());               \
+    std::unique_ptr<PayloadableValue> object = decoder.DecodeMessage(method->request());          \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
       std::cerr << error_stream.str();                                                            \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                             \
     }                                                                                             \
     rapidjson::Document actual;                                                                   \
     if (object != nullptr) {                                                                      \
-      object->ExtractJson(actual.GetAllocator(), actual);                                         \
+      object->AsStructValue()->ExtractJson(actual.GetAllocator(), actual);                        \
     }                                                                                             \
     rapidjson::StringBuffer actual_string;                                                        \
     rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);                           \
@@ -217,7 +217,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), actual, handle_dispositions,                 \
                              message.handles().size(), error_stream);                             \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());             \
+      std::unique_ptr<PayloadableValue> object = decoder.DecodeMessage(method->request());        \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual        \
                                       << " instead of " << message.bytes().actual();              \
     }                                                                                             \
@@ -226,14 +226,14 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_dispositions, \
                              actual, error_stream);                                               \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());             \
+      std::unique_ptr<PayloadableValue> object = decoder.DecodeMessage(method->request());        \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual        \
                                       << " instead of " << message.handles().actual();            \
     }                                                                                             \
                                                                                                   \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
       auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,      \
-                                                  header.magic_number, *object.get());            \
+                                                  header.magic_number, *object->AsStructValue()); \
       ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));             \
       ASSERT_EQ(message.handles().size(), encode_result.handles.size());                          \
                                                                                                   \
@@ -1676,21 +1676,26 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   // If this is null, you probably have to update the schema above.
   ASSERT_NE(method, nullptr);
 
-  std::unique_ptr<fidl_codec::StructValue> decoded_request;
+  std::unique_ptr<fidl_codec::PayloadableValue> decoded_request;
   std::stringstream error_stream;
-  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
-                            handle_dispositions, message.handles().size(), &decoded_request,
-                            error_stream);
+  bool success = fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
+                                           handle_dispositions, message.handles().size(),
+                                           &decoded_request, error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
   }
 
-  // Checks that an invalid type generates an invalid value.
-  ASSERT_STREQ(actual["i32"].GetString(), "(invalid)");
+  // Checks that request containing an invalid type fails decoding.
+  ASSERT_FALSE(success);
 
+  // Errors clearly indicate why the decode failure occurred.
   delete[] handle_dispositions;
-  ASSERT_STREQ(log_msg.str().c_str(), "Invalid type");
+  ASSERT_PRED_FORMAT2(
+      ::testing::IsSubstring,
+      "Unknown type for identifier: test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+      log_msg.str().c_str());
+  ASSERT_PRED_FORMAT2(::testing::IsSubstring, "Invalid type", log_msg.str().c_str());
 }
 
 // Checks that MessageDecoder::DecodeValue doesn't core dump with a null type.

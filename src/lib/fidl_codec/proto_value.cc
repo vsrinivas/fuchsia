@@ -12,7 +12,7 @@
 
 namespace fidl_codec {
 
-void ProtoEncodeStruct(proto::Struct* dst, const fidl_codec::StructValue* node) {
+void EncodeStruct(proto::Struct* dst, const fidl_codec::StructValue* node) {
   for (const auto& field : node->fields()) {
     auto proto_field = dst->add_fields();
     proto_field->set_name(field.first->name());
@@ -22,6 +22,15 @@ void ProtoEncodeStruct(proto::Struct* dst, const fidl_codec::StructValue* node) 
     ProtoVisitor visitor(value);
     field.second->Visit(&visitor, nullptr);
   }
+}
+
+void EncodePayload(proto::Payload* dst, const fidl_codec::PayloadableValue* node) {
+  const auto struct_value = node->AsStructValue();
+  // TODO(fxbug.dev/88343): handle table and union.
+  if (struct_value != nullptr) {
+    return EncodeStruct(dst->mutable_struct_value(), struct_value);
+  }
+  FX_LOGS_OR_CAPTURE(ERROR) << "Invalid payload value kind.";
 }
 
 void ProtoVisitor::VisitNullValue(const fidl_codec::NullValue* node,
@@ -82,7 +91,7 @@ void ProtoVisitor::VisitUnionValue(const fidl_codec::UnionValue* node,
 
 void ProtoVisitor::VisitStructValue(const fidl_codec::StructValue* node,
                                     const fidl_codec::Type* for_type) {
-  ProtoEncodeStruct(dst_->mutable_struct_value(), node);
+  EncodeStruct(dst_->mutable_struct_value(), node);
 }
 
 void ProtoVisitor::VisitVectorValue(const fidl_codec::VectorValue* node,
@@ -129,12 +138,14 @@ void ProtoVisitor::VisitFidlMessageValue(const fidl_codec::FidlMessageValue* nod
   }
   if (node->decoded_request() != nullptr) {
     fidl_message->set_has_request(true);
-    ProtoEncodeStruct(fidl_message->mutable_decoded_request(), node->decoded_request());
+    EncodePayload(fidl_message->mutable_decoded_request(),
+                  node->decoded_request()->AsPayloadableValue());
   }
   fidl_message->set_request_errors(node->request_errors());
   if (node->decoded_response() != nullptr) {
     fidl_message->set_has_response(true);
-    ProtoEncodeStruct(fidl_message->mutable_decoded_response(), node->decoded_response());
+    EncodePayload(fidl_message->mutable_decoded_response(),
+                  node->decoded_response()->AsPayloadableValue());
   }
   fidl_message->set_response_errors(node->response_errors());
 }
@@ -164,6 +175,30 @@ std::unique_ptr<StructValue> DecodeStruct(LibraryLoader* loader, const proto::St
     return nullptr;
   }
   return struct_value;
+}
+
+std::unique_ptr<PayloadableValue> DecodePayload(LibraryLoader* loader,
+                                                const proto::Payload& proto_payload,
+                                                const Payload* payload) {
+  if (payload == nullptr) {
+    return std::make_unique<fidl_codec::StructValue>(Struct::Empty);
+  }
+
+  const Type* type = payload->type().get();
+  switch (proto_payload.Kind_case()) {
+    case proto::Payload::kStructValue: {
+      auto struct_type = type->AsStructType();
+      if (struct_type == nullptr) {
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of struct value should be struct.";
+        return nullptr;
+      }
+      return DecodeStruct(loader, proto_payload.struct_value(), struct_type->struct_definition());
+    }
+    // TODO(fxbug.dev/88343): handle table and union.
+    default:
+      FX_LOGS_OR_CAPTURE(ERROR) << "Unknown payload kind.";
+      return nullptr;
+  }
 }
 
 std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& proto_value,
@@ -310,10 +345,9 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         bool ok = true;
         if (proto_message.has_request()) {
           if (method->has_request()) {
-            Struct* request = method->request();
+            Payload* request = method->request();
             message->set_decoded_request(
-                DecodeStruct(loader, proto_message.decoded_request(),
-                             request != nullptr ? *request : Struct::Empty));
+                DecodePayload(loader, proto_message.decoded_request(), request));
           } else {
             FX_LOGS_OR_CAPTURE(ERROR)
                 << "Request without request defined in " << method->name() << '.';
@@ -322,10 +356,9 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         }
         if (proto_message.has_response()) {
           if (method->has_response()) {
-            Struct* response = method->response();
+            Payload* response = method->response();
             message->set_decoded_response(
-                DecodeStruct(loader, proto_message.decoded_response(),
-                             response != nullptr ? *response : Struct::Empty));
+                DecodePayload(loader, proto_message.decoded_response(), response));
           } else {
             FX_LOGS_OR_CAPTURE(ERROR)
                 << "Response without response defined in " << method->name() << '.';

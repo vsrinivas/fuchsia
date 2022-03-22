@@ -512,22 +512,29 @@ void TestGenerator::GenerateGroup(
 }
 
 std::vector<std::shared_ptr<fidl_codec::CppVariable>>
-TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_prefix,
-                                                const fidl_codec::StructValue* struct_value) {
+TestGenerator::CollectArgumentsFromDecodedValue(
+    const std::string& variable_prefix, const fidl_codec::PayloadableValue* payloadable_value) {
   std::vector<std::shared_ptr<fidl_codec::CppVariable>> cpp_vars;
 
-  if (!struct_value) {
+  if (payloadable_value == nullptr) {
+    return cpp_vars;
+  }
+  const fidl_codec::StructValue* struct_value = payloadable_value->AsStructValue();
+  if (struct_value == nullptr) {
     return cpp_vars;
   }
 
   // The input to this method is the decoded_input_value/decoded_output_value from the message.
   // Each member in decoded_value will be treated as a argument to a HLCPP call,
   // Therefore we only need to traverse the decoded_value for one level.
-
   for (const std::unique_ptr<fidl_codec::StructMember>& struct_member :
        struct_value->struct_definition().members()) {
     std::pair<const fidl_codec::Type*, const fidl_codec::Value*> value =
         struct_value->GetFieldValue(struct_member->name());
+    if (value.first == nullptr || value.second == nullptr) {
+      continue;
+    }
+
     fidl_codec::CppVisitor visitor(AcquireUniqueName(variable_prefix + struct_member->name()));
     value.second->Visit(&visitor, value.first);
 

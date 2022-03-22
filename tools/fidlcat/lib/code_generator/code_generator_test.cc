@@ -68,10 +68,14 @@ class TestGeneratorTest : public ::testing::Test {
     struct_def_input_ = std::make_shared<fidl_codec::Struct>("StructInput");
     struct_def_input_->AddMember("base", std::make_unique<fidl_codec::Int64Type>());
     struct_def_input_->AddMember("exponent", std::make_unique<fidl_codec::Int64Type>());
+    payload_def_input_ =
+        std::make_shared<fidl_codec::Payload>(nullptr, nullptr, nullptr, struct_def_input_.get());
 
     struct_def_output_ = std::make_shared<fidl_codec::Struct>("StructOutput");
     struct_def_output_->AddMember("result", std::make_unique<fidl_codec::Int64Type>());
     struct_def_output_->AddMember("result_words", std::make_unique<fidl_codec::StringType>());
+    payload_def_output_ =
+        std::make_shared<fidl_codec::Payload>(nullptr, nullptr, nullptr, struct_def_output_.get());
 
     zx_handle_t handle_id = 1234;
     zx_txid_t txid_1 = 1;
@@ -85,8 +89,8 @@ class TestGeneratorTest : public ::testing::Test {
 
     call_write_1_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, txid_1, SyscallKind::kChannelWrite,
-        "Exponentiation", struct_def_input_.get(), struct_def_output_.get(), struct_input_1_.get(),
-        nullptr);
+        "Exponentiation", payload_def_input_.get(), payload_def_output_.get(),
+        struct_input_1_.get(), nullptr);
 
     struct_input_2_ = std::make_shared<fidl_codec::StructValue>(*struct_def_input_.get());
     struct_input_2_->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(3)));
@@ -94,7 +98,7 @@ class TestGeneratorTest : public ::testing::Test {
 
     call_write_2_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, txid_2, SyscallKind::kChannelWrite,
-        "ExponentiationSlow", struct_def_input_.get(), struct_def_output_.get(),
+        "ExponentiationSlow", payload_def_input_.get(), payload_def_output_.get(),
         struct_input_2_.get(), nullptr);
 
     struct_output_1_ = std::make_shared<fidl_codec::StructValue>(*struct_def_output_.get());
@@ -115,16 +119,16 @@ class TestGeneratorTest : public ::testing::Test {
 
     call_sync_ = std::make_shared<FidlCallInfo>(false, "fidl.examples.calculator", handle_id,
                                                 txid_3, SyscallKind::kChannelCall, "Exponentiation",
-                                                struct_def_input_.get(), struct_def_output_.get(),
+                                                payload_def_input_.get(), payload_def_output_.get(),
                                                 struct_input_1_.get(), struct_output_1_.get());
 
     call_event_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, 0, SyscallKind::kChannelRead, "OnTimeout",
-        nullptr, struct_def_output_.get(), nullptr, struct_output_1_.get());
+        nullptr, payload_def_output_.get(), nullptr, struct_output_1_.get());
 
     call_fire_and_forget_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, txid_4, SyscallKind::kChannelWrite, "TurnOn",
-        struct_def_input_.get(), nullptr, struct_input_1_.get(), nullptr);
+        payload_def_input_.get(), nullptr, struct_input_1_.get(), nullptr);
   }
 
   void SetUp() { os_.str(""); }
@@ -142,6 +146,8 @@ class TestGeneratorTest : public ::testing::Test {
   std::shared_ptr<fidl_codec::StructValue> struct_output_2_;
   std::shared_ptr<fidl_codec::Struct> struct_def_input_;
   std::shared_ptr<fidl_codec::Struct> struct_def_output_;
+  std::shared_ptr<fidl_codec::Payload> payload_def_input_;
+  std::shared_ptr<fidl_codec::Payload> payload_def_output_;
   std::shared_ptr<FidlCallInfo> call_write_1_;
   std::shared_ptr<FidlCallInfo> call_read_1_;
   std::shared_ptr<FidlCallInfo> call_write_2_;

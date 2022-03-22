@@ -190,21 +190,21 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
   version_ = container->version_;
 }
 
-std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct* message_format) {
+std::unique_ptr<PayloadableValue> MessageDecoder::DecodeMessage(const Payload* message_format) {
+  SkipObject(kTransactionHeaderSize);
   if (message_format == nullptr) {
-    SkipObject(kTransactionHeaderSize);
-    return DecodeStruct(fidl_codec::Struct::Empty, kTransactionHeaderSize);
+    return std::make_unique<StructValue>(fidl_codec::Struct::Empty);
   }
 
-  // Set the offset for the next object (just after this one).
-  SkipObject(message_format->Size(version_) + kTransactionHeaderSize);
-  // Decode the message.
-  std::unique_ptr<StructValue> message = DecodeStruct(*message_format, kTransactionHeaderSize);
+  // Decode the message payload (ie, everything past the header).
+  std::unique_ptr<PayloadableValue> message = message_format->Decode(*this);
+
   // It's an error if we didn't use all the bytes in the buffer.
   if (next_object_offset_ != num_bytes_) {
     AddError() << "Message not fully decoded (decoded=" << next_object_offset_
                << ", size=" << num_bytes_ << ")\n";
   }
+
   // It's an error if we didn't use all the handles in the buffer.
   if (GetRemainingHandles() != 0) {
     AddError() << "Message not fully decoded (remain " << GetRemainingHandles() << " handles)\n";
@@ -233,16 +233,6 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type, bool is_inl
   if (GetRemainingHandles() != 0) {
     AddError() << "Message envelope not fully decoded (remain " << GetRemainingHandles()
                << " handles)\n";
-  }
-  return result;
-}
-
-std::unique_ptr<StructValue> MessageDecoder::DecodeStruct(const Struct& struct_definition,
-                                                          uint64_t offset) {
-  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(struct_definition);
-  for (const auto& member : struct_definition.members()) {
-    std::unique_ptr<Value> value = member->type()->Decode(this, offset + member->Offset(version_));
-    result->AddField(member.get(), std::move(value));
   }
   return result;
 }

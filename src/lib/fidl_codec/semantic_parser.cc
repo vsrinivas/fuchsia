@@ -338,8 +338,8 @@ void SemanticParser::ParseMethod(InterfaceMethod* method) {
       if (!IsIdentifier()) {
         AddError() << "Field name expected.\n";
       } else {
-        method->Decode();
-        StructMember* member = method->SearchMember(current_string_);
+        method->DecodeTypes();
+        const std::unique_ptr<Parameter> member = method->FindParameter(current_string_);
         if (member == nullptr) {
           AddError() << "Field <" << current_string_ << "> not found.\n";
           NextLexicalToken();

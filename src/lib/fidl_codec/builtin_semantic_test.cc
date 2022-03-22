@@ -122,7 +122,7 @@ TEST_F(BuiltinSemanticTest, CloneWrite) {
   SetHandleSemantic("dir", "/svc");
 
   // This message (we only define the fields used by the semantic):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("object", std::make_unique<HandleValue>(channel0_));
 
   ExecuteWrite(method->semantic(), &request, nullptr);
@@ -154,7 +154,7 @@ TEST_F(BuiltinSemanticTest, CloneRead) {
   SetHandleSemantic("dir", "/svc");
 
   // This message (we only define the fields used by the semantic):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("object", std::make_unique<HandleValue>(channel0_));
 
   ExecuteRead(method->semantic(), &request, nullptr);
@@ -186,7 +186,7 @@ TEST_F(BuiltinSemanticTest, CloneFd) {
   SetHandleSemantic("handle", 2);
 
   // This message (we only define the fields used by the semantic):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("object", std::make_unique<HandleValue>(channel0_));
 
   ExecuteRead(method->semantic(), &request, nullptr);
@@ -218,7 +218,7 @@ TEST_F(BuiltinSemanticTest, Open) {
   SetHandleSemantic("dir", "/svc");
 
   // This message (we only define the fields used by the semantic):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("path", std::make_unique<StringValue>("fuchsia.sys.Launcher"));
   request.AddField("object", std::make_unique<HandleValue>(channel0_));
 
@@ -250,9 +250,13 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   SetHandleSemantic("dir", "/svc/fuchsia.sys.Launcher");
 
   // This message (we only define the fields used by the semantic):
-  StructValue request(*method->request());
-  auto launch_info = std::make_unique<StructValue>(
-      method->request()->SearchMember("launch_info")->type()->AsStructType()->struct_definition());
+  StructValue request(*method->request()->AsStruct());
+  auto launch_info = std::make_unique<StructValue>(method->request()
+                                                       ->AsStruct()
+                                                       ->SearchMember("launch_info")
+                                                       ->type()
+                                                       ->AsStructType()
+                                                       ->struct_definition());
   launch_info->AddField("url",
                         std::make_unique<StringValue>(
                             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx"));
@@ -292,7 +296,7 @@ TEST_F(BuiltinSemanticTest, OpenShortDisplay) {
   ASSERT_NE(method->short_display(), nullptr);
 
   // This message (we only define the fields used by the display):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("path", std::make_unique<StringValue>("fuchsia.sys.Launcher"));
   request.AddField("object", std::make_unique<HandleValue>(channel0_));
 
@@ -318,7 +322,7 @@ TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
   ASSERT_NE(method->short_display(), nullptr);
 
   // This message (we only define the fields used by the display):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   request.AddField("origin", std::make_unique<IntegerValue>(0, false));
   request.AddField("offset", std::make_unique<IntegerValue>(1000, false));
 
@@ -342,7 +346,7 @@ TEST_F(BuiltinSemanticTest, FileWriteShortDisplay) {
   ASSERT_NE(method->short_display(), nullptr);
 
   // This message (we only define the fields used by the display):
-  StructValue request(*method->request());
+  StructValue request(*method->request()->AsStruct());
   auto vector = std::make_unique<VectorValue>();
   vector->AddValue(std::make_unique<IntegerValue>(10, false));
   vector->AddValue(std::make_unique<IntegerValue>(20, false));

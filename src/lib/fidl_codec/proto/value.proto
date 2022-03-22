@@ -56,6 +56,7 @@ message StructField {
 // Defines a struct value.
 message Struct {
   repeated StructField fields = 1;
+  // TODO(fxbug.dev/88343): handle table and union.
 }
 
 // Defines a vector value.
@@ -66,6 +67,13 @@ message Vector {
 // Defines a table value.
 message Table {
   map<string, Value> members = 1;
+}
+
+// Defines a payloadable value.
+message Payload {
+  oneof Kind {
+    Struct struct_value = 1;
+  }
 }
 
 // Defines a FIDL message value.
@@ -82,10 +90,10 @@ message FidlMessage {
   bytes raw_bytes = 10;
   repeated HandleInfo handle = 11;
   bool has_request = 12;
-  Struct decoded_request = 13;
+  Payload decoded_request = 13;
   string request_errors = 14;
   bool has_response = 15;
-  Struct decoded_response = 16;
+  Payload decoded_response = 16;
   string response_errors = 17;
 }
 

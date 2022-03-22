@@ -21,6 +21,7 @@ class ActualAndRequestedValue;
 class FidlMessageValue;
 class HandleValue;
 class StringValue;
+class PayloadableValue;
 class StructValue;
 class VectorValue;
 class Visitor;
@@ -50,6 +51,8 @@ class Value {
   virtual const ActualAndRequestedValue* AsActualAndRequestedValue() const { return nullptr; }
   virtual const StringValue* AsStringValue() const { return nullptr; }
   virtual const HandleValue* AsHandleValue() const { return nullptr; }
+  virtual PayloadableValue* AsPayloadableValue() { return nullptr; }
+  virtual const PayloadableValue* AsPayloadableValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
   virtual const StructValue* AsStructValue() const { return nullptr; }
   virtual const VectorValue* AsVectorValue() const { return nullptr; }
@@ -283,6 +286,19 @@ class HandleValue : public Value {
   const zx_handle_disposition_t handle_;
 };
 
+// A PayloadableValue is a Value which MAY be used as a method response/request payload.
+class PayloadableValue : public Value {
+ public:
+  explicit PayloadableValue() = default;
+  virtual ~PayloadableValue() = default;
+
+  PayloadableValue* AsPayloadableValue() override { return this; }
+  const PayloadableValue* AsPayloadableValue() const override { return this; }
+
+  // Extract the JSON for this object.
+  void ExtractJson(rapidjson::Document::AllocatorType& allocator, rapidjson::Value& result) const;
+};
+
 // An union.
 class UnionValue : public Value {
  public:
@@ -306,8 +322,8 @@ class UnionValue : public Value {
   const std::unique_ptr<Value> value_;
 };
 
-// An instance of a Struct. This includes requests and responses which are also structs.
-class StructValue : public Value {
+// An instance of a Struct.
+class StructValue : public PayloadableValue {
  public:
   explicit StructValue(const Struct& struct_definition) : struct_definition_(struct_definition) {}
 
@@ -337,9 +353,6 @@ class StructValue : public Value {
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
-
-  // Extract the JSON for this object.
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator, rapidjson::Value& result) const;
 
  private:
   const Struct& struct_definition_;
@@ -453,13 +466,13 @@ class FidlMessageValue : public Value {
   const std::vector<uint8_t>& bytes() const { return bytes_; }
   const std::vector<zx_handle_disposition_t>& handles() const { return handles_; }
   void add_handle(const zx_handle_disposition_t& handle) { handles_.emplace_back(handle); }
-  const StructValue* decoded_request() const { return decoded_request_.get(); }
-  void set_decoded_request(std::unique_ptr<StructValue> decoded_request) {
+  const PayloadableValue* decoded_request() const { return decoded_request_.get(); }
+  void set_decoded_request(std::unique_ptr<PayloadableValue> decoded_request) {
     decoded_request_ = std::move(decoded_request);
   }
   const std::string& request_errors() const { return request_errors_; }
-  const StructValue* decoded_response() const { return decoded_response_.get(); }
-  void set_decoded_response(std::unique_ptr<StructValue> decoded_response) {
+  const PayloadableValue* decoded_response() const { return decoded_response_.get(); }
+  void set_decoded_response(std::unique_ptr<PayloadableValue> decoded_response) {
     decoded_response_ = std::move(decoded_response);
   }
   const std::string& response_errors() const { return response_errors_; }
@@ -507,13 +520,13 @@ class FidlMessageValue : public Value {
   std::vector<uint8_t> bytes_;
   // All the handles of the message.
   std::vector<zx_handle_disposition_t> handles_;
-  // Value of the request we have been able to decode.
-  std::unique_ptr<StructValue> decoded_request_;
+  // PayloadableValue of the request we have been able to decode.
+  std::unique_ptr<PayloadableValue> decoded_request_;
   // Errors generated during the decoding of the request. If not empty, decoded_request_ holds only
   // a partial result.
   const std::string request_errors_;
-  // Value of the response we have been able to decode.
-  std::unique_ptr<StructValue> decoded_response_;
+  // PayloadableValue of the response we have been able to decode.
+  std::unique_ptr<PayloadableValue> decoded_response_;
   // Errors generated during the decoding of the response. If not empty, decoded_response_ holds
   // only a partial result.
   const std::string response_errors_;

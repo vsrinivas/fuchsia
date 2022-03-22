@@ -185,6 +185,8 @@ std::string InvalidType::Name() const { return "unknown"; }
 
 size_t InvalidType::InlineSize(WireVersion version) const { return 0; }
 
+bool InvalidType::IsValid() const { return false; }
+
 std::unique_ptr<Value> InvalidType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return std::make_unique<InvalidValue>();
 }
@@ -893,7 +895,15 @@ std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offs
     }
     offset = nullable_offset;
   }
-  return decoder->DecodeStruct(struct_definition_, offset);
+
+  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(struct_definition_);
+  for (const auto& member : struct_definition_.members()) {
+    std::unique_ptr<Value> value =
+        member->type()->Decode(decoder, offset + member->Offset(decoder->version()));
+    result->AddField(member.get(), std::move(value));
+  }
+
+  return result;
 }
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
@@ -1076,7 +1086,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
   std::string library_name = id.substr(0, split_index);
   Library* library = loader->GetLibraryFromName(library_name);
   if (library == nullptr) {
-    FX_LOGS_OR_CAPTURE(ERROR) << "Unknown type for identifier: " << library_name;
+    FX_LOGS_OR_CAPTURE(ERROR) << "Unknown type for identifier: " << id;
     return std::make_unique<InvalidType>();
   }
 

@@ -50,6 +50,9 @@ class Type {
   // Returns true if the type is a ArrayType.
   virtual bool IsArray() const { return false; }
 
+  // Is this type valid?
+  virtual bool IsValid() const { return true; }
+
   // Returns a readable representation of the type.
   virtual std::string Name() const = 0;
 
@@ -114,6 +117,8 @@ class InvalidType : public Type {
   std::string Name() const override;
 
   size_t InlineSize(WireVersion version) const override;
+
+  bool IsValid() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 

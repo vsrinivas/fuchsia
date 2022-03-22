@@ -55,7 +55,7 @@ class TestGenerator : public CodeGenerator {
       : CodeGenerator(), dispatcher_(dispatcher), output_directory_(output_directory) {}
 
   std::vector<std::shared_ptr<fidl_codec::CppVariable>> CollectArgumentsFromDecodedValue(
-      const std::string& variable_prefix, const fidl_codec::StructValue* struct_value);
+      const std::string& variable_prefix, const fidl_codec::PayloadableValue* payload_value);
 
   std::vector<std::shared_ptr<fidl_codec::CppVariable>> GenerateInputInitializers(
       fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
