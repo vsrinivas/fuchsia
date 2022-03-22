@@ -98,6 +98,7 @@ source_set("integration_test_lib") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/virtualization/tests:fake_netstack",
   ]

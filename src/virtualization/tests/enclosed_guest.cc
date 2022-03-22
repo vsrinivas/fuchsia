@@ -7,8 +7,11 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fitx/result.h>
@@ -20,14 +23,19 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 
+#include "fuchsia/logger/cpp/fidl.h"
 #include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/fxl/strings/ascii.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
+#include "src/virtualization/lib/guest_config/guest_config.h"
 #include "src/virtualization/tests/backtrace_watchdog.h"
 #include "src/virtualization/tests/guest_constants.h"
 #include "src/virtualization/tests/logger.h"
@@ -39,9 +47,6 @@ constexpr char kZirconGuestUrl[] = "fuchsia-pkg://fuchsia.com/zircon_guest#meta/
 constexpr char kDebianGuestUrl[] = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
 constexpr char kTerminaGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-constexpr char kGuestManagerUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
-constexpr char kDefaultRealm[] = "realmguestintegrationtest";
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kFuchsiaTestUtilsUrl[] = "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 constexpr char kDebianTestUtilDir[] = "/test_utils";
@@ -49,7 +54,6 @@ constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
 constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
-constexpr zx::duration kBacktraceTimeout = zx::sec(120);
 
 bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {
@@ -77,6 +81,58 @@ std::string JoinArgVector(const std::vector<std::string>& argv) {
 
 }  // namespace
 
+LocalGuestConfigProvider::LocalGuestConfigProvider(async_dispatcher_t* dispatcher,
+                                                   std::string package_dir_name,
+                                                   fuchsia::virtualization::GuestConfig&& config)
+    : dispatcher_(dispatcher),
+      config_(std::move(config)),
+      package_dir_name_(std::move(package_dir_name)) {}
+
+void LocalGuestConfigProvider::Get(GetCallback callback) {
+  auto block_devices = std::move(*config_.mutable_block_devices());
+  zx_status_t status;
+
+  const std::string config_path = package_dir_name_ + "/data/guest.cfg";
+
+  auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
+    return fdio_open((package_dir_name_ + "/" + path).c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+                     file.TakeChannel().release());
+  };
+
+  std::string content;
+  bool readFileSuccess = files::ReadFileToString(config_path, &content);
+  if (!readFileSuccess) {
+    FX_LOGS(WARNING) << "Failed to read guest configuration";
+  }
+  status = guest_config::ParseConfig(content, std::move(open_at), &config_);
+  if (status != ZX_OK) {
+    FX_PLOGS(WARNING, status) << "Failed to read guest configuration";
+  }
+
+  // Make sure that block devices provided by the configuration in the guest's
+  // package take precedence, as the order matters.
+  for (auto& block_device : block_devices) {
+    config_.mutable_block_devices()->emplace_back(std::move(block_device));
+  }
+  // Merge the command-line additions into the main kernel command-line field.
+  for (auto& cmdline : *config_.mutable_cmdline_add()) {
+    config_.mutable_cmdline()->append(" " + cmdline);
+  }
+  config_.clear_cmdline_add();
+  // Set any defaults, before returning the configuration.
+  guest_config::SetDefaults(&config_);
+  callback(std::move(config_));
+}
+
+void LocalGuestConfigProvider::Start(
+    std::unique_ptr<component_testing::LocalComponentHandles> handles) {
+  // This class contains handles to the component's incoming and outgoing capabilities.
+  handles_ = std::move(handles);
+
+  ASSERT_EQ(handles_->outgoing()->AddPublicService(binding_set_.GetHandler(this, dispatcher_)),
+            ZX_OK);
+}
+
 // Execute |command| on the guest serial and wait for the |result|.
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    const std::unordered_map<std::string, std::string>& env,
@@ -89,10 +145,216 @@ zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
   return console_->ExecuteBlocking(command, ShellPrompt(), deadline, result);
 }
 
-zx_status_t EnclosedGuest::Install(sys::testing::EnvironmentServices& services) {
+zx_status_t EnclosedGuest::Start(zx::time deadline) {
+  Logger::Get().Reset();
+  PeriodicLogger logger;
+
+  using component_testing::ChildRef;
+  using component_testing::Directory;
+  using component_testing::ParentRef;
+  using component_testing::Protocol;
+  using component_testing::RealmBuilder;
+  using component_testing::RealmRoot;
+  using component_testing::Route;
+
+  constexpr auto kVmmComponentUrl = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
+  constexpr auto kVmmComponentName = "vmm";
+  constexpr auto kGuestConfigProviderComponentName = "guest_config_provider";
+  constexpr auto kFakeNetstackComponentName = "fake_netstack";
+  constexpr auto kHostVsockComponentName = "host_vsock";
+  constexpr auto kHostVsockComponentUrl = "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm";
+
+  fuchsia::virtualization::GuestConfig cfg;
+  std::string url;
+  zx_status_t status = LaunchInfo(&url, &cfg);
+
+  const char* package_dir_name;
+  if (url == kDebianGuestUrl) {
+    package_dir_name = "/debian_guest_pkg";
+  } else if (url == kTerminaGuestUrl) {
+    package_dir_name = "/termina_guest_pkg";
+  } else if (url == kZirconGuestUrl) {
+    package_dir_name = "/zircon_guest_pkg";
+  } else {
+    FX_LOGS(ERROR) << "Invalid package dir name " << url;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failure launching guest image: ";
+    return status;
+  }
+  local_guest_config_provider_ = std::make_unique<LocalGuestConfigProvider>(
+      loop_.dispatcher(), package_dir_name, std::move(cfg));
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddLegacyChild(kVmmComponentName, kVmmComponentUrl);
+  realm_builder.AddLocalChild(kGuestConfigProviderComponentName,
+                              local_guest_config_provider_.get());
+  realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
+  realm_builder.AddChild(kHostVsockComponentName, kHostVsockComponentUrl);
+
+  realm_builder
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::logger::LogSink::Name_},
+                              Protocol{fuchsia::kernel::HypervisorResource::Name_},
+                              Protocol{fuchsia::kernel::IrqResource::Name_},
+                              Protocol{fuchsia::kernel::MmioResource::Name_},
+                              Protocol{fuchsia::kernel::VmexResource::Name_},
+                              Protocol{fuchsia::sys::Environment::Name_},
+                              Protocol{fuchsia::sysinfo::SysInfo::Name_},
+                              Protocol{fuchsia::sys::Launcher::Name_},
+                              Protocol{fuchsia::sysmem::Allocator::Name_},
+                              Protocol{fuchsia::tracing::provider::Registry::Name_},
+                          },
+                      .source = {ParentRef()},
+                      .targets = {ChildRef{kVmmComponentName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::net::virtualization::Control::Name_},
+                          },
+                      .source = {ChildRef{kFakeNetstackComponentName}},
+                      .targets = {ChildRef{kVmmComponentName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::virtualization::GuestVsockEndpoint::Name_},
+                          },
+                      .source = {ChildRef{kVmmComponentName}},
+                      .targets = {ChildRef{kHostVsockComponentName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::virtualization::HostVsockEndpoint::Name_},
+                          },
+                      .source = {ChildRef{kHostVsockComponentName}},
+                      .targets = {ParentRef()}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::virtualization::GuestConfigProvider::Name_},
+                          },
+                      .source = {ChildRef{kGuestConfigProviderComponentName}},
+                      .targets = {ChildRef{kVmmComponentName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::virtualization::Guest::Name_},
+                              Protocol{fuchsia::virtualization::GuestVsockEndpoint::Name_},
+                              Protocol{fuchsia::virtualization::BalloonController::Name_},
+                          },
+                      .source = ChildRef{kVmmComponentName},
+                      .targets = {ParentRef()}});
+
+  realm_root_ = std::make_unique<RealmRoot>(realm_builder.Build(loop_.dispatcher()));
+  guest_ = realm_root_->Connect<fuchsia::virtualization::Guest>();
+
+  guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
+
+  status = SetupVsockServices(deadline);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Launch the guest.
+  logger.Start("Launching guest", zx::sec(5));
+  std::optional<zx_status_t> guest_error;
+  guest_.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
+
+  // Connect to guest serial, and log it to the logger.
+  logger.Start("Connecting to guest serial", zx::sec(10));
+  std::optional<fuchsia::virtualization::Guest_GetSerial_Result> get_serial_result;
+
+  guest_->GetSerial([&get_serial_result](fuchsia::virtualization::Guest_GetSerial_Result result) {
+    get_serial_result = std::move(result);
+  });
+
+  bool success = RunLoopUntil(
+      GetLoop(),
+      [&guest_error, &get_serial_result] {
+        return guest_error.has_value() || get_serial_result.has_value();
+      },
+      deadline);
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial";
+    return ZX_ERR_TIMED_OUT;
+  }
+  if (guest_error.has_value()) {
+    FX_LOGS(ERROR) << "Error connecting to guest's serial: "
+                   << zx_status_get_string(guest_error.value());
+    return guest_error.value();
+  }
+
+  if (get_serial_result->is_err()) {
+    FX_PLOGS(ERROR, get_serial_result->err()) << "Failed to connect to guest's serial";
+    return get_serial_result->err();
+  }
+  serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result->response().socket));
+
+  // Connect to guest console.
+  logger.Start("Connecting to guest console", zx::sec(10));
+  std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
+  guest_->GetConsole(
+      [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
+        get_console_result = std::move(result);
+      });
+  success = RunLoopUntil(
+      GetLoop(),
+      [&guest_error, &get_console_result] {
+        return guest_error.has_value() || get_console_result.has_value();
+      },
+      deadline);
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's console";
+    return ZX_ERR_TIMED_OUT;
+  }
+  if (guest_error.has_value()) {
+    FX_LOGS(ERROR) << "Error connecting to guest's console: "
+                   << zx_status_get_string(guest_error.value());
+    return guest_error.value();
+  }
+  if (get_console_result->is_err()) {
+    FX_PLOGS(ERROR, get_console_result->err()) << "Failed to open guest console";
+    return get_console_result->err();
+  }
+  console_.emplace(std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
+
+  // Wait for output to appear on the console.
+  logger.Start("Waiting for output to appear on guest console", zx::sec(10));
+  status = console_->Start(deadline);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error waiting for output on guest console: " << zx_status_get_string(status);
+    return status;
+  }
+
+  // Poll the system for all services to come up.
+  logger.Start("Waiting for system to become ready", zx::sec(10));
+  status = WaitForSystemReady(deadline);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failure while waiting for guest system to become ready: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  ready_ = true;
+  return ZX_OK;
+}
+
+zx_status_t EnclosedGuest::Stop(zx::time deadline) {
+  zx_status_t status = ShutdownAndWait(deadline);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
+                                   zx::time deadline, std::string* result) {
+  return Execute(GetTestUtilCommand(util, argv), {}, deadline, result);
+}
+
+zx_status_t EnclosedGuest::InstallV1(sys::testing::EnvironmentServices& services) {
   // Install faked network-related services into the guest environment.
   fake_netstack_.Install(services);
-
+  constexpr char kGuestManagerUrl[] =
+      "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
   zx_status_t status = services.AddServiceWithLaunchInfo(std::move(launch_info),
@@ -130,8 +392,8 @@ zx_status_t EnclosedGuest::Install(sys::testing::EnvironmentServices& services) 
   return ZX_OK;
 }
 
-zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environment,
-                                  const std::string& realm, zx::time deadline) {
+zx_status_t EnclosedGuest::LaunchV1(sys::testing::EnclosingEnvironment& environment,
+                                    const std::string& realm, zx::time deadline) {
   PeriodicLogger logger;
   std::string url;
   fuchsia::virtualization::GuestConfig cfg;
@@ -220,35 +482,6 @@ zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environmen
   }
   console_.emplace(std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
 
-  // fxbug.dev/86513
-  // To help track down a flake where guests sometimes cease responding create a watchdog that will
-  // backtrace all of the processes if our startup timeout is exceeded. The watchdog needs the job
-  // of the realm that was created for the enclosed environment.
-  // Note that the watchdog does not tear down or otherwise change the state of the system, so in
-  // the unlikely event it triggers spuriously it will just spam the logs once, but not fail the
-  // test.
-  BacktraceWatchdog watchdog;
-  {
-    // Find the path to the jobprovider in the realm.
-    files::Glob glob(std::string("/hub/r/") + realm + "/*/job");
-    FX_CHECK(1u == glob.size());
-    const std::string path = *glob.begin();
-
-    // Connect to the JobProvider
-    fuchsia::sys::JobProviderSyncPtr job_provider;
-    status = fdio_service_connect(path.c_str(), job_provider.NewRequest().TakeChannel().release());
-    FX_CHECK(status == ZX_OK);
-
-    // Get the job for the realm.
-    zx::job enclosed_job;
-    status = job_provider->GetJob(&enclosed_job);
-    FX_CHECK(status == ZX_OK);
-
-    // Start the watchdog.
-    status = watchdog.Start(std::move(enclosed_job), kBacktraceTimeout);
-    FX_CHECK(status == ZX_OK);
-  }
-
   // Wait for output to appear on the console.
   logger.Start("Waiting for output to appear on guest console", zx::sec(10));
   status = console_->Start(deadline);
@@ -268,44 +501,6 @@ zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environmen
 
   ready_ = true;
   return ZX_OK;
-}
-
-zx_status_t EnclosedGuest::Start(zx::time deadline) {
-  Logger::Get().Reset();
-  PeriodicLogger logger;
-
-  logger.Start("Creating guest environment", zx::sec(5));
-  real_services_->Connect(real_env_.NewRequest());
-  auto services = sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
-  zx_status_t status = Install(*services);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  logger.Start("Creating guest sandbox", zx::sec(5));
-  enclosing_environment_ =
-      sys::testing::EnclosingEnvironment::Create(kDefaultRealm, real_env_, std::move(services));
-  bool environment_running = RunLoopUntil(
-      GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
-  if (!environment_running) {
-    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready";
-    return ZX_ERR_TIMED_OUT;
-  }
-
-  return Launch(*enclosing_environment_, kDefaultRealm, deadline);
-}
-
-zx_status_t EnclosedGuest::Stop(zx::time deadline) {
-  zx_status_t status = ShutdownAndWait(deadline);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
-}
-
-zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
-                                   zx::time deadline, std::string* result) {
-  return Execute(GetTestUtilCommand(util, argv), {}, deadline, result);
 }
 
 zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
@@ -380,7 +575,6 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
     cfg->mutable_cmdline_add()->emplace_back(cmd);
   }
-
   return ZX_OK;
 }
 
@@ -490,9 +684,14 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
 
 zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
   fuchsia::virtualization::HostVsockEndpointPtr grpc_endpoint;
-  GetHostVsockEndpoint(vsock_.NewRequest());
-  GetHostVsockEndpoint(grpc_endpoint.NewRequest());
 
+  if (UsingCFv1()) {
+    GetHostVsockEndpointV1(vsock_.NewRequest());
+    GetHostVsockEndpointV1(grpc_endpoint.NewRequest());
+  } else {
+    vsock_ = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
+    grpc_endpoint = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
+  }
   GrpcVsockServerBuilder builder(std::move(grpc_endpoint));
   builder.AddListenPort(kTerminaStartupListenerPort);
   builder.RegisterService(this);
@@ -506,7 +705,6 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
           GetLoop(), [this] { return server_ != nullptr; }, deadline)) {
     return ZX_ERR_TIMED_OUT;
   }
-
   return ZX_OK;
 }
 
@@ -567,7 +765,12 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
 
   // Connect to vshd.
   fuchsia::virtualization::HostVsockEndpointPtr endpoint;
-  GetHostVsockEndpoint(endpoint.NewRequest());
+  if (UsingCFv1()) {
+    GetHostVsockEndpointV1(endpoint.NewRequest());
+  } else {
+    endpoint = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
+  }
+
   command_runner_ =
       std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint), GetGuestCid());
 

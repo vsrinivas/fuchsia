@@ -61,7 +61,7 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
     // Set `HermeticAudioEnvironment` to install guest services.
     HermeticAudioEnvironment::Options options = {
         .install_additional_services_fn = [&](sys::testing::EnvironmentServices& services)
-            -> zx_status_t { return GetEnclosedGuest().Install(services); },
+            -> zx_status_t { return GetEnclosedGuest().InstallV1(services); },
         .label = kEnvironmentLabel};
     HermeticAudioTest::SetTestSuiteEnvironmentOptions(std::move(options));
   }
@@ -75,15 +75,13 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
   void SetUp() override {
     enclosed_guest_.emplace(loop());
     HermeticAudioTest::SetUp();
-
     const auto format =
         Format::Create<kSampleFormat>(kStereoChannelCount, kOutputFrameRate).take_value();
     // Add some padding to ensure that there is enough headroom in the ring buffer.
     output_ = CreateOutput(kOutputId, format,
                            kRampFrameCount + kZeroPaddingFrameCount + 10 * kOutputFrameRate);
-
-    ASSERT_EQ(GetEnclosedGuest().Launch(environment()->GetEnvironment(), kEnvironmentLabel,
-                                        zx::time::infinite()),
+    ASSERT_EQ(GetEnclosedGuest().LaunchV1(environment()->GetEnvironment(), kEnvironmentLabel,
+                                          zx::time::infinite()),
               ZX_OK)
         << "Failed to launch guest";
   }
@@ -121,8 +119,14 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
   VirtualOutput<kSampleFormat>* output_ = nullptr;
 };
 
+class TerminaEnclosedGuestV1 : public TerminaEnclosedGuest {
+ public:
+  explicit TerminaEnclosedGuestV1(async::Loop& loop) : TerminaEnclosedGuest(loop) {}
+  bool UsingCFv1() const override { return true; }
+};
+
 // We only support `TerminaEnclosedGuest` since the tests require `virtio-sound` and `alsa-lib`.
-TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuest>);
+TYPED_TEST_SUITE(VirtioSoundGuestTest, ::testing::Types<TerminaEnclosedGuestV1>);
 
 TYPED_TEST(VirtioSoundGuestTest, OutputFidelity) {
   // The input audio file consists of a stereo linear ramp that covers the entire 16-bit range of

@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/promise.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <zircon/device/ethernet.h>
 
@@ -28,7 +29,7 @@ class FakeNetwork;
 // the fake netstack.
 //
 // Thread-safe.
-class FakeNetstack {
+class FakeNetstack : public component_testing::LocalComponent {
  public:
   FakeNetstack();
   ~FakeNetstack();
@@ -49,12 +50,15 @@ class FakeNetstack {
   fpromise::promise<std::vector<uint8_t>, zx_status_t> ReceivePacket(
       const fuchsia::hardware::ethernet::MacAddress& mac_addr);
 
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override;
+
  private:
   async::Loop loop_;
   async::Executor executor_;
 
   // Fakes for fuchsia.net.virtualization.Control.
   std::unique_ptr<fake_netstack::internal::FakeNetwork> network_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_

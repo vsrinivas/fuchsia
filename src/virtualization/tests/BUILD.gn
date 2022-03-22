@@ -8,8 +8,13 @@ import("//src/virtualization/buildtools/romfs_image.gni")
 
 # Packages required to run the guest integration tests.
 guest_packages = [
-  "//src/virtualization/bin",
+  "//src/virtualization/bin/vmm",
+  "//src/virtualization/bin/host_vsock",
   "//src/virtualization/packages",
+
+  # TODO(fxbug.dev/72386)
+  # Remove once audio test framework is migrated to RealmBuilder and virtio sound tests is using Cfv2
+  "//src/virtualization/bin",
 ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
@@ -147,6 +152,8 @@ source_set("fake_netstack") {
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.virtualization",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/connectivity/lib/network-device/cpp",
     "//src/lib/inet",
     "//zircon/system/ulib/async:async-cpp",
@@ -218,8 +225,15 @@ source_set("lib") {
     ":periodic_logger",
     ":socket_logger",
     "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.net.virtualization",
     "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/virtualization/lib/guest_config",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/zxc",
   ]
   public_deps = [
@@ -249,6 +263,8 @@ executable("virtualization_core_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
   ]
 }
@@ -267,10 +283,10 @@ group("test_images") {
 fuchsia_test_component("virtualization_core_tests_cmp") {
   component_name = "virtualization_core_tests"
   deps = [
-    ":test_images",
-    ":virtualization_core_tests",
-  ]
-  manifest = "meta/virtualization_core_tests.cmx"
+           ":test_images",
+           ":virtualization_core_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_core_tests.cml"
 }
 
 fuchsia_test_package("virtualization_core_tests_pkg") {
@@ -294,6 +310,8 @@ executable("virtualization_block_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
     "//third_party/googletest:gmock",
   ]
@@ -302,10 +320,10 @@ executable("virtualization_block_tests") {
 fuchsia_test_component("virtualization_block_tests_cmp") {
   component_name = "virtualization_block_tests"
   deps = [
-    ":test_images",
-    ":virtualization_block_tests",
-  ]
-  manifest = "meta/virtualization_block_tests.cmx"
+           ":test_images",
+           ":virtualization_block_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_block_tests.cml"
 }
 
 fuchsia_test_package("virtualization_block_tests_pkg") {
@@ -330,6 +348,8 @@ executable("virtualization_gpu_tests") {
     ":lib",
     ":periodic_logger",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
   ]
 }
@@ -337,10 +357,10 @@ executable("virtualization_gpu_tests") {
 fuchsia_test_component("virtualization_gpu_tests_cmp") {
   component_name = "virtualization_gpu_tests"
   deps = [
-    ":test_images",
-    ":virtualization_gpu_tests",
-  ]
-  manifest = "meta/virtualization_gpu_tests.cmx"
+           ":test_images",
+           ":virtualization_gpu_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_gpu_tests.cml"
 }
 
 fuchsia_test_package("virtualization_gpu_tests_pkg") {
@@ -364,16 +384,18 @@ executable("virtualization_input_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
   ]
 }
 
 fuchsia_test_component("virtualization_input_tests_cmp") {
   component_name = "virtualization_input_tests"
   deps = [
-    ":test_images",
-    ":virtualization_input_tests",
-  ]
-  manifest = "meta/virtualization_input_tests.cmx"
+           ":test_images",
+           ":virtualization_input_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_input_tests.cml"
 }
 
 fuchsia_test_package("virtualization_input_tests_pkg") {
@@ -397,6 +419,8 @@ executable("virtualization_net_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/inet",
     "//third_party/googletest:gmock",
   ]
@@ -405,10 +429,10 @@ executable("virtualization_net_tests") {
 fuchsia_test_component("virtualization_net_tests_cmp") {
   component_name = "virtualization_net_tests"
   deps = [
-    ":test_images",
-    ":virtualization_net_tests",
-  ]
-  manifest = "meta/virtualization_net_tests.cmx"
+           ":test_images",
+           ":virtualization_net_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_net_tests.cml"
 }
 
 fuchsia_test_package("virtualization_net_tests_pkg") {
@@ -432,6 +456,8 @@ executable("virtualization_sound_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/files",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:hermetic_audio_test",
@@ -469,6 +495,8 @@ executable("virtualization_vsock_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
   ]
 }
@@ -476,10 +504,10 @@ executable("virtualization_vsock_tests") {
 fuchsia_test_component("virtualization_vsock_tests_cmp") {
   component_name = "virtualization_vsock_tests"
   deps = [
-    ":test_images",
-    ":virtualization_vsock_tests",
-  ]
-  manifest = "meta/virtualization_vsock_tests.cmx"
+           ":test_images",
+           ":virtualization_vsock_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_vsock_tests.cml"
 }
 
 fuchsia_test_package("virtualization_vsock_tests_pkg") {
@@ -557,6 +585,8 @@ executable("termina_integration_tests_bin") {
   deps = [
     ":lib",
     ":test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gtest",
   ]
 }
@@ -580,7 +610,7 @@ fuchsia_test_component("termina_integration_tests_cmp") {
     ":termina_integration_tests_bin",
     ":test_images",
   ]
-  manifest = "meta/termina_integration_tests.cmx"
+  manifest = "meta/termina_integration_tests.cml"
 }
 
 fuchsia_test_package("termina_integration_tests") {

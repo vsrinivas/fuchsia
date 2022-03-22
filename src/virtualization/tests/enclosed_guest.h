@@ -8,9 +8,13 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
+#include <memory>
+
+#include "lib/async/dispatcher.h"
 #include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
@@ -26,6 +30,25 @@ enum class GuestKernel {
   LINUX,
 };
 
+class LocalGuestConfigProvider : public fuchsia::virtualization::GuestConfigProvider,
+                                 public component_testing::LocalComponent {
+ public:
+  LocalGuestConfigProvider(async_dispatcher_t* dispatcher, std::string package_dir_name,
+                           fuchsia::virtualization::GuestConfig&& config);
+
+  // |fuchsia::virtualization::GuestConfigProvider|
+  void Get(GetCallback callback) override;
+  // |component_testing::LocalComponent
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override;
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<fuchsia::virtualization::GuestConfigProvider> binding_set_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
+  fuchsia::virtualization::GuestConfig config_;
+  std::string package_dir_name_;
+};
+
 // EnclosedGuest is a base class that defines an guest environment and instance
 // encapsulated in an EnclosingEnvironment. A derived class must define the
 // |LaunchInfo| to send to the guest environment controller, as well as methods
@@ -35,23 +58,8 @@ enum class GuestKernel {
 // GuestTest.
 class EnclosedGuest {
  public:
-  explicit EnclosedGuest(async::Loop& loop)
-      : loop_(loop), real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
+  explicit EnclosedGuest(async::Loop& loop) : loop_(loop) {}
   virtual ~EnclosedGuest() {}
-
-  // Install the guest services.
-  //
-  // Use `Start` instead, unless `sys::testing::EnclosingEnvironment` will be created externally and
-  // passed in to `Launch` to launch the guest accordingly.
-  zx_status_t Install(sys::testing::EnvironmentServices& services);
-
-  // Launch the guest.
-  //
-  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
-  // Use `Start` instead, unless `environment` is created externally, where `Install` was called to
-  // install the guest services prior to its creation.
-  zx_status_t Launch(sys::testing::EnclosingEnvironment& environment, const std::string& realm,
-                     zx::time deadline);
 
   // Start the guest.
   //
@@ -64,6 +72,18 @@ class EnclosedGuest {
   //
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
   zx_status_t Stop(zx::time deadline);
+
+  // TODO(fxbug.dev/72386)
+  // Remove once audio test framework is migrated to RealmBuilder and virtio sound tests is using
+  // CFv2
+  zx_status_t InstallV1(sys::testing::EnvironmentServices& services);
+  zx_status_t LaunchV1(sys::testing::EnclosingEnvironment& environment, const std::string& realm,
+                       zx::time deadline);
+  void GetHostVsockEndpointV1(
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
+    realm_->GetHostVsockEndpoint(std::move(endpoint));
+  }
+  virtual bool UsingCFv1() const { return false; }
 
   bool Ready() const { return ready_; }
 
@@ -86,14 +106,14 @@ class EnclosedGuest {
 
   virtual GuestKernel GetGuestKernel() = 0;
 
-  void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-    realm_->GetHostVsockEndpoint(std::move(endpoint));
+  template <typename T>
+  ::fidl::SynchronousInterfacePtr<T> ConnectToRealmSync() {
+    return realm_root_->ConnectSync<T>();
   }
 
-  void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> balloon_controller) {
-    realm_->ConnectToBalloon(guest_cid_, std::move(balloon_controller));
+  template <typename T>
+  ::fidl::InterfacePtr<T> ConnectToRealm() {
+    return realm_root_->Connect<T>();
   }
 
   uint32_t GetGuestCid() const { return guest_cid_; }
@@ -127,13 +147,10 @@ class EnclosedGuest {
 
  private:
   async::Loop& loop_;
+  std::unique_ptr<component_testing::RealmRoot> realm_root_;
 
-  // Guest services.
-  std::shared_ptr<sys::ServiceDirectory> real_services_;
-  fuchsia::sys::EnvironmentPtr real_env_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
-  fuchsia::virtualization::ManagerPtr manager_;
-  fuchsia::virtualization::RealmPtr realm_;
+  std::unique_ptr<LocalGuestConfigProvider> local_guest_config_provider_;
+
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
   FakeNetstack fake_netstack_;
@@ -142,6 +159,13 @@ class EnclosedGuest {
   std::optional<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;
+
+  // TODO(fxbug.dev/72386)
+  // Remove once audio test framework is migrated to RealmBuilder and sound test is using CFv2
+  fuchsia::sys::EnvironmentPtr real_env_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
+  fuchsia::virtualization::ManagerPtr manager_;
+  fuchsia::virtualization::RealmPtr realm_;
 };
 
 class ZirconEnclosedGuest : public EnclosedGuest {

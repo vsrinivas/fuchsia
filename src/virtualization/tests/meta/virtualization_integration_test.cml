@@ -1,0 +1,70 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "zircon_guest",
+            url: "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cm",
+        },
+        {
+            name: "termina_guest",
+            url: "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cm",
+        },
+        {
+            name: "debian_guest",
+            url: "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+        {
+            directory: "pkg",
+            from: "#zircon_guest",
+            rights: [ "r*" ],
+            path: "/zircon_guest_pkg",
+        },
+        {
+            directory: "pkg",
+            from: "#debian_guest",
+            rights: [ "r*" ],
+            path: "/debian_guest_pkg",
+        },
+        {
+            directory: "pkg",
+            from: "#termina_guest",
+            rights: [ "r*" ],
+            path: "/termina_guest_pkg",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
+}

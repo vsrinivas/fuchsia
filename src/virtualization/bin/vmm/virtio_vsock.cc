@@ -480,7 +480,7 @@ VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem
       rx_queue_wait_(this, rx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
       tx_queue_wait_(this, tx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
       send_queue_(rx_queue()) {
-  config_.guest_cid = 0;
+  config_.guest_cid = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
   if (context) {
     context->outgoing()->AddPublicService(

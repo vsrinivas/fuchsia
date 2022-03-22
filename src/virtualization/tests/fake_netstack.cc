@@ -31,6 +31,8 @@
 #include <future>
 #include <queue>
 
+#include <gtest/gtest.h>
+
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 
 namespace {
@@ -567,4 +569,11 @@ fpromise::promise<std::vector<uint8_t>, zx_status_t> FakeNetstack::ReceivePacket
                    return fpromise::ok(std::move(packet));
                  }))
       .promise();
+}
+
+void FakeNetstack::Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) {
+  // This class contains handles to the component's incoming and outgoing capabilities.
+  handles_ = std::move(handles);
+
+  ASSERT_EQ(handles_->outgoing()->AddPublicService(network_->GetHandler()), ZX_OK);
 }

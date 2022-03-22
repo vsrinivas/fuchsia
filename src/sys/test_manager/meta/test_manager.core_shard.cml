@@ -30,6 +30,8 @@
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",

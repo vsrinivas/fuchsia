@@ -53,33 +53,29 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   void TestThread() {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-    fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
-    this->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+    fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint =
+        this->GetEnclosedGuest()
+            .template ConnectToRealmSync<fuchsia::virtualization::HostVsockEndpoint>();
 
     fidl::Binding<fuchsia::virtualization::HostVsockAcceptor> binding{this};
     zx_status_t out_status;
     ASSERT_EQ(vsock_endpoint->Listen(8000, binding.NewBinding(), &out_status), ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);
-
     ASSERT_EQ(binding.WaitForMessage(), ZX_OK);
     ASSERT_TRUE(requests.size() == 1);
     ASSERT_EQ(requests[0].src_cid, this->GetGuestCid());
     ASSERT_EQ(requests[0].src_port, 49152u);
     ASSERT_EQ(requests[0].port, 8000u);
-
     zx::socket socket1, socket2;
     ASSERT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
     requests.back().callback(ZX_OK, std::move(socket2));
     requests.pop_back();
     TestReadWrite(socket1);
-
     zx_signals_t pending;
     // Read the read/write completes we expect the util to close the connection.
     socket1.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), &pending);
     ASSERT_TRUE((pending & ZX_SOCKET_PEER_CLOSED) != 0);
-
     socket1.reset();
-
     // Attempt to connect into the guest
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
     ASSERT_EQ(vsock_endpoint->Connect(this->GetGuestCid(), 8001, std::move(socket2), &out_status),
@@ -90,7 +86,6 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
     TestReadWrite(socket1);
     // Close the connection by dropping the socket.
     socket1.reset();
-
     // Open another connection.
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
     ASSERT_EQ(vsock_endpoint->Connect(this->GetGuestCid(), 8002, std::move(socket2), &out_status),
@@ -99,7 +94,6 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
     // Read some data then close the connection
     Read(socket1, 10);
     socket1.reset();
-
     // Wait for another connection to get accepted
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
     ASSERT_EQ(vsock_endpoint->Connect(this->GetGuestCid(), 8003, std::move(socket2), &out_status),
