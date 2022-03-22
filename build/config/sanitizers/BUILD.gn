@@ -145,13 +145,6 @@ config("suppress-ubsan.DO-NOT-USE-THIS") {
   ]
 }
 
-# TODO(fxbug.dev/93804): Disable VLA bounds checking for a limited set of targets.
-# Do not add this into any new targets where this is not already used.
-config("suppress-ubsan-vla-bounds.DO-NOT-USE-THIS") {
-  cflags = [ "-fno-sanitize=vla-bound" ]
-  visibility = [ "//src/lib/storage/vfs/cpp:*" ]
-}
-
 config("no-shadow-call-stack") {
   if (current_cpu == "arm64" && !is_gcc) {
     cflags = [ "-fno-sanitize=shadow-call-stack" ]

@@ -222,12 +222,7 @@ test("fs-vnode-test") {
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [
-    "//build/config:Wno-conversion",
-
-    # FIXME(fxbug.dev/95567): Fix instances of VLAs with a non-positive size detected by UBSan.
-    "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS",
-  ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("fs-connection-test") {
