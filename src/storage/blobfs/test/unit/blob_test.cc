@@ -540,6 +540,38 @@ TEST_P(BlobTest, WritesToArbitraryOffsetsFails) {
   ASSERT_EQ(out_actual, info->size_data - 10);
 }
 
+TEST_P(BlobTest, WrittenBlobsArePagedOutWhenClosed) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  auto root = OpenRoot();
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    size_t out_actual = 0;
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    EXPECT_EQ(out_actual, info->size_data);
+
+    auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+    // Blobfs lazily creates the data VMO on first read.
+    char c;
+    size_t actual;
+    ASSERT_EQ(blob->Read(&c, sizeof(c), 0u, &actual), ZX_OK);
+
+    EXPECT_EQ(blob->Close(), ZX_OK);
+  }
+
+  fbl::RefPtr<fs::Vnode> file;
+  // Lookup doesn't call Open, so no need to Close later.
+  EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+  auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+
+  // Unfortunately, the name of the blob is the best signal that we have for whether it's pageable
+  // or not.
+  const std::string inactive_name =
+      std::string("inactive-blob-").append(std::string_view(info->path + 1, 8));
+  EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), inactive_name) << "VMO wasn't inactive";
+}
+
 std::string GetTestParamName(
     const ::testing::TestParamInfo<std::tuple<BlobLayoutFormat, CompressionAlgorithm>>& param) {
   const auto& [layout, algorithm] = param.param;
