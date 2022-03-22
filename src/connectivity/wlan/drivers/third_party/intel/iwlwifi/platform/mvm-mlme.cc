@@ -162,7 +162,7 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
   discovery_support_t discovery_support;
   mac_query_discovery_support(&discovery_support);
   if (discovery_support.scan_offload.supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS;
   }
   security_support_t security_support;
   mac_query_security_support(&security_support);
