@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_LIB_SYSMEM_SYSMEM_H_
 #define SRC_DEVICES_LIB_SYSMEM_SYSMEM_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire_types.h>
 #include <fuchsia/sysmem/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 
@@ -12,15 +13,29 @@ namespace sysmem {
 
 void pixel_format_fidl_from_banjo(const pixel_format_t& source,
                                   fuchsia_sysmem_PixelFormat& destination);
+void pixel_format_fidl_from_banjo(const pixel_format_t& source,
+                                  fuchsia_sysmem::wire::PixelFormat& destination);
+
 void image_format_2_banjo_from_fidl(const fuchsia_sysmem_ImageFormat_2& source,
                                     image_format_2_t& destination);
+void image_format_2_banjo_from_fidl(const fuchsia_sysmem::wire::ImageFormat2& source,
+                                    image_format_2_t& destination);
+
 void image_format_2_fidl_from_banjo(const image_format_2_t& source,
                                     fuchsia_sysmem_ImageFormat_2& destination);
+void image_format_2_fidl_from_banjo(const image_format_2_t& source,
+                                    fuchsia_sysmem::wire::ImageFormat2& destination);
+
 void buffer_collection_info_2_banjo_from_fidl(const fuchsia_sysmem_BufferCollectionInfo_2& source,
                                               buffer_collection_info_2_t& destination);
+void buffer_collection_info_2_banjo_from_fidl(fuchsia_sysmem::wire::BufferCollectionInfo2&& source,
+                                              buffer_collection_info_2_t& destination);
+
+void buffer_collection_info_2_fidl_from_banjo(const buffer_collection_info_2_t& source,
+                                              fuchsia_sysmem_BufferCollectionInfo_2& destination);
 void buffer_collection_info_2_fidl_from_banjo(
     const buffer_collection_info_2_t& source,
-    fuchsia_sysmem_BufferCollectionInfo_2& destination);
+    fuchsia_sysmem::wire::BufferCollectionInfo2& destination);
 
 }  // namespace sysmem
 
