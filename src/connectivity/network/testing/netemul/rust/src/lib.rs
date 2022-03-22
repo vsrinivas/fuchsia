@@ -39,7 +39,7 @@ use futures::{
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
-/// The default MTU used in in netemul endpoint configurations.
+/// The default MTU used in netemul endpoint configurations.
 pub const DEFAULT_MTU: u16 = 1500;
 
 /// Abstraction for different endpoint backing types.

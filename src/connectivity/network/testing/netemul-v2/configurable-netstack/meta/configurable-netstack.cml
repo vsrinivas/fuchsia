@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/configurable_netstack",
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack-debug.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.netemul.ConfigurableNetstack" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.interfaces.admin.Installer",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+            ],
+            from: "#netstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#netstack",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+        },
+    ],
+}

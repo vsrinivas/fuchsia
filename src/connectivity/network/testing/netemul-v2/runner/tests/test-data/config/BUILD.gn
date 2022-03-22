@@ -4,9 +4,9 @@
 
 import("//build/dist/resource.gni")
 
-# TODO(https://fxbug.dev/92247): read the configurations directly from the
+# TODO(https://fxbug.dev/95219): read the configurations directly from the
 # `program` section of the component's manifest rather than from a packaged
-# config file, once the CML schema supports it.
+# config file.
 
 resource("empty") {
   sources = [ "empty.json" ]

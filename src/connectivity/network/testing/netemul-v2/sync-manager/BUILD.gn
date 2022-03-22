@@ -22,10 +22,3 @@ fuchsia_component("sync-manager") {
   manifest = "meta/sync-manager.cml"
   deps = [ ":bin" ]
 }
-
-# TODO(https://fxbug.dev/92176): remove once this is connected to the build
-# graph elsewhere, e.g. through usage in the configurable netstack tests.
-group("compile") {
-  testonly = true
-  deps = [ ":sync-manager" ]
-}

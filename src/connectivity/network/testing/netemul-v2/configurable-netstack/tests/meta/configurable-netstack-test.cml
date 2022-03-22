@@ -1,0 +1,87 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        network_config: "config.json",
+    },
+    children: [
+        {
+            name: "client",
+            url: "#meta/client.cm",
+        },
+        {
+            name: "server",
+            url: "#meta/server.cm",
+            startup: "eager",
+        },
+        {
+            name: "client-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "server-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "sync-manager",
+            url: "#meta/sync-manager.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#client",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#client-netstack",
+            path: "/svc/client",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#server-netstack",
+            path: "/svc/server",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#client",
+                "#client-netstack",
+                "#server",
+                "#server-netstack",
+                "#sync-manager",
+            ],
+        },
+        {
+            protocol: "fuchsia.netemul.sync.SyncManager",
+            from: "#sync-manager",
+            to: [
+                "#client",
+                "#server",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#client-netstack",
+            to: "#client",
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#server-netstack",
+            to: "#server",
+        },
+    ],
+}

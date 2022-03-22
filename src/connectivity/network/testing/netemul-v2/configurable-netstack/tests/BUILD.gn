@@ -1,0 +1,97 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_library("lib") {
+  name = "configurable_netstack_test"
+  testonly = true
+  deps = [
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-component",
+  ]
+  source_root = "src/lib.rs"
+  sources = [ "src/lib.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_test("client") {
+  name = "configurable_netstack_test_client"
+  testonly = true
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//third_party/rust_crates:futures-util",
+  ]
+  source_root = "src/client.rs"
+  sources = [ "src/client.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_binary("server") {
+  testonly = true
+  deps = [
+    ":lib",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:log",
+  ]
+  source_root = "src/server.rs"
+  sources = [ "src/server.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("client-component") {
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [ ":client" ]
+}
+
+fuchsia_test_component("server-component") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  deps = [ ":server" ]
+}
+
+# TODO(https://fxbug.dev/95219): read the configurations directly from the
+# `program` section of the component's manifest rather than from a packaged
+# config file.
+resource("config") {
+  sources = [ "config.json" ]
+  outputs = [ "config.json" ]
+}
+
+fuchsia_test_component("configurable-netstack-test") {
+  manifest = "meta/configurable-netstack-test.cml"
+  deps = [
+    ":client-component",
+    ":config",
+    ":server-component",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+  ]
+}
+
+fuchsia_test_package("configurable-netstack-tests") {
+  test_components = [ ":configurable-netstack-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":configurable-netstack-tests" ]
+}
