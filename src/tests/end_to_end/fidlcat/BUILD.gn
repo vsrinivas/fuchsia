@@ -100,13 +100,13 @@ if (is_host) {
       "$_shared_out_dir/fidling/gen/src/tests/end_to_end/fidlcat/echo.fidl.json",
       "$host_tools_dir/fidlcat",
       "${target_gen_dir}/echo_client_placeholder.debug",
-      "//src/tests/end_to_end/fidlcat/echo.proto",
-      "//src/tests/end_to_end/fidlcat/echo_client.proto",
-      "//src/tests/end_to_end/fidlcat/echo_client_sync.proto",
-      "//src/tests/end_to_end/fidlcat/echo_sync_crash.proto",
+      "//src/tests/end_to_end/fidlcat/echo.pb",
+      "//src/tests/end_to_end/fidlcat/echo_client.pb",
+      "//src/tests/end_to_end/fidlcat/echo_client_sync.pb",
+      "//src/tests/end_to_end/fidlcat/echo_sync_crash.pb",
       "//src/tests/end_to_end/fidlcat/goldens/fidl_examples_echo__echo.test.cc.golden",
       "//src/tests/end_to_end/fidlcat/goldens/fidl_examples_echo__echo_sync.test.cc.golden",
-      "//src/tests/end_to_end/fidlcat/snapshot.proto",
+      "//src/tests/end_to_end/fidlcat/snapshot.pb",
     ]
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]

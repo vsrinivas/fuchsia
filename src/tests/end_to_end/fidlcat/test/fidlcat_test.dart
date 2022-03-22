@@ -277,7 +277,7 @@ void main(List<String> arguments) {
     test('Test save/replay', () async {
       var systemTempDir = Directory.systemTemp;
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat');
-      final String savePath = '${fidlcatTemp.path}/save.proto';
+      final String savePath = '${fidlcatTemp.path}/save.pb';
 
       var instanceSave = RunFidlcat();
       await instanceSave.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
@@ -311,7 +311,7 @@ void main(List<String> arguments) {
     /// All the tests which don't need a debug agent.
     test('Test --with=generate-tests (more than one proces)', () async {
       final String echoProto =
-          Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+          Platform.script.resolve('runtime_deps/echo.pb').toFilePath();
 
       var systemTempDir = Directory.systemTemp;
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
@@ -328,9 +328,8 @@ void main(List<String> arguments) {
     });
 
     test('Test --with=generate-tests', () async {
-      final String echoClientProto = Platform.script
-          .resolve('runtime_deps/echo_client.proto')
-          .toFilePath();
+      final String echoClientProto =
+          Platform.script.resolve('runtime_deps/echo_client.pb').toFilePath();
 
       var systemTempDir = Directory.systemTemp;
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
@@ -413,7 +412,7 @@ void main(List<String> arguments) {
 
     test('Test --with=generate-tests (sync)', () async {
       final String echoClientSyncProto = Platform.script
-          .resolve('runtime_deps/echo_client_sync.proto')
+          .resolve('runtime_deps/echo_client_sync.pb')
           .toFilePath();
 
       var systemTempDir = Directory.systemTemp;
@@ -461,7 +460,7 @@ void main(List<String> arguments) {
 
     test('Test --with=generate-tests (server crashing)', () async {
       final String echoCrashProto = Platform.script
-          .resolve('runtime_deps/echo_sync_crash.proto')
+          .resolve('runtime_deps/echo_sync_crash.pb')
           .toFilePath();
 
       var systemTempDir = Directory.systemTemp;
@@ -499,7 +498,7 @@ void main(List<String> arguments) {
 
     test('Test --with=summary', () async {
       final String echoProto =
-          Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+          Platform.script.resolve('runtime_deps/echo.pb').toFilePath();
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
           ['--with=summary', '--from=$echoProto']);
@@ -679,7 +678,7 @@ void main(List<String> arguments) {
 
     test('Test --with=top', () async {
       final String echoProto =
-          Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+          Platform.script.resolve('runtime_deps/echo.pb').toFilePath();
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
           ['--with=top', '--from=$echoProto']);
@@ -741,7 +740,7 @@ void main(List<String> arguments) {
 
     test('Test --with=top and unknown message', () async {
       final String snapshotProto =
-          Platform.script.resolve('runtime_deps/snapshot.proto').toFilePath();
+          Platform.script.resolve('runtime_deps/snapshot.pb').toFilePath();
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
           ['--with=top', '--from=$snapshotProto']);
@@ -756,7 +755,7 @@ void main(List<String> arguments) {
 
     test('Test --with=messages and unknown message', () async {
       final String snapshotProto =
-          Platform.script.resolve('runtime_deps/snapshot.proto').toFilePath();
+          Platform.script.resolve('runtime_deps/snapshot.pb').toFilePath();
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
           ['--messages=.*x.*', '--from=$snapshotProto']);
