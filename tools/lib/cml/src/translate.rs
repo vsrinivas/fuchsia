@@ -87,22 +87,33 @@ fn dictionary_from_map(in_obj: Map<String, Value>) -> Result<fdata::Dictionary, 
     Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY })
 }
 
-// Converts a serde_json::Value into a fuchsia DictionaryValue. Used by `dictionary_from_map`.
+// Converts a serde_json::Value into a fuchsia DictionaryValue.
 fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::DictionaryValue>>, Error> {
     match value {
         Value::Null => Ok(None),
         Value::String(s) => Ok(Some(Box::new(fdata::DictionaryValue::Str(s.clone())))),
         Value::Array(arr) => {
-            let mut strs = vec![];
-            for val in arr {
-                match val {
-                    Value::String(s) => strs.push(s),
-                    _ => return Err(Error::validate("Value must be string")),
-                };
+            if arr.iter().all(Value::is_string) {
+                let strs =
+                    arr.into_iter().map(|v| v.as_str().unwrap().to_owned()).collect::<Vec<_>>();
+                Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
+            } else if arr.iter().all(Value::is_object) {
+                let objs = arr
+                    .into_iter()
+                    .map(|v| v.as_object().unwrap().clone())
+                    .map(|v| dictionary_from_nested_map(v))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(Box::new(fdata::DictionaryValue::ObjVec(objs))))
+            } else {
+                Err(Error::validate(
+                    "Values of an array must either exclusively strings or exclusively objects",
+                ))
             }
-            Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
         }
-        _ => return Err(Error::validate("Value must be string or list of strings")),
+        other => Err(Error::validate(format!(
+            "Value must be string, list of strings, or list of objects: {:?}",
+            other
+        ))),
     }
 }
 
@@ -156,29 +167,7 @@ fn dictionary_from_nested_map(map: Map<String, Value>) -> Result<fdata::Dictiona
             return Ok(entries);
         }
 
-        let entry_value = match value {
-            Value::Null => Ok(None),
-            Value::String(s) => Ok(Some(Box::new(fdata::DictionaryValue::Str(s.clone())))),
-            Value::Array(arr) => {
-                if arr.iter().all(Value::is_string) {
-                    let strs =
-                        arr.into_iter().map(|v| v.as_str().unwrap().to_owned()).collect::<Vec<_>>();
-                    Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
-                } else if arr.iter().all(Value::is_object) {
-                    let objs = arr
-                        .into_iter()
-                        .map(|v| v.as_object().unwrap().clone())
-                        .map(|v| dictionary_from_nested_map(v))
-                        .collect::<Result<Vec<_>, _>>()?;
-                    Ok(Some(Box::new(fdata::DictionaryValue::ObjVec(objs))))
-                } else {
-                    Err(Error::validate(
-                        "Values of an array must either exclusively strings or exclusively objects",
-                    ))
-                }
-            }
-            _ => Err(Error::validate("Value must be string or list of strings")),
-        }?;
+        let entry_value = value_to_dictionary_value(value)?;
         Ok(vec![fdata::DictionaryEntry { key, value: entry_value }])
     }
 
