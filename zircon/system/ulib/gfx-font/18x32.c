@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gfx-font-data/gfx-font-data.h>
+#include <lib/gfx-font/gfx-font.h>
 
-const gfx_font gfx_font_18x32 = {
+const gfx_font_t gfx_font_18x32 = {
     .width = 18,
     .height = 32,
     .data = {

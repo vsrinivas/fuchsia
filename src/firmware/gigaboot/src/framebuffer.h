@@ -5,7 +5,7 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_SRC_FRAMEBUFFER_H_
 #define SRC_FIRMWARE_GIGABOOT_SRC_FRAMEBUFFER_H_
 
-#include <lib/gfx-font-data/gfx-font-data.h>
+#include <lib/gfx-font/gfx-font.h>
 
 #include <efi/protocol/graphics-output.h>
 #include <efi/system-table.h>
@@ -35,7 +35,7 @@ void print_fb_modes(void);
 void draw_logo(void);
 
 typedef struct fb_font {
-  const gfx_font* font;
+  const gfx_font_t* font;
   efi_graphics_output_blt_pixel* color;
 } fb_font;
 

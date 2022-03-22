@@ -511,7 +511,7 @@ void gfx_blend(struct gfx_surface* target, struct gfx_surface* source, uint32_t 
 }
 
 template <typename T>
-static void putchar(gfx_surface* surface, const struct gfx_font* font, uint32_t ch, uint32_t x,
+static void putchar(gfx_surface* surface, const gfx_font_t* font, uint32_t ch, uint32_t x,
                     uint32_t y, uint32_t fg, uint32_t bg) {
   T* dest = static_cast<T*>(surface->ptr) + (x + y * surface->stride);
 
@@ -527,8 +527,8 @@ static void putchar(gfx_surface* surface, const struct gfx_font* font, uint32_t 
   }
 }
 
-void gfx_putchar(gfx_surface* surface, const struct gfx_font* font, uint32_t ch, uint32_t x,
-                 uint32_t y, uint32_t fg, uint32_t bg) {
+void gfx_putchar(gfx_surface* surface, const gfx_font_t* font, uint32_t ch, uint32_t x, uint32_t y,
+                 uint32_t fg, uint32_t bg) {
   if (unlikely(ch > 127)) {
     return;
   }

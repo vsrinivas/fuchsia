@@ -19,7 +19,7 @@
 #include <debug.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
-#include <lib/gfx-font-data/gfx-font-data.h>
+#include <lib/gfx-font/gfx-font.h>
 #include <lib/gfx.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
@@ -60,7 +60,7 @@ static struct {
   uint32_t back_color;
 } gfxconsole;
 
-static void draw_char(char c, const struct gfx_font* font) {
+static void draw_char(char c, const gfx_font_t* font) {
   gfx_putchar(gfxconsole.surface, font, c, gfxconsole.x * font->width, gfxconsole.y * font->height,
               gfxconsole.front_color, gfxconsole.back_color);
 }
@@ -69,7 +69,7 @@ void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
   gfx_putpixel(gfxconsole.surface, x, y, color);
 }
 
-static const struct gfx_font* font = &gfx_font_9x16;
+static const gfx_font_t* font = &gfx_font_9x16;
 
 static bool gfxconsole_putc(char c) {
   static enum { NORMAL, ESCAPE } state = NORMAL;

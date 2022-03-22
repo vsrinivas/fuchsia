@@ -6,10 +6,11 @@ config("includes") {
   include_dirs = [ "include" ]
 }
 
-source_set("gfx-common") {
-  public = [ "include/gfx-common/gfx-common.h" ]
-  sources = [ "gfx-common.cc" ]
-  deps = [ "//src/zircon/lib/zircon" ]
-  public_deps = [ "//zircon/system/ulib/gfx-font" ]
+source_set("gfx-font") {
+  public = [ "include/lib/gfx-font/gfx-font.h" ]
+  sources = [
+    "18x32.c",
+    "9x16.c",
+  ]
   public_configs = [ ":includes" ]
 }

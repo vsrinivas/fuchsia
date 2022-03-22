@@ -6,6 +6,7 @@
 #define GFX_COMMON_GFX_COMMON_H_
 
 #include <inttypes.h>
+#include <lib/gfx-font/gfx-font.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -13,8 +14,6 @@
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
-
-#include <gfx-common/gfx-font.h>
 
 __BEGIN_CDECLS
 
@@ -67,7 +66,7 @@ struct gfx_surface {
   void (*fillrect)(gfx_surface*, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                    uint32_t color);
   void (*putpixel)(gfx_surface*, uint32_t x, uint32_t y, uint32_t color);
-  void (*putchar)(gfx_surface*, const gfx_font*, uint32_t ch, uint32_t x, uint32_t y, uint32_t fg,
+  void (*putchar)(gfx_surface*, const gfx_font_t*, uint32_t ch, uint32_t x, uint32_t y, uint32_t fg,
                   uint32_t bg);
   void (*flush)(uint32_t starty, uint32_t endy);
 };
@@ -84,7 +83,7 @@ void gfx_fillrect(gfx_surface* surface, uint32_t x, uint32_t y, uint32_t width, 
 void gfx_putpixel(gfx_surface* surface, uint32_t x, uint32_t y, uint32_t color);
 
 // draw a character at x, y in the surface
-void gfx_putchar(gfx_surface*, const gfx_font*, uint32_t ch, uint32_t x, uint32_t y, uint32_t fg,
+void gfx_putchar(gfx_surface*, const gfx_font_t*, uint32_t ch, uint32_t x, uint32_t y, uint32_t fg,
                  uint32_t bg);
 
 // draw a single pixel line between x1,y1 and x2,y1

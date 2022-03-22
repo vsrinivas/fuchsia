@@ -46,7 +46,7 @@ source_set("src") {
     "//third_party/android/platform/external/avb",
     "//zircon/kernel/lib/efi",
     "//zircon/system/public",
-    "//zircon/system/ulib/gfx-font-data",
+    "//zircon/system/ulib/gfx-font",
     "//zircon/system/ulib/tftp",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/lz4",
@@ -103,6 +103,7 @@ if (!is_mac) {
       "//third_party/googletest:gmock",
       "//zircon/kernel/lib/efi",
       "//zircon/kernel/lib/efi/testing",
+      "//zircon/system/ulib/gfx-font",
       "//zircon/third_party/ulib/cksum",
       "//zircon/third_party/ulib/lz4",
     ]

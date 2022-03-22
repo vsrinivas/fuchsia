@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <framebuffer.h>
-#include <lib/gfx-font-data/gfx-font-data.h>
+#include <lib/gfx-font/gfx-font.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -167,7 +167,7 @@ void draw_logo() {
   gBS->FreePool(tmp);
 }
 
-static void putchar(efi_graphics_output_protocol* gop, const gfx_font* font, unsigned ch,
+static void putchar(efi_graphics_output_protocol* gop, const gfx_font_t* font, unsigned ch,
                     unsigned x, unsigned y, unsigned scale_x, unsigned scale_y,
                     efi_graphics_output_blt_pixel* fg, efi_graphics_output_blt_pixel* bg) {
   const uint16_t* cdata = font->data + ch * font->height;
