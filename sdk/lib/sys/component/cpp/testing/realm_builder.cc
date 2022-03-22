@@ -147,7 +147,8 @@ std::string Realm::GetResolvedName(const std::string& child_name) {
 
 // Implementation methods for RealmBuilder.
 
-RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
+RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc,
+                                  cpp17::optional<std::string_view> relative_url) {
   if (svc == nullptr) {
     svc = sys::ServiceDirectory::CreateFromNamespace();
   }
@@ -159,12 +160,24 @@ RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
   exposed_dir.Connect(factory_proxy.NewRequest());
   fuchsia::component::test::BuilderSyncPtr builder_proxy;
   fuchsia::component::test::RealmSyncPtr test_realm_proxy;
-  fuchsia::component::test::RealmBuilderFactory_Create_Result result;
-  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
-      "RealmBuilderFactory/Create",
-      factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
-                            builder_proxy.NewRequest(), &result),
-      result);
+  if (relative_url.has_value()) {
+    ZX_ASSERT_MSG(!relative_url.value().empty(), "relative_url can't be empty");
+
+    fuchsia::component::test::RealmBuilderFactory_CreateFromRelativeUrl_Result result;
+    ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+        "RealmBuilderFactory/CreateFromRelativeUrl",
+        factory_proxy->CreateFromRelativeUrl(CreatePkgDirHandle(), relative_url.value().data(),
+                                             test_realm_proxy.NewRequest(),
+                                             builder_proxy.NewRequest(), &result),
+        result);
+  } else {
+    fuchsia::component::test::RealmBuilderFactory_Create_Result result;
+    ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+        "RealmBuilderFactory/Create",
+        factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
+                              builder_proxy.NewRequest(), &result),
+        result);
+  }
   return RealmBuilder(svc, std::move(builder_proxy), std::move(test_realm_proxy));
 }
 

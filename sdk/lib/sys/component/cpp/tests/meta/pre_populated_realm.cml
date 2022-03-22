@@ -1,0 +1,14 @@
+{
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.placeholders.Echo",
+            from: "#echo_server",
+        },
+    ],
+}
