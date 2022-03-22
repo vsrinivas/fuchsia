@@ -56,10 +56,11 @@ rustc_binary("bin") {
     "src/account_metadata.rs",
     "src/constants.rs",
     "src/disk_management.rs",
+    "src/insecure.rs",
     "src/keys.rs",
     "src/main.rs",
     "src/options.rs",
-    "src/prototype.rs",
+    "src/scrypt.rs",
     "src/testing.rs",
   ]
 }

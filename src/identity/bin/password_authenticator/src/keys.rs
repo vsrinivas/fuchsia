@@ -7,34 +7,54 @@ use {async_trait::async_trait, fidl_fuchsia_identity_account as faccount, thiser
 #[derive(Debug, Error)]
 pub enum KeyError {
     // TODO(zarvox): remove once NullKey support is removed
-    // This is only needed for NullKeyDerivation -- once we no longer have a key derivation that
+    // This is only needed for NullKeySource -- once we no longer have a key derivation that
     // would otherwise ignore the password provided, we can simply handle all authentication
     // failures by letting the resulting derived-key simply not match what the partition will
     // require to be unsealed.
     #[error("Password did not meet precondition")]
     PasswordError,
 
-    #[error("Failed to derive key from password")]
-    KeyDerivationError,
+    #[error("Failed to enroll key")]
+    KeyEnrollmentError,
+
+    #[error("Failed to retrieve key from password")]
+    KeyRetrievalError,
 }
 
 /// A 256-bit key.
 pub type Key = [u8; 32];
 
-/// The `KeyDerivation` trait provides a mechanism for deriving a key from a password.
-/// The returned key is suitable for use with a zxcrypt volume.
+#[derive(Debug)]
+pub struct EnrolledKey<T> {
+    pub key: Key,
 
+    pub enrollment_data: T,
+}
+
+/// The `KeyEnrollment` trait provides a mechanism for generating a new key to be retrievable
+/// when presented with the initially-given password.  This can include additional data specific
+/// to the enrollment scheme.
 #[async_trait]
-pub trait KeyDerivation {
-    /// Derive a key from the given password. The returned key will be 256 bits long.
-    async fn derive_key(&self, password: &str) -> Result<Key, KeyError>;
+pub trait KeyEnrollment<T> {
+    /// Enroll a key using this key derivation scheme with the given password.
+    async fn enroll_key(&self, password: &str) -> Result<EnrolledKey<T>, KeyError>;
+}
+
+/// The `KeyRetrieval` trait provides a mechanism for deriving a key from a password.
+/// The returned key is suitable for use with a zxcrypt volume.
+#[async_trait]
+pub trait KeyRetrieval {
+    /// Retrieve a key using this key derivation scheme with the given password.
+    /// The returned key will be 256 bits long.
+    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError>;
 }
 
 impl From<KeyError> for faccount::Error {
     fn from(e: KeyError) -> Self {
         match e {
             KeyError::PasswordError => faccount::Error::FailedAuthentication,
-            KeyError::KeyDerivationError => faccount::Error::Internal,
+            KeyError::KeyRetrievalError => faccount::Error::Internal,
+            KeyError::KeyEnrollmentError => faccount::Error::Internal,
         }
     }
 }

@@ -540,7 +540,7 @@ pub mod test {
         super::*,
         crate::{
             constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-            prototype::INSECURE_EMPTY_KEY,
+            insecure::INSECURE_EMPTY_KEY,
         },
         assert_matches::assert_matches,
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},

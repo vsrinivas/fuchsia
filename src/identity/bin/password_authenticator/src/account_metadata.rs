@@ -5,9 +5,10 @@
 use {
     crate::{
         account_manager::AccountId,
-        keys::{Key, KeyDerivation, KeyError},
+        insecure::{NullKeyParams, NullKeySource},
+        keys::{Key, KeyError, KeyRetrieval},
         options::Options,
-        prototype::NullKeyDerivation,
+        scrypt::{ScryptKeySource, ScryptParams},
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -82,29 +83,7 @@ pub struct NullAuthMetadata {}
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ScryptOnlyMetadata {
     /// The parameters used with scrypt
-    scrypt_params: ScryptParams,
-}
-
-/// Parameters used with the scrypt key-derivation function.  These match the parameters
-/// described in https://datatracker.ietf.org/doc/html/rfc7914
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ScryptParams {
-    salt: [u8; 16], // 16 byte random string
-    log_n: u8,
-    r: u32,
-    p: u32,
-}
-
-#[async_trait]
-impl KeyDerivation for ScryptParams {
-    async fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
-        let mut output = [0u8; 32];
-        let params = scrypt::Params::new(self.log_n, self.r, self.p)
-            .map_err(|_| KeyError::KeyDerivationError)?;
-        scrypt::scrypt(password.as_bytes(), &self.salt, &params, &mut output)
-            .map_err(|_| KeyError::KeyDerivationError)?;
-        Ok(output)
-    }
+    pub scrypt_params: ScryptParams,
 }
 
 /// An enumeration of all supported authenticator metadata types.
@@ -113,6 +92,18 @@ impl KeyDerivation for ScryptParams {
 pub enum AuthenticatorMetadata {
     NullKey(NullAuthMetadata),
     ScryptOnly(ScryptOnlyMetadata),
+}
+
+impl From<NullKeyParams> for AuthenticatorMetadata {
+    fn from(_item: NullKeyParams) -> AuthenticatorMetadata {
+        AuthenticatorMetadata::NullKey(NullAuthMetadata {})
+    }
+}
+
+impl From<ScryptParams> for AuthenticatorMetadata {
+    fn from(item: ScryptParams) -> AuthenticatorMetadata {
+        AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata { scrypt_params: item })
+    }
 }
 
 /// The data stored at /data/accounts/${ACCOUNT_ID} will have this shape, JSON-serialized.
@@ -127,21 +118,8 @@ pub struct AccountMetadata {
 }
 
 impl AccountMetadata {
-    /// Create a new AccountMetadata for the null key scheme
-    pub fn new_null(name: String) -> AccountMetadata {
-        let meta = AuthenticatorMetadata::NullKey(NullAuthMetadata {});
-        AccountMetadata { name, authenticator_metadata: meta }
-    }
-
-    /// Generate a new AccountMetadata for the scrypt key scheme, including generating a new salt
-    pub fn new_scrypt(name: String) -> AccountMetadata {
-        // Generate a new random salt
-        let mut salt = [0u8; 16];
-        zx::cprng_draw(&mut salt);
-        let meta = AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-            scrypt_params: ScryptParams { salt, log_n: 15, r: 8, p: 1 },
-        });
-        AccountMetadata { name, authenticator_metadata: meta }
+    pub fn new(name: String, authenticator_metadata: AuthenticatorMetadata) -> AccountMetadata {
+        AccountMetadata { name, authenticator_metadata }
     }
 
     /// Returns true iff this type of metadata is allowed by the supplied command line options.
@@ -159,13 +137,15 @@ impl AccountMetadata {
 }
 
 #[async_trait]
-impl KeyDerivation for AccountMetadata {
-    async fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
+impl KeyRetrieval for AccountMetadata {
+    async fn retrieve_key(&self, password: &str) -> Result<Key, KeyError> {
         match &self.authenticator_metadata {
-            AuthenticatorMetadata::NullKey(_) => NullKeyDerivation.derive_key(&password),
-            AuthenticatorMetadata::ScryptOnly(s_meta) => s_meta.scrypt_params.derive_key(&password),
+            AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
+            AuthenticatorMetadata::ScryptOnly(s_meta) => {
+                let key_source = ScryptKeySource::new_with_params(s_meta.scrypt_params);
+                key_source.retrieve_key(&password).await
+            }
         }
-        .await
     }
 }
 
@@ -306,24 +286,42 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 
 #[cfg(test)]
 pub mod test {
-    use {super::*, assert_matches::assert_matches, lazy_static::lazy_static, tempfile::TempDir};
+    use {
+        super::*,
+        crate::{
+            insecure::{INSECURE_EMPTY_KEY, INSECURE_EMPTY_PASSWORD},
+            scrypt::test::{
+                FULL_STRENGTH_SCRYPT_PARAMS, TEST_SCRYPT_KEY, TEST_SCRYPT_PARAMS,
+                TEST_SCRYPT_PASSWORD,
+            },
+        },
+        assert_matches::assert_matches,
+        lazy_static::lazy_static,
+        tempfile::TempDir,
+    };
 
     impl AccountMetadata {
-        /// Create a new ScryptOnly AccountMetadata using standard scrypt parameters and the
-        /// supplied salt.  Useful for ensuring that (combined with a known password), a
-        /// deterministic key can be produced for tests.
-        pub fn test_new_weak_scrypt_with_salt(name: String, salt: [u8; 16]) -> AccountMetadata {
+        /// Create a new AccountMetadata for the null key scheme
+        pub fn test_new_null(name: String) -> AccountMetadata {
+            let meta = AuthenticatorMetadata::NullKey(NullAuthMetadata {});
+            AccountMetadata { name, authenticator_metadata: meta }
+        }
+
+        /// Generate a new AccountMetadata for the scrypt key scheme
+        pub fn test_new_scrypt(name: String) -> AccountMetadata {
+            let meta = AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
+                scrypt_params: ScryptParams::new(),
+            });
+            AccountMetadata { name, authenticator_metadata: meta }
+        }
+
+        /// Create a new ScryptOnly AccountMetadata using weak scrypt parameters and a fixed salt.
+        /// Combined with a known password, this produces a deterministic key for tests.
+        pub fn test_new_weak_scrypt(name: String) -> AccountMetadata {
             AccountMetadata {
                 name,
                 authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-                    scrypt_params: ScryptParams {
-                        salt,
-                        // We use a very low log_n hardness here to avoid tests burning CPU time
-                        // needlessly during unit tests.
-                        log_n: 8,
-                        r: 8,
-                        p: 1,
-                    },
+                    scrypt_params: TEST_SCRYPT_PARAMS,
                 }),
             }
         }
@@ -332,34 +330,21 @@ pub mod test {
     // This is the user name we include in all test metadata objects
     pub const TEST_NAME: &str = "Test Display Name";
 
-    // These are both valid golden metadata we expect to be able to load.
+    // These are both valid golden metadata we expect to be able to load.  Note that
     const NULL_KEY_AND_NAME_DATA: &[u8] =
         br#"{"name":"Display Name","authenticator_metadata":{"type":"NullKey"}}"#;
-    const SCRYPT_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"ScryptOnly","scrypt_params":{"salt":[138,254,213,33,89,127,189,29,172,66,247,81,102,200,26,205],"log_n":15,"r":8,"p":1}}}"#;
+    const SCRYPT_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"ScryptOnly","scrypt_params":{"salt":[198,228,57,32,90,251,238,12,194,62,68,106,218,187,24,246],"log_n":15,"r":8,"p":1}}}"#;
 
     // This is invalid; it's missing the required authenticator_metadata key.
     // We'll check that we fail to load it.
     const INVALID_METADATA: &[u8] = br#"{"name": "Display Name"}"#;
 
-    // A well-known salt & key for test
-    pub const TEST_SCRYPT_SALT: [u8; 16] =
-        [202, 26, 165, 102, 212, 113, 114, 60, 106, 121, 183, 133, 36, 166, 127, 146];
-    pub const TEST_SCRYPT_PASSWORD: &str = "test password";
-
     lazy_static! {
         pub static ref TEST_SCRYPT_METADATA: AccountMetadata =
-            AccountMetadata::test_new_weak_scrypt_with_salt(TEST_NAME.into(), TEST_SCRYPT_SALT,);
+            AccountMetadata::test_new_weak_scrypt(TEST_NAME.into());
         static ref TEST_NULL_METADATA: AccountMetadata =
-            AccountMetadata::new_null(TEST_NAME.into(),);
+            AccountMetadata::test_new_null(TEST_NAME.into(),);
     }
-
-    // We have precomputed the key produced by the above fixed salt so that each test that wants to
-    // use one doesn't need to perform an additional key derivation every single time.  A test
-    // ensures that we do the work at least once to make sure our constant is correct.
-    pub const TEST_SCRYPT_KEY: [u8; 32] = [
-        88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
-        129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
-    ];
 
     async fn write_test_file_in_dir(
         dir: &fio::DirectoryProxy,
@@ -451,62 +436,47 @@ pub mod test {
         let deserialized = serde_json::from_slice::<AccountMetadata>(SCRYPT_KEY_AND_NAME_DATA)
             .expect("Deserialize password-only auth metadata");
         assert_eq!(&deserialized.name, "Display Name");
-        assert_matches!(
+
+        assert_eq!(
             deserialized.authenticator_metadata,
             AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-                scrypt_params: ScryptParams {
-                    salt: [
-                        138u8, 254u8, 213u8, 33u8, 89u8, 127u8, 189u8, 29u8, 172u8, 66u8, 247u8,
-                        81u8, 102u8, 200u8, 26u8, 205u8
-                    ],
-                    log_n: 15,
-                    r: 8,
-                    p: 1,
-                },
+                scrypt_params: FULL_STRENGTH_SCRYPT_PARAMS,
             })
         );
+
         let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
             .expect("Reserialize password-only auth metadata");
         assert_eq!(reserialized, SCRYPT_KEY_AND_NAME_DATA);
     }
 
     #[fuchsia::test]
-    async fn test_scrypt_key_derivation_weak_for_tests() {
-        let key = TEST_SCRYPT_METADATA.derive_key(TEST_SCRYPT_PASSWORD).await.expect("derive_key");
-        assert_eq!(key, TEST_SCRYPT_KEY);
-    }
-
-    #[fuchsia::test]
-    async fn test_scrypt_key_derivation_full_strength() {
-        // Tests the full-strength key derivation against separately-verified constants.
-        const GOLDEN_SCRYPT_SALT: [u8; 16] =
-            [198, 228, 57, 32, 90, 251, 238, 12, 194, 62, 68, 106, 218, 187, 24, 246];
-
-        const GOLDEN_SCRYPT_PASSWORD: &str = "test password";
-        const GOLDEN_SCRYPT_KEY: [u8; 32] = [
-            27, 250, 228, 96, 145, 67, 194, 114, 144, 240, 92, 150, 43, 136, 128, 51, 223, 120, 56,
-            118, 124, 122, 106, 185, 159, 111, 178, 50, 86, 243, 227, 175,
-        ];
-
+    async fn test_account_metadata_key_retrieval() {
         let meta = AccountMetadata {
             name: "Test Display Name".into(),
             authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-                scrypt_params: ScryptParams { salt: GOLDEN_SCRYPT_SALT, log_n: 15, r: 8, p: 1 },
+                scrypt_params: TEST_SCRYPT_PARAMS,
             }),
         };
-        let key = meta.derive_key(GOLDEN_SCRYPT_PASSWORD).await.expect("derive_key");
-        assert_eq!(key, GOLDEN_SCRYPT_KEY);
+        let key = meta.retrieve_key(TEST_SCRYPT_PASSWORD).await.expect("retrieve_key");
+        assert_eq!(key, TEST_SCRYPT_KEY);
+
+        let null_meta = AccountMetadata {
+            name: "Test Display Name".into(),
+            authenticator_metadata: AuthenticatorMetadata::NullKey(NullAuthMetadata {}),
+        };
+        let null_key = null_meta.retrieve_key(INSECURE_EMPTY_PASSWORD).await.expect("retrieve_key");
+        assert_eq!(null_key, INSECURE_EMPTY_KEY);
     }
 
     #[fuchsia::test]
     fn test_metadata_round_trip() {
-        let content = AccountMetadata::new_null("Display Name".into());
+        let content = AccountMetadata::test_new_null("Display Name".into());
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
         assert_eq!(content, deserialized);
         assert_eq!(deserialized.name(), "Display Name");
 
-        let content = AccountMetadata::new_scrypt("Display Name".into());
+        let content = AccountMetadata::test_new_scrypt("Display Name".into());
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
         assert_eq!(content, deserialized);
@@ -528,7 +498,7 @@ pub mod test {
 
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
-        let null_content = AccountMetadata::new_null("Display Name".into());
+        let null_content = AccountMetadata::test_new_null("Display Name".into());
         // Try saving an account to ID 1, and expect it to write new data
         metadata_store.save(&1, &null_content).await.expect("save account 1");
 
@@ -541,7 +511,7 @@ pub mod test {
         assert!(roundtripped.is_some());
         assert_eq!(roundtripped.unwrap(), null_content);
 
-        let scrypt_content = AccountMetadata::new_scrypt("Display Name".into());
+        let scrypt_content = AccountMetadata::test_new_scrypt("Display Name".into());
 
         // Try saving an account to ID 1, and expect it to overwrite the existing data
         metadata_store.save(&1, &scrypt_content).await.expect("save (overwrite) account 1");
@@ -584,15 +554,7 @@ pub mod test {
             AccountMetadata {
                 name: "Display Name".into(),
                 authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
-                    scrypt_params: ScryptParams {
-                        salt: [
-                            138u8, 254u8, 213u8, 33u8, 89u8, 127u8, 189u8, 29u8, 172u8, 66u8,
-                            247u8, 81u8, 102u8, 200u8, 26u8, 205u8
-                        ],
-                        log_n: 15,
-                        r: 8,
-                        p: 1,
-                    },
+                    scrypt_params: FULL_STRENGTH_SCRYPT_PARAMS,
                 }),
             }
         );
@@ -662,7 +624,7 @@ pub mod test {
         assert_eq!(ids, Vec::<u64>::new());
 
         // After saving a new account, the store enumerates the account
-        let scrypt_meta = AccountMetadata::new_scrypt("Display Name".into());
+        let scrypt_meta = AccountMetadata::test_new_scrypt("Display Name".into());
         metadata_store.save(&1, &scrypt_meta).await.expect("save");
         let ids = metadata_store.account_ids().await.expect("account_ids");
         assert_eq!(ids, vec![1u64]);

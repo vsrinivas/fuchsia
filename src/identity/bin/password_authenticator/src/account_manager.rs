@@ -4,11 +4,14 @@
 
 use crate::{
     account::{Account, CheckNewClientResult},
-    account_metadata::{AccountMetadata, AccountMetadataStore, AccountMetadataStoreError},
+    account_metadata::{
+        AccountMetadata, AccountMetadataStore, AccountMetadataStoreError, AuthenticatorMetadata,
+    },
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
-    keys::{Key, KeyDerivation},
-    prototype::{GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD},
+    insecure::{NullKeySource, INSECURE_EMPTY_PASSWORD},
+    keys::{Key, KeyEnrollment, KeyRetrieval},
+    scrypt::ScryptKeySource,
     Options,
 };
 use anyhow::{anyhow, Context, Error};
@@ -19,6 +22,11 @@ use fidl_fuchsia_identity_account::{
 use futures::{lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use std::{collections::HashMap, sync::Arc};
+
+/// The singleton account ID on the device.
+/// For now, we only support a single account (as in the fuchsia.identity protocol).  The local
+/// account, if it exists, will have a value of 1.
+pub const GLOBAL_ACCOUNT_ID: u64 = 1;
 
 /// The minimum length of (non-empty) password that is allowed for new accounts, in bytes.
 const MIN_PASSWORD_SIZE: usize = 8;
@@ -267,7 +275,7 @@ where
 
         // If account metadata present, derive key (using the appropriate scheme for the
         // AccountMetadata instance).
-        let key = account_metadata.derive_key(&password).await?;
+        let key = account_metadata.retrieve_key(&password).await?;
 
         // Acquire the lock for all accounts.
         let mut accounts_locked = self.accounts.lock().await;
@@ -420,12 +428,6 @@ where
             }
         };
 
-        let metadata = match enrollment_scheme {
-            EnrollmentScheme::NullKey => AccountMetadata::new_null(name.to_string()),
-            EnrollmentScheme::Scrypt => AccountMetadata::new_scrypt(name.to_string()),
-            EnrollmentScheme::Pinweaver => unimplemented!(),
-        };
-
         // For now, we only contemplate one account ID
         let account_id = GLOBAL_ACCOUNT_ID;
 
@@ -473,10 +475,27 @@ where
         drop(accounts_locked);
 
         // Provision the new account.
-        let key = metadata.derive_key(&password).await.map_err(|err| {
-            error!("provision_new_account: key derivation failed during provisioning: {}", err);
+        let (key, authenticator_metadata): (Key, AuthenticatorMetadata) = match enrollment_scheme {
+            EnrollmentScheme::NullKey => NullKeySource
+                .enroll_key(&password)
+                .await
+                .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into())),
+            EnrollmentScheme::Scrypt => {
+                let key_source = ScryptKeySource::new();
+                key_source
+                    .enroll_key(&password)
+                    .await
+                    .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into()))
+            }
+            EnrollmentScheme::Pinweaver => unimplemented!(),
+        }
+        .map_err(|err| {
+            error!("provision_new_account: key enrollment failed during provisioning: {}", err);
             err
         })?;
+
+        let metadata = AccountMetadata::new(name.to_string(), authenticator_metadata);
+
         let res: Result<AccountId, ProvisionError> = async {
             let encrypted_block =
                 self.disk_manager.bind_to_encrypted_block(block).await.map_err(|err| {
@@ -646,12 +665,13 @@ mod test {
         super::*,
         crate::{
             account_metadata::{
-                test::{TEST_NAME, TEST_SCRYPT_KEY, TEST_SCRYPT_METADATA, TEST_SCRYPT_PASSWORD},
+                test::{TEST_NAME, TEST_SCRYPT_METADATA},
                 AccountMetadata, AccountMetadataStoreError,
             },
             disk_management::{DiskError, MockMinfs},
+            insecure::INSECURE_EMPTY_KEY,
             keys::Key,
-            prototype::INSECURE_EMPTY_KEY,
+            scrypt::test::{TEST_SCRYPT_KEY, TEST_SCRYPT_PASSWORD},
         },
         async_trait::async_trait,
         fidl_fuchsia_io as fio,
@@ -882,7 +902,7 @@ mod test {
         }
 
         fn with_null_keyed_account(mut self, account_id: &AccountId) -> Self {
-            let metadata = AccountMetadata::new_null(TEST_NAME.into());
+            let metadata = AccountMetadata::test_new_null(TEST_NAME.into());
             self.accounts.insert(*account_id, metadata);
             self
         }

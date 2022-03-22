@@ -7,9 +7,10 @@ mod account_manager;
 mod account_metadata;
 mod constants;
 mod disk_management;
+mod insecure;
 mod keys;
 mod options;
-mod prototype;
+mod scrypt;
 #[cfg(test)]
 mod testing;
 
