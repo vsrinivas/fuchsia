@@ -1292,10 +1292,11 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
     const bool locally_initiated = event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DISASSOC ||
                                    event_code == BRCMF_E_LINK;
     // BRCMF_E_DEAUTH is unlikely if not SME-initiated
-    if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND) {
+    if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND ||
+        event_code == BRCMF_E_LINK) {
       brcmf_notify_deauth_ind(ndev, vif->profile.bssid, reason_code, locally_initiated);
     } else {
-      // This is a catch-all case - could be E_DISASSOC, E_DISASSOC_IND, E_LINK or IF delete
+      // This is a catch-all case - could be E_DISASSOC, E_DISASSOC_IND or IF delete
       brcmf_notify_disassoc_ind(ndev, vif->profile.bssid, reason_code, locally_initiated);
     }
   }
