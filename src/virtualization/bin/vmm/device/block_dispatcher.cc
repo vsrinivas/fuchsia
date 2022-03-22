@@ -375,7 +375,7 @@ void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base, fpromise::
   auto file_ptr = file.get();
   executor.schedule_task(file_ptr->Load(base_ptr).then(
       [base = std::move(base), file = std::move(file),
-       callback = std::move(callback)](const fit::result<void, zx_status_t>& result) mutable {
+       callback = std::move(callback)](const fpromise::result<void, zx_status_t>& result) mutable {
         uint64_t capacity = file->size();
         auto disp = std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
         callback(capacity, kBlockSectorSize, std::move(disp));
@@ -519,8 +519,8 @@ void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
 fpromise::promise<void, zx_status_t> JoinAndFlattenPromises(
     std::vector<fpromise::promise<void, zx_status_t>> promises) {
   return fpromise::join_promise_vector(std::move(promises))
-      .then([](const fit::result<std::vector<fit::result<void, zx_status_t>>>& results)
-                -> fit::result<void, zx_status_t> {
+      .then([](const fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>& results)
+                -> fpromise::result<void, zx_status_t> {
         // Join never returns an error (any errors of the input promise are in the result vector).
         FX_CHECK(results.is_ok()) << "join_promise_vector is expected to never fail";
         for (const auto& result : results.value()) {

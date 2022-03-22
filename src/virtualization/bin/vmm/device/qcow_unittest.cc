@@ -130,13 +130,13 @@ class QcowTest : public testing::Test {
 
   zx_status_t Load() {
     FdBlockDispatcher disp(fd_.get());
-    fit::result<void, zx_status_t> result = fpromise::run_single_threaded(file_.Load(&disp));
+    fpromise::result<void, zx_status_t> result = fpromise::run_single_threaded(file_.Load(&disp));
     return result.is_ok() ? ZX_OK : result.error();
   }
 
   zx_status_t ReadAt(void* data, uint64_t size) {
     FdBlockDispatcher disp(fd_.get());
-    fit::result<void, zx_status_t> result =
+    fpromise::result<void, zx_status_t> result =
         fpromise::run_single_threaded(file_.ReadAt(&disp, data, size, 0));
     return result.is_ok() ? ZX_OK : result.error();
   }

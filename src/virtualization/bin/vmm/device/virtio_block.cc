@@ -237,7 +237,7 @@ class RequestStream : public StreamBase {
     TRACE_FLOW_BEGIN("machina", "block:read-batch", nonce);
     executor_.schedule_task(
         dispatcher_->ReadBatch(request_buffer_)
-            .then([nonce, request](const fit::result<void, zx_status_t>& result) mutable {
+            .then([nonce, request](const fpromise::result<void, zx_status_t>& result) mutable {
               TRACE_DURATION("machina", "RequestStream::DoWrite completion");
               TRACE_FLOW_END("machina", "block:read-batch", nonce);
               if (result.is_error()) {
@@ -271,7 +271,7 @@ class RequestStream : public StreamBase {
     TRACE_FLOW_BEGIN("machina", "block:write-batch", nonce);
     executor_.schedule_task(
         dispatcher_->WriteBatch(request_buffer_)
-            .then([nonce, request](const fit::result<void, zx_status_t>& result) {
+            .then([nonce, request](const fpromise::result<void, zx_status_t>& result) {
               TRACE_DURATION("machina", "RequestStream::DoWrite completion");
               TRACE_FLOW_END("machina", "block:write-batch", nonce);
               if (result.is_error()) {
@@ -285,8 +285,8 @@ class RequestStream : public StreamBase {
     TRACE_DURATION("machina", "RequestStream::DoSync");
     const trace_async_id_t nonce = TRACE_NONCE();
     TRACE_FLOW_BEGIN("machina", "block:sync", nonce);
-    executor_.schedule_task(
-        dispatcher_->Sync().then([nonce, request](const fit::result<void, zx_status_t>& result) {
+    executor_.schedule_task(dispatcher_->Sync().then(
+        [nonce, request](const fpromise::result<void, zx_status_t>& result) {
           TRACE_DURATION("machina", "RequestStream::DoSync completion");
           TRACE_FLOW_END("machina", "block:sync", nonce);
           if (result.is_error()) {
