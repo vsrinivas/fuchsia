@@ -119,9 +119,7 @@ static void boot_reserve_zbi() {
 
 #include <dev/display.h>
 
-zx_status_t display_get_info(struct display_info* info) {
-  return gfxconsole_display_get_info(info);
-}
+zx_status_t display_get_info(struct display_info* info) { return gfx::ConsoleDisplayGetInfo(info); }
 
 bool platform_early_console_enabled() { return !early_console_disabled; }
 
@@ -150,7 +148,7 @@ static void platform_early_display_init(void) {
   info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
   info.framebuffer = (void*)X86_PHYS_TO_VIRT(bootloader.fb.base);
 
-  gfxconsole_bind_display(&info, bits);
+  gfx::ConsoleBindDisplay(&info, bits);
 }
 
 /* Ensure the framebuffer is write-combining as soon as we have the VMM.
@@ -183,7 +181,7 @@ static void platform_ensure_display_memtype(uint level) {
   }
 
   info.framebuffer = addr;
-  gfxconsole_bind_display(&info, NULL);
+  gfx::ConsoleBindDisplay(&info, NULL);
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1)
 

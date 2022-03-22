@@ -41,7 +41,7 @@
 // will attempt to initialize PCI.  Someday, there should be a different way of
 // handing off from early/BSOD kernel mode graphics to user mode.
 #include <lib/gfx/console.h>
-static inline void shutdown_early_init_console() { gfxconsole_bind_display(nullptr, nullptr); }
+static inline void shutdown_early_init_console() { gfx::ConsoleBindDisplay(nullptr, nullptr); }
 
 #ifdef WITH_KERNEL_PCIE
 #include <dev/address_provider/ecam_region.h>
