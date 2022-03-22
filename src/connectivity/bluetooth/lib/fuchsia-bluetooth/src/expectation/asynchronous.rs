@@ -46,6 +46,7 @@ use crate::expectation::Predicate;
 
 /// Future that completes once a Predicate is satisfied for the `T::State` type
 /// where `T` is some type that allows monitoring of State updates
+#[must_use = "futures do nothing unless polled"]
 pub struct ExpectationFuture<T: ExpectableState> {
     state: T,
     expectation: Predicate<T::State>,
