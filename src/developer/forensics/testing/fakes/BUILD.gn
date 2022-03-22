@@ -5,7 +5,10 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 
-visibility = [ "//src/developer/forensics/*" ]
+visibility = [
+  "//bundles/buildbot:core_base_packages",
+  "//src/developer/forensics/*",
+]
 
 ###############################################################################
 # PACKAGES
