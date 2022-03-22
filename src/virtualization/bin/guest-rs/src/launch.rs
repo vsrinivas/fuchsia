@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::arguments,
     crate::services,
     anyhow::{Context, Error},
     fidl_fuchsia_virtualization::{
@@ -10,9 +11,46 @@ use {
     fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_zircon::sys,
     fuchsia_zircon_status as zx_status,
+    std::convert::TryFrom,
     std::io::{self, Write},
 };
+
+// Reduce the default maximum memory usage on ARM64, due to the lack of memory
+// on the devices we test against.
+#[cfg(target_arch = "x86_64")]
+const DEFAULT_GUEST_MEM_SIZE: u64 = 3584 << 20;
+
+#[cfg(target_arch = "aarch64")]
+const DEFAULT_GUEST_MEM_SIZE: u64 = 1 << 30;
+
+pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
+    // FIDL requires we make a GuestConfig::EMPTY before trying to update fields
+    let mut guest_config = GuestConfig::EMPTY;
+
+    if !arguments.cmdline_add.is_empty() {
+        guest_config.cmdline_add = Some(arguments.cmdline_add.clone())
+    };
+    guest_config.default_net = Some(arguments.default_net);
+    guest_config.guest_memory = Some(arguments.memory.unwrap_or(DEFAULT_GUEST_MEM_SIZE));
+    // There are no assumptions made by this unsafe block; it is only unsafe due to FFI.
+    guest_config.cpus = Some(
+        arguments.cpus.unwrap_or(unsafe { u8::try_from(sys::zx_system_get_num_cpus()).unwrap() }),
+    );
+    if !arguments.interrupt.is_empty() {
+        guest_config.interrupts = Some(arguments.interrupt.clone())
+    };
+    guest_config.virtio_balloon = Some(arguments.virtio_balloon);
+    guest_config.virtio_console = Some(arguments.virtio_console);
+    guest_config.virtio_gpu = Some(arguments.virtio_gpu);
+    guest_config.virtio_rng = Some(arguments.virtio_rng);
+    guest_config.virtio_sound = Some(arguments.virtio_sound);
+    guest_config.virtio_sound_input = Some(arguments.virtio_sound_input);
+    guest_config.virtio_vsock = Some(arguments.virtio_vsock);
+
+    guest_config
+}
 
 pub struct GuestLaunch {
     guest: GuestProxy,
@@ -20,7 +58,7 @@ pub struct GuestLaunch {
 }
 
 impl GuestLaunch {
-    pub async fn new(package_name: String, _args: Vec<String>) -> Result<Self, Error> {
+    pub async fn new(package_name: String, config: GuestConfig) -> Result<Self, Error> {
         // Take a package, connect to a Manager, create a Guest Realm,
         // launch the package, return guest proxy on success
         // as we need a reference to both the manager and the realm,
@@ -45,12 +83,8 @@ impl GuestLaunch {
         let (guest, guest_server_end) =
             fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
 
-        let mut guest_config = GuestConfig::EMPTY;
-        guest_config.virtio_gpu = Some(false); // TODO(fxbug.dev/89427): add argument parsing
-        guest_config.default_net = Some(false);
-
         let _guest_cid = realm
-            .launch_instance(&url.to_string(), None, guest_config, guest_server_end)
+            .launch_instance(&url.to_string(), None, config, guest_server_end)
             .map_err(Error::new)
             .await?;
 

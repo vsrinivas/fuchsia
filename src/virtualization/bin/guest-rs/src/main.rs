@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {anyhow::Error, argh::FromArgs, fuchsia_async as fasync};
 
+mod arguments;
 mod balloon;
 mod launch;
 mod list;
@@ -19,32 +20,20 @@ struct GuestOptions {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 enum SubCommands {
-    One(Launch),
-    Two(Balloon),
-    Three(BalloonStats),
-    Four(Serial),
-    Five(List),
-    Six(Socat),
-    Seven(SocatListen),
-    Eight(Vsh),
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Launch a guest image. Usage: guest-rs launch --package <package> [--vmm_args <args>]
-#[argh(subcommand, name = "launch")]
-struct Launch {
-    #[argh(option)]
-    /// package name to launch e.g. 'zircon_guest'.
-    package: String,
-    /// arguments to configure guest image with.
-    #[argh(option)]
-    vmm_args: Vec<String>,
+    Launch(arguments::LaunchArgs),
+    Balloon(BalloonArgs),
+    BalloonStats(BalloonStatsArgs),
+    Serial(SerialArgs),
+    List(ListArgs),
+    Socat(SocatArgs),
+    SocatListen(SocatListenArgs),
+    Vsh(VshArgs),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Modify the size of a memory balloon. Usage: guest-rs balloon --env_id <id> --cid <id> --num_pages <num>
 #[argh(subcommand, name = "balloon")]
-struct Balloon {
+struct BalloonArgs {
     #[argh(option)]
     /// environment id where guest lives.
     env_id: u32,
@@ -59,7 +48,7 @@ struct Balloon {
 #[derive(FromArgs, PartialEq, Debug)]
 /// See the stats of a guest's memory balloon. Usage: guest-rs balloon-stats --env_id <id> --cid <id>
 #[argh(subcommand, name = "balloon-stats")]
-struct BalloonStats {
+struct BalloonStatsArgs {
     #[argh(option)]
     /// environment id where guest lives.
     env_id: u32,
@@ -71,7 +60,7 @@ struct BalloonStats {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Access the serial output for a guest. Usage: guest-rs serial --env_id <id> --cid <id>
 #[argh(subcommand, name = "serial")]
-struct Serial {
+struct SerialArgs {
     #[argh(option)]
     /// environment id where guest lives.
     env_id: u32,
@@ -83,12 +72,12 @@ struct Serial {
 #[derive(FromArgs, PartialEq, Debug)]
 /// List existing guest environments. Usage: guest-rs list
 #[argh(subcommand, name = "list")]
-struct List {}
+struct ListArgs {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Create a socat connection on the specified port. Usage: guest-rs socat --env_id <id> --cid <id> --port <num>
 #[argh(subcommand, name = "socat")]
-struct Socat {
+struct SocatArgs {
     #[argh(option)]
     /// environment id where guest lives.
     env_id: u32,
@@ -103,7 +92,7 @@ struct Socat {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Listen through socat on the specified port. Usage: guest-rs socat-listen --env_id <id> --host_port <num>
 #[argh(subcommand, name = "socat-listen")]
-struct SocatListen {
+struct SocatListenArgs {
     #[argh(option)]
     /// environment id of host.
     env_id: u32,
@@ -115,7 +104,7 @@ struct SocatListen {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Create virtual shell for a guest or connect via virtual shell. Usage: guest-rs [--env_id <id> [--cid <id> [--port [num]]]] [--args <args>]
 #[argh(subcommand, name = "vsh")]
-struct Vsh {
+struct VshArgs {
     #[argh(option)]
     /// optional environment id of host.
     env_id: Option<u32>,
@@ -135,11 +124,12 @@ async fn main() -> Result<(), Error> {
     let options: GuestOptions = argh::from_env();
 
     match options.nested {
-        SubCommands::One(launch_args) => {
-            let guest = launch::GuestLaunch::new(launch_args.package, launch_args.vmm_args).await?;
+        SubCommands::Launch(launch_args) => {
+            let guest_config = launch::parse_vmm_args(&launch_args);
+            let guest = launch::GuestLaunch::new(launch_args.package, guest_config).await?;
             guest.run().await
         }
-        SubCommands::Two(balloon_args) => {
+        SubCommands::Balloon(balloon_args) => {
             let balloon_controller =
                 balloon::connect_to_balloon_controller(balloon_args.env_id, balloon_args.cid)
                     .await?;
@@ -148,7 +138,7 @@ async fn main() -> Result<(), Error> {
             println!("{}", output);
             Ok(())
         }
-        SubCommands::Three(balloon_stat_args) => {
+        SubCommands::BalloonStats(balloon_stat_args) => {
             let balloon_controller = balloon::connect_to_balloon_controller(
                 balloon_stat_args.env_id,
                 balloon_stat_args.cid,
@@ -158,17 +148,17 @@ async fn main() -> Result<(), Error> {
             println!("{}", output);
             Ok(())
         }
-        SubCommands::Five(..) => {
+        SubCommands::List(..) => {
             let manager = services::connect_to_manager()?;
             let output = list::handle_list(manager).await?;
             println!("{}", output);
             Ok(())
         }
-        SubCommands::Six(socat_args) => {
+        SubCommands::Socat(socat_args) => {
             let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_args.env_id).await?;
             socat::handle_socat(vsock_endpoint, socat_args.cid, socat_args.port).await
         }
-        SubCommands::Seven(socat_listen_args) => {
+        SubCommands::SocatListen(socat_listen_args) => {
             let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_listen_args.env_id).await?;
             socat::handle_socat_listen(vsock_endpoint, socat_listen_args.host_port).await
         }

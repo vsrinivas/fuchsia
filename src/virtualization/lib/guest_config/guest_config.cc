@@ -412,16 +412,8 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--virtio-sound-input    Enable virtio-sound input (default false)\n";
   std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
   std::cerr << "\n";
-  std::cerr << "NET SPEC\n";
-  std::cerr << "\n";
-  std::cerr << " Net devices can be specified by MAC address. Each --net argument specifies an\n";
-  std::cerr << " additional device.\n";
-  std::cerr << "\n";
-  std::cerr << " Ex:\n";
-  std::cerr << "    --net=02:1a:11:00:00:00\n";
-  std::cerr << "\n";
-  std::cerr << " By default the guest is configured with one net device with the MAC address in\n";
-  std::cerr << " the example above. To remove the default device pass --default-net=false.\n";
+  std::cerr << " By default the guest is configured with one net device\n";
+  std::cerr << "To remove the default device pass --default-net=false.\n";
   std::cerr << "\n";
   // clang-format on
 }
