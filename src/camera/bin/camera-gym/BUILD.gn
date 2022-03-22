@@ -18,6 +18,10 @@ group("camera-gym") {
     "controller_client:camera-gym-ctl",
     "fidl:controller",
   ]
+  deps = [
+    # Camera-gym is for testing and shouldn't be in production builds.
+    "//build/validate:non_production_tag",
+  ]
 }
 
 group("tests") {
