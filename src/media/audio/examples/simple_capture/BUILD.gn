@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "simple_capture"
+
+  sources = [
+    "simple_capture.cc",
+    "simple_capture.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/media/audio/lib/logging:cli",
+    "//src/media/audio/lib/wav",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+fuchsia_shell_package("simple_capture") {
+  deps = [ ":bin" ]
+}
