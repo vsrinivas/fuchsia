@@ -52,7 +52,7 @@ class TurduckenTestBase {
 
   arch::EarlyTicks entry_ticks() const { return entry_ticks_; }
 
-  // This just returns Symbolize::kProgramName_, but is shorter to type.
+  // This just returns gSymbolize()->name(), but is shorter to type.
   [[gnu::const]] static const char* test_name();
 
   // The ZBI item type TestMain looks for and passes to TurduckenTest::Main.

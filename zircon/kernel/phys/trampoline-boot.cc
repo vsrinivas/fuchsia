@@ -222,10 +222,9 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
 // This output lines up with what BootZbi::LogAddresses() prints.
 void TrampolineBoot::LogFixedAddresses() const {
 #define ADDR "0x%016" PRIx64
-  const auto& name = Symbolize::kProgramName_;
   const uint64_t kernel = kFixedLoadAddress;
   const uint64_t bss = kernel + KernelLoadSize();
   const uint64_t end = kernel + KernelMemorySize();
-  debugf("%s: Relocated @ [" ADDR ", " ADDR ")\n", name, kernel, bss);
-  debugf("%s:       BSS @ [" ADDR ", " ADDR ")\n", name, bss, end);
+  debugf("%s: Relocated @ [" ADDR ", " ADDR ")\n", ProgramName(), kernel, bss);
+  debugf("%s:       BSS @ [" ADDR ", " ADDR ")\n", ProgramName(), bss, end);
 }

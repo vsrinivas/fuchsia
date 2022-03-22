@@ -50,7 +50,7 @@ zbi_mem_range_t gMemRangesBuffer[linuxboot::kMaxE820TableEntries];
 
 void PopulateMemRages(const linuxboot::boot_params& bp) {
   if (bp.e820_entries > ktl::size(bp.e820_table)) {
-    printf("%s: e820_entries %zu exceeds format maximum %zu\n", Symbolize::kProgramName_,
+    printf("%s: e820_entries %zu exceeds format maximum %zu\n", ProgramName(),
            static_cast<size_t>(bp.e820_entries), ktl::size(bp.e820_table));
   }
   ktl::span e820{

@@ -402,17 +402,16 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
 #define ADDR "0x%016" PRIx64
 
 void BootZbi::LogAddresses() {
-  const auto& name = Symbolize::kProgramName_;
-  debugf("%s:    Kernel @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress(),
+  debugf("%s:    Kernel @ [" ADDR ", " ADDR ")  %s\n", ProgramName(), KernelLoadAddress(),
          KernelLoadAddress() + KernelLoadSize(), pretty::FormattedBytes(KernelLoadSize()).c_str());
-  debugf("%s:       BSS @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress() + KernelLoadSize(),
-         KernelLoadAddress() + KernelMemorySize(),
+  debugf("%s:       BSS @ [" ADDR ", " ADDR ")  %s\n", ProgramName(),
+         KernelLoadAddress() + KernelLoadSize(), KernelLoadAddress() + KernelMemorySize(),
          pretty::FormattedBytes(static_cast<size_t>(KernelHeader()->reserve_memory_size)).c_str());
-  debugf("%s:       ZBI @ [" ADDR ", " ADDR ")  %s\n", name, DataLoadAddress(),
+  debugf("%s:       ZBI @ [" ADDR ", " ADDR ")  %s\n", ProgramName(), DataLoadAddress(),
          DataLoadAddress() + DataLoadSize(),
          pretty::FormattedBytes(static_cast<size_t>(DataLoadSize())).c_str());
 }
 
 void BootZbi::LogBoot(uint64_t entry) const {
-  debugf("%s:     Entry @  " ADDR "  Booting...\n", Symbolize::kProgramName_, entry);
+  debugf("%s:     Entry @  " ADDR "  Booting...\n", ProgramName(), entry);
 }

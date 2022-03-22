@@ -16,7 +16,7 @@
 namespace {
 
 void PrintCaseInfo(const code_patching::Directive& patch, const char* fmt, ...) {
-  printf("%s: code-patching: ", Symbolize::kProgramName_);
+  printf("%s: code-patching: ", ProgramName());
   va_list args;
   va_start(args, fmt);
   vprintf(fmt, args);
@@ -45,12 +45,11 @@ void ArchPatchCode(code_patching::Patcher patcher, ktl::span<ktl::byte> patchee,
         performed = true;
         break;
       default:
-        ZX_PANIC("%s: code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n",
-                 Symbolize::kProgramName_, patch.id, patch.range_start,
-                 patch.range_start + patch.range_size);
+        ZX_PANIC("%s: code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n", ProgramName(),
+                 patch.id, patch.range_start, patch.range_start + patch.range_size);
     }
   }
   if (!performed) {
-    ZX_PANIC("%s: code-patching: failed to patch the kernel\n", Symbolize::kProgramName_);
+    ZX_PANIC("%s: code-patching: failed to patch the kernel\n", ProgramName());
   }
 }

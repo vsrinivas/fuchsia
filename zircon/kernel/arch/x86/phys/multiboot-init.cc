@@ -106,8 +106,8 @@ void InitMemory(void* bootloader_data) {
           mods.front().mod_end - mods.front().mod_start,
       };
       if (mods.size() > 1) {
-        printf("%s: Multiboot mods @ %p count %zu != expected 1.\n", Symbolize::kProgramName_,
-               mods.data(), mods.size());
+        printf("%s: Multiboot mods @ %p count %zu != expected 1.\n", ProgramName(), mods.data(),
+               mods.size());
       }
     }
   }

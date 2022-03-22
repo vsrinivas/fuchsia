@@ -35,8 +35,7 @@ uint64_t gArmPsciResetRegisters[arch::kArmPsciRegisters] = {
 void ArmPsciSetup(const dcfg_arm_psci_driver_t* cfg) {
   if (!cfg) {
     gArmPsciDisabled = 1;
-    debugf("%s: No KDRV_ARM_PSCI item found in ZBI.  Early PSCI disabled.\n",
-           Symbolize::kProgramName_);
+    debugf("%s: No KDRV_ARM_PSCI item found in ZBI.  Early PSCI disabled.\n", ProgramName());
     return;
   }
 
@@ -46,7 +45,7 @@ void ArmPsciSetup(const dcfg_arm_psci_driver_t* cfg) {
   switch (gBootOptions->phys_psci_reset) {
     case Arm64PhysPsciReset::kDisabled:
       gArmPsciDisabled = 1;
-      debugf("%s: Early PSCI disabled by boot option.\n", Symbolize::kProgramName_);
+      debugf("%s: Early PSCI disabled by boot option.\n", ProgramName());
       return;
     case Arm64PhysPsciReset::kShutdown:
       reset_args = cfg->shutdown_args;
@@ -81,7 +80,7 @@ void ArmPsciSetup(const dcfg_arm_psci_driver_t* cfg) {
 
   const char* insn = gArmPsciUseHvc ? "HVC" : "SMC";
   const char* cmd = have_reset2 ? "RESET2" : "RESET";
-  debugf("%s: Early PSCI via %s insn and %s with arguments: {%#zx, %#zx, %#zx}\n",
-         Symbolize::kProgramName_, insn, cmd, gArmPsciResetRegisters[1], gArmPsciResetRegisters[2],
+  debugf("%s: Early PSCI via %s insn and %s with arguments: {%#zx, %#zx, %#zx}\n", ProgramName(),
+         insn, cmd, gArmPsciResetRegisters[1], gArmPsciResetRegisters[2],
          gArmPsciResetRegisters[3]);
 }

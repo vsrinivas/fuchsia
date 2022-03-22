@@ -28,8 +28,7 @@ namespace {
 
 [[noreturn]] void BadZbi(KernelStorage::Zbi zbi, size_t count,
                          ktl::optional<KernelStorage::Zbi::Error> error) {
-  printf("%s: Invalid ZBI of %zu bytes, %zu items: ", Symbolize::kProgramName_, zbi.size_bytes(),
-         count);
+  printf("%s: Invalid ZBI of %zu bytes, %zu items: ", ProgramName(), zbi.size_bytes(), count);
 
   if (error) {
     zbitl::PrintViewError(*error);
@@ -46,9 +45,8 @@ namespace {
     printf(
         "\
 %s: Item @ %#08x size %#08x type %#08x (%.*s) extra %#08x flags %#08x\n",
-        Symbolize::kProgramName_, static_cast<uint32_t>(payload.data() - zbi.storage().data()),
-        header->length, header->type, static_cast<int>(name.size()), name.data(), header->extra,
-        header->flags);
+        ProgramName(), static_cast<uint32_t>(payload.data() - zbi.storage().data()), header->length,
+        header->type, static_cast<int>(name.size()), name.data(), header->extra, header->flags);
   }
   zbi.ignore_error();
   abort();
@@ -82,8 +80,8 @@ void KernelStorage::Init(Zbi zbi) {
   storage_ =
       Allocation::New(ac, memalloc::Type::kKernelStorage, storage_size, ZBI_BOOTFS_PAGE_SIZE);
   if (!ac.check()) {
-    printf("%s: Cannot allocate %#x bytes for decompressed STORAGE_KERNEL item!\n",
-           Symbolize::kProgramName_, storage_size);
+    printf("%s: Cannot allocate %#x bytes for decompressed STORAGE_KERNEL item!\n", ProgramName(),
+           storage_size);
     abort();
   }
 
@@ -93,8 +91,8 @@ void KernelStorage::Init(Zbi zbi) {
   decompress_start_ts_ = arch::EarlyTicks::Get();
 
   if (auto result = zbi_.CopyStorageItem(data(), item_, ZbitlScratchAllocator); result.is_error()) {
-    printf("%s: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ",
-           Symbolize::kProgramName_, storage_size);
+    printf("%s: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ", ProgramName(),
+           storage_size);
     zbitl::PrintViewCopyError(result.error_value());
     abort();
   }
@@ -102,7 +100,7 @@ void KernelStorage::Init(Zbi zbi) {
   // This marks just the decompression (or copying) time.
   decompress_end_ts_ = arch::EarlyTicks::Get();
 
-  debugf("%s: STORAGE_KERNEL decompressed %s -> %s\n", Symbolize::kProgramName_,
+  debugf("%s: STORAGE_KERNEL decompressed %s -> %s\n", ProgramName(),
          pretty::FormattedBytes(item_->header->length).c_str(),
          pretty::FormattedBytes(storage_size).c_str());
 }
@@ -111,7 +109,7 @@ KernelStorage::Bootfs KernelStorage::GetBootfs() const {
   auto result = Bootfs::Create(data());
   if (result.is_error()) {
     printf("%s: cannot open BOOTFS image from KERNEL_STORAGE item (%#zx bytes at %p): ",
-           Symbolize::kProgramName_, data().size(), data().data());
+           ProgramName(), data().size(), data().data());
     zbitl::PrintBootfsError(result.error_value());
     abort();
   }

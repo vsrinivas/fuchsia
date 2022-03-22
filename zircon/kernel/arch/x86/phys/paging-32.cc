@@ -57,7 +57,7 @@ void ArchSetUpAddressSpaceLate() {
 
   // Now actually turn on paging.  This affects us immediately in 32-bit mode,
   // as well as being mandatory for 64-bit mode.
-  printf("%s: Enabling MMU with x86-64 page tables... ", Symbolize::kProgramName_);
+  printf("%s: Enabling MMU with x86-64 page tables... ", ProgramName());
   arch::X86Cr0::Read().set_pg(true).Write();
 
   ZX_ASSERT(efer.ReadFrom(&msr).lma());

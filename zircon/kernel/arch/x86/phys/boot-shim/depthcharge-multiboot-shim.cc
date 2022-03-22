@@ -154,7 +154,7 @@ bool LoadDepthchargeZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
   auto kernel_item = shim.input_zbi().begin();
   while (true) {
     if (kernel_item == shim.input_zbi().end()) {
-      printf("%s: No kernel item in ZBI!\n", Symbolize::kProgramName_);
+      printf("%s: No kernel item in ZBI!\n", ProgramName());
       return false;
     }
     if (kernel_item->header->type == arch::kZbiBootKernelType) {

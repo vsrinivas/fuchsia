@@ -67,7 +67,7 @@ constexpr auto ForEachWord = [](TurduckenTestBase::Zbi& zbi, auto&& callback) {
 TurduckenTestBase::TurduckenTestBase(void* zbi, arch::EarlyTicks ticks, uint32_t embedded_type)
     : entry_ticks_(ticks), boot_zbi_(GetZbi(zbi)), embedded_type_(embedded_type) {}
 
-const char* TurduckenTestBase::test_name() { return Symbolize::kProgramName_; }
+const char* TurduckenTestBase::test_name() { return ProgramName(); }
 
 bool TurduckenTestBase::Option(ktl::string_view exact_word) {
   bool result = false;

@@ -27,7 +27,7 @@ void InitAcpi(LegacyBootShim& shim) {
 
   if (static_cast<uintptr_t>(rsdp) != rsdp) {
     printf("%s: ACPI tables (%#" PRIx64 ") were reportedly not found within the lower 4GiB\n",
-           Symbolize::kProgramName_, rsdp);
+           ProgramName(), rsdp);
     return;
   }
 
@@ -36,7 +36,7 @@ void InitAcpi(LegacyBootShim& shim) {
   if (acpi_parser.is_ok()) {
     shim.InitAcpi(acpi_parser.value());
   } else {
-    printf("%s: Cannot find ACPI tables (%" PRId32 ") from %#" PRIx64 "\n",
-           Symbolize::kProgramName_, acpi_parser.error_value(), rsdp);
+    printf("%s: Cannot find ACPI tables (%" PRId32 ") from %#" PRIx64 "\n", ProgramName(),
+           acpi_parser.error_value(), rsdp);
   }
 }

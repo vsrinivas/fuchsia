@@ -52,6 +52,6 @@ void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config,
   ArchSetUpAddressSpaceEarly();
 
   if (gBootOptions->phys_verbose) {
-    pool.PrintMemoryRanges(Symbolize::kProgramName_);
+    pool.PrintMemoryRanges(ProgramName());
   }
 }

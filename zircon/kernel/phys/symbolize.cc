@@ -107,6 +107,12 @@ BuildId BuildId::gInstance;
 
 Symbolize Symbolize::instance_;
 
+const char* ProgramName() {
+  // TODO(fxbug.dev/95625): This should be a function of a global Symbolize
+  // pointer instead.
+  return Symbolize::kProgramName_;
+}
+
 void Symbolize::Printf(const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -123,19 +129,19 @@ ktl::span<const ktl::byte> Symbolize::BuildId() const {
 }
 
 void Symbolize::PrintModule() {
-  Printf("%s: {{{module:0:%s:elf:%V}}}\n", kProgramName_, kProgramName_,
+  Printf("%s: {{{module:0:%s:elf:%V}}}\n", ProgramName(), ProgramName(),
          BuildId::GetInstance().Print());
 }
 
 void Symbolize::PrintMmap() {
   auto start = reinterpret_cast<uintptr_t>(__code_start);
   auto end = reinterpret_cast<uintptr_t>(_end);
-  Printf("%s: {{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", kProgramName_, __code_start, end - start,
+  Printf("%s: {{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", ProgramName(), __code_start, end - start,
          kLinkTimeAddress);
 }
 
 void Symbolize::ContextAlways() {
-  Printf("%s: {{{reset}}}\n", kProgramName_);
+  Printf("%s: {{{reset}}}\n", ProgramName());
   PrintModule();
   PrintMmap();
 }
@@ -150,29 +156,29 @@ void Symbolize::Context() {
 void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt) {
   // Just print the line in markup format.  Context() was called earlier.
   const char* kind = interrupt ? "pc" : "ra";
-  Printf("%s: {{{bt:%u:%#zx:%s}}}\n", kProgramName_, n, pc, kind);
+  Printf("%s: {{{bt:%u:%#zx:%s}}}\n", ProgramName(), n, pc, kind);
 }
 
 void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name, ktl::string_view desc,
                          size_t size_bytes) {
   Context();
-  Printf("%s: %V: {{{dumpfile:%V:%V}}} %zu bytes\n", kProgramName_, desc, type, name, size_bytes);
+  Printf("%s: %V: {{{dumpfile:%V:%V}}} %zu bytes\n", ProgramName(), desc, type, name, size_bytes);
 }
 
 void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
                                 const ShadowCallStackBacktrace& shadow_call_stack, unsigned int n) {
   Context();
   if (frame_pointers.empty()) {
-    Printf("%s: Frame pointer backtrace is empty!\n", kProgramName_);
+    Printf("%s: Frame pointer backtrace is empty!\n", ProgramName());
   } else {
-    Printf("%s: Backtrace (via frame pointers):\n", kProgramName_);
+    Printf("%s: Backtrace (via frame pointers):\n", ProgramName());
     BackTrace(frame_pointers, n);
   }
   if (BootShadowCallStack::kEnabled) {
     if (shadow_call_stack.empty()) {
-      Printf("%s: Shadow call stack backtrace is empty!\n", kProgramName_);
+      Printf("%s: Shadow call stack backtrace is empty!\n", ProgramName());
     } else {
-      Printf("%s: Backtrace (via shadow call stack):\n", kProgramName_);
+      Printf("%s: Backtrace (via shadow call stack):\n", ProgramName());
     }
     BackTrace(shadow_call_stack, n);
   }
@@ -182,7 +188,7 @@ void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
   const size_t configured_max = gBootOptions->phys_print_stack_max;
   auto dump_stack = [max = max_size_bytes.value_or(configured_max), sp, this](
                         const BootStack& stack, const char* which) {
-    Printf("%s: Partial dump of %s stack at [%p, %p):\n", kProgramName_, which, &stack, &stack + 1);
+    Printf("%s: Partial dump of %s stack at [%p, %p):\n", ProgramName(), which, &stack, &stack + 1);
     ktl::span whole(reinterpret_cast<const uint64_t*>(stack.stack),
                     sizeof(stack.stack) / sizeof(uint64_t));
     const uintptr_t base = reinterpret_cast<uintptr_t>(whole.data());
@@ -195,7 +201,7 @@ void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
   } else if (phys_exception_stack.IsOnStack(sp)) {
     dump_stack(phys_exception_stack, "exception");
   } else {
-    Printf("%s: Stack pointer is outside expected bounds [%p, %p) or [%p, %p)\n", kProgramName_,
+    Printf("%s: Stack pointer is outside expected bounds [%p, %p) or [%p, %p)\n", ProgramName(),
            &boot_stack, &boot_stack + 1, &phys_exception_stack, &phys_exception_stack + 1);
   }
 }
@@ -203,50 +209,50 @@ void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
 #ifndef __i386__
 
 void Symbolize::PrintRegisters(const PhysExceptionState& exc) {
-  Printf("%s: Registers stored at %p: {{{hexdump:", kProgramName_, &exc);
+  Printf("%s: Registers stored at %p: {{{hexdump:", ProgramName(), &exc);
 
 #if defined(__aarch64__)
 
   for (size_t i = 0; i < ktl::size(exc.regs.r); ++i) {
     if (i % 4 == 0) {
-      Printf("\n%s: ", kProgramName_);
+      Printf("\n%s: ", ProgramName());
     }
     Printf("  %sX%zu: 0x%016" PRIx64, i < 10 ? " " : "", i, exc.regs.r[i]);
   }
   Printf("  X30: 0x%016" PRIx64 "\n", exc.regs.lr);
   Printf("%s:    SP: 0x%016" PRIx64 "   PC: 0x%016" PRIx64 " SPSR: 0x%016" PRIx64 "\n",
-         kProgramName_, exc.regs.sp, exc.regs.pc, exc.regs.cpsr);
-  Printf("%s:   ESR: 0x%016" PRIx64 "  FAR: 0x%016" PRIx64 "\n", kProgramName_,
+         ProgramName(), exc.regs.sp, exc.regs.pc, exc.regs.cpsr);
+  Printf("%s:   ESR: 0x%016" PRIx64 "  FAR: 0x%016" PRIx64 "\n", ProgramName(),
          exc.exc.arch.u.arm_64.esr, exc.exc.arch.u.arm_64.far);
 
 #elif defined(__x86_64__)
 
   Printf("%s:  RAX: 0x%016" PRIx64 " RBX: 0x%016" PRIx64 " RCX: 0x%016" PRIx64 " RDX: 0x%016" PRIx64
          "\n",
-         kProgramName_, exc.regs.rax, exc.regs.rbx, exc.regs.rcx, exc.regs.rdx);
+         ProgramName(), exc.regs.rax, exc.regs.rbx, exc.regs.rcx, exc.regs.rdx);
   Printf("%s:  RSI: 0x%016" PRIx64 " RDI: 0x%016" PRIx64 " RBP: 0x%016" PRIx64 " RSP: 0x%016" PRIx64
          "\n",
-         kProgramName_, exc.regs.rsi, exc.regs.rdi, exc.regs.rbp, exc.regs.rsp);
+         ProgramName(), exc.regs.rsi, exc.regs.rdi, exc.regs.rbp, exc.regs.rsp);
   Printf("%s:   R8: 0x%016" PRIx64 "  R9: 0x%016" PRIx64 " R10: 0x%016" PRIx64 " R11: 0x%016" PRIx64
          "\n",
-         kProgramName_, exc.regs.r8, exc.regs.r9, exc.regs.r10, exc.regs.r11);
+         ProgramName(), exc.regs.r8, exc.regs.r9, exc.regs.r10, exc.regs.r11);
   Printf("%s:  R12: 0x%016" PRIx64 " R13: 0x%016" PRIx64 " R14: 0x%016" PRIx64 " R15: 0x%016" PRIx64
          "\n",
-         kProgramName_, exc.regs.r12, exc.regs.r13, exc.regs.r14, exc.regs.r15);
+         ProgramName(), exc.regs.r12, exc.regs.r13, exc.regs.r14, exc.regs.r15);
   Printf("%s:  RIP: 0x%016" PRIx64 " RFLAGS: 0x%08" PRIx64 " FS.BASE: 0x%016" PRIx64
          " GS.BASE: 0x%016" PRIx64 "\n",
-         kProgramName_, exc.regs.rip, exc.regs.rflags, exc.regs.fs_base, exc.regs.gs_base);
-  Printf("%s:   V#: " PRIu64 "  ERR: %#" PRIx64 "  CR2: %016" PRIx64 "\n", kProgramName_,
+         ProgramName(), exc.regs.rip, exc.regs.rflags, exc.regs.fs_base, exc.regs.gs_base);
+  Printf("%s:   V#: " PRIu64 "  ERR: %#" PRIx64 "  CR2: %016" PRIx64 "\n", ProgramName(),
          exc.exc.arch.u.x86_64.vector, exc.exc.arch.u.x86_64.err_code, exc.exc.arch.u.x86_64.cr2);
 
 #endif
 
-  Printf("%s: }}}\n", kProgramName_);
+  Printf("%s: }}}\n", ProgramName());
 }
 
 void Symbolize::PrintException(uint64_t vector, const char* vector_name,
                                const PhysExceptionState& exc) {
-  Printf("%s: exception vector %s (%#" PRIx64 ")\n", Symbolize::kProgramName_, vector_name, vector);
+  Printf("%s: exception vector %s (%#" PRIx64 ")\n", ProgramName(), vector_name, vector);
 
   // Always print the context, even if it was printed earlier.
   context_done_ = false;

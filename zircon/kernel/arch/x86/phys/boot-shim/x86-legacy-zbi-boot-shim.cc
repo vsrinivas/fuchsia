@@ -81,9 +81,9 @@ MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
     auto result = MemRangeTable::FromSpan(it->header->type, it->payload);
     if (result.is_error()) {
       ktl::string_view type = zbitl::TypeName(it->header->type);
-      printf("%s: Bad legacy %.*s item: %.*s\n", Symbolize::kProgramName_,
-             static_cast<int>(type.size()), type.data(),
-             static_cast<int>(result.error_value().size()), result.error_value().data());
+      printf("%s: Bad legacy %.*s item: %.*s\n", ProgramName(), static_cast<int>(type.size()),
+             type.data(), static_cast<int>(result.error_value().size()),
+             result.error_value().data());
     } else {
       table = result.value();
       auto edit_result = scan_zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
@@ -112,7 +112,7 @@ void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
 
   ZbiInitMemory(zbi, GetZbiMemoryRanges(input_zbi));
 
-  Shim shim(Symbolize::kProgramName_);
+  Shim shim(ProgramName());
   shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
 
   // The pool knows all the memory details, so populate the new ZBI item that

@@ -53,9 +53,8 @@ void FindTestRamReservation(RamReservation& ram) {
           ram.paddr = aligned_start;
           if (gBootOptions->phys_verbose) {
             // Dump out the memory usage again to show the reservation.
-            printf("%s: Physical memory after kernel.test.ram.reserve carve-out:\n",
-                   Symbolize::kProgramName_);
-            pool.PrintMemoryRanges(Symbolize::kProgramName_);
+            printf("%s: Physical memory after kernel.test.ram.reserve carve-out:\n", ProgramName());
+            pool.PrintMemoryRanges(ProgramName());
           }
           return;
         }
@@ -67,7 +66,7 @@ void FindTestRamReservation(RamReservation& ram) {
 
   printf("%s: ERROR: Cannot reserve %#" PRIx64
          " bytes of RAM for kernel.test.ram.reserve request!\n",
-         Symbolize::kProgramName_, ram.size);
+         ProgramName(), ram.size);
 }
 
 }  // namespace

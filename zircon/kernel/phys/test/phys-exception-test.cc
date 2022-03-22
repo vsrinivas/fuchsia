@@ -41,8 +41,8 @@ PHYS_SINGLETHREAD uint64_t HandleExpectedException(uint64_t vector, const char* 
   ZX_ASSERT(test_value == 17);
   test_value = 23;
 
-  printf("%s: Resume from exception at %#" PRIx64 " to PC %#" PRIx64 "...\n",
-         Symbolize::kProgramName_, state.pc(), kExceptionResume);
+  printf("%s: Resume from exception at %#" PRIx64 " to PC %#" PRIx64 "...\n", ProgramName(),
+         state.pc(), kExceptionResume);
 
   return PhysExceptionResume(state, kExceptionResume, state.sp(), state.psr());
 }

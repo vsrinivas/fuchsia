@@ -131,7 +131,7 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
           ZX_DEBUG_ASSERT(handoff_table.size() == table->size());
           ktl::copy(table->begin(), table->end(), handoff_table.begin());
         } else {
-          printf("%s: NOTE: ignored invalid CPU topology payload: %.*s\n", Symbolize::kProgramName_,
+          printf("%s: NOTE: ignored invalid CPU topology payload: %.*s\n", ProgramName(),
                  static_cast<int>(table.error_value().size()), table.error_value().data());
         }
         SaveForMexec(*header, payload);
@@ -186,8 +186,8 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
 void HandoffPrep::SaveForMexec(const zbi_header_t& header, ktl::span<const ktl::byte> payload) {
   auto result = zbitl::Image(mexec_data_).Append(header, payload);
   if (result.is_error()) {
-    printf("%s: ERROR: failed to append item of %zu bytes to mexec image: ",
-           Symbolize::kProgramName_, payload.size_bytes());
+    printf("%s: ERROR: failed to append item of %zu bytes to mexec image: ", ProgramName(),
+           payload.size_bytes());
     zbitl::PrintViewError(result.error_value());
   }
   // Don't make it fatal in production if there's too much to fit.

@@ -20,6 +20,9 @@ class FramePointer;
 class ShadowCallStackBacktrace;
 struct PhysExceptionState;
 
+// Returns the name of the current program.
+const char* ProgramName();
+
 class Symbolize {
  public:
   // Each program contains `const char Symbolize::kProgramName_[] = "myname";`.

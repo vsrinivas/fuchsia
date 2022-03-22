@@ -31,7 +31,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   StdoutFromCmdline(gLegacyBoot.cmdline);
 
-  LegacyBootShim shim(Symbolize::kProgramName_, gLegacyBoot);
+  LegacyBootShim shim(ProgramName(), gLegacyBoot);
   shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
 
   // The pool knows all the memory details, so populate the ZBI item that way.
@@ -43,7 +43,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   TrampolineBoot boot;
   if (shim.Load(boot)) {
     ArchSetUpAddressSpaceLate();
-    memory.PrintMemoryRanges(Symbolize::kProgramName_);
+    memory.PrintMemoryRanges(ProgramName());
     boot.Boot();
   }
 
