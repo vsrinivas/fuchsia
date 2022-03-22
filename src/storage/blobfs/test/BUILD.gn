@@ -60,10 +60,6 @@ source_set("test_utils") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/id_allocator",
   ]
-
-  # FIXME(fxbug.dev/95558): Fix instances of VLAs with a non-positive size detected by UBSan.
-  configs +=
-      [ "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS" ]
 }
 
 test("blobfs_unittest") {
@@ -119,10 +115,6 @@ test("blobfs_unittest") {
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # FIXME(fxbug.dev/95558): Fix instances of VLAs with a non-positive size detected by UBSan.
-  configs +=
-      [ "//build/config/sanitizers:suppress-ubsan-vla-bounds.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.

@@ -149,11 +149,7 @@ config("suppress-ubsan.DO-NOT-USE-THIS") {
 # Do not add this into any new targets where this is not already used.
 config("suppress-ubsan-vla-bounds.DO-NOT-USE-THIS") {
   cflags = [ "-fno-sanitize=vla-bound" ]
-  visibility = [
-    "//src/graphics/display/drivers/display:*",
-    "//src/lib/storage/vfs/cpp:*",
-    "//src/storage/blobfs/test:*",
-  ]
+  visibility = [ "//src/lib/storage/vfs/cpp:*" ]
 }
 
 config("no-shadow-call-stack") {
