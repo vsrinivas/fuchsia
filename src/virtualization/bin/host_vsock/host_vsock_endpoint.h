@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
-#define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
+#ifndef SRC_VIRTUALIZATION_BIN_HOST_VSOCK_HOST_VSOCK_ENDPOINT_H_
+#define SRC_VIRTUALIZATION_BIN_HOST_VSOCK_HOST_VSOCK_ENDPOINT_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -37,6 +37,8 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
   HostVsockEndpoint(async_dispatcher_t* dispatcher, AcceptorProvider acceptor_provider);
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> request);
+
+  fidl::InterfaceRequestHandler<fuchsia::virtualization::HostVsockEndpoint> GetHandler();
 
   // |fuchsia::virtualization::HostVsockConnector|
   void Connect(uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
@@ -79,4 +81,4 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
   std::unordered_map<uint32_t, fuchsia::virtualization::HostVsockAcceptorPtr> listeners_;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_HOST_VSOCK_ENDPOINT_H_
+#endif  // SRC_VIRTUALIZATION_BIN_HOST_VSOCK_HOST_VSOCK_ENDPOINT_H_

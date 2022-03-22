@@ -12,6 +12,7 @@ group("bin") {
     "guest-rs",
     "guest_manager",
     "guest_runner",
+    "host_vsock",
     "linux_runner",
     "vmm",
   ]
@@ -22,7 +23,7 @@ group("tests") {
 
   deps = [
     "guest-rs:tests",
-    "guest_manager:tests",
+    "host_vsock:tests",
     "linux_runner:tests",
     "vmm:tests",
   ]

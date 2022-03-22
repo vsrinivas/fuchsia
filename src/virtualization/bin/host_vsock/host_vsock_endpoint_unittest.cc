@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
+#include "src/virtualization/bin/host_vsock/host_vsock_endpoint.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -11,7 +11,7 @@
 #include <unordered_map>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
+#include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
 static constexpr uint32_t kGuestCid = 3;
 static constexpr uint32_t kOtherGuestCid = 4;

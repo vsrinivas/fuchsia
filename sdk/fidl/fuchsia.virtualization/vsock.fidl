@@ -10,6 +10,7 @@ using zx;
 /// CIDs for guests are assigned by the Manager and can be found in the
 /// corresponding `InstanceInfo` structure.
 const HOST_CID uint32 = 2;
+const DEFAULT_GUEST_CID uint32 = 3;
 
 /// Exposed by guests capable of listening via vsocks. On a request to establish
 /// a connection, the `Accept` method will be called. If the port is open and
@@ -81,6 +82,7 @@ protocol GuestVsockEndpoint {
 
 /// Exposed by a host to provide the ability for listeners to be multiplexed by
 /// port and to manage dynamic port allocation for outbound connections.
+@discoverable
 protocol HostVsockEndpoint {
     /// Register `acceptor` to be invoked for any connection requests to `port`.
     Listen(resource struct {

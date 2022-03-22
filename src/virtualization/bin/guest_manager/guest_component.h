@@ -10,7 +10,7 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"
-#include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
+#include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
 // Maintains references to resources associated with a guest throughout the
 // lifetime of the guest.

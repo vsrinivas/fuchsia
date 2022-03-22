@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
+#include "src/virtualization/bin/host_vsock/host_vsock_endpoint.h"
 
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
@@ -139,4 +139,9 @@ void HostVsockEndpoint::FreeEphemeralPort(uint32_t port) {
   // Add the port to the quarantine list.
   quarantined_ports_.push_back(QuarantinedPort{
       .port = port, .available_time = async::Now(dispatcher_) + kPortQuarantineTime});
+}
+
+fidl::InterfaceRequestHandler<fuchsia::virtualization::HostVsockEndpoint>
+HostVsockEndpoint::GetHandler() {
+  return bindings_.GetHandler(this);
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_
-#define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_
+#ifndef SRC_VIRTUALIZATION_BIN_HOST_VSOCK_GUEST_VSOCK_ENDPOINT_H_
+#define SRC_VIRTUALIZATION_BIN_HOST_VSOCK_GUEST_VSOCK_ENDPOINT_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -27,4 +27,4 @@ class GuestVsockEndpoint : public fuchsia::virtualization::GuestVsockAcceptor {
   fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint_;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_VSOCK_ENDPOINT_H_
+#endif  // SRC_VIRTUALIZATION_BIN_HOST_VSOCK_GUEST_VSOCK_ENDPOINT_H_

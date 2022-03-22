@@ -14,7 +14,7 @@
 #include <unordered_map>
 
 #include "src/virtualization/bin/guest_manager/guest_component.h"
-#include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
+#include "src/virtualization/bin/host_vsock/host_vsock_endpoint.h"
 
 // Per the virto-vsock spec, CID values 0 and 1 are reserved and CID 2 is used
 // to address the host. We'll allocate CIDs linearly starting at 3 for each
