@@ -8,6 +8,7 @@
             "/data:remotefs:data",
             "/data/tmp:tmpfs",
             "/dev:devtmpfs",
+            "/dev/pts:devpts",
             "/proc:proc",
         ],
         apex_hack: [ "com.android.runtime" ],
