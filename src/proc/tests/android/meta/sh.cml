@@ -11,6 +11,7 @@
             "/dev/pts:devpts",
             "/proc:proc",
         ],
+        features: [ "binder" ],
         apex_hack: [ "com.android.runtime" ],
     },
 }

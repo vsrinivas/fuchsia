@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::device::wayland::serve_wayland;
+use crate::device::{binder::create_binders, wayland::serve_wayland};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -19,6 +19,10 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                     b"/data/tmp/wayland-0".to_vec(),
                     b"/data/tmp/wayland-1".to_vec(),
                 )?;
+            }
+            "binder" => {
+                // Creates the various binder drivers (/dev/binder, /dev/hwbinder, /dev/vndbinder).
+                create_binders(current_task.kernel())?;
             }
             feature => {
                 log::warn!("Unsupported feature: {:?}", feature);

@@ -5,5 +5,6 @@
         mounts: [ "/:ext4:data/system.img" ],
         user: "root:x:0:0",
         kernel_cmdline: "androidboot.hardware=starnix",
+        features: [ "binder" ],
     },
 }
