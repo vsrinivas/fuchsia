@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_USB_HUB_H_
-#define SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_USB_HUB_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_HUB_USB_HUB_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_HUB_USB_HUB_H_
 #include <fuchsia/hardware/usb/bus/cpp/banjo.h>
 #include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hub/cpp/banjo.h>
@@ -206,6 +206,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   ddk::UsbBusProtocolClient bus_;
   async::Loop loop_;
   std::unique_ptr<fpromise::executor> executor_;
+  sync_completion_t thread_start_;  // Completion signaled when thread starts running.
   thrd_t callback_thread_;
   sync_completion_t xfer_done_;
 
@@ -215,4 +216,4 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
 }  // namespace usb_hub
 
-#endif  // SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_USB_HUB_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_HUB_USB_HUB_H_

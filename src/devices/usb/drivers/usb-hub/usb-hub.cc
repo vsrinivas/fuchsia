@@ -18,6 +18,9 @@
 
 namespace usb_hub {
 
+// A timeout guarding DDK routines from blocking their thread indefinitely.
+static constexpr auto kSafetyTimeout = ZX_SEC(5);
+
 usb_speed_t PortStatus::GetSpeed(usb_speed_t hub_speed) const {
   usb_speed_t speed;
   if (hub_speed == USB_SPEED_SUPER) {
@@ -170,6 +173,13 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
     txn_->Reply(status);
     return;
   }
+  status = sync_completion_wait(
+      &thread_start_, kSafetyTimeout);  // Make sure thread is running before replying to txn_
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Thread start timed out!");
+    txn_->Reply(status);
+    return;
+  }
   for (size_t i = 0; i < port_status_.size(); i++) {
     HandlePortStatusChanged(IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
   }
@@ -191,6 +201,7 @@ void UsbHubDevice::HandlePortStatusChanged(PortNumber port) {
 }
 
 void UsbHubDevice::InterruptCallback() {
+  sync_completion_signal(&thread_start_);  // Signal completion. Thread is running.
   // Data to be extracted from the request
   size_t hub_bit_count =
       hub_descriptor_.b_nbr_ports + 1;  // Number of ports including the hub itself
@@ -441,7 +452,6 @@ void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
     zxlogf(ERROR, "Could not join interrupt thread");
     return;
   }
-
   txn.Reply();
 }
 
@@ -542,13 +552,14 @@ zx_status_t UsbHubDevice::ControlOut(uint8_t request_type, uint8_t request, uint
         if (request_status != ZX_OK) {
           request_pool_.Add(std::move(request));
           status = request_status;
+          sync_completion_signal(&completion);
           return;
         }
         request_pool_.Add(std::move(request));
         sync_completion_signal(&completion);
       }));
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  return ZX_OK;
+  return status;
 }
 
 std::optional<Request> UsbHubDevice::AllocRequest() {
