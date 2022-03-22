@@ -84,7 +84,6 @@ fuchsia_test_package("rust-test-runner-test") {
     "test_data/huge-rust-tests",
     "test_data/no-rust-tests",
     "test_data/sample-rust-tests",
-    "//src/sys/test_runners/lib_loader_cache:lib_loader_runner_cache_cmp",
   ]
 }
 

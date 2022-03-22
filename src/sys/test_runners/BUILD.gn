@@ -33,7 +33,6 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/library_loader:library_loader",
     "//src/sys/lib/runner",
-    "//src/sys/test_runners/fidl/fuchsia.test.runner:fuchsia.test.runner-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
@@ -121,7 +120,11 @@ fuchsia_component("echo_server_for_concurrency_test") {
 }
 
 fuchsia_unittest_package("test-runner-unit-tests") {
-  deps = [ ":lib_test" ]
+  deps = [
+    ":lib_test",
+    "//src/sys/lib/library_loader:config_test_bar_baz",
+    "//src/sys/lib/library_loader:config_test_foo",
+  ]
 }
 
 fuchsia_unittest_package("test-runner-test-lib-unit-tests") {
@@ -143,7 +146,6 @@ group("test_runners") {
     "gtest",
     "inspect",
     "legacy_test",
-    "lib_loader_cache",
     "rust",
     "starnix",
     "stress_test",
@@ -161,7 +163,6 @@ group("tests") {
     "gtest:tests",
     "inspect:tests",
     "legacy_test:tests",
-    "lib_loader_cache:tests",
     "rust:tests",
     "starnix:tests",
     "stress_test:tests",
@@ -176,19 +177,9 @@ group("test-with-process-launcher") {
   metadata = {
     test_component_manifest_cml = [
       {
-        children = [
-          {
-            name = "lib_loader_cache"
-            url = "#meta/lib_loader_runner_cache.cm"
-          },
-        ]
         use = [
           {
             protocol = [ "fuchsia.process.Launcher" ]
-          },
-          {
-            protocol = [ "fuchsia.test.runner.LibraryLoaderCacheBuilder" ]
-            from = "#lib_loader_cache"
           },
         ]
       },

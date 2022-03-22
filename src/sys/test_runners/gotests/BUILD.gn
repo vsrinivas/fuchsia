@@ -84,7 +84,6 @@ fuchsia_test_package("go-test-runner-test") {
   deps = [
     "test_data/empty_go_test:empty-go-test",
     "test_data/sample_go_test:sample-go-test",
-    "//src/sys/test_runners/lib_loader_cache:lib_loader_runner_cache_cmp",
   ]
 }
 
