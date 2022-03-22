@@ -126,16 +126,17 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   const StorageSize kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
-  SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
-                             SystemLogRecorder::WriteParameters{
-                                 .period = kWriterPeriod,
-                                 .max_write_size = kWriteSize,
-                                 .logs_dir = temp_dir.path(),
-                                 .max_num_files = 2u,
-                                 .total_log_size = 2u * kWriteSize,
-                             },
-                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
-                             std::unique_ptr<Encoder>(new IdentityEncoder()));
+  SystemLogRecorder recorder(
+      dispatcher(), dispatcher(), services(),
+      SystemLogRecorder::WriteParameters{
+          .period = kWriterPeriod,
+          .max_write_size = kWriteSize,
+          .logs_dir = temp_dir.path(),
+          .max_num_files = 2u,
+          .total_log_size = 2u * kWriteSize,
+      },
+      std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty())),
+      std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
   RunLoopFor(kTimeWaitForLimitedLogs);
@@ -289,16 +290,17 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
 
   const StorageSize kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
-  SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
-                             SystemLogRecorder::WriteParameters{
-                                 .period = kWriterPeriod,
-                                 .max_write_size = kWriteSize,
-                                 .logs_dir = temp_dir.path(),
-                                 .max_num_files = 2u,
-                                 .total_log_size = 2u * kWriteSize,
-                             },
-                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
-                             std::unique_ptr<Encoder>(new IdentityEncoder()));
+  SystemLogRecorder recorder(
+      dispatcher(), dispatcher(), services(),
+      SystemLogRecorder::WriteParameters{
+          .period = kWriterPeriod,
+          .max_write_size = kWriteSize,
+          .logs_dir = temp_dir.path(),
+          .max_num_files = 2u,
+          .total_log_size = 2u * kWriteSize,
+      },
+      std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty())),
+      std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
   RunLoopFor(kTimeWaitForLimitedLogs);
@@ -409,16 +411,17 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
   const StorageSize kWriteSize =
       kMaxLogLineSize * 2 + kDroppedFormatStrSize + StorageSize::Bytes(kFlushStr.size());
 
-  SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
-                             SystemLogRecorder::WriteParameters{
-                                 .period = kWriterPeriod,
-                                 .max_write_size = kWriteSize,
-                                 .logs_dir = temp_dir.path(),
-                                 .max_num_files = 2u,
-                                 .total_log_size = 2u * kWriteSize,
-                             },
-                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
-                             std::unique_ptr<Encoder>(new IdentityEncoder()));
+  SystemLogRecorder recorder(
+      dispatcher(), dispatcher(), services(),
+      SystemLogRecorder::WriteParameters{
+          .period = kWriterPeriod,
+          .max_write_size = kWriteSize,
+          .logs_dir = temp_dir.path(),
+          .max_num_files = 2u,
+          .total_log_size = 2u * kWriteSize,
+      },
+      std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty())),
+      std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
   RunLoopFor(kTimeWaitForLimitedLogs);

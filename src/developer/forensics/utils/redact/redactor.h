@@ -18,6 +18,7 @@ namespace forensics {
 
 class RedactorBase {
  public:
+  explicit RedactorBase(inspect::BoolProperty redaction_enabled);
   virtual ~RedactorBase() = default;
   //
   // Redacts |text| in-place and returns a reference to |text|.
@@ -26,6 +27,9 @@ class RedactorBase {
   // Unredacted / redacted version of canary message for confirming log redaction.
   virtual std::string UnredactedCanary() const = 0;
   virtual std::string RedactedCanary() const = 0;
+
+ private:
+  inspect::BoolProperty redaction_enabled_;
 };
 
 // Redacts PII from text.
@@ -35,7 +39,8 @@ class RedactorBase {
 // https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/diagnostics/archivist/src/logs/redact.rs
 class Redactor : public RedactorBase {
  public:
-  explicit Redactor(int starting_id, inspect::UintProperty cache_size);
+  Redactor(int starting_id, inspect::UintProperty cache_size,
+           inspect::BoolProperty redaction_enabled);
   ~Redactor() override = default;
 
   std::string& Redact(std::string& text) override;
@@ -55,6 +60,7 @@ class Redactor : public RedactorBase {
 // Do-nothing redactor
 class IdentityRedactor : public RedactorBase {
  public:
+  explicit IdentityRedactor(inspect::BoolProperty redaction_enabled);
   ~IdentityRedactor() override = default;
 
   std::string& Redact(std::string& text) override;

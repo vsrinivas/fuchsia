@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/utils/redact/redactor.h"
 
+#include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -100,8 +101,12 @@ constexpr std::string_view kRedactedCanary =
 
 }  // namespace
 
-Redactor::Redactor(const int starting_id, inspect::UintProperty cache_size)
-    : cache_(std::move(cache_size), starting_id) {
+RedactorBase::RedactorBase(inspect::BoolProperty redaction_enabled)
+    : redaction_enabled_(std::move(redaction_enabled)) {}
+
+Redactor::Redactor(const int starting_id, inspect::UintProperty cache_size,
+                   inspect::BoolProperty redaction_enabled)
+    : RedactorBase(std::move(redaction_enabled)), cache_(std::move(cache_size), starting_id) {
   Add(ReplaceIPv4())
       .Add(ReplaceIPv6())
       .Add(ReplaceMac())
@@ -143,6 +148,9 @@ Redactor& Redactor::AddIdReplacer(std::string_view pattern, std::string_view for
 std::string Redactor::UnredactedCanary() const { return std::string(kUnredactedCanary); }
 
 std::string Redactor::RedactedCanary() const { return std::string(kRedactedCanary); }
+
+IdentityRedactor::IdentityRedactor(inspect::BoolProperty redaction_enabled)
+    : RedactorBase(std::move(redaction_enabled)) {}
 
 std::string& IdentityRedactor::Redact(std::string& text) { return text; }
 

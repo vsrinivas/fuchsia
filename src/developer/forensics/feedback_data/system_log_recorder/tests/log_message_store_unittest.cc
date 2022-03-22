@@ -9,6 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/inspect/cpp/vmo/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
@@ -42,12 +43,13 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
 }
 
 std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
-  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty()));
 }
 
 class SimpleRedactor : public RedactorBase {
  public:
-  SimpleRedactor(const bool count_calls) : count_calls_(count_calls) {}
+  SimpleRedactor(const bool count_calls)
+      : RedactorBase(inspect::BoolProperty()), count_calls_(count_calls) {}
 
   std::string& Redact(std::string& text) override {
     text = (count_calls_) ? fxl::StringPrintf("R: %d", ++num_calls_) : "R";

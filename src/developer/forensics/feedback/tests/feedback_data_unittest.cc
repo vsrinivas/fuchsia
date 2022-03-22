@@ -42,7 +42,7 @@ class FeedbackDataTest : public UnitTestFixture {
  private:
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
-  IdentityRedactor redactor_;
+  IdentityRedactor redactor_{inspect::BoolProperty()};
   RemoteDeviceIdProvider device_id_provider_;
 };
 

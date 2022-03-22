@@ -8,6 +8,7 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/result.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
@@ -184,7 +185,7 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
-  IdentityRedactor redactor_;
+  IdentityRedactor redactor_{inspect::BoolProperty()};
 
  protected:
   std::unique_ptr<Datastore> datastore_;

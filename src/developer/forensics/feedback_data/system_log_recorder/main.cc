@@ -64,7 +64,7 @@ int main() {
                                  .total_log_size = kPersistentLogsMaxSize,
                              },
                              // Don't set up Inspect because all messages in the previous boot log
-                             // are in the currnt boot log and counted in Inspect.
+                             // are in the current boot log and counted in Inspect.
                              feedback::RedactorFromConfig(nullptr /*no inspect*/),
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 

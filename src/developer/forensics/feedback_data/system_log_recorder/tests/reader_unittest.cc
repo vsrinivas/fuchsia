@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/logger.h>
 
 #include <memory>
@@ -43,7 +44,7 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
 }
 
 std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
-  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty()));
 }
 
 std::string MakeLogFilePath(files::ScopedTempDir& temp_dir, const size_t file_num) {

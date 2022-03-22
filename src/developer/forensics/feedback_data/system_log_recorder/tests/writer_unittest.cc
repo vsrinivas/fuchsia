@@ -70,7 +70,7 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
 }
 
 std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
-  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty()));
 }
 
 std::string MakeLogFilePath(files::ScopedTempDir& temp_dir, const size_t file_num) {

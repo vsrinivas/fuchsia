@@ -19,7 +19,7 @@ class IdentityRedactorTest : public ::testing::Test {
   std::string Redact(std::string text) { return redactor_.Redact(text); }
 
  private:
-  IdentityRedactor redactor_;
+  IdentityRedactor redactor_{inspect::BoolProperty()};
 };
 
 TEST_F(IdentityRedactorTest, Check) {
@@ -33,7 +33,7 @@ class RedactorTest : public ::testing::Test {
   const Redactor& redactor() const { return redactor_; }
 
  private:
-  Redactor redactor_{0u, inspect::UintProperty()};
+  Redactor redactor_{0u, inspect::UintProperty(), inspect::BoolProperty()};
 };
 
 TEST_F(RedactorTest, Check) {

@@ -27,14 +27,21 @@ int DefaultCacheIdFn() {
 std::unique_ptr<RedactorBase> RedactorFromConfig(inspect::Node* root_node,
                                                  const std::string& enable_flag_file,
                                                  ::fit::function<int()> seed_cache_id) {
+  std::unique_ptr<RedactorBase> redactor;
+  auto redaction_enabled = root_node == nullptr ? inspect::BoolProperty()
+                                                : root_node->CreateBool("redaction_enabled", false);
   if (files::IsFile(enable_flag_file)) {
+    redaction_enabled.Set(true);
     auto num_redaction_ids = root_node == nullptr ? inspect::UintProperty()
                                                   : root_node->CreateUint("num_redaction_ids", 0u);
-    return std::unique_ptr<RedactorBase>(
-        new Redactor(seed_cache_id(), std::move(num_redaction_ids)));
+    redactor = std::unique_ptr<RedactorBase>(
+        new Redactor(seed_cache_id(), std::move(num_redaction_ids), std::move(redaction_enabled)));
   } else {
-    return std::unique_ptr<RedactorBase>(new IdentityRedactor);
+    redaction_enabled.Set(false);
+    redactor = std::unique_ptr<RedactorBase>(new IdentityRedactor(std::move(redaction_enabled)));
   }
+
+  return redactor;
 }
 
 }  // namespace forensics::feedback

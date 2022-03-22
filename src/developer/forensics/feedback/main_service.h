@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -62,6 +63,7 @@ class MainService {
   inspect::Node* inspect_root_;
   cobalt::Logger* cobalt_;
   std::unique_ptr<RedactorBase> redactor_;
+
   std::unique_ptr<DeviceIdProvider> device_id_provider_;
 
   InspectNodeManager inspect_node_manager_;

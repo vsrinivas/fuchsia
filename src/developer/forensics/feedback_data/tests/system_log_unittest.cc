@@ -7,6 +7,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/result.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -129,7 +130,7 @@ class CollectLogDataTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::DiagnosticsArchiveBase> log_server_;
-  IdentityRedactor redactor_;
+  IdentityRedactor redactor_{inspect::BoolProperty()};
 };
 
 TEST_F(CollectLogDataTest, Succeed_AllSystemLogs) {
@@ -190,6 +191,10 @@ TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
 }
 
 class SimpleRedactor : public RedactorBase {
+ public:
+  SimpleRedactor() : RedactorBase(inspect::BoolProperty()) {}
+
+ private:
   std::string& Redact(std::string& text) override {
     text = "REDACTED";
     return text;
