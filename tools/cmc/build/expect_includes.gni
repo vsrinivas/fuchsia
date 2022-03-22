@@ -79,9 +79,6 @@ template("expect_includes") {
 # Expected includes from transitive deps on `expect_includes` will be
 # collected. Those can then be passed to `cmc check-includes`.
 #
-# Generate a file that contains all expected includes from a manifest and
-# a set of transitive dependencies. Its content is required by `cmc_check_includes()`.
-#
 # Parameters
 #
 #   manifest (required)
@@ -91,8 +88,6 @@ template("expect_includes") {
 #   testonly
 #   visibility
 template("collect_expected_includes") {
-  # Walks the `cmc_expected_includes_(cmx|cml)` metadata keys (depending on
-  # the manifest's extension) up to an `expect_includes_barrier`.
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
@@ -122,13 +117,22 @@ template("collect_expected_includes") {
 #   manifest (required)
 #     [file] The path to the cmx file that is to be processed
 #
-#   expected_includes (required)
-#     [file] A path to the output of `collect_expected_includes()`.
-#
 #   deps
 #   testonly
 #   visibility
 template("cmc_check_includes") {
+  expected_includes_label = "${target_name}_expected_includes"
+  collect_expected_includes(expected_includes_label) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "metadata",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
@@ -139,10 +143,9 @@ template("cmc_check_includes") {
     if (!defined(deps)) {
       deps = []
     }
-    inputs = [
-      invoker.manifest,
-      invoker.expected_includes,
-    ]
+    deps += [ ":" + expected_includes_label ]
+    inputs =
+        [ invoker.manifest ] + get_target_outputs(":" + expected_includes_label)
     outputs = [ "$target_out_dir/$target_name.gn_stamp" ]
     depfile = "$target_gen_dir/$target_name.d"
 
