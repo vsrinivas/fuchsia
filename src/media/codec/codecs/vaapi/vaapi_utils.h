@@ -30,13 +30,13 @@ class VADisplayWrapper {
 
 class ScopedConfigID {
  public:
-  ScopedConfigID(VAConfigID config_id) : id_(config_id) {}
+  explicit ScopedConfigID(VAConfigID config_id) : id_(config_id) {}
   ~ScopedConfigID() { vaDestroyConfig(VADisplayWrapper::GetSingleton()->display(), id_); }
 
   VAConfigID id() const { return id_; }
 
  private:
-  VAConfigID id_;
+  VAConfigID id_{VA_INVALID_ID};
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedConfigID);
 };
 
@@ -44,24 +44,24 @@ class ScopedBufferID {
  public:
   explicit ScopedBufferID(VABufferID buffer_id) : id_(buffer_id) {}
   ~ScopedBufferID() {
-    if (id_)
+    if (id_ != VA_INVALID_ID)
       vaDestroyBuffer(VADisplayWrapper::GetSingleton()->display(), id_);
   }
   ScopedBufferID(ScopedBufferID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
   }
 
   ScopedBufferID& operator=(ScopedBufferID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
     return *this;
   }
 
   VABufferID id() const { return id_; }
 
  private:
-  VABufferID id_;
+  VABufferID id_{VA_INVALID_ID};
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedBufferID);
 };
 
@@ -69,24 +69,24 @@ class ScopedContextID {
  public:
   explicit ScopedContextID(VAContextID buffer_id) : id_(buffer_id) {}
   ~ScopedContextID() {
-    if (id_)
+    if (id_ != VA_INVALID_ID)
       vaDestroyContext(VADisplayWrapper::GetSingleton()->display(), id_);
   }
   ScopedContextID(ScopedContextID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
   }
 
   ScopedContextID& operator=(ScopedContextID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
     return *this;
   }
 
   VAContextID id() const { return id_; }
 
  private:
-  VAContextID id_;
+  VAContextID id_{VA_INVALID_ID};
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedContextID);
 };
 
@@ -94,17 +94,17 @@ class ScopedSurfaceID {
  public:
   explicit ScopedSurfaceID(VASurfaceID buffer_id) : id_(buffer_id) {}
   ~ScopedSurfaceID() {
-    if (id_)
+    if (id_ != VA_INVALID_SURFACE)
       vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &id_, 1);
   }
   ScopedSurfaceID(ScopedSurfaceID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_SURFACE;
   }
 
   ScopedSurfaceID& operator=(ScopedSurfaceID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_SURFACE;
     return *this;
   }
 
@@ -112,12 +112,12 @@ class ScopedSurfaceID {
 
   VASurfaceID release() {
     auto id = id_;
-    id_ = 0;
+    id_ = VA_INVALID_SURFACE;
     return id;
   }
 
  private:
-  VASurfaceID id_;
+  VASurfaceID id_{VA_INVALID_SURFACE};
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedSurfaceID);
 };
 
@@ -147,17 +147,19 @@ class VASurface {
 class ScopedImageID {
  public:
   explicit ScopedImageID(VAImageID image_id) : id_(image_id) {}
+  ScopedImageID() = default;
+
   ~ScopedImageID() { DestroyImageIfNecessary(); }
   ScopedImageID(ScopedImageID&& other) noexcept {
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
   }
 
   ScopedImageID& operator=(ScopedImageID&& other) noexcept {
     DestroyImageIfNecessary();
 
     id_ = other.id_;
-    other.id_ = 0;
+    other.id_ = VA_INVALID_ID;
     return *this;
   }
 
@@ -165,21 +167,21 @@ class ScopedImageID {
 
   VAImageID release() {
     auto id = id_;
-    id_ = 0;
+    id_ = VA_INVALID_ID;
     return id;
   }
 
  private:
   void DestroyImageIfNecessary() {
-    if (id_) {
+    if (id_ != VA_INVALID_ID) {
       VAStatus status = vaDestroyImage(VADisplayWrapper::GetSingleton()->display(), id_);
       if (status != VA_STATUS_SUCCESS) {
         FX_LOGS(FATAL) << "vaDestroyImage failed: " << status;
       }
     }
-    id_ = 0;
+    id_ = VA_INVALID_ID;
   }
-  VAImageID id_;
+  VAImageID id_{VA_INVALID_ID};
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedImageID);
 };
 

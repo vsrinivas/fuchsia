@@ -279,7 +279,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
 
   // Clean up the image; the data was already copied to the destination VMO
   // above.  The surface is cleaned up by ~processed_surface.
-  scoped_image = ScopedImageID(0);
+  scoped_image = ScopedImageID();
 
   std::optional<CodecPacket*> maybe_output_packet = free_output_packets_.WaitForElement();
   if (!maybe_output_packet) {
