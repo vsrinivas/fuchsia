@@ -78,13 +78,13 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
   component::OutgoingDirectory* GetOutgoingDirectory() { return outgoing_directory_.get(); }
 
-  fidl::ClientEnd<fuchsia_io::Directory> TakeSvcClientEnd() {
+  fidl::ClientEnd<fuchsia_io::Directory> TakeSvcClientEnd(
+      fidl::ClientEnd<fuchsia_io::Directory> root) {
     zx::channel server_end, client_end;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &server_end, &client_end));
     // Check if this has already be initialized.
     if (!svc_client_.is_valid()) {
-      auto root_ = TakeRootClientEnd();
-      svc_client_ = fidl::WireClient<fuchsia_io::Directory>(std::move(root_), dispatcher());
+      svc_client_ = fidl::WireClient<fuchsia_io::Directory>(std::move(root), dispatcher());
     }
 
     auto status =
@@ -164,7 +164,8 @@ TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
                 .is_ok());
 
   // Setup test client.
-  auto open_result = service::OpenServiceAt<fuchsia_examples::EchoService>(TakeSvcClientEnd());
+  auto open_result =
+      service::OpenServiceAt<fuchsia_examples::EchoService>(TakeSvcClientEnd(TakeRootClientEnd()));
   ZX_ASSERT(open_result.is_ok());
 
   fuchsia_examples::EchoService::ServiceClient service = std::move(open_result.value());
@@ -216,7 +217,8 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
 
   // Setup fuchsia.examples.Echo client
   for (auto [reversed, path] : kIsReversedAndPaths) {
-    auto client_end = service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(), path);
+    auto client_end =
+        service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()), path);
     ASSERT_EQ(client_end.status_value(), ZX_OK);
     fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
@@ -292,6 +294,51 @@ TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
   EXPECT_EQ(GetOutgoingDirectory()->RemoveDirectory(kTestDirectory).status_value(), ZX_OK);
 }
 
+// Test that we can connect to the outgoing directory via multiple connections.
+TEST_F(OutgoingDirectoryTest, ServeCanYieldMultipleConnections) {
+  // Setup fuchsia.examples.Echo server
+  EchoImpl regular_impl(/*reversed=*/false);
+  ASSERT_EQ(
+      GetOutgoingDirectory()->AddProtocol<fuchsia_examples::Echo>(&regular_impl).status_value(),
+      ZX_OK);
+
+  // Setup fuchsia.examples.Echo client
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  // First |Serve| is invoked as part of test setup, so we'll assert that a
+  // subsequent invocation is allowed.
+  ASSERT_EQ(GetOutgoingDirectory()->Serve(std::move(endpoints->server)).status_value(), ZX_OK);
+
+  std::vector<fidl::ClientEnd<fuchsia_io::Directory>> root_client_ends;
+  // Take client end for channel used during invocation of |Serve| during setup.
+  root_client_ends.emplace_back(TakeRootClientEnd());
+  // Take client end for channel used during invocation of |Serve| in this function.
+  root_client_ends.emplace_back(std::move(endpoints->client));
+
+  while (!root_client_ends.empty()) {
+    auto root = std::move(root_client_ends.back());
+    root_client_ends.pop_back();
+
+    auto client_end =
+        service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(/*root=*/std::move(root)));
+    ASSERT_EQ(client_end.status_value(), ZX_OK);
+    fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
+
+    std::string reply_received;
+    client->EchoString(
+        kTestString, [&reply_received, quit_loop = QuitLoopClosure()](
+                         fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+          ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
+                        result.error().FormatDescription().c_str());
+          auto* response = result.Unwrap();
+          reply_received = std::string(response->response.data(), response->response.size());
+          quit_loop();
+        });
+    RunLoop();
+
+    EXPECT_EQ(reply_received, kTestString);
+  }
+}
+
 TEST_F(OutgoingDirectoryTest, CreateFailsIfDispatcherIsNullptr) {
   ASSERT_DEATH(
       { auto outgoing_directory = component::OutgoingDirectory::Create(/*dispatcher=*/nullptr); },
@@ -305,12 +352,6 @@ TEST_F(OutgoingDirectoryTest, ServeFailsIfHandleInvalid) {
   endpoints->server.reset();
   EXPECT_EQ(outgoing_directory.Serve(std::move(endpoints->server)).status_value(),
             ZX_ERR_BAD_HANDLE);
-}
-
-TEST_F(OutgoingDirectoryTest, ServeFailsOnMultipleInvocation) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(GetOutgoingDirectory()->Serve(std::move(endpoints->server)).status_value(),
-            ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(OutgoingDirectoryTest, AddServiceFailsIfInstanceNameIsEmpty) {

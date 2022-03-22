@@ -83,8 +83,6 @@ class OutgoingDirectory final {
   // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  //
-  // ZX_ERR_ALREADY_BOUND: |Serve| had already been called before.
   zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request);
 
   // Starts serving the outgoing directory on the channel provided to this
@@ -314,10 +312,6 @@ class OutgoingDirectory final {
   // The OnConnectContext has to be stored in the heap because its pointer
   // is used by |OnConnect|, a static function, during channel connection attempt.
   std::map<std::string, std::map<std::string, OnConnectContext>> registered_handlers_ = {};
-
-  // Status used to track whether or not this object is serving the directory
-  // on a directory handle.
-  bool serving_ = false;
 };
 
 }  // namespace component

@@ -33,20 +33,17 @@ OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* 
     : dispatcher_(dispatcher), root_(root) {}
 
 OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
-    : dispatcher_(other.dispatcher_), root_(other.root_), serving_(other.serving_) {
+    : dispatcher_(other.dispatcher_), root_(other.root_) {
   other.dispatcher_ = nullptr;
   other.root_ = nullptr;
-  other.serving_ = false;
 }
 
 OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
   dispatcher_ = other.dispatcher_;
   root_ = other.root_;
-  serving_ = other.serving_;
 
   other.dispatcher_ = nullptr;
   other.root_ = nullptr;
-  other.serving_ = false;
 
   return *this;
 }
@@ -58,9 +55,6 @@ OutgoingDirectory::~OutgoingDirectory() {
 }
 
 zx::status<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request) {
-  if (serving_) {
-    return zx::error_status(ZX_ERR_ALREADY_BOUND);
-  }
   if (!directory_request.is_valid()) {
     return zx::error_status(ZX_ERR_BAD_HANDLE);
   }
@@ -70,7 +64,6 @@ zx::status<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> dir
     return zx::error_status(status);
   }
 
-  serving_ = true;
   return zx::make_status(status);
 }
 
