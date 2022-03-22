@@ -181,7 +181,7 @@ void MediaButtonsHandler::RegisterListener2(
     const ui_input::InputDeviceImpl* device_impl = it->second.first;
     const fuchsia::ui::input::InputReport* report = device_impl->LastReport();
     if (report) {
-      listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(*report));
+      listener->OnEvent(CreateMediaButtonsEvent(*report), [] {});
     }
   }
 

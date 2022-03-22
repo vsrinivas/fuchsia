@@ -20,29 +20,76 @@
 namespace root_presenter {
 namespace {
 
-// A mock for capturing events passed to the listener.
-class MockListener : public fuchsia::ui::policy::MediaButtonsListener {
+// A mock implementation which expects events via `OnMediaButtonsEvent()`.
+class LegacyListener : public fuchsia::ui::policy::MediaButtonsListener {
  public:
-  MockListener(fidl::InterfaceRequest<fuchsia::ui::policy::MediaButtonsListener> listener_request)
-      : binding_(this, std::move(listener_request)) {}
+  explicit LegacyListener(MediaButtonsHandler* handler) : binding_(this) {
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> fidl_handle;
+    binding_.Bind(fidl_handle.NewRequest());
+    handler->RegisterListener(std::move(fidl_handle));
+  }
 
+  // fuchsia::ui::policy::MediaButtonsListener
   void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
     if (!last_event_) {
       last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
     }
     event.Clone(last_event_.get());
-    media_button_event_count_++;
+    event_count_++;
   }
 
+  // fuchsia::ui::policy::MediaButtonsListener
+  void OnEvent(fuchsia::ui::input::MediaButtonsEvent event,
+               fuchsia::ui::policy::MediaButtonsListener::OnEventCallback cb) override {
+    FAIL() << "Should not receive modern events on legacy listener.";
+  }
+
+  // Test support.
   fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
-  uint32_t GetMediaButtonEventCount() { return media_button_event_count_; }
+  size_t GetEventCount() const { return event_count_; }
 
  private:
   fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> binding_;
-  uint32_t media_button_event_count_ = 0;
+  size_t event_count_ = 0;
   std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
 };
 
+// A mock implementation which expects events via `OnEvent()`.
+class ModernListener : public fuchsia::ui::policy::MediaButtonsListener {
+ public:
+  explicit ModernListener(MediaButtonsHandler* handler) : binding_(this) {
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> fidl_handle;
+    binding_.Bind(fidl_handle.NewRequest());
+    handler->RegisterListener2(std::move(fidl_handle));
+  }
+
+  // fuchsia::ui::policy::MediaButtonsListener
+  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
+    FAIL() << "Should not receive legacy events on modern listener.";
+  }
+
+  // fuchsia::ui::policy::MediaButtonsListener
+  void OnEvent(fuchsia::ui::input::MediaButtonsEvent event,
+               fuchsia::ui::policy::MediaButtonsListener::OnEventCallback cb) override {
+    if (!last_event_) {
+      last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
+    }
+    event.Clone(last_event_.get());
+    event_count_++;
+    cb();
+  }
+
+  // Test support.
+  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
+  size_t GetEventCount() const { return event_count_; }
+
+ private:
+  fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> binding_;
+  size_t event_count_ = 0;
+  std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
+};
+
+template <typename ListenerT>
 class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
                                 public ui_input::InputDeviceImpl::Listener {
  public:
@@ -59,18 +106,15 @@ class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
     device_added = false;
   }
 
-  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device){}
+  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {}
   void OnReport(ui_input::InputDeviceImpl* input_device, fuchsia::ui::input::InputReport report) {
     handler->OnReport(input_device->id(), std::move(report));
   }
 
  protected:
-  std::unique_ptr<MockListener> CreateListener() {
-    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
-    auto mock_listener = std::make_unique<MockListener>(listener_handle.NewRequest());
-    handler->RegisterListener(std::move(listener_handle));
+  std::unique_ptr<ListenerT> CreateListener() {
+    auto mock_listener = std::make_unique<ListenerT>(handler.get());
     RunLoopUntilIdle();
-
     return mock_listener;
   }
 
@@ -105,130 +149,133 @@ class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
   }
 };
 
+using ListenerTypes = ::testing::Types<LegacyListener, ModernListener>;
+TYPED_TEST_SUITE(MediaButtonsHandlerTest, ListenerTypes);
+
 // This test exercises delivering a report to handler after registration.
-TEST_F(MediaButtonsHandlerTest, ReportAfterRegistration) {
-  auto listener = CreateListener();
+TYPED_TEST(MediaButtonsHandlerTest, ReportAfterRegistration) {
+  auto listener = this->CreateListener();
 
   fuchsia::ui::input::MediaButtonsReport media_buttons;
   media_buttons.volume_down = true;
 
-  DispatchReport(std::move(media_buttons));
+  this->DispatchReport(std::move(media_buttons));
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(listener->GetLastEvent()->volume() == -1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
+  EXPECT_EQ(listener->GetLastEvent()->volume(), -1);
 }
 
 // This test exercises delivering a report to handler before registration. Upon
 // registration, the last report should be delivered to the handler.
-TEST_F(MediaButtonsHandlerTest, ReportBeforeRegistration) {
+TYPED_TEST(MediaButtonsHandlerTest, ReportBeforeRegistration) {
   {
     fuchsia::ui::input::MediaButtonsReport media_buttons;
     media_buttons.mic_mute = false;
 
-    DispatchReport(std::move(media_buttons));
+    this->DispatchReport(std::move(media_buttons));
   }
 
   {
     fuchsia::ui::input::MediaButtonsReport media_buttons;
     media_buttons.mic_mute = true;
 
-    DispatchReport(std::move(media_buttons));
+    this->DispatchReport(std::move(media_buttons));
   }
 
-  auto listener = CreateListener();
+  auto listener = this->CreateListener();
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
   EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
 }
 
 // This test ensures multiple listeners receive messages when dispatched by an
 // input device.
-TEST_F(MediaButtonsHandlerTest, MultipleListeners) {
-  auto listener = CreateListener();
-  auto listener2 = CreateListener();
+TYPED_TEST(MediaButtonsHandlerTest, MultipleListeners) {
+  auto listener = this->CreateListener();
+  auto listener2 = this->CreateListener();
 
   fuchsia::ui::input::MediaButtonsReport media_buttons;
   media_buttons.volume_up = true;
 
-  DispatchReport(std::move(media_buttons));
+  this->DispatchReport(std::move(media_buttons));
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(listener->GetLastEvent()->volume() == 1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
+  EXPECT_EQ(listener->GetLastEvent()->volume(), 1);
 
-  EXPECT_TRUE(listener2->GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(listener2->GetLastEvent()->volume() == 1);
+  EXPECT_EQ(listener2->GetEventCount(), 1U);
+  EXPECT_EQ(listener2->GetLastEvent()->volume(), 1);
 }
 
 // This test checks that pause is wired up correctly.
-TEST_F(MediaButtonsHandlerTest, PauseButton) {
-  auto listener = CreateListener();
+TYPED_TEST(MediaButtonsHandlerTest, PauseButton) {
+  auto listener = this->CreateListener();
 
   fuchsia::ui::input::MediaButtonsReport media_buttons = {};
   media_buttons.pause = true;
 
-  DispatchReport(media_buttons);
+  this->DispatchReport(media_buttons);
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
   EXPECT_TRUE(listener->GetLastEvent()->pause());
 
   media_buttons.pause = false;
-  DispatchReport(media_buttons);
+  this->DispatchReport(media_buttons);
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 2);
+  EXPECT_EQ(listener->GetEventCount(), 2U);
   EXPECT_FALSE(listener->GetLastEvent()->pause());
 }
 
 // This test ensures that the camera button state is sent forward
 // if the mic and camera are tied together.
-TEST_F(MediaButtonsHandlerTest, MicCameraTogether) {
+TYPED_TEST(MediaButtonsHandlerTest, MicCameraTogether) {
   {
     fuchsia::ui::input::MediaButtonsReport media_buttons;
     media_buttons.mic_mute = true;
     media_buttons.camera_disable = true;
 
-    DispatchReport(std::move(media_buttons));
+    this->DispatchReport(std::move(media_buttons));
   }
 
-  auto listener = CreateListener();
+  auto listener = this->CreateListener();
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
   EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
   EXPECT_TRUE(listener->GetLastEvent()->camera_disable());
 }
 
 // This test ensures that the camera button state is sent forward
 // if the mic and camera are separately controlled.
-TEST_F(MediaButtonsHandlerTest, MicCameraSeparate) {
+TYPED_TEST(MediaButtonsHandlerTest, MicCameraSeparate) {
   {
     fuchsia::ui::input::MediaButtonsReport media_buttons;
     media_buttons.mic_mute = true;
     media_buttons.camera_disable = false;
 
-    DispatchReport(std::move(media_buttons));
+    this->DispatchReport(std::move(media_buttons));
   }
 
-  auto listener = CreateListener();
+  auto listener = this->CreateListener();
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
   EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
   EXPECT_FALSE(listener->GetLastEvent()->camera_disable());
 }
 
 // This test ensures that the button state is delivered to media button
 // listeners when FDR is active.
-TEST_F(MediaButtonsHandlerTest, MediaButtonListeningDuringFDR) {
+TYPED_TEST(MediaButtonsHandlerTest, MediaButtonListeningDuringFDR) {
   {
     fuchsia::ui::input::MediaButtonsReport media_buttons;
     media_buttons.reset = true;
     media_buttons.volume_down = true;
 
-    DispatchReport(std::move(media_buttons));
+    this->DispatchReport(std::move(media_buttons));
   }
 
-  auto listener = CreateListener();
+  auto listener = this->CreateListener();
 
-  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
-  EXPECT_TRUE(listener->GetLastEvent()->volume() == -1);
+  EXPECT_EQ(listener->GetEventCount(), 1U);
+  EXPECT_EQ(listener->GetLastEvent()->volume(), -1);
 }
 
 }  // namespace
