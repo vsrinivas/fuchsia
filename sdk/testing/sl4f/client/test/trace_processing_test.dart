@@ -908,4 +908,27 @@ void main(List<String> args) {
     expect(results[2].values[0], _closeTo(59.9981988540704));
     expect(results[3].values[0], _closeTo(60.03445978045461));
   });
+
+  test('Memory metric missing fixed', () async {
+    // One useless event with memory_monitor category so that the check that
+    // memory_monitor data is there passes.
+    final event = CounterEvent()
+      ..category = 'memory_monitor'
+      ..name = 'useless'
+      ..pid = 1234
+      ..tid = 1235
+      ..start = TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1000))
+      ..id = 1
+      ..args = {};
+    final thread = Thread()
+      ..tid = 1235
+      ..events = [event];
+    final process = Process()
+      ..pid = 1234
+      ..threads = [thread];
+    final model = Model()..processes = [process];
+
+    final memoryMetrics = memoryMetricsProcessor(model, {});
+    expect(memoryMetrics, equals([]));
+  });
 }

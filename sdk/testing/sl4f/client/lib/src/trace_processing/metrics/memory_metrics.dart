@@ -40,7 +40,9 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
   }
   final totalMemory =
       filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'fixed')
-          ?.first
+          // Add a placeholder event so that [first] never throws an exception.
+          .followedBy([CounterEvent()])
+          .first
           ?.args['total'];
   if (totalMemory == null) {
     _log.warning(
