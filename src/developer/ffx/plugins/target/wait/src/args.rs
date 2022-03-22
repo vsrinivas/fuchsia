@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "wait",
-    description = "Wait until the target becomes available.",
+    description = "Wait until able to establish a remote control connection to the target.",
     error_code(1, "Timeout while getting ssh address")
 )]
 
