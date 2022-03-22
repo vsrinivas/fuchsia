@@ -166,11 +166,6 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     }
   }
 
-  auto profile_provider = ns_.Connect<fuchsia_scheduler::ProfileProvider>();
-  if (profile_provider.is_ok()) {
-    profile_client_ = std::move(profile_provider.value());
-  }
-
   auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
                         .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
@@ -552,11 +547,16 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
 }
 
 zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const char* name) {
-  if (!profile_client_.is_valid()) {
+  auto profile_client = ns_.Connect<fuchsia_scheduler::ProfileProvider>();
+  if (!profile_client.is_ok()) {
+    return profile_client.take_error();
+  }
+
+  if (!profile_client->is_valid()) {
     return zx::error(ZX_ERR_NOT_CONNECTED);
   }
   fidl::WireResult result =
-      fidl::WireCall(profile_client_)->GetProfile(priority, fidl::StringView::FromExternal(name));
+      fidl::WireCall(*profile_client)->GetProfile(priority, fidl::StringView::FromExternal(name));
   if (!result.ok()) {
     return zx::error(result.status());
   }
