@@ -8,17 +8,11 @@ use {
     anyhow::{Context, Result},
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
     fidl_fuchsia_driver_test as fdt,
-    fuchsia_async::{
-        self as fasync,
-        futures::{stream::FuturesUnordered, TryStreamExt},
-    },
+    fuchsia_async::{self as fasync},
     fuchsia_component_test::new::{RealmBuilder, RealmInstance},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon_status as zx_status,
-    std::iter::FromIterator,
 };
-
-const DRIVERS_TO_WAIT_ON: [&str; 1] = ["sys/test/sample_driver"];
 
 const NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST: Option<[fdf::NodeProperty; 1]> =
     Some([fdf::NodeProperty {
@@ -42,18 +36,6 @@ fn assert_not_found_error(error: fidl::Error) {
     } else {
         panic!("Expcted ClientChannelClosed error");
     }
-}
-
-async fn wait_for_drivers(instance: &RealmInstance, driver_paths: &[&str]) -> Result<()> {
-    let dev = instance.driver_test_realm_connect_to_dev()?;
-
-    let mut tasks = FuturesUnordered::from_iter(
-        driver_paths
-            .iter()
-            .map(|driver_path| device_watcher::recursive_wait_and_open_node(&dev, driver_path)),
-    );
-    while let Some(_) = tasks.try_next().await? {}
-    Ok(())
 }
 
 fn send_get_device_info_request(
@@ -140,6 +122,10 @@ async fn set_up_test_driver_realm(
     let driver_dev =
         instance.root.connect_to_protocol_at_exposed_dir::<fdd::DriverDevelopmentMarker>()?;
 
+    // Make sure we wait until all the drivers are bound before returning.
+    let dev = instance.driver_test_realm_connect_to_dev()?;
+    let _ = device_watcher::recursive_wait_and_open_node(&dev, "sys/test/sample_driver").await;
+
     Ok((instance, driver_dev))
 }
 
@@ -155,9 +141,7 @@ fn assert_contains_driver_url(driver_infos: &Vec<fdd::DriverInfo>, expected_driv
 // DFv1
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_no_filter_dfv1() -> Result<()> {
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let driver_infos = get_driver_info(&driver_dev, &[]).await?;
 
     assert_eq!(driver_infos.len(), 2);
@@ -170,9 +154,7 @@ async fn test_get_driver_info_no_filter_dfv1() -> Result<()> {
 async fn test_get_driver_info_with_filter_dfv1() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#driver/sample-driver.so"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
@@ -184,9 +166,7 @@ async fn test_get_driver_info_with_filter_dfv1() -> Result<()> {
 async fn test_get_driver_info_with_mixed_filter_dfv1() -> Result<()> {
     const DRIVER_FILTER: [&str; 2] = ["fuchsia-boot:///#driver/sample-driver.so", "foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_driver_info_request(&driver_dev, &DRIVER_FILTER)?;
     let res = iterator.get_next().await.expect_err("A driver should not be returned");
 
@@ -199,9 +179,7 @@ async fn test_get_driver_info_with_duplicate_filter_dfv1() -> Result<()> {
     const DRIVER_FILTER: [&str; 2] =
         ["fuchsia-boot:///#driver/sample-driver.so", "fuchsia-boot:///#driver/sample-driver.so"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 2);
@@ -221,9 +199,7 @@ async fn test_get_driver_info_with_duplicate_filter_dfv1() -> Result<()> {
 async fn test_get_driver_info_with_incomplete_filter_dfv1() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#driver/sample-driver"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_driver_info_request(&driver_dev, &DRIVER_FILTER)?;
     let res = iterator.get_next().await.expect_err("A driver should not be returned");
 
@@ -235,9 +211,7 @@ async fn test_get_driver_info_with_incomplete_filter_dfv1() -> Result<()> {
 async fn test_get_driver_info_not_found_filter_dfv1() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_driver_info_request(&driver_dev, &DRIVER_FILTER)?;
     let res = iterator.get_next().await.expect_err("A driver should not be returned");
 
@@ -248,9 +222,7 @@ async fn test_get_driver_info_not_found_filter_dfv1() -> Result<()> {
 // DFv2
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_no_filter_dfv2() -> Result<()> {
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &[]).await?;
 
     assert_eq!(driver_infos.len(), 2);
@@ -263,9 +235,7 @@ async fn test_get_driver_info_no_filter_dfv2() -> Result<()> {
 async fn test_get_driver_info_with_filter_dfv2() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#meta/sample-driver.cm"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
@@ -278,9 +248,7 @@ async fn test_get_driver_info_with_duplicate_filter_dfv2() -> Result<()> {
     const DRIVER_FILTER: [&str; 2] =
         ["fuchsia-boot:///#meta/sample-driver.cm", "fuchsia-boot:///#meta/sample-driver.cm"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
@@ -293,9 +261,7 @@ async fn test_get_driver_info_with_duplicate_filter_dfv2() -> Result<()> {
 async fn test_get_driver_info_with_mixed_filter_dfv2() -> Result<()> {
     const DRIVER_FILTER: [&str; 2] = ["fuchsia-boot:///#meta/sample-driver.cm", "foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
@@ -308,9 +274,7 @@ async fn test_get_driver_info_with_mixed_filter_dfv2() -> Result<()> {
 async fn test_get_driver_info_with_incomplete_filter_dfv2() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#meta/sample-driver"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert!(driver_infos.is_empty());
@@ -321,9 +285,7 @@ async fn test_get_driver_info_with_incomplete_filter_dfv2() -> Result<()> {
 async fn test_get_driver_info_not_found_filter_dfv2() -> Result<()> {
     const DRIVER_FILTER: [&str; 1] = ["foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    // TODO(fxbug.dev/92702): Remove call to wait for drivers once issue is fixed.
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert!(driver_infos.is_empty());
@@ -334,8 +296,7 @@ async fn test_get_driver_info_not_found_filter_dfv2() -> Result<()> {
 // DFv1
 #[fasync::run_singlethreaded(test)]
 async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let device_infos = get_device_info(&driver_dev, &[]).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -383,8 +344,7 @@ async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
 async fn test_get_device_info_with_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["sys/test"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -414,8 +374,7 @@ async fn test_get_device_info_with_filter_dfv1() -> Result<()> {
 async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 2] = ["sys/test/sample_driver", "sys/test/sample_driver"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -462,8 +421,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
 async fn test_get_device_info_with_incomplete_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["sys/test/sample"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_device_info_request(&driver_dev, &DEVICE_FILTER)?;
     let res = iterator.get_next().await.expect_err("A device should not be returned");
 
@@ -475,8 +433,7 @@ async fn test_get_device_info_with_incomplete_filter_dfv1() -> Result<()> {
 async fn test_get_device_info_not_found_filter_dfv1() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_device_info_request(&driver_dev, &DEVICE_FILTER)?;
     let res = iterator.get_next().await.expect_err("A device should not be returned");
 
@@ -487,8 +444,7 @@ async fn test_get_device_info_not_found_filter_dfv1() -> Result<()> {
 // DFv2
 #[fasync::run_singlethreaded(test)]
 async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let device_infos = get_device_info(&driver_dev, &[]).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -535,8 +491,7 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
 async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["root.sys.test"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -567,8 +522,7 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
 async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 2] = ["root.sys.test", "root.sys.test"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     let device_nodes = test_utils::create_device_topology(device_infos);
@@ -599,8 +553,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
 async fn test_get_device_info_with_incomplete_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["root.sys.te"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     assert!(device_infos.is_empty());
@@ -611,8 +564,7 @@ async fn test_get_device_info_with_incomplete_filter_dfv2() -> Result<()> {
 async fn test_get_device_info_not_found_filter_dfv2() -> Result<()> {
     const DEVICE_FILTER: [&str; 1] = ["foo"];
 
-    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
-    wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
     assert!(device_infos.is_empty());
