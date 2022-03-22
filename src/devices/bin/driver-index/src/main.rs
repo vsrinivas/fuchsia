@@ -143,12 +143,11 @@ impl Indexer {
         let properties = node_to_device_property(&properties)?;
 
         let base_repo = self.base_repo.borrow();
-        let base_driver_iter = match base_repo.deref() {
+        let base_repo_iter = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers.iter(),
             BaseRepo::NotResolved(_) => [].iter(),
         };
 
-        let groups = self.device_groups.borrow();
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
         // base drivers.
@@ -159,9 +158,9 @@ impl Indexer {
             .boot_repo
             .iter()
             .filter(|&driver| !driver.fallback)
-            .chain(base_driver_iter.clone().filter(|&driver| !driver.fallback))
+            .chain(base_repo_iter.clone().filter(|&driver| !driver.fallback))
             .chain(self.boot_repo.iter().filter(|&driver| driver.fallback))
-            .chain(base_driver_iter.filter(|&driver| driver.fallback))
+            .chain(base_repo_iter.filter(|&driver| driver.fallback))
             .filter_map(|driver| {
                 if let Ok(Some(matched)) = driver.matches(&properties) {
                     Some((driver.fallback, matched))
@@ -169,7 +168,7 @@ impl Indexer {
                     None
                 }
             })
-            .chain(groups.iter().filter_map(|(_, group)| {
+            .chain(self.device_groups.borrow().iter().filter_map(|(_, group)| {
                 group.matches(&properties).map(|matched| (false, matched))
             }))
             .partition(|(fallback, _)| *fallback);
@@ -202,24 +201,25 @@ impl Indexer {
             BaseRepo::NotResolved(_) => [].iter(),
         };
 
-        let mut matched_drivers: Vec<fdf::MatchedDriver> = self
+        // Iterate over all drivers. Match non-fallback boot drivers, then
+        // non-fallback base drivers, then fallback boot drivers, then fallback
+        // base drivers.
+        Ok(self
             .boot_repo
             .iter()
-            .chain(base_repo_iter)
+            .filter(|&driver| !driver.fallback)
+            .chain(base_repo_iter.clone().filter(|&driver| !driver.fallback))
+            .chain(self.boot_repo.iter().filter(|&driver| driver.fallback))
+            .chain(base_repo_iter.filter(|&driver| driver.fallback))
             .filter_map(|driver| driver.matches(&properties).ok())
             .filter_map(|d| d)
-            .collect();
-
-        matched_drivers.append(
-            &mut self
-                .device_groups
-                .borrow()
-                .iter()
-                .filter_map(|(_, driver)| driver.matches(&properties))
-                .collect(),
-        );
-
-        Ok(matched_drivers)
+            .chain(
+                self.device_groups
+                    .borrow()
+                    .iter()
+                    .filter_map(|(_, driver)| driver.matches(&properties)),
+            )
+            .collect())
     }
 
     fn add_device_group(
@@ -1105,6 +1105,191 @@ mod tests {
                 ),
                 false,
             ));
+
+            // The non-fallback base driver should be returned and not the
+            // fallback boot driver even though boot drivers get priority
+            // because non-fallback drivers get even higher priority.
+            assert_eq!(result, expected_result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_drivers_v1_non_fallback_boot_priority() {
+        const FALLBACK_BOOT_DRIVER_COMPONENT_URL: &str = "fuchsia-boot:///#driver/fallback-boot.cm";
+        const FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH: &str = "meta/fallback-boot.so";
+        const NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL: &str =
+            "fuchsia-boot:///#driver/non-fallback-boot.cm";
+        const NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH: &str = "meta/non-fallback-boot.so";
+
+        // Make the bind instructions.
+        let always_match = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
+        )
+        .unwrap();
+
+        let boot_repo = vec![
+            ResolvedDriver {
+                component_url: url::Url::parse(FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
+                v1_driver_path: Some(FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH.to_owned()),
+                bind_rules: always_match.clone(),
+                colocate: false,
+                fallback: true,
+            },
+            ResolvedDriver {
+                component_url: url::Url::parse(NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
+                v1_driver_path: Some(NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH.to_owned()),
+                bind_rules: always_match.clone(),
+                colocate: false,
+                fallback: false,
+            },
+        ];
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![])));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+
+            let expected_result = vec![
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
+                    format!("fuchsia-boot:///#{}", NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
+                    false,
+                )),
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
+                    format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
+                    false,
+                )),
+            ];
+
+            // The non-fallback boot driver should be returned and not the
+            // fallback boot driver.
+            assert_eq!(result, expected_result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_drivers_v1_non_fallback_base_priority() {
+        const FALLBACK_BOOT_DRIVER_COMPONENT_URL: &str = "fuchsia-boot:///#driver/fallback-boot.cm";
+        const FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH: &str = "meta/fallback-boot.so";
+        const NON_FALLBACK_BASE_DRIVER_COMPONENT_URL: &str =
+            "fuchsia-pkg://fuchsia.com/package#driver/non-fallback-base.cm";
+        const NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH: &str = "meta/non-fallback-base.so";
+        const FALLBACK_BASE_DRIVER_COMPONENT_URL: &str =
+            "fuchsia-pkg://fuchsia.com/package#driver/fallback-base.cm";
+        const FALLBACK_BASE_DRIVER_V1_DRIVER_PATH: &str = "meta/fallback-base.so";
+
+        // Make the bind instructions.
+        let always_match = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
+        )
+        .unwrap();
+
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse(FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
+            v1_driver_path: Some(FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH.to_owned()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: true,
+        }];
+
+        let base_repo = BaseRepo::Resolved(std::vec![
+            ResolvedDriver {
+                component_url: url::Url::parse(FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
+                v1_driver_path: Some(FALLBACK_BASE_DRIVER_V1_DRIVER_PATH.to_owned()),
+                bind_rules: always_match.clone(),
+                colocate: false,
+                fallback: true,
+            },
+            ResolvedDriver {
+                component_url: url::Url::parse(NON_FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
+                v1_driver_path: Some(NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH.to_owned()),
+                bind_rules: always_match.clone(),
+                colocate: false,
+                fallback: false,
+            },
+        ]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(boot_repo, base_repo));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+
+            let expected_result = vec![
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    NON_FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
+                    format!(
+                        "fuchsia-pkg://fuchsia.com/package#{}",
+                        NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
+                    ),
+                    false,
+                )),
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
+                    format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
+                    false,
+                )),
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
+                    format!(
+                        "fuchsia-pkg://fuchsia.com/package#{}",
+                        FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
+                    ),
+                    false,
+                )),
+            ];
 
             // The non-fallback base driver should be returned and not the
             // fallback boot driver even though boot drivers get priority
