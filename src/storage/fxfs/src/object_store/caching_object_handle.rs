@@ -317,7 +317,7 @@ impl<S: HandleOwner> ObjectHandle for CachingObjectHandle<S> {
 #[async_trait]
 impl<S: HandleOwner> GetProperties for CachingObjectHandle<S> {
     async fn get_properties(&self) -> Result<ObjectProperties, Error> {
-        // TODO(jfsulliv): This could be optimized to skip getting the underlying handle's
+        // TODO(fxbug.dev/95354): This could be optimized to skip getting the underlying handle's
         // properties if the cache has all of the timestamps we need.
         let mut props = self.handle.get_properties().await?;
         let cached_metadata = self.cache.cached_metadata();

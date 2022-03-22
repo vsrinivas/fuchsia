@@ -1349,8 +1349,6 @@ impl Mutations for ObjectStore {
             }
         }
 
-        // TODO(jfsulliv): Add transaction::Options to CachingObjectHandle so that we can get rid of
-        // DirectWriter and use the cached handle for both writing and reading.
         let mut new_store_info = store_info_snapshot.store_info.into_inner().unwrap();
         let mut total_layer_size = 0;
 

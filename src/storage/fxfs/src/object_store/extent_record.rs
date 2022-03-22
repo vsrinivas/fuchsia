@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(jfsulliv): need validation after deserialization.
+// TODO(fxbug.dev/96139): need validation after deserialization.
 
 use {
     crate::lsm_tree::types::{OrdLowerBound, OrdUpperBound},

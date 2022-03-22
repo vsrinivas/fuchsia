@@ -135,10 +135,8 @@ pub struct SuperBlock {
     /// The globally unique identifier for the filesystem.
     guid: [u8; 16],
 
-    /// The minor version of the oldest driver which touched the super-block in writeable mode.
-    /// See //src/storage/docs/versioning.md.
-    // TODO(jfsulliv): Actually set this based on the driver version.
-    // TODO(jfsulliv): Check this value.
+    /// Unused.
+    // TODO(fxbug.dev/96136): Remove this field.
     oldest_minor_version: u32,
 
     /// There are two super-blocks which are used in an A/B configuration. The super-block with the

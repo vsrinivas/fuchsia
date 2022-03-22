@@ -41,8 +41,8 @@ impl Crypt for RemoteCrypt {
         Ok((
             WrappedKeys(vec![WrappedKey {
                 wrapping_key_id,
-                // TODO(jfsulliv): For key rolling, we need to assign a key ID which doesn't already
-                // exist for the object.
+                // TODO(fxbug.dev/96131): For key rolling, we need to assign a key ID which doesn't
+                // already exist for the object.
                 key_id: 0,
                 key: key.try_into().map_err(|_| anyhow!("Unexpected key length"))?,
             }]),
@@ -54,10 +54,9 @@ impl Crypt for RemoteCrypt {
     }
 
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        // TODO(jfsulliv): Should we just change the Crypt interface to do one key at a time, or
-        // attempt to batch the calls by wrapped key?  It seems that in practice we'll never have a
-        // WrappedKey with the same wrapping key appearing twice, so the batch interface might not
-        // make sense.
+        // TODO(fxbug.dev/95352): Change the Crypt interface to do one key at a time.
+        // It seems that in practice we'll never have a WrappedKey with the same wrapping key
+        // appearing twice, so the batch interface doesn't make sense.
         let unwrap_key = |key: WrappedKey| async move {
             let raw_keys = vec![&key.key[..]];
             // Have to split this up because the &mut raw_keys... part isn't Send.

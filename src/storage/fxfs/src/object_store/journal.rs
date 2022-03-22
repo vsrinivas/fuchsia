@@ -297,8 +297,6 @@ impl Journal {
                 .await;
         }
 
-        // TODO(jfsulliv): Upgrade minor revision as needed.
-
         Ok((super_block, target_super_block, root_parent))
     }
 
@@ -843,8 +841,8 @@ impl Journal {
 
         let (journal_file_offsets, min_checkpoint) = self.objects.journal_file_offsets();
 
-        // TODO(jfsulliv): Handle overflow.
-        new_super_block.generation = new_super_block.generation.checked_add(1).unwrap();
+        new_super_block.generation =
+            new_super_block.generation.checked_add(1).ok_or(FxfsError::Inconsistent)?;
         new_super_block.super_block_journal_file_offset = checkpoint.file_offset;
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(checkpoint);
         new_super_block.journal_checkpoint.version = LATEST_VERSION;

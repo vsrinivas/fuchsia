@@ -1053,8 +1053,6 @@ impl Mutations for SimpleAllocator {
             ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default(), None)
                 .await?;
 
-        // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
-        // size up front?
         let reservation_update;
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
         let mut serialized_info = Vec::new();

@@ -29,7 +29,7 @@ pub enum FsckIssue {
 impl FsckIssue {
     /// Translates an error to a human-readable string, intended for reporting errors to the user.
     /// For debugging, std::fmt::Debug is preferred.
-    // TODO(jfsulliv): Localization
+    // TODO(fxbug.dev/95352): Localization
     pub fn to_string(&self) -> String {
         match self {
             FsckIssue::Warning(w) => format!("WARNING: {}", w.to_string()),

@@ -393,11 +393,6 @@ impl<B: DataBuffer> WritebackCache<B> {
 
         // |inner| shouldn't be modified until we're at a part of the function where nothing can
         // fail (either before an early-return, or at the end of the function).
-        // TODO(jfsulliv): Consider splitting this up into a prepare and commit function (the
-        // prepare function would need to return a lock).  That would make this requirement
-        // more explicit, but might also have other advantages, such as not needing the
-        // StorageReservation trait nor the Reservation wrapper any more.  However, it involves
-        // other complexity, mostly around the lock.
         let mut dirtied_intervals = vec![];
         let mut dirtied_bytes = 0;
         let reservation;
@@ -408,7 +403,7 @@ impl<B: DataBuffer> WritebackCache<B> {
             let aligned_range = round_down(offset, block_size)..round_up(end, block_size).unwrap();
 
             let intervals = inner.intervals.get_intervals(&aligned_range).unwrap();
-            // TODO(jfsulliv): This might be much simpler and more readable if we refactored
+            // TODO(fxbug.dev/96146): This might be much simpler and more readable if we refactored
             // interval_tree to have an iterator interface.  See
             // https://fuchsia-review.googlesource.com/c/fuchsia/+/547024/comments/523de326_6e2b4766.
             let mut current_offset = aligned_range.start;
@@ -684,8 +679,8 @@ mod tests {
         }
     }
 
-    // TODO(jfsulliv): It's crude to implement Allocator here, but we need to clean all of this up
-    // anyways when we make Reservation a VFS-level construct.
+    // TODO(fxbug.dev/96148): It's crude to implement Allocator here, but we need to clean all of
+    // this up anyways when we make Reservation a VFS-level construct.
     #[async_trait]
     impl Allocator for FakeReserverInner {
         fn object_id(&self) -> u64 {

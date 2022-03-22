@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(jfsulliv): need validation after deserialization.
+// TODO(fxbug.dev/96139): need validation after deserialization.
 use {
     crate::{
         crypt::WrappedKeys,
@@ -34,7 +34,8 @@ pub enum ObjectKeyData {
     /// An attribute associated with an object.  It has a 64-bit ID.
     Attribute(u64, AttributeKey),
     /// A child of a directory.
-    Child { name: String }, // TODO(jfsulliv): Should this be a string or array of bytes?
+    /// We store the filename as a case-preserving unicode string.
+    Child { name: String },
     /// A graveyard entry.
     GraveyardEntry { object_id: u64 },
 }

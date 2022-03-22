@@ -73,7 +73,6 @@ enum ScannedObject {
     Tombstone,
 }
 
-// TODO(jfsulliv): We might need to do something for large filesystems to keep memory usage down.
 struct ScannedStore<'a, F: Fn(&FsckIssue)> {
     fsck: &'a Fsck<F>,
     objects: BTreeMap<u64, ScannedObject>,

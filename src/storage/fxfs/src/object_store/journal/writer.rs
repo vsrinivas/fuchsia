@@ -76,9 +76,6 @@ impl JournalWriter {
         if to_do == 0 {
             return None;
         }
-        // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
-        // buffer. Doing so will require picking an appropriate size up front, and forcing
-        // flush as we fill it up.
         let mut buf = handle.allocate_buffer(to_do);
         buf.as_mut_slice()[..to_do].copy_from_slice(&self.buf[..to_do]);
         let offset = self.checkpoint.file_offset;

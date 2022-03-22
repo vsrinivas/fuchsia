@@ -949,8 +949,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
 
 #[async_trait]
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> GetProperties for StoreObjectHandle<S> {
-    // TODO(jfsulliv): Make StoreObjectHandle per-object (not per-attribute as it currently is)
-    // and pass in a list of attributes to fetch properties for.
     async fn get_properties(&self) -> Result<ObjectProperties, Error> {
         // Take a read guard since we need to return a consistent view of all object properties.
         let fs = self.store().filesystem();
