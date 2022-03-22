@@ -221,11 +221,11 @@ zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
 void Tas58xx::SignalProcessingConnect(
     fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
-  if (signal_processing_binding_.has_value()) {
+  if (signal_processing_bindings_.size() >= kMaximumNumberOfSignalProcessingConnections) {
     signal_processing.Close(ZX_ERR_ALREADY_BOUND);
     return;
   }
-  signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
+  signal_processing_bindings_.AddBinding(this, std::move(signal_processing), dispatcher());
 }
 
 void Tas58xx::GetElements(signal_fidl::SignalProcessing::GetElementsCallback callback) {

@@ -20,6 +20,7 @@
 #include <ti/ti-audio.h>
 
 #include "ddktl/suspend-txn.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace audio {
 
@@ -85,6 +86,7 @@ class Tas58xx : public SimpleCodecServer,
   static constexpr float kEqualizerMinGainDb = -5.f;
   static constexpr float kEqualizerMaxGainDb = 5.f;
   static constexpr float kSupportedQ = 1.f;
+  static constexpr size_t kMaximumNumberOfSignalProcessingConnections = 8;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t WriteRegs(uint8_t* regs, size_t count);
@@ -107,8 +109,8 @@ class Tas58xx : public SimpleCodecServer,
   // AGL.
   bool last_agl_ = false;
   std::optional<bool> last_reported_agl_;
-  std::optional<fidl::Binding<fuchsia::hardware::audio::signalprocessing::SignalProcessing>>
-      signal_processing_binding_;
+  fidl::BindingSet<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+      signal_processing_bindings_;
   std::optional<
       fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
       agl_callback_;

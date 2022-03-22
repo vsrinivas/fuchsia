@@ -496,17 +496,23 @@ TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
   audio_fidl::CodecSyncPtr codec_client;
   codec_client.Bind(std::move(channel_local));
 
-  // First connection succeeds in making a 2-way call.
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-  signal_fidl::Reader_GetTopologies_Result result;
-  ASSERT_OK(signal_processing_client->GetTopologies(&result));
-  ASSERT_FALSE(result.is_err());
+  // First kNumberOfConnectionsSucceed connections succeed in making a 2-way call.
+  constexpr size_t kNumberOfConnectionsSucceed = 8;
+  fidl::InterfaceRequest<signal_fidl::SignalProcessing>
+      signal_processing_request[kNumberOfConnectionsSucceed];
+  fidl::SynchronousInterfacePtr<signal_fidl::SignalProcessing>
+      signal_processing_client[kNumberOfConnectionsSucceed];
+  for (size_t i = 0; i < kNumberOfConnectionsSucceed; ++i) {
+    fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
+    signal_processing_request[i] = signal_processing_handle.NewRequest();
+    ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request[i])));
+    signal_processing_client[i] = signal_processing_handle.BindSync();
+    signal_fidl::Reader_GetTopologies_Result result;
+    ASSERT_OK(signal_processing_client[i]->GetTopologies(&result));
+    ASSERT_FALSE(result.is_err());
+  }
 
-  // Second connection fails to make a 2-way call.
+  // Connection number kNumberOfConnectionsSucceed + 1 fails to make a 2-way call.
   fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle2;
   fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request2 =
       signal_processing_handle2.NewRequest();
