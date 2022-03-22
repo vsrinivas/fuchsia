@@ -13,7 +13,6 @@ zx_library("udisplay") {
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/gfx",
-    "//zircon/kernel/lib/gfxconsole",
     "//zircon/kernel/lib/io",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/vm:headers",

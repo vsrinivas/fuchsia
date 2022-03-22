@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/gfx/surface.h>
+
 #include <map>
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "gfx/gfx.h"
+#include "test-surface.h"
 
 static const unsigned kMaxDimension = 4096;
 

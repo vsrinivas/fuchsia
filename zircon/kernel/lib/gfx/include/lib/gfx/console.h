@@ -5,12 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_
-#define ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_
+#ifndef ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_CONSOLE_H_
+#define ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_CONSOLE_H_
 
-#include <lib/gfx.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "surface.h"
 
 __BEGIN_CDECLS
 
@@ -22,4 +23,4 @@ void gfxconsole_flush(void);
 
 __END_CDECLS
 
-#endif  // ZIRCON_KERNEL_LIB_GFXCONSOLE_INCLUDE_LIB_GFXCONSOLE_H_
+#endif  // ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_CONSOLE_H_
