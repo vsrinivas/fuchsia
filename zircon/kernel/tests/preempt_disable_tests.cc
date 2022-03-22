@@ -318,6 +318,31 @@ static bool test_auto_preempt_disabler() {
     ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
   }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
 
+  // Test an explicit Enable
+  {
+    AutoPreemptDisabler ap_disabler;
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
+
+    {
+      // Create a defered disabler, and test that Enabling it before its disabled does nothing.
+      AutoPreemptDisabler ap_disabler2{AutoPreemptDisabler::Defer};
+      ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
+
+      ap_disabler2.Enable();
+      ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
+    }
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
+
+    // Should be able to toggle enable and disable
+    ap_disabler.Enable();
+    ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
+    ap_disabler.Disable();
+    ASSERT_EQ(1u, preemption_state.PreemptDisableCount());
+    // Ending on Enable should result in no change after the disabler goes out of scope.
+    ap_disabler.Enable();
+    ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
+  }
+
   ASSERT_EQ(0u, preemption_state.PreemptDisableCount());
 
   END_TEST;

@@ -46,11 +46,7 @@ class AutoPreemptDisabler {
   AutoPreemptDisabler() { Thread::Current::preemption_state().PreemptDisable(); }
   explicit AutoPreemptDisabler(DeferType) : disabled_{false} {}
 
-  ~AutoPreemptDisabler() {
-    if (disabled_) {
-      Thread::Current::preemption_state().PreemptReenable();
-    }
-  }
+  ~AutoPreemptDisabler() { Enable(); }
 
   AutoPreemptDisabler(const AutoPreemptDisabler&) = delete;
   AutoPreemptDisabler& operator=(const AutoPreemptDisabler&) = delete;
@@ -62,6 +58,14 @@ class AutoPreemptDisabler {
     if (!disabled_) {
       Thread::Current::preemption_state().PreemptDisable();
       disabled_ = true;
+    }
+  }
+
+  // Enables preemption if it was previously disabled by this instance.
+  void Enable() {
+    if (disabled_) {
+      Thread::Current::preemption_state().PreemptReenable();
+      disabled_ = false;
     }
   }
 
@@ -82,11 +86,7 @@ class AutoEagerReschedDisabler {
   AutoEagerReschedDisabler() { Thread::Current::preemption_state().EagerReschedDisable(); }
   explicit AutoEagerReschedDisabler(DeferType) : disabled_{false} {}
 
-  ~AutoEagerReschedDisabler() {
-    if (disabled_) {
-      Thread::Current::preemption_state().EagerReschedReenable();
-    }
-  }
+  ~AutoEagerReschedDisabler() { Enable(); }
 
   AutoEagerReschedDisabler(const AutoEagerReschedDisabler&) = delete;
   AutoEagerReschedDisabler& operator=(const AutoEagerReschedDisabler&) = delete;
@@ -98,6 +98,14 @@ class AutoEagerReschedDisabler {
     if (!disabled_) {
       Thread::Current::preemption_state().EagerReschedDisable();
       disabled_ = true;
+    }
+  }
+
+  // Enables preemption if it was previously disabled by this instance.
+  void Enable() {
+    if (disabled_) {
+      Thread::Current::preemption_state().EagerReschedReenable();
+      disabled_ = false;
     }
   }
 
