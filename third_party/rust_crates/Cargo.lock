@@ -1337,6 +1337,7 @@ dependencies = [
  "matches",
  "maybe-owned",
  "memchr",
+ "memoffset 0.5.3",
  "mockall",
  "nix",
  "nom",
