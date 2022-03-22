@@ -327,73 +327,94 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
     // Note that we disable involuntary preemption while we are inside of this
     // lock.  The price of blocking while holding this lock is high, and we
     // should not (in theory) _ever_ be inside of this lock for very long at
-    // all.  Were it not for the potential to block while resolving a page fault
-    // during validation of the futex state, this would be an IRQ-disable spin
-    // lock.  The vast majority of the time, we just need validate the state,
+    // all. The vast majority of the time, we just need validate the state,
     // then trade this lock for the thread lock, and then block.  Even if we are
     // operating at the very end of our slice, it is best to disable preemption
     // until we manage to join the wait queue, or abort because of state
     // validation issues.
-    AutoPreemptDisabler preempt_disabler;
-    Guard<Mutex> guard{&futex_ref->lock_};
+    // TODO: Make this a IRQ-disable spin lock once there is a way to manage IRQ
+    // state between this and the thread_lock acquisition.
+    while (1) {
+      AutoPreemptDisabler preempt_disabler;
+      Guard<Mutex> guard{&futex_ref->lock_};
 
-    // Sanity check, bookkeeping should not indicate that we are blocked on
-    // a futex at this point in time.
-    DEBUG_ASSERT(current_thread->blocking_futex_id_ == FutexId::Null());
+      // Sanity check, bookkeeping should not indicate that we are blocked on
+      // a futex at this point in time.
+      DEBUG_ASSERT(current_thread->blocking_futex_id_ == FutexId::Null());
 
-    int value;
-    result = value_ptr.copy_from_user(&value);
-    if (result != ZX_OK) {
-      return result;
-    }
-    if (value != current_value) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    if (validator_status != ZX_OK) {
-      if (validator_status == ZX_ERR_BAD_HANDLE) {
-        __UNUSED auto res = ProcessDispatcher::GetCurrent()->EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
+      int value;
+      UserCopyCaptureFaultsResult copy_result = value_ptr.copy_from_user_capture_faults(&value);
+      if (copy_result.status != ZX_OK) {
+        // At this point we are committed to either returning from the function, or restarting the
+        // loop, so we can drop the lock and preempt disable that are local to this loop iteration.
+        guard.Release();
+        preempt_disabler.Enable();
+        if (auto fault = copy_result.fault_info) {
+          new_owner_guard.CallUnlocked([&] {
+            result =
+                ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+          });
+          if (result != ZX_OK) {
+            return result;
+          }
+          continue;
+        }
+        return copy_result.status;
       }
-      return validator_status;
-    }
 
-    if (futex_owner_thread != nullptr) {
-      // When attempting to wait, the new owner of the futex (if any) may not be
-      // the thread which is attempting to wait.
-      if (futex_owner_thread == ThreadDispatcher::GetCurrent()) {
-        return ZX_ERR_INVALID_ARGS;
+      if (value != current_value) {
+        return ZX_ERR_BAD_STATE;
       }
 
-      // If we have a valid new owner, then verify that this thread is not already
-      // waiting on the target futex.
-      if (futex_owner_thread->blocking_futex_id_ == futex_id) {
-        return ZX_ERR_INVALID_ARGS;
+      if (validator_status != ZX_OK) {
+        if (validator_status == ZX_ERR_BAD_HANDLE) {
+          __UNUSED auto res =
+              ProcessDispatcher::GetCurrent()->EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
+        }
+        return validator_status;
       }
+
+      if (futex_owner_thread != nullptr) {
+        // When attempting to wait, the new owner of the futex (if any) may not be
+        // the thread which is attempting to wait.
+        if (futex_owner_thread == ThreadDispatcher::GetCurrent()) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        // If we have a valid new owner, then verify that this thread is not already
+        // waiting on the target futex.
+        if (futex_owner_thread->blocking_futex_id_ == futex_id) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+      }
+
+      // Record the futex ID of the thread we are about to block on.
+      current_thread->blocking_futex_id_ = futex_id;
+
+      // Enter the thread lock (exchanging the futex context lock and the
+      // ThreadDispatcher's object lock for the thread spin-lock in the process)
+      // and wait on the futex wait queue, assigning ownership properly in the
+      // process.
+      Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+      ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
+      guard.Release(MutexPolicy::ThreadLockHeld);
+      new_owner_guard.Release(MutexPolicy::ThreadLockHeld);
+
+      wait_tracer.FutexWait(futex_id, new_owner);
+
+      result = futex_ref->waiters_.BlockAndAssignOwner(
+          deadline, new_owner, ResourceOwnership::Normal, Interruptible::Yes);
+
+      // Do _not_ allow the PendingOpRef helper to release our pending op
+      // reference.  Having just woken up, either the thread which woke us will
+      // have released our pending op reference, or we will need to revalidate
+      // _which_ futex we were waiting on (because of FutexRequeue) and manage the
+      // release of the reference ourselves.
+      futex_ref.CancelRef();
+      // If we got to here then we have no user copy faults that need retrying, so we should break
+      // out of the infinite loop.
+      break;
     }
-
-    // Record the futex ID of the thread we are about to block on.
-    current_thread->blocking_futex_id_ = futex_id;
-
-    // Enter the thread lock (exchanging the futex context lock and the
-    // ThreadDispatcher's object lock for the thread spin-lock in the process)
-    // and wait on the futex wait queue, assigning ownership properly in the
-    // process.
-    Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-    ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
-    guard.Release(MutexPolicy::ThreadLockHeld);
-    new_owner_guard.Release(MutexPolicy::ThreadLockHeld);
-
-    wait_tracer.FutexWait(futex_id, new_owner);
-
-    result = futex_ref->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal,
-                                                     Interruptible::Yes);
-
-    // Do _not_ allow the PendingOpRef helper to release our pending op
-    // reference.  Having just woken up, either the thread which woke us will
-    // have released our pending op reference, or we will need to revalidate
-    // _which_ futex we were waiting on (because of FutexRequeue) and manage the
-    // release of the reference ourselves.
-    futex_ref.CancelRef();
   }
 
   // If we were woken by another thread, then our block result will be ZX_OK.
@@ -618,15 +639,29 @@ zx_status_t FutexContext::FutexRequeueInternal(
 
   ResetBlockingFutexIdState wake_op;
   SetBlockingFutexIdState requeue_op(requeue_id);
-  {
+  while (1) {
     AutoEagerReschedDisabler eager_resched_disabler;
     GuardMultiple<2, Mutex> futex_guards{&wake_futex_ref->lock_, &requeue_futex_ref->lock_};
 
     // Validate the futex storage state.
     int value;
-    result = wake_ptr.copy_from_user(&value);
-    if (result != ZX_OK) {
-      return result;
+    UserCopyCaptureFaultsResult copy_result = wake_ptr.copy_from_user_capture_faults(&value);
+    if (copy_result.status != ZX_OK) {
+      // At this point we are committed to either returning from the function, or restarting the
+      // loop, so we can drop the locks and resched disable that are local to this loop iteration.
+      futex_guards.Release();
+      eager_resched_disabler.Enable();
+      if (auto fault = copy_result.fault_info) {
+        new_owner_guard.CallUnlocked([&] {
+          result =
+              ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+        });
+        if (result != ZX_OK) {
+          return result;
+        }
+        continue;
+      }
+      return copy_result.status;
     }
 
     if (value != current_value) {
@@ -665,9 +700,9 @@ zx_status_t FutexContext::FutexRequeueInternal(
 
       if (requeue_count) {
         DEBUG_ASSERT(requeue_futex_ref != nullptr);
-        wake_futex_ref->waiters_.WakeAndRequeue(
-            wake_count, &(requeue_futex_ref->waiters_), requeue_count, new_requeue_owner,
-            {wake_hook, &wake_op}, {requeue_hook, &requeue_op});
+        wake_futex_ref->waiters_.WakeAndRequeue(wake_count, &(requeue_futex_ref->waiters_),
+                                                requeue_count, new_requeue_owner,
+                                                {wake_hook, &wake_op}, {requeue_hook, &requeue_op});
       } else {
         wake_futex_ref->waiters_.WakeThreads(wake_count, {wake_hook, &wake_op});
 
@@ -699,6 +734,9 @@ zx_status_t FutexContext::FutexRequeueInternal(
       tracer.FutexRequeue(requeue_id, requeue_futex_was_active, requeue_op.count,
                           new_requeue_owner);
     }
+    // If we got to here then we have no user copy faults that need retrying, so we should break out
+    // of the infinite loop.
+    break;
   }
 
   // Now, if we successfully woke any threads from the wake_futex, then we need
