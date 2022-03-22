@@ -204,9 +204,8 @@ class Payloadable {
  protected:
   // Decode all the values from the JSON definition.
   virtual void DecodeTypes() = 0;
-
-  // TODO(fxbug.dev/88343): extend for tables and unions
-  virtual std::unique_ptr<Parameter> FindParameter(std::string_view) = 0;
+  virtual std::unique_ptr<Parameter> FindParameter(std::string_view,
+                                                   const std::unique_ptr<Type>&) = 0;
 
   Library* enclosing_library_;
   const rapidjson::Value* json_definition_;
@@ -232,6 +231,10 @@ class Payload {
 
   Struct* AsStruct();
   const Struct* AsStruct() const;
+  Table* AsTable();
+  const Table* AsTable() const;
+  Union* AsUnion();
+  const Union* AsUnion() const;
 
   // Decodes the |Payloadable|-derived class held by this instance. Note that decoding always starts
   // with an offset of |kTransactionHeaderSize|, since a |Payload| always represents the entirety of
@@ -270,26 +273,27 @@ class UnionMember {
   std::unique_ptr<Type> type_;
 };
 
-class Union {
+class Union final : public Payloadable {
  public:
   friend class Library;
 
-  Library* enclosing_library() const { return enclosing_library_; }
-  const std::string& name() const { return name_; }
+  ~Union() override;
+
   const std::vector<std::unique_ptr<UnionMember>>& members() const { return members_; }
 
+  std::unique_ptr<PayloadableValue> DecodeAsPayload(const std::unique_ptr<Type>& payload_type,
+                                                    MessageDecoder& decoder) const override;
   const UnionMember* MemberFromOrdinal(Ordinal64 ordinal) const;
   UnionMember* SearchMember(std::string_view name) const;
+  std::string ToString(bool expand) const override;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value* json_definition);
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes();
+  void DecodeTypes() override;
+  std::unique_ptr<Parameter> FindParameter(std::string_view, const std::unique_ptr<Type>&) override;
 
-  Library* enclosing_library_;
-  const rapidjson::Value* json_definition_;
-  std::string name_;
   std::vector<std::unique_ptr<UnionMember>> members_;
 };
 
@@ -344,7 +348,7 @@ class Struct final : public Payloadable {
 
   // Decode all the values from the JSON definition.
   void DecodeTypes() override;
-  std::unique_ptr<Parameter> FindParameter(std::string_view) override;
+  std::unique_ptr<Parameter> FindParameter(std::string_view, const std::unique_ptr<Type>&) override;
 
   uint32_t size_v1_ = 0;
   uint32_t size_v2_ = 0;
@@ -368,26 +372,29 @@ class TableMember {
   std::unique_ptr<Type> type_;
 };
 
-class Table {
+class Table final : public Payloadable {
  public:
   friend class Library;
+
+  ~Table() override;
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<TableMember>>& members() const { return members_; }
 
+  std::unique_ptr<PayloadableValue> DecodeAsPayload(const std::unique_ptr<Type>& payload_type,
+                                                    MessageDecoder& decoder) const override;
   const TableMember* MemberFromOrdinal(Ordinal64 ordinal) const;
   const TableMember* SearchMember(std::string_view name) const;
+  std::string ToString(bool expand) const override;
 
  private:
   Table(Library* enclosing_library, const rapidjson::Value* json_definition);
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes();
+  void DecodeTypes() override;
+  std::unique_ptr<Parameter> FindParameter(std::string_view, const std::unique_ptr<Type>&) override;
 
-  Library* enclosing_library_;
-  const rapidjson::Value* json_definition_;
-  std::string name_;
   std::vector<std::unique_ptr<TableMember>> members_;
 };
 

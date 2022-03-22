@@ -251,7 +251,7 @@ TEST_F(ProtoValueTest, TableValue) {
       "}");
 }
 
-TEST_F(ProtoValueTest, FidlMessageValue) {
+TEST_F(ProtoValueTest, FidlMessageValueStruct) {
   fidl::IncomingMessageBuffer buffer_;
   fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
   InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
@@ -276,6 +276,64 @@ TEST_F(ProtoValueTest, FidlMessageValue) {
              "    0010: 0a, 00, 00, 00, 00, 00, 00, 00, ff, ff, ff, ff, ff, ff, ff, ff, \n"
              "    0020: 64, 00, 00, 00, 00, 00, 00, 00, 48, 65, 6c, 6c, 6f, 20, 46, 49, \n"
              "    0030: 44, 4c, 00, 00, 00, 00, 00, 00\n");
+}
+
+TEST_F(ProtoValueTest, FidlMessageValueTable) {
+  fidl::IncomingMessageBuffer buffer_;
+  fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
+  test::fidlcodec::examples::FidlCodecTestInterfaceStringIntTableRequest payload;
+  payload.set_s("Hello FIDL");
+  payload.set_i32(200);
+  InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
+      message, [&](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
+        ptr->StringIntTable(std::move(payload));
+      });
+  std::unique_ptr<FidlMessageValue> fidl_message = CreateFidlMessage(message);
+  PROTO_TEST(fidl_message, nullptr, false,
+             "sent request test.fidlcodec.examples/FidlCodecTestInterface.StringIntTable = {\n"
+             "  s: string = \"Hello FIDL\"\n"
+             "  i32: int32 = 200\n"
+             "}\n");
+  PROTO_TEST(fidl_message, nullptr, true,
+             "sent request test.fidlcodec.examples/FidlCodecTestInterface.StringIntTable = {\n"
+             "  s: string = \"Hello FIDL\"\n"
+             "  i32: int32 = 200\n"
+             "}\n"
+             "Message: num_bytes=80 num_handles=0 ordinal="
+             "619975f01cd65ff4(test.fidlcodec.examples/FidlCodecTestInterface.StringIntTable)\n"
+             "  data=\n"
+             "    0000: 00, 00, 00, 00, 02, 00, 00, 01, f4, 5f, d6, 1c, f0, 75, 99, 61, \n"
+             "    0010: 02, 00, 00, 00, 00, 00, 00, 00, ff, ff, ff, ff, ff, ff, ff, ff, \n"
+             "    0020: 20, 00, 00, 00, 00, 00, 00, 00, c8, 00, 00, 00, 00, 00, 01, 00, \n"
+             "    0030: 0a, 00, 00, 00, 00, 00, 00, 00, ff, ff, ff, ff, ff, ff, ff, ff, \n"
+             "    0040: 48, 65, 6c, 6c, 6f, 20, 46, 49, 44, 4c, 00, 00, 00, 00, 00, 00\n");
+}
+
+TEST_F(ProtoValueTest, FidlMessageValueUnion) {
+  fidl::IncomingMessageBuffer buffer_;
+  fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
+  InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
+      message, [&](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
+        ptr->StringIntUnion(
+            test::fidlcodec::examples::FidlCodecTestInterfaceStringIntUnionRequest::WithS(
+                "Hello FIDL"));
+      });
+  std::unique_ptr<FidlMessageValue> fidl_message = CreateFidlMessage(message);
+  PROTO_TEST(fidl_message, nullptr, false,
+             "sent request test.fidlcodec.examples/FidlCodecTestInterface.StringIntUnion = {\n"
+             "  s: string = \"Hello FIDL\"\n"
+             "}\n");
+  PROTO_TEST(fidl_message, nullptr, true,
+             "sent request test.fidlcodec.examples/FidlCodecTestInterface.StringIntUnion = {\n"
+             "  s: string = \"Hello FIDL\"\n"
+             "}\n"
+             "Message: num_bytes=64 num_handles=0 ordinal="
+             "12457466e3b99a6f(test.fidlcodec.examples/FidlCodecTestInterface.StringIntUnion)\n"
+             "  data=\n"
+             "    0000: 00, 00, 00, 00, 02, 00, 00, 01, 6f, 9a, b9, e3, 66, 74, 45, 12, \n"
+             "    0010: 01, 00, 00, 00, 00, 00, 00, 00, 20, 00, 00, 00, 00, 00, 00, 00, \n"
+             "    0020: 0a, 00, 00, 00, 00, 00, 00, 00, ff, ff, ff, ff, ff, ff, ff, ff, \n"
+             "    0030: 48, 65, 6c, 6c, 6f, 20, 46, 49, 44, 4c, 00, 00, 00, 00, 00, 00\n");
 }
 
 TEST_F(ProtoValueTest, ActualAndRequestedValue) {

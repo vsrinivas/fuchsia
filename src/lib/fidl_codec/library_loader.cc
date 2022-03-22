@@ -148,7 +148,7 @@ std::unique_ptr<PayloadableValue> Payload::Decode(MessageDecoder& decoder) const
 }
 
 std::unique_ptr<Parameter> Payload::FindParameter(std::string_view name) {
-  return payloadable_->FindParameter(name);
+  return payloadable_->FindParameter(name, type_);
 }
 
 Struct* Payload::AsStruct() {
@@ -161,6 +161,34 @@ Struct* Payload::AsStruct() {
 const Struct* Payload::AsStruct() const {
   if (type_->AsStructType() != nullptr) {
     return static_cast<const Struct*>(payloadable_);
+  }
+  return nullptr;
+}
+
+Table* Payload::AsTable() {
+  if (type_->AsTableType() != nullptr) {
+    return static_cast<Table*>(payloadable_);
+  }
+  return nullptr;
+}
+
+const Table* Payload::AsTable() const {
+  if (type_->AsTableType() != nullptr) {
+    return static_cast<const Table*>(payloadable_);
+  }
+  return nullptr;
+}
+
+Union* Payload::AsUnion() {
+  if (type_->AsUnionType() != nullptr) {
+    return static_cast<Union*>(payloadable_);
+  }
+  return nullptr;
+}
+
+const Union* Payload::AsUnion() const {
+  if (type_->AsUnionType() != nullptr) {
+    return static_cast<const Union*>(payloadable_);
   }
   return nullptr;
 }
@@ -183,7 +211,17 @@ UnionMember::UnionMember(const Union& union_definition, Library* enclosing_libra
 UnionMember::~UnionMember() = default;
 
 Union::Union(Library* enclosing_library, const rapidjson::Value* json_definition)
-    : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
+    : Payloadable(enclosing_library, json_definition, "") {}
+
+Union::~Union() = default;
+
+std::unique_ptr<PayloadableValue> Union::DecodeAsPayload(const std::unique_ptr<Type>& payload_type,
+                                                         MessageDecoder& decoder) const {
+  decoder.SkipObject(payload_type->InlineSize(decoder.version()));
+  std::unique_ptr<Value> value = payload_type->Decode(&decoder, kTransactionHeaderSize);
+  UnionValue* struct_value = static_cast<UnionValue*>(value.release());
+  return std::unique_ptr<PayloadableValue>(struct_value);
+}
 
 void Union::DecodeTypes() {
   if (json_definition_ == nullptr) {
@@ -205,6 +243,11 @@ void Union::DecodeTypes() {
   }
 }
 
+std::unique_ptr<Parameter> Union::FindParameter(std::string_view _,
+                                                const std::unique_ptr<Type>& payload_type) {
+  return std::make_unique<Parameter>("payload", payload_type.get());
+}
+
 const UnionMember* Union::MemberFromOrdinal(Ordinal64 ordinal) const {
   for (const auto& member : members_) {
     if (member->ordinal() == ordinal) {
@@ -224,6 +267,11 @@ UnionMember* Union::SearchMember(std::string_view name) const {
     }
   }
   return nullptr;
+}
+
+std::string Union::ToString(bool expand) const {
+  UnionType type(*this, false);
+  return type.ToString(expand);
 }
 
 StructMember::StructMember(Library* enclosing_library, const rapidjson::Value* json_definition)
@@ -302,7 +350,8 @@ std::unique_ptr<PayloadableValue> Struct::DecodeAsPayload(const std::unique_ptr<
   return std::unique_ptr<PayloadableValue>(struct_value);
 }
 
-std::unique_ptr<Parameter> Struct::FindParameter(std::string_view name) {
+std::unique_ptr<Parameter> Struct::FindParameter(std::string_view name,
+                                                 const std::unique_ptr<Type>& _) {
   StructMember* found = this->SearchMember(name, 0);
   return found != nullptr ? std::make_unique<Parameter>(found->name(), found->type()) : nullptr;
 }
@@ -344,7 +393,17 @@ TableMember::TableMember(Library* enclosing_library, const rapidjson::Value* jso
 TableMember::~TableMember() = default;
 
 Table::Table(Library* enclosing_library, const rapidjson::Value* json_definition)
-    : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
+    : Payloadable(enclosing_library, json_definition, "") {}
+
+Table::~Table() = default;
+
+std::unique_ptr<PayloadableValue> Table::DecodeAsPayload(const std::unique_ptr<Type>& payload_type,
+                                                         MessageDecoder& decoder) const {
+  decoder.SkipObject(payload_type->InlineSize(decoder.version()));
+  std::unique_ptr<Value> value = payload_type->Decode(&decoder, kTransactionHeaderSize);
+  TableValue* struct_value = static_cast<TableValue*>(value.release());
+  return std::unique_ptr<PayloadableValue>(struct_value);
+}
 
 void Table::DecodeTypes() {
   if (json_definition_ == nullptr) {
@@ -370,6 +429,11 @@ void Table::DecodeTypes() {
   }
 }
 
+std::unique_ptr<Parameter> Table::FindParameter(std::string_view _,
+                                                const std::unique_ptr<Type>& payload_type) {
+  return std::make_unique<Parameter>("payload", payload_type.get());
+}
+
 const TableMember* Table::MemberFromOrdinal(Ordinal64 ordinal) const {
   if (ordinal >= members_.size()) {
     return nullptr;
@@ -384,6 +448,11 @@ const TableMember* Table::SearchMember(std::string_view name) const {
     }
   }
   return nullptr;
+}
+
+std::string Table::ToString(bool expand) const {
+  TableType type(*this);
+  return type.ToString(expand);
 }
 
 InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& interface,
@@ -484,6 +553,10 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     FieldNotFound("library", name_, "struct_declarations");
   } else if (!json_definition_.HasMember("external_struct_declarations")) {
     FieldNotFound("library", name_, "external_struct_declarations");
+  } else if (!json_definition_.HasMember("table_declarations")) {
+    FieldNotFound("library", name_, "table_declarations");
+  } else if (!json_definition_.HasMember("union_declarations")) {
+    FieldNotFound("library", name_, "union_declarations");
   } else {
     // Make a set of the encoded compound identifiers of all types that are used as payloads for
     // for FIDL methods.
@@ -513,6 +586,20 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
       if (message_body_type_names.find(struct_name) != message_body_type_names.end()) {
         payloadables_.emplace(std::piecewise_construct, std::forward_as_tuple(struct_name),
                               std::forward_as_tuple(new Struct(this, &str)));
+      }
+    }
+    for (auto& tab : json_definition_["table_declarations"].GetArray()) {
+      const std::string tab_name = tab["name"].GetString();
+      if (message_body_type_names.find(tab_name) != message_body_type_names.end()) {
+        payloadables_.emplace(std::piecewise_construct, std::forward_as_tuple(tab_name),
+                              std::forward_as_tuple(new Table(this, &tab)));
+      }
+    }
+    for (auto& uni : json_definition_["union_declarations"].GetArray()) {
+      const std::string uni_name = uni["name"].GetString();
+      if (message_body_type_names.find(uni_name) != message_body_type_names.end()) {
+        payloadables_.emplace(std::piecewise_construct, std::forward_as_tuple(uni_name),
+                              std::forward_as_tuple(new Union(this, &uni)));
       }
     }
   }

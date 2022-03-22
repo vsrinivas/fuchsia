@@ -24,11 +24,33 @@ void EncodeStruct(proto::Struct* dst, const fidl_codec::StructValue* node) {
   }
 }
 
+void EncodeTable(proto::Table* dst, const fidl_codec::TableValue* node) {
+  for (const auto& member : node->members()) {
+    proto::Value value;
+    ProtoVisitor visitor(&value);
+    member.second->Visit(&visitor, nullptr);
+    dst->mutable_members()->insert(google::protobuf::MapPair(member.first->name(), value));
+  }
+}
+
+void EncodeUnion(proto::Union* dst, const fidl_codec::UnionValue* node) {
+  dst->set_member(node->member().name());
+  ProtoVisitor visitor(dst->mutable_value());
+  node->value()->Visit(&visitor, nullptr);
+}
+
 void EncodePayload(proto::Payload* dst, const fidl_codec::PayloadableValue* node) {
   const auto struct_value = node->AsStructValue();
-  // TODO(fxbug.dev/88343): handle table and union.
+  const auto table_value = node->AsTableValue();
+  const auto union_value = node->AsUnionValue();
   if (struct_value != nullptr) {
     return EncodeStruct(dst->mutable_struct_value(), struct_value);
+  }
+  if (table_value != nullptr) {
+    return EncodeTable(dst->mutable_table_value(), table_value);
+  }
+  if (union_value != nullptr) {
+    return EncodeUnion(dst->mutable_union_value(), union_value);
   }
   FX_LOGS_OR_CAPTURE(ERROR) << "Invalid payload value kind.";
 }
@@ -83,10 +105,7 @@ void ProtoVisitor::VisitHandleValue(const fidl_codec::HandleValue* node,
 
 void ProtoVisitor::VisitUnionValue(const fidl_codec::UnionValue* node,
                                    const fidl_codec::Type* for_type) {
-  proto::Union* union_value = dst_->mutable_union_value();
-  union_value->set_member(node->member().name());
-  ProtoVisitor visitor(union_value->mutable_value());
-  node->value()->Visit(&visitor, nullptr);
+  EncodeUnion(dst_->mutable_union_value(), node);
 }
 
 void ProtoVisitor::VisitStructValue(const fidl_codec::StructValue* node,
@@ -105,13 +124,7 @@ void ProtoVisitor::VisitVectorValue(const fidl_codec::VectorValue* node,
 
 void ProtoVisitor::VisitTableValue(const fidl_codec::TableValue* node,
                                    const fidl_codec::Type* for_type) {
-  proto::Table* table_value = dst_->mutable_table_value();
-  for (const auto& member : node->members()) {
-    proto::Value value;
-    ProtoVisitor visitor(&value);
-    member.second->Visit(&visitor, nullptr);
-    table_value->mutable_members()->insert(google::protobuf::MapPair(member.first->name(), value));
-  }
+  EncodeTable(dst_->mutable_table_value(), node);
 }
 
 void ProtoVisitor::VisitFidlMessageValue(const fidl_codec::FidlMessageValue* node,
@@ -177,6 +190,48 @@ std::unique_ptr<StructValue> DecodeStruct(LibraryLoader* loader, const proto::St
   return struct_value;
 }
 
+std::unique_ptr<TableValue> DecodeTable(LibraryLoader* loader, const proto::Table& proto_table,
+                                        const Table& table_definition) {
+  bool ok = true;
+  auto table_value = std::make_unique<fidl_codec::TableValue>(table_definition);
+  for (const auto& proto_member : proto_table.members()) {
+    const fidl_codec::TableMember* member = table_definition.SearchMember(proto_member.first);
+    if (member == nullptr) {
+      FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_member.first << " not found in "
+                                << table_definition.name() << '.';
+      ok = false;
+    } else {
+      std::unique_ptr<fidl_codec::Value> value =
+          DecodeValue(loader, proto_member.second, member->type());
+      if (value == nullptr) {
+        ok = false;
+      } else {
+        table_value->AddMember(member, std::move(value));
+      }
+    }
+  }
+  if (!ok) {
+    return nullptr;
+  }
+  return table_value;
+}
+
+std::unique_ptr<UnionValue> DecodeUnion(LibraryLoader* loader, const proto::Union& proto_union,
+                                        const Union& union_definition) {
+  fidl_codec::UnionMember* member = union_definition.SearchMember(proto_union.member());
+  if (member == nullptr) {
+    FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_union.member() << " not found in union "
+                              << union_definition.name() << '.';
+    return nullptr;
+  }
+  std::unique_ptr<fidl_codec::Value> union_value =
+      DecodeValue(loader, proto_union.value(), member->type());
+  if (union_value == nullptr) {
+    return nullptr;
+  }
+  return std::make_unique<fidl_codec::UnionValue>(*member, std::move(union_value));
+}
+
 std::unique_ptr<PayloadableValue> DecodePayload(LibraryLoader* loader,
                                                 const proto::Payload& proto_payload,
                                                 const Payload* payload) {
@@ -194,7 +249,22 @@ std::unique_ptr<PayloadableValue> DecodePayload(LibraryLoader* loader,
       }
       return DecodeStruct(loader, proto_payload.struct_value(), struct_type->struct_definition());
     }
-    // TODO(fxbug.dev/88343): handle table and union.
+    case proto::Payload::kTableValue: {
+      auto table_type = type->AsTableType();
+      if (table_type == nullptr) {
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of table value should be table.";
+        return nullptr;
+      }
+      return DecodeTable(loader, proto_payload.table_value(), table_type->table_definition());
+    }
+    case proto::Payload::kUnionValue: {
+      auto union_type = type->AsUnionType();
+      if (union_type == nullptr) {
+        FX_LOGS_OR_CAPTURE(ERROR) << "Type of union value should be union.";
+        return nullptr;
+      }
+      return DecodeUnion(loader, proto_payload.union_value(), union_type->union_definition());
+    }
     default:
       FX_LOGS_OR_CAPTURE(ERROR) << "Unknown payload kind.";
       return nullptr;
@@ -235,20 +305,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         FX_LOGS_OR_CAPTURE(ERROR) << "Type of union value should be union.";
         return nullptr;
       }
-      fidl_codec::UnionMember* member =
-          union_type->union_definition().SearchMember(proto_value.union_value().member());
-      if (member == nullptr) {
-        FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_value.union_value().member()
-                                  << " not found in union " << union_type->union_definition().name()
-                                  << '.';
-        return nullptr;
-      }
-      std::unique_ptr<fidl_codec::Value> union_value =
-          DecodeValue(loader, proto_value.union_value().value(), member->type());
-      if (union_value == nullptr) {
-        return nullptr;
-      }
-      return std::make_unique<fidl_codec::UnionValue>(*member, std::move(union_value));
+      return DecodeUnion(loader, proto_value.union_value(), union_type->union_definition());
     }
     case proto::Value::kStructValue: {
       auto struct_type = type->AsStructType();
@@ -287,29 +344,7 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         FX_LOGS_OR_CAPTURE(ERROR) << "Type of table value should be table.";
         return nullptr;
       }
-      bool ok = true;
-      auto table_value = std::make_unique<fidl_codec::TableValue>(table_type->table_definition());
-      for (const auto& proto_member : proto_value.table_value().members()) {
-        const fidl_codec::TableMember* member =
-            table_type->table_definition().SearchMember(proto_member.first);
-        if (member == nullptr) {
-          FX_LOGS_OR_CAPTURE(ERROR) << "Member " << proto_member.first << " not found in "
-                                    << table_type->table_definition().name() << '.';
-          ok = false;
-        } else {
-          std::unique_ptr<fidl_codec::Value> value =
-              DecodeValue(loader, proto_member.second, member->type());
-          if (value == nullptr) {
-            ok = false;
-          } else {
-            table_value->AddMember(member, std::move(value));
-          }
-        }
-      }
-      if (!ok) {
-        return nullptr;
-      }
-      return table_value;
+      return DecodeTable(loader, proto_value.table_value(), table_type->table_definition());
     }
     case proto::Value::kFidlMessageValue: {
       const proto::FidlMessage& proto_message = proto_value.fidl_message_value();

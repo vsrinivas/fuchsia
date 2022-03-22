@@ -73,6 +73,8 @@ message Table {
 message Payload {
   oneof Kind {
     Struct struct_value = 1;
+    Union union_value = 2;
+    Table table_value = 3;
   }
 }
 

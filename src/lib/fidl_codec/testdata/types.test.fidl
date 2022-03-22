@@ -65,6 +65,14 @@ protocol FidlCodecTestInterface {
         s string:100;
         i32 int32;
     });
+    StringIntTable(table {
+        1: s string:100;
+        2: i32 int32;
+    });
+    StringIntUnion(union {
+        1: s string:100;
+        2: i32 int32;
+    });
 
     Array1(struct {
         b_1 array<int32, 1>;

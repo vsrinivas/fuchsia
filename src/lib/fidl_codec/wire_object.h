@@ -23,6 +23,8 @@ class HandleValue;
 class StringValue;
 class PayloadableValue;
 class StructValue;
+class TableValue;
+class UnionValue;
 class VectorValue;
 class Visitor;
 
@@ -55,6 +57,10 @@ class Value {
   virtual const PayloadableValue* AsPayloadableValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
   virtual const StructValue* AsStructValue() const { return nullptr; }
+  virtual TableValue* AsTableValue() { return nullptr; }
+  virtual const TableValue* AsTableValue() const { return nullptr; }
+  virtual UnionValue* AsUnionValue() { return nullptr; }
+  virtual const UnionValue* AsUnionValue() const { return nullptr; }
   virtual const VectorValue* AsVectorValue() const { return nullptr; }
   virtual const FidlMessageValue* AsFidlMessageValue() const { return nullptr; }
 
@@ -300,7 +306,7 @@ class PayloadableValue : public Value {
 };
 
 // An union.
-class UnionValue : public Value {
+class UnionValue : public PayloadableValue {
  public:
   UnionValue(const UnionMember& member, std::unique_ptr<Value> value)
       : member_(member), value_(std::move(value)) {}
@@ -310,6 +316,9 @@ class UnionValue : public Value {
 
   bool NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
+
+  UnionValue* AsUnionValue() override { return this; }
+  const UnionValue* AsUnionValue() const override { return this; }
 
   size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
@@ -400,7 +409,7 @@ class VectorValue : public Value {
 };
 
 // A table.
-class TableValue : public Value {
+class TableValue : public PayloadableValue {
  public:
   explicit TableValue(const Table& table_definition) : table_definition_(table_definition) {}
 
@@ -416,6 +425,9 @@ class TableValue : public Value {
   }
 
   bool AddMember(std::string_view name, std::unique_ptr<Value> value);
+
+  TableValue* AsTableValue() override { return this; }
+  const TableValue* AsTableValue() const override { return this; }
 
   bool NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
