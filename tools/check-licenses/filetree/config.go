@@ -11,14 +11,13 @@ import (
 var Config *FileTreeConfig
 
 type FileTreeConfig struct {
-	FuchsiaDir           string  `json:"fuchsiaDir"`
+	FuchsiaDir string `json:"fuchsiaDir"`
+
 	Skips                []*Skip `json:"skips"`
 	ExitOnMissingProject bool    `json:"exitOnMissingProject"`
 }
 
 type Skip struct {
-	FuchsiaDir string `json:"fuchsiaDir"`
-
 	Paths []string `json:"paths"`
 	Notes []string `json:"notes"`
 

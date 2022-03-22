@@ -1,2 +1,4 @@
-External Library Name, Link to License File, License Name
-{{ range $_, $entry := (getCSVEntries . ) }}{{ $entry }}{{ end }}
+Project,License File,Library Name,Line Number
+{{ $csvData := (getCSVEntries . ) }}
+{{ range $_, $entry := $csvData.Entries }}
+{{ $entry.Project }},{{ $entry.Path }},{{ $entry.Package }},{{ $entry.Left }}{{ end }}

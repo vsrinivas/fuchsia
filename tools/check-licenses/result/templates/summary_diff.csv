@@ -1,0 +1,7 @@
+{{ range $_, $header := .Diff.Header }}{{ $header }}
+{{end}}
+{{ $csvData := (getCSVEntries . ) }}{{ $csvData.Header }}
+
+Project,Link to License File,Library Name,Left,Right
+{{ range $_, $entry := $csvData.Entries }}
+{{ $entry.Project }},{{ $entry.Path }},{{ $entry.Package }},{{ $entry.Left }},{{ $entry.Right }}{{ end }}

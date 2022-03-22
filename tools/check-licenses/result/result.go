@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
@@ -25,15 +24,6 @@ import (
 const (
 	indent = "  "
 )
-
-// World is a struct that contains all the information about this check-license
-// run. The fields are all defined for easy use in template files.
-type World struct {
-	Files     []*file.File
-	FileTrees []*filetree.FileTree
-	Projects  []*project.Project
-	Patterns  []*license.Pattern
-}
 
 // SaveResults saves the results to the output files defined in the config file.
 func SaveResults() (string, error) {

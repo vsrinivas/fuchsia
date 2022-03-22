@@ -5,6 +5,7 @@
 package file
 
 import (
+	"io/ioutil"
 	"path/filepath"
 )
 
@@ -14,6 +15,7 @@ type File struct {
 	Name string
 	Path string `json:"path"`
 	Data []*FileData
+	Text []byte
 }
 
 // Order implements sort.Interface for []*File based on the Path field.
@@ -35,7 +37,12 @@ func NewFile(path string, ft FileType) (*File, error) {
 		return f, nil
 	}
 
-	data, err := NewFileData(path, ft)
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := NewFileData(path, content, ft)
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +52,7 @@ func NewFile(path string, ft FileType) (*File, error) {
 		Name: filepath.Base(path),
 		Path: path,
 		Data: data,
+		Text: content,
 	}
 
 	AllFiles[path] = f

@@ -7,7 +7,6 @@ package notice
 import (
 	"bufio"
 	"bytes"
-	"os"
 	"strings"
 )
 
@@ -31,14 +30,10 @@ const (
 	parserStateLicense     = iota
 )
 
-func ParseChromium(path string) ([]*Data, error) {
+func ParseChromium(path string, content []byte) ([]*Data, error) {
 	var licenseDelimiter = []byte("--------------------")
 
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+	r := bytes.NewReader(content)
 
 	var builder strings.Builder
 	var licenses []*Data
@@ -51,7 +46,7 @@ func ParseChromium(path string) ([]*Data, error) {
 	// associated with it.
 	parserState := parserStateLicense
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	lineNumber := 0
 	for scanner.Scan() {
 		lineNumber = lineNumber + 1

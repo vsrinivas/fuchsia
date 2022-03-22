@@ -7,7 +7,6 @@ package notice
 import (
 	"bufio"
 	"bytes"
-	"os"
 	"strings"
 )
 
@@ -22,12 +21,8 @@ import (
 
 var separator = []byte("=================")
 
-func ParseGoogle(path string) ([]*Data, error) {
-	r, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
+func ParseGoogle(path string, content []byte) ([]*Data, error) {
+	r := bytes.NewReader(content)
 
 	var (
 		inLicense bool
