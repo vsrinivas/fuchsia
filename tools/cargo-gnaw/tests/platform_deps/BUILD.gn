@@ -6,13 +6,13 @@
 
 if (current_cpu == "arm64" && current_os == "mac") {
   group("anyhow") {
-    deps = [ ":anyhow-v1_0_27" ]
+    public_deps = [ ":anyhow-v1_0_27" ]
   }
 }
 
 if (current_os == "fuchsia") {
   group("anyhow") {
-    deps = [ ":anyhow-v1_0_27" ]
+    public_deps = [ ":anyhow-v1_0_27" ]
   }
 }
 
