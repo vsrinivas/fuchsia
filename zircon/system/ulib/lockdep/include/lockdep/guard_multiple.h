@@ -45,7 +45,7 @@ class GuardMultiple {
   }
 
   // Releases all of the locks guarded by this instance.
-  void Release() {
+  void Release() __TA_NO_THREAD_SAFETY_ANALYSIS {
     for (size_t i = 0; i < Size; i++)
       guard_storage_.guards[i].Release();
   }
