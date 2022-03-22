@@ -209,26 +209,14 @@ which use isolated storage. Any product that builds on top of the `core`
 product already includes a component ID index in its assembly, so the following
 instructions may not be necessary.
 
-### `component_id_index_config()`
-All component_id_index()s in a system build are merged together using the
-`component_id_index_config()` template.
+All `component_id_index()`s in a system build are merged together using the
+`component_id_index_config()` template. This template is currently used in
+`assemble_system.gni`, and assembly will fail if you define your own alongside
+the one from `assemble_system.gni`.
 
-`component_id_index_config()` produces a `resource()` target containing a
-a FIDL-wireformat encoded index, along with a `config_data(for_pkg=appmgr)`
-sub-target with a "-config-data" suffix containing a JSON-encoded index.
+### Steps
 
-The `resource()` copy of the index is used by `component_manager`, while the
-`config_data()` copy is used by `appmgr`. Although they use different formats,
-they carry the same information.
+1. Define any `component_id_index()`s you want included in the system.
+1. Add these targets as dependencies of `base_packages` in your `assemble_system()`
+target.
 
-To include a `component_id_index_config()` target in a system assembly:
-
-**a)** Define it with a dependency on any `component_id_index()` targets
-you want included in the system. For example, `//build/images:universe_packages`
-is a good dependency candidate because it transitively includes all
-`component_id_index()` specified in the build.
-
-**b)** Add both the `component_id_index_config()` target and the `-config-data`
-suffixed subtarget to the system assembly. Currently, a good method is to
-include the target in the bootfs_labels, and make the `-config-data` sub-target
-a dependency to your system assembly's `config_package()`.
