@@ -165,6 +165,7 @@ fuchsia_package("test_manager_pkg") {
     "debug_data:debug_data_rust",
     "debug_data_processor",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/sys/early_boot_instrumentation:early-boot-instrumentation",
   ]
 }
 

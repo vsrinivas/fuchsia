@@ -75,6 +75,10 @@
             name: "debug_data",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data_rust.cm",
         },
+        {
+            name: "early_boot_instrumentation",
+            url: "#meta/early-boot-instrumentation.cm",
+        },
     ],
     collections: [
         {
@@ -139,10 +143,10 @@
             from: "#custom_artifacts",
         },
         {
-            directory: "kernel_data",
-            from: "parent",
+            directory: "prof-data",
+            from: "#early_boot_instrumentation",
             rights: [ "r*" ],
-            path: "/kernel_data",
+            path: "/prof-data",
         },
         {
             protocol: "fuchsia.test.internal.DebugDataController",
@@ -210,6 +214,7 @@
             to: [
                 "#cmx_runner",
                 "#debug_data",
+                "#early_boot_instrumentation",
                 "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
                 "#go_test_runner",
@@ -467,6 +472,12 @@
             from: "parent",
             to: [ "#system-tests" ],
             rights: [ "rx*" ],
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: [ "#early_boot_instrumentation" ],
+            rights: [ "r*" ],
         },
 
         // Tests of the media system change their behavior based on board

@@ -55,6 +55,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
+        path::PathBuf,
         sync::{
             atomic::{AtomicU32, AtomicU64, Ordering},
             Arc, Weak,
@@ -289,28 +290,60 @@ async fn send_debug_data_if_produced(
     }
 }
 
+const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
+const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
+
 async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
-    let file = io_util::open_file_in_namespace(
-        "/kernel_data/zircon.elf.profraw",
+    let profile_dir = match io_util::open_directory_in_namespace(
+        DYNAMIC_PROFILE_PREFIX,
         io_util::OPEN_RIGHT_READABLE,
-    );
-    match file {
-        Ok(file) => match io_util::read_file_bytes(&file).await {
-            Ok(contents) => {
-                let (client, task) = serve_debug_data(vec![DebugDataFile {
-                    name: "zircon.elf.profraw".to_string(),
-                    contents,
-                }]);
-                let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
-                task.await;
-            }
-            Err(e) => {
-                warn!("Failed to read kernel profile contents {:?}", e);
-            }
-        },
+    ) {
+        Ok(d) => d,
         Err(e) => {
-            warn!("Failed to open kernel profile contents {:?}", e);
+            warn!("Failed to open dynamic profile directory: {:?}", e);
+            return;
         }
+    };
+
+    let mut file_stream = files_async::readdir_recursive(
+        &profile_dir,
+        Some(fasync::Duration::from_seconds(PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS)),
+    );
+
+    let mut file_futs = vec![];
+    while let Some(Ok(file)) = file_stream.next().await {
+        file_futs.push(async move {
+            let name = file.name;
+            let path =
+                PathBuf::from(DYNAMIC_PROFILE_PREFIX).join(&name).to_string_lossy().to_string();
+            let file = io_util::open_file_in_namespace(&path, io_util::OPEN_RIGHT_READABLE)?;
+            let content = io_util::read_file_bytes(&file).await;
+
+            Ok::<_, Error>((name, content))
+        });
+    }
+
+    let file_futs: Vec<(String, Result<Vec<u8>, Error>)> =
+        join_all(file_futs).await.into_iter().filter_map(|v| v.ok()).collect();
+
+    let files = file_futs
+        .into_iter()
+        .filter_map(|v| {
+            let (name, result) = v;
+            match result {
+                Ok(contents) => Some(DebugDataFile { name: name.to_string(), contents }),
+                Err(e) => {
+                    warn!("Failed to read debug data file {}: {:?}", name, e);
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if !files.is_empty() {
+        let (client, task) = serve_debug_data(files);
+        let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
+        task.await;
     }
 }
 
