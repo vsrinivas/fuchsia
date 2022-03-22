@@ -5,7 +5,7 @@
 #include "driver_host.h"
 
 #include <dlfcn.h>
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -58,6 +58,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 namespace fdm = fuchsia_device_manager;
+namespace fdf = fuchsia_driver_framework;
 
 bool property_value_type_valid(uint32_t value_type) {
   return value_type > ZX_DEVICE_PROPERTY_VALUE_UNDEFINED &&
@@ -110,8 +111,7 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
     }
     case ZX_DEVICE_PROPERTY_VALUE_STRING: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-          fidl::ObjectView<fidl::StringView>(allocator, allocator,
-                                             prop.property_value.value.str_val));
+          allocator, allocator, prop.property_value.value.str_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
@@ -128,6 +128,65 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   }
 
   return str_property;
+}
+
+fdf::wire::DeviceGroupNode convert_device_group_node(fidl::AnyArena& allocator,
+                                                     device_group_fragment_t fragment) {
+  fidl::VectorView<fdf::wire::NodeProperty> properties(
+      allocator, fragment.props_count + fragment.str_props_count);
+
+  for (size_t i = 0; i < fragment.props_count; i++) {
+    fidl::WireTableBuilder<fdf::wire::NodeProperty> builder =
+        fdf::wire::NodeProperty::Builder(allocator);
+    builder.key(fdf::wire::NodePropertyKey::WithIntValue(fragment.props[i].id));
+    builder.value(fdf::wire::NodePropertyValue::WithIntValue(fragment.props[i].value));
+    properties[i] = builder.Build();
+  }
+
+  size_t index = fragment.props_count;
+  for (size_t i = 0; i < fragment.str_props_count; i++) {
+    auto str_property = fragment.str_props[i];
+    ZX_ASSERT(property_value_type_valid(str_property.property_value.value_type));
+
+    fidl::WireTableBuilder<fdf::wire::NodeProperty> builder =
+        fdf::wire::NodeProperty::Builder(allocator);
+
+    auto property_key =
+        fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_property.key);
+    builder.key(property_key);
+
+    switch (str_property.property_value.value_type) {
+      case ZX_DEVICE_PROPERTY_VALUE_INT: {
+        builder.value(
+            fdf::wire::NodePropertyValue::WithIntValue(str_property.property_value.value.int_val));
+        break;
+      }
+      case ZX_DEVICE_PROPERTY_VALUE_STRING: {
+        auto property_val = fidl::ObjectView<fidl::StringView>(
+            allocator, allocator, str_property.property_value.value.str_val);
+        builder.value(fdf::wire::NodePropertyValue::WithStringValue(property_val));
+        break;
+      }
+      case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
+        builder.value(fdf::wire::NodePropertyValue::WithBoolValue(
+            str_property.property_value.value.bool_val));
+        break;
+      }
+      case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
+        auto property_val = fidl::ObjectView<fidl::StringView>(
+            allocator, allocator, str_property.property_value.value.enum_val);
+        builder.value(fdf::wire::NodePropertyValue::WithEnumValue(property_val));
+        break;
+      }
+    }
+
+    properties[index + i] = builder.Build();
+  }
+
+  return fdf::wire::DeviceGroupNode{
+      .name = fidl::StringView(allocator, fragment.name),
+      .properties = properties,
+  };
 }
 
 static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
@@ -1174,4 +1233,71 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     call_status = response->result.err();
   }
   return log_rpc_result(dev, "create-composite", status, call_status);
+}
+
+zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& dev,
+                                              std::string_view name,
+                                              const device_group_desc_t* group_desc) {
+  if (name.empty() || !group_desc) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!group_desc->fragments || group_desc->fragments_count == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if ((!group_desc->props && group_desc->props_count > 0) ||
+      (!group_desc->str_props && group_desc->str_props_count > 0) ||
+      (!group_desc->metadata_list && group_desc->metadata_count > 0)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto& client = dev->coordinator_client;
+  if (!client) {
+    return ZX_ERR_IO_REFUSED;
+  }
+
+  fidl::Arena allocator;
+
+  auto props = fidl::VectorView<fdm::wire::DeviceProperty>(allocator, group_desc->props_count);
+  for (size_t i = 0; i < group_desc->props_count; i++) {
+    props[i] = convert_device_prop(group_desc->props[i]);
+  }
+
+  auto str_props =
+      fidl::VectorView<fdm::wire::DeviceStrProperty>(allocator, group_desc->str_props_count);
+  for (size_t i = 0; i < group_desc->str_props_count; i++) {
+    if (!property_value_type_valid(group_desc->str_props[i].property_value.value_type)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    str_props[i] = convert_device_str_prop(group_desc->str_props[i], allocator);
+  }
+
+  auto fragments =
+      fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->fragments_count);
+  for (size_t i = 0; i < group_desc->fragments_count; i++) {
+    fragments[i] = convert_device_group_node(allocator, group_desc->fragments[i]);
+  }
+
+  auto metadata =
+      fidl::VectorView<fdm::wire::DeviceMetadata>(allocator, group_desc->metadata_count);
+  for (size_t i = 0; i < group_desc->metadata_count; i++) {
+    metadata[i] = fdm::wire::DeviceMetadata{
+        .key = group_desc->metadata_list[i].type,
+        .data = fidl::VectorView<uint8_t>::FromExternal(
+            reinterpret_cast<uint8_t*>(const_cast<void*>(group_desc->metadata_list[i].data)),
+            group_desc->metadata_list[i].length)};
+  }
+
+  fdm::wire::DeviceGroupDescriptor desc = {.props = props,
+                                           .str_props = str_props,
+                                           .fragments = fragments,
+                                           .spawn_colocated = group_desc->spawn_colocated,
+                                           .metadata = metadata};
+
+  auto response = client.sync()->AddDeviceGroup(fidl::StringView(allocator, name), std::move(desc));
+  auto status = response.status();
+  auto call_status = status == ZX_OK && response->result.is_err() ? response->result.err() : ZX_OK;
+
+  return log_rpc_result(dev, "add-device-group", status, call_status);
 }

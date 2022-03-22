@@ -5,6 +5,7 @@ library fuchsia.device.manager;
 
 // TODO(teisenbe): Move these interfaces to be internal to the devmgr codebase
 
+using fuchsia.driver.framework as fdf;
 using fuchsia.io;
 using zx;
 
@@ -115,6 +116,15 @@ type CompositeDeviceDescriptor = struct {
     str_props vector<DeviceStrProperty>:STR_PROPERTIES_MAX;
     fragments vector<DeviceFragment>:FRAGMENTS_MAX;
     primary_fragment_index uint32;
+    spawn_colocated bool;
+    metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
+};
+
+/// Device group parts and properties.
+type DeviceGroupDescriptor = struct {
+    props vector<DeviceProperty>:PROPERTIES_MAX;
+    str_props vector<DeviceStrProperty>:STR_PROPERTIES_MAX;
+    fragments vector<fdf.DeviceGroupNode>:MAX;
     spawn_colocated bool;
     metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
 };
@@ -329,11 +339,20 @@ protocol Coordinator {
         data vector<uint8>:<METADATA_BYTES_MAX, optional>;
     }) -> (struct {}) error zx.status;
 
-    /// Adds the given composite device.  This causes the devcoordinator to try to match the
+    /// Adds the given composite device.  This causes the driver manager to try to match the
     /// fragments against the existing device tree, and to monitor all new device additions
     /// in order to find the fragments as they are created.
     AddCompositeDevice(struct {
         name string:DEVICE_NAME_MAX;
         comp_desc CompositeDeviceDescriptor;
+    }) -> (struct {}) error zx.status;
+
+    /// Adds the given device group. This causes the driver manager to add the device group to
+    /// the driver index, and then try to match the nodes against the existing device tree.
+    /// All device additions will be monitored to see if they matched to the remaining
+    /// unbound nodes.
+    AddDeviceGroup(struct {
+        name string:DEVICE_NAME_MAX;
+        group_desc DeviceGroupDescriptor;
     }) -> (struct {}) error zx.status;
 };

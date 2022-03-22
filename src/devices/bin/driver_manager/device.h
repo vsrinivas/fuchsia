@@ -100,6 +100,8 @@ class Device
                       ScheduleRemoveCompleter::Sync& _completer) override;
   void AddCompositeDevice(AddCompositeDeviceRequestView request,
                           AddCompositeDeviceCompleter::Sync& _completer) override;
+  void AddDeviceGroup(AddDeviceGroupRequestView request,
+                      AddDeviceGroupCompleter::Sync& _completer) override;
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override;
@@ -641,7 +643,6 @@ class Device
 
   // Provides incoming directory for the driver which binds to this device.
   fidl::ClientEnd<fio::Directory> outgoing_dir_;
-
 
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;

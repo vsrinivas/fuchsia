@@ -424,6 +424,34 @@ async_dispatcher_t* device_get_dispatcher(zx_device_t* device);
 zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out, size_t out_size,
                                 size_t* size_actual);
 
+typedef struct device_group_fragment {
+  const char* name;
+
+  const zx_device_prop_t* props;
+  size_t props_count;
+
+  const zx_device_str_prop_t* str_props;
+  size_t str_props_count;
+} device_group_fragment_t;
+
+typedef struct device_group_desc {
+  // The first fragment is the primary fragment.
+  const device_group_fragment_t* fragments;
+  size_t fragments_count;
+
+  const zx_device_prop_t* props;
+  size_t props_count;
+  const zx_device_str_prop_t* str_props;
+  size_t str_props_count;
+
+  bool spawn_colocated;
+  const device_metadata_t* metadata_list;
+  size_t metadata_count;
+} device_group_desc_t;
+
+zx_status_t add_device_group(zx_device_t* dev, const char* name,
+                             const device_group_desc_t* group_desc);
+
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
 enum {

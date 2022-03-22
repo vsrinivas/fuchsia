@@ -786,6 +786,12 @@ void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,
   }
 }
 
+// TODO(fxb/91510): Implement support for device groups.
+void Device::AddDeviceGroup(AddDeviceGroupRequestView request,
+                            AddDeviceGroupCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 bool Device::DriverLivesInSystemStorage() const {
   const std::string kSystemPrefix = "/system/";
 

@@ -529,3 +529,10 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
   strncpy(out, variable, out_size);
   return ZX_OK;
 }
+
+__EXPORT zx_status_t add_device_group(zx_device_t* dev, const char* name,
+                                      const device_group_desc_t* group_desc) {
+  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
+  auto dev_ref = fbl::RefPtr(dev);
+  return internal::ContextForApi()->DeviceAddGroup(dev_ref, name, group_desc);
+}

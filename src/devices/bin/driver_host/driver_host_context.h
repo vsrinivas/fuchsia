@@ -115,6 +115,9 @@ class DriverHostContext {
   zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_t* comp_desc) TA_REQ(api_lock_);
 
+  zx_status_t DeviceAddGroup(const fbl::RefPtr<zx_device_t>& dev, std::string_view name,
+                             const device_group_desc_t* group_desc) TA_REQ(api_lock_);
+
   zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
 
   // Called when a zx_device_t has run out of references and needs its destruction finalized.
