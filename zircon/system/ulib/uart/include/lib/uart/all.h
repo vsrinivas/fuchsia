@@ -14,6 +14,7 @@
 #include <hwreg/internal.h>
 
 #include "amlogic.h"
+#include "motmot.h"
 #include "ns8250.h"
 #include "null.h"
 #include "pl011.h"
@@ -56,7 +57,7 @@ using WithAllDrivers = Template<
     // This driver is potentially used on all machines.
     ns8250::MmioDriver,
 #if defined(__aarch64__) || UART_ALL_DRIVERS
-    amlogic::Driver, ns8250::LegacyDw8250Driver, pl011::Driver,
+    amlogic::Driver, motmot::Driver, ns8250::LegacyDw8250Driver, pl011::Driver,
 #endif
 #if defined(__x86_64__) || defined(__i386__) || UART_ALL_DRIVERS
     ns8250::PioDriver,
