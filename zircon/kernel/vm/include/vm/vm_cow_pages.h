@@ -802,7 +802,9 @@ class VmCowPages final
   // |offset| and |len| should be page-aligned.
   //
   // |dirty_len_out| will return the (page-aligned) length starting at |offset| that contains dirty
-  // pages, either already dirty before making the call or dirtied during the call.
+  // pages, either already dirty before making the call or dirtied during the call. In other words,
+  // the range [offset, offset + dirty_len_out) will be dirty when this call returns, where
+  // |dirty_len_out| <= |len|.
   zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
                                     uint64_t* dirty_len_out) TA_REQ(lock_);
 
