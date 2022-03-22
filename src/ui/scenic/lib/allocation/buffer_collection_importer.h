@@ -63,6 +63,7 @@ inline std::ostream& operator<<(std::ostream& out,
 inline std::ostream& operator<<(std::ostream& str, const ImageMetadata& m) {
   str << "size=" << m.width << "x" << m.height << "  multiply_color=(" << m.multiply_color[0] << ","
       << m.multiply_color[1] << "," << m.multiply_color[2] << "," << m.multiply_color[3] << ")"
+      << (m.collection_id == kInvalidImageId ? " (Solid Color)" : "")
       << "  blend_mode=" << m.blend_mode;
   return str;
 }

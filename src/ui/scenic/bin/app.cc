@@ -8,6 +8,8 @@
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <optional>
+
 #include "lib/async/default.h"
 #include "rapidjson/document.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
@@ -509,8 +511,14 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   {
     TRACE_DURATION("gfx", "App::InitializeServices[flatland_engine]");
 
-    flatland_engine_ = std::make_shared<flatland::Engine>(flatland_compositor_, flatland_presenter_,
-                                                          uber_struct_system_, link_system_);
+    flatland_engine_ = std::make_shared<flatland::Engine>(
+        flatland_compositor_, flatland_presenter_, uber_struct_system_, link_system_,
+        scenic_->inspect_node()->CreateChild("FlatlandEngine"), [this] {
+          FX_DCHECK(flatland_manager_);
+          const auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
+          return display ? std::optional<flatland::TransformHandle>(display->root_transform())
+                         : std::nullopt;
+        });
 
     frame_renderer_ = std::make_shared<TemporaryFrameRendererDelegator>(flatland_manager_,
                                                                         flatland_engine_, engine_);

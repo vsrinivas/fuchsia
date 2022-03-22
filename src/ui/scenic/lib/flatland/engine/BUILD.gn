@@ -31,6 +31,7 @@ template("engine_library") {
 
     public_deps = [
       "//sdk/fidl/fuchsia.hardware.display",
+      "//sdk/lib/sys/inspect/cpp",
       "//src/ui/scenic/lib/display:display",
       "//src/ui/scenic/lib/flatland",
       "//src/ui/scenic/lib/flatland/renderer",

@@ -8,6 +8,8 @@
 
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
+#include "src/ui/scenic/lib/flatland/global_topology_data.h"
+#include "src/ui/scenic/lib/flatland/scene_dumper.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/logging.h"
@@ -16,6 +18,7 @@
 #include <lib/zx/time.h>
 
 #include <sstream>
+#include <string>
 #include <unordered_set>
 
 // Hardcoded double buffering.
@@ -29,15 +32,39 @@ namespace flatland {
 Engine::Engine(std::shared_ptr<DisplayCompositor> flatland_compositor,
                std::shared_ptr<DefaultFlatlandPresenter> flatland_presenter,
                std::shared_ptr<UberStructSystem> uber_struct_system,
-               std::shared_ptr<LinkSystem> link_system)
+               std::shared_ptr<LinkSystem> link_system, inspect::Node inspect_node,
+               GetRootTransformFunc get_root_transform)
     : flatland_compositor_(std::move(flatland_compositor)),
       flatland_presenter_(std::move(flatland_presenter)),
       uber_struct_system_(std::move(uber_struct_system)),
-      link_system_(std::move(link_system)) {
+      link_system_(std::move(link_system)),
+      inspect_node_(std::move(inspect_node)),
+      get_root_transform_(std::move(get_root_transform)) {
   FX_DCHECK(flatland_compositor_);
   FX_DCHECK(flatland_presenter_);
   FX_DCHECK(uber_struct_system_);
   FX_DCHECK(link_system_);
+  InitializeInspectObjects();
+}
+
+constexpr char kSceneDump[] = "scene_dump";
+
+void Engine::InitializeInspectObjects() {
+  inspect_scene_dump_ = inspect_node_.CreateLazyValues(kSceneDump, [this] {
+    inspect::Inspector inspector;
+    const auto root_transform = get_root_transform_();
+    if (!root_transform) {
+      inspector.GetRoot().CreateString(kSceneDump, "(No Root Transform)", &inspector);
+      return fpromise::make_ok_promise(std::move(inspector));
+    }
+
+    const SceneState scene_state(*this, *root_transform);
+    std::ostringstream output;
+    DumpScene(scene_state.snapshot, scene_state.topology_data, scene_state.images,
+              scene_state.image_indices, scene_state.image_rectangles, output);
+    inspector.GetRoot().CreateString(kSceneDump, output.str(), &inspector);
+    return fpromise::make_ok_promise(std::move(inspector));
+  });
 }
 
 void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
@@ -48,46 +75,24 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   FX_CHECK(frame_number == last_rendered_frame_ + 1);
   last_rendered_frame_ = frame_number;
 
-  const auto snapshot = uber_struct_system_->Snapshot();
-  const auto links = link_system_->GetResolvedTopologyLinks();
-  const auto link_system_id = link_system_->GetInstanceId();
-
-  const auto topology_data = GlobalTopologyData::ComputeGlobalTopologyData(
-      snapshot, links, link_system_id, display.root_transform());
-  const auto global_matrices =
-      ComputeGlobalMatrices(topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  auto [image_indices, images] =
-      ComputeGlobalImageData(topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto global_clip_regions = ComputeGlobalTransformClipRegions(
-      topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
-
-  auto image_rectangles =
-      ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
-                              SelectAttribute(global_image_sample_regions, image_indices),
-                              SelectAttribute(global_clip_regions, image_indices), images);
-
+  SceneState scene_state(*this, display.root_transform());
   const auto hw_display = display.display();
 
 #if defined(USE_FLATLAND_VERBOSE_LOGGING)
   std::ostringstream str;
   str << "Engine::RenderScheduledFrame()\n"
-      << "Root transform of global topology: " << topology_data.topology_vector[0]
+      << "Root transform of global topology: " << scene_state.topology_data.topology_vector[0]
       << "\nTopologically-sorted transforms and their corresponding parent transforms:";
-  for (size_t i = 1; i < topology_data.topology_vector.size(); ++i) {
-    str << "\n        " << topology_data.topology_vector[i] << " -> "
-        << topology_data.topology_vector[topology_data.parent_indices[i]];
+  for (size_t i = 1; i < scene_state.topology_data.topology_vector.size(); ++i) {
+    str << "\n        " << scene_state.topology_data.topology_vector[i] << " -> "
+        << scene_state.topology_data.topology_vector[scene_state.topology_data.parent_indices[i]];
   }
-  str << "\nFrame display-list contains " << image_rectangles.size() << " image-rectangles and "
-      << images.size() << " images.";
-  for (auto& r : image_rectangles) {
+  str << "\nFrame display-list contains " << scene_state.image_rectangles.size()
+      << " image-rectangles and " << scene_state.images.size() << " images.";
+  for (auto& r : scene_state.image_rectangles) {
     str << "\n        rect: " << r;
   }
-  for (auto& i : images) {
+  for (auto& i : scene_state.images) {
     str << "\n        image: " << i;
   }
   FLATLAND_VERBOSE_LOG << str.str();
@@ -95,8 +100,9 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
 
   // TODO(fxbug.dev/78201): we hardcode the pixel scale to {1, 1}.  We might want to augment the
   // FIDL API to allow this to be modified.
-  link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
-                            global_matrices, /*display_pixel_scale*/ glm::vec2{1.f, 1.f}, snapshot);
+  link_system_->UpdateLinks(scene_state.topology_data.topology_vector,
+                            scene_state.topology_data.live_handles, scene_state.global_matrices,
+                            /*display_pixel_scale*/ glm::vec2{1.f, 1.f}, scene_state.snapshot);
 
   // TODO(fxbug.dev/76640): hack!  need a better place to call AddDisplay().
   if (hack_seen_display_ids_.find(hw_display->display_id()) == hack_seen_display_ids_.end()) {
@@ -116,11 +122,12 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
                                      /*num_vmos*/ kNumDisplayFramebuffers, &render_target_info);
   }
 
-  CullRectangles(&image_rectangles, &images, hw_display->width_in_px(), hw_display->height_in_px());
+  CullRectangles(&scene_state.image_rectangles, &scene_state.images, hw_display->width_in_px(),
+                 hw_display->height_in_px());
 
   flatland_compositor_->RenderFrame(frame_number, presentation_time,
-                                    {{.rectangles = std::move(image_rectangles),
-                                      .images = std::move(images),
+                                    {{.rectangles = std::move(scene_state.image_rectangles),
+                                      .images = std::move(scene_state.images),
                                       .display_id = hw_display->display_id()}},
                                     flatland_presenter_->TakeReleaseFences(), std::move(callback));
 }
@@ -157,17 +164,35 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
 Renderables Engine::GetRenderables(const FlatlandDisplay& display) {
   TransformHandle root = display.root_transform();
 
-  const auto snapshot = uber_struct_system_->Snapshot();
-  const auto links = link_system_->GetResolvedTopologyLinks();
-  const auto link_system_id = link_system_->GetInstanceId();
+  SceneState scene_state(*this, root);
+  const auto hw_display = display.display();
+  CullRectangles(&scene_state.image_rectangles, &scene_state.images, hw_display->width_in_px(),
+                 hw_display->height_in_px());
 
-  const auto topology_data =
-      GlobalTopologyData::ComputeGlobalTopologyData(snapshot, links, link_system_id, root);
-  const auto global_matrices =
+  return std::make_pair(std::move(scene_state.image_rectangles), std::move(scene_state.images));
+}
+
+void Engine::SetColorConversionValues(const std::array<float, 9>& matrix,
+                                      const std::array<float, 3>& preoffsets,
+                                      const std::array<float, 3>& postoffsets) {
+  flatland_compositor_->SetColorConversionValues(matrix, preoffsets, postoffsets);
+}
+
+Engine::SceneState::SceneState(Engine& engine, TransformHandle root_transform) {
+  snapshot = engine.uber_struct_system_->Snapshot();
+
+  const auto links = engine.link_system_->GetResolvedTopologyLinks();
+  const auto link_system_id = engine.link_system_->GetInstanceId();
+
+  topology_data = GlobalTopologyData::ComputeGlobalTopologyData(snapshot, links, link_system_id,
+                                                                root_transform);
+  global_matrices =
       ComputeGlobalMatrices(topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
-  auto [image_indices, images] =
+  auto [indices, im] =
       ComputeGlobalImageData(topology_data.topology_vector, topology_data.parent_indices, snapshot);
+  this->image_indices = std::move(indices);
+  this->images = std::move(im);
 
   const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
@@ -175,21 +200,10 @@ Renderables Engine::GetRenderables(const FlatlandDisplay& display) {
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
       topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
-  auto image_rectangles =
+  image_rectangles =
       ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
                               SelectAttribute(global_image_sample_regions, image_indices),
                               SelectAttribute(global_clip_regions, image_indices), images);
-
-  const auto hw_display = display.display();
-  CullRectangles(&image_rectangles, &images, hw_display->width_in_px(), hw_display->height_in_px());
-
-  return std::make_pair(std::move(image_rectangles), std::move(images));
-}
-
-void Engine::SetColorConversionValues(const std::array<float, 9>& matrix,
-                                      const std::array<float, 3>& preoffsets,
-                                      const std::array<float, 3>& postoffsets) {
-  flatland_compositor_->SetColorConversionValues(matrix, preoffsets, postoffsets);
 }
 
 }  // namespace flatland

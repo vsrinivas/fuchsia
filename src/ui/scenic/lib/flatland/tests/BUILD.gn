@@ -20,6 +20,7 @@ executable("unittests") {
     "hanging_get_helper_unittest.cc",
     "link_system_unittest.cc",
     "mock_flatland_presenter.h",
+    "scene_dumper_unittest.cc",
     "transform_graph_unittest.cc",
     "uber_struct_system_unittest.cc",
   ]

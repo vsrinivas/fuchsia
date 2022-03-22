@@ -22,6 +22,8 @@ source_set("flatland") {
     "hanging_get_helper.h",
     "link_system.cc",
     "link_system.h",
+    "scene_dumper.cc",
+    "scene_dumper.h",
     "transform_graph.cc",
     "transform_graph.h",
     "transform_handle.cc",
