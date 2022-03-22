@@ -418,11 +418,10 @@ impl<T: 'static + File> FileConnection<T> {
             }
             fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
-                let (status, mut buffer) =
-                    match self.handle_get_buffer(fio::VmoFlags::from_bits_truncate(flags)).await {
-                        Ok(buffer) => (zx::Status::OK, Some(buffer)),
-                        Err(status) => (status, None),
-                    };
+                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
+                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
+                    Err(status) => (status, None),
+                };
                 responder.send(status.into_raw(), buffer.as_mut())?;
             }
             fio::FileRequest::GetBackingMemory { flags, responder } => {

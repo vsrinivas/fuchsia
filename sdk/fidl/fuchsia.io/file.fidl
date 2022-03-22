@@ -134,17 +134,15 @@ protocol File1 {
     /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
     ///
-    /// `flags` must be a valid [`VmoFlags`].
-    ///
     /// This method requires following rights:
     ///
-    /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VmoFlags::WRITE`.
-    /// - `OPEN_RIGHT_READABLE` if `flags` includes `VmoFlags::READ` or `VmoFlags::EXECUTE`.
-    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VmoFlags::EXECUTE`.
+    /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VmoFlags.WRITE`.
+    /// - `OPEN_RIGHT_READABLE` if `flags` includes `VmoFlags.READ` or `VmoFlags.EXECUTE`.
+    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VmoFlags.EXECUTE`.
     @selector("fuchsia.io1/File.GetBuffer")
     @deprecated("replaced by File2.GetBackingMemory")
     GetBufferDeprecatedUseGetBackingMemory(struct {
-        flags uint32;
+        flags VmoFlags;
     }) -> (resource struct {
         s zx.status;
         buffer box<fuchsia.mem.Buffer>;

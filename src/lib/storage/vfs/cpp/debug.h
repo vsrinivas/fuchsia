@@ -200,6 +200,28 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::NodeAttri
   }
 }
 
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::VmoFlags flags) {
+  constexpr std::pair<fuchsia_io::wire::VmoFlags, std::string_view> flagToString[] = {
+      {fuchsia_io::wire::VmoFlags::kRead, "READ"},
+      {fuchsia_io::wire::VmoFlags::kWrite, "WRITE"},
+      {fuchsia_io::wire::VmoFlags::kExecute, "EXECUTE"},
+      {fuchsia_io::wire::VmoFlags::kPrivateClone, "PRIVATE_CLONE"},
+      {fuchsia_io::wire::VmoFlags::kSharedBuffer, "SHARED_BUFFER"},
+  };
+  bool first = true;
+  for (const auto& [flag, desc] : flagToString) {
+    if (flags & flag) {
+      if (!first) {
+        sb->Append(" | ");
+      }
+      first = false;
+      sb->Append(desc);
+    }
+    flags ^= flag;
+  }
+}
+
 #endif  // __Fuchsia__
 
 template <size_t N>

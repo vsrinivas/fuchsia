@@ -725,9 +725,9 @@ func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, 
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (f *fileWrapper) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
+func (f *fileWrapper) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags io.VmoFlags) (int32, *mem.Buffer, error) {
 	if file, ok := f.file.(fs.FileWithBackingMemory); ok {
-		vmo, size, err := file.GetBackingMemory(io.VmoFlags(flags))
+		vmo, size, err := file.GetBackingMemory(flags)
 		var buffer *mem.Buffer
 		if vmo != nil {
 			buffer = &mem.Buffer{

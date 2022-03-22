@@ -201,11 +201,9 @@ void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
     GetBufferDeprecatedUseGetBackingMemoryRequestView request,
     GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
-                        ", incoming flags: ", ZxFlags(request->flags));
-  fio::wire::VmoFlags flags = fio::wire::VmoFlags::TruncatingUnknown(request->flags);
-
+                        ", incoming flags: ", request->flags);
   fuchsia_mem::wire::Buffer buffer;
-  zx_status_t status = GetBackingMemoryInternal(flags, &buffer.vmo, &buffer.size);
+  zx_status_t status = GetBackingMemoryInternal(request->flags, &buffer.vmo, &buffer.size);
   completer.Reply(status, status == ZX_OK
                               ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
                               : nullptr);

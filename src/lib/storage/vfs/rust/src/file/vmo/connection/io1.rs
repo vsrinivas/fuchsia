@@ -541,11 +541,9 @@ impl VmoFileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
-                self.handle_get_buffer(fio::VmoFlags::from_bits_truncate(flags), |buffer| {
-                    match buffer {
-                        Err(status) => responder.send(status.into_raw(), None),
-                        Ok(mut buffer) => responder.send(ZX_OK, Some(&mut buffer)),
-                    }
+                self.handle_get_buffer(flags, |buffer| match buffer {
+                    Err(status) => responder.send(status.into_raw(), None),
+                    Ok(mut buffer) => responder.send(ZX_OK, Some(&mut buffer)),
                 })
                 .await?;
             }

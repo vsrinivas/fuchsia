@@ -389,7 +389,7 @@ class _FileConnection extends File {
 
   @override
   Future<File$GetBufferDeprecatedUseGetBackingMemory$Response>
-      getBufferDeprecatedUseGetBackingMemory(int flags) async {
+      getBufferDeprecatedUseGetBackingMemory(VmoFlags flags) async {
     return File$GetBufferDeprecatedUseGetBackingMemory$Response(
         ZX.ERR_NOT_SUPPORTED, null);
   }

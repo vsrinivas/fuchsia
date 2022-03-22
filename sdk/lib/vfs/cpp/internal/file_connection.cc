@@ -231,7 +231,7 @@ void FileConnection::SetFlagsDeprecatedUseNode(uint32_t flags,
 }
 
 void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
-    uint32_t flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) {
+    fuchsia::io::VmoFlags flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
