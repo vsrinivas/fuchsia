@@ -961,6 +961,20 @@ Whether to compress the blobfs image.
 
 From //build/images/args.gni:127
 
+### config_example_cpp_greeting
+Set this in args.gn to override the greeting emitted by this example.
+
+**Current value (from the default):** `"World"`
+
+From //examples/components/config/cpp/BUILD.gn:9
+
+### config_example_rust_greeting
+Set this in args.gn to override the greeting emitted by this example.
+
+**Current value (from the default):** `"World"`
+
+From //examples/components/config/rust/BUILD.gn:10
+
 ### config_have_heap
 Tells openweave to include files that require heap access.
 
