@@ -140,24 +140,14 @@ zx_status_t FragmentProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* ou
   return st;
 }
 
-zx_status_t FragmentProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+void FragmentProxy::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
-  req.irq.mode = mode;
-  zx_status_t st = PciRpc(pci::PCI_OP_QUERY_IRQ_MODE, /*rd_handle=*/nullptr,
+  zx_status_t st = PciRpc(pci::PCI_OP_GET_INTERRUPT_MODES, /*rd_handle=*/nullptr,
                           /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
-    *out_max_irqs = resp.irq.max_irqs;
+    *out_modes = resp.irq.modes;
   }
-  return st;
-}
-
-void FragmentProxy::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
-  pci_interrupt_modes_t modes{};
-  PciQueryIrqMode(PCI_IRQ_MODE_LEGACY, &modes.legacy);
-  PciQueryIrqMode(PCI_IRQ_MODE_MSI, &modes.msi);
-  PciQueryIrqMode(PCI_IRQ_MODE_MSI_X, &modes.msix);
-  *out_modes = modes;
 }
 
 zx_status_t FragmentProxy::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
@@ -166,7 +156,7 @@ zx_status_t FragmentProxy::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t req
 
   req.irq.mode = mode;
   req.irq.requested_irqs = requested_irq_count;
-  return PciRpc(pci::PCI_OP_SET_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req,
+  return PciRpc(pci::PCI_OP_SET_INTERRUPT_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req,
                 &resp);
 }
 

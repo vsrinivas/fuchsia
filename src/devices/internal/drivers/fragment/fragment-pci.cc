@@ -72,16 +72,10 @@ zx_status_t RpcGetBar(const ddk::PciProtocolClient& pci, const PciRpcRequest* re
   return st;
 }
 
-zx_status_t RpcQueryIrqMode(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
-                            PciRpcResponse* resp) {
-  uint32_t max_irqs{};
-  zx_status_t st = pci.QueryIrqMode(req->irq.mode, &max_irqs);
-  if (st == ZX_OK) {
-    resp->irq.mode = req->irq.mode;
-    resp->irq.max_irqs = max_irqs;
-  }
-
-  return st;
+zx_status_t RpcGetInterruptModes(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
+                                 PciRpcResponse* resp) {
+  pci.GetInterruptModes(&resp->irq.modes);
+  return ZX_OK;
 }
 
 zx_status_t RpcSetInterruptMode(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
@@ -161,13 +155,13 @@ zx_status_t Fragment::RpcPci(const uint8_t* req_buf, uint32_t req_size, uint8_t*
     case pci::PCI_OP_MAP_INTERRUPT:
       status = RpcMapInterrupt(pci_client_.proto_client(), request, response, resp_handles);
       break;
-    case pci::PCI_OP_QUERY_IRQ_MODE:
-      status = RpcQueryIrqMode(pci_client_.proto_client(), request, response);
+    case pci::PCI_OP_GET_INTERRUPT_MODES:
+      status = RpcGetInterruptModes(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_RESET_DEVICE:
       status = RpcResetDevice(pci_client_.proto_client(), request, response);
       break;
-    case pci::PCI_OP_SET_IRQ_MODE:
+    case pci::PCI_OP_SET_INTERRUPT_MODE:
       status = RpcSetInterruptMode(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_ACK_INTERRUPT:

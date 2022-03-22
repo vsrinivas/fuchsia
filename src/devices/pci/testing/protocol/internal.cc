@@ -71,37 +71,6 @@ zx_status_t FakePciProtocolInternal::PciMapInterrupt(uint32_t which_irq,
   return ZX_ERR_BAD_STATE;
 }
 
-zx_status_t FakePciProtocolInternal::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-  ZX_ASSERT(out_max_irqs);
-  ZX_ASSERT(mode < PCI_IRQ_MODE_COUNT);
-
-  switch (mode) {
-    case PCI_IRQ_MODE_LEGACY:
-    case PCI_IRQ_MODE_LEGACY_NOACK:
-      if (legacy_interrupt_) {
-        *out_max_irqs = 1;
-        return ZX_OK;
-      }
-      break;
-    case PCI_IRQ_MODE_MSI:
-      if (!msi_interrupts_.empty()) {
-        // MSI interrupts are only supported in powers of 2.
-        *out_max_irqs = static_cast<uint32_t>((msi_interrupts_.size() <= 1)
-                                                  ? msi_interrupts_.size()
-                                                  : fbl::round_down(msi_interrupts_.size(), 2u));
-        return ZX_OK;
-      }
-      break;
-    case PCI_IRQ_MODE_MSI_X:
-      if (!msix_interrupts_.empty()) {
-        *out_max_irqs = static_cast<uint32_t>(msix_interrupts_.size());
-        return ZX_OK;
-        break;
-      }
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void FakePciProtocolInternal::PciGetInterruptModes(pci_interrupt_modes* out_modes) {
   pci_interrupt_modes_t modes{};
   if (legacy_interrupt_) {

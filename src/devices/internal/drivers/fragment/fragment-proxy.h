@@ -182,7 +182,6 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   zx_status_t PciConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* mode);
-  zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs);
   void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
   zx_status_t PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
   zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_into);

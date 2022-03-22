@@ -146,12 +146,6 @@ protocol Pci {
         s zx.status;
         handle zx.handle:INTERRUPT;
     });
-    QueryIrqMode(struct {
-        mode fuchsia.hardware.syscalls.pci.PciIrqMode;
-    }) -> (struct {
-        s zx.status;
-        max_irqs uint32;
-    });
     GetInterruptModes() -> (struct {
         modes PciInterruptModes;
     });

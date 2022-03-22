@@ -113,41 +113,42 @@ TEST_F(FakePciProtocolTests, GetDeviceInfo) {
   ASSERT_EQ(expected.program_interface, val8);
 }
 
-TEST_F(FakePciProtocolTests, QueryIrqMode) {
-  uint32_t irq_cnt = 0;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &irq_cnt));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
+TEST_F(FakePciProtocolTests, GetInterruptModes) {
+  pci_interrupt_modes_t modes{};
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(0, modes.legacy);
+  ASSERT_EQ(0, modes.msi);
+  ASSERT_EQ(0, modes.msix);
 
   fake_pci().AddLegacyInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &irq_cnt));
-  ASSERT_EQ(1, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(1, modes.legacy);
 
   // MSI supports interrupt configuration via powers of two, so ensure that we
   // round down if not enough have been added.
   fake_pci().AddMsiInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
-  ASSERT_EQ(1, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(1, modes.msi);
   fake_pci().AddMsiInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
-  ASSERT_EQ(2, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(2, modes.msi);
   fake_pci().AddMsiInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
-  ASSERT_EQ(2, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(2, modes.msi);
   fake_pci().AddMsiInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &irq_cnt));
-  ASSERT_EQ(4, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(4, modes.msi);
 
   // MSI-X doesn't care about alignment, so any value should work.
   fake_pci().AddMsixInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
-  ASSERT_EQ(1, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(1, modes.msix);
   fake_pci().AddMsixInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
-  ASSERT_EQ(2, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(2, modes.msix);
   fake_pci().AddMsixInterrupt();
-  ASSERT_EQ(ZX_OK, pci().QueryIrqMode(PCI_IRQ_MODE_MSI_X, &irq_cnt));
-  ASSERT_EQ(3, irq_cnt);
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(3, modes.msix);
 }
 
 TEST_F(FakePciProtocolTests, SetInterruptMode) {

@@ -240,15 +240,6 @@ zx_status_t Device::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offse
   return LOG_STATUS(DEBUG, status, "%#x, %#x", cap_id, offset);
 }
 
-zx_status_t Device::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-  auto result = QueryIrqMode(mode);
-  if (result.is_ok()) {
-    *out_max_irqs = result.value();
-  }
-
-  return LOG_STATUS(DEBUG, result.status_value(), "%u", mode);
-}
-
 void Device::PciGetInterruptModes(pci_interrupt_modes_t* modes) { *modes = GetInterruptModes(); }
 
 zx_status_t Device::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {

@@ -432,14 +432,13 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
 #ifdef ENABLE_MSIX
 // MSI-X interrupts should be bound by the platform support.
 TEST_F(PciProtocolTests, MsiX) {
-  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
-  uint32_t max_irqs;
-  ASSERT_OK(pci().QueryIrqMode(mode, &max_irqs));
-  ASSERT_EQ(max_irqs, kFakeQuadroMsiXIrqCnt);
-  ASSERT_OK(pci().SetInterruptMode(mode, max_irqs));
+  pci_interrupt_modes_t modes{};
+  pci().GetInterruptModes(&modes);
+  ASSERT_EQ(modes.msix, kFakeQuadroMsiXIrqCnt);
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI_X, modes.msix));
   {
     std::vector<zx::interrupt> ints;
-    for (uint32_t i = 0; i < max_irqs; i++) {
+    for (uint32_t i = 0; i < modes.msix; i++) {
       zx::interrupt interrupt = {};
       EXPECT_OK(pci().MapInterrupt(i, &interrupt));
       ints.push_back(std::move(interrupt));
@@ -467,24 +466,21 @@ TEST_F(PciProtocolTests, MsiEnablesBusMastering) {
 }
 
 // The Quadro card supports 4 MSI interrupts.
-TEST_F(PciProtocolTests, QueryAndSetInterruptMode) {
+TEST_F(PciProtocolTests, GetAndSetInterruptMode) {
   pci::MsiControlReg msi_ctrl = {
       .value = *reinterpret_cast<uint16_t*>(
           &kFakeQuadroDeviceConfig[kFakeQuadroMsiCapabilityOffset + 2]),
   };
 
-  uint32_t max_irqs;
-  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs));
-  EXPECT_EQ(max_irqs, PCI_LEGACY_INT_COUNT);
-  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, &max_irqs));
-  EXPECT_EQ(max_irqs, PCI_LEGACY_INT_COUNT);
-  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
-  ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
+  pci_interrupt_modes_t modes{};
+  pci().GetInterruptModes(&modes);
+  EXPECT_EQ(modes.legacy, PCI_LEGACY_INT_COUNT);
+  ASSERT_EQ(modes.msi, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
   ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
   ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
-  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, max_irqs));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, modes.msi));
   // Setting the same mode twice should work if no IRQs have been allocated off of this one.
-  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, max_irqs));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, modes.msi));
   ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_DISABLED, 0));
 }
 
@@ -539,13 +535,13 @@ bool WaitForThreadState(thrd_t thrd, zx_thread_state_t state) {
 }
 
 TEST_F(PciProtocolTests, MapInterrupt) {
-  uint32_t max_irqs;
-  ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
-  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, max_irqs));
+  pci_interrupt_modes_t modes{};
+  pci().GetInterruptModes(&modes);
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, modes.msi));
   zx::interrupt interrupt;
-  for (uint32_t int_id = 0; int_id < max_irqs; int_id++) {
+  for (uint32_t int_id = 0; int_id < modes.msi; int_id++) {
     ASSERT_OK(pci().MapInterrupt(int_id, &interrupt));
-    ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_MSI, max_irqs));
+    ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_MSI, modes.msi));
 
     // Verify that we can wait on the provided interrupt and that our thread
     // ends up in the correct state (that it was destroyed out from under it).
@@ -566,7 +562,7 @@ TEST_F(PciProtocolTests, MapInterrupt) {
 
   // Invalid ids
   ASSERT_NOT_OK(pci().MapInterrupt(-1, &interrupt));
-  ASSERT_NOT_OK(pci().MapInterrupt(max_irqs + 1, &interrupt));
+  ASSERT_NOT_OK(pci().MapInterrupt(modes.msi + 1, &interrupt));
   // Duplicate ids
   {
     zx::interrupt int_0, int_0_dup;

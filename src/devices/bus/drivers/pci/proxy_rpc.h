@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_PROXY_RPC_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_PROXY_RPC_H_
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <stdint.h>
 #include <zircon/syscalls/pci.h>
 
@@ -20,9 +21,9 @@ enum PciRpcOp : uint32_t {
   PCI_OP_GET_DEVICE_INFO,
   PCI_OP_GET_NEXT_CAPABILITY,
   PCI_OP_MAP_INTERRUPT,
-  PCI_OP_QUERY_IRQ_MODE,
+  PCI_OP_GET_INTERRUPT_MODES,
+  PCI_OP_SET_INTERRUPT_MODE,
   PCI_OP_RESET_DEVICE,
-  PCI_OP_SET_IRQ_MODE,
   PCI_OP_ACK_INTERRUPT,
   PCI_OP_MAX,
 };
@@ -47,8 +48,8 @@ struct PciMsgIrq {
   pci_irq_mode_t mode;
   union {
     uint32_t which_irq;
-    uint32_t max_irqs;
     uint32_t requested_irqs;
+    pci_interrupt_modes_t modes;
   };
 };
 

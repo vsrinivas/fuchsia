@@ -192,10 +192,6 @@ zx_status_t KernelPci::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_ha
   return zx_pci_map_interrupt(device_.handle, which_irq, out_handle->reset_and_get_address());
 }
 
-zx_status_t KernelPci::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-  return zx_pci_query_irq_mode(device_.handle, mode, out_max_irqs);
-}
-
 void KernelPci::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
   pci_interrupt_modes_t modes{};
   zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_LEGACY, &modes.legacy);
