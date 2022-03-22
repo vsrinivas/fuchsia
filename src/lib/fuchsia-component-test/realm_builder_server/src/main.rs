@@ -1288,7 +1288,6 @@ fn create_offer_decl(
                 target,
                 target_name,
                 filter,
-                mode: cm_rust::EventMode::Async,
             })
         }
         _ => {
@@ -1466,7 +1465,6 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 source_name: source_name.clone(),
                 target_name: source_name,
                 filter,
-                mode: cm_rust::EventMode::Async,
                 dependency_type: cm_rust::DependencyType::Strong,
             })
         }
@@ -3448,7 +3446,6 @@ mod tests {
                     filter: Some(hashmap!(
                         "name".to_string() => cm_rust::DictionaryValue::Str("hippos".to_string()),
                     )),
-                    mode: cm_rust::EventMode::Async,
                 })],
                 ..cm_rust::ComponentDecl::default()
             },

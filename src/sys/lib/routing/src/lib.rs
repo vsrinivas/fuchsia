@@ -27,7 +27,7 @@ use {
         },
         environment::DebugRegistration,
         error::RoutingError,
-        event::{EventFilter, EventModeSet},
+        event::EventFilter,
         path::PathBufExt,
         rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
         router::{
@@ -784,7 +784,6 @@ where
 /// State accumulated from routing an Event capability to its source.
 struct EventState {
     filter_state: WalkState<EventFilter>,
-    modes_state: WalkState<EventModeSet>,
 }
 
 impl OfferVisitor for EventState {
@@ -792,15 +791,12 @@ impl OfferVisitor for EventState {
 
     fn visit(&mut self, offer: &OfferEventDecl) -> Result<(), RoutingError> {
         let event_filter = Some(EventFilter::new(offer.filter.clone()));
-        let modes = Some(EventModeSet::new(offer.mode.clone()));
         match &offer.source {
             OfferSource::Parent => {
                 self.filter_state = self.filter_state.advance(event_filter)?;
-                self.modes_state = self.modes_state.advance(modes)?;
             }
             OfferSource::Framework => {
                 self.filter_state = self.filter_state.finalize(event_filter)?;
-                self.modes_state = self.modes_state.finalize(modes)?;
             }
             _ => unreachable!("no other valid sources"),
         }
@@ -823,10 +819,8 @@ where
 {
     let allowed_sources =
         AllowedSourcesBuilder::new().framework(InternalCapability::Event).builtin();
-    let mut state = EventState {
-        filter_state: WalkState::at(EventFilter::new(use_decl.filter.clone())),
-        modes_state: WalkState::at(EventModeSet::new(use_decl.mode.clone())),
-    };
+    let mut state =
+        EventState { filter_state: WalkState::at(EventFilter::new(use_decl.filter.clone())) };
 
     let source = RoutingStrategy::new()
         .use_::<UseEventDecl>()

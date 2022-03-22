@@ -5,7 +5,7 @@
 use {
     crate::{component_id_index::ComponentIdIndexError, policy::PolicyError},
     clonable_error::ClonableError,
-    cm_rust::{CapabilityName, EventMode},
+    cm_rust::CapabilityName,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
     moniker::{AbsoluteMoniker, ChildMoniker},
     thiserror::Error,
@@ -659,12 +659,6 @@ pub enum EventsRoutingError {
 
     #[error("Event routes must end at source with a filter declaration")]
     MissingFilter,
-
-    #[error("Event mode, `{:?}`, cannot be propagated", event_mode)]
-    CannotPropagateEventMode { event_mode: EventMode },
-
-    #[error("Event routes must end at source with a modes declaration")]
-    MissingModes,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]

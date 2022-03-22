@@ -13,7 +13,7 @@ use {
             TransferEvent,
         },
     },
-    ::routing::event::{EventFilter, EventModeSet},
+    ::routing::event::EventFilter,
     anyhow::Error,
     cm_moniker::InstancedExtendedMoniker,
     cm_rust::{DictionaryValue, EventMode},
@@ -119,10 +119,7 @@ impl EventDispatcher {
         // moniker here. For now taking the first one and ignoring the rest.
         // Ensure that the event is coming from a realm within the scope of this dispatcher and
         // matching the path filter if one exists.
-        self.scopes
-            .iter()
-            .filter(|scope| scope.contains(&self.options, self.mode.clone(), &event))
-            .next()
+        self.scopes.iter().filter(|scope| scope.contains(&self.options, &event)).next()
     }
 }
 
@@ -134,17 +131,11 @@ pub struct EventDispatcherScope {
 
     /// Filters for an event in that realm.
     pub filter: EventFilter,
-
-    pub mode_set: EventModeSet,
 }
 
 impl EventDispatcherScope {
     pub fn new(moniker: InstancedExtendedMoniker) -> Self {
-        Self {
-            moniker,
-            filter: EventFilter::new(None),
-            mode_set: EventModeSet::new(cm_rust::EventMode::Async),
-        }
+        Self { moniker, filter: EventFilter::new(None) }
     }
 
     pub fn with_filter(mut self, filter: EventFilter) -> Self {
@@ -152,27 +143,16 @@ impl EventDispatcherScope {
         self
     }
 
-    pub fn with_mode_set(mut self, mode_set: EventModeSet) -> Self {
-        self.mode_set = mode_set;
-        self
-    }
-
     /// For the top-level EventStreams and event strems used in unit tests in the c_m codebase we
     /// don't take filters into account.
     pub fn for_debug(mut self) -> Self {
         self.filter = EventFilter::debug();
-        self.mode_set = EventModeSet::debug();
         self
     }
 
     /// Given the provided options, indicates whether or not the event is contained
     /// in this scope.
-    pub fn contains(
-        &self,
-        options: &SubscriptionOptions,
-        mode: EventMode,
-        event: &ComponentEvent,
-    ) -> bool {
+    pub fn contains(&self, options: &SubscriptionOptions, event: &ComponentEvent) -> bool {
         let in_scope = match &event.result {
             Ok(EventPayload::CapabilityRequested { source_moniker, .. })
             | Err(EventError {
@@ -222,7 +202,7 @@ impl EventDispatcherScope {
             }),
             _ => None,
         };
-        self.filter.has_fields(&filterable_fields) && self.mode_set.supports_mode(&mode)
+        self.filter.has_fields(&filterable_fields)
     }
 }
 

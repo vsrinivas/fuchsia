@@ -200,15 +200,12 @@ pub enum TestModelError {
     UseDeclNotFound,
     #[error("matching expose decl not found")]
     ExposeDeclNotFound,
-    #[error("found use decl for Event capability, but mode does not match request")]
-    EventModeMismatch,
 }
 
 impl TestModelError {
     pub fn as_zx_status(&self) -> zx_status::Status {
         match self {
             Self::UseDeclNotFound | Self::ExposeDeclNotFound => zx_status::Status::NOT_FOUND,
-            Self::EventModeMismatch => zx_status::Status::UNAVAILABLE,
         }
     }
 }
@@ -236,8 +233,7 @@ impl RoutingTestForAnalyzer {
                     _ => None,
                 });
                 let decl_result = match find_decl {
-                    Some(d) if d.mode == request.mode => Ok(UseDecl::Event(d)),
-                    Some(_) => Err(TestModelError::EventModeMismatch),
+                    Some(d) => Ok(UseDecl::Event(d)),
                     None => Err(TestModelError::UseDeclNotFound),
                 };
                 (decl_result, expected_res)
@@ -1368,14 +1364,12 @@ mod tests {
             target_name: "started_on_a".into(),
             target: OfferTarget::static_child("b".to_string()),
             filter: None,
-            mode: cm_rust::EventMode::Sync,
         });
         let use_event_decl = UseDecl::Event(UseEventDecl {
             source: UseSource::Parent,
             source_name: "started_on_a".into(),
             target_name: "started".into(),
             filter: None,
-            mode: cm_rust::EventMode::Sync,
             dependency_type: DependencyType::Strong,
         });
 
@@ -1903,7 +1897,6 @@ mod tests {
             source_name: "started_on_a".into(),
             target_name: "started".into(),
             filter: None,
-            mode: cm_rust::EventMode::Sync,
             dependency_type: DependencyType::Strong,
         });
 

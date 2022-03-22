@@ -2382,7 +2382,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "capability_requested".into(),
                         target_name: "capability_requested".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
@@ -2390,7 +2389,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_name: "started".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
@@ -2398,7 +2396,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .build(),
@@ -2455,7 +2452,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "capability_requested_on_a".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -2474,7 +2470,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "capability_requested_on_a".into(),
                         target_name: "capability_requested_from_parent".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
@@ -2482,7 +2477,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .build(),
@@ -2527,7 +2521,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "started_on_a".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2553,7 +2546,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started_on_a".into(),
                         target_name: "started".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
@@ -2561,7 +2553,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
                     .build(),
@@ -2610,7 +2601,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
@@ -2625,7 +2615,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "stopped_on_b".into(),
                     target: OfferTarget::static_child("b".to_string()),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -2639,7 +2628,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
@@ -2654,7 +2642,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     target_name: "destroyed".into(),
                     target: OfferTarget::static_child("c".to_string()),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
-                    mode: cm_rust::EventMode::Sync,
                 }))
                 .add_lazy_child("c")
                 .build(),
@@ -2673,7 +2660,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                     dependency_type: DependencyType::Strong,
 
                 }))
@@ -2682,7 +2668,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "destroyed".into(),
                     target_name: "destroyed".into(),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
-                    mode: cm_rust::EventMode::Sync,
                     dependency_type: DependencyType::Strong,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
@@ -2690,7 +2675,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "stopped_on_a".into(),
                     target_name: "stopped".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                     dependency_type: DependencyType::Strong,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
@@ -2698,7 +2682,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Sync,
                     dependency_type: DependencyType::Strong,
                 }))
                 .build(),
@@ -2766,7 +2749,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string(), "baz".to_string()
                             ])
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2795,7 +2777,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("foo".into()),
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2803,7 +2784,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2829,7 +2809,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
@@ -2841,7 +2820,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .add_lazy_child("c")
                     .add_lazy_child("d")
@@ -2866,7 +2844,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                                 "foo".to_string(), "bar".to_string()
                             ])
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2874,7 +2851,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .build(),
             ),
@@ -2895,7 +2871,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("baz".into()),
                         }),
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -2903,7 +2878,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .build(),
             ),
@@ -2962,7 +2936,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "directory_ready".into(),
                     target_name: "directory_ready".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
@@ -2976,7 +2949,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "unregistered".into(),
                     target_name: "unregistered".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Async,
                 }))
                 .build(),
         )];
@@ -3408,7 +3380,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "capability_requested".into(),
                         target_name: "capability_requested".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Async,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -3416,7 +3387,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_name: "started".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Async,
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         dependency_type: DependencyType::Strong,
@@ -3424,7 +3394,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
-                        mode: cm_rust::EventMode::Sync,
                     }))
                     .build(),
             ),

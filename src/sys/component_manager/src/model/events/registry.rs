@@ -22,11 +22,7 @@ use {
             routing::{RouteRequest, RouteSource},
         },
     },
-    ::routing::{
-        capability_source::InternalCapability,
-        event::{EventFilter, EventModeSet},
-        route_capability,
-    },
+    ::routing::{capability_source::InternalCapability, event::EventFilter, route_capability},
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
@@ -365,11 +361,8 @@ impl EventRegistry {
                         let (source_name, scope_moniker) =
                             Self::route_event(event_decl.clone(), &component).await?;
                         let scope = EventDispatcherScope::new(scope_moniker)
-                            .with_filter(EventFilter::new(event_decl.filter))
-                            .with_mode_set(EventModeSet::new(event_decl.mode));
-                        if scope.mode_set.supports_mode(mode) {
-                            result.insert(source_name, mode.clone(), scope);
-                        }
+                            .with_filter(EventFilter::new(event_decl.filter));
+                        result.insert(source_name, mode.clone(), scope);
                     }
                 }
                 _ => {}

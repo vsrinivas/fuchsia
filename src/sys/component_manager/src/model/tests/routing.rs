@@ -254,16 +254,16 @@ async fn capability_requested_event_at_parent() {
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
                     filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
-                    mode: cm_rust::EventMode::Async,
                 }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Framework,
-                    source_name: "resolved".into(),
-                    target_name: "resolved".into(),
-                    filter: None,
-                    mode: cm_rust::EventMode::Sync,
-                }))
+                // TODO: This shouldn't be necessary
+                // .use_(UseDecl::Event(UseEventDecl {
+                //     dependency_type: DependencyType::Strong,
+                //     source: UseSource::Framework,
+                //     source_name: "resolved".into(),
+                //     target_name: "resolved".into(),
+                //     filter: None,
+                //     mode: cm_rust::EventMode::Sync,
+                // }))
                 .add_lazy_child("b")
                 .build(),
         ),
@@ -1622,7 +1622,6 @@ async fn use_runner_from_environment_failed() {
                     source_name: "stopped".into(),
                     target_name: "stopped".into(),
                     filter: None,
-                    mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,

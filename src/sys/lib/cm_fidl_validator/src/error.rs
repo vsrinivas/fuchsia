@@ -37,8 +37,6 @@ pub enum Error {
     InvalidRunner(DeclField, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in events")]
     EventStreamEventNotFound(DeclField, String),
-    #[error("Event \"{1}\" is referenced in {0} with unsupported mode \"{2}\"")]
-    EventStreamUnsupportedMode(DeclField, String, String),
     #[error("dependency cycle(s) exist: {0}")]
     DependencyCycle(String),
     #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
@@ -171,19 +169,6 @@ impl Error {
         Error::EventStreamEventNotFound(
             DeclField { decl: decl_type.into(), field: keyword.into() },
             event_name.into(),
-        )
-    }
-
-    pub fn event_stream_unsupported_mode(
-        decl_type: impl Into<String>,
-        keyword: impl Into<String>,
-        event_name: impl Into<String>,
-        event_mode: impl Into<String>,
-    ) -> Self {
-        Error::EventStreamUnsupportedMode(
-            DeclField { decl: decl_type.into(), field: keyword.into() },
-            event_name.into(),
-            event_mode.into(),
         )
     }
 

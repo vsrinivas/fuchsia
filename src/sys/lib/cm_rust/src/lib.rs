@@ -284,7 +284,6 @@ pub struct UseEventDecl {
     pub source_name: CapabilityName,
     pub target_name: CapabilityName,
     pub filter: Option<HashMap<String, DictionaryValue>>,
-    pub mode: EventMode,
     pub dependency_type: DependencyType,
 }
 
@@ -293,7 +292,6 @@ pub struct UseEventDecl {
 #[fidl_decl(fidl_table = "fdecl::EventSubscription")]
 pub struct EventSubscription {
     pub event_name: String,
-    pub mode: EventMode,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
@@ -302,8 +300,6 @@ pub enum EventMode {
     Async,
     Sync,
 }
-
-fidl_translations_symmetrical_enums!(fdecl::EventMode, EventMode, Sync, Async);
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -422,7 +418,6 @@ pub struct OfferEventDecl {
     pub target: OfferTarget,
     pub target_name: CapabilityName,
     pub filter: Option<HashMap<String, DictionaryValue>>,
-    pub mode: EventMode,
 }
 
 impl SourceName for OfferDecl {
@@ -2087,7 +2082,6 @@ mod tests {
                             ]),
                             ..fdata::Dictionary::EMPTY
                         }),
-                        mode: Some(fdecl::EventMode::Sync),
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
@@ -2249,7 +2243,6 @@ mod tests {
                             ]),
                             ..fdata::Dictionary::EMPTY
                         }),
-                        mode: Some(fdecl::EventMode::Sync),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                     fdecl::Offer::Service(fdecl::OfferService {
@@ -2487,7 +2480,6 @@ mod tests {
                             source_name: "directory_ready".into(),
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
-                            mode: EventMode::Sync,
                         }),
                         UseDecl::EventStream(UseEventStreamDecl {
                             source: UseSource::Child("test".to_string()),
@@ -2577,7 +2569,6 @@ mod tests {
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mystarted".into(),
                             filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/a".to_string())}),
-                            mode: EventMode::Sync,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,

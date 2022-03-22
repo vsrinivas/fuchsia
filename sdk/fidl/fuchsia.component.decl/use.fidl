@@ -138,9 +138,6 @@ type UseEvent = table {
     /// for some events.
     4: filter fuchsia.data.Dictionary;
 
-    /// The mode that the event can use.
-    5: mode EventMode;
-
     /// The dependency type this use represents.
     ///
     /// A component which offers a capability to a child from itself and uses a
@@ -149,7 +146,7 @@ type UseEvent = table {
     /// any point. Taking a strong dependency on a child's capability will
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
-    6: dependency_type DependencyType;
+    5: dependency_type DependencyType;
 };
 
 /// Declares a static EventStream used by a component.

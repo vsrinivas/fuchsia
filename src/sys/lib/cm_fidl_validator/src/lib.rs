@@ -191,7 +191,7 @@ struct ValidationContext<'a> {
     all_runners: HashSet<&'a str>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
-    all_events: HashMap<&'a str, fdecl::EventMode>,
+    all_events: HashSet<&'a str>,
     all_event_streams: HashSet<&'a str>,
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_ids: IdMap<'a>,
@@ -742,13 +742,8 @@ impl<'a> ValidationContext<'a> {
         }
         check_name(event.source_name.as_ref(), "UseEvent", "source_name", &mut self.errors);
         check_name(event.target_name.as_ref(), "UseEvent", "target_name", &mut self.errors);
-        check_events_mode(&event.mode, "UseEvent", "mode", &mut self.errors);
         if let Some(target_name) = event.target_name.as_ref() {
-            if self
-                .all_events
-                .insert(target_name, event.mode.unwrap_or(fdecl::EventMode::Async))
-                .is_some()
-            {
+            if !self.all_events.insert(target_name) {
                 self.errors.push(Error::duplicate_field("UseEvent", "target_name", target_name));
             }
         }
@@ -780,27 +775,12 @@ impl<'a> ValidationContext<'a> {
                         &mut self.errors,
                     );
                     let event_name = subscription.event_name.clone().unwrap_or_default();
-                    let event_mode = subscription.mode.unwrap_or(fdecl::EventMode::Async);
-                    match self.all_events.get(event_name.as_str()) {
-                        Some(mode) => {
-                            if *mode != fdecl::EventMode::Sync
-                                && event_mode == fdecl::EventMode::Sync
-                            {
-                                self.errors.push(Error::event_stream_unsupported_mode(
-                                    "UseEventStream",
-                                    "events",
-                                    event_name,
-                                    format!("{:?}", event_mode),
-                                ));
-                            }
-                        }
-                        None => {
-                            self.errors.push(Error::event_stream_event_not_found(
-                                "UseEventStream",
-                                "events",
-                                event_name,
-                            ));
-                        }
+                    if !self.all_events.contains(event_name.as_str()) {
+                        self.errors.push(Error::event_stream_event_not_found(
+                            "UseEventStream",
+                            "events",
+                            event_name,
+                        ));
                     }
                 }
             }
@@ -1963,7 +1943,6 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
-        check_events_mode(&event.mode, "OfferEvent", "mode", &mut self.errors);
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -2105,17 +2084,6 @@ impl<'a> ValidationContext<'a> {
             Some(_) => self.errors.push(Error::invalid_field(decl, "target")),
             None => self.errors.push(Error::missing_field(decl, "target")),
         }
-    }
-}
-/// Events mode should be always present.
-fn check_events_mode(
-    mode: &Option<fdecl::EventMode>,
-    decl_type: &str,
-    field_name: &str,
-    errors: &mut Vec<Error>,
-) {
-    if mode.is_none() {
-        errors.push(Error::missing_field(decl_type, field_name));
     }
 }
 
@@ -2679,7 +2647,6 @@ mod tests {
                         source_name: None,
                         target_name: None,
                         filter: None,
-                        mode: None,
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
@@ -2694,7 +2661,6 @@ mod tests {
                 Error::missing_field("UseEvent", "source"),
                 Error::missing_field("UseEvent", "source_name"),
                 Error::missing_field("UseEvent", "target_name"),
-                Error::missing_field("UseEvent", "mode"),
                 Error::missing_field("UseService", "source"),
                 Error::missing_field("UseService", "source_name"),
                 Error::missing_field("UseService", "target_path"),
@@ -2805,7 +2771,6 @@ mod tests {
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::Event(fdecl::UseEvent {
@@ -2814,14 +2779,12 @@ mod tests {
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                         name: Some("bar".to_string()),
                         subscriptions: Some(vec!["a".to_string(), "b".to_string()].into_iter().map(|name| fdecl::EventSubscription {
                             event_name: Some(name),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::EventSubscription::EMPTY
                         }).collect()),
                         ..fdecl::UseEventStreamDeprecated::EMPTY
@@ -2830,7 +2793,6 @@ mod tests {
                         name: Some("bleep".to_string()),
                         subscriptions: Some(vec![fdecl::EventSubscription {
                             event_name: Some("started".to_string()),
-                            mode: Some(fdecl::EventMode::Sync),
                             ..fdecl::EventSubscription::EMPTY
                         }]),
                         ..fdecl::UseEventStreamDeprecated::EMPTY
@@ -2844,7 +2806,6 @@ mod tests {
                 Error::invalid_field("UseEvent", "target_name"),
                 Error::event_stream_event_not_found("UseEventStream", "events", "a".to_string()),
                 Error::event_stream_event_not_found("UseEventStream", "events", "b".to_string()),
-                Error::event_stream_unsupported_mode("UseEventStream", "events", "started".to_string(), "Sync".to_string()),
             ])),
         },
         test_validate_uses_missing_source => {
@@ -2901,7 +2862,6 @@ mod tests {
                             source_name: Some("abc".to_string()),
                             target_name: Some("abc".to_string()),
                             filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         }),
                     ]),
@@ -2954,7 +2914,6 @@ mod tests {
                             source_name: Some("abc".to_string()),
                             target_name: Some("abc".to_string()),
                             filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         })
                     ]),
@@ -3500,7 +3459,6 @@ mod tests {
                             source_name: Some("abc".to_string()),
                             target_name: Some("abc".to_string()),
                             filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         })
                     ]),
@@ -3751,7 +3709,6 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Sync),
                         ..fdecl::UseEvent::EMPTY
                     }),
                 ]);
@@ -3814,7 +3771,6 @@ mod tests {
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
                     fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
@@ -3824,7 +3780,6 @@ mod tests {
                                 .into_iter()
                                 .map(|name| fdecl::EventSubscription {
                                     event_name: Some(name),
-                                    mode: Some(fdecl::EventMode::Async),
                                     ..fdecl::EventSubscription::EMPTY
                                 })
                                 .collect()
@@ -3837,7 +3792,6 @@ mod tests {
                         source_name: Some("stopped".to_string()),
                         target_name: Some("stopped".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
                 ]);
@@ -3853,7 +3807,6 @@ mod tests {
                         source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                         source_name: Some("started".to_string()),
                         target_name: Some("foo_started".to_string()),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::UseEvent::EMPTY
                     }),
                 ]);
@@ -4644,7 +4597,6 @@ mod tests {
                         target: None,
                         target_name: None,
                         filter: None,
-                        mode: None,
                         ..fdecl::OfferEvent::EMPTY
                     })
                 ]);
@@ -4676,7 +4628,6 @@ mod tests {
                 Error::missing_field("OfferEvent", "source"),
                 Error::missing_field("OfferEvent", "target"),
                 Error::missing_field("OfferEvent", "target_name"),
-                Error::missing_field("OfferEvent", "mode"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -4827,7 +4778,6 @@ mod tests {
                         })),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                 ]);
@@ -5074,7 +5024,6 @@ mod tests {
                         })),
                         target_name: Some("/path".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(fdecl::EventMode::Sync),
                         ..fdecl::OfferEvent::EMPTY
                     })
                 ]);
@@ -5488,7 +5437,6 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                     fdecl::Offer::Event(fdecl::OfferEvent {
@@ -5500,7 +5448,6 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                 ]);
@@ -5683,7 +5630,6 @@ mod tests {
                             }
                         )),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                     fdecl::Offer::Event(fdecl::OfferEvent {
@@ -5694,7 +5640,6 @@ mod tests {
                         fdecl::CollectionRef { name: "modular".to_string(), }
                         )),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                 ]);
@@ -5783,7 +5728,6 @@ mod tests {
                         target: Some(fdecl::Ref::Child(fdecl::ChildRef { name: "child".to_string(), collection: None })),
                         target_name: Some("f".to_string()),
                         filter: None,
-                        mode: Some(fdecl::EventMode::Async),
                         ..fdecl::OfferEvent::EMPTY
                     }),
                 ]);
@@ -5853,7 +5797,6 @@ mod tests {
                             target_name: Some(format!("started_{}", i)),
 
                             filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                            mode: Some(fdecl::EventMode::Sync),
                             ..fdecl::OfferEvent::EMPTY
                         })
                     })
@@ -7538,7 +7481,6 @@ mod tests {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
                     source_name: Some("thung5".to_string()),
                     target_name: Some("thung5".to_string()),
-                    mode: Some(fdecl::EventMode::Async),
                     ..fdecl::OfferEvent::EMPTY
                 }),
             ]),
@@ -7617,7 +7559,6 @@ mod tests {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
                     source_name: Some("thung5".to_string()),
                     target_name: Some("thung5".to_string()),
-                    mode: Some(fdecl::EventMode::Async),
                     ..fdecl::OfferEvent::EMPTY
                 }),
             ]),
@@ -7668,7 +7609,6 @@ mod tests {
                 Error::missing_field("OfferEvent", "source_name"),
                 Error::missing_field("OfferEvent", "source"),
                 Error::missing_field("OfferEvent", "target_name"),
-                Error::missing_field("OfferEvent", "mode"),
             ]))
         );
     }

@@ -140,12 +140,11 @@ impl EventStreamProvider {
                         name.to_string(),
                         subscriptions
                             .iter()
-                            .map(|subscription| EventSubscription {
-                                event_name: CapabilityName::from(subscription.event_name.clone()),
-                                mode: match subscription.mode {
-                                    cm_rust::EventMode::Sync => EventMode::Sync,
-                                    _ => EventMode::Async,
-                                },
+                            .map(|subscription| {
+                                EventSubscription::new(
+                                    CapabilityName::from(subscription.event_name.clone()),
+                                    EventMode::Async,
+                                )
                             })
                             .collect(),
                     )

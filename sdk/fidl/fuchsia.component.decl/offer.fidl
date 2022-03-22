@@ -180,10 +180,7 @@ type OfferEvent = table {
     /// Name under which the event is being offered.
     4: target_name name;
 
-    /// The mode offered for the event.
-    5: mode EventMode;
-
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
-    6: filter fuchsia.data.Dictionary;
+    5: filter fuchsia.data.Dictionary;
 };

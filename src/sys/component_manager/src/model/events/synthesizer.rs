@@ -265,7 +265,6 @@ mod tests {
             hooks::EventPayload,
             testing::routing_test_helpers::*,
         },
-        ::routing::event::EventModeSet,
         cm_rust::{
             DirectoryDecl, EventMode, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
         },
@@ -450,14 +449,12 @@ mod tests {
             .map(|moniker| EventDispatcherScope {
                 moniker: moniker.into(),
                 filter: EventFilter::debug(),
-                mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
             })
             .collect::<Vec<_>>();
         if args.include_builtin {
             scopes.push(EventDispatcherScope {
                 moniker: InstancedExtendedMoniker::ComponentManager,
                 filter: EventFilter::debug(),
-                mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
             });
         }
         let events = args

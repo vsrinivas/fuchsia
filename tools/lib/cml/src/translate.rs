@@ -275,7 +275,6 @@ fn translate_use(
                     source: Some(clone_ref(&source)?),
                     source_name: Some(source_name.into()),
                     target_name: Some(target_name.into()),
-                    mode: Some(fdecl::EventMode::Async),
                     // We have already validated that none will be present if we were using many
                     // events.
                     filter: match use_.filter.clone() {
@@ -298,7 +297,6 @@ fn translate_use(
                         .flat_map(|subscription| {
                             subscription.event.iter().map(move |event| fdecl::EventSubscription {
                                 event_name: Some(event.to_string()),
-                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             })
                         })
@@ -604,7 +602,6 @@ fn translate_offer(
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
-                    mode: Some(fdecl::EventMode::Async),
                     ..fdecl::OfferEvent::EMPTY
                 }));
             }
@@ -1790,7 +1787,6 @@ mod tests {
                             source_name: Some("destroyed".to_string()),
                             target_name: Some("destroyed".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1801,7 +1797,6 @@ mod tests {
                             source_name: Some("started".to_string()),
                             target_name: Some("started".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1812,7 +1807,6 @@ mod tests {
                             source_name: Some("stopped".to_string()),
                             target_name: Some("stopped".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1831,7 +1825,6 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1840,17 +1833,14 @@ mod tests {
                         subscriptions: Some(vec![
                             fdecl::EventSubscription {
                                 event_name: Some("started".to_string()),
-                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             },
                             fdecl::EventSubscription {
                                 event_name: Some("diagnostics".to_string()),
-                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             },
                             fdecl::EventSubscription {
                                 event_name: Some("destroyed".to_string()),
-                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             },
                         ]),
@@ -2590,7 +2580,6 @@ mod tests {
                             })),
                             target_name: Some("destroyed_net".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2603,7 +2592,6 @@ mod tests {
                             })),
                             target_name: Some("stopped".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2616,7 +2604,6 @@ mod tests {
                             })),
                             target_name: Some("started".to_string()),
                             filter: None,
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2640,7 +2627,6 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
-                            mode: Some(fdecl::EventMode::Async),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),

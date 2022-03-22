@@ -87,7 +87,6 @@ fn main() {
                 source_name: Some("started".to_string()),
                 target_name: Some("began".to_string()),
                 filter: None,
-                mode: Some(EventMode::Async),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -96,7 +95,6 @@ fn main() {
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
                 filter: None,
-                mode: Some(EventMode::Async),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -105,7 +103,6 @@ fn main() {
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
                 filter: None,
-                mode: Some(EventMode::Async),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -122,7 +119,6 @@ fn main() {
                     }]),
                     ..fdata::Dictionary::EMPTY
                 }),
-                mode: Some(EventMode::Async),
                 ..UseEvent::EMPTY
             }),
             Use::EventStreamDeprecated(UseEventStreamDeprecated {
@@ -130,17 +126,14 @@ fn main() {
                 subscriptions: Some(vec![
                     EventSubscription {
                         event_name: Some("began".to_string()),
-                        mode: Some(EventMode::Async),
                         ..EventSubscription::EMPTY
                     },
                     EventSubscription {
                         event_name: Some("destroyed".to_string()),
-                        mode: Some(EventMode::Async),
                         ..EventSubscription::EMPTY
                     },
                     EventSubscription {
                         event_name: Some("diagnostics_ready".to_string()),
-                        mode: Some(EventMode::Async),
                         ..EventSubscription::EMPTY
                     },
                 ]),
@@ -221,7 +214,6 @@ fn main() {
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),
                 filter: None,
-                mode: Some(EventMode::Async),
                 ..OfferEvent::EMPTY
             }),
         ];
