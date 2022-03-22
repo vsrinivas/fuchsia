@@ -2882,7 +2882,6 @@ mod tests {
         }
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95064)
     #[test]
     fn assoc_send_eth_frame_becomes_data_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -2903,7 +2902,7 @@ mod tests {
             29, // more payload
         ];
 
-        assert_eq!((), state.on_eth_frame(&mut sta, &eth_frame[..]).expect("all good"));
+        state.on_eth_frame(&mut sta, &eth_frame[..]).expect("all good");
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         let (data_frame, _tx_flags) = m.fake_device.wlan_queue.remove(0);

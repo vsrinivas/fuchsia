@@ -102,11 +102,9 @@ async fn handle_connect_transaction(
     connect_transaction: fidl_sme::ConnectTransactionProxy,
 ) -> Result<fidl_ieee80211::StatusCode, Error> {
     let mut event_stream = connect_transaction.take_event_stream();
-
     let mut result_code = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
 
-    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95064)
-    while let Some(evt) = event_stream
+    if let Some(evt) = event_stream
         .try_next()
         .await
         .context("failed to receive connect result before the channel was closed")?
@@ -114,7 +112,6 @@ async fn handle_connect_transaction(
         match evt {
             fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {
                 result_code = result.code;
-                break;
             }
             other => {
                 return Err(format_err!(

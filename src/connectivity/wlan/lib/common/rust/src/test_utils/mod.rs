@@ -185,11 +185,9 @@ mod tests {
         assert_variant!(Foo::A(8), Foo::A(8));
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95064)
     #[test]
     fn assert_variant_no_expr_value() {
-        let value = assert_variant!(0, 0);
-        assert_eq!(value, ());
+        assert_variant!(0, 0);
     }
 
     #[test]
@@ -270,12 +268,10 @@ mod tests {
         assert_variant_at_idx!(v, 0, 0);
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95064)
     #[test]
     fn assert_variant_at_idx_no_expr_value() {
         let v = vec![0, 2];
-        let value = assert_variant_at_idx!(v, 0, 0);
-        assert_eq!(value, ());
+        assert_variant_at_idx!(v, 0, 0);
     }
 
     #[test]

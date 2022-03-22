@@ -34,7 +34,7 @@ impl GtkProvider {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct Gtk {
     pub gtk: Vec<u8>,
     key_id: u8,
@@ -44,8 +44,22 @@ pub struct Gtk {
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.2).
 }
 
-#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95064)
+/// PartialEq implementation is the same as the default derive(PartialEq)
+/// We explicitly implement it here because we have a custom Hash implementation, and clippy
+/// requires that both PartialEq and Hash are either derive together or have custom implementations
+/// together.
+impl PartialEq for Gtk {
+    fn eq(&self, other: &Self) -> bool {
+        self.gtk == other.gtk
+            && self.key_id == other.key_id
+            && self.tk_len == other.tk_len
+            && self.rsc == other.rsc
+            && self.cipher == other.cipher
+    }
+}
+
 /// Custom Hash implementation which doesn't take the RSC or cipher suite into consideration.
+/// Make sure to check that this property is upheld: `v1 == v2 => hash(v1) == hash(v2)`
 impl Hash for Gtk {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.key_id.hash(state);
