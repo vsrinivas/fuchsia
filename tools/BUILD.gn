@@ -6,8 +6,6 @@ group("tools") {
   testonly = true
 
   public_deps = [
-    ":build_infra",
-    ":test_infra",
     "//tools/auto_owners($host_toolchain)",
     "//tools/bindc:host($host_toolchain)",
     "//tools/blackout",
