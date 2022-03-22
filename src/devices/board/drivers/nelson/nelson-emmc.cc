@@ -53,6 +53,7 @@ static aml_sdmmc_config_t config = {
     .max_freq = 120000000,
     .version_3 = true,
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
+    .use_new_tuning = true,
 };
 
 static const guid_map_t guid_map[] = {
