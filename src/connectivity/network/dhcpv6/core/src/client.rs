@@ -1133,6 +1133,12 @@ mod private {
             let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = self.ia;
             address
         }
+
+        /// Returns the configured address.
+        pub(super) fn configured_address(&self) -> Option<Ipv6Addr> {
+            let Self { ia: _, configured_address } = self;
+            *configured_address
+        }
     }
 }
 
@@ -1149,16 +1155,6 @@ enum AddressToRequest {
 }
 
 impl AddressToRequest {
-    /// Extracts the configured addresses from a map of addresses to request.
-    fn to_configured_addresses(
-        addresses_to_request: HashMap<v6::IAID, AddressToRequest>,
-    ) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
-        addresses_to_request
-            .iter()
-            .map(|(iaid, addr_to_request)| (*iaid, addr_to_request.configured_address()))
-            .collect()
-    }
-
     /// Creates an `AddressToRequest`.
     fn new(address: Option<Ipv6Addr>, configured_address: Option<Ipv6Addr>) -> Self {
         let non_conf_addr_opt = NonConfiguredAddress::new(address, configured_address);
@@ -1194,8 +1190,8 @@ struct Requesting {
     /// [Client Identifier]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses to request from the server.
-    addresses_to_request: HashMap<v6::IAID, AddressToRequest>,
+    /// The addresses entries negotiated by the client.
+    addresses: HashMap<v6::IAID, AddressEntry>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
@@ -1295,7 +1291,7 @@ impl Requesting {
         // Create a map of addresses to be requested, combining the IA in the selected
         // Advertise with the configured IAs that were not received in the Advertise
         // message.
-        let addresses_to_request = configured_addresses.iter().fold(
+        let addresses = configured_addresses.iter().fold(
             HashMap::new(),
             |mut addrs, (iaid, configured_address)| {
                 // Note that the advertised address for an IAID may be different
@@ -1310,10 +1306,10 @@ impl Requesting {
                         assert_eq!(
                             addrs.insert(
                                 *iaid,
-                                AddressToRequest::new(
+                                AddressEntry::ToRequest(AddressToRequest::new(
                                     Some(*advertised_address),
                                     *configured_address
-                                )
+                                ))
                             ),
                             None
                         );
@@ -1327,7 +1323,12 @@ impl Requesting {
                     //    additional IAs in subsequent messages.
                     None => {
                         assert_eq!(
-                            addrs.insert(*iaid, AddressToRequest::Configured(*configured_address)),
+                            addrs.insert(
+                                *iaid,
+                                AddressEntry::ToRequest(AddressToRequest::Configured(
+                                    *configured_address
+                                ))
+                            ),
                             None
                         );
                     }
@@ -1337,7 +1338,7 @@ impl Requesting {
         );
         Self {
             client_id,
-            addresses_to_request,
+            addresses,
             server_id,
             collected_advertise,
             first_request_time: None,
@@ -1393,7 +1394,7 @@ impl Requesting {
         let Self {
             client_id,
             server_id,
-            addresses_to_request,
+            addresses,
             collected_advertise,
             first_request_time,
             retrans_timeout: prev_retrans_timeout,
@@ -1414,16 +1415,25 @@ impl Requesting {
             vec![v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)];
 
         let mut iaaddr_options = HashMap::new();
-        for (iaid, addr_to_request) in &addresses_to_request {
-            assert_matches!(
-                iaaddr_options.insert(
-                    *iaid,
-                    addr_to_request.address().map(|addr| {
-                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                    }),
-                ),
-                None
-            );
+        for (iaid, addr_entry) in &addresses {
+            match addr_entry {
+                AddressEntry::ToRequest(addr_to_request) => {
+                    assert_matches!(
+                        iaaddr_options.insert(
+                            *iaid,
+                            addr_to_request.address().map(|addr| {
+                                [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                            }),
+                        ),
+                        None
+                    );
+                }
+                AddressEntry::Assigned(_ia) => {
+                    // TODO(https://fxbug.dev/76765): handle assigned addresses
+                    // on transitioning from `Renewing` to `Requesting` for IAs
+                    // with `NoBinding` status.
+                }
+            }
         }
         for (iaid, iaddr_opt) in &iaaddr_options {
             options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
@@ -1465,7 +1475,7 @@ impl Requesting {
         Transition {
             state: ClientState::Requesting(Requesting {
                 client_id,
-                addresses_to_request,
+                addresses,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -1519,7 +1529,7 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            addresses_to_request,
+            addresses,
             server_id,
             mut collected_advertise,
             first_request_time,
@@ -1530,7 +1540,7 @@ impl Requesting {
         if retrans_count != REQUEST_MAX_RC {
             return Self {
                 client_id,
-                addresses_to_request,
+                addresses,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -1547,7 +1557,7 @@ impl Requesting {
         if let Some(advertise) = collected_advertise.pop() {
             return Requesting::start(
                 client_id,
-                AddressToRequest::to_configured_addresses(addresses_to_request),
+                to_configured_addresses(addresses),
                 advertise,
                 &options_to_request,
                 collected_advertise,
@@ -1558,7 +1568,7 @@ impl Requesting {
         return ServerDiscovery::start(
             transaction_id(),
             client_id,
-            AddressToRequest::to_configured_addresses(addresses_to_request),
+            to_configured_addresses(addresses),
             &options_to_request,
             solicit_max_rt,
             rng,
@@ -1573,7 +1583,7 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            addresses_to_request,
+            addresses: current_addresses,
             server_id,
             collected_advertise,
             first_request_time,
@@ -1656,8 +1666,8 @@ impl Requesting {
                     }
 
                     let configured_address =
-                        match addresses_to_request.get(&v6::IAID::new(iana_data.iaid())) {
-                            Some(address_to_request) => address_to_request.configured_address(),
+                        match current_addresses.get(&v6::IAID::new(iana_data.iaid())) {
+                            Some(address_entry) => address_entry.configured_address(),
                             None => {
                                 // The RFC does not explicitly call out what to
                                 // do with IAs that were not requested by the
@@ -1882,7 +1892,7 @@ impl Requesting {
             return Transition {
                 state: ClientState::Requesting(Self {
                     client_id,
-                    addresses_to_request,
+                    addresses: current_addresses,
                     server_id,
                     collected_advertise,
                     first_request_time,
@@ -1924,7 +1934,7 @@ impl Requesting {
                 // TODO(https://fxbug.dev/81086): implement rate limiting.
                 return Requesting {
                     client_id,
-                    addresses_to_request,
+                    addresses: current_addresses,
                     server_id,
                     collected_advertise,
                     first_request_time,
@@ -1950,17 +1960,17 @@ impl Requesting {
                 // The client reissues the message without specifying addresses, leaving
                 // it up to the server to assign addresses appropriate for the client's
                 // link.
-                let addresses_to_request = addresses_to_request.iter().fold(
+                let addresses = current_addresses.iter().fold(
                     HashMap::new(),
                     |mut addrs, (iaid, address_to_request)| {
                             assert_eq!(
                                 addrs.insert(
                                     *iaid,
-                                    AddressToRequest::new(
+                                    AddressEntry::ToRequest(AddressToRequest::new(
                                         None,
                                         address_to_request.configured_address()
                                         )
-                                    ),
+                                    )),
                                     None
                                     );
                             addrs
@@ -1968,7 +1978,7 @@ impl Requesting {
                     );
                 return Requesting {
                     client_id,
-                    addresses_to_request,
+                    addresses,
                     server_id,
                     collected_advertise,
                     first_request_time,
@@ -1996,7 +2006,7 @@ impl Requesting {
                 );
                 return request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    AddressToRequest::to_configured_addresses(addresses_to_request),
+                    to_configured_addresses(addresses),
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -2024,7 +2034,7 @@ impl Requesting {
             }) {
                 return request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    AddressToRequest::to_configured_addresses(addresses_to_request),
+                    to_configured_addresses(addresses),
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -2035,9 +2045,19 @@ impl Requesting {
 
         // Add configured addresses that were requested by the client but were
         // not received in this Reply.
-        for (iaid, address_to_request) in addresses_to_request {
-            let _: &mut AddressEntry =
-                addresses.entry(iaid).or_insert(AddressEntry::ToRequest(address_to_request));
+        for (iaid, addr_entry) in current_addresses {
+            match addr_entry {
+                AddressEntry::ToRequest(address_to_request) => {
+                    let _: &mut AddressEntry = addresses
+                        .entry(iaid)
+                        .or_insert(AddressEntry::ToRequest(address_to_request));
+                }
+                AddressEntry::Assigned(_ia) => {
+                    // TODO(https://fxbug.dev/76765): handle assigned addresses
+                    // on transitioning from `Renewing` to `Requesting` for IAs
+                    // with `NoBinding` status.
+                }
+            }
         }
 
         // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
@@ -2161,6 +2181,18 @@ impl AssignedIa {
             AssignedIa::NonConfigured(non_conf_ia) => non_conf_ia.address(),
         }
     }
+
+    /// Returns the configured address.
+    fn configured_address(&self) -> Option<Ipv6Addr> {
+        match self {
+            AssignedIa::Configured(IdentityAssociation {
+                address,
+                preferred_lifetime: _,
+                valid_lifetime: _,
+            }) => Some(*address),
+            AssignedIa::NonConfigured(non_conf_ia) => non_conf_ia.configured_address(),
+        }
+    }
 }
 
 /// Represents an address entry negotiated by the client.
@@ -2174,12 +2206,28 @@ enum AddressEntry {
 }
 
 impl AddressEntry {
+    /// Returns the assigned address.
     fn address(&self) -> Option<Ipv6Addr> {
         match self {
             AddressEntry::Assigned(ia) => Some(ia.address()),
             AddressEntry::ToRequest(address) => address.address(),
         }
     }
+
+    /// Returns the configured address.
+    fn configured_address(&self) -> Option<Ipv6Addr> {
+        match self {
+            AddressEntry::Assigned(ia) => ia.configured_address(),
+            AddressEntry::ToRequest(address) => address.configured_address(),
+        }
+    }
+}
+
+/// Extracts the configured addresses from a map of address entries.
+fn to_configured_addresses(
+    addresses: HashMap<v6::IAID, AddressEntry>,
+) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
+    addresses.iter().map(|(iaid, addr_entry)| (*iaid, addr_entry.configured_address())).collect()
 }
 
 /// Provides methods for handling state transitions from address assigned
@@ -2579,7 +2627,7 @@ impl ClientState {
             })
             | ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -3069,7 +3117,7 @@ pub(crate) mod testutil {
         let request_transaction_id = *transaction_id;
         assert_matches!(&state, Some(ClientState::Requesting(Requesting {
                 client_id: got_client_id,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: got_server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -3804,7 +3852,7 @@ mod tests {
             state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -3983,7 +4031,7 @@ mod tests {
             state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4046,15 +4094,19 @@ mod tests {
             &mut rng,
         );
 
-        let expected_addresses_to_request = (0..)
+        let expected_addresses = (0..)
             .map(v6::IAID::new)
-            .zip(advertised_addresses.iter().map(|addr| AddressToRequest::new(Some(*addr), None)))
-            .collect::<HashMap<v6::IAID, AddressToRequest>>();
+            .zip(
+                advertised_addresses
+                    .iter()
+                    .map(|addr| AddressEntry::ToRequest(AddressToRequest::new(Some(*addr), None))),
+            )
+            .collect::<HashMap<v6::IAID, AddressEntry>>();
         assert_matches!(
             &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: got_addresses_to_request,
+                addresses: got_addresses,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4062,7 +4114,7 @@ mod tests {
                 retrans_count: _,
                 solicit_max_rt: _,
             }) if *server_id == vec![1, 2, 3] &&
-                  *got_addresses_to_request == expected_addresses_to_request
+                  *got_addresses == expected_addresses
         );
 
         // If the reply contains an top level UnspecFail status code, the
@@ -4086,7 +4138,7 @@ mod tests {
             &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: got_addresses_to_request,
+                addresses: got_addresses,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4094,7 +4146,7 @@ mod tests {
                 retrans_count: _,
                 solicit_max_rt: _,
             }) if *server_id == vec![1, 2, 3] &&
-                  *got_addresses_to_request == expected_addresses_to_request
+                  *got_addresses == expected_addresses
         );
         assert!(transaction_id.is_some());
 
@@ -4116,13 +4168,15 @@ mod tests {
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
 
-        let expected_addresses_to_request: HashMap<v6::IAID, AddressToRequest> =
-            HashMap::from([(v6::IAID::new(0), AddressToRequest::new(None, None))]);
+        let expected_addresses: HashMap<v6::IAID, AddressEntry> = HashMap::from([(
+            v6::IAID::new(0),
+            AddressEntry::ToRequest(AddressToRequest::new(None, None)),
+        )]);
         assert_matches!(
             &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: got_addresses_to_request,
+                addresses: got_addresses,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4130,7 +4184,7 @@ mod tests {
                 retrans_count: _,
                 solicit_max_rt: _,
             }) if *server_id == vec![1, 2, 3] &&
-                  *got_addresses_to_request == expected_addresses_to_request
+                  *got_addresses == expected_addresses
         );
         assert!(transaction_id.is_some());
 
@@ -4153,7 +4207,7 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg);
         assert_matches!(&state, ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4189,7 +4243,7 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg);
         assert_matches!(state, ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4600,7 +4654,7 @@ mod tests {
             &client;
         assert_matches!(state, Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4625,7 +4679,7 @@ mod tests {
                 state,
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
-                    addresses_to_request: _,
+                    addresses: _,
                     server_id,
                     collected_advertise: _,
                     first_request_time: _,
@@ -4653,7 +4707,7 @@ mod tests {
             state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4680,7 +4734,7 @@ mod tests {
                 state,
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
-                    addresses_to_request: _,
+                    addresses: _,
                     server_id,
                     collected_advertise: _,
                     first_request_time: _,
@@ -4824,7 +4878,7 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4856,7 +4910,7 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -4886,7 +4940,7 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses_to_request: _,
+                addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -5515,7 +5569,12 @@ mod tests {
                     .expect("should succeed for non-zero or u32::MAX values"),
             )),
         };
-        assert_eq!(NonConfiguredIa::new(ia, configured_address).is_some(), expect_ia_is_some);
+        let non_conf_ia_opt = NonConfiguredIa::new(ia, configured_address);
+        assert_eq!(non_conf_ia_opt.is_some(), expect_ia_is_some);
+        if let Some(non_conf_ia) = non_conf_ia_opt {
+            assert_eq!(non_conf_ia.address(), address);
+            assert_eq!(non_conf_ia.configured_address(), configured_address);
+        }
     }
 
     #[test]
