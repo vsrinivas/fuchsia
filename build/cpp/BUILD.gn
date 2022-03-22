@@ -402,7 +402,7 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/ui/input/drivers/goldfish_sensor:sensor_fuchsia_driver",
     "//src/ui/input/drivers/gt6853:gt6853-module-driver",
     "//src/ui/input/drivers/gt6853:gt6853-test",
-    "//src/ui/input/drivers/hid-input-report:hid-input-report-driver",
+    "//src/ui/input/drivers/hid-input-report:driver-internals",
     "//src/ui/input/drivers/hid-input-report:hid-input-report-test-bin",
     "//src/ui/input/drivers/virtio:virtio-input-test",
     "//src/ui/input/lib/hid-input-report",

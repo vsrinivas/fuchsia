@@ -23,36 +23,46 @@ group("tests") {
   ]
 }
 
-fuchsia_driver("hid-input-report-driver") {
-  output_name = "hid-input-report"
+source_set("driver-internals") {
   sources = [
-    "driver_v1.cc",
     "input-report.cc",
     "input-reports-reader.cc",
   ]
   deps = [
     ":hid_input_report_bind",
-    "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//src/ui/input/lib/hid-input-report",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
-    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/ui/input/lib/hid-input-report",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}
+
+fuchsia_driver("hid-input-report-driver") {
+  output_name = "hid-input-report"
+  sources = [ "driver_v1.cc" ]
+  deps = [
+    ":driver-internals",
+    ":hid_input_report_bind",
+    "//src/devices/lib/driver",
+  ]
 }
 
 fuchsia_driver_component("hid-input-report") {
@@ -65,21 +75,14 @@ fuchsia_driver_component("hid-input-report") {
 test("hid-input-report-test-bin") {
   sources = [
     "driver_v1.cc",
-    "input-report.cc",
-    "input-reports-reader.cc",
     "test.cc",
   ]
   deps = [
+    ":driver-internals",
     ":hid_input_report_bind",
-    "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
-    "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
-    "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
