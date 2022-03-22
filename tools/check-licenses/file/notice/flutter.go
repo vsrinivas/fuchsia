@@ -7,7 +7,6 @@ package notice
 import (
 	"bufio"
 	"bytes"
-	"os"
 	"strings"
 )
 
@@ -36,14 +35,10 @@ var (
 	appendixDelimiter = []byte("END OF TERMS AND CONDITIONS")
 )
 
-func ParseFlutter(path string) ([]*Data, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+func ParseFlutter(path string, content []byte) ([]*Data, error) {
+	r := bytes.NewReader(content)
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	var (
 		inAppendix bool
 		inLicense  bool
@@ -77,6 +72,8 @@ func ParseFlutter(path string) ([]*Data, error) {
 				}
 			} else if bytes.Equal(line, licenseDelimiter) {
 				inLicense = true
+			} else if bytes.HasPrefix(line, []byte("LIBRARY")) {
+				license.LibraryName = string(bytes.ReplaceAll(line, []byte("LIBRARY: "), []byte("")))
 			}
 		} else if bytes.Equal(line, sectionDelimiter) {
 			inSection = true

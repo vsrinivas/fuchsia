@@ -3,7 +3,9 @@
         "fuchsiaDir": "{FUCHSIA_DIR}",
         "outputdir": "/tmp/check-licenses",
         "outputs": [
-            "summary.csv"
+            "license_texts_grouped_by_project.txt",
+            "summary.csv",
+            "summary_diff.csv"
         ],
         "templates": [
             {
@@ -13,8 +15,7 @@
                 "notes": []
             }
         ],
-        "diffNotices": [
-        ],
+        "diffNotice": "",
         "zip": true
     }
 }

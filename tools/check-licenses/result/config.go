@@ -11,7 +11,7 @@ type ResultConfig struct {
 	Templates  []*Template `json:"templates"`
 	Zip        bool        `json:"zip"`
 
-	DiffNotices []string `json:"diffnotices"`
+	DiffNotice string `json:"diffnotice"`
 }
 
 type Template struct {
@@ -40,5 +40,7 @@ func (c *ResultConfig) Merge(other *ResultConfig) {
 	c.Templates = append(c.Templates, other.Templates...)
 	c.Outputs = append(c.Outputs, other.Outputs...)
 	c.Zip = c.Zip || other.Zip
-	c.DiffNotices = append(c.DiffNotices, other.DiffNotices...)
+	if c.DiffNotice == "" {
+		c.DiffNotice = other.DiffNotice
+	}
 }

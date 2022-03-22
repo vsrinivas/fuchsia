@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"io/ioutil"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file/notice"
 )
@@ -36,14 +35,14 @@ func (a OrderFileData) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a OrderFileData) Less(i, j int) bool {
 	if a[i].FilePath < a[j].FilePath {
 		return true
-	} else if a[i].FilePath > a[j].FilePath {
-		return false
-	} else {
-		return a[i].LineNumber < a[j].LineNumber
 	}
+	if a[i].FilePath > a[j].FilePath {
+		return false
+	}
+	return a[i].LineNumber < a[j].LineNumber
 }
 
-func NewFileData(path string, filetype FileType) ([]*FileData, error) {
+func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, error) {
 	data := make([]*FileData, 0)
 
 	// The "LicenseFormat" field of each file is set at the project level
@@ -66,21 +65,17 @@ func NewFileData(path string, filetype FileType) ([]*FileData, error) {
 	// File.LicenseFormat == SingleLicense
 	// Regular LICENSE files that contain text for a single license.
 	case SingleLicense:
-		text, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
 		data = append(data, &FileData{
 			FilePath:   path,
 			LineNumber: 0,
-			Data:       text,
+			Data:       bytes.TrimSpace(content),
 		})
 
 	// File.LicenseFormat == MultiLicense*
 	// NOTICE files that contain text for multiple licenses.
 	// See the files in the /notice subdirectory for more info.
 	case MultiLicenseChromium:
-		ndata, err := notice.ParseChromium(path)
+		ndata, err := notice.ParseChromium(path, content)
 		if err != nil {
 			return nil, err
 		}
@@ -89,11 +84,11 @@ func NewFileData(path string, filetype FileType) ([]*FileData, error) {
 				FilePath:    path,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
-				Data:        d.LicenseText,
+				Data:        bytes.TrimSpace(d.LicenseText),
 			})
 		}
 	case MultiLicenseFlutter:
-		ndata, err := notice.ParseFlutter(path)
+		ndata, err := notice.ParseFlutter(path, content)
 		if err != nil {
 			return nil, err
 		}
@@ -102,11 +97,11 @@ func NewFileData(path string, filetype FileType) ([]*FileData, error) {
 				FilePath:    path,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
-				Data:        d.LicenseText,
+				Data:        bytes.TrimSpace(d.LicenseText),
 			})
 		}
 	case MultiLicenseGoogle:
-		ndata, err := notice.ParseGoogle(path)
+		ndata, err := notice.ParseGoogle(path, content)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +110,7 @@ func NewFileData(path string, filetype FileType) ([]*FileData, error) {
 				FilePath:    path,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
-				Data:        d.LicenseText,
+				Data:        bytes.TrimSpace(d.LicenseText),
 			})
 		}
 	}
