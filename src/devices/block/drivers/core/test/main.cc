@@ -18,7 +18,7 @@ TEST(ManagerTest, StartServer) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
   ASSERT_OK(manager.CloseFifoServer());
 }
 
@@ -27,7 +27,7 @@ TEST(ManagerTest, AttachVmo) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(8192, 0, &vmo));
@@ -43,7 +43,7 @@ TEST(ManagerTest, CloseVMO) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(8192, 0, &vmo));
   vmoid_t vmoid;
@@ -100,7 +100,7 @@ TEST(ManagerTest, ReadSingleTest) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;
@@ -149,7 +149,7 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;
@@ -217,7 +217,7 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
   zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(&client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;

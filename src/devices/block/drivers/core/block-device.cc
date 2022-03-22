@@ -444,7 +444,7 @@ zx_status_t BlockDevice::FidlBlockGetStats(bool clear, fidl_txn_t* txn) {
 
 zx_status_t BlockDevice::FidlBlockGetFifo(fidl_txn_t* txn) {
   zx::fifo fifo;
-  zx_status_t status = manager_.StartServer(&self_protocol_, &fifo);
+  zx_status_t status = manager_.StartServer(zxdev(), &self_protocol_, &fifo);
   return fuchsia_hardware_block_BlockGetFifo_reply(txn, status, fifo.release());
 }
 

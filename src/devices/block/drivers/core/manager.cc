@@ -37,7 +37,8 @@ bool Manager::IsFifoServerRunning() {
   return false;
 }
 
-zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* out_fifo) {
+zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* protocol,
+                                 zx::fifo* out_fifo) {
   if (IsFifoServerRunning()) {
     return ZX_ERR_ALREADY_BOUND;
   }
@@ -76,7 +77,7 @@ zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* o
   const zx_duration_t period = deadline;
 
   zx_handle_t profile = ZX_HANDLE_INVALID;
-  status = device_get_deadline_profile(nullptr, capacity, deadline, period,
+  status = device_get_deadline_profile(device, capacity, deadline, period,
                                        "driver_host:pdev:05:00:f:block_server", &profile);
   if (status != ZX_OK) {
     zxlogf(WARNING, "block: Failed to get deadline profile: %d\n", status);
