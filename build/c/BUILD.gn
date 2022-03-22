@@ -9,3 +9,9 @@ config("banjo_gen_config") {
       get_label_info("//bogus($banjo_toolchain)", "root_gen_dir")
   include_dirs = [ banjo_root_gen_dir ]
 }
+
+# TODO(fxbug.dev/95833): Delete this config after all user code
+# migrates off of the C bindings.
+config("fidl-deprecated-c-bindings") {
+  cflags = [ "-DFIDL_ALLOW_DEPRECATED_C_BINDINGS" ]
+}
