@@ -38,8 +38,9 @@ fuchsia_component("battery_manager_test") {
 }
 
 fuchsia_test_package("battery-manager-gotests") {
-  package_deps_for_infra_only =
-      [ "//src/power/battery-manager:battery-manager" ]
   test_components = [ ":battery_manager_test" ]
-  deps = [ ":battery_manager_test_driver" ]
+  deps = [
+    ":battery_manager_test_driver",
+    "//src/power/battery-manager:battery_manager",
+  ]
 }
