@@ -796,10 +796,8 @@ group("slab") {
   public_deps = [ ":slab-v0_4_2" ]
 }
 
-if (current_os == "fuchsia") {
-  group("smallvec") {
-    public_deps = [ ":smallvec-v1_6_1" ]
-  }
+group("smallvec") {
+  deps = [ ":smallvec-v1_8_0" ]
 }
 
 group("socket2") {
@@ -3579,7 +3577,7 @@ rust_library("deepsize-v0_2_0") {
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":deepsize_derive-v0_1_1($host_toolchain)" ]
   deps += [ ":slab-v0_4_2" ]
-  deps += [ ":smallvec-v1_6_1" ]
+  deps += [ ":smallvec-v1_8_0" ]
 
   rustenv = []
 
@@ -7145,7 +7143,7 @@ rust_library("parking_lot_core-v0_8_3") {
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":instant-v0_1_9" ]
-  deps += [ ":smallvec-v1_6_1" ]
+  deps += [ ":smallvec-v1_8_0" ]
   if (false) {
     deps += [ ":redox_syscall-v0_2_5" ]
   }
@@ -10505,10 +10503,10 @@ rust_library("smallvec-v0_6_13") {
   visibility = [ ":*" ]
 }
 
-rust_library("smallvec-v1_6_1") {
+rust_library("smallvec-v1_8_0") {
   crate_name = "smallvec"
   crate_root = "//third_party/rust_crates/vendor/smallvec/src/lib.rs"
-  output_name = "smallvec-129929172b61f7b"
+  output_name = "smallvec-2ac5f197ec7958a6"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -10521,8 +10519,9 @@ rust_library("smallvec-v1_6_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=129929172b61f7b",
-    "-Cextra-filename=-129929172b61f7b",
+    "-Cmetadata=2ac5f197ec7958a6",
+    "-Cextra-filename=-2ac5f197ec7958a6",
+    "--cfg=feature=\"const_generics\"",
   ]
 
   visibility = [ ":*" ]
@@ -11713,7 +11712,7 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":rand-v0_8_4" ]
-  deps += [ ":smallvec-v1_6_1" ]
+  deps += [ ":smallvec-v1_8_0" ]
   deps += [ ":thiserror-v1_0_23" ]
   deps += [ ":tinyvec-v1_3_1" ]
   deps += [ ":url-v2_1_0" ]
@@ -11747,7 +11746,7 @@ rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
   deps += [ ":log-v0_4_11" ]
   deps += [ ":lru-cache-v0_1_2" ]
   deps += [ ":parking_lot-v0_11_1" ]
-  deps += [ ":smallvec-v1_6_1" ]
+  deps += [ ":smallvec-v1_8_0" ]
   deps += [ ":thiserror-v1_0_23" ]
   deps += [ ":trust-dns-proto-v0_21_0-alpha_4" ]
 

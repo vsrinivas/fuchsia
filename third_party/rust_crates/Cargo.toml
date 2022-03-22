@@ -170,6 +170,7 @@ serde_repr = "0.1.7"
 sha2 = "0.9"
 signature =  "1.4.0"
 slab = "0.4"
+smallvec = {version= "1.8", features = ["const_generics"]}
 socket2 = { version = "0.4.4", features = ["all"] }
 splines = "2.2.0"
 static_assertions = "1.1.0"
@@ -238,7 +239,6 @@ rust_icu_uloc = { version = "2.0.0", default-features = false, features = ["rena
 rust_icu_unorm2 = { version = "2.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "2.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
 serde_yaml = "0.8.23"
-smallvec = "1.2"
 tokio-rustls = "0.13.0"
 # TODO(https://fxbug.dev/90312): point to a crates.io version when there is a
 # new official release of Trust-DNS that includes

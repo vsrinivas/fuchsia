@@ -947,7 +947,7 @@ dependencies = [
  "chrono",
  "deepsize_derive",
  "slab",
- "smallvec 1.6.1",
+ "smallvec 1.8.0",
 ]
 
 [[package]]
@@ -1412,7 +1412,7 @@ dependencies = [
  "signature",
  "simplelog",
  "slab",
- "smallvec 1.6.1",
+ "smallvec 1.8.0",
  "socket2",
  "splines",
  "static_assertions",
@@ -2445,7 +2445,7 @@ dependencies = [
  "instant",
  "libc",
  "redox_syscall 0.2.5",
- "smallvec 1.6.1",
+ "smallvec 1.8.0",
  "winapi",
 ]
 
@@ -3704,9 +3704,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.6.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
+checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "socket2"
@@ -4126,7 +4126,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.8.4",
- "smallvec 1.6.1",
+ "smallvec 1.8.0",
  "thiserror",
  "tinyvec",
  "url 2.1.0",
@@ -4143,7 +4143,7 @@ dependencies = [
  "log",
  "lru-cache",
  "parking_lot 0.11.1",
- "smallvec 1.6.1",
+ "smallvec 1.8.0",
  "thiserror",
  "trust-dns-proto",
 ]
