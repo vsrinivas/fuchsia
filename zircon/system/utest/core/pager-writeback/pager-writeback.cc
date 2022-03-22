@@ -1809,4 +1809,85 @@ TEST(PagerWriteback, DirtyAfterMapProtect) {
   }
 }
 
+// Tests that zero pages are supplied by the kernel for the newly extended range after a resize, and
+// are not overwritten by a pager supply.
+TEST(PagerWriteback, ResizeSupplyZero) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  uint32_t create_options[] = {ZX_VMO_RESIZABLE, ZX_VMO_TRAP_DIRTY | ZX_VMO_RESIZABLE};
+
+  for (auto create_option : create_options) {
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+
+    // Resize the VMO up.
+    ASSERT_TRUE(vmo->Resize(4));
+
+    // Now try to access all the pages. The first two should result in read requests, but the last
+    // two should be supplied with zeros without any read requests.
+    TestThread t([vmo]() -> bool {
+      uint8_t data[4 * zx_system_get_page_size()];
+      return vmo->vmo().read(&data[0], 0, sizeof(data)) == ZX_OK;
+    });
+    ASSERT_TRUE(t.Start());
+    ASSERT_TRUE(t.WaitForBlocked());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+
+    // No more read requests seen for the newly extended range.
+    uint64_t offset, length;
+    ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+    ASSERT_TRUE(t.Wait());
+
+    // Verify that the last two pages are zeros.
+    std::vector<uint8_t> expected(4 * zx_system_get_page_size(), 0);
+    vmo->GenerateBufferContents(expected.data(), 2, 0);
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+    // Only two pages should be committed in the VMO.
+    zx_info_vmo_t info;
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+    // Supply pages in the newly extended range. This should be a no-op. Since the range is already
+    // implicitly "supplied", another supply will be ignored.
+    ASSERT_TRUE(pager.SupplyPages(vmo, 2, 2));
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+    // Verify that the last two pages are still zero.
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+    // Write to the last two pages now.
+    uint8_t data[2 * zx_system_get_page_size()];
+    memset(data, 0xaa, sizeof(data));
+    zx_status_t status = vmo->vmo().write(data, 2 * zx_system_get_page_size(), sizeof(data));
+
+    if (create_option & ZX_VMO_TRAP_DIRTY) {
+      // TODO(rashaeqbal): This will no longer fail with the next CL. Remove this.
+      ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
+      continue;
+    }
+    ASSERT_OK(status);
+
+    // All four pages should be committed now.
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(4 * zx_system_get_page_size(), info.committed_bytes);
+
+    // Verify the contents.
+    memset(expected.data() + 2 * zx_system_get_page_size(), 0xaa, sizeof(data));
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+    // The last two pages should be dirty.
+    zx_vmo_dirty_range_t range = {.offset = 2, .length = 2};
+    ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  }
+}
+
 }  // namespace pager_tests

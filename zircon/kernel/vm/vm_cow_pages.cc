@@ -1305,6 +1305,19 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
     if (!page->IsEmpty()) {
       return ZX_ERR_ALREADY_EXISTS;
     }
+    // This VMO is backed by a page source and the slot is empty. Check if this empty slot
+    // represents zero content. For page sources that preserve content (pager backed VMOs), pages
+    // starting at the supply_zero_offset_ have an implicit initial content of zero. These pages are
+    // not supplied by the user pager, and are instead supplied by the kernel as zero pages. So for
+    // pager backed VMOs, we should not overwrite this zero content.
+    //
+    // TODO(rashaeqbal): Consider replacing supply_zero_offset_ with a single zero range in the page
+    // list itself, so that all content resides in the page list. This might require supporting
+    // custom sized ranges in the page list; we don't want to pay the cost of individual zero page
+    // markers per page or multiple fixed sized zero ranges.
+    if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
   }
 
   // We're only permitted to overwrite zero content. This has different meanings based on the
@@ -2060,20 +2073,38 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // reading zeroes is consistent with what the page source would provide.
       p = vm_get_zero_page();
     } else {
-      AssertHeld(page_owner->lock_);
-      uint64_t user_id = 0;
-      if (page_owner->paged_ref_) {
-        AssertHeld(page_owner->paged_ref_->lock_ref());
-        user_id = page_owner->paged_ref_->user_id_locked();
-      }
-      VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(page_owner->paged_ref_),
-                                     .vmo_id = user_id};
-      zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request->get(),
-                                                             vmo_debug_info, &p, nullptr);
-      // Pager page sources will never synchronously return a page.
-      DEBUG_ASSERT(status != ZX_OK);
+      // We will attempt to get the page from the page source.
 
-      return status;
+      AssertHeld(page_owner->lock_);
+      // Before requesting the page source, check if we can implicitly supply a zero page. Pages in
+      // the range [supply_zero_offset_, size_) can be supplied with zeros.
+      if (owner_offset >= page_owner->supply_zero_offset_) {
+        // The supply_zero_offset_ is only relevant for page sources preserving page content. For
+        // other types of VMOs, the supply_zero_offset_ will be set to UINT64_MAX, so we can never
+        // end up here.
+        DEBUG_ASSERT(page_owner->is_source_preserving_page_content_locked());
+        DEBUG_ASSERT(IS_PAGE_ALIGNED(page_owner->supply_zero_offset_));
+        DEBUG_ASSERT(page_owner->supply_zero_offset_ <= page_owner->size_);
+
+        // Set p to the zero page and fall through. We will correctly fork the zero page if we're
+        // writing to it.
+        p = vm_get_zero_page();
+      } else {
+        // Otherwise request the page from the page source.
+        uint64_t user_id = 0;
+        if (page_owner->paged_ref_) {
+          AssertHeld(page_owner->paged_ref_->lock_ref());
+          user_id = page_owner->paged_ref_->user_id_locked();
+        }
+        VmoDebugInfo vmo_debug_info = {
+            .vmo_ptr = reinterpret_cast<uintptr_t>(page_owner->paged_ref_), .vmo_id = user_id};
+        zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request->get(),
+                                                               vmo_debug_info, &p, nullptr);
+        // Pager page sources will never synchronously return a page.
+        DEBUG_ASSERT(status != ZX_OK);
+
+        return status;
+      }
     }
   }
 
@@ -2119,6 +2150,14 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       DEBUG_ASSERT(p == vm_get_zero_page());
       // This object directly owns the page.
       DEBUG_ASSERT(page_owner == this);
+
+      // TODO(rashaeqbal): This will be removed with the following CL. Temporary hack to fail the
+      // lookup if a DIRTY request is required beyond supply_zero_offset_. Otherwise
+      // PrepareForWriteLocked will return ZX_OK on finding a gap *without* having generated a
+      // request, and we will fail the (status != ZX_OK) assert below.
+      if (offset >= supply_zero_offset_) {
+        return ZX_ERR_NOT_FOUND;
+      }
 
       // When generating the DIRTY request, try to extend the range beyond the immediate page, to
       // include other non-dirty pages and markers within the requested range. This is an

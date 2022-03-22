@@ -724,6 +724,8 @@ TEST(StreamTestCase, ShrinkGuard) {
 
   // The only way to test that shrink holds up reads is to repeatedly issue reads and shrinks and we
   // expect the reads to not fail with an error.
+  // Note that the user pager does not need to supply pages anymore. The vmo was resized to 0 above,
+  // so the kernel will supply zero pages.
   std::thread read_thread([&] {
     for (int i = 0; i < 100; ++i) {
       char buffer[16] = {};
@@ -737,13 +739,6 @@ TEST(StreamTestCase, ShrinkGuard) {
     }
   });
 
-  std::thread supply_pages_thread([&] {
-    for (int i = 0; i < 100; ++i) {
-      pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE);
-      pager.SupplyPages(vmo, 0, 1);
-    }
-  });
-
   std::thread shrink_thread([&] {
     for (int i = 0; i < 100; ++i) {
       vmo->vmo().set_size(16);
@@ -753,7 +748,6 @@ TEST(StreamTestCase, ShrinkGuard) {
 
   read_thread.join();
   shrink_thread.join();
-  supply_pages_thread.join();
 }
 
 // Regression test for fxbug.dev/94454. Writing to an offset that requires expansion should not
