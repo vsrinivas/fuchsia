@@ -19,11 +19,21 @@ fn init_devtmpfs() -> FileSystemHandle {
         root.create_node(name, FileMode::IFCHR | FileMode::from_bits(0o666), device_type).unwrap();
     };
 
+    let mkdir = |name| {
+        root.create_node(name, FileMode::IFDIR | FileMode::from_bits(0o755), DeviceType::NONE)
+            .unwrap();
+    };
+
     mkchr(b"null", DeviceType::NULL);
     mkchr(b"zero", DeviceType::ZERO);
     mkchr(b"full", DeviceType::FULL);
     mkchr(b"random", DeviceType::RANDOM);
     mkchr(b"urandom", DeviceType::URANDOM);
+
+    // tty related nodes
+    mkdir(b"pts");
+    mkchr(b"tty", DeviceType::TTY);
+    mkchr(b"ptmx", DeviceType::PTMX);
 
     fs
 }

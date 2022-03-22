@@ -5,6 +5,7 @@
             "/:ext4:data/system.img",
             "/data:remotefs:data",
             "/dev:devtmpfs",
+            "/dev/pts:devpts",
             "/data/tmp:tmpfs",
             "/proc:proc",
         ],
