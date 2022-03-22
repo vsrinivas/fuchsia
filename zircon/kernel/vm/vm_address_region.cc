@@ -472,6 +472,8 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
       *this, min_addr, max_addr);
   AssertHeld(enumerator.lock_ref());
   while (auto result = enumerator.next()) {
+    // Lock is held over the entire duration so we can treat this as a raw pointer, knowing it will
+    // not go away.
     VmAddressRegionOrMapping* curr = result->region_or_mapping;
     if (curr->is_mapping()) {
       VmMapping* mapping = curr->as_vm_mapping().get();
@@ -590,7 +592,9 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
   AssertHeld(enumerator.lock_ref());
   vaddr_t expected = base;
   while (auto map = enumerator.next()) {
-    VmMapping* mapping = map->region_or_mapping;
+    // Presently we hold the lock, so we know that region_or_mapping is valid, but we want to use
+    // this outside of the lock later on, and so we must upgrade it to a RefPtr.
+    fbl::RefPtr<VmMapping> mapping = fbl::RefPtr<VmMapping>(map->region_or_mapping);
     AssertHeld(mapping->lock_ref());
 
     // It's possible base is less than expected if the first mapping is not precisely aligned

@@ -57,7 +57,9 @@ class VmAddressRegionEnumerator {
   };
 
   // Yield the next region or mapping, or a nullopt if enumeration has completed. Regions are
-  // yielded in depth-first pre-order.
+  // yielded in depth-first pre-order. The regions are yielded as raw pointers, which are guaranteed
+  // to be valid since the lock is held. It is the callers responsibility to keep these pointers
+  // alive, by upgrading to RefPtrs or otherwise, if they want to |pause| and drop the lock.
   ktl::optional<NextResult> next() TA_REQ(vmar_.lock()) {
     if constexpr (Type == VmAddressRegionEnumeratorType::PausableMapping) {
       ASSERT(!state_.paused_);
