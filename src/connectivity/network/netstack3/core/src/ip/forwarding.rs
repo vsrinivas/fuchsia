@@ -434,7 +434,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::{assert_empty, device::DeviceId};
+    use crate::{device::DeviceId, testutil::assert_empty};
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the active and installed forwarding table.

@@ -366,6 +366,15 @@ impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> 
             DeviceIdInner::Loopback => None,
         }
     }
+
+    fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]> {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                Some(ethernet::get_mac(self, id).to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC))
+            }
+            DeviceIdInner::Loopback => None,
+        }
+    }
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv6, B>
@@ -710,15 +719,6 @@ pub fn initialize_device<D: EventDispatcher, C: BlanketCoreContext>(
 
     // `device` must currently be uninitialized.
     assert!(state.is_uninitialized());
-
-    state.set_initialization_status(InitializationStatus::Initializing);
-
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            ethernet::initialize_device(ctx, id);
-        }
-        DeviceIdInner::Loopback => {}
-    }
 
     get_common_device_state_mut(&mut ctx.state, device)
         .set_initialization_status(InitializationStatus::Initialized);

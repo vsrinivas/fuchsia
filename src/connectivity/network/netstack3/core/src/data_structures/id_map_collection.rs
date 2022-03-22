@@ -361,7 +361,7 @@ impl<K: IdMapCollectionKey, T> Default for IdMapCollection<K, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_empty;
+    use crate::testutil::assert_empty;
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum MockVariants {

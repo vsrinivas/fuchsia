@@ -718,9 +718,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::testutil::{DummyInstant, DummyTimerCtxExt},
-        testutil::{DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+        testutil::{assert_empty, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
     };
 
     type DummyCtx<I> = crate::context::testutil::DummyTimerCtx<FragmentCacheKey<<I as Ip>::Addr>>;

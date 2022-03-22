@@ -2329,7 +2329,7 @@ mod tests {
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::device::set_routing_enabled,
         testutil::*,
-        {assert_empty, DeviceId, Mac, StackStateBuilder},
+        DeviceId, Mac, StackStateBuilder,
     };
 
     // Some helper functions

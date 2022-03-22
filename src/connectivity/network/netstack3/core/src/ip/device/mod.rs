@@ -15,7 +15,7 @@ use core::{num::NonZeroU8, time::Duration};
 #[cfg(test)]
 use net_types::ip::{Ip, IpVersion};
 use net_types::{
-    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
@@ -203,9 +203,15 @@ pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
     // L3.
     fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
 
-    /// Returns the device's link-layer address bytes, if the device supports
+    /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+
+    /// Gets the device's EUI-64 based interface identifier.
+    ///
+    /// A `None` value indicates the device does not have an EUI-64 based
+    /// interface identifier.
+    fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]>;
 }
 
 /// The execution context for an IP device with a buffer.
@@ -227,10 +233,33 @@ pub(crate) trait BufferIpDeviceContext<
     ) -> Result<(), S>;
 }
 
-pub(crate) fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler>(
+pub(crate) fn enable_ipv6_device<
+    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler,
+>(
     ctx: &mut C,
     device_id: C::DeviceId,
 ) {
+    // TODO(https://fxbug.dev/95946): Generate link-local address with opaque
+    // IIDs.
+    if let Some(iid) = ctx.get_eui64_iid(device_id) {
+        let link_local_addr_sub = {
+            let mut addr = [0; 16];
+            addr[0..2].copy_from_slice(&[0xfe, 0x80]);
+            addr[(Ipv6::UNICAST_INTERFACE_IDENTIFIER_BITS / 8) as usize..].copy_from_slice(&iid);
+
+            AddrSubnet::new(
+                Ipv6Addr::from(addr),
+                Ipv6Addr::BYTES * 8 - Ipv6::UNICAST_INTERFACE_IDENTIFIER_BITS,
+            )
+            .expect("valid link-local address")
+        };
+
+        add_ipv6_addr_subnet(ctx, device_id, link_local_addr_sub, AddrConfig::SLAAC_LINK_LOCAL)
+            .expect(
+                "internal invariant violated: uninitialized device already had IP address assigned",
+            );
+    }
+
     // All nodes should join the all-nodes multicast group.
     join_ip_multicast(ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
 

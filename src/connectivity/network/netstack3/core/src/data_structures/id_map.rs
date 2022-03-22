@@ -632,7 +632,7 @@ mod tests {
         IdMapEntry::{Allocated, Free},
         *,
     };
-    use crate::assert_empty;
+    use crate::testutil::assert_empty;
 
     // Smart constructors
     fn free<T>(prev: usize, next: usize) -> IdMapEntry<T> {

@@ -2331,7 +2331,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::testutil::{DummyCtx, DummyInstant},
         device::{DeviceId, FrameDestination},
         ip::{
@@ -2342,7 +2341,7 @@ mod tests {
             socket::testutil::DummyIpSocketCtx,
             DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::{get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+        testutil::{assert_empty, get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
         transport::udp::UdpStateBuilder,
         StackStateBuilder,
     };

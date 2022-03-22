@@ -14,10 +14,6 @@ pub(crate) enum InitializationStatus {
     /// The device is not yet initialized and MUST NOT be used.
     Uninitialized,
 
-    /// The device is currently being initialized and must only be used by
-    /// the initialization methods.
-    Initializing,
-
     /// The device is initialized and can operate as normal.
     Initialized,
 }

@@ -496,7 +496,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::{
             testutil::{DummyInstant, DummyTimerCtxExt},
             DualStateContext,
@@ -505,7 +504,7 @@ mod tests {
             gmp::{Action, GmpAction, MemberState},
             DummyDeviceId,
         },
-        testutil::{new_rng, run_with_many_seeds, FakeCryptoRng},
+        testutil::{assert_empty, new_rng, run_with_many_seeds, FakeCryptoRng},
     };
 
     /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an

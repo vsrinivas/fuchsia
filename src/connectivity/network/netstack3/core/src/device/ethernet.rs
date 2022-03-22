@@ -28,7 +28,6 @@ use packet_formats::{
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::{
-    assert_empty,
     context::{FrameContext, StateContext},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
@@ -345,33 +344,6 @@ impl_timer_context!(
     EthernetTimerId::Ndp(id),
     id
 );
-
-/// Initialize a device.
-///
-/// `initialize_device` sets the link-local address for `device_id` and performs
-/// DAD on it.
-///
-/// `device_id` MUST be ready to send packets before `initialize_device` is
-/// called.
-pub(super) fn initialize_device<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-) {
-    // Assign a link-local address.
-
-    let state = ctx.get_state_with(device_id);
-
-    // There should be no way to add addresses to a device before it's
-    // initialized.
-    assert_empty(state.ip.ipv6.ip_state.iter_addrs());
-
-    // Join the MAC-derived link-local address. Mark it as configured by SLAAC
-    // and not set to expire.
-    let addr_sub = state.link.mac.to_ipv6_link_local().to_witness();
-    ctx.add_ipv6_addr_subnet(device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
-        "internal invariant violated: uninitialized device already had IP address assigned",
-    );
-}
 
 /// Send an IP packet in an Ethernet frame.
 ///
@@ -1008,8 +980,8 @@ mod tests {
             dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId,
         },
         testutil::{
-            add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcherBuilder,
-            FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
+            add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,
+            DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
         },
     };
 

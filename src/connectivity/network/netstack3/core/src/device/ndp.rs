@@ -2828,7 +2828,6 @@ mod tests {
     use test_case::test_case;
 
     use crate::{
-        assert_empty,
         context::{
             testutil::{
                 DummyCtx, DummyInstant, DummyInstantRange, DummyTimerCtxExt as _, StepResult,
@@ -2853,7 +2852,7 @@ mod tests {
             SendIpPacketMeta,
         },
         testutil::{
-            get_counter_val, set_logger_for_test, DummyEventDispatcher,
+            assert_empty, get_counter_val, set_logger_for_test, DummyEventDispatcher,
             DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V6,
         },
         Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,

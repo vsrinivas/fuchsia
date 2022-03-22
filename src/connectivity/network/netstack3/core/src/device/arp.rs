@@ -728,12 +728,12 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::{
             testutil::{DummyInstant, DummyNetwork, DummyTimerCtxExt},
             InstantContext,
         },
         device::ethernet::EthernetLinkDevice,
+        testutil::assert_empty,
     };
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);

@@ -1196,7 +1196,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::testutil::{DummyFrameCtx, DummyInstant},
         ip::{
             device::state::IpDeviceStateIpExt,
@@ -1207,7 +1206,7 @@ mod tests {
             },
             DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::{set_logger_for_test, FakeCryptoRng},
+        testutil::{assert_empty, set_logger_for_test, FakeCryptoRng},
     };
 
     /// The listener data sent through a [`DummyUdpCtx`].

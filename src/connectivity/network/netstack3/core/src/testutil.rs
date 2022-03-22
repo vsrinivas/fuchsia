@@ -38,6 +38,21 @@ use crate::{
     BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
 };
 
+/// Asserts that an iterable object produces zero items.
+///
+/// `assert_empty` drains `into_iter.into_iter()` and asserts that zero
+/// items are produced. It panics with a message which includes the produced
+/// items if this assertion fails.
+#[track_caller]
+pub(crate) fn assert_empty<I: IntoIterator>(into_iter: I)
+where
+    I::Item: Debug + PartialEq,
+{
+    // NOTE: Collecting into a `Vec` is cheap in the happy path because
+    // zero-capacity vectors are guaranteed not to allocate.
+    assert_eq!(into_iter.into_iter().collect::<Vec<_>>(), &[]);
+}
+
 /// Utilities to allow running benchmarks as tests.
 ///
 /// Our benchmarks rely on the unstable `test` feature, which is disallowed in
@@ -692,7 +707,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        assert_empty,
         context::testutil::{DummyNetwork, DummyNetworkLinks},
         device::testutil::receive_frame_or_panic,
         ip::socket::BufferIpSocketHandler,

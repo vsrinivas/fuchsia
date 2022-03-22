@@ -376,12 +376,11 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use crate::{
-        assert_empty,
         context::{
             testutil::{DummyInstant, DummyTimerCtxExt},
             InstantContext,
         },
-        testutil::TestIpExt,
+        testutil::{assert_empty, TestIpExt},
     };
 
     type DummyCtx<I> = crate::context::testutil::DummyTimerCtx<PmtuTimerId<I>>;
