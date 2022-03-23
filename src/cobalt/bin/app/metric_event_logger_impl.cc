@@ -55,7 +55,8 @@ void MetricEventLoggerImpl::LogMetricEvents(
     std::vector<fuchsia::metrics::MetricEvent> events,
     fuchsia::metrics::MetricEventLogger::LogMetricEventsCallback callback) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogMetricEvents");
-  logger_->RecordLoggerCall(logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogMetricEvents);
+  logger_->RecordLoggerCall(
+      logger::LoggerCallsMadeMigratedMetricDimensionLoggerMethod::LogMetricEvents);
 
   // tracking LoggerCalled events is expensive (~3.5ms/event). We want
   // LogCobaltEvents to be a more performance concious alternative, so we pause

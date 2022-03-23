@@ -36,13 +36,13 @@ TEST_F(LoggerImplTest, PauseDuringBatch) {
   events.push_back(CobaltEventBuilder(1).as_event());
   events.push_back(CobaltEventBuilder(1).as_event());
   logger_->LogCobaltEvents(std::move(events), [](FuchsiaStatus status) {});
-  std::map<logger::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod, uint32_t>
+  std::map<logger::PerProjectLoggerCallsMadeMigratedMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
   // Only the LogCobaltEvents call should be recorded.
   EXPECT_EQ(internal_logger_calls.size(), 1);
-  EXPECT_EQ(
-      internal_logger_calls[logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogCobaltEvents],
-      1);
+  EXPECT_EQ(internal_logger_calls
+                [logger::LoggerCallsMadeMigratedMetricDimensionLoggerMethod::LogCobaltEvents],
+            1);
 }
 
 // Tests that if StartTimer() and EndTimer() are invoked when the LoggerImpl

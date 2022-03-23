@@ -34,13 +34,13 @@ TEST_F(MetricEventLoggerImplTest, PauseDuringBatch) {
   events.push_back(MetricEventBuilder(1).as_occurrence(4));
   events.push_back(MetricEventBuilder(1).as_occurrence(5));
   logger_->LogMetricEvents(std::move(events), [](fuchsia::metrics::Status status) {});
-  std::map<logger::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod, uint32_t>
+  std::map<logger::PerProjectLoggerCallsMadeMigratedMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
   // Only the LogMetricEvents call should be recorded.
   EXPECT_EQ(internal_logger_calls.size(), 1);
-  EXPECT_EQ(
-      internal_logger_calls[logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogMetricEvents],
-      1);
+  EXPECT_EQ(internal_logger_calls
+                [logger::LoggerCallsMadeMigratedMetricDimensionLoggerMethod::LogMetricEvents],
+            1);
 }
 
 }  // namespace cobalt
