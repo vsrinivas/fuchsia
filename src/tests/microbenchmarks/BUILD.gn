@@ -53,6 +53,7 @@ executable("bin") {
       "prng.cc",
       "pseudo_dir.cc",
       "round_trips.cc",
+      "round_trips_futex.cc",
       "sleep.cc",
       "sockets.cc",
       "streams.cc",
