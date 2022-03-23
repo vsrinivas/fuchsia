@@ -128,6 +128,7 @@ rustc_library("wlan-common") {
     with_unit_tests = true
     sources += [
       "src/test_utils/fake_capabilities.rs",
+      "src/test_utils/fake_features.rs",
       "src/test_utils/fake_frames.rs",
       "src/test_utils/fake_stas.rs",
       "src/test_utils/mod.rs",

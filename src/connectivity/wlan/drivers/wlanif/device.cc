@@ -16,6 +16,7 @@
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
+#include <wlan/common/features.h>
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/drivers/log.h>
 
@@ -23,6 +24,8 @@
 #include "debug.h"
 #include "driver.h"
 #include "fuchsia/wlan/common/c/banjo.h"
+#include "fuchsia/wlan/common/cpp/fidl.h"
+#include "zircon/system/public/zircon/assert.h"
 
 namespace wlanif {
 
@@ -613,6 +616,89 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   wlan_mlme::DeviceInfo fidl_resp = {};
   ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_);
   cb(std::move(fidl_resp));
+}
+
+void Device::QueryDiscoverySupport(QueryDiscoverySupportCallback cb) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  wlan_common::DiscoverySupport support;
+  // Fullmac drivers do not currently support any discovery features.
+  // If fullmac drivers come to support discovery features, this method will need
+  // to check that the device has been bound (like the other Query functions below.
+  cb(support);
+}
+
+void Device::QueryMacSublayerSupport(QueryMacSublayerSupportCallback cb) {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  mac_sublayer_support support;
+  wlan_fullmac_impl_query_mac_sublayer_support(&wlan_fullmac_impl_, &support);
+  wlan_common::MacSublayerSupport fidl_support;
+  const auto convert_status = wlan::common::ConvertMacSublayerSupportToFidl(support, &fidl_support);
+  if (convert_status != ZX_OK) {
+    lwarn("Invalid data plane type: %u", support.data_plane.data_plane_type);
+  }
+  ZX_DEBUG_ASSERT_MSG(convert_status == ZX_OK, "MAC sublayer support conversion failed: %s",
+                      zx_status_get_string(convert_status));
+  // All wlanif devices must be fullmac.
+  const bool is_fullmac =
+      fidl_support.device.mac_implementation_type == wlan_common::MacImplementationType::FULLMAC;
+  if (!is_fullmac) {
+    lerror("Invalid MAC implementation type: %u", support.device.mac_implementation_type);
+  }
+  ZX_DEBUG_ASSERT_MSG(is_fullmac, "MAC sublayer support conversion failed: %s",
+                      zx_status_get_string(convert_status));
+
+  cb(fidl_support);
+}
+
+void Device::QuerySecuritySupport(QuerySecuritySupportCallback cb) {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  security_support support;
+  wlan_fullmac_impl_query_security_support(&wlan_fullmac_impl_, &support);
+  wlan_common::SecuritySupport fidl_support;
+  const auto convert_status = wlan::common::ConvertSecuritySupportToFidl(support, &fidl_support);
+  if (convert_status != ZX_OK) {
+    lwarn("Security support conversion failed: %s", zx_status_get_string(convert_status));
+  }
+  ZX_DEBUG_ASSERT_MSG(convert_status == ZX_OK, "Security support conversion failed: %s",
+                      zx_status_get_string(convert_status));
+
+  cb(fidl_support);
+}
+
+void Device::QuerySpectrumManagementSupport(QuerySpectrumManagementSupportCallback cb) {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  spectrum_management_support support;
+  wlan_fullmac_impl_query_spectrum_management_support(&wlan_fullmac_impl_, &support);
+  wlan_common::SpectrumManagementSupport fidl_support;
+  const auto convert_status =
+      wlan::common::ConvertSpectrumManagementSupportToFidl(support, &fidl_support);
+  if (convert_status != ZX_OK) {
+    lwarn("Spectrum management support conversion failed: %s",
+          zx_status_get_string(convert_status));
+  }
+  ZX_DEBUG_ASSERT_MSG(convert_status == ZX_OK, "Spectrum management support conversion failed:: %s",
+                      zx_status_get_string(convert_status));
+
+  cb(fidl_support);
 }
 
 void Device::StatsQueryReq() {

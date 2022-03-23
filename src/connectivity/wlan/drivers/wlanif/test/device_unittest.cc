@@ -5,8 +5,6 @@
 #include "src/connectivity/wlan/drivers/wlanif/device.h"
 
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
-#include <fuchsia/wlan/internal/c/banjo.h>
-#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
@@ -28,11 +26,14 @@
 
 #include "fuchsia/hardware/wlan/fullmac/c/banjo.h"
 #include "fuchsia/wlan/common/c/banjo.h"
+#include "fuchsia/wlan/common/cpp/fidl.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "test_bss.h"
 
-namespace wlan_internal = ::fuchsia::wlan::internal;
+namespace {
+
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_common = ::fuchsia::wlan::common;
 
 using ::testing::_;
 using ::testing::ElementsAre;
@@ -624,6 +625,150 @@ TEST_F(DeviceTestFixture, SetKeysTooLarge) {
   }
 }
 
+#define QUERY_TEST_DEV(c) (static_cast<QueryTestContext*>(c))
+
+struct QueryTestContext {
+  QueryTestContext() {
+    auto [new_sme, new_mlme] = make_channel();
+    mlme = std::move(new_mlme);
+    sme = std::move(new_sme);
+  }
+
+  zx::channel mlme = {};
+  zx::channel sme = {};
+};
+
+TEST(QueryTest, QueryDiscoverySupport) {
+  wlan_fullmac_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = QUERY_TEST_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+  QueryTestContext ctx;
+  wlan_fullmac_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  ASSERT_EQ(device->Bind(), ZX_OK);
+
+  fuchsia::wlan::common::DiscoverySupport support;
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  ASSERT_EQ(mlme_proxy.QueryDiscoverySupport(&support), ZX_OK);
+  EXPECT_FALSE(support.scan_offload.supported);
+  EXPECT_FALSE(support.probe_response_offload.supported);
+
+  device->Unbind();
+}
+
+TEST(QueryTest, QueryMacSublayerSupport) {
+  wlan_fullmac_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = QUERY_TEST_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  proto_ops.query_mac_sublayer_support = [](void* ctx, mac_sublayer_support_t* out_support) {
+    *out_support = {};
+    out_support->rate_selection_offload.supported = true;
+    out_support->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+    out_support->device.is_synthetic = false;
+    out_support->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_FULLMAC;
+    out_support->device.tx_status_report_supported = false;
+  };
+  QueryTestContext ctx;
+  wlan_fullmac_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  ASSERT_EQ(device->Bind(), ZX_OK);
+
+  fuchsia::wlan::common::MacSublayerSupport support;
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  ASSERT_EQ(mlme_proxy.QueryMacSublayerSupport(&support), ZX_OK);
+  EXPECT_TRUE(support.rate_selection_offload.supported);
+  EXPECT_EQ(support.data_plane.data_plane_type, wlan_common::DataPlaneType::ETHERNET_DEVICE);
+  EXPECT_FALSE(support.device.is_synthetic);
+  EXPECT_EQ(support.device.mac_implementation_type, wlan_common::MacImplementationType::FULLMAC);
+  EXPECT_FALSE(support.device.tx_status_report_supported);
+
+  device->Unbind();
+}
+
+TEST(QueryTest, QuerySecuritySupport) {
+  wlan_fullmac_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = QUERY_TEST_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  proto_ops.query_security_support = [](void* ctx, security_support_t* out_support) {
+    *out_support = {};
+    out_support->sae.supported = true;
+    out_support->sae.handler = SAE_HANDLER_SME;
+    out_support->mfp.supported = true;
+  };
+  QueryTestContext ctx;
+  wlan_fullmac_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  ASSERT_EQ(device->Bind(), ZX_OK);
+
+  fuchsia::wlan::common::SecuritySupport support;
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  ASSERT_EQ(mlme_proxy.QuerySecuritySupport(&support), ZX_OK);
+  EXPECT_TRUE(support.sae.supported);
+  EXPECT_EQ(support.sae.handler, wlan_common::SaeHandler::SME);
+  EXPECT_TRUE(support.mfp.supported);
+
+  device->Unbind();
+}
+
+TEST(QueryTest, QuerySpectrumManagementSupport) {
+  wlan_fullmac_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = QUERY_TEST_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  proto_ops.query_spectrum_management_support = [](void* ctx,
+                                                   spectrum_management_support_t* out_support) {
+    *out_support = {};
+    out_support->dfs.supported = true;
+  };
+  QueryTestContext ctx;
+  wlan_fullmac_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  ASSERT_EQ(device->Bind(), ZX_OK);
+
+  fuchsia::wlan::common::SpectrumManagementSupport support;
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  ASSERT_EQ(mlme_proxy.QuerySpectrumManagementSupport(&support), ZX_OK);
+  EXPECT_TRUE(support.dfs.supported);
+
+  device->Unbind();
+}
+
+#undef QUERY_TEST_DEV
+
 struct EthernetTestFixture : public DeviceTestFixture {
   void TestEthernetAgainstRole(wlan_mac_role_t role);
   void InitDeviceWithRole(wlan_mac_role_t role);
@@ -661,6 +806,7 @@ static void hook_query(void* ctx, wlan_fullmac_query_info_t* info) {
 }
 
 static void hook_query_mac_sublayer_support(void* ctx, mac_sublayer_support_t* out_resp) {
+  out_resp->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_FULLMAC;
   out_resp->data_plane.data_plane_type = ETH_DEV(ctx)->data_plane_type_;
 }
 
@@ -980,3 +1126,5 @@ TEST_F(EthernetTestFixture, StopReqDoesNotDeadlockWithEthRecv) {
 }
 
 #undef ETH_DEV
+
+}  // namespace

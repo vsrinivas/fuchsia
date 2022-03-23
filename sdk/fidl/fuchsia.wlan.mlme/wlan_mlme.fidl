@@ -509,9 +509,8 @@ type GetMeshPathTableRequest = struct {
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 protocol MLME {
-    // ==== 01xxxx: scanning ====
-    // We deviate from the spec here in order to support incremental scan
-    // results easily. We could stay closer to 802.11ai, but the protocol
+    // We deviate from the spec for scanning in order to support incremental
+    // scan results easily. We could stay closer to 802.11ai, but the protocol
     // that is described there is more difficult to implement correctly.
 
     // Initiate a scan transaction. The caller is responsible for filling
@@ -540,8 +539,6 @@ protocol MLME {
     -> OnScanEnd(struct {
         end ScanEnd;
     });
-
-    // ====
 
     JoinReq(struct {
         req JoinRequest;
@@ -638,7 +635,6 @@ protocol MLME {
 
     // The following are extensions to the 802.11 MLME SAP interface.
 
-    // ==== Mesh ===
     -> IncomingMpOpenAction(struct {
         action MeshPeeringOpenAction;
     });
@@ -675,6 +671,19 @@ protocol MLME {
 
     QueryDeviceInfo() -> (struct {
         info DeviceInfo;
+    });
+
+    QueryDiscoverySupport() -> (struct {
+        resp fuchsia.wlan.common.DiscoverySupport;
+    });
+    QueryMacSublayerSupport() -> (struct {
+        resp fuchsia.wlan.common.MacSublayerSupport;
+    });
+    QuerySecuritySupport() -> (struct {
+        resp fuchsia.wlan.common.SecuritySupport;
+    });
+    QuerySpectrumManagementSupport() -> (struct {
+        resp fuchsia.wlan.common.SpectrumManagementSupport;
     });
 
     @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
@@ -717,18 +726,19 @@ protocol MLME {
         info PmkInfo;
     });
 
-    // === Messages for managing SAE authentication inside SME ===
-    // MLME notification that SME will handle authentication.
+    /// MLME notification that SME will handle SAE authentication.
     -> OnSaeHandshakeInd(struct {
         ind SaeHandshakeIndication;
     });
-    // SME notification that authentication is completed.
+    /// Notifies that SAE authentication is completed.
     SaeHandshakeResp(struct {
         resp SaeHandshakeResponse;
     });
+    /// Transmits SAE frame (if SME is managing SAE authentication).
     SaeFrameTx(struct {
         frame SaeFrame;
     });
+    /// Receives SAE frame (if SME is managing SAE authentication).
     -> OnSaeFrameRx(struct {
         frame SaeFrame;
     });

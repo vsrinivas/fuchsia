@@ -10,6 +10,7 @@ use {
 };
 
 pub mod fake_capabilities;
+pub mod fake_features;
 pub mod fake_frames;
 pub mod fake_stas;
 

@@ -72,6 +72,10 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void DeleteKeysReq(::fuchsia::wlan::mlme::DeleteKeysRequest req) override;
   void EapolReq(::fuchsia::wlan::mlme::EapolRequest req) override;
   void QueryDeviceInfo(QueryDeviceInfoCallback cb) override;
+  void QueryDiscoverySupport(QueryDiscoverySupportCallback cb) override;
+  void QueryMacSublayerSupport(QueryMacSublayerSupportCallback cb) override;
+  void QuerySecuritySupport(QuerySecuritySupportCallback cb) override;
+  void QuerySpectrumManagementSupport(QuerySpectrumManagementSupportCallback cb) override;
   void StatsQueryReq() override;
   void GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) override;
   void GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) override;
