@@ -119,12 +119,12 @@ static void boot_reserve_zbi() {
 
 #include <dev/display.h>
 
-zx_status_t display_get_info(struct display_info* info) { return gfx::ConsoleDisplayGetInfo(info); }
+zx_status_t display_get_info(display_info* info) { return gfx::ConsoleDisplayGetInfo(info); }
 
 bool platform_early_console_enabled() { return !early_console_disabled; }
 
 static void platform_early_display_init(void) {
-  struct display_info info;
+  display_info info;
   void* bits;
 
   if (bootloader.fb.base == 0) {
@@ -162,7 +162,7 @@ static void platform_ensure_display_memtype(uint level) {
   if (early_console_disabled) {
     return;
   }
-  struct display_info info;
+  display_info info;
   memset(&info, 0, sizeof(info));
   info.format = bootloader.fb.format;
   info.width = bootloader.fb.width;

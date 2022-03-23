@@ -514,7 +514,7 @@ int platform_pgetc(char* c) {
 }
 
 /* no built in framebuffer */
-zx_status_t display_get_info(struct display_info* info) { return ZX_ERR_NOT_FOUND; }
+zx_status_t display_get_info(display_info* info) { return ZX_ERR_NOT_FOUND; }
 
 void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason,
                             bool halt_on_panic) {

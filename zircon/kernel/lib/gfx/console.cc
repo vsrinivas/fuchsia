@@ -235,9 +235,9 @@ void ConsoleStart(Surface* surface, Surface* hw_surface) {
 
 static Surface hw_surface;
 static Surface sw_surface;
-static struct display_info dispinfo;
+static display_info dispinfo;
 
-zx_status_t ConsoleDisplayGetInfo(struct display_info* info) {
+zx_status_t ConsoleDisplayGetInfo(display_info* info) {
   if (gfxconsole.surface) {
     memcpy(info, &dispinfo, sizeof(*info));
     return 0;
@@ -259,7 +259,7 @@ zx_status_t ConsoleDisplayGetInfo(struct display_info* info) {
  * surface (stride * height * pixelsize) for the provided hardware display.
  * This is used for very early framebuffer init before the heap is alive.
  */
-void ConsoleBindDisplay(struct display_info* info, void* raw_sw_fb) {
+void ConsoleBindDisplay(display_info* info, void* raw_sw_fb) {
   static bool active = false;
   bool same_as_before = false;
   struct Surface hw;

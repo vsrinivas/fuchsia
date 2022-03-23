@@ -24,8 +24,8 @@ Surface* CreateSurface(void* ptr, uint width, uint height, uint stride, gfx_form
                        uint32_t flags);
 
 // utility routine to make a surface out of a display info
-Surface* CreateSurfaceFromDisplay(struct display_info*);
-zx_status_t InitSurfaceFromDisplay(Surface* surface, struct display_info*);
+Surface* CreateSurfaceFromDisplay(display_info*);
+zx_status_t InitSurfaceFromDisplay(Surface* surface, display_info*);
 
 // utility routine to fill the display with a little moire pattern
 void DrawPattern(void);

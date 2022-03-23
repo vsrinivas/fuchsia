@@ -15,7 +15,7 @@
 __BEGIN_CDECLS
 
 zx_status_t udisplay_init(void);
-zx_status_t udisplay_set_display_info(struct display_info* display);
+zx_status_t udisplay_set_display_info(display_info* display);
 zx_status_t udisplay_bind_gfxconsole(void);
 
 __END_CDECLS

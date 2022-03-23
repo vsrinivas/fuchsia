@@ -207,8 +207,8 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
     return status;
   }
 
-  struct display_info di;
-  memset(&di, 0, sizeof(struct display_info));
+  display_info di;
+  memset(&di, 0, sizeof(display_info));
   di.format = format;
   di.width = width;
   di.height = height;

@@ -19,9 +19,9 @@ namespace gfx {
 
 // TODO(fxbug.dev/96043): `class Console`.
 
-zx_status_t ConsoleDisplayGetInfo(struct display_info* info);
+zx_status_t ConsoleDisplayGetInfo(display_info* info);
 void ConsoleStart(Surface* surface, Surface* hw_surface);
-void ConsoleBindDisplay(struct display_info* info, void* raw_sw_fb);
+void ConsoleBindDisplay(display_info* info, void* raw_sw_fb);
 void ConsolePutPixel(unsigned x, unsigned y, unsigned color);
 void ConsoleFlush(void);
 

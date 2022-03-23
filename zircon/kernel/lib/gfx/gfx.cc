@@ -55,7 +55,7 @@ Surface* CreateSurface(void* ptr, uint width, uint height, uint stride, gfx_form
 /**
  * @brief  Create a new graphics surface object from a display
  */
-Surface* CreateSurfaceFromDisplay(struct display_info* info) {
+Surface* CreateSurfaceFromDisplay(display_info* info) {
   Surface* surface = static_cast<Surface*>(calloc(1, sizeof(*surface)));
   if (surface == NULL)
     return NULL;
@@ -66,7 +66,7 @@ Surface* CreateSurfaceFromDisplay(struct display_info* info) {
   return surface;
 }
 
-zx_status_t InitSurfaceFromDisplay(Surface* surface, struct display_info* info) {
+zx_status_t InitSurfaceFromDisplay(Surface* surface, display_info* info) {
   zx_status_t r;
   switch (info->format) {
     case ZX_PIXEL_FORMAT_RGB_565:
@@ -94,7 +94,7 @@ zx_status_t InitSurfaceFromDisplay(Surface* surface, struct display_info* info) 
  * @brief  Write a test pattern to the default display.
  */
 void DrawPattern(void) {
-  struct display_info info;
+  display_info info;
   if (display_get_info(&info) < 0)
     return;
 
@@ -166,7 +166,7 @@ static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags) {
     return -1;
   }
 
-  struct display_info info;
+  display_info info;
   if (display_get_info(&info) < 0) {
     printf("no display to draw on!\n");
     return -1;

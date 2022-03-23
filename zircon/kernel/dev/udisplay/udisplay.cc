@@ -29,7 +29,7 @@ constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLA
 struct udisplay_info {
   void* framebuffer_virt;
   size_t framebuffer_size;
-  struct display_info info;
+  display_info info;
   fbl::RefPtr<VmMapping> framebuffer_vmo_mapping;
 };
 
@@ -69,8 +69,8 @@ zx_status_t udisplay_set_framebuffer(fbl::RefPtr<VmObject> vmo) {
   return ZX_OK;
 }
 
-zx_status_t udisplay_set_display_info(struct display_info* display) {
-  memcpy(&g_udisplay.info, display, sizeof(struct display_info));
+zx_status_t udisplay_set_display_info(display_info* display) {
+  memcpy(&g_udisplay.info, display, sizeof(display_info));
   return ZX_OK;
 }
 

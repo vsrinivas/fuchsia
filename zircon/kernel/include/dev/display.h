@@ -40,8 +40,6 @@ struct display_info {
   void (*flush)(uint starty, uint endy);
 };
 
-__BEGIN_CDECLS
-zx_status_t display_get_info(struct display_info *info);
-__END_CDECLS
+zx_status_t display_get_info(display_info *info);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_DEV_DISPLAY_H_
