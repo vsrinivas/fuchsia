@@ -18,9 +18,12 @@ if (is_host) {
     ]
     sources = [
       "codegen/codegen.go",
-      "codegen/driver/file_header.tmpl",
-      "codegen/driver/file_messaging_header.tmpl",
-      "codegen/driver/file_messaging_source.tmpl",
+      "codegen/driver/file_natural_messaging_header.tmpl",
+      "codegen/driver/file_natural_messaging_source.tmpl",
+      "codegen/driver/file_unified_header.tmpl",
+      "codegen/driver/file_wire_header.tmpl",
+      "codegen/driver/file_wire_messaging_header.tmpl",
+      "codegen/driver/file_wire_messaging_source.tmpl",
       "codegen/driver/fragment_method_client_impl_async_buffer.tmpl",
       "codegen/driver/fragment_method_client_impl_oneway_buffer.tmpl",
       "codegen/driver/fragment_method_completer_base.tmpl",
@@ -132,18 +135,6 @@ if (is_host) {
             generated = "$gen_dir/$include_path/wire_messaging.cc"
           },
           {
-            golden = "${info.name}_driver.h.golden"
-            generated = "$gen_dir/$include_path/driver/wire.h"
-          },
-          {
-            golden = "${info.name}_driver_wire_messaging.h.golden"
-            generated = "$gen_dir/$include_path/driver/wire_messaging.h"
-          },
-          {
-            golden = "${info.name}_driver_wire_messaging.cc.golden"
-            generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
-          },
-          {
             golden = "${info.name}_natural_types.h.golden"
             generated = "$gen_dir/$include_path/natural_types.h"
           },
@@ -162,6 +153,30 @@ if (is_host) {
           {
             golden = "${info.name}_fidl.h.golden"
             generated = "$gen_dir/$include_path/fidl.h"
+          },
+          {
+            golden = "${info.name}_driver_wire.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
+          },
+          {
+            golden = "${info.name}_driver_natural_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver/natural_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_natural_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver/natural_messaging.cc"
+          },
+          {
+            golden = "${info.name}_driver_fidl.h.golden"
+            generated = "$gen_dir/$include_path/driver/fidl.h"
           },
         ]
       }

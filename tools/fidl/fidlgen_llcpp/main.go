@@ -20,7 +20,9 @@ func main() {
 		"WireMessagingHeader", "WireMessagingSource",
 		"NaturalTypesHeader", "NaturalTypesSource",
 		"NaturalMessagingHeader", "NaturalMessagingSource",
-		"driver/Header",
-		"driver/MessagingHeader", "driver/MessagingSource",
+		"driver/WireHeader",
+		"driver/WireMessagingHeader", "driver/WireMessagingSource",
+		"driver/NaturalMessagingHeader", "driver/NaturalMessagingSource",
+		"driver/UnifiedHeader",
 	})
 }
