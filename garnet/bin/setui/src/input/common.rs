@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// The amount of time in milliseconds to wait for a camera device to be detected.
-pub const CAMERA_WATCHER_TIMEOUT: i64 = 3000;
+pub const CAMERA_WATCHER_TIMEOUT: i64 = 30_000;
 
 /// Builder to simplify construction of fidl_fuchsia_ui_input::MediaButtonsEvent.
 /// # Example usage:
