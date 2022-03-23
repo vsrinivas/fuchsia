@@ -310,10 +310,10 @@ pub struct UseEventStreamDeprecatedDecl {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::UseEventStream")]
 pub struct UseEventStreamDecl {
-    pub source_names: Vec<CapabilityName>,
+    pub source_name: CapabilityName,
     pub source: UseSource,
     pub scope: Option<Vec<EventScope>>,
     pub target_path: CapabilityPath,
@@ -2089,7 +2089,7 @@ mod tests {
                             collection: None,
                             name: "test".to_string(),
                         })),
-                        source_names: Some(vec!["stopped".to_string()]),
+                        source_name: Some("stopped".to_string()),
                         scope: Some(vec![
                             fdecl::Ref::Child(fdecl::ChildRef {
                                 collection: None,
@@ -2484,7 +2484,7 @@ mod tests {
                         UseDecl::EventStream(UseEventStreamDecl {
                             source: UseSource::Child("test".to_string()),
                             scope: Some(vec![EventScope::Child(ChildRef{ name: "a".to_string(), collection: None}), EventScope::Collection("b".to_string())]),
-                            source_names: vec![CapabilityName::from("stopped")],
+                            source_name: CapabilityName::from("stopped"),
                             target_path: CapabilityPath::from_str("/svc/test").unwrap(),
                         }),
                     ],

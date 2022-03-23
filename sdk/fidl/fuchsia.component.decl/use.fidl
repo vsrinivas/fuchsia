@@ -162,7 +162,7 @@ type UseEventStreamDeprecated = table {
 /// Declares an EventStream used by a component.
 type UseEventStream = table {
     /// The names of the event streams.
-    1: source_names vector<name>:MAX;
+    1: source_name name;
 
     /// The provider of the event. Must be `parent`, `framework`, or `child`.
     2: source Ref;

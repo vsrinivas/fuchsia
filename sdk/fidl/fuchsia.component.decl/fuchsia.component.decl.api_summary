@@ -261,7 +261,7 @@ table/member fuchsia.component.decl/UseEvent.target_name string:100
 table fuchsia.component.decl/UseEvent
 table/member fuchsia.component.decl/UseEventStream.scope vector<fuchsia.component.decl/Ref>
 table/member fuchsia.component.decl/UseEventStream.source fuchsia.component.decl/Ref
-table/member fuchsia.component.decl/UseEventStream.source_names vector<string:100>
+table/member fuchsia.component.decl/UseEventStream.source_name string:100
 table/member fuchsia.component.decl/UseEventStream.target_path string:100
 table fuchsia.component.decl/UseEventStream
 table/member fuchsia.component.decl/UseEventStreamDeprecated.name string:100

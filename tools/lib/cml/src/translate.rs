@@ -305,46 +305,49 @@ fn translate_use(
                 ..fdecl::UseEventStreamDeprecated::EMPTY
             }));
         } else if let Some(names) = &use_.event_stream {
-            let source_names = annotate_type::<Vec<cm_types::Name>>(names.clone().into())
-                .iter()
-                .map(|name| name.to_string())
-                .collect();
-            let scopes = match use_.scope.clone() {
-                Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
-                None => None,
-            };
-            let internal_error = format!("Internal error in all_target_use_paths when translating an EventStream. Please file a bug.");
-            out_uses.push(fdecl::Use::EventStream(fdecl::UseEventStream {
-                source_names: Some(source_names),
-                scope: match scopes {
-                    Some(values) => {
-                        let mut output = vec![];
-                        for value in &values {
-                            output.push(translate_child_or_collection_ref(
-                                value.into(),
-                                &all_children,
-                                &all_collections,
-                            )?);
-                        }
-                        Some(output)
-                    }
-                    None => None,
-                },
-                source: Some(extract_use_source(use_, all_capability_names, all_children)?),
-                target_path: Some(
-                    annotate_type::<Vec<cm_types::Path>>(
-                        all_target_use_paths(use_, use_)
-                            .ok_or_else(|| Error::internal(internal_error.clone()))?
-                            .into(),
-                    )
+            let source_names: Vec<String> =
+                annotate_type::<Vec<cm_types::Name>>(names.clone().into())
                     .iter()
-                    .next()
-                    .ok_or_else(|| Error::internal(internal_error.clone()))?
-                    .as_str()
-                    .to_string(),
-                ),
-                ..fdecl::UseEventStream::EMPTY
-            }));
+                    .map(|name| name.to_string())
+                    .collect();
+            for name in source_names {
+                let scopes = match use_.scope.clone() {
+                    Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
+                    None => None,
+                };
+                let internal_error = format!("Internal error in all_target_use_paths when translating an EventStream. Please file a bug.");
+                out_uses.push(fdecl::Use::EventStream(fdecl::UseEventStream {
+                    source_name: Some(name),
+                    scope: match scopes {
+                        Some(values) => {
+                            let mut output = vec![];
+                            for value in &values {
+                                output.push(translate_child_or_collection_ref(
+                                    value.into(),
+                                    &all_children,
+                                    &all_collections,
+                                )?);
+                            }
+                            Some(output)
+                        }
+                        None => None,
+                    },
+                    source: Some(extract_use_source(use_, all_capability_names, all_children)?),
+                    target_path: Some(
+                        annotate_type::<Vec<cm_types::Path>>(
+                            all_target_use_paths(use_, use_)
+                                .ok_or_else(|| Error::internal(internal_error.clone()))?
+                                .into(),
+                        )
+                        .iter()
+                        .next()
+                        .ok_or_else(|| Error::internal(internal_error.clone()))?
+                        .as_str()
+                        .to_string(),
+                    ),
+                    ..fdecl::UseEventStream::EMPTY
+                }));
+            }
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -1847,18 +1850,25 @@ mod tests {
                         ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
-                        source_names: Some(vec!["bar_stream".to_string()]),
+                        source_name: Some("bar_stream".to_string()),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
                         ..fdecl::UseEventStream::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
-                        source_names: Some(vec!["foobar".to_string(), "stream".to_string()]),
+                        source_name: Some("foobar".to_string()),
                         scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name:"logger".to_string(), collection: None}), fdecl::Ref::Collection(fdecl::CollectionRef{name:"modular".to_string()})]),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
                         ..fdecl::UseEventStream::EMPTY
-                    })
+                    }),
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source_name: Some("stream".to_string()),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name:"logger".to_string(), collection: None}), fdecl::Ref::Collection(fdecl::CollectionRef{name:"modular".to_string()})]),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
                 ]),
                 collections:Some(vec![
                     fdecl::Collection{

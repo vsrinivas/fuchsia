@@ -622,16 +622,10 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_path(u.target_path.as_ref(), "UseEventStream", "target_path", &mut self.errors);
-        if let Some(names) = &u.source_names {
-            // TODO: Validate names once Expose/Offer are implemented
-            if names.len() == 0 {
-                self.errors.push(Error::invalid_field("UseEventStream", "source_names"));
-            }
-            for name in names {
-                check_name(Some(name), "UseEventStream", "source_names", &mut self.errors);
-            }
+        if let Some(name) = &u.source_name {
+            check_name(Some(name), "UseEventStream", "source_name", &mut self.errors);
         } else {
-            self.errors.push(Error::missing_field("UseEventStream", "source_names"));
+            self.errors.push(Error::missing_field("UseEventStream", "source_name"));
         }
     }
 
@@ -3531,7 +3525,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     fdecl::Use::EventStream(fdecl::UseEventStream {
-                        source_names: Some(vec!["bar".to_string()]),
+                        source_name: Some("bar".to_string()),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         ..fdecl::UseEventStream::EMPTY
                     }),
@@ -3555,24 +3549,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::MissingField(DeclField { decl: "UseEventStream".to_string(), field: "source_names".to_string() })
-            ])),
-        },
-        test_validate_event_stream_must_have_nonempty_source_names => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.uses = Some(vec![
-                    fdecl::Use::EventStream(fdecl::UseEventStream {
-                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
-                        target_path: Some("/svc/something".to_string()),
-                        source_names: (Some(vec![])),
-                        ..fdecl::UseEventStream::EMPTY
-                    }),
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::InvalidField(DeclField { decl: "UseEventStream".to_string(), field: "source_names".to_string() })
+                Error::MissingField(DeclField { decl: "UseEventStream".to_string(), field: "source_name".to_string() })
             ])),
         },
         test_validate_event_stream_scope_must_be_child_or_collection => {
@@ -3582,7 +3559,7 @@ mod tests {
                     fdecl::Use::EventStream(fdecl::UseEventStream {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/something".to_string()),
-                        source_names: (Some(vec!["some_source".to_string()])),
+                        source_name: Some("some_source".to_string()),
                         scope: Some(vec![fdecl::Ref::Framework(fdecl::FrameworkRef{})]),
                         ..fdecl::UseEventStream::EMPTY
                     }),
@@ -3600,7 +3577,7 @@ mod tests {
                     fdecl::Use::EventStream(fdecl::UseEventStream {
                         source: Some(fdecl::Ref::Debug(fdecl::DebugRef{})),
                         target_path: Some("/svc/something".to_string()),
-                        source_names: (Some(vec!["some_source".to_string()])),
+                        source_name: Some("some_source".to_string()),
                         scope: Some(vec![]),
                         ..fdecl::UseEventStream::EMPTY
                     }),
@@ -3618,7 +3595,7 @@ mod tests {
                     fdecl::Use::EventStream(fdecl::UseEventStream {
                         source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
                         target_path: Some("/svc/something".to_string()),
-                        source_names: (Some(vec!["some_source".to_string()])),
+                        source_name: Some("some_source".to_string()),
                         scope: Some(vec![]),
                         ..fdecl::UseEventStream::EMPTY
                     }),
@@ -3636,7 +3613,7 @@ mod tests {
                     fdecl::Use::EventStream(fdecl::UseEventStream {
                         source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
                         target_path: Some("/svc/something".to_string()),
-                        source_names: (Some(vec!["some_source".to_string()])),
+                        source_name: Some("some_source".to_string()),
                         ..fdecl::UseEventStream::EMPTY
                     }),
                 ]);
