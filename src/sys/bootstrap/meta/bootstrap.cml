@@ -889,18 +889,12 @@
         },
     ],
     expose: [
-        // This handle is used by base_resolver to resolve packages from the base package set.
-        {
-            directory: "pkgfs-delayed",
-            from: "#fshost",
-        },
         {
             directory: "dev",
             from: "#driver_manager",
         },
         {
             directory: [
-                "bin",
                 "blob",
                 "build-info",
                 "config-data",
