@@ -100,10 +100,10 @@ class VerifyPlasaDiff(unittest.TestCase):
             json.dump(content, f)
 
         return {
-            'left_manifest': plasa_manifest,
-            'left_fragments_root': fragment_root,
-            'right_manifest': plasa_manifest,
-            'right_fragments_root': fragment_root,
+            'before_manifest': plasa_manifest,
+            'before_fragments_root': fragment_root,
+            'after_manifest': plasa_manifest,
+            'after_fragments_root': fragment_root,
             'kinds': ['api_fidl', 'api_cpp'],
             'utils_dir': ARGS.utils_dir,
             'out_dir': ARGS.out_dir
@@ -163,8 +163,8 @@ class VerifyPlasaDiff(unittest.TestCase):
                 args[4] = kinds
                 pd = PlasaDiffer(*args)
                 result = pd.load_manifest(
-                    temp_files['left_manifest'],
-                    temp_files['left_fragments_root'])
+                    temp_files['before_manifest'],
+                    temp_files['before_fragments_root'])
                 return result
                 #except Exception as e:
                 #    self.assertTrue(False, e)

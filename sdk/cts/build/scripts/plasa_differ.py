@@ -36,8 +36,8 @@ class Match:
     This also stores match result information in the form of an error message
     and a compatibility status bit.
     """
-    left: Fragment
-    right: Fragment
+    before: Fragment
+    after: Fragment
     message: str
     is_compatible: bool
 
@@ -47,7 +47,7 @@ class Match:
         Returns:
             A string representing the Fragment key and match error message.
         """
-        return '{}\n{}'.format(self.left.dest, self.message)
+        return '{}\n{}'.format(self.before.dest, self.message)
 
 
 @dataclass
@@ -57,20 +57,20 @@ class PlasaDiffer:
     Throws an exception if a compatibility issue is detected, or some other
     processing error occurs.
     """
-    left_manifest: str
-    left_fragments_root: str
-    right_manifest: str
-    right_fragments_root: str
+    before_manifest: str
+    before_fragments_root: str
+    after_manifest: str
+    after_fragments_root: str
     kinds: List[str]
     utils_dir: str
     out_dir: str
 
     def __post_init__(self):
-        if not (os.path.exists(self.left_manifest) and
-                os.path.exists(self.right_manifest)):
+        if not (os.path.exists(self.before_manifest) and
+                os.path.exists(self.after_manifest)):
             raise ValueError('manifest paths cannot be empty and must exist.')
-        if not (os.path.exists(self.left_fragments_root) and
-                os.path.exists(self.right_fragments_root)):
+        if not (os.path.exists(self.before_fragments_root) and
+                os.path.exists(self.after_fragments_root)):
             raise ValueError('fragment paths cannot be empty and must exist.')
         if self.kinds == None or len(self.kinds) == 0:
             raise ValueError('kinds list cannot be None or empty.')
@@ -104,37 +104,37 @@ class PlasaDiffer:
                     d[entry['dest']] = Fragment(**entry)
         return d
 
-    def diff_fragments(self, left, right):
+    def diff_fragments(self, before, after):
         """Diff two fragment files against each other.
 
         Returns:
             A string message containing any useful output of the diff tool.
             A boolean value: True if the two fragment interfaces are compatible.
         """
-        if left.kind != right.kind:
+        if before.kind != after.kind:
             return 'Left fragment kind ({}) does not match Right fragment kind ({}).'.format(
-                left.kind, right.kind), False
+                before.kind, after.kind), False
 
-        if left.kind == 'api_fidl':
-            return self._diff_fidl(left, right)
+        if before.kind == 'api_fidl':
+            return self._diff_fidl(before, after)
         else:
             return 'Diffing for fragments of type {} is not yet supported.'.format(
-                left.kind), False
+                before.kind), False
 
-    def _diff_fidl(self, left, right):
+    def _diff_fidl(self, before, after):
         """Diff two api_fidl fragment files against each other.
 
         The above method calls this method to diff FIDL fragment files.
         """
 
         tool = os.path.join(self.utils_dir, 'fidl_api_diff')
-        out_file = os.path.join(self.out_dir, os.path.basename(left.cts_path))
+        out_file = os.path.join(self.out_dir, os.path.basename(before.cts_path))
         args = [
             tool,
             '--before-file',
-            left.cts_path,
+            before.cts_path,
             '--after-file',
-            right.cts_path,
+            after.cts_path,
             '--api-diff-file',
             out_file,
         ]
@@ -167,26 +167,26 @@ class PlasaDiffer:
             RuntimeError if incompatible changes are detected.
         """
 
-        left_fragments = self.load_manifest(
-            self.left_manifest, self.left_fragments_root)
-        right_fragments = self.load_manifest(
-            self.right_manifest, self.right_fragments_root)
+        before_fragments = self.load_manifest(
+            self.before_manifest, self.before_fragments_root)
+        after_fragments = self.load_manifest(
+            self.after_manifest, self.after_fragments_root)
         matches = {}
 
-        # Match fragments from the left and right PlaSA manifest files,
+        # Match fragments from the before and after PlaSA manifest files,
         # and diff them using the provided tools.
         # Delete them from the dictionaries so we can detect discrepancies.
-        for key, left in list(left_fragments.items()):
-            del left_fragments[key]
+        for key, before in list(before_fragments.items()):
+            del before_fragments[key]
 
             try:
-                right = right_fragments[key]
-                del right_fragments[key]
-                message, is_compatible = self.diff_fragments(left, right)
+                after = after_fragments[key]
+                del after_fragments[key]
+                message, is_compatible = self.diff_fragments(before, after)
 
             except KeyError:
-                right = None
-                message = "PlaSA fragment missing in right manifest file."
+                after = None
+                message = "PlaSA fragment missing in after manifest file."
 
                 # TODO(jcecil): Removing elements from the PlaSA is OK in some
                 # situations: e.g. if the element has been deprecated.
@@ -194,20 +194,20 @@ class PlasaDiffer:
                 is_compatible = False
 
             finally:
-                matches[key] = Match(left, right, message, is_compatible)
+                matches[key] = Match(before, after, message, is_compatible)
 
-        # PlaSA elements that are newly introduced in the right manifest
+        # PlaSA elements that are newly introduced in the after manifest
         # are identified and captured here.
-        for key, right in list(right_fragments.items()):
-            del right_fragments[key]
-            left = None
-            message = "PlaSA fragment addition in right manifest file."
+        for key, after in list(after_fragments.items()):
+            del after_fragments[key]
+            before = None
+            message = "PlaSA fragment addition in after manifest file."
 
             # TODO(jcecil): Consider flagging new additions to the PlaSA
             # manifest here, to ensure they have sufficient CTS test coverage.
             is_compatible = True
 
-            matches[key] = Match(left, right, message, is_compatible)
+            matches[key] = Match(before, after, message, is_compatible)
 
         issues = ""
         found_issue = False
@@ -224,19 +224,19 @@ class PlasaDiffer:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--left_manifest',
+        '--before_manifest',
         help='Path to the old PlaSA manifest file, from the CTS release.',
         required=True)
     parser.add_argument(
-        '--left_fragments_root',
+        '--before_fragments_root',
         help='Path to the root directory for fragment files in the CTS archive.',
         required=True)
     parser.add_argument(
-        '--right_manifest',
+        '--after_manifest',
         help='Path to the new PlaSA manifest file, from an SDK release.',
         required=True)
     parser.add_argument(
-        '--right_fragments_root',
+        '--after_fragments_root',
         help='Path to the root directory for fragment files in the target SDK.',
         required=True)
     parser.add_argument(
