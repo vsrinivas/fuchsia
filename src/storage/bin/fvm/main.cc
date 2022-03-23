@@ -475,7 +475,7 @@ int main(int argc, char** argv) {
       auto decompress_or =
           storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(), writer);
       if (decompress_or.is_error()) {
-        std::cout << decompress_or.error();
+        std::cerr << decompress_or.error();
         return EXIT_FAILURE;
       }
 
@@ -641,34 +641,34 @@ int main(int argc, char** argv) {
   if (!strcmp(command, "create")) {
     auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
     if (create_params_or.is_error()) {
-      std::cout << create_params_or.error() << std::endl;
+      std::cerr << create_params_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
-      std::cout << result.error() << std::endl;
+      std::cerr << result.error() << std::endl;
       return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "extend")) {
     auto extend_params_or = storage::volume_image::ExtendParams::FromArguments(arguments);
     if (extend_params_or.is_error()) {
-      std::cout << extend_params_or.error() << std::endl;
+      std::cerr << extend_params_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
     if (auto extend_res = Extend(extend_params_or.value()); extend_res.is_error()) {
-      std::cout << extend_res.error() << std::endl;
+      std::cerr << extend_res.error() << std::endl;
       return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "sparse")) {
     auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
     if (create_params_or.is_error()) {
-      std::cout << create_params_or.error() << std::endl;
+      std::cerr << create_params_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
-      std::cout << result.error() << std::endl;
+      std::cerr << result.error() << std::endl;
       return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "decompress")) {
@@ -684,7 +684,7 @@ int main(int argc, char** argv) {
       // Look at the magic values and update input_type to match the right one.
       auto reader_or = storage::volume_image::FdReader::Create(input_path);
       if (reader_or.is_error()) {
-        std::cout << "Failed to read image. " << reader_or.error() << std::endl;
+        std::cerr << "Failed to read image. " << reader_or.error() << std::endl;
         return EXIT_FAILURE;
       }
 
@@ -706,14 +706,14 @@ int main(int argc, char** argv) {
     if (!strcmp(input_type, "--sparse")) {
       auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
       if (sparse_image_reader_or.is_error()) {
-        std::cout << "Failed to read image. " << sparse_image_reader_or.error() << std::endl;
+        std::cerr << "Failed to read image. " << sparse_image_reader_or.error() << std::endl;
         return EXIT_FAILURE;
       }
 
       auto header_or =
           storage::volume_image::fvm_sparse_internal::GetHeader(0, sparse_image_reader_or.value());
       if (header_or.is_error()) {
-        std::cout << "Failed to parse sparse image header. " << header_or.error() << std::endl;
+        std::cerr << "Failed to parse sparse image header. " << header_or.error() << std::endl;
         return EXIT_FAILURE;
       }
       auto header = header_or.take_value();
@@ -725,14 +725,14 @@ int main(int argc, char** argv) {
         auto reader_or = storage::volume_image::FdReader::Create(input_path);
         auto writer_or = storage::volume_image::FdWriter::Create(path);
         if (writer_or.is_error()) {
-          std::cout << writer_or.error() << std::endl;
+          std::cerr << writer_or.error() << std::endl;
           return EXIT_FAILURE;
         }
 
         auto decompress_or = storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(),
                                                                              writer_or.value());
         if (decompress_or.is_error()) {
-          std::cout << decompress_or.error();
+          std::cerr << decompress_or.error();
           return EXIT_FAILURE;
         }
       }
@@ -751,13 +751,13 @@ int main(int argc, char** argv) {
   } else if (!strcmp(command, "size")) {
     auto size_params_or = storage::volume_image::SizeParams::FromArguments(arguments);
     if (size_params_or.is_error()) {
-      std::cout << size_params_or.error() << std::endl;
+      std::cerr << size_params_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
     auto size_or = storage::volume_image::Size(size_params_or.value());
     if (size_or.is_error()) {
-      std::cout << size_or.error() << std::endl;
+      std::cerr << size_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
@@ -769,12 +769,12 @@ int main(int argc, char** argv) {
   } else if (!strcmp(command, "pave")) {
     auto pave_params_or = storage::volume_image::PaveParams::FromArguments(arguments);
     if (pave_params_or.is_error()) {
-      std::cout << "Failed to parse pave params. " << pave_params_or.error() << std::endl;
+      std::cerr << "Failed to parse pave params. " << pave_params_or.error() << std::endl;
       return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Pave(pave_params_or.value()); result.is_error()) {
-      std::cout << "Failed to pave. " << result.error() << std::endl;
+      std::cerr << "Failed to pave. " << result.error() << std::endl;
       return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "unpack")) {
