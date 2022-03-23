@@ -50,6 +50,8 @@ class Driver {
 
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
   zx::status<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
+  zx::status<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
+                                             const char* name);
 
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }

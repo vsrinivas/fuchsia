@@ -560,7 +560,30 @@ zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const cha
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  fidl::WireResponse response = std::move(result.value());
+  fidl::WireResponse response = std::move(*result);
+  if (response.status != ZX_OK) {
+    return zx::error(response.status);
+  }
+  return zx::ok(std::move(response.profile));
+}
+
+zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t deadline,
+                                                   uint64_t period, const char* name) {
+  auto profile_client = ns_.Connect<fuchsia_scheduler::ProfileProvider>();
+  if (!profile_client.is_ok()) {
+    return profile_client.take_error();
+  }
+
+  if (!profile_client->is_valid()) {
+    return zx::error(ZX_ERR_NOT_CONNECTED);
+  }
+  fidl::WireResult result =
+      fidl::WireCall(*profile_client)
+          ->GetDeadlineProfile(capacity, deadline, period, fidl::StringView::FromExternal(name));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  fidl::WireResponse response = std::move(*result);
   if (response.status != ZX_OK) {
     return zx::error(response.status);
   }
