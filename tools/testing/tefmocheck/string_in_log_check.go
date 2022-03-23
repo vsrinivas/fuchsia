@@ -418,7 +418,7 @@ func infraToolLogChecks() []FailureModeCheck {
 		},
 		// This error happens when ffx test returns early and skips running some tests.
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.SkippedRunningTestsMsg),
+			String: fmt.Sprintf("testrunner FATAL: %s", testrunnerconstants.SkippedRunningTestsMsg),
 			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/56651.
