@@ -187,10 +187,6 @@ class PlasaDiffer:
             except KeyError:
                 after = None
                 message = "PlaSA fragment missing in after manifest file."
-
-                # TODO(jcecil): Removing elements from the PlaSA is OK in some
-                # situations: e.g. if the element has been deprecated.
-                # Design a way to set this variable accordingly.
                 is_compatible = False
 
             finally:
