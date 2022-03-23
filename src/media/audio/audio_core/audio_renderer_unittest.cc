@@ -45,9 +45,9 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
     fidl_renderer_.set_error_handler(
         [](auto status) { EXPECT_TRUE(status == ZX_OK) << "Renderer disconnected: " << status; });
 
-    fake_output_ =
-        testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                         &context().link_matrix(), context().clock_factory());
+    fake_output_ = testing::FakeAudioOutput::Create(
+        context().process_config().device_config(), &threading_model(), &context().device_manager(),
+        &context().link_matrix(), context().clock_factory());
   }
 
   fuchsia::media::AudioStreamType PcmStreamType() {

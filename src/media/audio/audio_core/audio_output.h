@@ -13,6 +13,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -42,9 +43,10 @@ class AudioOutput : public AudioDevice {
                    fuchsia::media::AudioGainValidFlags set_flags) override;
 
  protected:
-  AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
-              EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver>);
+  AudioOutput(const std::string& name, const DeviceConfig& config, ThreadingModel* threading_model,
+              DeviceRegistry* registry, LinkMatrix* link_matrix,
+              std::shared_ptr<AudioClockFactory> clock_factory, EffectsLoaderV2* effects_loader_v2,
+              std::unique_ptr<AudioDriver>);
 
   Reporter::OutputDevice& reporter() { return *reporter_; }
   EffectsLoaderV2* effects_loader_v2() const { return effects_loader_v2_; }

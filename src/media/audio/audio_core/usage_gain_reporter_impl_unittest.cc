@@ -90,8 +90,6 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
         usage_(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)) {}
 
   std::unique_ptr<FakeGainListener> Listen(std::string device_id) {
-    const auto handle = ProcessConfig::set_instance(process_config_);
-
     auto device_registry = std::make_unique<TestDeviceRegistry>();
     device_registry->AddDeviceInfo({.unique_id = device_id});
 

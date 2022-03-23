@@ -13,9 +13,10 @@ namespace {
 
 class TestThrottleOutput : public ThrottleOutput {
  public:
-  TestThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                     LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : ThrottleOutput(threading_model, registry, link_matrix, clock_factory) {}
+  TestThrottleOutput(const DeviceConfig& config, ThreadingModel* threading_model,
+                     DeviceRegistry* registry, LinkMatrix* link_matrix,
+                     std::shared_ptr<AudioClockFactory> clock_factory)
+      : ThrottleOutput(config, threading_model, registry, link_matrix, clock_factory) {}
 
   using ThrottleOutput::driver_ref_time_to_frac_presentation_frame;
   using ThrottleOutput::last_sched_time_mono;
@@ -25,9 +26,9 @@ class TestThrottleOutput : public ThrottleOutput {
 class ThrottleOutputTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() override {
-    throttle_output_ =
-        std::make_shared<TestThrottleOutput>(&threading_model(), &context().device_manager(),
-                                             &context().link_matrix(), context().clock_factory());
+    throttle_output_ = std::make_shared<TestThrottleOutput>(
+        context().process_config().device_config(), &threading_model(), &context().device_manager(),
+        &context().link_matrix(), context().clock_factory());
   }
 
   std::shared_ptr<TestThrottleOutput> throttle_output_;

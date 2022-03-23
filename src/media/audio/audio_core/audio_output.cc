@@ -36,11 +36,11 @@ void DumpStageMetrics(std::ostringstream& os, const StageMetrics& metrics) {
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
 // TODO(fxbug.dev/49345): We should not need driver to be set for all Audio Devices.
-AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_model,
-                         DeviceRegistry* registry, LinkMatrix* link_matrix,
-                         std::shared_ptr<AudioClockFactory> clock_factory,
+AudioOutput::AudioOutput(const std::string& name, const DeviceConfig& config,
+                         ThreadingModel* threading_model, DeviceRegistry* registry,
+                         LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
                          EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver> driver)
-    : AudioDevice(Type::Output, name, threading_model, registry, link_matrix, clock_factory,
+    : AudioDevice(Type::Output, name, config, threading_model, registry, link_matrix, clock_factory,
                   std::move(driver)),
       reporter_(Reporter::Singleton().CreateOutputDevice(name, mix_domain().name())),
       effects_loader_v2_(effects_loader_v2) {

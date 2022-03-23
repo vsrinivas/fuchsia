@@ -14,8 +14,8 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/context.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/testing/fake_plug_detector.h"
-#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/clock/testing/fake_audio_clock_factory.h"
 
@@ -72,9 +72,19 @@ class TestThreadingModel : public ThreadingModel {
 //   }
 class ThreadingModelFixture : public gtest::TestLoopFixture {
  public:
-  ThreadingModelFixture(ProcessConfig config) : process_config_(std::move(config)) { Init(); }
+  explicit ThreadingModelFixture(ProcessConfig config) { Init(std::move(config)); }
 
-  ThreadingModelFixture() { Init(); }
+  // The default constructor provides a reasonable valid default configuration.
+  ThreadingModelFixture()
+      : ThreadingModelFixture(
+            ProcessConfig::Builder()
+                .AddDeviceProfile(
+                    {std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                       /* eligible_for_loopback */ true,
+                                       StreamUsageSetFromRenderUsages(kFidlRenderUsages))})
+                .SetDefaultVolumeCurve(
+                    VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
+                .Build()) {}
 
  protected:
   // This threading model will be backed by an |async::TestLoop|. Control the loop using the methods
@@ -86,16 +96,14 @@ class ThreadingModelFixture : public gtest::TestLoopFixture {
   FakePlugDetector* fake_plug_detector() const { return fake_plug_detector_; }
 
  private:
-  void Init() {
+  void Init(ProcessConfig config) {
     auto threading_model = std::make_unique<TestThreadingModel>(&test_loop());
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     fake_plug_detector_ = plug_detector.get();
-    context_ =
-        Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
-                        std::move(plug_detector), ProcessConfig::instance(),
-                        std::make_shared<FakeAudioClockFactory>());
+    context_ = Context::Create(std::move(threading_model),
+                               component_context_provider_.TakeContext(), std::move(plug_detector),
+                               std::move(config), std::make_shared<FakeAudioClockFactory>());
   }
-  TestProcessConfig process_config_;
   TestThreadingModel threading_model_{&test_loop()};
   sys::testing::ComponentContextProvider component_context_provider_;
   testing::FakePlugDetector* fake_plug_detector_;

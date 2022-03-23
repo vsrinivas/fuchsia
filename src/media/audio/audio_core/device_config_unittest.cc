@@ -19,7 +19,7 @@ TEST(OutputDeviceProfileTest, TransformForDependentVolumeControl) {
 
   const auto eligible_for_loopback = false;
   const auto dependent_volume_tf =
-      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
+      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /*supported_usages=*/{},
                                         kVolumeCurve, /*independent_volume_control=*/false,
                                         /*pipeline_config=*/PipelineConfig::Default(),
                                         /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)
@@ -36,7 +36,7 @@ TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
 
   const auto eligible_for_loopback = false;
   const auto independent_volume_tf =
-      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
+      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /*supported_usages=*/{},
                                         kVolumeCurve, /*independent_volume_control=*/true,
                                         PipelineConfig::Default(), /*driver_gain_db=*/0.0,
                                         /*software_gain_db=*/0.0)
@@ -53,11 +53,16 @@ TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
 }
 
 TEST(DeviceProfileTest, DeviceProfileTransform) {
-  const auto handle = ProcessConfig::set_instance(kConfig);
-
   const auto default_tf = kConfig.default_loudness_transform();
-  EXPECT_EQ(DeviceConfig::DeviceProfile(/* usage_support_set */ {}).loudness_transform(),
-            default_tf);
+  const auto volume_tf =
+      DeviceConfig::DeviceProfile(/*supported_usages=*/{}, kVolumeCurve,
+                                  /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)
+          .loudness_transform();
+
+  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}),
+                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}));
+  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}),
+                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}));
 }
 
 }  // namespace

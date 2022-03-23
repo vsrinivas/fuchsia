@@ -10,6 +10,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
@@ -19,12 +20,12 @@ class AudioDeviceManager;
 class AudioInput : public AudioDevice {
  public:
   static std::shared_ptr<AudioInput> Create(
-      const std::string& name,
+      const std::string& name, const DeviceConfig& config,
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
       ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
       std::shared_ptr<AudioClockFactory> clock_factory);
 
-  AudioInput(const std::string& name,
+  AudioInput(const std::string& name, const DeviceConfig& config,
              fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
              ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
              std::shared_ptr<AudioClockFactory> clock_factory);

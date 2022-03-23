@@ -42,8 +42,6 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
                                       .Build());
   }
   FX_CHECK(process_config);
-  auto config_handle = ProcessConfig::set_instance(process_config.value());
-
   auto threading_model = ThreadingModel::CreateWithMixStrategy(
       MixStrategy::kThreadPerMix, process_config.value().mix_profile_config());
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());

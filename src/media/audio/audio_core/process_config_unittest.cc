@@ -10,8 +10,6 @@
 #include "src/media/audio/audio_core/testing/matchers.h"
 
 using media::audio::testing::VolumeMappingEq;
-using testing::FloatEq;
-using testing::Matcher;
 using testing::Pointwise;
 
 namespace media::audio {
@@ -35,34 +33,12 @@ TEST(ProcessConfigTest, LoudnessTransform) {
   EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), Gain::kUnityGainDb);
 }
 
-TEST(ProcessConfigTest, SetInstance) {
-  auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
-  auto config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();
-
-  // Test that |set_instance|/|instance| are coherent and we can reset the instance once a handle
-  // goes out of scope.
-  {
-    auto handle = ProcessConfig::set_instance(config);
-    EXPECT_THAT(
-        config.default_volume_curve().mappings(),
-        Pointwise(VolumeMappingEq(), ProcessConfig::instance().default_volume_curve().mappings()));
-  }
-  {
-    auto handle = ProcessConfig::set_instance(config);
-    EXPECT_THAT(
-        config.default_volume_curve().mappings(),
-        Pointwise(VolumeMappingEq(), ProcessConfig::instance().default_volume_curve().mappings()));
-  }
-}
-
 TEST(ProcessConfigTest, CanCopy) {
-  auto handle = [] {
-    auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
-    auto config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();
-    return ProcessConfig::set_instance(config);
-  }();
+  const auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
+  const ProcessConfig config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();
 
-  ProcessConfig::instance().default_loudness_transform()->Evaluate<1>({VolumeValue{1}});
+  const ProcessConfig config_copy = config;
+  config_copy.default_loudness_transform()->Evaluate<1>({VolumeValue{1}});
 }
 
 }  // namespace

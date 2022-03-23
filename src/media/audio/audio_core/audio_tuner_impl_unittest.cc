@@ -76,8 +76,8 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
 class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
-      : AudioOutput("", &context->threading_model(), &context->device_manager(),
-                    &context->link_matrix(), context->clock_factory(),
+      : AudioOutput("", context->process_config().device_config(), &context->threading_model(),
+                    &context->device_manager(), &context->link_matrix(), context->clock_factory(),
                     nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
@@ -153,19 +153,17 @@ class TestDevice : public AudioOutput {
 class AudioTunerTest : public gtest::TestLoopFixture {
  protected:
   std::unique_ptr<Context> CreateContext(ProcessConfig process_config) {
-    handle_ = ProcessConfig::set_instance(process_config);
     auto threading_model = std::make_unique<testing::TestThreadingModel>(&test_loop());
     sys::testing::ComponentContextProvider component_context_provider_;
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     return Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
-                           std::move(plug_detector), process_config,
+                           std::move(plug_detector), std::move(process_config),
                            std::make_shared<AudioClockFactory>());
   }
 
   std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }
 
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
-  ProcessConfig::Handle handle_;
 };
 
 TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {

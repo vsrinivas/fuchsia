@@ -4,9 +4,8 @@
 
 #include "src/media/audio/audio_core/device_config.h"
 
-#include "src/media/audio/audio_core/process_config.h"
-
 namespace media::audio {
+
 namespace {
 
 const PipelineConfig::EffectV1* FindEffectV1InMixGroup(const std::string& instance_name,
@@ -30,7 +29,7 @@ const PipelineConfig::EffectV1* FindEffectV1InMixGroup(const std::string& instan
 }  // namespace
 
 const std::shared_ptr<LoudnessTransform>& DeviceConfig::DeviceProfile::loudness_transform() const {
-  return ProcessConfig::instance().default_loudness_transform();
+  return loudness_transform_;
 }
 
 const std::shared_ptr<LoudnessTransform> DeviceConfig::OutputDeviceProfile::kNoOpTransform =
@@ -42,7 +41,7 @@ const std::shared_ptr<LoudnessTransform>& DeviceConfig::OutputDeviceProfile::lou
     return kNoOpTransform;
   }
 
-  return loudness_transform_;
+  return DeviceProfile::loudness_transform();
 }
 
 const PipelineConfig::EffectV1* DeviceConfig::FindEffectV1(const std::string& instance_name) const {

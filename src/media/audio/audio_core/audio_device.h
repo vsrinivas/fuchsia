@@ -149,8 +149,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   }
 
  protected:
-  AudioDevice(Type type, const std::string& name, ThreadingModel* threading_model,
-              DeviceRegistry* registry, LinkMatrix* link_matrix,
+  AudioDevice(Type type, const std::string& name, const DeviceConfig& config,
+              ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
               std::shared_ptr<AudioClockFactory> clock_factory,
               std::unique_ptr<AudioDriver> driver);
 
@@ -305,7 +305,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   ThreadingModel::OwnedDomainPtr mix_domain_;
   WakeupEvent mix_wakeup_;
 
-  DeviceConfig config_ = ProcessConfig::instance().device_config();
+  DeviceConfig config_;
 
   // This object manages most interactions with the low-level driver for us.
   std::unique_ptr<AudioDriver> driver_;

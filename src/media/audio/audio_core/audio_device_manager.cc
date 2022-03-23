@@ -469,12 +469,13 @@ void AudioDeviceManager::AddDeviceByChannel(
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
-    new_device = AudioInput::Create(device_name, std::move(stream_config), &threading_model(), this,
-                                    &link_matrix_, clock_factory_);
+    new_device =
+        AudioInput::Create(device_name, process_config_.device_config(), std::move(stream_config),
+                           &threading_model(), this, &link_matrix_, clock_factory_);
   } else {
     new_device = std::make_shared<DriverOutput>(
-        device_name, process_config_.mix_profile_config(), &threading_model(), this,
-        std::move(stream_config), &link_matrix_, clock_factory_,
+        device_name, process_config_.device_config(), process_config_.mix_profile_config(),
+        &threading_model(), this, std::move(stream_config), &link_matrix_, clock_factory_,
         process_config_.default_volume_curve(), effects_loader_v2_);
   }
 

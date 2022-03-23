@@ -454,10 +454,11 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
   }
 
   return fpromise::ok(std::make_pair(
-      device_id, DeviceConfig::OutputDeviceProfile(
-                     eligible_for_loopback, std::move(supported_stream_types), volume_curve,
-                     independent_volume_control, std::move(pipeline_config), driver_gain_db,
-                     /*software_gain_db=*/0)));
+      device_id,
+      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, std::move(supported_stream_types),
+                                        std::move(volume_curve), independent_volume_control,
+                                        std::move(pipeline_config), driver_gain_db,
+                                        /*software_gain_db=*/0)));
 }
 
 ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
@@ -560,7 +561,7 @@ fpromise::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
 
 fpromise::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
                            DeviceConfig::InputDeviceProfile>>
-ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
+ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value, VolumeCurve volume_curve) {
   FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
@@ -595,7 +596,8 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
     supported_stream_types = ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value);
     return fpromise::ok(std::make_pair(
         device_id, DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types),
-                                                    driver_gain_db, software_gain_db)));
+                                                    std::move(volume_curve), driver_gain_db,
+                                                    software_gain_db)));
   }
 
   return fpromise::ok(std::make_pair(
@@ -607,7 +609,8 @@ fpromise::result<> ParseInputDevicePoliciesFromJsonObject(
   FX_CHECK(input_device_profiles.IsArray());
 
   for (const auto& input_device_profile : input_device_profiles.GetArray()) {
-    auto result = ParseInputDeviceProfileFromJsonObject(input_device_profile);
+    auto result = ParseInputDeviceProfileFromJsonObject(input_device_profile,
+                                                        config_builder->default_volume_curve());
     if (result.is_error()) {
       return fpromise::error();
     }

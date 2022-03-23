@@ -17,19 +17,19 @@ constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(
-    const std::string& name,
+    const std::string& name, const DeviceConfig& config,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
     ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
     std::shared_ptr<AudioClockFactory> clock_factory) {
-  return std::make_shared<AudioInput>(name, std::move(stream_config), threading_model, registry,
-                                      link_matrix, clock_factory);
+  return std::make_shared<AudioInput>(name, config, std::move(stream_config), threading_model,
+                                      registry, link_matrix, clock_factory);
 }
 
-AudioInput::AudioInput(const std::string& name,
+AudioInput::AudioInput(const std::string& name, const DeviceConfig& config,
                        fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
                        LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix, clock_factory,
+    : AudioDevice(Type::Input, name, config, threading_model, registry, link_matrix, clock_factory,
                   std::make_unique<AudioDriver>(this)),
       initial_stream_channel_(stream_config.TakeChannel()),
       reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}

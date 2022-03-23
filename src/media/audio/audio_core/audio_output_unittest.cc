@@ -7,6 +7,7 @@
 #include <lib/fit/defer.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
@@ -101,9 +102,10 @@ class StubDriver : public AudioDriver {
 
 class TestAudioOutput : public AudioOutput {
  public:
-  TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioOutput("", threading_model, registry, link_matrix, clock_factory,
+  TestAudioOutput(const DeviceConfig& config, ThreadingModel* threading_model,
+                  DeviceRegistry* registry, LinkMatrix* link_matrix,
+                  std::shared_ptr<AudioClockFactory> clock_factory)
+      : AudioOutput("", config, threading_model, registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }
@@ -214,9 +216,9 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
   StubDriver* stub_driver() { return static_cast<StubDriver*>(audio_output_->driver()); }
 
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
-  std::shared_ptr<TestAudioOutput> audio_output_ =
-      std::make_shared<TestAudioOutput>(&threading_model(), &context().device_manager(),
-                                        &context().link_matrix(), context().clock_factory());
+  std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
+      context().process_config().device_config(), &threading_model(), &context().device_manager(),
+      &context().link_matrix(), context().clock_factory());
 
   std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
 };

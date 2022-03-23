@@ -63,14 +63,15 @@ constexpr const char* kWavFileExtension = ".wav";
 // specifically to generate unique ids for each final-mix WAV file.
 std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
 
-DriverOutput::DriverOutput(const std::string& name, const MixProfileConfig& mix_profile_config,
+DriverOutput::DriverOutput(const std::string& name, const DeviceConfig& config,
+                           const MixProfileConfig& mix_profile_config,
                            ThreadingModel* threading_model, DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
                            std::shared_ptr<AudioClockFactory> clock_factory,
                            VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2)
-    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory, effects_loader_v2,
-                  std::make_unique<AudioDriver>(this)),
+    : AudioOutput(name, config, threading_model, registry, link_matrix, clock_factory,
+                  effects_loader_v2, std::make_unique<AudioDriver>(this)),
       low_water_duration_(mix_profile_config.period),
       high_water_duration_(low_water_duration_ + mix_profile_config.period),
       initial_stream_channel_(channel.TakeChannel()),

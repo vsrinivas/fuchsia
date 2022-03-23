@@ -76,8 +76,9 @@ const DeviceConfig::DeviceProfile& AudioDevice::profile() const {
 }
 
 AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
-                         ThreadingModel* threading_model, DeviceRegistry* registry,
-                         LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
+                         const DeviceConfig& config, ThreadingModel* threading_model,
+                         DeviceRegistry* registry, LinkMatrix* link_matrix,
+                         std::shared_ptr<AudioClockFactory> clock_factory,
                          std::unique_ptr<AudioDriver> driver)
     : AudioObject(type),
       name_(name),
@@ -86,6 +87,7 @@ AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain(type == Type::Input ? "input-device"
                                                                         : "output-device")),
+      config_(config),
       driver_(std::move(driver)),
       link_matrix_(*link_matrix) {
   FX_DCHECK(registry);

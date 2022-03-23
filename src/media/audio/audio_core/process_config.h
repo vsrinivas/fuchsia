@@ -60,38 +60,6 @@ class ProcessConfigBuilder {
 
 class ProcessConfig {
  public:
-  class HandleImpl {
-   public:
-    ~HandleImpl() { ProcessConfig::instance_ = {}; }
-
-    // Disallow copy/move.
-    HandleImpl(const HandleImpl&) = delete;
-    HandleImpl& operator=(const HandleImpl&) = delete;
-    HandleImpl(HandleImpl&& o) = delete;
-    HandleImpl& operator=(HandleImpl&& o) = delete;
-
-   private:
-    friend class ProcessConfig;
-    HandleImpl() = default;
-  };
-  using Handle = std::unique_ptr<HandleImpl>;
-
-  // Sets the |ProcessConfig|.
-  //
-  // |ProcessConfig::instance()| will return a reference to |config| as long as the returned
-  // |ProcessConfig::Handle| exists. It's illegal to call |set_instance| while a
-  // |ProcessConfig::Handle| is active.
-  [[nodiscard]] static ProcessConfig::Handle set_instance(ProcessConfig config) {
-    FX_CHECK(!ProcessConfig::instance_);
-    ProcessConfig::instance_ = {std::move(config)};
-    return std::unique_ptr<HandleImpl>(new HandleImpl);
-  }
-  // Returns the |ProcessConfig|. Must be called while there is a
-  static const ProcessConfig& instance() {
-    FX_CHECK(ProcessConfig::instance_);
-    return *ProcessConfig::instance_;
-  }
-
   using Builder = ProcessConfigBuilder;
   ProcessConfig(VolumeCurve curve, DeviceConfig device_config, MixProfileConfig mix_profile_config,
                 ThermalConfig thermal_config)

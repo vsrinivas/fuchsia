@@ -7,6 +7,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
@@ -15,10 +16,11 @@ namespace media::audio::testing {
 
 class FakeAudioDevice : public AudioDevice {
  public:
-  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
+  FakeAudioDevice(AudioDevice::Type type, const DeviceConfig& config,
+                  ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioDevice(type, "", threading_model, registry, link_matrix, std::move(clock_factory),
-                    std::make_unique<AudioDriver>(this)),
+      : AudioDevice(type, "", config, threading_model, registry, link_matrix,
+                    std::move(clock_factory), std::make_unique<AudioDriver>(this)),
         mix_domain_(threading_model->AcquireMixDomain("fake-audio-device")) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
@@ -56,31 +58,35 @@ class FakeAudioDevice : public AudioDevice {
 
 class FakeAudioInput : public FakeAudioDevice {
  public:
-  static std::shared_ptr<FakeAudioInput> Create(ThreadingModel* threading_model,
+  static std::shared_ptr<FakeAudioInput> Create(const DeviceConfig& config,
+                                                ThreadingModel* threading_model,
                                                 DeviceRegistry* registry, LinkMatrix* link_matrix,
                                                 std::shared_ptr<AudioClockFactory> clock_factory) {
-    return std::make_shared<FakeAudioInput>(threading_model, registry, link_matrix,
+    return std::make_shared<FakeAudioInput>(config, threading_model, registry, link_matrix,
                                             std::move(clock_factory));
   }
 
-  FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+  FakeAudioInput(const DeviceConfig& config, ThreadingModel* threading_model,
+                 DeviceRegistry* registry, LinkMatrix* link_matrix,
                  std::shared_ptr<AudioClockFactory> clock_factory)
-      : FakeAudioDevice(Type::Input, threading_model, registry, link_matrix,
+      : FakeAudioDevice(Type::Input, config, threading_model, registry, link_matrix,
                         std::move(clock_factory)) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
-  static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,
+  static std::shared_ptr<FakeAudioOutput> Create(const DeviceConfig& config,
+                                                 ThreadingModel* threading_model,
                                                  DeviceRegistry* registry, LinkMatrix* link_matrix,
                                                  std::shared_ptr<AudioClockFactory> clock_factory) {
-    return std::make_shared<FakeAudioOutput>(threading_model, registry, link_matrix,
+    return std::make_shared<FakeAudioOutput>(config, threading_model, registry, link_matrix,
                                              std::move(clock_factory));
   }
 
-  FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix,
+  FakeAudioOutput(const DeviceConfig& config, ThreadingModel* threading_model,
+                  DeviceRegistry* registry, LinkMatrix* link_matrix,
+                  std::shared_ptr<AudioClockFactory> clock_factory)
+      : FakeAudioDevice(Type::Output, config, threading_model, registry, link_matrix,
                         std::move(clock_factory)) {}
 
   fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>

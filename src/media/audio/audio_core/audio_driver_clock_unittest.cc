@@ -112,9 +112,9 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
   // simulates channel messages from the actual driver instance
   std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
 
-  std::shared_ptr<testing::FakeAudioOutput> device_{
-      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_factory())};
+  std::shared_ptr<testing::FakeAudioOutput> device_{testing::FakeAudioOutput::Create(
+      context().process_config().device_config(), &threading_model(), &context().device_manager(),
+      &context().link_matrix(), context().clock_factory())};
 
   fzl::VmoMapper mapped_ring_buffer_;
 

@@ -11,6 +11,7 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -21,9 +22,10 @@ namespace {
 
 class FakeAudioDevice : public AudioDevice {
  public:
-  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
+  FakeAudioDevice(AudioDevice::Type type, const DeviceConfig& config,
+                  ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioDevice(type, "", threading_model, registry, link_matrix, clock_factory,
+      : AudioDevice(type, "", config, threading_model, registry, link_matrix, clock_factory,
                     std::make_unique<AudioDriver>(this)) {}
 
   // Needed because AudioDevice is an abstract class
@@ -44,8 +46,8 @@ class AudioDeviceTest : public testing::ThreadingModelFixture {
 
   void SetUp() override {
     device_ = std::make_shared<FakeAudioDevice>(
-        AudioObject::Type::Input, &threading_model(), &context().device_manager(),
-        &context().link_matrix(), context().clock_factory());
+        AudioObject::Type::Input, context().process_config().device_config(), &threading_model(),
+        &context().device_manager(), &context().link_matrix(), context().clock_factory());
 
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));

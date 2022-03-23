@@ -39,9 +39,10 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
 
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
-    input_ = AudioInput::Create("", std::move(stream_config), &threading_model(),
-                                &context().device_manager(), &context().link_matrix(),
-                                context().clock_factory());
+    input_ =
+        AudioInput::Create("", context().process_config().device_config(), std::move(stream_config),
+                           &threading_model(), &context().device_manager(),
+                           &context().link_matrix(), context().clock_factory());
     ASSERT_NE(input_, nullptr);
 
     ring_buffer_mapper_ =

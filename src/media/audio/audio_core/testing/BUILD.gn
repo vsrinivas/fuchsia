@@ -25,7 +25,6 @@ source_set("testing") {
     "packet_factory.cc",
     "packet_factory.h",
     "sine_wave_stream.h",
-    "test_process_config.h",
     "threading_model_fixture.h",
   ]
 

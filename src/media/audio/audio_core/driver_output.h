@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/channel_attributes.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -25,8 +26,9 @@ class EffectsLoaderV2;
 
 class DriverOutput : public AudioOutput {
  public:
-  DriverOutput(const std::string& name, const MixProfileConfig& mix_profile_config,
-               ThreadingModel* threading_model, DeviceRegistry* registry,
+  DriverOutput(const std::string& name, const DeviceConfig& config,
+               const MixProfileConfig& mix_profile_config, ThreadingModel* threading_model,
+               DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
                VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2);
