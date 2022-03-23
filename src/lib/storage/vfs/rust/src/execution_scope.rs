@@ -478,47 +478,55 @@ mod tests {
         });
     }
 
-    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_token_registry() {
-        let registry = token_registry::Simple::new();
+        let registry: Arc<dyn TokenRegistry + Send + Sync> = token_registry::Simple::new();
 
         let scope = ExecutionScope::build().token_registry(registry.clone()).new();
 
         let registry2 = scope.token_registry().unwrap();
         assert!(
-            Arc::ptr_eq(&(registry as Arc<dyn TokenRegistry + Send + Sync>), &registry2),
+            // Note this ugly cast in place of `Arc::ptr_eq(&registry, &registry2)` here is
+            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
+            // the same across casts done in different code generation units at compilation time.
+            registry.as_ref() as *const dyn TokenRegistry as *const u8
+                == registry2.as_ref() as *const dyn TokenRegistry as *const u8,
             "`scope` returned `Arc` to a token registry is different from the one initially set."
         );
     }
 
-    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_inode_registry() {
-        let registry = inode_registry::Simple::new();
+        let registry: Arc<dyn InodeRegistry + Send + Sync> = inode_registry::Simple::new();
 
         let scope = ExecutionScope::build().inode_registry(registry.clone()).new();
 
         let registry2 = scope.inode_registry().unwrap();
         assert!(
-            Arc::ptr_eq(&(registry as Arc<dyn InodeRegistry + Send + Sync>), &registry2),
+            // Note this ugly cast in place of `Arc::ptr_eq(&registry, &registry2)` here is
+            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
+            // the same across casts done in different code generation units at compilation time.
+            registry.as_ref() as *const dyn InodeRegistry as *const u8
+                == registry2.as_ref() as *const dyn InodeRegistry as *const u8,
             "`scope` returned `Arc` to an inode registry is different from the one initially set."
         );
     }
 
-    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_mock_entry_constructor() {
-        let entry_constructor = mocks::MockEntryConstructor::new();
+        let entry_constructor: Arc<dyn EntryConstructor + Send + Sync> =
+            mocks::MockEntryConstructor::new();
 
         let scope = ExecutionScope::build().entry_constructor(entry_constructor.clone()).new();
 
         let entry_constructor2 = scope.entry_constructor().unwrap();
         assert!(
-            Arc::ptr_eq(
-                &(entry_constructor as Arc<dyn EntryConstructor + Send + Sync>),
-                &entry_constructor2
-            ),
+            // Note this ugly cast in place of
+            // `Arc::ptr_eq(&entry_constructor, &entry_constructor2)` here is
+            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
+            // the same across casts done in different code generation units at compilation time.
+            entry_constructor.as_ref() as *const dyn EntryConstructor as *const u8
+                == entry_constructor2.as_ref() as *const dyn EntryConstructor as *const u8,
             "`scope` returned `Arc` to an entry constructor is different from the one initially \
              set."
         );

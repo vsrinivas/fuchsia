@@ -70,7 +70,6 @@ impl DirentsSameInodeBuilder {
         DirentsSameInodeBuilder { expected: vec![], inode }
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     pub fn add(&mut self, type_: fio::DirentType, name: &[u8]) -> &mut Self {
         assert!(
             name.len() <= fio::MAX_FILENAME as usize,
@@ -85,7 +84,7 @@ impl DirentsSameInodeBuilder {
         self.expected.write_u64::<LittleEndian>(self.inode).unwrap();
         self.expected.write_u8(name.len().try_into().unwrap()).unwrap();
         self.expected.write_u8(type_.into_primitive()).unwrap();
-        self.expected.write(name).unwrap();
+        self.expected.write_all(name).unwrap();
 
         self
     }

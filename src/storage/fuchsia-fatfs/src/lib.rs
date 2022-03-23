@@ -186,13 +186,12 @@ mod tests {
             };
         }
 
-        #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
         fn create_fs_structure(&self, name: &str, dir: &Dir<'_>) {
             match self {
                 TestDiskContents::File(content) => {
                     let mut file = dir.create_file(name).expect("Creating file to succeed");
                     file.truncate().expect("Truncate to succeed");
-                    file.write(content.as_bytes()).expect("Write to succeed");
+                    file.write_all(content.as_bytes()).expect("Write to succeed");
                 }
                 TestDiskContents::Dir(map) => {
                     let new_dir = dir.create_dir(name).expect("Creating directory to succeed");

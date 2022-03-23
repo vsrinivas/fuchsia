@@ -127,7 +127,6 @@ pub async fn fsck(
     fsck::fsck_with_options(fs, Some(crypt), options).await
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// Read a file's contents into a Vec and return it.
 pub async fn get(vol: &Arc<ObjectStore>, src: &Path) -> Result<Vec<u8>, Error> {
     let dir = walk_dir(vol, src.parent().unwrap()).await?;
@@ -146,7 +145,7 @@ pub async fn get(vol: &Arc<ObjectStore>, src: &Path) -> Result<Vec<u8>, Error> {
         loop {
             let bytes = handle.read(ofs, buf.as_mut()).await?;
             ofs += bytes as u64;
-            out.write(&buf.as_ref().as_slice()[..bytes])?;
+            out.write_all(&buf.as_ref().as_slice()[..bytes])?;
             if bytes as u64 != handle.block_size() {
                 break;
             }

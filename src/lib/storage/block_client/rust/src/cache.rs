@@ -426,7 +426,6 @@ mod tests {
         );
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn test_io_read_write_and_seek() {
         let (_ramdisk, remote_block_device) = make_ramdisk();
@@ -434,7 +433,7 @@ mod tests {
         const OFFSET: u64 = 11;
         const DATA: &[u8] = b"hello";
         assert_eq!(cache.seek(SeekFrom::Start(OFFSET)).expect("seek failed"), OFFSET);
-        cache.write(DATA).expect("cache.write failed");
+        cache.write_all(DATA).expect("cache.write failed");
         assert_eq!(
             cache.seek(SeekFrom::Current(-(DATA.len() as i64))).expect("seek failed"),
             OFFSET

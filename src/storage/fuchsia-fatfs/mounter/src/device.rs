@@ -289,7 +289,6 @@ pub mod test {
             .expect("Format volume succeeds");
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     pub fn setup_test_fs(channel: zx::Channel, name: &str) {
         let device = Box::new(
             remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),
@@ -300,7 +299,7 @@ pub mod test {
         {
             let dir = fs.root_dir().create_dir("test").expect("Create dir succeeds");
             let mut file = dir.create_file("blah").expect("Create file succeeds");
-            file.write("hello, world!".as_bytes()).expect("Write succeds");
+            file.write_all("hello, world!".as_bytes()).expect("Write succeds");
 
             fs.root_dir().create_dir(name).expect("Create dir succeeds");
         }

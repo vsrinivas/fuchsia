@@ -521,7 +521,8 @@ impl Journal {
         let last_checkpoint = if transactions.is_empty() {
             super_block.journal_checkpoint.clone()
         } else {
-            #[allow(clippy::never_loop)] // TODO(fxbug.dev/95027)
+            // Loop used here in place of for {} else {}
+            #[allow(clippy::never_loop)]
             'outer: loop {
                 for (checkpoint, mutations, end_offset) in transactions {
                     if checkpoint.file_offset >= valid_to {

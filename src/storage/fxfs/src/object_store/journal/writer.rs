@@ -49,12 +49,11 @@ impl JournalWriter {
         assert!(self.buf.len() - buf_len <= self.block_size, "{:?}", record);
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     /// Pads from the current offset in the buffer to the end of the block.
     pub fn pad_to_block(&mut self) -> std::io::Result<()> {
         let align = self.buf.len() % self.block_size;
         if align > 0 {
-            self.write(&vec![0; self.block_size - std::mem::size_of::<Checksum>() - align])?;
+            self.write_all(&vec![0; self.block_size - std::mem::size_of::<Checksum>() - align])?;
         }
         Ok(())
     }
@@ -103,7 +102,6 @@ impl JournalWriter {
 }
 
 impl std::io::Write for JournalWriter {
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut offset = 0;
         while offset < buf.len() {
@@ -111,7 +109,7 @@ impl std::io::Write for JournalWriter {
                 - std::mem::size_of::<Checksum>()
                 - self.buf.len() % self.block_size;
             let to_copy = min(space, buf.len() - offset);
-            self.buf.write(&buf[offset..offset + to_copy])?;
+            self.buf.write_all(&buf[offset..offset + to_copy])?;
             if to_copy == space {
                 let end = self.buf.len();
                 let start = end + std::mem::size_of::<Checksum>() - self.block_size;

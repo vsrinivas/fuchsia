@@ -267,7 +267,6 @@ impl SuperBlock {
         Ok((super_block, ItemReader { reader }))
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     /// Writes the super-block and the records from the root parent store.
     pub(super) async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,
@@ -284,7 +283,7 @@ impl SuperBlock {
         // We should abstract away the checksum code and implement these separately.
         let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
-        writer.writer.write(SUPER_BLOCK_MAGIC)?;
+        writer.writer.write_all(SUPER_BLOCK_MAGIC)?;
         self.serialize_with_version(&mut writer.writer)?;
 
         let tree = root_parent_store.tree();

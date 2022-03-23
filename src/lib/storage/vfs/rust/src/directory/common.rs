@@ -140,7 +140,6 @@ pub fn check_child_connection_flags(
     }
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// A helper to generate binary encodings for the ReadDirents response.  This function will append
 /// an entry description as specified by `entry` and `name` to the `buf`, and would return `true`.
 /// In case this would cause the buffer size to exceed `max_bytes`, the buffer is then left
@@ -175,7 +174,7 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
     buf.write_u8(name.len() as u8).expect("out should be an in memory buffer that grows as needed");
     buf.write_u8(entry.type_().into_primitive())
         .expect("out should be an in memory buffer that grows as needed");
-    buf.write(name.as_ref()).expect("out should be an in memory buffer that grows as needed");
+    buf.write_all(name.as_ref()).expect("out should be an in memory buffer that grows as needed");
 
     true
 }

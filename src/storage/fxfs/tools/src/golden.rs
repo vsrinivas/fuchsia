@@ -60,7 +60,6 @@ async fn load_device(path: &Path) -> Result<FakeDevice, Error> {
     Ok(device)
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// Compresses a RAM backed FakeDevice into a zstd compressed local image.
 async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> {
     device.reopen();
@@ -69,14 +68,13 @@ async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> 
     let mut offset: u64 = 0;
     while offset < IMAGE_BLOCKS * IMAGE_BLOCK_SIZE as u64 {
         device.read(offset, buf.as_mut()).await?;
-        writer.write(buf.as_ref().as_slice())?;
+        writer.write_all(buf.as_ref().as_slice())?;
         offset += device.block_size() as u64;
     }
     writer.finish()?;
     Ok(())
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// Create a new golden image (at the current version).
 pub async fn create_image() -> Result<(), Error> {
     let path = golden_image_dir()?.join(latest_image_filename());
@@ -102,7 +100,7 @@ pub async fn create_image() -> Result<(), Error> {
     save_device(device, &path).await?;
 
     let mut file = std::fs::File::create(golden_image_dir()?.join("images.gni").as_path())?;
-    file.write(
+    file.write_all(
         format!(
             "# Copyright {} The Fuchsia Authors. All rights reserved.\n\
              # Use of this source code is governed by a BSD-style license that can be\n\
@@ -113,14 +111,14 @@ pub async fn create_image() -> Result<(), Error> {
         )
         .as_bytes(),
     )?;
-    file.write(b"fxfs_golden_images = [\n")?;
+    file.write_all(b"fxfs_golden_images = [\n")?;
     let paths = std::fs::read_dir(golden_image_dir()?)?.collect::<Result<Vec<_>, _>>()?;
     for file_name in
         paths.iter().map(|e| e.file_name()).filter(|x| x.to_str().unwrap().ends_with(".zstd"))
     {
-        file.write(format!("  \"{}\",\n", file_name.to_str().unwrap()).as_bytes())?;
+        file.write_all(format!("  \"{}\",\n", file_name.to_str().unwrap()).as_bytes())?;
     }
-    file.write(b"]\n")?;
+    file.write_all(b"]\n")?;
     Ok(())
 }
 

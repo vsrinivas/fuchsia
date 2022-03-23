@@ -171,7 +171,6 @@ impl NodeCache {
         .await
     }
 
-    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     /// Removes a node from the cache. Calling this on a placeholder is an error; instead, the
     /// placeholder should simply be dropped.
     pub fn remove(&self, node: &dyn FxNode) {
@@ -180,7 +179,13 @@ impl NodeCache {
             // If this method is called when a node is being dropped, then upgrade will fail and
             // it's possible the cache has been populated with another node, so to avoid that race,
             // we must check that the node in the cache is the node we want to remove.
-            if std::ptr::eq(o.get().as_ptr(), node) {
+            //
+            // Note this ugly cast in place of `std::ptr::eq(o.get().as_ptr(), node)` here is
+            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
+            // the same across casts done in different code generation units at compilation time.
+            if o.get().as_ptr() as *const dyn FxNode as *const u8
+                == node as *const dyn FxNode as *const u8
+            {
                 o.remove();
             }
         }

@@ -209,10 +209,9 @@ mod tests {
         assert_eq!(token.basic_info().unwrap().rights, DEFAULT_TOKEN_RIGHTS);
     }
 
-    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn client_unregister() {
-        let client = MockDirectory::new();
+        let client: Arc<dyn TokenRegistryClient> = MockDirectory::new();
         let registry = Simple::new();
 
         let token = registry.get_token(client.clone()).unwrap();
@@ -222,7 +221,13 @@ mod tests {
                 .get_container(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
                 .unwrap()
                 .unwrap();
-            assert!(Arc::ptr_eq(&(client.clone() as Arc<dyn TokenRegistryClient>), &res));
+            // Note this ugly cast in place of `Arc::ptr_eq(&client, &res)` here is
+            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
+            // the same across casts done in different code generation units at compilation time.
+            assert!(
+                client.as_ref() as *const dyn TokenRegistryClient as *const u8
+                    == res.as_ref() as *const dyn TokenRegistryClient as *const u8
+            );
         }
 
         registry.unregister(client.clone());

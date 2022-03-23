@@ -673,7 +673,6 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn blobfs_format_fsck_error() {
         let block_size = 512;
@@ -688,14 +687,13 @@ mod tests {
         let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
             .expect("failed to convert to file descriptor");
         let mut bytes: Vec<u8> = std::iter::repeat(0xff).take(block_size as usize).collect();
-        file.write(&mut bytes).expect("failed to write to device");
+        file.write_all(&mut bytes).expect("failed to write to device");
 
         blobfs.fsck().expect_err("fsck succeeded when it shouldn't have");
 
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn blobfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 512;
@@ -718,7 +716,7 @@ mod tests {
         {
             let mut test_file = std::fs::File::create(&path).expect("failed to create test file");
             test_file.set_len(content.len() as u64).expect("failed to truncate file");
-            test_file.write(&content).expect("failed to write to test file");
+            test_file.write_all(&content).expect("failed to write to test file");
         }
 
         // check against the snapshot FilesystemInfo
@@ -796,7 +794,6 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn minfs_format_fsck_error() {
         let block_size = 8192;
@@ -820,14 +817,13 @@ mod tests {
         let actual_offset =
             file.seek(std::io::SeekFrom::Start(bitmap_offset)).expect("failed to seek to bitmap");
         assert_eq!(actual_offset, bitmap_offset);
-        file.write(&mut stomping_bytes).expect("failed to write to device");
+        file.write_all(&mut stomping_bytes).expect("failed to write to device");
 
         minfs.fsck().expect_err("fsck succeeded when it shouldn't have");
 
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn minfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 8192;
@@ -848,7 +844,7 @@ mod tests {
 
         {
             let mut test_file = std::fs::File::create(&path).expect("failed to create test file");
-            test_file.write(&content).expect("failed to write to test file");
+            test_file.write_all(&content).expect("failed to write to test file");
         }
 
         // check against the snapshot FilesystemInfo
