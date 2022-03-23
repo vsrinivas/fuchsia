@@ -35,10 +35,6 @@ group("tests") {
   ]
 }
 
-group("infra_configs") {
-  deps = [ ":crash_reports_upload_to_prod_server_config" ]
-}
-
 group("userdebug_configs") {
   deps = [ ":crash_reports_userdebug_config" ]
 }
