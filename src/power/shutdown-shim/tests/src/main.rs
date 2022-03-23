@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_boot as fboot, fidl_fuchsia_device_manager as fdevicemanager,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_zircon as zx,

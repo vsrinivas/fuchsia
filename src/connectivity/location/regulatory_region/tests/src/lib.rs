@@ -12,9 +12,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys2,
     fuchsia_component::client::connect_to_named_protocol_at_dir_root,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
 };
 
 const REGION_COMPONENT_NAME: &str = "regulatory_region";

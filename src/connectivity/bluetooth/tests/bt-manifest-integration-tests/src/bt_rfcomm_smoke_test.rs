@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},

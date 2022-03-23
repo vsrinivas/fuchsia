@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::{PeerManagerExtMarker, PeerManagerExtProxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fuchsia_async as fasync,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},

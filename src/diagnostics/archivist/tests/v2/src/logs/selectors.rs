@@ -13,7 +13,7 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::new::RealmInstance;
+use fuchsia_component_test::RealmInstance;
 use futures::{FutureExt, StreamExt};
 
 #[fuchsia::test]

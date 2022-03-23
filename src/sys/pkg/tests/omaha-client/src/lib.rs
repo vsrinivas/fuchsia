@@ -22,9 +22,7 @@ use {
     fidl_fuchsia_update_installer::UpdateNotStartedReason,
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_inspect::{
         assert_data_tree,
         reader::DiagnosticsHierarchy,

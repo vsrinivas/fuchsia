@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},

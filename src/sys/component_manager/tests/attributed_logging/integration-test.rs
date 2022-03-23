@@ -9,7 +9,7 @@ use {
         sequence::{self, EventSequence},
     },
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fuchsia::test]

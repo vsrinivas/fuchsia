@@ -4,9 +4,7 @@
 
 use anyhow::Error;
 use fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy};
-use fuchsia_component_test::new::{
-    Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-};
+use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route};
 
 const FIZZBUZZ_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/fizzbuzz.cm";

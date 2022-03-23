@@ -306,7 +306,7 @@ mod test {
         },
         fidl_fuchsia_test_intl_manager::{PropertyManagerMarker, PropertyManagerProxy},
         fuchsia_async as fasync,
-        fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+        fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
         futures::{self, prelude::*},
         lazy_static::lazy_static,
     };

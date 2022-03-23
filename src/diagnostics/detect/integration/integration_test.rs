@@ -32,7 +32,7 @@ use {
     fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_feedback as fcrash,
     fidl_fuchsia_io as fio,
     fuchsia_component::server::*,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_zircon as zx,

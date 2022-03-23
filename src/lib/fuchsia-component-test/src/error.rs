@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::new::Ref,
+    crate::Ref,
     anyhow, fidl_fuchsia_component_test as ftest,
     thiserror::{self, Error},
 };

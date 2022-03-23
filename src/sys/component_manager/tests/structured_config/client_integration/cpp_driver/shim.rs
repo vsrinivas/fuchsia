@@ -7,7 +7,7 @@ use {
     fidl_test_structuredconfig_receiver as scr, fidl_test_structuredconfig_receiver_shim as scrs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{Capability, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, RealmBuilder, Ref, Route},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::StreamExt,
     std::time::Duration,

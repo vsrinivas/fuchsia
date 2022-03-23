@@ -6,7 +6,7 @@ use {
     anyhow::{self, Error},
     diagnostics_reader::{ArchiveReader, Logs},
     fidl_fuchsia_data as fdata,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::StreamExt,
     std::fs::File,
     std::io::{self, BufRead},

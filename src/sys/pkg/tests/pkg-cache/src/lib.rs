@@ -20,9 +20,7 @@ use {
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, PackagePath},

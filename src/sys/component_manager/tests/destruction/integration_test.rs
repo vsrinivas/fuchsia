@@ -9,7 +9,7 @@ use {
         sequence::{EventSequence, Ordering},
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fasync::run_singlethreaded(test)]

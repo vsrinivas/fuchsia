@@ -8,7 +8,7 @@ use diagnostics_message::{fx_log_metadata_t, fx_log_packet_t};
 use diagnostics_reader::{ArchiveReader, Data, Logs};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogLevelFilter, LogSinkMarker, LogSinkProxy};
-use fuchsia_component_test::new::RealmInstance;
+use fuchsia_component_test::RealmInstance;
 use fuchsia_zircon as zx;
 use tracing::debug;
 

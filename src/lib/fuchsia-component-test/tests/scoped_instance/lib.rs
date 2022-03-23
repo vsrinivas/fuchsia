@@ -5,7 +5,7 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     fuchsia_syslog as syslog,
     test_case::test_case,
 };

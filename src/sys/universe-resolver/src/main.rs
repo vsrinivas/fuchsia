@@ -190,7 +190,7 @@ mod tests {
         fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
-        fuchsia_component_test::new::{
+        fuchsia_component_test::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
         },
         fuchsia_zircon::Vmo,

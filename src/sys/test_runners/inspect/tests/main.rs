@@ -10,7 +10,7 @@ use {
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
     paste::paste,
     pretty_assertions::assert_eq,

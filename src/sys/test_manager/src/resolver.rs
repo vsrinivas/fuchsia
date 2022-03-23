@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::LocalComponentHandles,
+    fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::pkg_url::PkgUrl,
     futures::{StreamExt, TryStreamExt},
     std::collections::HashSet,
@@ -133,7 +133,7 @@ mod tests {
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fuchsia_component_test::error::Error as RealmBuilderError,
-        fuchsia_component_test::new::{
+        fuchsia_component_test::{
             Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
         },
     };

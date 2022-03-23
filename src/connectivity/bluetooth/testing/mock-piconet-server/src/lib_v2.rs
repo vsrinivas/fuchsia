@@ -14,7 +14,7 @@ use {
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{types as bt_types, util::CollectExt},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_zircon as zx,

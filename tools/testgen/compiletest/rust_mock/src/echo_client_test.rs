@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use fidl_fidl_examples_routing_echo::*;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::new::LocalComponentHandles;
+use fuchsia_component_test::LocalComponentHandles;
 use futures::{StreamExt, TryStreamExt};
 
 mod lib;

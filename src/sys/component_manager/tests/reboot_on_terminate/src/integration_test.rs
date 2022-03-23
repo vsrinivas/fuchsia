@@ -5,7 +5,7 @@
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::channel::mpsc,

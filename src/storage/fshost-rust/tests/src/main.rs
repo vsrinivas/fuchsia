@@ -10,9 +10,7 @@ use {
     },
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fidl_fuchsia_logger as flogger,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     futures::FutureExt,
 };
 

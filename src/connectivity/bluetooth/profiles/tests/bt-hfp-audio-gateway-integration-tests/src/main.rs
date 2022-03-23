@@ -16,7 +16,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_zircon::Duration,

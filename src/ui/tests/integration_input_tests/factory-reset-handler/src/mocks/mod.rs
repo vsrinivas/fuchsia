@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::new::LocalComponentHandles,
+    fuchsia_component_test::LocalComponentHandles,
     futures::{Future, StreamExt},
 };
 
@@ -58,8 +58,8 @@ macro_rules! impl_test_realm_component {
     ($component_type:ty) => {
         #[async_trait::async_trait]
         impl crate::traits::test_realm_component::TestRealmComponent for $component_type {
-            fn ref_(&self) -> fuchsia_component_test::new::Ref {
-                fuchsia_component_test::new::Ref::child(&self.name)
+            fn ref_(&self) -> fuchsia_component_test::Ref {
+                fuchsia_component_test::Ref::child(&self.name)
             }
 
             async fn add_to_builder(&self, builder: &RealmBuilder) {

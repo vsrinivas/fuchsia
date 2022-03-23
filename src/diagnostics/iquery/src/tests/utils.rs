@@ -7,9 +7,7 @@
 use argh::FromArgs;
 use difference::{Changeset, Difference};
 use fuchsia_async as fasync;
-use fuchsia_component_test::new::{
-    Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-};
+use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route};
 use fuchsia_zircon::{self as zx, DurationNum};
 use iquery::{command_line::CommandLine, commands::*, types::Error};
 use regex::Regex;

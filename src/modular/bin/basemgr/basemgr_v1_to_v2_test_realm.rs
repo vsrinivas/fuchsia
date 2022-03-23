@@ -8,7 +8,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_modular as modular, fidl_fuchsia_sys as fsys,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::prelude::*,

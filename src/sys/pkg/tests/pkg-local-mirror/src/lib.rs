@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_url::pkg_url::RepoUrl,

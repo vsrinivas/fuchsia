@@ -4,9 +4,7 @@
 
 use anyhow::Error;
 use fidl_fidl_examples_routing_echo::*;
-use fuchsia_component_test::new::{
-    Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-};
+use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route};
 
 const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 

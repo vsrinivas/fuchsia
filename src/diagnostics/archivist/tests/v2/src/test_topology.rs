@@ -4,8 +4,8 @@
 
 use crate::constants;
 use fuchsia_component_test::{
-    error::Error,
-    new::{Capability, ChildOptions, ChildRef, Event, RealmBuilder, Ref, Route, SubRealmBuilder},
+    error::Error, Capability, ChildOptions, ChildRef, Event, RealmBuilder, Ref, Route,
+    SubRealmBuilder,
 };
 
 /// Options for creating a test topology.

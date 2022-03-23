@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     fidl::endpoints::Proxy,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
-    fuchsia_component_test::new::RealmBuilder,
+    fuchsia_component_test::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 

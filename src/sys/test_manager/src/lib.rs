@@ -33,11 +33,8 @@ use {
     fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        error::Error as RealmBuilderError,
-        new::{
-            Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance,
-            Ref, Route, SubRealmBuilder,
-        },
+        error::Error as RealmBuilderError, Capability, ChildOptions, Event, LocalComponentHandles,
+        RealmBuilder, RealmInstance, Ref, Route, SubRealmBuilder,
     },
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,

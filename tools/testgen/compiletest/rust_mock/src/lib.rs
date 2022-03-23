@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use anyhow::Error;
 use async_trait::async_trait;
-use fuchsia_component_test::new::{
+use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
 

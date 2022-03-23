@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_power_battery::{BatteryManagerMarker, BatteryManagerRequestStream},
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},

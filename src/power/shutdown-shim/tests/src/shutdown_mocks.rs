@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::new::LocalComponentHandles,
+    fuchsia_component_test::LocalComponentHandles,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt},

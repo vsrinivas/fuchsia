@@ -16,7 +16,7 @@ use {
     fixture::fixture,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, Uuid},
-    fuchsia_component_test::new::Capability,
+    fuchsia_component_test::Capability,
     fuchsia_zircon as zx,
     futures::{join, stream::StreamExt, TryFutureExt},
     mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
@@ -33,7 +33,7 @@ const MOCK_PEER_NAME: &str = "mock-peer";
 struct AvrcpIntegrationTest {
     avrcp_observer: BtProfileComponent,
     mock_peer: PiconetMember,
-    test_realm: fuchsia_component_test::new::RealmInstance,
+    test_realm: fuchsia_component_test::RealmInstance,
 }
 
 impl AvrcpIntegrationTest {

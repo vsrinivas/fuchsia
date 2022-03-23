@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fuchsia::test]

@@ -4,7 +4,7 @@
 
 use {
     crate::traits::test_realm_component::TestRealmComponent,
-    fuchsia_component_test::new::{ChildOptions, RealmBuilder, Ref},
+    fuchsia_component_test::{ChildOptions, RealmBuilder, Ref},
 };
 
 enum LegacyOrModernUrl {

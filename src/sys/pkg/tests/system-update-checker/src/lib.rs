@@ -20,9 +20,7 @@ use {
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, prelude::*},

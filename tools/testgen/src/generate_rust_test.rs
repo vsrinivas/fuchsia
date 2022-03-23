@@ -60,7 +60,7 @@ impl CodeGenerator for RustTestCodeGenerator<'_> {
             imports = format!("use crate::lib::{{{}, Mocks}};\n", self.code.test_class_name);
             imports.push_str("use async_trait::async_trait;\n");
             imports.push_str("use fuchsia_component::server::ServiceFs;\n");
-            imports.push_str("use fuchsia_component_test::new::LocalComponentHandles;\n");
+            imports.push_str("use fuchsia_component_test::LocalComponentHandles;\n");
 
             mock_impl.push_str(
                 format!(
@@ -419,7 +419,7 @@ mod test {
         let expect = r#"use crate::lib::{TestComponentTest, Mocks};
 use async_trait::async_trait;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::new::LocalComponentHandles;
+use fuchsia_component_test::LocalComponentHandles;
 mod lib;
 
 #[async_trait]

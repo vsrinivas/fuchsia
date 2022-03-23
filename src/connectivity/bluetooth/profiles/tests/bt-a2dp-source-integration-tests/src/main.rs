@@ -10,7 +10,7 @@ use fidl_fuchsia_sysmem::AllocatorMarker;
 use fidl_fuchsia_tracing_provider::RegistryMarker;
 use fixture::fixture;
 use fuchsia_bluetooth::types::Uuid;
-use fuchsia_component_test::new::{Capability, RealmInstance};
+use fuchsia_component_test::{Capability, RealmInstance};
 use futures::stream::StreamExt;
 use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
 

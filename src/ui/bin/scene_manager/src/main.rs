@@ -236,7 +236,7 @@ mod tests {
     use fidl_fuchsia_ui_views as ui_views;
     use fidl_fuchsia_ui_views::ViewToken;
     use fuchsia_async as fasync;
-    use fuchsia_component_test::new::{
+    use fuchsia_component_test::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     };
     use fuchsia_scenic as scenic;

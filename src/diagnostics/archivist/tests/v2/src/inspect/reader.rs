@@ -7,8 +7,8 @@ use anyhow::Error;
 use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
 use difference::assert_diff;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
-use fuchsia_component_test::new::RealmInstance;
-use fuchsia_component_test::new::{Capability, ChildOptions, Ref, Route};
+use fuchsia_component_test::RealmInstance;
+use fuchsia_component_test::{Capability, ChildOptions, Ref, Route};
 use lazy_static::lazy_static;
 
 const MONIKER_KEY: &str = "moniker";

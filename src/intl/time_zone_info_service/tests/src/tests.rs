@@ -13,7 +13,7 @@ mod tests {
             TimeZonesProxy,
         },
         fuchsia_async as fasync,
-        fuchsia_component_test::new::{
+        fuchsia_component_test::{
             Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
         },
         fuchsia_zircon as zx,

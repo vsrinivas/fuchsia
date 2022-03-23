@@ -15,11 +15,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
-        self as fcomponent,
-        new::{
-            Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, RealmInstance,
-            Ref, Route,
-        },
+        self as fcomponent, Capability, ChildOptions, ChildRef, LocalComponentHandles,
+        RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_driver_test::DriverTestRealmBuilder as _,
     fuchsia_zircon as zx,
@@ -128,7 +125,7 @@ impl Into<zx::Status> for CreateRealmError {
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::RefUsedInWrongRealm(
-                    fcomponent::new::Ref { .. },
+                    fcomponent::Ref { .. },
                     String { .. },
                 ) => zx::Status::INTERNAL,
                 fcomponent::error::Error::DestroyWaiterTaken

@@ -25,8 +25,8 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        new::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
-        ScopedInstance, ScopedInstanceFactory,
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route, ScopedInstance,
+        ScopedInstanceFactory,
     },
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::SystemImageBuilder,

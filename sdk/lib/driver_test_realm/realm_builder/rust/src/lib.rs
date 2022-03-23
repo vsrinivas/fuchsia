@@ -5,9 +5,7 @@
 use {
     anyhow::{anyhow, Result},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io as fio,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
 };
 
 pub const COMPONENT_NAME: &str = "driver_test_realm";

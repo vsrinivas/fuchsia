@@ -459,7 +459,7 @@ mod tests {
     use diagnostics_data::{Data, LifecycleType};
     use diagnostics_hierarchy::assert_data_tree;
     use fidl_fuchsia_diagnostics as fdiagnostics;
-    use fuchsia_component_test::new::{
+    use fuchsia_component_test::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     };
     use fuchsia_zircon as zx;

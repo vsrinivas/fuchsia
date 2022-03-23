@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_component_test::new::{RealmBuilder, Ref};
+use fuchsia_component_test::{RealmBuilder, Ref};
 
 /// A component that runs in the test realm.
 #[async_trait::async_trait]

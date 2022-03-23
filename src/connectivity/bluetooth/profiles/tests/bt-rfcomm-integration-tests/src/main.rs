@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
-    fuchsia_component_test::new::{Capability, RealmInstance},
+    fuchsia_component_test::{Capability, RealmInstance},
     fuchsia_zircon::Duration,
     futures::{pin_mut, stream::StreamExt},
     mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},

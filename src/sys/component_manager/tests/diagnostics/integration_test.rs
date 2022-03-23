@@ -5,7 +5,7 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait_on: &str) {

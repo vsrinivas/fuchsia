@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_services_test as ft,
     fuchsia_async::{self as fasync, DurationExt, Timer},
     fuchsia_component::client,
-    fuchsia_component_test::new::{Capability, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, RealmBuilder, Ref, Route},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::DurationNum,
 };

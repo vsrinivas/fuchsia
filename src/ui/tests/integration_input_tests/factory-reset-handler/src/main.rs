@@ -13,7 +13,7 @@ use {
         traits::realm_builder_ext::RealmBuilderExt as _,
     },
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_component_test::new::{RealmBuilder, RealmInstance},
+    fuchsia_component_test::{RealmBuilder, RealmInstance},
     futures::StreamExt,
     input_synthesis::{modern_backend, synthesizer},
 };

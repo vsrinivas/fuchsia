@@ -18,7 +18,7 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io as fio;
 use fuchsia_async::Task;
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::new::{
+use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmInstance, Ref, Route,
 };
 use fuchsia_zircon as zx;

@@ -9,7 +9,7 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::new::{Capability, Ref, Route};
+use fuchsia_component_test::{Capability, Ref, Route};
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, Stream, StreamExt};

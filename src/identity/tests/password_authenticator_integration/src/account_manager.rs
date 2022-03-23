@@ -21,9 +21,7 @@ use {
         futures::{FutureExt as _, StreamExt as _},
         DurationExt as _, TimeoutExt as _,
     },
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{self as zx, sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},

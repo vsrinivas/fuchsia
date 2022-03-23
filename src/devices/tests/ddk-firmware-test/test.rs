@@ -9,7 +9,7 @@ use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io as fio,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::DriverTestRealmInstance,
@@ -46,7 +46,7 @@ async fn serve_fake_filesystem(
 async fn create_realm(
     system: Directory,
     pkgfs: Directory,
-) -> Result<fuchsia_component_test::new::RealmInstance, Error> {
+) -> Result<fuchsia_component_test::RealmInstance, Error> {
     let builder = RealmBuilder::new().await?;
 
     let fake_filesystem = builder

@@ -5,7 +5,7 @@
 use {
     crate::traits::test_realm_component::TestRealmComponent,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fuchsia_component_test::new::{Capability, RealmBuilder, Ref, Route},
+    fuchsia_component_test::{Capability, RealmBuilder, Ref, Route},
 };
 
 /// Ergonomic extension of RealmBuilder.

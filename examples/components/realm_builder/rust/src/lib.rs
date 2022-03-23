@@ -13,7 +13,7 @@ use {
     },
     fuchsia_component::server as fserver,
     // [END_EXCLUDE]
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
 };

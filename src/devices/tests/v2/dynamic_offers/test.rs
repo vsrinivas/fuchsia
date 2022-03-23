@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_offers_test as ft, fuchsia_async as fasync,
     fuchsia_async::futures::{StreamExt, TryStreamExt},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},

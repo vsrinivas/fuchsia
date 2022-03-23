@@ -163,14 +163,14 @@ fn write_rust(
 
     match input.generate_mocks {
         true => {
-            code.add_import(r#"fuchsia_component_test::new::{
+            code.add_import(r#"fuchsia_component_test::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 }"#);
             code.add_import("anyhow::Error");
             code.add_import("async_trait::async_trait")
         }
         false => code.add_import(
-            r#"fuchsia_component_test::new::{
+            r#"fuchsia_component_test::{
             Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
 }"#,
         ),

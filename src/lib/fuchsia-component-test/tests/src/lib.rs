@@ -14,11 +14,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
-        error::Error as RealmBuilderError,
-        new::{
-            Capability, ChildOptions, DirectoryContents, LocalComponentHandles, RealmBuilder, Ref,
-            Route,
-        },
+        error::Error as RealmBuilderError, Capability, ChildOptions, DirectoryContents,
+        LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
     io_util,

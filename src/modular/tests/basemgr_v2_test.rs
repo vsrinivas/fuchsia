@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, future::join_all, prelude::*},

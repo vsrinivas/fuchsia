@@ -5,7 +5,7 @@
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_bluetooth_deviceid::*;
 use fuchsia_bluetooth::types::PeerId;
-use fuchsia_component_test::new::{Capability, RealmInstance};
+use fuchsia_component_test::{Capability, RealmInstance};
 use fuchsia_zircon as zx;
 use futures::{future::Either, pin_mut, Future, FutureExt, StreamExt};
 use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};

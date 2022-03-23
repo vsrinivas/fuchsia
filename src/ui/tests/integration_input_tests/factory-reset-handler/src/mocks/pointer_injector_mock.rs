@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration::{
         SetupRequest, SetupRequestStream, SetupWatchViewportResponder,
     },
-    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, RealmBuilder},
     futures::TryStreamExt,
 };
 

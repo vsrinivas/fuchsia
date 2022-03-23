@@ -9,7 +9,7 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger as flogger;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::new::{
+use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
 };
 use fuchsia_zircon as zx;

@@ -5,7 +5,7 @@
 use crate::mocks;
 use anyhow::Error;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::new::{
+use fuchsia_component_test::{
     Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
 use futures::{channel::mpsc, lock::Mutex, StreamExt};

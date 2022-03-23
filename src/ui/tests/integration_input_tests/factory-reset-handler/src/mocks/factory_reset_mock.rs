@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_recovery::{FactoryResetRequest, FactoryResetRequestStream},
-    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, RealmBuilder},
     fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
 };

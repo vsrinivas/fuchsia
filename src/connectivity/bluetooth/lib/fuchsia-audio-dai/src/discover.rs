@@ -36,7 +36,7 @@ mod tests {
     use {
         anyhow::Error,
         fuchsia,
-        fuchsia_component_test::new::{
+        fuchsia_component_test::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Route,
         },
         futures::{channel::mpsc, SinkExt, StreamExt},

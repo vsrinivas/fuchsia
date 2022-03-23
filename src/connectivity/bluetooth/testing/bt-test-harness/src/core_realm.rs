@@ -13,8 +13,7 @@ use {
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component_test::{
-        new::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
-        ScopedInstance,
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route, ScopedInstance,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::FutureExt,

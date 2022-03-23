@@ -15,9 +15,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon::Status,
     futures::prelude::*,

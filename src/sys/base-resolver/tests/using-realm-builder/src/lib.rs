@@ -8,9 +8,7 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::*,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon as zx,
     futures::{
         channel::oneshot,

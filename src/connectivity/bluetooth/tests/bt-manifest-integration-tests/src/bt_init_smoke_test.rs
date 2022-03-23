@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::new::{
+    fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
