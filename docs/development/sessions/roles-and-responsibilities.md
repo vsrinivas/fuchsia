@@ -82,7 +82,7 @@ impl InputHandler for MouseHandler {
                self.send_events_to_scenic(...)).await;
                vec![] // InputEvent is consumed because it was sent to Scenic
            }
-           _ => vec![input_event], // InputEvent is returned for the next InputHanlder
+           _ => vec![input_event], // InputEvent is returned for the next InputHandler
        }
    }
 }
