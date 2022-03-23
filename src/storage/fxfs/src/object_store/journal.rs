@@ -74,7 +74,7 @@ use {
 };
 
 // Exposed for serialized_types.
-pub use super_block::{SuperBlock, SuperBlockRecord, SuperBlockV1};
+pub use super_block::{SuperBlock, SuperBlockRecord, SuperBlockV1, SuperBlockV2};
 
 // The journal file is written to in blocks of this size.
 const BLOCK_SIZE: u64 = 8192;

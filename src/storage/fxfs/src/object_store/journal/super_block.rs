@@ -82,6 +82,8 @@ impl SuperBlockCopy {
     }
 }
 
+// major_version was removed after this version.
+// guid was added after this version.
 #[derive(Serialize, Deserialize, Versioned)]
 pub struct SuperBlockV1 {
     major_version: u32,
@@ -98,10 +100,47 @@ pub struct SuperBlockV1 {
     borrowed_metadata_space: u64,
 }
 
-impl From<SuperBlockV1> for SuperBlock {
+impl From<SuperBlockV1> for SuperBlockV2 {
     fn from(other: SuperBlockV1) -> Self {
         Self {
             oldest_minor_version: other.oldest_minor_version,
+            generation: other.generation,
+            root_parent_store_object_id: other.root_parent_store_object_id,
+            root_parent_graveyard_directory_object_id: other
+                .root_parent_graveyard_directory_object_id,
+            root_store_object_id: other.root_store_object_id,
+            allocator_object_id: other.allocator_object_id,
+            journal_object_id: other.journal_object_id,
+            journal_checkpoint: other.journal_checkpoint,
+            super_block_journal_file_offset: other.super_block_journal_file_offset,
+            journal_file_offsets: other.journal_file_offsets,
+            borrowed_metadata_space: other.borrowed_metadata_space,
+            ..Self::default()
+        }
+    }
+}
+
+// oldest_minor_version was removed after this version.
+#[derive(Serialize, Deserialize, Default, Versioned)]
+pub struct SuperBlockV2 {
+    guid: [u8; 16],
+    oldest_minor_version: u32,
+    generation: u64,
+    root_parent_store_object_id: u64,
+    root_parent_graveyard_directory_object_id: u64,
+    root_store_object_id: u64,
+    allocator_object_id: u64,
+    journal_object_id: u64,
+    journal_checkpoint: JournalCheckpoint,
+    super_block_journal_file_offset: u64,
+    journal_file_offsets: HashMap<u64, u64>,
+    borrowed_metadata_space: u64,
+}
+
+impl From<SuperBlockV2> for SuperBlock {
+    fn from(other: SuperBlockV2) -> Self {
+        Self {
+            guid: other.guid,
             generation: other.generation,
             root_parent_store_object_id: other.root_parent_store_object_id,
             root_parent_graveyard_directory_object_id: other
@@ -134,10 +173,6 @@ impl From<SuperBlockV1> for SuperBlock {
 pub struct SuperBlock {
     /// The globally unique identifier for the filesystem.
     guid: [u8; 16],
-
-    /// Unused.
-    // TODO(fxbug.dev/96136): Remove this field.
-    oldest_minor_version: u32,
 
     /// There are two super-blocks which are used in an A/B configuration. The super-block with the
     /// greatest generation number is what is used when mounting an Fxfs image; the other is
@@ -205,7 +240,6 @@ impl SuperBlock {
         let uuid = Uuid::new_v4();
         SuperBlock {
             guid: *uuid.as_bytes(),
-            oldest_minor_version: 0,
             generation: 1u64,
             root_parent_store_object_id,
             root_parent_graveyard_directory_object_id,
