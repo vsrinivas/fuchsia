@@ -57,7 +57,7 @@ std::unique_ptr<BlockDispatcher> CreateDispatcher() {
 TEST(VolatileWriteBlockDispatcherTest, WriteBlock) {
   auto disp = CreateDispatcher();
 
-  fit::result<void, zx_status_t> result;
+  fpromise::result<void, zx_status_t> result;
   fidl::VectorPtr<uint8_t> buf(kBlockSectorSize);
   result = fpromise::run_single_threaded(disp->ReadAt(buf->data(), buf->size(), 0));
   ASSERT_TRUE(result.is_ok());
@@ -77,7 +77,7 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
 
   // Write blocks 0 & 2, blocks 1 & 3 will hit the static dispatcher.
   fidl::VectorPtr<uint8_t> write_buf(BufVector(kBlockSectorSize, 0xbe));
-  fit::result<void, zx_status_t> result;
+  fpromise::result<void, zx_status_t> result;
   result = fpromise::run_single_threaded(disp->WriteAt(write_buf->data(), write_buf->size(), 0));
   ASSERT_TRUE(result.is_ok());
   result = fpromise::run_single_threaded(
@@ -96,7 +96,7 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
 TEST(VolatileWriteBlockDispatcherTest, BadRequest) {
   auto disp = CreateDispatcher();
 
-  fit::result<void, zx_status_t> result;
+  fpromise::result<void, zx_status_t> result;
   result = fpromise::run_single_threaded(disp->ReadAt(nullptr, kBlockSectorSize, 1));
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.error());
