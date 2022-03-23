@@ -5,6 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915/igd.h"
 
 #include <lib/device-protocol/pci.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/object.h>
 #include <lib/zx/vmar.h>
 #include <limits.h>
@@ -114,6 +115,9 @@ static uint8_t iboost_idx_to_level(uint8_t iboost_idx) {
 namespace i915 {
 
 IgdOpRegion::~IgdOpRegion() {
+  if (vbt_region_base_) {
+    zx::vmar::root_self()->unmap(vbt_region_base_, vbt_region_size_);
+  }
   if (igd_opregion_pages_base_) {
     zx::vmar::root_self()->unmap(igd_opregion_pages_base_, igd_opregion_pages_len_);
   }
@@ -344,19 +348,21 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     return status;
   }
 
+  // igd_addr may not be page aligned
+  uint32_t igd_offset = igd_addr & (PAGE_SIZE - 1);
+  uint32_t igd_base = igd_addr & ~(PAGE_SIZE - 1);
+
   // TODO(stevensd): This is directly mapping a physical address into our address space, which
   // is not something we'll be able to do forever. At some point, there will need to be an
   // actual API (probably in ACPI) to do this.
-  zx_handle_t vmo;
-  uint32_t igd_opregion_pages_len_ = kIgdOpRegionLen + (igd_addr & PAGE_SIZE);
+  igd_opregion_pages_len_ = ZX_PAGE_ALIGN(kIgdOpRegionLen + igd_offset);
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  status = zx_vmo_create_physical(get_root_resource(), igd_addr & ~(PAGE_SIZE - 1),
-                                  igd_opregion_pages_len_, &vmo);
+  status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), igd_base,
+                                    igd_opregion_pages_len_, &igd_opregion_pages_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to access IGD OpRegion (%d)", status);
     return status;
   }
-  igd_opregion_pages_ = zx::vmo(vmo);
 
   status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, igd_opregion_pages_, 0,
                                       igd_opregion_pages_len_, &igd_opregion_pages_base_);
@@ -365,20 +371,49 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     return status;
   }
 
-  igd_opregion_ =
-      reinterpret_cast<igd_opregion_t*>(igd_opregion_pages_base_ + (igd_addr % PAGE_SIZE));
+  igd_opregion_ = reinterpret_cast<igd_opregion_t*>(igd_opregion_pages_base_ + igd_offset);
   if (!igd_opregion_->validate()) {
     zxlogf(ERROR, "Failed to validate IGD OpRegion");
     return ZX_ERR_INTERNAL;
   }
 
-  vbt_header_t* vbt_header = reinterpret_cast<vbt_header_t*>(&igd_opregion_->mailbox4);
+  vbt_header_t* vbt_header = nullptr;
+
+  if (igd_opregion_->major_version() == 2 && igd_opregion_->minor_version() == 1 &&
+      igd_opregion_->asle_supported()) {
+    auto [rvda, rvds] = igd_opregion_->vbt_region();
+
+    rvda += igd_base;
+    rvds += igd_offset;
+
+    vbt_region_size_ = ZX_PAGE_ALIGN(rvds);
+
+    status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), rvda,
+                                      vbt_region_size_, &vbt_region_vmo_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to create vbt region (%d)", status);
+      return status;
+    }
+
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0 /*vmar_offset*/, vbt_region_vmo_,
+                                        0 /*vmo_offset*/, vbt_region_size_, &vbt_region_base_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to map IGD OpRegion (%d)", status);
+      return status;
+    }
+
+    vbt_header = reinterpret_cast<vbt_header_t*>(vbt_region_base_ + igd_offset);
+
+  } else {
+    vbt_header = reinterpret_cast<vbt_header_t*>(&igd_opregion_->mailbox4);
+  }
+
   if (!vbt_header->validate()) {
     zxlogf(ERROR, "Failed to validate vbt header");
     return ZX_ERR_INTERNAL;
   }
 
-  bdb_ = reinterpret_cast<bios_data_blocks_header_t*>(igd_opregion_->mailbox4 +
+  bdb_ = reinterpret_cast<bios_data_blocks_header_t*>(reinterpret_cast<uintptr_t>(vbt_header) +
                                                       vbt_header->bios_data_blocks_offset);
   uint16_t vbt_size = vbt_header->vbt_size;
   if (!bdb_->validate() || bdb_->bios_data_blocks_size > vbt_size ||

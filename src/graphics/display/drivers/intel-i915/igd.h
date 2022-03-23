@@ -48,6 +48,25 @@ typedef struct igd_opregion {
   uint8_t mailbox4[kMaxVbtSize];
   uint8_t mailbox5[1024];
 
+  uint8_t major_version() const { return version >> 24; }
+  uint8_t minor_version() const { return (version >> 16) & 0xff; }
+
+  bool asle_supported() const { return supported_mailboxes & (1 << 2); }
+
+  struct vbt_region_t {
+    uint64_t rvda;
+    uint32_t rvds;
+  } __attribute__((__packed__));
+
+  vbt_region_t vbt_region() {
+    vbt_region_t region;
+    // According to the IGD OpRegion spec v0.5, this offset is the beginning
+    // of a reserved region.  It would be good to confirm this offset with a
+    // newer version of the spec.
+    std::memcpy(&region, &mailbox3[186], sizeof(vbt_region_t));
+    return region;
+  }
+
   bool validate() {
     const char* sig = "IntelGraphicsMem";
     return !memcmp(signature, reinterpret_cast<const void*>(sig), 16) &&
@@ -104,7 +123,6 @@ typedef struct vbt_header {
   bool validate() {
     const char* sig_prefix = "$VBT";
     return !memcmp(signature, sig_prefix, 4) && sizeof(bios_data_blocks_header_t) < vbt_size &&
-           vbt_size <= kMaxVbtSize &&
            bios_data_blocks_offset < vbt_size - sizeof(bios_data_blocks_header_t);
   }
 } vbt_header_t;
@@ -249,6 +267,10 @@ class IgdOpRegion {
   zx::vmo igd_opregion_pages_;
   uintptr_t igd_opregion_pages_base_;
   uintptr_t igd_opregion_pages_len_;
+  // Vbt region is optional; may be located in mailbox4
+  zx::vmo vbt_region_vmo_;
+  uintptr_t vbt_region_base_ = {};
+  uint32_t vbt_region_size_ = {};
   igd_opregion_t* igd_opregion_;
   bios_data_blocks_header_t* bdb_;
 
