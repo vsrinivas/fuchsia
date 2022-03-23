@@ -6,7 +6,7 @@
 
 # Fuchsia input drivers
 
-Fuchsia's input drivers implement the
+Fuchsia's [input drivers](/docs/reference/hardware/drivers.md) implement the
 [fuchsia.input.report](/sdk/fidl/fuchsia.input.report) FIDL API. Input drivers
 cover a range of input devices like mice, keyboards, touchscreens, consumer
 controls (media buttons), and sensors. Input drivers cover a range of protocols including USB,
