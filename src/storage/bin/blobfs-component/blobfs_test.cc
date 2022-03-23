@@ -10,7 +10,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
-#include <zircon/device/vfs.h>
 
 #include <gtest/gtest.h>
 

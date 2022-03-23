@@ -7,7 +7,6 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
-#include <zircon/device/vfs.h>
 
 #include <memory>
 
@@ -26,13 +25,6 @@ namespace fshost {
 #define FS_ALL        0x9FFF
 
 // clang-format on
-
-#define FS_READONLY_DIR_FLAGS (ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
-
-#define FS_READ_EXEC_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_EXECUTABLE)
-#define FS_READ_WRITE_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
-#define FS_READ_WRITE_EXEC_DIR_FLAGS \
-  (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE)
 
 class FsProvider {
   // Pure abstract interface describing how to get a clone of a channel to an fs handle.

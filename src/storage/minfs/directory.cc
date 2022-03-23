@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
 #include <memory>

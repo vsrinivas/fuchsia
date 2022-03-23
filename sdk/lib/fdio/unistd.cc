@@ -26,7 +26,6 @@
 #include <threads.h>
 #include <utime.h>
 #include <zircon/compiler.h>
-#include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -69,32 +68,14 @@ fdio_state_t __fdio_global_state = []() constexpr {
 }
 ();
 
-// Verify that the fuchsia.io flags align with ZXIO_FS_*. If any of these static assertions fire,
-// the corresponding constants in zircon/system/public/zircon/device/vfs.h need to be updated.
-static_assert(ZX_FS_RIGHT_READABLE == fio::wire::kOpenRightReadable, "Flag mismatch!");
-static_assert(ZX_FS_RIGHT_WRITABLE == fio::wire::kOpenRightWritable, "Flag mismatch!");
-static_assert(ZX_FS_RIGHT_EXECUTABLE == fio::wire::kOpenRightExecutable, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_CREATE == fio::wire::kOpenFlagCreate, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_EXCLUSIVE == fio::wire::kOpenFlagCreateIfAbsent, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_TRUNCATE == fio::wire::kOpenFlagTruncate, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_DIRECTORY == fio::wire::kOpenFlagDirectory, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_APPEND == fio::wire::kOpenFlagAppend, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_NOREMOTE == fio::wire::kOpenFlagNoRemote, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_VNODE_REF_ONLY == fio::wire::kOpenFlagNodeReference, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_DESCRIBE == fio::wire::kOpenFlagDescribe, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_NOT_DIRECTORY == fio::wire::kOpenFlagNotDirectory, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_CLONE_SAME_RIGHTS == fio::wire::kCloneFlagSameRights, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_POSIX_WRITABLE == fio::wire::kOpenFlagPosixWritable, "Flag mismatch!");
-static_assert(ZX_FS_FLAG_POSIX_EXECUTABLE == fio::wire::kOpenFlagPosixExecutable, "Flag mismatch!");
-
-// Verify the O_* flags which align with ZXIO_FS_*.
-static_assert(O_PATH == ZX_FS_FLAG_VNODE_REF_ONLY, "Open Flag mismatch");
-static_assert(O_CREAT == ZX_FS_FLAG_CREATE, "Open Flag mismatch");
-static_assert(O_EXCL == ZX_FS_FLAG_EXCLUSIVE, "Open Flag mismatch");
-static_assert(O_TRUNC == ZX_FS_FLAG_TRUNCATE, "Open Flag mismatch");
-static_assert(O_DIRECTORY == ZX_FS_FLAG_DIRECTORY, "Open Flag mismatch");
-static_assert(O_APPEND == ZX_FS_FLAG_APPEND, "Open Flag mismatch");
-static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
+// Verify the O_* flags which align with fuchsia.io.
+static_assert(O_PATH == fio::wire::kOpenFlagNodeReference, "Open Flag mismatch");
+static_assert(O_CREAT == fio::wire::kOpenFlagCreate, "Open Flag mismatch");
+static_assert(O_EXCL == fio::wire::kOpenFlagCreateIfAbsent, "Open Flag mismatch");
+static_assert(O_TRUNC == fio::wire::kOpenFlagTruncate, "Open Flag mismatch");
+static_assert(O_DIRECTORY == fio::wire::kOpenFlagDirectory, "Open Flag mismatch");
+static_assert(O_APPEND == fio::wire::kOpenFlagAppend, "Open Flag mismatch");
+static_assert(O_NOREMOTE == fio::wire::kOpenFlagNoRemote, "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
 constexpr uint32_t kZxioFsMask =
@@ -123,38 +104,34 @@ static_assert(!(O_LARGEFILE & kZxioFsFlags), "Unexpected collision with kZxioFsF
 static_assert(!(O_NOATIME & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
 static_assert(!(O_TMPFILE & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
 
-static constexpr uint32_t kZxFsFlagsAllowedWithOPath =
-    ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY |
-    ZX_FS_FLAG_DESCRIBE;
-
 static uint32_t fdio_flags_to_zxio(uint32_t flags) {
   uint32_t rights = 0;
   switch (flags & O_ACCMODE) {
     case O_RDONLY:
-      rights |= ZX_FS_RIGHT_READABLE;
+      rights |= fio::wire::kOpenRightReadable;
       break;
     case O_WRONLY:
-      rights |= ZX_FS_RIGHT_WRITABLE;
+      rights |= fio::wire::kOpenRightWritable;
       break;
     case O_RDWR:
-      rights |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+      rights |= fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
       break;
   }
 
-  uint32_t result = rights | ZX_FS_FLAG_DESCRIBE | (flags & kZxioFsMask);
+  uint32_t result = rights | fio::wire::kOpenFlagDescribe | (flags & kZxioFsMask);
 
-  if (!(result & ZX_FS_FLAG_VNODE_REF_ONLY)) {
-    result |= ZX_FS_FLAG_POSIX_WRITABLE | ZX_FS_FLAG_POSIX_EXECUTABLE;
+  if (!(result & fio::wire::kOpenFlagNodeReference)) {
+    result |= fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable;
   }
   return result;
 }
 
 static uint32_t zxio_flags_to_fdio(uint32_t flags) {
   uint32_t result = 0;
-  if ((flags & (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE)) ==
-      (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE)) {
+  if ((flags & (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) ==
+      (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) {
     result |= O_RDWR;
-  } else if (flags & ZX_FS_RIGHT_WRITABLE) {
+  } else if (flags & fio::wire::kOpenRightWritable) {
     result |= O_WRONLY;
   } else {
     result |= O_RDONLY;
@@ -222,17 +199,17 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
 
   uint32_t zx_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
 
-  if (!(zx_flags & ZX_FS_FLAG_DIRECTORY)) {
+  if (!(zx_flags & fio::wire::kOpenFlagDirectory)) {
     // At this point we're not sure if the path refers to a directory.
     // To emulate EISDIR behavior, if the flags are not compatible with directory,
     // use this flag to instruct open to error if the path turns out to be a directory.
     // Otherwise, opening a directory with O_RDWR will incorrectly succeed.
     if (enforce_eisdir && flags_incompatible_with_directory) {
-      zx_flags |= ZX_FS_FLAG_NOT_DIRECTORY;
+      zx_flags |= fio::wire::kOpenFlagNotDirectory;
     }
   }
-  if (zx_flags & ZX_FS_FLAG_VNODE_REF_ONLY) {
-    zx_flags &= kZxFsFlagsAllowedWithOPath;
+  if (zx_flags & fio::wire::kOpenFlagNodeReference) {
+    zx_flags &= fio::wire::kOpenFlagsAllowedWithNodeReference;
   }
   return iodir->open(clean.c_str(), zx_flags, mode);
 }

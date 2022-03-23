@@ -4,10 +4,10 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.feedback.testing/cpp/wire.h>
+#include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>

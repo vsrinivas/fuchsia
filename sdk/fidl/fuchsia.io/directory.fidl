@@ -37,9 +37,6 @@ const OPEN_FLAG_NO_REMOTE uint32 = 0x00200000;
 /// The resulting node allows a limited set of operations: `GetAttr`, `Clone`, `Close`, `Describe`,
 /// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
 const OPEN_FLAG_NODE_REFERENCE uint32 = 0x00400000;
-/// Binary OR of `OPEN_FLAG_DIRECTORY`, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
-/// `OPEN_FLAG_NODE_REFERENCE`. Flags used when opening a node reference must fall within this mask.
-const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 = 0x02c80000;
 /// Requests that an "OnOpen" event is sent to the interface request.
 /// The event will contain a non-null NodeInfo if the open/clone is successful.
 const OPEN_FLAG_DESCRIBE uint32 = 0x00800000;
@@ -86,6 +83,16 @@ const OPEN_FLAG_NOT_DIRECTORY uint32 = 0x02000000;
 /// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
 /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
 const CLONE_FLAG_SAME_RIGHTS uint32 = 0x04000000;
+
+/// All known rights.
+const OPEN_RIGHTS uint32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
+
+/// A mask for all possible rights including future extensions.
+const OPEN_RIGHTS_MASK uint32 = 0x0000FFFF;
+
+/// Flags used when opening a node reference must fall within this mask.
+const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32
+        = OPEN_FLAG_DIRECTORY | OPEN_FLAG_NOT_DIRECTORY | OPEN_FLAG_DESCRIBE | OPEN_FLAG_NODE_REFERENCE;
 
 /// Bits reserved for posix protections. Native fuchsia filesystems
 /// are not required to set bits contained within `MODE_PROTECTION_MASK`,

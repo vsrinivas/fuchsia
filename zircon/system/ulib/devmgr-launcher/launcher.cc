@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
@@ -15,7 +16,6 @@
 #include <lib/zx/process.h>
 #include <stdint.h>
 #include <zircon/assert.h>
-#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
@@ -72,7 +72,9 @@ zx_status_t LaunchDriverIndex(const Args& args, zx::job& job, zx::channel svc_cl
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+  status = fdio_open("/pkg",
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
+                         fuchsia_io::wire::kOpenFlagDirectory,
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -179,7 +181,9 @@ zx_status_t LaunchFshost(const Args& args, zx::job& job, zx::channel svc_client,
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+  status = fdio_open("/pkg",
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
+                         fuchsia_io::wire::kOpenFlagDirectory,
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -328,7 +332,9 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+  status = fdio_open("/pkg",
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
+                         fuchsia_io::wire::kOpenFlagDirectory,
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -345,7 +351,9 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+  status = fdio_open("/pkg",
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
+                         fuchsia_io::wire::kOpenFlagDirectory,
                      remote.release());
   if (status != ZX_OK) {
     return status;

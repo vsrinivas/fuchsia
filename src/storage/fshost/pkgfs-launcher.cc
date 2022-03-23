@@ -25,13 +25,17 @@ namespace fshost {
 namespace {
 
 zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs_root) {
+  constexpr auto kFlags =
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDirectory |
+      fuchsia_io::wire::kOpenFlagNoRemote | fuchsia_io::wire::kOpenRightExecutable;
+
   // re-export /pkgfs/system as /system
   zx::channel system_channel, system_req;
   zx_status_t status = zx::channel::create(0, &system_channel, &system_req);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status = fdio_open_at(pkgfs_root.get(), "system", FS_READ_EXEC_DIR_FLAGS, system_req.release());
+  status = fdio_open_at(pkgfs_root.get(), "system", kFlags, system_req.release());
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -41,8 +45,8 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status = fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_READ_EXEC_DIR_FLAGS,
-                        bin_req.release());
+  status =
+      fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", kFlags, bin_req.release());
   if (status != ZX_OK) {
     // non-fatal.
     FX_LOGS(WARNING) << "failed to install /bin (could not open shell-commands)";

@@ -8,7 +8,6 @@
 #include <limits.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
@@ -30,7 +29,7 @@ zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
   if (fs_rights.write) {
     rights |= ZX_RIGHT_WRITE;
   }
-  // TODO(mdempsky): Add ZX_FS_RIGHT_EXECUTABLE flag?
+  // TODO(mdempsky): Add ZX_RIGHT_EXECUTE?
   return rights;
 }
 

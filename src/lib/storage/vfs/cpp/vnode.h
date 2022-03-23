@@ -37,7 +37,6 @@
 #include <lib/file-lock/file-lock.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
-#include <zircon/device/vfs.h>
 #endif  // __Fuchsia__
 
 namespace fs {

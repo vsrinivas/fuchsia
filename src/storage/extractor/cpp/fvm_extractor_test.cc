@@ -11,7 +11,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
 
 #include <algorithm>
 #include <climits>

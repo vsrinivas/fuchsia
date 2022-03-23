@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 

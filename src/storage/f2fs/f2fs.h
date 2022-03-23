@@ -7,7 +7,6 @@
 
 // clang-format off
 #ifdef __Fuchsia__
-#include <zircon/device/vfs.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

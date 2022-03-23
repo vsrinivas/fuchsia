@@ -12,7 +12,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <zircon/device/vfs.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 

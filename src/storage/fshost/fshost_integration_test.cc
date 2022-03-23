@@ -4,9 +4,9 @@
 
 #include "src/storage/fshost/fshost_integration_test.h"
 
+#include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <sys/statfs.h>
-#include <zircon/device/vfs.h>
 
 namespace fshost {
 

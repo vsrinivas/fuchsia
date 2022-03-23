@@ -18,7 +18,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include <utility>

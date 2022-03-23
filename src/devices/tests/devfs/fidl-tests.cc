@@ -6,7 +6,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -72,8 +71,8 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(
-        fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, endpoints->server.channel().release()));
+    ASSERT_OK(fdio_ns_connect(ns, "/dev", fio::wire::kOpenRightReadable,
+                              endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice)));
     ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "class/platform-bus/000",
@@ -90,8 +89,8 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(
-        fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, endpoints->server.channel().release()));
+    ASSERT_OK(fdio_ns_connect(ns, "/boot", fio::wire::kOpenRightReadable,
+                              endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "lib", zx::ok(fio::wire::NodeInfo::Tag::kDirectory)));
     ASSERT_NO_FAILURES(FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",

@@ -13,7 +13,6 @@
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
-#include <zircon/device/vfs.h>
 #include <zircon/lookup.h>
 
 #include <cerrno>

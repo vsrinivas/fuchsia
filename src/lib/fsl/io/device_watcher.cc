@@ -10,7 +10,6 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/types.h>
-#include <zircon/device/vfs.h>
 
 #include <utility>
 

@@ -43,7 +43,9 @@ class InspectManagerTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(endpoints.is_ok());
     auto [client, server] = *std::move(endpoints);
-    EXPECT_EQ(ZX_OK, fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+    EXPECT_EQ(ZX_OK, fdio_open(kTmpfsPath,
+                               fuchsia_io::wire::kOpenRightReadable |
+                                   fuchsia_io::wire::kOpenRightExecutable,
                                server.TakeChannel().release()));
     return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
   }
@@ -133,8 +135,10 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_TRUE(endpoints.is_ok());
   auto [root, server] = *std::move(endpoints);
-  ASSERT_EQ(ZX_OK, fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-                             server.TakeChannel().release()));
+  ASSERT_EQ(ZX_OK,
+            fdio_open(kTmpfsPath,
+                      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable,
+                      server.TakeChannel().release()));
   fidl::ClientEnd<fuchsia_io::Node> test_dir_chan;
   auto status = fshost::OpenNode(root, "/iterator-test", S_IFDIR, &test_dir_chan);
   ASSERT_EQ(status, ZX_OK);

@@ -18,7 +18,6 @@
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-#include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
 #include <algorithm>

@@ -9,7 +9,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
-#include <zircon/device/vfs.h>
 
 #include <gmock/gmock.h>
 #include <sdk/lib/inspect/testing/cpp/inspect.h>

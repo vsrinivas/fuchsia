@@ -129,7 +129,7 @@ TEST(DirectoryTest, OpenFD) {
     // Path must start with '/'.
     ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("pkg", kReadFlags, fd.reset_and_get_address()));
 
-    // fdio_open_fd sets ZX_FS_FLAG_DIRECTORY if the path ends in '/'.
+    // fdio_open_fd sets OPEN_FLAG_DIRECTORY if the path ends in '/'.
     ASSERT_STATUS(ZX_ERR_NOT_DIR,
                   fdio_open_fd("/pkg/test/fdio-test/", kReadFlags, fd.reset_and_get_address()));
   }
@@ -165,7 +165,7 @@ TEST(DirectoryTest, OpenFD) {
     ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test/..", kReadFlags, fd2.reset_and_get_address()));
     ASSERT_TRUE(fd2.is_valid());
 
-    // fdio_open_fd_at sets ZX_FS_FLAG_DIRECTORY if the path ends in '/'.
+    // fdio_open_fd_at sets OPEN_FLAG_DIRECTORY if the path ends in '/'.
     ASSERT_STATUS(ZX_ERR_NOT_DIR,
                   fdio_open_fd_at(fd.get(), "fdio-test/", kReadFlags, fd2.reset_and_get_address()));
     ASSERT_FALSE(fd2.is_valid());

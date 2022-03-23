@@ -7,9 +7,6 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 
-#define FS_READONLY_DIR_FLAGS (ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY)
-#define FS_READ_WRITE_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
-
 class FsProvider {
   // Pure abstract interface describing how to get a clone of a channel to an fs handle.
  public:

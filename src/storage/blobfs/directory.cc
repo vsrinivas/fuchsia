@@ -9,7 +9,6 @@
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/vfs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 

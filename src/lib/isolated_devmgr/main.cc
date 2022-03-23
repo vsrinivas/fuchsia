@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/remote_dir.h>
-#include <zircon/device/vfs.h>
 
 #include <iostream>
 #include <string_view>
@@ -157,7 +157,9 @@ int main(int argc, const char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to create channel";
       return ISO_DEV_MGR_RET_ERR;
     }
-    status = fdio_open(ns.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, server.release());
+    status = fdio_open(
+        ns.c_str(), fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable,
+        server.release());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to open namespace " << ns;
       return ISO_DEV_MGR_RET_ERR;

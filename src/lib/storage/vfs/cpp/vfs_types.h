@@ -7,7 +7,6 @@
 
 #include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
-#include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__

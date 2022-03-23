@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
@@ -14,7 +15,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
-#include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
 #include <iostream>
@@ -480,7 +480,8 @@ int EthernetClientFactory::OpenDir() {
       return -1;
     }
     auto status = fdio_open_at(devfs_root_.get(), base_dir_.c_str(),
-                               ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE, srv.release());
+                               fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE,
+                               srv.release());
     if (status != ZX_OK) {
       std::cerr << "Failed to open ethernet directory " << base_dir_ << ", "
                 << static_cast<bool>(devfs_root_) << " - " << zx_status_get_string(status);

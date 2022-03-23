@@ -43,8 +43,9 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
 
   auto foo = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(foo.status_value(), ZX_OK);
-  zx_status_t status = fdio_open_at(root->client.channel().get(), "fs/foo", ZX_FS_RIGHT_READABLE,
-                                    foo->server.channel().release());
+  zx_status_t status =
+      fdio_open_at(root->client.channel().get(), "fs/foo", fuchsia_io::wire::kOpenRightReadable,
+                   foo->server.channel().release());
   ASSERT_EQ(status, ZX_OK);
 
   // If we attempt to read from the channel behind DelayedOutdir, we should see

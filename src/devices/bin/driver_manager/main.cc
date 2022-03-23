@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <getopt.h>
@@ -16,7 +17,6 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <threads.h>
-#include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -38,7 +38,6 @@
 #include "driver_host_loader_service.h"
 #include "driver_runner.h"
 #include "fdio.h"
-#include "fidl/fuchsia.io/cpp/wire.h"
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/bin/driver_manager/driver_development_service.h"
@@ -465,7 +464,8 @@ int main(int argc, char** argv) {
   {
     std::string library_path = driver_manager_args.path_prefix + "lib";
     status = fdio_open_fd(library_path.c_str(),
-                          ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                          fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                              fio::wire::kOpenRightExecutable,
                           lib_fd.reset_and_get_address());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to open %s: %s", library_path.c_str(), zx_status_get_string(status));

@@ -12,7 +12,6 @@
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
-#include <zircon/device/vfs.h>
 
 #include <gmock/gmock.h>
 #include <src/lib/fxl/strings/substitute.h>

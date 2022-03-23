@@ -167,7 +167,7 @@ void FileConnection::Resize(ResizeRequestView request, ResizeCompleter::Sync& co
 }
 
 void FileConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
-  uint32_t flags = options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS);
+  uint32_t flags = options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights);
   completer.Reply(ZX_OK, flags);
 }
 

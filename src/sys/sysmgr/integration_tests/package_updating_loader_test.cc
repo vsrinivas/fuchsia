@@ -17,7 +17,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -44,7 +43,8 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
                        ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                        ResolveCallback callback) override {
     args_ = std::make_tuple(package_uri);
-    fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, dir.TakeChannel().release());
+    fdio_open("/pkg", fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
+              dir.TakeChannel().release());
     if (error_) {
       callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithErr(
           std::forward<fuchsia::pkg::ResolveError>(error_.value())));

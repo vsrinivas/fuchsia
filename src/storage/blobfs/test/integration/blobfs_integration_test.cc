@@ -28,7 +28,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <utime.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
 #include <zircon/time.h>

@@ -14,7 +14,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
-#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -92,7 +91,9 @@ static zx_status_t AddAuxDirToSpawnAction(const char* local_path, const char* re
     return false;
   }
 
-  status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
+  status =
+      fdio_open(local_path, fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                server.release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;
@@ -158,7 +159,9 @@ static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_pat
     return false;
   }
 
-  status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
+  status =
+      fdio_open(local_path, fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                server.release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;

@@ -36,7 +36,6 @@
 #include <unistd.h>
 #include <utime.h>
 #include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>

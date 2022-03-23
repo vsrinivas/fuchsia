@@ -1,13 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/global.h>
-#include <zircon/device/vfs.h>
 
 #include <zxtest/zxtest.h>
 
@@ -22,7 +22,9 @@ void StartDriverTestRealm() {
 
   auto interface = fidl::InterfaceHandle<fuchsia::io::Directory>();
   zx_status_t status =
-      fdio_open("/pkg", ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+      fdio_open("/pkg",
+                fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
+                    fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                 interface.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return;

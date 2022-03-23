@@ -15,7 +15,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/vfs.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +20,6 @@
 #include <sys/statvfs.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include <utility>

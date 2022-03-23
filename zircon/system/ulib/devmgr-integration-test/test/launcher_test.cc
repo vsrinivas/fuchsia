@@ -11,7 +11,6 @@
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/vfs.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>

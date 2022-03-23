@@ -452,6 +452,8 @@ const fuchsia.io/OPEN_FLAG_POSIX_DEPRECATED uint32 16777216
 const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE uint32 268435456
 const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE uint32 134217728
 const fuchsia.io/OPEN_FLAG_TRUNCATE uint32 262144
+const fuchsia.io/OPEN_RIGHTS uint32 11
+const fuchsia.io/OPEN_RIGHTS_MASK uint32 65535
 const fuchsia.io/OPEN_RIGHT_EXECUTABLE uint32 8
 const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2

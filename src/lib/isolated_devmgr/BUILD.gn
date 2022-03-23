@@ -43,6 +43,7 @@ executable("isolated_devmgr") {
 
   deps = [
     ":src",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

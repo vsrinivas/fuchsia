@@ -4,6 +4,7 @@
 
 #include "fshost-fs-provider.h"
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
@@ -12,12 +13,13 @@
 namespace fshost {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
-  int flags = FS_READ_WRITE_DIR_FLAGS;
+  int flags = fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+              fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenFlagNoRemote;
   if (strcmp(path, "data") == 0) {
     path = "/fs/data";
   } else if (strcmp(path, "blobexec") == 0) {
     path = "/blob";
-    flags = FS_READ_WRITE_EXEC_DIR_FLAGS;
+    flags |= fuchsia_io::wire::kOpenRightExecutable;
   } else {
     FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Cannot clone: " << path;
     return zx::channel();

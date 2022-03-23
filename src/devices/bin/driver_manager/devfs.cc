@@ -13,7 +13,6 @@
 #include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -446,14 +445,14 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       path = nullptr;
     }
 
-    auto describe =
-        [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
-          if (describe) {
-            __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
-                node_info.status_value(),
-                node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
-          }
-        };
+    auto describe = [&ipc, describe = flags & fio::wire::kOpenFlagDescribe](
+                        zx::status<fio::wire::NodeInfo> node_info) {
+      if (describe) {
+        __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
+            node_info.status_value(),
+            node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
+      }
+    };
 
     Devnode* dn = dirdn;
     if (zx_status_t status = devfs_walk(&dn, path); status != ZX_OK) {
@@ -463,7 +462,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
 
     // If we are a local-only node, or we are asked to not go remote, or we are asked to
     // open-as-a-directory, open locally:
-    if (devnode_is_local(dn) || flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
+    if (devnode_is_local(dn) ||
+        flags & (fio::wire::kOpenFlagNoRemote | fio::wire::kOpenFlagDirectory)) {
       auto ios = std::make_unique<DcIostate>(dn, dispatcher);
       if (ios == nullptr) {
         describe(zx::error(ZX_ERR_NO_MEMORY));
@@ -681,12 +681,12 @@ void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
 }
 
 void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-    request->flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+  if (request->flags & fio::wire::kCloneFlagSameRights) {
+    request->flags |= fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   }
   char path[] = ".";
   devfs_open(devnode_, dispatcher_, std::move(request->object), path,
-             request->flags | ZX_FS_FLAG_NOREMOTE);
+             request->flags | fio::wire::kOpenFlagNoRemote);
 }
 
 void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
@@ -902,7 +902,7 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
       return endpoints.status_value();
     }
     auto result = fidl::WireCall(dn->service_dir)
-                      ->Clone(ZX_FS_FLAG_CLONE_SAME_RIGHTS, std::move(endpoints->server));
+                      ->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server));
     if (!result.ok()) {
       return result.status();
     }

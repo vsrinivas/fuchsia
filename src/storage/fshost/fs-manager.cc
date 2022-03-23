@@ -22,7 +22,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>

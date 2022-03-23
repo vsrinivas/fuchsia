@@ -124,7 +124,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/device/network.h",
         "zircon/device/usb-peripheral.h",
         "zircon/device/usb-peripheral-test.h",
-        "zircon/device/vfs.h",
       ]
     }
   },

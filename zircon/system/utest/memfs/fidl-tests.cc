@@ -12,13 +12,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/vfs.h>
 #include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -83,13 +83,13 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
 
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE,
+  ASSERT_OK(fdio_open("/fidltmp-ro/file-ro", fio::wire::kOpenRightReadable,
                       endpoints->server.TakeChannel().release()));
 
   auto result = fidl::WireCall(endpoints->client)->GetFlags();
   ASSERT_OK(result.status());
   ASSERT_OK(result.Unwrap()->s);
-  ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
+  ASSERT_EQ(result.Unwrap()->flags, fio::wire::kOpenRightReadable);
   endpoints->client.TakeChannel().reset();
 
   sync_completion_t unmounted;

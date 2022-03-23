@@ -62,7 +62,7 @@ zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
 
 bool PrevalidateFlags(uint32_t flags) {
   // If the caller specified an unknown right, reject the request.
-  if ((flags & ZX_FS_RIGHTS_SPACE) & ~ZX_FS_RIGHTS) {
+  if ((flags & fio::wire::kOpenRightsMask) & ~fio::wire::kOpenRights) {
     return false;
   }
 
@@ -359,7 +359,7 @@ zx::status<> Connection::NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
 }
 
 zx::status<uint32_t> Connection::NodeGetFlags() {
-  return zx::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
+  return zx::ok(options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights));
 }
 
 zx::status<> Connection::NodeSetFlags(uint32_t flags) {

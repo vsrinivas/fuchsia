@@ -16,7 +16,6 @@
 #include <string.h>
 #include <strings.h>
 #include <zircon/assert.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>

@@ -51,6 +51,7 @@ test("autobind-test") {
   sources = [ "test.cc" ]
   deps = [
     ":component",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
     "//src/devices/internal/drivers/fragment",

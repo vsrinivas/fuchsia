@@ -5,7 +5,6 @@
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <zircon/device/vfs.h>
 
 #include <string_view>
 #include <utility>

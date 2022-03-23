@@ -19,7 +19,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -162,7 +161,8 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
     if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
       return status;
     }
-    if ((status = fdio_open("/fs/system", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+    if ((status = fdio_open("/fs/system",
+                            fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                             server.release())) != ZX_OK) {
       FX_LOGS(ERROR) << "cannot open connection to /system: " << status;
       return status;

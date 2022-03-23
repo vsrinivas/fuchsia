@@ -110,8 +110,11 @@ fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path)
   } else if (!strncmp(path, "dev/", 4)) {
     zx::unowned_channel fs = devfs_root_borrow();
     path += 4;
-    status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS,
-                          endpoints->server.TakeChannel().release());
+    status =
+        fdio_open_at(fs->get(), path,
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+                         fuchsia_io::wire::kOpenFlagDirectory,
+                     endpoints->server.TakeChannel().release());
   }
   if (status != ZX_OK) {
     LOGF(ERROR, "CloneFs failed for '%s': %s", path, zx_status_get_string(status));

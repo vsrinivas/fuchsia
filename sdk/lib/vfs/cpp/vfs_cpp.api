@@ -1,7 +1,7 @@
 {
   "pkg/vfs_cpp/include/lib/vfs/cpp/composed_service_dir.h": "32982ffdcc2d4a84711559231a8e6c9e",
   "pkg/vfs_cpp/include/lib/vfs/cpp/flags.h": "d0a0c0cd7679dbc4dc6a7d61dc283de2",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/connection.h": "8ab3b12aa6e08e0d0d844c128c0d09e9",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/connection.h": "35805399a551f509d1228438c8b6aefe",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory.h": "e40bbe7bddf5f2f74508cfb0fff40675",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory_connection.h": "a88a4d638b42cb240c496b3081ef2cb1",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/dirent_filler.h": "ee345a473fcd059824371a39bf82a6c5",

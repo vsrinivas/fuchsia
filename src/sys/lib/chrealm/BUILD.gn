@@ -8,6 +8,8 @@ source_set("chrealm") {
     "chrealm.h",
   ]
 
+  deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp" ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fdio",

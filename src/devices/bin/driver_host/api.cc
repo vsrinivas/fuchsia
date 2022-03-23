@@ -12,7 +12,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 
 #include <utility>
@@ -192,8 +191,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
   if (dev && client_remote.is_valid()) {
     // This needs to be called outside the api lock, as device_open will be called
-    internal::ContextForApi()->DeviceConnect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                                             std::move(client_remote));
+    internal::ContextForApi()->DeviceConnect(
+        dev, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+        std::move(client_remote));
 
     // Leak the reference that was written to |out|, it will be recovered in device_remove().
     // For device instances we mimic the behavior of |open| by not leaking the reference,

@@ -22,7 +22,6 @@
 #include <safemath/checked_math.h>
 
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include "zircon/device/vfs.h"
 
 namespace {
 

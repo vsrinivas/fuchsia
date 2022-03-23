@@ -10,7 +10,6 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/vfs.h>
 
 #include "src/lib/storage/block_client/cpp/reader.h"
 #include "src/lib/storage/block_client/cpp/writer.h"
@@ -92,7 +91,7 @@ zx_status_t RemoteBlockDevice::VolumeGetInfo(
   if (status != ZX_OK) {
     return status;
   }
-  uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+  uint32_t flags = fio::wire::kCloneFlagSameRights;
   auto result = fidl::WireCall<fio::Node>(device_.borrow())->Clone(flags, std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();

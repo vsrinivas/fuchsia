@@ -45,7 +45,6 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "zircon/system/public/zircon/device/vfs.h"
 
 namespace {
 
@@ -364,7 +363,9 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
         return;
       }
       zx_status_t status =
-          fdio_open("/pkg", ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+          fdio_open("/pkg",
+                    fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenRightReadable |
+                        fuchsia_io::wire::kOpenRightExecutable,
                     endpoints->server.channel().release());
       if (status != ZX_OK) {
         completer.ReplyError(ZX_ERR_INTERNAL);

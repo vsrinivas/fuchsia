@@ -17,7 +17,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 
 #include <string>
 #include <utility>

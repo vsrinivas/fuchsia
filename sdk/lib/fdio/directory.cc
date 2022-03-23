@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <zircon/device/vfs.h>
 
 #include <fbl/auto_lock.h>
 
@@ -16,12 +15,12 @@ namespace fio = fuchsia_io;
 
 __EXPORT
 zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
-  return fdio_open(path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
+  return fdio_open(path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, h);
 }
 
 __EXPORT
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h) {
-  return fdio_open_at(dir, path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
+  return fdio_open_at(dir, path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, h);
 }
 
 __EXPORT
@@ -84,7 +83,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
     return status;
   }
 
-  if (flags & ZX_FS_FLAG_DESCRIBE) {
+  if (flags & fio::wire::kOpenFlagDescribe) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -102,7 +101,7 @@ zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, std::string_view path, ui
   // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
   // is valid before returning from here, and mimics how open() and openat() behave
   // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
-  flags |= ZX_FS_FLAG_DESCRIBE;
+  flags |= fio::wire::kOpenFlagDescribe;
 
   zx::status io = iodir->open(path.data(), flags, mode);
   if (io.is_error()) {
@@ -132,7 +131,7 @@ zx_status_t fdio_open_fd(const char* dirty_path, uint32_t flags, int* out_fd) {
   }
   std::string_view clean_path = clean;
   if (has_ending_slash) {
-    flags |= ZX_FS_FLAG_DIRECTORY;
+    flags |= fio::wire::kOpenFlagDirectory;
   }
 
   // Since we are sending a request to the root handle, require that we start at '/'. (In fdio_open
@@ -163,7 +162,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* dirty_path, uint32_t flags, 
   }
   std::string_view clean_path = clean;
   if (has_ending_slash) {
-    flags |= ZX_FS_FLAG_DIRECTORY;
+    flags |= fio::wire::kOpenFlagDirectory;
   }
 
   fdio_ptr iodir = fd_to_io(dir_fd);
@@ -194,6 +193,6 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
   if (!node.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+  uint32_t flags = fio::wire::kCloneFlagSameRights;
   return fidl::WireCall(node)->Clone(flags, std::move(request)).status();
 }

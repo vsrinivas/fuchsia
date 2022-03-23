@@ -30,6 +30,20 @@ WatcherContainer::VnodeWatcher::VnodeWatcher(
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() = default;
 
+namespace {
+
+// Watch event messages are sent via the provided channel and take the form:
+// { uint8_t event; uint8_t namelen; uint8_t name[namelen]; }
+// Multiple events may arrive in one message, one after another.
+// Names do not include a terminating null.
+using vfs_watch_msg_t = struct {
+  uint8_t event;
+  uint8_t len;
+  char name[];
+};
+
+}  // namespace
+
 // Transmission buffer for sending directory watcher notifications to clients. Allows enqueueing
 // multiple messages in a buffer before sending an IPC message to a client.
 class WatchBuffer {

@@ -113,7 +113,7 @@ class TestDirectory : public fio::testing::Directory_TestBase {
 
  private:
   void Clone(uint32_t flags, fidl::InterfaceRequest<fio::Node> object) override {
-    EXPECT_EQ(ZX_FS_FLAG_CLONE_SAME_RIGHTS, flags);
+    EXPECT_EQ(fuchsia::io::CLONE_FLAG_SAME_RIGHTS, flags);
     fidl::InterfaceRequest<fio::Directory> dir(object.TakeChannel());
     Bind(std::move(dir));
   }

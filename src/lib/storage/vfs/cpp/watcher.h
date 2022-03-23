@@ -10,7 +10,6 @@
 #endif
 
 #include <lib/zx/channel.h>
-#include <zircon/device/vfs.h>
 
 #include <memory>
 #include <mutex>

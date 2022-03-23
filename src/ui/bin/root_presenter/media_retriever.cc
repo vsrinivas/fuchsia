@@ -6,7 +6,6 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
 namespace root_presenter {
@@ -26,7 +25,7 @@ MediaRetriever::ResetSoundResult MediaRetriever::GetResetSound() {
   {
     std::string path(CONFIG_DATA_PATH);
     path += FACTORY_RESET_SOUND_PATH;
-    open_status = fdio_open(path.c_str(), ZX_FS_RIGHT_READABLE,
+    open_status = fdio_open(path.c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
                             sound_file.NewRequest().TakeChannel().release());
   }
 

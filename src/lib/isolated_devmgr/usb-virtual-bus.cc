@@ -17,7 +17,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 #include <zircon/hw/usb.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

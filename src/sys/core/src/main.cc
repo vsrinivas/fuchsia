@@ -9,7 +9,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
-#include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -27,7 +26,9 @@ void ServeFromNamespace(fs::PseudoDir* out_dir, const char* ns_path, const char*
   zx::channel ns_server, ns_client;
   status = zx::channel::create(0, &ns_server, &ns_client);
   FX_CHECK(status == ZX_OK) << "failed to create channel: " << zx_status_get_string(status);
-  status = fdio_open(ns_path, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
+  status = fdio_open(ns_path,
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDirectory |
+                         fuchsia_io::wire::kOpenRightWritable,
                      ns_server.release());
   FX_CHECK(status == ZX_OK) << "failed to open " << ns_path << ": " << zx_status_get_string(status);
 

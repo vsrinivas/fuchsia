@@ -264,8 +264,7 @@ protocol Node1 {
             /// The maximum length of a filesystem name.
             max_filename_size uint32;
 
-            /// A unique identifier for the type of the underlying filesystem. These constants are
-            /// the VFS_TYPE_* constants defined in zircon/device/vfs.h.
+            /// A unique identifier for the type of the underlying filesystem.
             fs_type uint32;
 
             padding uint32;

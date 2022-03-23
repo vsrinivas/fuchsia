@@ -5,8 +5,6 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_DEBUG_H_
 #define SRC_LIB_STORAGE_VFS_CPP_DEBUG_H_
 
-#include <zircon/device/vfs.h>
-
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
@@ -43,72 +41,6 @@ struct Path {
 };
 
 namespace debug_internal {
-
-// TODO(fxbug.dev/81185): Remove kFlagPosixDeprecated when OPEN_FLAG_POSIX_DEPRECATED has been
-// removed from fuchsia.io.
-static constexpr uint32_t kFlagPosixDeprecated = 0x01000000U;
-#ifdef __Fuchsia__
-static_assert(kFlagPosixDeprecated == fuchsia_io::wire::kOpenFlagPosixDeprecated, "Flag mismatch!");
-#endif
-
-constexpr const char* FlagToString(uint32_t flag) {
-  switch (flag) {
-    case ZX_FS_RIGHT_READABLE:
-      return "RIGHT_READABLE";
-    case ZX_FS_RIGHT_WRITABLE:
-      return "RIGHT_WRITABLE";
-    case ZX_FS_RIGHT_EXECUTABLE:
-      return "RIGHT_EXECUTABLE";
-    case ZX_FS_RIGHTS:
-      return "RIGHTS";
-    case ZX_FS_FLAG_CREATE:
-      return "FLAG_CREATE";
-    case ZX_FS_FLAG_EXCLUSIVE:
-      return "FLAG_EXCLUSIVE";
-    case ZX_FS_FLAG_TRUNCATE:
-      return "FLAG_TRUNCATE";
-    case ZX_FS_FLAG_DIRECTORY:
-      return "FLAG_DIRECTORY";
-    case ZX_FS_FLAG_APPEND:
-      return "FLAG_APPEND";
-    case ZX_FS_FLAG_NOREMOTE:
-      return "FLAG_NOREMOTE";
-    case ZX_FS_FLAG_VNODE_REF_ONLY:
-      return "FLAG_VNODE_REF_ONLY";
-    case ZX_FS_FLAG_DESCRIBE:
-      return "FLAG_DESCRIBE";
-    case kFlagPosixDeprecated:
-      return "FLAG_POSIX_DEPRECATED";
-    case ZX_FS_FLAG_POSIX_WRITABLE:
-      return "FLAG_POSIX_WRITABLE";
-    case ZX_FS_FLAG_POSIX_EXECUTABLE:
-      return "FLAG_POSIX_EXECUTABLE";
-    case ZX_FS_FLAG_NOT_DIRECTORY:
-      return "FLAG_NOT_DIRECTORY";
-    case ZX_FS_FLAG_CLONE_SAME_RIGHTS:
-      return "FLAG_CLONE_SAME_RIGHTS";
-    default:
-      return "(Unknown flag)";
-  }
-}
-
-template <size_t N>
-void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, ZxFlags flags) {
-  bool first = true;
-  uint32_t bit = 1;
-  for (int i = 0; i < 32; i++) {
-    const uint32_t flag = flags.value & bit;
-    if (flag) {
-      const char* desc = FlagToString(flag);
-      if (!first) {
-        sb->Append(" | ");
-      }
-      first = false;
-      sb->Append(desc);
-    }
-    bit = bit << 1U;
-  }
-}
 
 template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, VnodeConnectionOptions options) {
@@ -197,6 +129,63 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::NodeAttri
       sb->Append(desc);
     }
     flags ^= flag;
+  }
+}
+
+constexpr const char* FlagToString(uint32_t flag) {
+  switch (flag) {
+    case fuchsia_io::wire::kOpenRightReadable:
+      return "RIGHT_READABLE";
+    case fuchsia_io::wire::kOpenRightWritable:
+      return "RIGHT_WRITABLE";
+    case fuchsia_io::wire::kOpenRightExecutable:
+      return "RIGHT_EXECUTABLE";
+    case fuchsia_io::wire::kOpenFlagCreate:
+      return "CREATE";
+    case fuchsia_io::wire::kOpenFlagCreateIfAbsent:
+      return "CREATE_IF_ABSENT";
+    case fuchsia_io::wire::kOpenFlagTruncate:
+      return "TRUNCATE";
+    case fuchsia_io::wire::kOpenFlagDirectory:
+      return "DIRECTORY";
+    case fuchsia_io::wire::kOpenFlagAppend:
+      return "APPEND";
+    case fuchsia_io::wire::kOpenFlagNoRemote:
+      return "NO_REMOTE";
+    case fuchsia_io::wire::kOpenFlagNodeReference:
+      return "NODE_REFEREFENCE";
+    case fuchsia_io::wire::kOpenFlagDescribe:
+      return "DESCRIBE";
+    case fuchsia_io::wire::kOpenFlagPosixDeprecated:
+      return "POSIX_DEPRECATED";
+    case fuchsia_io::wire::kOpenFlagPosixWritable:
+      return "POSIX_WRITABLE";
+    case fuchsia_io::wire::kOpenFlagPosixExecutable:
+      return "POSIX_EXECUTABLE";
+    case fuchsia_io::wire::kOpenFlagNotDirectory:
+      return "NOT_DIRECTORY";
+    case fuchsia_io::wire::kCloneFlagSameRights:
+      return "CLONE_SAME_RIGHTS";
+    default:
+      return "(Unknown flag)";
+  }
+}
+
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, ZxFlags flags) {
+  bool first = true;
+  uint32_t bit = 1;
+  for (int i = 0; i < 32; i++) {
+    const uint32_t flag = flags.value & bit;
+    if (flag) {
+      const char* desc = FlagToString(flag);
+      if (!first) {
+        sb->Append(" | ");
+      }
+      first = false;
+      sb->Append(desc);
+    }
+    bit = bit << 1U;
   }
 }
 

@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 

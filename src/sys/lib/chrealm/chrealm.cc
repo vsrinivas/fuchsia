@@ -5,6 +5,7 @@
 #include "src/sys/lib/chrealm/chrealm.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -15,7 +16,6 @@
 #include <lib/zx/job.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -74,7 +74,8 @@ zx_status_t SpawnBinaryInRealmAsync(const std::string& realm_path, const char** 
     *error = "Could not create channel";
     return status;
   }
-  status = fdio_open(realm_path.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+  status = fdio_open(realm_path.c_str(),
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
                      realm_hub_server.release());
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Could not open hub in realm: %s", realm_path.c_str());
@@ -89,7 +90,8 @@ zx_status_t SpawnBinaryInRealmAsync(const std::string& realm_path, const char** 
     return status;
   }
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
-  status = fdio_open(svc_path.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+  status = fdio_open(svc_path.c_str(),
+                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
                      realm_svc_server.release());
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Could not open svc in realm: %s", svc_path.c_str());

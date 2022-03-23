@@ -15,7 +15,6 @@ package ramdisk
 // #include <lib/fdio/spawn.h>
 // #include <lib/fdio/vfs.h>
 // #include <string.h>
-// #include <zircon/device/vfs.h>
 // #include <zircon/syscalls.h>
 //
 // zx_status_t ramdisk_blobfs_mkfs(const ramdisk_client_t* client, zx_handle_t* process_out) {
@@ -43,7 +42,7 @@ package ramdisk
 // 	return fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], (const char* const *)argv, NULL, 1, actions, process_out, NULL);
 // }
 //
-// zx_status_t ramdisk_blobfs_mount(const ramdisk_client_t* client, zx_handle_t dir_request, zx_handle_t* process_out) {
+// zx_status_t ramdisk_blobfs_mount(const ramdisk_client_t* client, zx_handle_t dir_request, uint32_t flags, zx_handle_t* process_out) {
 // 	zx_status_t status = ZX_OK;
 // 	zx_handle_t export_root_client, export_root_server;
 // 	status = zx_channel_create(0, &export_root_client, &export_root_server);
@@ -87,7 +86,7 @@ package ramdisk
 // 		zx_handle_close(export_root_client);
 // 		return status;
 // 	}
-// 	status = fdio_open_at(export_root_client, "root", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE, dir_request);
+// 	status = fdio_open_at(export_root_client, "root", flags, dir_request);
 // 	zx_handle_close(export_root_client);
 // 	return status;
 // }
@@ -151,8 +150,12 @@ func (r *Ramdisk) StartBlobfs() error {
 	if err != nil {
 		return err
 	}
-
-	status = C.ramdisk_blobfs_mount(r.ramdisk_client, C.uint(uint32(zx.Handle(req))), (*C.uint)(&r.proc))
+	status = C.ramdisk_blobfs_mount(
+		r.ramdisk_client,
+		C.uint(uint32(zx.Handle(req))),
+		C.uint(io.OpenRightReadable|io.OpenRightWritable|io.OpenRightExecutable),
+		(*C.uint)(&r.proc),
+	)
 	if zx.Status(status) != zx.ErrOk {
 		pxy.Close()
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mount"}

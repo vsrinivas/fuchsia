@@ -9,7 +9,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <zircon/device/vfs.h>
 
 #include <string_view>
 #include <utility>

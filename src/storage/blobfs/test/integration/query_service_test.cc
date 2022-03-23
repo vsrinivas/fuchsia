@@ -9,7 +9,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/vfs.h>
 
 #include <array>
 #include <atomic>

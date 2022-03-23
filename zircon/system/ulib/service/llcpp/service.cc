@@ -8,7 +8,6 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fpromise/result.h>
 #include <lib/service/llcpp/service.h>
-#include <zircon/device/vfs.h>
 
 namespace service {
 

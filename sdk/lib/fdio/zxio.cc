@@ -14,7 +14,6 @@
 #include <poll.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
-#include <zircon/device/vfs.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -329,7 +328,7 @@ zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mod
     return zx::error(status);
   }
 
-  if (flags & ZX_FS_FLAG_DESCRIBE) {
+  if (flags & fio::wire::kOpenFlagDescribe) {
     return fdio::create_with_on_open(std::move(endpoints->client));
   }
 
