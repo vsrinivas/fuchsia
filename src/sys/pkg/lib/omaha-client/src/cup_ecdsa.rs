@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::request_builder::Intermediate;
 use http::Response;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature, VerifyingKey};
@@ -78,6 +77,17 @@ impl RequestMetadata {
     }
 }
 
+/// An interface to an under-construction server request, providing read/write
+/// access to the URI and read access to the serialized request body.
+pub trait CupRequest {
+    /// Get the request URI.
+    fn get_uri(&self) -> &str;
+    /// Set a new request URI.
+    fn set_uri(&mut self, uri: String);
+    /// Get a serialized copy of the request body.
+    fn get_serialized_body(&self) -> serde_json::Result<Vec<u8>>;
+}
+
 // General trait for a decorator which knows how to decorate and verify CUPv2
 // requests. Can also be used to verify the stored signature of a CUPv2 request
 // after-the-fact; verify_response_with_signature is not hyper-aware.
@@ -88,7 +98,7 @@ pub trait Cupv2Handler {
     fn decorate_request(
         &self,
         nonce: Nonce,
-        request: &mut Intermediate,
+        request: &mut impl CupRequest,
     ) -> Result<RequestMetadata, CupDecorationError>;
 
     /// Examines an incoming client request with an ETag HTTP Header. Returns an
@@ -142,7 +152,7 @@ impl Cupv2Handler for StandardCupv2Handler {
     fn decorate_request(
         &self,
         nonce: Nonce,
-        request: &mut Intermediate,
+        request: &mut impl CupRequest,
     ) -> Result<RequestMetadata, CupDecorationError> {
         // Per
         // https://github.com/google/omaha/blob/master/doc/ClientUpdateProtocolEcdsa.md#top-level-description,
@@ -153,13 +163,15 @@ impl Cupv2Handler for StandardCupv2Handler {
 
         let public_key_id: PublicKeyId = self.latest_public_key_id;
 
-        request.uri = Url::parse_with_params(
-            &request.uri,
-            &[("cup2key", format!("{}:{}", public_key_id, hex::encode(nonce)))],
-        )?
-        .into_string();
+        request.set_uri(
+            Url::parse_with_params(
+                request.get_uri(),
+                &[("cup2key", format!("{}:{}", public_key_id, hex::encode(nonce)))],
+            )?
+            .into_string(),
+        );
 
-        Ok(RequestMetadata { request_body: request.serialize_body()?, public_key_id, nonce })
+        Ok(RequestMetadata { request_body: request.get_serialized_body()?, public_key_id, nonce })
     }
 
     fn verify_response(
@@ -235,10 +247,23 @@ impl Cupv2Handler for StandardCupv2Handler {
 mod tests {
     use super::*;
     use crate::protocol::request::{Request, RequestWrapper};
+    use crate::request_builder::Intermediate;
     use assert_matches::assert_matches;
     use p256::ecdsa::SigningKey;
     use signature::rand_core::OsRng;
     use std::convert::TryInto;
+
+    impl CupRequest for Intermediate {
+        fn get_uri(&self) -> &str {
+            &self.uri
+        }
+        fn set_uri(&mut self, uri: String) {
+            self.uri = uri;
+        }
+        fn get_serialized_body(&self) -> serde_json::Result<Vec<u8>> {
+            self.serialize_body()
+        }
+    }
 
     // For testing only, it is useful to compute equality for CupVerificationError enums.
     impl PartialEq for CupVerificationError {
