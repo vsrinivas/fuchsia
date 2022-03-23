@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // The Dart runner depends on fuchsia.posix.socket.Provider,
+        // which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+    ],
+    program: {
+        binary: "bin/dart_realm_builder_test_realm",
+    },
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: "stopped",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+    ],
+}

@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/config.gni")
+
+config("dart_runner_rust_cfg") {
+  if (dart_default_build_cfg.is_aot) {
+    rustflags = [ "--cfg=use_dart_aot_runner" ]
+  }
+}
+
+rustc_test("dart_realm_builder_test_realm_bin") {
+  name = "dart_realm_builder_test_realm"
+  source_root = "dart_realm_builder_test_realm.rs"
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "dart_realm_builder_test_realm.rs" ]
+  configs += [ ":dart_runner_rust_cfg" ]
+}

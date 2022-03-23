@@ -131,6 +131,7 @@ group("tests") {
                   "//src/fonts",
 
                   "//sdk/dart/fuchsia_inspect:tests",
+                  "//sdk/dart/fuchsia_component_test:tests",
 
                   # TODO(fxb/38305): Re-enable test when unblocked and inspect paths are corrected
                   # "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-dart-integration-test-driver",
@@ -182,6 +183,7 @@ action("dart_sdk_docs") {
     # packages
     rebase_path("//sdk/dart/fidl"),
     rebase_path("//sdk/dart/fuchsia"),
+    rebase_path("//sdk/dart/fuchsia_component_test"),
     rebase_path("//sdk/dart/fuchsia_inspect"),
     rebase_path("//sdk/dart/fuchsia_inspect_flutter"),
     rebase_path("//sdk/dart/fuchsia_internationalization_flutter"),
