@@ -26,3 +26,35 @@ writing code that uses some other option.
      used implementations.)
    * A teritary benefit, largely speculative, is that performance may be better.
      As with `Rc` vs. `Arc`, `RefCell` doesn't require cross-core synchronization.
+
+## Background tasks
+
+In some cases, a pipeline stage wants to do work independently of newly arriving
+input events. For example, the `autorepeater` wants to periodically send new key
+events when a key has been pressed but _not_ released.
+
+Because the work is independent of newly arriving events, there's no natural way
+to integrate the autorepeat logic (wait for a timer, send an event) with
+`InputHandler::handle_input_event()`.
+
+For this reason, the autorepeat logic uses the Fuchsia Async library's `Task`
+facility.
+
+This section describes the recommended way to use background tasks within this
+library. If this seems unsuitable for your use case, please ask a reviewer
+_before_ writing code that uses some other option.
+
+1. Use `fuchsia_async::Task::local()`, rather than `fuchsia_async::Task::spawn()`.
+   Given that the input pipeline code [runs on a `LocalExecutor`](parallelism.md),
+   the two functions for creating a task will behave identically. However,
+   `Task::local()` better documents the fact that the code was not written, reviewed,
+   or tested with multithreaded use in mind.
+
+1. Store the `Task` within a data structure (e.g. the `struct` that created the `Task`),
+   rather than `detach()`-ing the `Task`. Having the `Task` within the data structure
+   is a convenient and low-effort way of documenting that the struct is active, rather
+   than inert. Said differently: the `Task` field in the struct makes it obvious that
+   the struct may act spontaneously, rather than, e.g. only responding to function calls.
+
+Note: some existing code does not follow these recommendations. Such code will be
+migrated over time.
