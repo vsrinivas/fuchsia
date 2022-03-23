@@ -355,6 +355,21 @@
   related_guides: [""]
   area: ["Devices", "System"]
 
+- term: "Content"
+  short_description: "Graphical content containing a bitmap that is attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>.
+  <a href=\"/docs/glossary#image\">Image</a>, <a href=\"/docs/glossary#viewport\">Viewport</a> and
+  <a href=\"/docs/glossary#filledrect\">FilledRect</a> are types of Contents."
+  full_description: "Graphical content containing a bitmap that is attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>.
+  <a href=\"/docs/glossary#image\">Image</a>, <a href=\"/docs/glossary#viewport\">Viewport</a> and
+  <a href=\"/docs/glossary#filledrect\">FilledRect</a> are types of Contents. Each
+  <a href=\"/docs/glossary#transform\">Transform</a> can have, at most, one attached Content. A
+  Content inherits all of the attributes from its attached <a href=\"/docs/glossary#transform\">Transform</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
 - term: "Core driver"
   short_description: "A
   <a href=\"/docs/glossary#driver\">driver</a> that implements the application-facing RPC
@@ -563,6 +578,16 @@
   related_guides: [""]
   area: [""]
 
+- term: "FilledRect"
+  short_description: "A solid color rectangle can be attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>."
+  full_description: "A solid color rectangle can be attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>.
+  FilledRect is type of a <a href=\"/docs/glossary#content\">Content</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
 - term: "FIDL"
   short_description: "The Fuchsia Interface Definition Language (FIDL) is a language for defining
   protocols."
@@ -574,6 +599,16 @@
   see_also: [""]
   related_guides: ["<a href=\"/docs/development/languages/fidl/\">FIDL</a>"]
   area: ["General", "FIDL", "System"]
+
+- term: "Flatland"
+  short_description:  "A <a href=\"/docs/glossary#fidl\">FIDL</a> protocol that allows sending 2D
+  graphical content to <a href=\"/docs/glossary#fidl\">Scenic</a>."
+  full_description: "The 2D composition API for Fuchsia graphics clients. Flatland clients can
+  construct their scene graph and send to <a href=\"/docs/glossary#scenic\">Scenic</a> to compose
+  into the shared scene graph that is submitted to the display."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
 
 - term: "Flutter"
   short_description: "A functional-reactive user interface framework optimized for Fuchsia and is
@@ -730,6 +765,16 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   see_also: ["<a href=\"/docs/concepts/components/v2/hub.md\">Hub</a>"]
   related_guides: [""]
   area: ["Component Framework"]
+
+- term: "Image"
+  short_description: "A bitmap containing pixels that can be attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>."
+  full_description: "A bitmap containing pixels that can be attached to a
+  <a href=\"/docs/glossary#transform\">Transform</a> in <a href=\"/docs/glossary#flatland\">Flatland</a>.
+  Image is type of a <a href=\"/docs/glossary#content\">Content</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
 
 - term: "In-tree"
   short_description: "Relating to or describing an action to be performed inside a Fuchsia checkout."
@@ -1251,6 +1296,17 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   related_guides: [""]
   area: ["Zircon"]
 
+- term: "Transform"
+  short_description: "A hierarchical piece of a <a href=\"/docs/glossary#flatland\">Flatland</a>
+  graph."
+  full_description: "A hierarchical piece of a <a href=\"/docs/glossary#flatland\">Flatland</a>
+  graph. Transform is the fundamental object used to organize a
+  <a href=\"/docs/glossary#flatland\">Flatland</a> graph. Transforms can have children Transforms
+  and can attach a <a href=\"/docs/glossary#content\">Content</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
 - term: "use"
   short_description: "A keyword for a component instance to consume a capability that was offered to it."
   full_description: "A <a href=\"/docs/glossary#component-instance\">component instance</a>
@@ -1281,6 +1337,27 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   related_guides: [""]
   area: ["Graphics","HCI"]
 
+- term: "Viewport"
+  short_description: "The parent endpoint of two connected <a href=\"/docs/glossary#flatland\">Flatland</a>
+  instances."
+  full_description: "The parent endpoint of two connected <a href=\"/docs/glossary#flatland\">Flatland</a>
+  instances. <a href=\"/docs/glossary#view\">View</a> is the child endpoint. Viewport is type of a
+  <a href=\"/docs/glossary#content\">Content</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
+- term: "ViewportCreationToken"
+  short_description: "Uniquely identifies the parent connection point of a connection between two
+  <a href=\"/docs/glossary#flatland\">Flatland</a> instances."
+  full_description: "Uniquely identifies the parent connection point of a connection between two
+  <a href=\"/docs/glossary#flatland\">Flatland</a> instances. There is only one
+  <a href=\"/docs/glossary#viewcreationtoken\">ViewCreationToken</a> associated with a
+  ViewportCreationToken."
+  see_also: [""]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
 - term: "ViewController"
   short_description: "Represents a handle to a remote View that was launched by calling
   <code>PresentView()</code> on a <a href=\"/docs/glossary#graphicalpresenter\"><code>GraphicalPresenter</code></a>."
@@ -1288,6 +1365,17 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   the caller (often, the session) can control the View's lifecycle. Closing the
   <code>ViewController</code> should close the presented view, and allow the system to reclaim its resources."
   see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.element#ViewController\"><code>fuchsia.element.ViewController</code></a>"]
+  related_guides: [""]
+  area: ["FIDL", "Graphics"]
+
+- term: "ViewCreationToken"
+  short_description: "Uniquely identifies the child connection point of a connection between two
+  <a href=\"/docs/glossary#flatland\">Flatland</a> instances."
+  full_description: "Uniquely identifies the child connection point of a connection between two
+  <a href=\"/docs/glossary#flatland\">Flatland</a> instances. There is only one
+  <a href=\"/docs/glossary#viewportcreationtoken\">ViewportCreationToken</a> associated with a
+  ViewCreationToken."
+  see_also: [""]
   related_guides: [""]
   area: ["FIDL", "Graphics"]
 
