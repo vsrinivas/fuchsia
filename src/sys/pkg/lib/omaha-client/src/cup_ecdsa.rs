@@ -5,6 +5,7 @@
 use http::Response;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature, VerifyingKey};
+use rand::{thread_rng, Rng};
 use sha2::{Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt::Debug};
@@ -97,7 +98,6 @@ pub trait Cupv2Handler {
     /// used later.
     fn decorate_request(
         &self,
-        nonce: Nonce,
         request: &mut impl CupRequest,
     ) -> Result<RequestMetadata, CupDecorationError>;
 
@@ -151,7 +151,6 @@ impl StandardCupv2Handler {
 impl Cupv2Handler for StandardCupv2Handler {
     fn decorate_request(
         &self,
-        nonce: Nonce,
         request: &mut impl CupRequest,
     ) -> Result<RequestMetadata, CupDecorationError> {
         // Per
@@ -162,6 +161,9 @@ impl Cupv2Handler for StandardCupv2Handler {
         // freshness nonce.
 
         let public_key_id: PublicKeyId = self.latest_public_key_id;
+
+        let mut nonce: Nonce = [0_u8; 32];
+        thread_rng().fill(&mut nonce[..]);
 
         request.set_uri(
             Url::parse_with_params(
@@ -325,8 +327,7 @@ mod tests {
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
 
-        let nonce: Nonce = [1_u8; 32];
-        let request_metadata = cup_handler.decorate_request(nonce, &mut intermediate)?;
+        let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
         // check cup2key value newly set on request.
         let cup2key_value: String = Url::parse(&intermediate.uri)?
@@ -337,9 +338,9 @@ mod tests {
 
         let (public_key_decimal, nonce_hex) = cup2key_value.split_once(':').unwrap();
         assert_eq!(public_key_decimal, public_key_id.to_string());
-        assert_eq!(nonce_hex, hex::encode(nonce));
-
-        assert_eq!(request_metadata.nonce, nonce);
+        assert_eq!(nonce_hex, hex::encode(request_metadata.nonce));
+        // Assert that the nonce is being generated randomly inline (i.e. not the default value).
+        assert_ne!(request_metadata.nonce, [0_u8; 32]);
 
         Ok(())
     }
@@ -351,8 +352,7 @@ mod tests {
         let cup_handler = make_standard_cup_handler_for_test(public_key_id, verifying_key);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
-        let nonce: Nonce = [2_u8; 32];
-        let request_metadata = cup_handler.decorate_request(nonce, &mut intermediate)?;
+        let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
         // No .header(ETAG, <val>), which is a problem.
         let response: Response<Vec<u8>> =
@@ -372,8 +372,7 @@ mod tests {
         let cup_handler = make_standard_cup_handler_for_test(public_key_id, verifying_key);
 
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
-        let nonce: Nonce = [3_u8; 32];
-        let request_metadata = cup_handler.decorate_request(nonce, &mut intermediate)?;
+        let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
 
         let response: Response<Vec<u8>> = hyper::Response::builder()
             .status(200)
@@ -390,32 +389,33 @@ mod tests {
     #[test]
     fn test_verify_cached_signature_against_message() -> Result<(), anyhow::Error> {
         let (priv_key, verifying_key) = make_keys_for_test();
-        let nonce: Nonce = [4_u8; 32];
         let response_body = "bar";
         let correct_public_key_id: PublicKeyId = 24682468.try_into()?;
         let wrong_public_key_id: PublicKeyId = 12341234.try_into()?;
 
-        let intermediate =
-            Intermediate { uri: "".to_string(), headers: vec![], body: RequestWrapper::default() };
-
+        let cup_handler = StandardCupv2Handler::new(
+            [(correct_public_key_id, verifying_key)],
+            correct_public_key_id,
+        )?;
+        let mut intermediate = make_standard_intermediate_for_test(Request::default());
+        let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
         let expected_request_metadata = RequestMetadata {
             request_body: intermediate.serialize_body()?,
             public_key_id: correct_public_key_id,
-            nonce,
+            nonce: request_metadata.nonce,
         };
 
-        let expected_hash =
-            make_expected_hash_for_test(&intermediate, nonce, correct_public_key_id);
+        let expected_hash = make_expected_hash_for_test(
+            &intermediate,
+            request_metadata.nonce,
+            correct_public_key_id,
+        );
         let expected_hash_hex: String = hex::encode(expected_hash);
         let expected_signature = make_expected_signature_for_test(
             &priv_key,
             &expected_request_metadata,
             response_body.as_bytes(),
         );
-        let cup_handler = StandardCupv2Handler::new(
-            [(correct_public_key_id, verifying_key)],
-            correct_public_key_id,
-        )?;
 
         for (etag, public_key_id, expected_err) in vec![
             // This etag doesn't even have the form foo:bar.
@@ -455,9 +455,6 @@ mod tests {
                 None,
             ),
         ] {
-            let mut intermediate = make_standard_intermediate_for_test(Request::default());
-            let request_metadata = cup_handler.decorate_request(nonce, &mut intermediate)?;
-
             let response: Response<Vec<u8>> = hyper::Response::builder()
                 .status(200)
                 .header(ETAG, etag)
