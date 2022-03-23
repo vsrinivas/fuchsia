@@ -85,6 +85,10 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/devmgr-integration-test/test/*",
     "//zircon/system/ulib/driver-integration-test/*",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {

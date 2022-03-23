@@ -44,6 +44,10 @@ source_set("fake_buffer_collection") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/third_party/ulib/safemath",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("button_checker") {
@@ -87,6 +91,10 @@ executable("fake_buffer_collection_unittest_bin") {
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("button_checker_unittest_bin") {

@@ -60,6 +60,10 @@ static_library("fvm") {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
     public_deps += [ "//src/zircon/lib/zircon:zircon-headers" ]
   }
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 static_library("test_support") {
@@ -103,6 +107,10 @@ static_library("test_support") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("fvm_unit") {
@@ -130,6 +138,10 @@ test("fvm_unit") {
       "//zircon/system/ulib/zx",
     ]
   }
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("fvm-tests") {
@@ -184,6 +196,10 @@ test("fvm-integration") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_test_component("test-component") {

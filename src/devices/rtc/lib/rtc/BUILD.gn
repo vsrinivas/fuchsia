@@ -18,6 +18,10 @@ zx_library("rtc") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 zx_library("rtc_llcpp") {

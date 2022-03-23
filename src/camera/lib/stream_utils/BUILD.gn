@@ -37,6 +37,10 @@ source_set("stream_configs") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/image-format",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("image_io_util_unittest_bin") {

@@ -30,6 +30,10 @@ zx_library("image-format") {
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  public_configs = [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # TODO(dustingreen): Migrate / move anything that's still needed into
@@ -39,4 +43,8 @@ zx_library("image-format-llcpp") {
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
   sources = [ "image-format-llcpp.cc" ]
   public_deps = [ ":image-format" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

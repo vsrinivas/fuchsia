@@ -278,6 +278,10 @@ executable("kernel_log_ptr_integration_test_exe") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("product_info_provider_unittest_exe") {

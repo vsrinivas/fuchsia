@@ -95,6 +95,11 @@ template("fidl_c_target") {
                          type + "(" + get_label_info(dep, "toolchain") + ")" ]
       }
     }
+
+    # TODO(fxbug.dev/95833): We suppress deprecated usage warnings
+    # in generated C bindings code itself. Delete this line after everything
+    # migrates off of the C bindings.
+    configs += [ "//build/c:fidl-deprecated-c-bindings-reserved-for-fidlc-generated-code-only" ]
   }
 }
 

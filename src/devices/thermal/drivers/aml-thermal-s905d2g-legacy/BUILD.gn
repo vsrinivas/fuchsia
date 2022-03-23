@@ -52,6 +52,10 @@ fuchsia_driver("aml-thermal-s905d2g-legacy-driver") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("aml-thermal-s905d2g-legacy") {
@@ -100,6 +104,10 @@ test("aml-thermal-s905d2g-legacy-test-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("aml-thermal-s905d2g-legacy-test") {

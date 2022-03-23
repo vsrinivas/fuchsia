@@ -77,6 +77,10 @@ static_library("cpp") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  public_configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 static_library("fake_device") {
@@ -101,6 +105,10 @@ static_library("fake_device") {
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("block_client_unit_test") {
@@ -139,6 +147,10 @@ test("block_client_unit_test") {
   # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("block_client_unit_test_pkg") {

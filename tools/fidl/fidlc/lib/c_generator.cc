@@ -195,6 +195,13 @@ void EmitHeaderGuard(std::ostream* file) {
   *file << "#pragma once\n";
 }
 
+void EmitAllowlistCheck(std::ostream* file) {
+  *file << "#if !defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)\n";
+  *file << "#error This target is not allowed to include the deprecated C bindings header. \\\n";
+  *file << " Please consider migrating to the C++ bindings.\n";
+  *file << "#endif\n";
+}
+
 void EmitIncludeHeader(std::ostream* file, std::string_view header) {
   *file << "#include " << header << "\n";
 }
@@ -804,6 +811,7 @@ void CGenerator::GeneratePrologues() {
   EmitFileComment(&file_);
   EmitHeaderGuard(&file_);
   EmitBlank(&file_);
+  EmitAllowlistCheck(&file_);
   EmitIncludeHeader(&file_, "<stdalign.h>");
   EmitIncludeHeader(&file_, "<stdbool.h>");
   EmitIncludeHeader(&file_, "<stdint.h>");

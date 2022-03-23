@@ -57,6 +57,10 @@ test("pci-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # These drivers are not 'test' drivers because at the moment having other
@@ -112,6 +116,10 @@ fuchsia_driver("pci_protocol_test_driver-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("pci_protocol_test_driver") {

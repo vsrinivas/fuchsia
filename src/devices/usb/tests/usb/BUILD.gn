@@ -13,6 +13,10 @@ test("usb") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 bootfs_test("usb-bootfs-test") {

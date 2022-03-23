@@ -27,6 +27,10 @@ test("disk_inspector_unit") {
     "//zircon/system/ulib/storage/operation",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("disk-inspector-unit") {
@@ -87,6 +91,10 @@ if (is_fuchsia) {
         "//zircon/third_party/ulib/safemath",
       ]
     }
+
+    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+    # Consider switching to the C++ bindings. See linked bug for details.
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
   }
 } else {
   config("headers_config") {
@@ -115,5 +123,9 @@ if (is_fuchsia) {
       "//sdk/lib/fit-promise",
       "//src/lib/storage/vfs/cpp/transaction",
     ]
+
+    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+    # Consider switching to the C++ bindings. See linked bug for details.
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
   }
 }

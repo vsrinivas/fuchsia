@@ -223,6 +223,10 @@ static_library("blobfs") {
       "BLOBFS_ENABLE_STREAMING_WRITES",
     ]
   }
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fidl("fuchsia.blobfs.internal") {

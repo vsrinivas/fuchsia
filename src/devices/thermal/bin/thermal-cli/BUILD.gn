@@ -14,6 +14,10 @@ executable("thermal-cli") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 source_set("common") {
@@ -27,6 +31,10 @@ source_set("common") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("thermal-cli-test-bin") {
@@ -43,6 +51,10 @@ test("thermal-cli-test-bin") {
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("thermal-cli-test") {

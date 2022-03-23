@@ -37,6 +37,10 @@ fuchsia_driver("ethertap-driver") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("ethertap") {
@@ -71,6 +75,10 @@ test("ethertap-unittest") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("ethertap-unittest-package") {

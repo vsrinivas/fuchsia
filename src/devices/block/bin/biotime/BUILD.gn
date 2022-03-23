@@ -19,6 +19,10 @@ executable("biotime") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("biotime-test") {
