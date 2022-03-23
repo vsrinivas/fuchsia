@@ -18,6 +18,7 @@ def main():
         '--product-config', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--directories', type=str, nargs='*')
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
@@ -29,16 +30,16 @@ def main():
     # aware of. This will be written to a depfile.
     depfiles = []
 
-    # Add a file's path to one of the lists, relative to CWD.
+    # Add a file or directory path to one of the lists, relative to CWD.
     # The destination is the path when placed inside "built/artifacts".
     # If the path is prefixed with ../../, the prefix is removed.
-    def add_file(file_path):
+    def add_source(source):
         # Absolute paths are not portable out-of-tree, therefore if a file is
         # using an absolute path we throw an error.
-        if os.path.isabs(file_path):
-            raise Exception("Absolute paths are not allowed", file_path)
+        if os.path.isabs(source):
+            raise Exception("Absolute paths are not allowed", source)
 
-        source = os.path.relpath(file_path, os.getcwd())
+        source = os.path.relpath(source, os.getcwd())
         prefix = "../../"
         if source.startswith(prefix):
             destination = source[len(prefix):]
@@ -51,16 +52,16 @@ def main():
 
     # Add all the blobs in a package to the list.
     def add_package(package_manifest_path):
-        add_file(package_manifest_path)
+        add_source(package_manifest_path)
         add_depfile(package_manifest_path)
         with open(package_manifest_path, 'r') as f:
             package_manifest = json.load(f)
             if "blobs" in package_manifest:
                 for blob in package_manifest["blobs"]:
-                    add_file(blob["source_path"])
+                    add_source(blob["source_path"])
 
     # Add the product config.
-    add_file(args.product_config.name)
+    add_source(args.product_config.name)
     product_config = json.load(args.product_config)
     if "base" in product_config:
         for package_path in product_config["base"]:
@@ -72,24 +73,28 @@ def main():
         for package_path in product_config["system"]:
             add_package(package_path)
     if "kernel" in product_config:
-        add_file(product_config["kernel"]["path"])
+        add_source(product_config["kernel"]["path"])
     if "bootfs_files" in product_config:
         for bootfs_file in product_config["bootfs_files"]:
-            add_file(bootfs_file["source"])
+            add_source(bootfs_file["source"])
 
     # Add the images config.
-    add_file(args.images_config.name)
+    add_source(args.images_config.name)
     images = json.load(args.images_config).get("images", [])
     for image in images:
         if image["type"] == "vbmeta":
-            add_file(image["key"])
-            add_file(image["key_metadata"])
+            add_source(image["key"])
+            add_source(image["key_metadata"])
             if "additional_descriptor_files" in image:
                 for descriptor in image["additional_descriptor_files"]:
-                    add_file(descriptor)
+                    add_source(descriptor)
         elif image["type"] == "zbi":
             if "postprocessing_script" in image:
-                add_file(image["postprocessing_script"]["path"])
+                add_source(image["postprocessing_script"]["path"])
+
+    # Add any additional directories to copy.
+    for directory in args.directories:
+        add_source(directory)
 
     # Convert the map into a list of maps.
     files = []

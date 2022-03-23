@@ -9,11 +9,14 @@
 #   product_config (required)
 #     [path] The path to the product config.
 #
-#   board_config (required)
-#     [path] The path to the board config.
+#   images_config (required)
+#     [path] The path to the images config.
 #
 #   output_path (required)
 #     [path] Where to write the output list.
+#
+#   directories (optional)
+#     [list of str] Additional directories to list as inputs.
 #
 template("generated_assembly_inputs") {
   assert(defined(invoker.product_config), "Need to define product_config")
@@ -47,5 +50,12 @@ template("generated_assembly_inputs") {
       "--depfile",
       rebase_path(depfile_path, root_build_dir),
     ]
+
+    if (defined(invoker.directories)) {
+      args += [ "--directories" ]
+      foreach(directory, invoker.directories) {
+        args += [ rebase_path(directory, root_build_dir) ]
+      }
+    }
   }
 }

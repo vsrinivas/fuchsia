@@ -593,6 +593,7 @@ template("assemble_system") {
     product_config = files.image_assembly_config
     images_config = files.images_config
     output_path = files.assembly_inputs
+    directories = [ "${files.outdir}/legacy" ]
 
     deps = [
       ":${labels.image_assembly_config}",
