@@ -1092,7 +1092,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/9acec52615bfc8dfefd8488db9b7ad1d0c4c96c7/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/3a4aff268b766e79c1693650afeebed607306d74/BUILD.gn#22)
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
