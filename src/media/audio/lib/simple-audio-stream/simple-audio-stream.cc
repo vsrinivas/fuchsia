@@ -232,7 +232,10 @@ void SimpleAudioStream::GetChannel(GetChannelRequestView request,
   fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
       [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo info,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
-        zxlogf(INFO, "StreamConf channel closing: %s", info.FormatDescription().c_str());
+        // Do not log canceled cases which happens too often in particular in test cases.
+        if (info.status() != ZX_ERR_CANCELED) {
+          zxlogf(INFO, "StreamConf channel closing: %s", info.FormatDescription().c_str());
+        }
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
@@ -406,7 +409,10 @@ void SimpleAudioStream::CreateRingBuffer(
     fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
         [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
-          zxlogf(INFO, "Ring buffer channel closing: %s", info.FormatDescription().c_str());
+          // Do not log canceled cases which happens too often in particular in test cases.
+          if (info.status() != ZX_ERR_CANCELED) {
+            zxlogf(INFO, "Ring buffer channel closing: %s", info.FormatDescription().c_str());
+          }
           ScopedToken t(domain_token());
           fbl::AutoLock channel_lock(&channel_lock_);
           this->DeactivateRingBufferChannel(rb_channel_.get());
