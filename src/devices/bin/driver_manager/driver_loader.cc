@@ -173,7 +173,7 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
     return;
   }
 
-  driver_index_->WaitForBaseDrivers(
+  driver_index_->WaitForBaseDrivers().Then(
       [this, callback = std::move(callback)](
           fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
         if (!result.ok()) {

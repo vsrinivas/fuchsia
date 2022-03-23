@@ -47,7 +47,7 @@ void Loader::LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync
     }
     completer.Reply(result->rv, std::move(result->object));
   };
-  client_->LoadObject(request->object_name, std::move(callback));
+  client_->LoadObject(request->object_name).ThenExactlyOnce(std::move(callback));
 }
 
 void Loader::Config(ConfigRequestView request, ConfigCompleter::Sync& completer) {
@@ -59,7 +59,7 @@ void Loader::Config(ConfigRequestView request, ConfigCompleter::Sync& completer)
     }
     completer.Reply(result->rv);
   };
-  client_->Config(request->config, std::move(callback));
+  client_->Config(request->config).ThenExactlyOnce(std::move(callback));
 }
 
 void Loader::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {

@@ -141,33 +141,37 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
     fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
     auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
 
-    dh->controller()->CreateDevice(
-        std::move(coordinator_endpoints->client), std::move(device_controller_request),
-        std::move(type), dev->local_id(),
-        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-          if (!result.ok()) {
-            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-            return;
-          }
-          if (result->status != ZX_OK) {
-            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-          }
-        });
+    dh->controller()
+        ->CreateDevice(std::move(coordinator_endpoints->client),
+                       std::move(device_controller_request), std::move(type), dev->local_id())
+        .ThenExactlyOnce(
+            [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+              if (!result.ok()) {
+                LOGF(ERROR, "Failed to create device: %s",
+                     result.error().FormatDescription().c_str());
+                return;
+              }
+              if (result->status != ZX_OK) {
+                LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+              }
+            });
   } else {
     fdm::wire::StubDevice stub{dev->protocol_id()};
     auto type = fdm::wire::DeviceType::WithStub(stub);
-    dh->controller()->CreateDevice(
-        std::move(coordinator_endpoints->client), std::move(device_controller_request),
-        std::move(type), dev->local_id(),
-        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-          if (!result.ok()) {
-            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-            return;
-          }
-          if (result->status != ZX_OK) {
-            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-          }
-        });
+    dh->controller()
+        ->CreateDevice(std::move(coordinator_endpoints->client),
+                       std::move(device_controller_request), std::move(type), dev->local_id())
+        .ThenExactlyOnce(
+            [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+              if (!result.ok()) {
+                LOGF(ERROR, "Failed to create device: %s",
+                     result.error().FormatDescription().c_str());
+                return;
+              }
+              if (result->status != ZX_OK) {
+                LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+              }
+            });
   }
 
   Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
@@ -186,18 +190,20 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
   fdm::wire::NewProxyDevice new_proxy{std::move(incoming_dir)};
   auto type = fdm::wire::DeviceType::WithNewProxy(std::move(new_proxy));
 
-  dh->controller()->CreateDevice(
-      std::move(coordinator_endpoints->client), std::move(device_controller_request),
-      std::move(type), dev->local_id(),
-      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-        if (!result.ok()) {
-          LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-          return;
-        }
-        if (result->status != ZX_OK) {
-          LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-        }
-      });
+  dh->controller()
+      ->CreateDevice(std::move(coordinator_endpoints->client), std::move(device_controller_request),
+                     std::move(type), dev->local_id())
+      .ThenExactlyOnce(
+          [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+            if (!result.ok()) {
+              LOGF(ERROR, "Failed to create device: %s",
+                   result.error().FormatDescription().c_str());
+              return;
+            }
+            if (result->status != ZX_OK) {
+              LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+            }
+          });
 
   Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
   return ZX_OK;

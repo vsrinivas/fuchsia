@@ -210,22 +210,24 @@ fpromise::promise<void, zx_status_t> ChromiumosEcCore::BindFidlClients(
                     fidl::ObserveTeardown([this]() { ec_teardown_.completer.complete_ok(); }));
     acpi_client_.Bind(std::move(acpi_client), loop_.dispatcher(),
                       fidl::ObserveTeardown([this]() { acpi_teardown_.completer.complete_ok(); }));
-    acpi_client_->InstallNotifyHandler(
-        fuchsia_hardware_acpi::wire::NotificationMode::kDevice, std::move(endpoints->client),
-        [completer = std::move(completer)](
-            fidl::WireUnownedResult<fuchsia_hardware_acpi::Device::InstallNotifyHandler>&
-                result) mutable {
-          if (!result.ok()) {
-            zxlogf(ERROR, "Failed to install notify handler: %s",
-                   result.FormatDescription().data());
-            completer.complete_error(result.status());
-          } else if (result->result.is_err()) {
-            zxlogf(ERROR, "Failed to install notify handler: %u", int(result->result.err()));
-            completer.complete_error(ZX_ERR_INTERNAL);
-          } else {
-            completer.complete_ok();
-          }
-        });
+    acpi_client_
+        ->InstallNotifyHandler(fuchsia_hardware_acpi::wire::NotificationMode::kDevice,
+                               std::move(endpoints->client))
+        .ThenExactlyOnce(
+            [completer = std::move(completer)](
+                fidl::WireUnownedResult<fuchsia_hardware_acpi::Device::InstallNotifyHandler>&
+                    result) mutable {
+              if (!result.ok()) {
+                zxlogf(ERROR, "Failed to install notify handler: %s",
+                       result.FormatDescription().data());
+                completer.complete_error(result.status());
+              } else if (result->result.is_err()) {
+                zxlogf(ERROR, "Failed to install notify handler: %u", int(result->result.err()));
+                completer.complete_error(ZX_ERR_INTERNAL);
+              } else {
+                completer.complete_ok();
+              }
+            });
   });
 
   return bridge.consumer.promise();
@@ -307,11 +309,12 @@ void ChromiumosEcCore::ScheduleInspectCommands() {
 fpromise::promise<CommandResult, zx_status_t> ChromiumosEcCore::IssueRawCommand(
     uint16_t command, uint8_t version, cpp20::span<uint8_t> input) {
   fpromise::bridge<CommandResult, zx_status_t> result;
-  ec_client_->RunCommand(
-      command, version, fidl::VectorView<uint8_t>::FromExternal(input.data(), input.size()),
-      [command, version, completer = std::move(result.completer)](
-          fidl::WireUnownedResult<fuchsia_hardware_google_ec::Device::RunCommand>&
-              response) mutable {
+  ec_client_
+      ->RunCommand(command, version,
+                   fidl::VectorView<uint8_t>::FromExternal(input.data(), input.size()))
+      .ThenExactlyOnce([command, version, completer = std::move(result.completer)](
+                           fidl::WireUnownedResult<fuchsia_hardware_google_ec::Device::RunCommand>&
+                               response) mutable {
         if (!response.ok()) {
           zxlogf(ERROR, "Failed to send FIDL for EC command %u version %u: %s", command, version,
                  response.FormatDescription().data());

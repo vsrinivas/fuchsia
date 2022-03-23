@@ -572,11 +572,11 @@ TEST(MockDdk, SetFidlProtocol) {
 
   constexpr std::string_view kInput = "Test String";
 
-  client->EchoString(fidl::StringView::FromExternal(kInput),
-                     [&](fidl::WireUnownedResult<fidl_examples_echo::Echo::EchoString>& result) {
-                       EXPECT_OK(result.status());
-                       EXPECT_EQ(result->response.get(), kInput);
-                     });
+  client->EchoString(fidl::StringView::FromExternal(kInput))
+      .ThenExactlyOnce([&](fidl::WireUnownedResult<fidl_examples_echo::Echo::EchoString>& result) {
+        EXPECT_OK(result.status());
+        EXPECT_EQ(result->response.get(), kInput);
+      });
   EXPECT_OK(loop.RunUntilIdle());
 
   // Incorrect proto ids still fail.

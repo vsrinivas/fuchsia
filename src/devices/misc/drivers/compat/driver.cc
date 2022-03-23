@@ -194,8 +194,8 @@ promise<zx::resource, zx_status_t> Driver::GetRootResource(
     }
     completer.complete_ok(std::move(result->resource));
   };
-  root_resource->Get(std::move(callback));
-  return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE));
+  root_resource->Get().ThenExactlyOnce(std::move(callback));
+  return bridge.consumer.promise();
 }
 
 promise<Driver::FileVmo, zx_status_t> Driver::GetBuffer(
@@ -226,8 +226,8 @@ promise<Driver::FileVmo, zx_status_t> Driver::GetBuffer(
         return;
     }
   };
-  file->GetBackingMemory(kVmoFlags, std::move(callback));
-  return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE)).or_else([this](zx_status_t& status) {
+  file->GetBackingMemory(kVmoFlags).ThenExactlyOnce(std::move(callback));
+  return bridge.consumer.promise().or_else([this](zx_status_t& status) {
     FDF_LOG(WARNING, "Failed to get buffer: %s", zx_status_get_string(status));
     return error(status);
   });
@@ -411,17 +411,26 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
   }
 
   bridge<void, zx_status_t> topo_bridge;
-  interop_.device_client()->GetTopologicalPath(
+  interop_.device_client()->GetTopologicalPath().Then(
       [this, completer = std::move(topo_bridge.completer)](
-          fidl::WireResponse<fuchsia_driver_compat::Device::GetTopologicalPath>* response) mutable {
+          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
+              result) mutable {
+        if (!result.ok()) {
+          return;
+        }
+        auto* response = result.Unwrap();
         device_.set_topological_path(std::string(response->path.data(), response->path.size()));
         completer.complete_ok();
       });
 
   bridge<void, zx_status_t> metadata_bridge;
-  interop_.device_client()->GetMetadata(
+  interop_.device_client()->GetMetadata().Then(
       [this, completer = std::move(metadata_bridge.completer)](
-          fidl::WireResponse<fuchsia_driver_compat::Device::GetMetadata>* response) mutable {
+          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetMetadata>& result) mutable {
+        if (!result.ok()) {
+          return;
+        }
+        auto* response = result.Unwrap();
         if (response->result.is_err()) {
           completer.complete_error(response->result.err());
           return;
@@ -446,6 +455,7 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
         completer.complete_ok();
       });
 
+  // The task may be abandoned in the code paths above due to the use of |Then| and early returns.
   return topo_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL))
       .and_then(metadata_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL)));
 }

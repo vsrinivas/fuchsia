@@ -198,7 +198,7 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
 }
 
 void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callback) {
-  fshost_admin_client_->Shutdown(
+  fshost_admin_client_->Shutdown().ThenExactlyOnce(
       [callback = std::move(callback)](
           fidl::WireUnownedResult<fuchsia_fshost::Admin::Shutdown>& result) mutable {
         if (!result.ok()) {

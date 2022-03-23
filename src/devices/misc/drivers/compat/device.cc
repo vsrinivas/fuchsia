@@ -299,10 +299,11 @@ zx_status_t Device::CreateNode() {
     }
     completer.complete_ok();
   };
-  (*parent_)->node_->AddChild(std::move(args), std::move(controller_ends->server),
-                              std::move(node_server), std::move(callback));
+  (*parent_)
+      ->node_->AddChild(args, std::move(controller_ends->server), std::move(node_server))
+      .ThenExactlyOnce(std::move(callback));
 
-  auto task = bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
+  auto task = bridge.consumer.promise()
                   .or_else([this](std::variant<zx_status_t, fdf::NodeError>& status) {
                     if (std::holds_alternative<zx_status_t>(status)) {
                       FDF_LOG(ERROR, "Failed to add device: status: '%s': %u", Name(),

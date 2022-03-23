@@ -68,8 +68,8 @@ class LeafDriver {
       }
       completer.complete_ok();
     };
-    handshake->Do(std::move(callback));
-    return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE));
+    handshake->Do().ThenExactlyOnce(std::move(callback));
+    return bridge.consumer.promise();
   }
 
   result<void, zx_status_t> CallAck(const fidl::WireSharedClient<ft::Waiter>& waiter) {

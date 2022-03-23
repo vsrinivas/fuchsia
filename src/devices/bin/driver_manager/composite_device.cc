@@ -322,20 +322,22 @@ zx_status_t CompositeDevice::TryAssemble() {
   fdm::wire::CompositeDevice composite{fragments, fidl::StringView::FromExternal(name())};
   auto type = fdm::wire::DeviceType::WithComposite(allocator, composite);
 
-  driver_host->controller()->CreateDevice(
-      std::move(coordinator_endpoints->client), std::move(device_controller_endpoints->server),
-      std::move(type), new_device->local_id(),
-      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-        if (!result.ok()) {
-          LOGF(ERROR, "Failed to create composite device: %s",
-               result.error().FormatDescription().c_str());
-          return;
-        }
-        if (result->status != ZX_OK) {
-          LOGF(ERROR, "Failed to create composite device: %s",
-               zx_status_get_string(result->status));
-        }
-      });
+  driver_host->controller()
+      ->CreateDevice(std::move(coordinator_endpoints->client),
+                     std::move(device_controller_endpoints->server), std::move(type),
+                     new_device->local_id())
+      .ThenExactlyOnce(
+          [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+            if (!result.ok()) {
+              LOGF(ERROR, "Failed to create composite device: %s",
+                   result.error().FormatDescription().c_str());
+              return;
+            }
+            if (result->status != ZX_OK) {
+              LOGF(ERROR, "Failed to create composite device: %s",
+                   zx_status_get_string(result->status));
+            }
+          });
 
   device_ = std::move(new_device);
   device_->set_composite(this);

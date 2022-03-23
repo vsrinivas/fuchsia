@@ -1039,33 +1039,33 @@ void DriverHostContext::LoadFirmwareAsync(const zx_driver_t* drv,
   VLOGD(1, *dev, "load-firmware-async");
   auto drv_libname = ::fidl::StringView::FromExternal(drv->libname());
   auto str_path = ::fidl::StringView::FromExternal(path);
-  client->LoadFirmware(
-      drv_libname, str_path,
-      [callback, context, dev = dev](
-          fidl::WireUnownedResult<fuchsia_device_manager::Coordinator::LoadFirmware>& result) {
-        if (!result.ok()) {
-          log_rpc_result(dev, "load-firmware-async", result.status(), ZX_OK);
-          callback(context, result.status(), ZX_HANDLE_INVALID, 0);
-          return;
-        }
-        zx_status_t call_status = ZX_OK;
-        size_t size = 0;
-        zx::vmo vmo;
+  client->LoadFirmware(drv_libname, str_path)
+      .ThenExactlyOnce(
+          [callback, context, dev = dev](
+              fidl::WireUnownedResult<fuchsia_device_manager::Coordinator::LoadFirmware>& result) {
+            if (!result.ok()) {
+              log_rpc_result(dev, "load-firmware-async", result.status(), ZX_OK);
+              callback(context, result.status(), ZX_HANDLE_INVALID, 0);
+              return;
+            }
+            zx_status_t call_status = ZX_OK;
+            size_t size = 0;
+            zx::vmo vmo;
 
-        if (result->result.is_err()) {
-          call_status = result->result.err();
-        } else {
-          auto& resp = result->result.response();
-          size = resp.size;
-          vmo = std::move(resp.vmo);
-        }
-        log_rpc_result(dev, "load-firmware-async", ZX_OK, call_status);
-        if (call_status == ZX_OK && !vmo.is_valid()) {
-          call_status = ZX_ERR_INTERNAL;
-        }
+            if (result->result.is_err()) {
+              call_status = result->result.err();
+            } else {
+              auto& resp = result->result.response();
+              size = resp.size;
+              vmo = std::move(resp.vmo);
+            }
+            log_rpc_result(dev, "load-firmware-async", ZX_OK, call_status);
+            if (call_status == ZX_OK && !vmo.is_valid()) {
+              call_status = ZX_ERR_INTERNAL;
+            }
 
-        callback(context, call_status, vmo.release(), size);
-      });
+            callback(context, call_status, vmo.release(), size);
+          });
 }
 
 zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,

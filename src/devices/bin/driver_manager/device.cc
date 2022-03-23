@@ -340,7 +340,7 @@ void Device::SendInit(InitCompletion completion) {
   ZX_ASSERT(!init_completion_);
 
   VLOGF(1, "Initializing device %p '%s'", this, name_.data());
-  device_controller()->Init(
+  device_controller()->Init().ThenExactlyOnce(
       [dev = fbl::RefPtr(this)](
           fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Init>& result) {
         if (!result.ok()) {
@@ -384,8 +384,7 @@ void Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
     return completion(ZX_ERR_UNAVAILABLE);
   }
   VLOGF(1, "Suspending device %p '%s'", this, name_.data());
-  device_controller()->Suspend(
-      flags,
+  device_controller()->Suspend(flags).ThenExactlyOnce(
       [dev = fbl::RefPtr(this)](
           fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Suspend>& result) {
         if (!result.ok()) {
@@ -412,19 +411,20 @@ void Device::SendResume(uint32_t target_system_state, ResumeCompletion completio
   }
   VLOGF(1, "Resuming device %p '%s'", this, name_.data());
 
-  device_controller()->Resume(
-      target_system_state,
-      [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Resume>& result) {
-        if (!result.ok()) {
-          dev->CompleteResume(result.status());
-          return;
-        }
-        auto* response = result.Unwrap();
-        LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
-             zx_status_get_string(response->status));
-        dev->CompleteResume(response->status);
-      });
+  device_controller()
+      ->Resume(target_system_state)
+      .ThenExactlyOnce(
+          [dev = fbl::RefPtr(this)](
+              fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Resume>& result) {
+            if (!result.ok()) {
+              dev->CompleteResume(result.status());
+              return;
+            }
+            auto* response = result.Unwrap();
+            LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
+                 zx_status_get_string(response->status));
+            dev->CompleteResume(response->status);
+          });
   set_state(Device::State::kResuming);
   resume_completion_ = std::move(completion);
 }

@@ -55,9 +55,11 @@ fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view serv
       completer.complete_ok();
     }
   };
-  exporter_->Export(std::move(endpoints->client), fidl::StringView::FromExternal(service_path),
-                    fidl::StringView::FromExternal(devfs_path), protocol_id, std::move(callback));
-  return bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE));
+  exporter_
+      ->Export(std::move(endpoints->client), fidl::StringView::FromExternal(service_path),
+               fidl::StringView::FromExternal(devfs_path), protocol_id)
+      .ThenExactlyOnce(std::move(callback));
+  return bridge.consumer.promise();
 }
 
 }  // namespace driver

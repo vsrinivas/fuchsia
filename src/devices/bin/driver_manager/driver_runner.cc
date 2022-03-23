@@ -660,7 +660,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
 const Node* DriverRunner::root_node() const { return root_node_.get(); }
 
 void DriverRunner::ScheduleBaseDriversBinding() {
-  driver_index_->WaitForBaseDrivers(
+  driver_index_->WaitForBaseDrivers().Then(
       [this](fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
         if (!result.ok()) {
           // It's possible in tests that the test can finish before WaitForBaseDrivers
@@ -878,7 +878,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
     }
     node.OnBind();
   };
-  driver_index_->MatchDriver(args, std::move(match_callback));
+  driver_index_->MatchDriver(args).Then(std::move(match_callback));
 }
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
@@ -1028,7 +1028,9 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
           realm_->OpenExposedDir(child_ref, std::move(exposed_dir), std::move(open_callback));
         }
       };
-  realm_->CreateChild(fdecl::wire::CollectionRef{.name = CollectionName(collection)}, child_decl,
-                      child_args, std::move(create_callback));
+  realm_
+      ->CreateChild(fdecl::wire::CollectionRef{.name = CollectionName(collection)}, child_decl,
+                    child_args)
+      .Then(std::move(create_callback));
   return zx::ok();
 }

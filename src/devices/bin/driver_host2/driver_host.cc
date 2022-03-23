@@ -278,6 +278,6 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     async::PostTask(driver_dispatcher_, std::move(start_task));
   };
   file->GetBackingMemory(fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute |
-                             fio::wire::VmoFlags::kPrivateClone,
-                         std::move(callback));
+                         fio::wire::VmoFlags::kPrivateClone)
+      .ThenExactlyOnce(std::move(callback));
 }

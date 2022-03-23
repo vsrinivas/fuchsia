@@ -26,8 +26,9 @@ fpromise::promise<void, fdf::wire::NodeError> AddChild(
     }
     completer.complete_ok();
   };
-  client->AddChild(std::move(args), std::move(controller), std::move(node), std::move(callback));
-  return bridge.consumer.promise_or(fpromise::error(fdf::wire::NodeError::kInternal));
+  client->AddChild(args, std::move(controller), std::move(node))
+      .ThenExactlyOnce(std::move(callback));
+  return bridge.consumer.promise();
 }
 
 }  // namespace driver

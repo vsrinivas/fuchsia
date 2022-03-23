@@ -499,11 +499,16 @@ TEST_F(DeviceTest, GetFidlProtocol) {
 
   fidl::WireClient client(std::move(echo_endpoints->client), dispatcher());
   bool done = false;
-  client->EchoString("hello",
-                     [&done](fidl::WireResponse<test_placeholders::Echo::EchoString>* response) {
-                       ASSERT_STREQ("hello", response->response.begin());
-                       done = true;
-                     });
+  client->EchoString("hello").ThenExactlyOnce(
+      [&done](fidl::WireUnownedResult<test_placeholders::Echo::EchoString>& result) {
+        if (!result.ok()) {
+          FAIL() << result.error();
+          return;
+        }
+        auto* response = result.Unwrap();
+        ASSERT_STREQ("hello", response->response.begin());
+        done = true;
+      });
 
   ASSERT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(done);
@@ -606,9 +611,14 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
   client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
 
   bool callback_called = false;
-  client->GetTopologicalPath(
+  client->GetTopologicalPath().ThenExactlyOnce(
       [&callback_called](
-          fidl::WireResponse<fuchsia_device::Controller::GetTopologicalPath>* response) {
+          fidl::WireUnownedResult<fuchsia_device::Controller::GetTopologicalPath>& result) {
+        if (!result.ok()) {
+          FAIL() << result.error();
+          return;
+        }
+        auto* response = result.Unwrap();
         ASSERT_TRUE(response->result.is_response());
         std::string path(response->result.response().path.data(),
                          response->result.response().path.size());
@@ -660,11 +670,16 @@ TEST_F(DeviceTest, DevfsVnodeTestBind) {
 
   auto [vnode, client] = CreateVnode(second_device);
   bool callback_called = false;
-  client->Bind("gpt.so",
-               [&callback_called](fidl::WireResponse<fuchsia_device::Controller::Bind>* response) {
-                 ASSERT_TRUE(response->result.is_response());
-                 callback_called = true;
-               });
+  client->Bind("gpt.so").ThenExactlyOnce(
+      [&callback_called](fidl::WireUnownedResult<fuchsia_device::Controller::Bind>& result) {
+        if (!result.ok()) {
+          FAIL() << result.error();
+          return;
+        }
+        auto* response = result.Unwrap();
+        ASSERT_TRUE(response->result.is_response());
+        callback_called = true;
+      });
 
   ASSERT_TRUE(test_loop().RunUntilIdle());
   ASSERT_TRUE(callback_called);
