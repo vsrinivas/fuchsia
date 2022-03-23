@@ -179,7 +179,7 @@ Add the following code to `main()` to serve the `Echo` protocol:
 `echo-server/src/main.rs`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" highlight="1,2,3,4,14,15,24,25,26" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" highlight="1,2,3,4,14,15,23,24,25,26,27" %}
 ```
 
 This code performs the following steps to serve the `Echo` protocol:

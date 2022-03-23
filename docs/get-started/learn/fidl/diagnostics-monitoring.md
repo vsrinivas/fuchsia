@@ -269,8 +269,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     {{ '<strong>' }}// Attach request handler for incoming requests {{ '</strong>' }}
     {{ '<strong>' }}service_fs {{ '</strong>' }}
-        {{ '<strong>' }}.for_each_concurrent(None, |_request: IncomingRequest| async { {{ '</strong>' }}
-            {{ '<strong>' }}match _request { {{ '</strong>' }}
+        {{ '<strong>' }}.for_each_concurrent(None, |request: IncomingRequest| async { {{ '</strong>' }}
+            {{ '<strong>' }}match request { {{ '</strong>' }}
                 {{ '<strong>' }}IncomingRequest::Echo(stream) => handle_echo_request(stream, &stats).await, {{ '</strong>' }}
             {{ '<strong>' }}} {{ '</strong>' }}
         {{ '<strong>' }}}) {{ '</strong>' }}

@@ -33,8 +33,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Attach request handler for incoming requests
     service_fs
-        .for_each_concurrent(None, |_request: IncomingRequest| async move {
-            match _request {
+        .for_each_concurrent(None, |request: IncomingRequest| async move {
+            match request {
                 IncomingRequest::Echo(stream) => handle_echo_request(stream).await,
             }
         })

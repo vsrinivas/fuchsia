@@ -48,8 +48,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Begin serving to handle incoming requests
     service_fs
-        .for_each_concurrent(None, |_request: IncomingRequest| async {
-            match _request {
+        .for_each_concurrent(None, |request: IncomingRequest| async {
+            match request {
                 IncomingRequest::Echo(stream) => handle_echo_request(stream, &stats).await,
             }
         })

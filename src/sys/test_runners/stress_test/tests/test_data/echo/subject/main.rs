@@ -18,8 +18,8 @@ async fn main() -> Result<(), anyhow::Error> {
     service_fs.dir("svc").add_fidl_service(IncomingRequest::Echo);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
     service_fs
-        .for_each_concurrent(None, |_request: IncomingRequest| async move {
-            match _request {
+        .for_each_concurrent(None, |request: IncomingRequest| async move {
+            match request {
                 IncomingRequest::Echo(stream) => handle_echo_request(stream).await,
             }
         })
