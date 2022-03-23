@@ -44,6 +44,44 @@ std::vector<std::string> MountOptions::as_argv(const char *binary) const {
   return argv;
 }
 
+zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_options() const {
+  fuchsia_fs_startup::wire::StartOptions options;
+
+  options.read_only = readonly;
+  options.verbose = verbose_mount;
+  options.collect_metrics = collect_metrics;
+  options.sandbox_decompression = sandbox_decompression;
+  options.write_compression_level = write_compression_level;
+
+  if (write_compression_algorithm != nullptr) {
+    std::string write_compression_algorithm_string(write_compression_algorithm);
+    if (write_compression_algorithm_string == "ZSTD_CHUNKED") {
+      options.write_compression_algorithm =
+          fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
+    } else if (write_compression_algorithm_string == "UNCOMPRESSED") {
+      options.write_compression_algorithm =
+          fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed;
+    } else {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
+  if (cache_eviction_policy != nullptr) {
+    std::string cache_eviction_policy_string(cache_eviction_policy);
+    if (cache_eviction_policy_string == "NEVER_EVICT") {
+      options.cache_eviction_policy_override =
+          fuchsia_fs_startup::wire::EvictionPolicyOverride::kNeverEvict;
+    } else if (cache_eviction_policy_string == "EVICT_IMMEDIATELY") {
+      options.cache_eviction_policy_override =
+          fuchsia_fs_startup::wire::EvictionPolicyOverride::kEvictImmediately;
+    } else {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
+  return zx::ok(options);
+}
+
 std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {
   std::vector<std::string> argv;
   argv.push_back(binary);
@@ -70,6 +108,16 @@ std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {
   argv.push_back("mkfs");
 
   return argv;
+}
+
+fuchsia_fs_startup::wire::FormatOptions MkfsOptions::as_format_options() const {
+  fuchsia_fs_startup::wire::FormatOptions options;
+
+  options.verbose = verbose;
+  options.deprecated_padded_blobfs_format = deprecated_padded_blobfs_format;
+  options.num_inodes = num_inodes;
+
+  return options;
 }
 
 std::vector<std::string> FsckOptions::as_argv(const char *binary) const {
@@ -100,6 +148,11 @@ std::vector<std::string> FsckOptions::as_argv_fat32(const char *binary,
   argv.push_back(device_path);
 
   return argv;
+}
+
+fuchsia_fs_startup::wire::CheckOptions FsckOptions::as_check_options() const {
+  fuchsia_fs_startup::wire::CheckOptions options;
+  return options;
 }
 
 }  // namespace fs_management

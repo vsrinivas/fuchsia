@@ -4,11 +4,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -25,6 +28,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/path.h"
 
@@ -74,12 +78,51 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
   return cb(static_cast<int>(argv.size() - 1), argv.data(), NULL, NULL, 0);
 }
 
+zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+                             const std::string& device_path, const MkfsOptions& options) {
+  zx::channel crypt_client(options.crypt_client);
+
+  auto device = service::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
+  if (device.is_error())
+    return device.take_error();
+
+  auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
+  if (startup_client_end.is_error())
+    return startup_client_end.take_error();
+  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+
+  auto res = startup_client->Format(std::move(*device), options.as_format_options());
+  if (!res.ok())
+    return zx::error(res.status());
+  if (res->result.is_err())
+    return zx::error(res->result.err());
+
+  return zx::ok();
+}
+
 }  // namespace
 
 __EXPORT
 zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options) {
   // N.B. Make sure to release crypt_client in any new error paths here.
+
+  if (options.component_child_name != nullptr) {
+    std::string_view url = DiskFormatComponentUrl(df);
+    // If we don't know the url, fall back on the old launching method.
+    if (!url.empty()) {
+      // Otherwise, launch the component way.
+      auto exposed_dir_or = ConnectNativeFsComponent(url, options.component_child_name,
+                                                     options.component_collection_name);
+      if (exposed_dir_or.is_error()) {
+        if (options.crypt_client != ZX_HANDLE_INVALID)
+          zx_handle_close(options.crypt_client);
+        return exposed_dir_or.status_value();
+      }
+      return MkfsComponentFs(*exposed_dir_or, device_path, options).status_value();
+    }
+  }
+
   switch (df) {
     case kDiskFormatFactoryfs:
       return MkfsNativeFs(GetBinaryPath("factoryfs").c_str(), device_path, cb, options, false);

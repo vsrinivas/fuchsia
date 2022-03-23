@@ -46,10 +46,13 @@ class __EXPORT MountedFilesystem {
 //   options    : mount options.
 //   cb         : a callback used to actually launch the binary. This can be one of the
 //                functions declared in launch.h.
+//
+// See //src/storage/docs/launching.md for more information.
 zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_path, DiskFormat df,
                                     const MountOptions& options, LaunchCallback cb);
 
-// Shuts down a filesystem (using fuchsia.fs/Admin).
+// Shuts down a filesystem (using fuchsia.fs/Admin). Depending on whether or not this filesystem is
+// a component, the protocol is in a different spot.
 __EXPORT
 zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root);
 

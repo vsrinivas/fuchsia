@@ -6,6 +6,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.component/cpp/wire.h>
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
@@ -35,6 +37,7 @@
 #include <fbl/vector.h>
 #include <pretty/hexdump.h>
 
+#include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/path.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
@@ -93,10 +96,53 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   return zx::ok(std::move(outgoing_directory_or->client));
 }
 
-__EXPORT
+zx::status<> InitNativeFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir,
+                                   zx::channel device, const MountOptions& options) {
+  auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
+  if (startup_client_end.is_error())
+    return startup_client_end.take_error();
+  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+
+  auto start_options_or = options.as_start_options();
+  if (start_options_or.is_error())
+    return start_options_or.take_error();
+
+  auto res = startup_client->Start(std::move(device), std::move(*start_options_or));
+  if (!res.ok())
+    return zx::error(res.status());
+  if (res->result.is_err())
+    return zx::error(res->result.err());
+
+  return zx::ok();
+}
+
 zx::status<fidl::ClientEnd<Directory>> FsInit(zx::channel device, DiskFormat df,
                                               const MountOptions& options, LaunchCallback cb,
                                               zx::channel crypt_client) {
+  if (options.component_child_name != nullptr) {
+    std::string_view url = DiskFormatComponentUrl(df);
+    // If we don't know the url, fall back on the old launching method.
+    if (!url.empty()) {
+      // Otherwise, launch the component way.
+      auto exposed_dir_or = ConnectNativeFsComponent(url, options.component_child_name,
+                                                     options.component_collection_name);
+      if (exposed_dir_or.is_error())
+        return exposed_dir_or.take_error();
+      zx::status<> start_status =
+          InitNativeFsComponent(*exposed_dir_or, std::move(device), options);
+      if (start_status.is_error() && options.component_collection_name != nullptr) {
+        // If we hit an error starting, destroy the component instance. It may have been left in a
+        // partially initialized state. We purposely ignore the result of destruction; it probably
+        // won't fail, but if it does there is nothing we can really do, and the start error is
+        // more important.
+        [[maybe_unused]] auto result = DestroyNativeFsComponent(options.component_child_name,
+                                                                options.component_collection_name);
+        return start_status.take_error();
+      }
+      return exposed_dir_or;
+    }
+  }
+
   switch (df) {
     case kDiskFormatMinfs:
       return InitNativeFs(GetBinaryPath("minfs").c_str(), std::move(device), options, cb,

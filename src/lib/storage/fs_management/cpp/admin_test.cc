@@ -36,6 +36,16 @@ constexpr MountOptions kReadonlyOptions = {
     // Remaining options are same as default values.
 };
 
+constexpr MountOptions kDynamicComponentOptions = {
+    .component_child_name = "test-blobfs", .component_collection_name = "fs-collection",
+    // Remaining options are same as default values.
+};
+
+constexpr MountOptions kStaticComponentOptions = {
+    .component_child_name = "static-test-blobfs",
+    // Remaining options are same as default values.
+};
+
 constexpr char kTestFilePath[] = "test_file";
 
 class OutgoingDirectoryFixture : public testing::Test {
@@ -49,12 +59,20 @@ class OutgoingDirectoryFixture : public testing::Test {
     ramdisk_ = std::move(*ramdisk_or);
 
     zx_status_t status;
-    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, launch_stdio_sync, MkfsOptions()),
+    MkfsOptions mkfs_options{
+        .component_child_name = options_.component_child_name,
+        .component_collection_name = options_.component_collection_name,
+    };
+    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, launch_stdio_sync, mkfs_options),
               ZX_OK)
         << zx_status_get_string(status);
     state_ = kFormatted;
 
-    ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, FsckOptions(), launch_stdio_sync),
+    FsckOptions fsck_options{
+        .component_child_name = options_.component_child_name,
+        .component_collection_name = options_.component_collection_name,
+    };
+    ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, launch_stdio_sync),
               ZX_OK)
         << zx_status_get_string(status);
 
@@ -124,6 +142,12 @@ std::string PrintTestSuffix(
   if (std::get<1>(params.param).readonly) {
     out << "_readonly";
   }
+  if (std::get<1>(params.param).component_collection_name != nullptr) {
+    out << "_dynamic";
+  }
+  if (std::get<1>(params.param).component_child_name != nullptr) {
+    out << "_component";
+  }
   return out.str();
 }
 
@@ -147,7 +171,12 @@ TEST_P(OutgoingDirectoryTest, DataRootIsValid) {
 INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
                          testing::Combine(testing::Values(kDiskFormatBlobfs, kDiskFormatMinfs,
                                                           kDiskFormatFxfs, kDiskFormatF2fs),
-                                          testing::Values(kEmptyOptions, kReadonlyOptions)),
+                                          // Filesystems that don't yet support launching as
+                                          // components should be able to fall back to launching
+                                          // the old way.
+                                          testing::Values(kEmptyOptions, kReadonlyOptions,
+                                                          kStaticComponentOptions,
+                                                          kDynamicComponentOptions)),
                          PrintTestSuffix);
 
 // Minfs-Specific Tests (can be generalized to work with any mutable filesystem by parameterizing

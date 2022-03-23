@@ -225,4 +225,35 @@ __EXPORT std::string_view DiskFormatString(DiskFormat fs_type) {
   return format->name().c_str();
 }
 
+__EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
+  switch (fs_type) {
+    case kDiskFormatCount:
+    case kDiskFormatUnknown:
+      break;
+    case kDiskFormatBlobfs:
+      return kBlobfsComponentUrl;
+    case kDiskFormatGpt:
+    case kDiskFormatMbr:
+    case kDiskFormatMinfs:
+    case kDiskFormatFat:
+    case kDiskFormatFvm:
+    case kDiskFormatZxcrypt:
+    case kDiskFormatFactoryfs:
+    case kDiskFormatBlockVerity:
+    case kDiskFormatVbmeta:
+    case kDiskFormatBootpart:
+    case kDiskFormatFxfs:
+    case kDiskFormatF2fs:
+    case kDiskFormatNandBroker:
+      break;
+  }
+
+  auto format = CustomDiskFormat::Get(fs_type);
+  if (format == nullptr) {
+    return "";
+  }
+
+  return format->url().c_str();
+}
+
 }  // namespace fs_management

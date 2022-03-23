@@ -13,6 +13,8 @@
 
 namespace fs_management {
 
+constexpr std::string_view kBlobfsComponentUrl = "fuchsia-boot://#meta/blobfs.cm";
+
 enum DiskFormat {
   kDiskFormatUnknown = 0,
   kDiskFormatGpt = 1,
@@ -33,6 +35,10 @@ enum DiskFormat {
 };
 
 std::string_view DiskFormatString(DiskFormat fs_type);
+
+// Get the component url for the disk format, if it's known. If it's not known, this returns an
+// empty string.
+std::string_view DiskFormatComponentUrl(DiskFormat fs_type);
 
 inline constexpr int kHeaderSize = 4096;
 
@@ -86,16 +92,19 @@ class __EXPORT CustomDiskFormat {
   static DiskFormat Register(std::unique_ptr<CustomDiskFormat> format);
   static const CustomDiskFormat* Get(DiskFormat);
 
-  CustomDiskFormat(std::string name, std::string_view binary_path)
-      : name_(std::move(name)), binary_path_(binary_path) {}
+  CustomDiskFormat(std::string name, std::string_view binary_path,
+                   std::string_view component_url = "")
+      : name_(std::move(name)), binary_path_(binary_path), component_url_(component_url) {}
   CustomDiskFormat(CustomDiskFormat&&) = default;
 
   const std::string& name() const { return name_; }
   const std::string& binary_path() const { return binary_path_; }
+  const std::string& url() const { return component_url_; }
 
  private:
   std::string name_;
   std::string binary_path_;
+  std::string component_url_;
 };
 
 }  // namespace fs_management

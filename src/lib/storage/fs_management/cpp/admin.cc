@@ -16,6 +16,7 @@
 
 #include <fbl/vector.h>
 
+#include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
@@ -30,8 +31,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
     return status.take_error();
   }
 
-  auto resp = fidl::WireCall<fuchsia_io::Directory>(export_root)
-                  ->Open(flags, 0, fidl::StringView("root"), std::move(root_server));
+  auto resp = fidl::WireCall(export_root)->Open(flags, 0, "root", std::move(root_server));
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
