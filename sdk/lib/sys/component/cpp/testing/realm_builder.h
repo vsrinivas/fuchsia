@@ -168,10 +168,7 @@ class RealmBuilder final {
   // Factory method to create a new Realm::Builder object.
   // |svc| must outlive the RealmBuilder object and created Realm object.
   // If it's nullptr, then the current process' "/svc" namespace entry is used.
-  // If |relative_url| is not empty, then the Realm will contain the contents
-  // in the manifest of the component referenced by the url.
-  static RealmBuilder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr,
-                             cpp17::optional<std::string_view> relative_url = cpp17::nullopt);
+  static RealmBuilder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
 
   RealmBuilder(RealmBuilder&&) = default;
   RealmBuilder& operator=(RealmBuilder&&) = default;
