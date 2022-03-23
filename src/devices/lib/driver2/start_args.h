@@ -27,6 +27,13 @@ zx::status<T> SymbolValue(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
+template <typename T>
+T GetSymbol(const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols,
+            std::string_view name, T default_value = nullptr) {
+  auto value = driver::SymbolValue<T>(symbols, name);
+  return value.is_ok() ? *value : default_value;
+}
+
 inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary& program,
                                             std::string_view key) {
   if (program.has_entries()) {

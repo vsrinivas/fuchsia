@@ -44,13 +44,6 @@ constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRigh
 constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 constexpr auto kLibDriverPath = "/pkg/driver/compat.so";
 
-template <typename T>
-T GetSymbol(const fidl::VectorView<fdf::wire::NodeSymbol>& symbols, std::string_view name,
-            T default_value = nullptr) {
-  auto value = driver::SymbolValue<T>(symbols, name);
-  return value.is_ok() ? *value : default_value;
-}
-
 }  // namespace
 
 namespace compat {
@@ -101,8 +94,8 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
   if (start_args.has_symbols()) {
     symbols = start_args.symbols();
   }
-  auto compat_device = GetSymbol<const device_t*>(symbols, kDeviceSymbol, &kDefaultDevice);
-  const zx_protocol_device_t* ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  auto compat_device = driver::GetSymbol<const device_t*>(symbols, kDeviceSymbol, &kDefaultDevice);
+  const zx_protocol_device_t* ops = driver::GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
 
   // Open the compat driver's binary within the package.
   auto compat = driver::ProgramValue(start_args.program(), "compat");
