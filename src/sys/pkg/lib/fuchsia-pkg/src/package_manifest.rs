@@ -218,12 +218,13 @@ pub mod host {
                     .into_iter()
                     .map(|blob| relativize_blob_source_path(blob, &manifest_path))
                     .collect::<anyhow::Result<Vec<BlobInfo>>>()?;
-                Self { blobs, ..self }
+                Self { blobs, blob_sources_relative: RelativeTo::File, ..self }
             } else {
                 self
             };
+            let versioned_manifest = VersionedPackageManifest::Version1(manifest.clone());
             let file = File::create(manifest_path)?;
-            serde_json::to_writer(file, &manifest)?;
+            serde_json::to_writer(file, &versioned_manifest)?;
             Ok(manifest)
         }
     }
@@ -586,6 +587,7 @@ mod host_tests {
         let parsed_manifest: Value =
             serde_json::from_reader(File::open(manifest_path).unwrap()).unwrap();
         let object = parsed_manifest.as_object().unwrap();
+        let version = object.get("version").unwrap();
         let blobs_value = object.get("blobs").unwrap();
         let blobs = blobs_value.as_array().unwrap();
         let blob_value = blobs.first().unwrap();
@@ -593,6 +595,7 @@ mod host_tests {
         let source_path_value = blob.get("source_path").unwrap();
         let source_path = source_path_value.as_str().unwrap();
 
+        assert_eq!(version, "1");
         assert_eq!(source_path, "../data_source/p1");
     }
 
