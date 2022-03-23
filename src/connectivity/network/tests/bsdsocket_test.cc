@@ -6526,6 +6526,60 @@ TEST_P(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
       }));
 }
 
+TEST_P(NetDatagramSocketsCmsgIpTtlTest, SendCmsg) {
+  constexpr int kTtl = 42;
+  char send_buf[] = "hello";
+  ASSERT_NO_FATAL_FAILURE(
+      SendWithCmsg(connected().get(), send_buf, sizeof(send_buf), SOL_IP, IP_TTL, kTtl));
+
+  char recv_control[CMSG_SPACE(sizeof(kTtl)) + 1];
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(
+      send_buf, sizeof(send_buf), recv_control, sizeof(recv_control), [kTtl](msghdr& recv_msghdr) {
+        EXPECT_EQ(recv_msghdr.msg_controllen, CMSG_SPACE(sizeof(kTtl)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&recv_msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kTtl)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+        EXPECT_EQ(cmsg->cmsg_type, IP_TTL);
+        int recv_ttl;
+        memcpy(&recv_ttl, CMSG_DATA(cmsg), sizeof(recv_ttl));
+        EXPECT_EQ(recv_ttl, kTtl);
+        EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
+      }));
+}
+
+TEST_P(NetDatagramSocketsCmsgIpTtlTest, SendCmsgInvalidValues) {
+  // A valid IP_TTL must fit in an single byte and must not be zero.
+  // https://github.com/torvalds/linux/blob/f443e374ae1/net/ipv4/ip_sockglue.c#L304
+  constexpr std::array<int, 3> kInvalidValues = {-1, 0, 256};
+
+  for (int value : kInvalidValues) {
+    SCOPED_TRACE("ttl=" + std::to_string(value));
+    char send_buf[] = "hello";
+    iovec iov = {
+        .iov_base = send_buf,
+        .iov_len = sizeof(send_buf),
+    };
+    std::array<uint8_t, CMSG_SPACE(sizeof(value))> control;
+    msghdr msg = {
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+        .msg_control = control.data(),
+        .msg_controllen = CMSG_LEN(sizeof(value)),
+    };
+    cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+    ASSERT_NE(cmsg, nullptr);
+    *cmsg = {
+        .cmsg_len = CMSG_LEN(sizeof(value)),
+        .cmsg_level = SOL_IP,
+        .cmsg_type = IP_TTL,
+    };
+    memcpy(CMSG_DATA(cmsg), &value, sizeof(value));
+    ASSERT_EQ(sendmsg(connected().get(), &msg, 0), -1);
+    ASSERT_EQ(errno, EINVAL) << strerror(errno);
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTtlTests, NetDatagramSocketsCmsgIpTtlTest,
                          testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
                                          EnableCmsgReceiveTime::BetweenSendAndRecv),

@@ -487,7 +487,17 @@ type NetworkSocketSendControlData = table {
     /// IPv4 level ancillary data.
     ///
     /// These match POSIX `SOL_IP` control messages.
-    2: ip @generated_name("IpSendControlData") table {};
+    2: ip @generated_name("IpSendControlData") table {
+        // Reserved for `SOL_IP` -> `IP_TOS` control message, to maintain
+        // a consistent order with the similar IpRecvControlData table.
+        // TODO(https://fxbug.dev/96028): Replace with `IP_TOS` cmsg.
+        1: reserved;
+
+        /// The Time to Live value to set in the IPv4 header of an outgoing
+        /// packet.
+        // Values from range [1, 255] are valid.
+        2: ttl uint8;
+    };
 
     /// IPv6 level ancillary data.
     ///

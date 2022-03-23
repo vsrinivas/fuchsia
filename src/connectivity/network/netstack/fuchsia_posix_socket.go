@@ -1864,6 +1864,28 @@ func (s *datagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ReceivableControlM
 	return controlData
 }
 
+func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlData, out *tcpip.SendableControlMessages) posix.Errno {
+	if in.HasIp() {
+		inIp := in.GetIp()
+		if inIp.HasTtl() {
+			ttl := inIp.GetTtl()
+			if ttl == 0 {
+				return posix.ErrnoEinval
+			}
+			out.TTL = ttl
+			out.HasTTL = true
+		}
+	}
+	return 0
+}
+
+func fidlDatagramControlDataToControlMessages(in socket.DatagramSocketSendControlData, out *tcpip.SendableControlMessages) posix.Errno {
+	if in.HasNetwork() {
+		return fidlNetworkControlDataToControlMessages(in.GetNetwork(), out)
+	}
+	return 0
+}
+
 func (s *datagramSocket) close() {
 	if s.endpoint.decRef() {
 		s.wq.EventUnregister(&s.entry)
@@ -2007,10 +2029,13 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	}), nil
 }
 
-func (s *datagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8) (int64, tcpip.Error) {
+func (s *datagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
 	var r bytes.Reader
 	r.Reset(data)
-	n, err := s.ep.Write(&r, tcpip.WriteOptions{To: to})
+	n, err := s.ep.Write(&r, tcpip.WriteOptions{
+		To:              to,
+		ControlMessages: cmsg,
+	})
 	if err != nil {
 		if err := s.pending.update(); err != nil {
 			panic(err)
@@ -2020,7 +2045,7 @@ func (s *datagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8) (int64, tc
 	return n, nil
 }
 
-func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8) (int64, tcpip.Error) {
+func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
 	var fullAddr tcpip.FullAddress
 	var to *tcpip.FullAddress
 	if addr != nil {
@@ -2035,14 +2060,15 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 		to = &fullAddr
 	}
 
-	return s.datagramSocket.sendMsg(to, data)
+	return s.datagramSocket.sendMsg(to, data, cmsg)
 }
 
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
-	// TODO(https://fxbug.dev/21106): do something with control.
-	_ = control
-
-	n, err := s.sendMsg(addr, data)
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+	var cmsg tcpip.SendableControlMessages
+	if err := fidlDatagramControlDataToControlMessages(controlData, &cmsg); err != 0 {
+		return socket.DatagramSocketSendMsgResultWithErr(err), nil
+	}
+	n, err := s.sendMsg(addr, data, cmsg)
 	if err != nil {
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -2959,11 +2985,12 @@ func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, w
 	}), nil
 }
 
-func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.NetworkSocketSendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
-	// TODO(https://fxbug.dev/21106): do something with control.
-	_ = control
-
-	n, err := s.sendMsg(addr, data)
+func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.NetworkSocketSendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
+	var cmsg tcpip.SendableControlMessages
+	if err := fidlNetworkControlDataToControlMessages(controlData, &cmsg); err != 0 {
+		return rawsocket.SocketSendMsgResultWithErr(err), nil
+	}
+	n, err := s.sendMsg(addr, data, cmsg)
 	if err != nil {
 		return rawsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -3470,7 +3497,7 @@ func (s *packetSocketImpl) SendMsg(_ fidl.Context, addr *packetsocket.PacketInfo
 		to = &fullAddr
 	}
 
-	n, err := s.datagramSocket.sendMsg(to, data)
+	n, err := s.datagramSocket.sendMsg(to, data, tcpip.SendableControlMessages{})
 	if err != nil {
 		return packetsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}

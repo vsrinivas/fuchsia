@@ -135,49 +135,100 @@ struct PacketInfo {
   fnet::wire::MacAddress eui48_storage_;
 };
 
-template <typename T>
-int16_t ParseSocketControlMessage(T& cdata, int type, const void* data, socklen_t len) {
-  // TODO(https://fxbug.dev/88984): Validate SOL_SOCKET control messages.
+int16_t ParseSocketLevelControlMessage(fsocket::wire::SocketSendControlData& fidl_socket, int type,
+                                       const void* data, socklen_t len) {
+  // TODO(https://fxbug.dev/88984): Validate unsupported SOL_SOCKET control messages.
   return 0;
 }
 
-template <typename T>
-int16_t ParseIpControlMessage(T& cdata, int type, const void* data, socklen_t len) {
-  if constexpr (std::is_same_v<T, fsocket::wire::DatagramSocketSendControlData> ||
-                std::is_same_v<T, fsocket::wire::NetworkSocketSendControlData>) {
-    // TODO(https://fxbug.dev/88984): Validate SOL_IP control messages.
-    return 0;
+int16_t ParseIpLevelControlMessage(fsocket::wire::IpSendControlData& fidl_ip, int type,
+                                   const void* data, socklen_t len) {
+  switch (type) {
+    case IP_TTL: {
+      int ttl;
+      if (len != sizeof(ttl)) {
+        return EINVAL;
+      }
+      memcpy(&ttl, data, sizeof(ttl));
+      if (ttl < 0 || ttl > std::numeric_limits<uint8_t>::max()) {
+        return EINVAL;
+      }
+      fidl_ip.set_ttl(static_cast<uint8_t>(ttl));
+      return 0;
+    }
+    default:
+      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IP control messages.
+      return 0;
   }
+}
 
-  // Ignore SOL_IP control messages on non-ipv4 sockets.
+int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ipv6, int type,
+                                     const void* data, socklen_t data_len) {
+  // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IPV6 control messages.
   return 0;
 }
 
-template <typename T>
-int16_t ParseIpv6ControlMessage(T& cdata, int type, const void* data, socklen_t len) {
-  if constexpr (std::is_same_v<T, fsocket::wire::DatagramSocketSendControlData> ||
-                std::is_same_v<T, fsocket::wire::NetworkSocketSendControlData>) {
-    // TODO(https://fxbug.dev/88984): Validate SOL_IPV6 control messages.
-    return 0;
+int16_t ParseControlMessage(fsocket::wire::SocketSendControlData& fidl_socket,
+                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            socklen_t data_len) {
+  switch (level) {
+    case SOL_SOCKET:
+      return ParseSocketLevelControlMessage(fidl_socket, type, data, data_len);
+    default:
+      return 0;
   }
+}
 
-  // Ignore SOL_IPV6 control messages on non-ip sockets.
-  return 0;
+int16_t ParseControlMessage(fsocket::wire::NetworkSocketSendControlData& fidl_net,
+                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            socklen_t data_len) {
+  switch (level) {
+    case SOL_SOCKET:
+      if (!fidl_net.has_socket()) {
+        fidl_net.set_socket(allocator, fsocket::wire::SocketSendControlData(allocator));
+      }
+      return ParseSocketLevelControlMessage(fidl_net.socket(), type, data, data_len);
+    case SOL_IP:
+      if (!fidl_net.has_ip()) {
+        fidl_net.set_ip(allocator, fsocket::wire::IpSendControlData(allocator));
+      }
+      return ParseIpLevelControlMessage(fidl_net.ip(), type, data, data_len);
+    case SOL_IPV6:
+      if (!fidl_net.has_ipv6()) {
+        fidl_net.set_ipv6(allocator, fsocket::wire::Ipv6SendControlData(allocator));
+      }
+      return ParseIpv6LevelControlMessage(fidl_net.ipv6(), type, data, data_len);
+    default:
+      return 0;
+  }
+}
+
+int16_t ParseControlMessage(fsocket::wire::DatagramSocketSendControlData& fidl_dgram,
+                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            socklen_t data_len) {
+  if (!fidl_dgram.has_network()) {
+    fidl_dgram.set_network(allocator, fsocket::wire::NetworkSocketSendControlData(allocator));
+  }
+  return ParseControlMessage(fidl_dgram.network(), allocator, level, type, data, data_len);
+}
+
+int16_t ParseControlMessage(fpacketsocket::wire::SendControlData& fidl_packet,
+                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            socklen_t data_len) {
+  if (!fidl_packet.has_socket()) {
+    fidl_packet.set_socket(allocator, fsocket::wire::SocketSendControlData(allocator));
+  }
+  return ParseControlMessage(fidl_packet.socket(), allocator, level, type, data, data_len);
 }
 
 template <typename T>
-int16_t ParseUdpControlMessage(T& cdata, int type, const void* data, socklen_t len) {
-  // TODO(https://fxbug.dev/91034): Add support for SOL_UDP control messages.
-  return 0;
-}
-
-template <typename T>
-fitx::result<int16_t, T> ParseControlMessage(const void* buf, socklen_t len) {
+fitx::result<int16_t, T> ParseControlMessages(const void* buf, socklen_t len,
+                                              fidl::AnyArena& allocator) {
   if (buf == nullptr && len != 0) {
     return fitx::error(static_cast<int16_t>(EFAULT));
   }
 
-  T fidl_cmsg;
+  T fidl_cmsg(allocator);
   cpp20::span posix_cmsg(static_cast<const unsigned char*>(buf), len);
   // Stop parsing once there is not enough bytes left to form a full cmsghdr.
   // https://github.com/torvalds/linux/blob/42eb8fdac2f/net/core/sock.c#L2644
@@ -185,34 +236,21 @@ fitx::result<int16_t, T> ParseControlMessage(const void* buf, socklen_t len) {
   while (posix_cmsg.size() >= sizeof(cmsghdr)) {
     // Do not access the control buffer directly, as it may be misaligned.
     cmsghdr cmsg;
-    std::copy_n(posix_cmsg.data(), sizeof(cmsg), reinterpret_cast<uint8_t*>(&cmsg));
+    memcpy(&cmsg, posix_cmsg.data(), sizeof(cmsg));
 
     // Validate the header length.
     // https://github.com/torvalds/linux/blob/42eb8fdac2f/include/linux/socket.h#L119-L122
     if (cmsg.cmsg_len < sizeof(cmsg) || cmsg.cmsg_len > posix_cmsg.size()) {
       return fitx::error(static_cast<int16_t>(EINVAL));
     }
+    const void* data = CMSG_DATA(posix_cmsg.data());
+    const socklen_t data_len = cmsg.cmsg_len - CMSG_ALIGN(sizeof(cmsghdr));
+    ZX_ASSERT_MSG(reinterpret_cast<const unsigned char*>(data) + data_len < posix_cmsg.end(),
+                  "incoherent data buffer bounds, %p + %x > %p", data, data_len, posix_cmsg.end());
     posix_cmsg = posix_cmsg.subspan(cmsg.cmsg_len);
 
-    int16_t err = [&fidl_cmsg, &cmsg]() -> int16_t {
-      switch (cmsg.cmsg_level) {
-        case SOL_SOCKET:
-          return ParseSocketControlMessage(fidl_cmsg, cmsg.cmsg_type, CMSG_DATA(&cmsg),
-                                           cmsg.cmsg_len);
-        case SOL_IP:
-          return ParseIpControlMessage(fidl_cmsg, cmsg.cmsg_type, CMSG_DATA(&cmsg), cmsg.cmsg_len);
-        case SOL_IPV6:
-          return ParseIpv6ControlMessage(fidl_cmsg, cmsg.cmsg_type, CMSG_DATA(&cmsg),
-                                         cmsg.cmsg_len);
-        case SOL_UDP:
-          return ParseUdpControlMessage(fidl_cmsg, cmsg.cmsg_type, CMSG_DATA(&cmsg), cmsg.cmsg_len);
-        default:
-          // Control messages with an unrecognized level are silently ignored. See SOL_IPV6
-          // example below. The behavior for every socket domain/type is the same.
-          // https://github.com/torvalds/linux/blob/2585cf9dfaa/net/ipv6/datagram.c#L780
-          return 0;
-      }
-    }();
+    int16_t err =
+        ParseControlMessage(fidl_cmsg, allocator, cmsg.cmsg_level, cmsg.cmsg_type, data, data_len);
     if (err != 0) {
       return fitx::error(err);
     }
@@ -2028,8 +2066,9 @@ struct base_socket_with_event : public zxio {
       total += iov.iov_len;
     }
 
-    fitx::result cmsg_result =
-        ParseControlMessage<typename T::FidlSendControlData>(msg->msg_control, msg->msg_controllen);
+    fidl::Arena allocator;
+    fitx::result cmsg_result = ParseControlMessages<typename T::FidlSendControlData>(
+        msg->msg_control, msg->msg_controllen, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
@@ -2076,7 +2115,7 @@ struct base_socket_with_event : public zxio {
     T::handle_sendmsg_response(result.response(), total);
 
     *out_code = 0;
-    // SendMsg does not perform partial writes..
+    // SendMsg does not perform partial writes.
     *out_actual = total;
     return ZX_OK;
   }
@@ -2519,8 +2558,9 @@ struct stream_socket : public zxio {
 
     // Fuchsia does not support control messages on stream sockets. But we still parse the buffer
     // to check that it is valid.
-    fitx::result cmsg_result = ParseControlMessage<fsocket::wire::SocketSendControlData>(
-        msg->msg_control, msg->msg_controllen);
+    fidl::Arena allocator;
+    fitx::result cmsg_result = ParseControlMessages<fsocket::wire::SocketSendControlData>(
+        msg->msg_control, msg->msg_controllen, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
