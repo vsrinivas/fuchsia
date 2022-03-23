@@ -58,3 +58,37 @@ _before_ writing code that uses some other option.
 
 Note: some existing code does not follow these recommendations. Such code will be
 migrated over time.
+
+## Re-entrancy
+
+Some `InputHandler`s need to maintain state which depends on the order in which
+events are received. If `handle_input_event()` could be invoked re-entrantly,
+a handler would probably need to buffer the re-entrant calls internally, to
+avoid corrupting mutable state.
+
+Instead, the `handle_input_event()` API is documented as _not_ being reentrant-safe,
+and the `InputPipeline` struct always waits for an `InputHandler` to complete
+processing an `InputEvent`, before invoking `handle_input_event()` again on the
+same handler.
+
+Consequently, `InputHandler`s _should_ assume that `handle_input_event()`
+is not invoked concurrently.
+
+In addition to avoiding the need for internal buffering, this may also simplify
+reasoning about the correctness of the use of `RefCell::borrow()` and
+`RefCell::borrow_mut()`.
+
+For example, for some handlers, code in `handle_input_event()` and its callees
+_may_ be able to assume that data read while holding a `RefCell::borrow()` or
+`RefCell::borrow_mut()` guard remains unchanged even after releasing the guard
+and yielding (via the `await` operator).
+
+> NOTE: Such an assumption is _only_ appropriate if
+> 1. The handler does _not_ create `fuchsia_async::Task`s which can modify the
+>    mutable state behind the `RefCell`, OR
+> 2. It is semantically correct for the `handle_input_event()` `Future`
+>    to use the old value.
+>
+> Otherwise, the other `Task`s may execute while `handle_input_event()` is
+> suspended, and the state cached in `handle_input_event()` `Future` will be
+> (incorrectly) used instead of the value updated by the other `Task`s.
