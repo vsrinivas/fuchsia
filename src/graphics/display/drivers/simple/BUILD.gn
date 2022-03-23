@@ -69,9 +69,6 @@ foreach(driver, simple_drivers) {
       "//src/devices/pci/lib/pci",
       "//src/lib/ddk",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   fuchsia_driver_component("simple.$driver") {

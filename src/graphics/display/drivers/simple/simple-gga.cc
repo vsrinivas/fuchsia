@@ -9,6 +9,9 @@
 #include <lib/pci/hw.h>
 #include <zircon/syscalls.h>
 
+#include <cstdint>
+#include <limits>
+
 #include "src/graphics/display/drivers/simple/simple-display.h"
 #include "src/graphics/display/drivers/simple/simple-gga-bind.h"
 
@@ -54,7 +57,7 @@ static void gga_write_reg(uint16_t idx, uint16_t value) {
 __attribute__((unused)) static void gga_dump_regs() {
   zxlogf(INFO, "GGA VBE Registers:");
   uint16_t reg_value[GGA_VBE_DISPI_NUM_REGS];
-  for (size_t i = 0; i < GGA_VBE_DISPI_NUM_REGS; i++) {
+  for (uint16_t i = 0; i < GGA_VBE_DISPI_NUM_REGS; i++) {
     reg_value[i] = gga_read_reg(i);
   }
   for (size_t i = 0; i < GGA_VBE_DISPI_NUM_REGS; i++) {
@@ -119,7 +122,12 @@ static zx_status_t gga_disp_bind(void* ctx, zx_device_t* dev) {
   }
 
   // Set up device VBE registers.
-  status = gga_disp_setup(width, height);
+  if (width >= std::numeric_limits<uint16_t>::max() ||
+      height >= std::numeric_limits<uint16_t>::max()) {
+    zxlogf(ERROR, "%s: unsupported large width/height: %d %d\n", __func__, width, height);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  status = gga_disp_setup(static_cast<uint16_t>(width), static_cast<uint16_t>(height));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Cannot set up GGA device registers: %d", __func__, status);
     return status;

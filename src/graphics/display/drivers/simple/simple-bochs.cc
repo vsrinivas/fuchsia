@@ -41,6 +41,9 @@ inline void bochs_vbe_dispi_write(MMIO_PTR void* base, uint32_t reg, uint16_t va
 #define BOCHS_VBE_DISPI_Y_OFFSET 0x9
 #define BOCHS_VBE_DISPI_VIDEO_MEMORY_64K 0xa
 
+#define BOCHS_VBE_DISPI_ENABLED 0x01
+#define BOCHS_VBE_DISPI_LFB_ENABLED 0x40
+
 static int zx_display_format_to_bpp(zx_pixel_format_t format) {
   unsigned bpp = ZX_PIXEL_FORMAT_BYTES(format) * 8;
   if (bpp == 0) {
@@ -57,9 +60,10 @@ static void set_hw_mode(MMIO_PTR void* regs, uint16_t width, uint16_t height,
 
   int bpp = zx_display_format_to_bpp(format);
   assert(bpp >= 0);
+  assert(bpp < 256);
 
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_ENABLE, 0);
-  bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_BPP, bpp);
+  bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_BPP, static_cast<uint16_t>(bpp));
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_XRES, width);
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_YRES, height);
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_BANK, 0);
@@ -67,7 +71,8 @@ static void set_hw_mode(MMIO_PTR void* regs, uint16_t width, uint16_t height,
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_VIRT_HEIGHT, height);
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_X_OFFSET, 0);
   bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_Y_OFFSET, 0);
-  bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_ENABLE, 0x41);
+  bochs_vbe_dispi_write(regs, BOCHS_VBE_DISPI_ENABLE,
+                        BOCHS_VBE_DISPI_ENABLED | BOCHS_VBE_DISPI_LFB_ENABLED);
 
   zxlogf(TRACE, "bochs_vbe_set_hw_mode:");
   zxlogf(TRACE, "     ID: 0x%x", bochs_vbe_dispi_read(regs, BOCHS_VBE_DISPI_ID));
