@@ -25,7 +25,7 @@ as written today.
 [ev]: https://fuchsia.dev/fuchsia-src/reference/kernel_objects/event
 [scenic]: https://fuchsia.dev/fuchsia-src/development/graphics/scenic
 [vc]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0094_carnelian_virtcon
-[doe]: https://fuchsia.dev/reference/fidl/fuchsia.ui.scenic?hl=en#Scenic.GetDisplayOwnershipEvent
+[doe]: https://fuchsia.dev/reference/fidl/fuchsia.ui.scenic#Scenic.GetDisplayOwnershipEvent
 
 When the display ownership detects that the display ownership has been
 lost, it marks all events that it subsequently sees as handled.  This makes
