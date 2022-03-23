@@ -80,11 +80,12 @@ protocol Node2 {
     /// Terminates the connection to the node.
     ///
     /// After calling `Close`, the client must not send any other requests.
-    /// The result of `Close` arrives as an epitaph, where the channel is closed
-    /// by the server upon processing this operation.
+    /// Servers, after sending the status response, should close the connection
+    /// regardless of status and without sending an epitaph.
     ///
     /// Closing the client end of the channel should be semantically equivalent
-    /// to calling `Close` without monitoring the status epitaph.
+    /// to calling `Close` without knowing when the close has completed or its
+    /// status.
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io/Node.Close")
