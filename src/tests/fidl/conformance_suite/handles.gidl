@@ -21,6 +21,23 @@ success("SingleHandle") {
     },
 }
 
+encode_failure("AbsentNonOptionalHandle") {
+    value = SingleHandle{
+        h: null,
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("AbsentNonOptionalHandle") {
+    bytes = {
+        v1, v2 = [
+            repeat(0x00):4, padding:4,
+        ],
+    },
+    type = SingleHandle,
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
 success("SingleOptionalHandlePresent") {
     handle_defs = {
         #0 = event(),

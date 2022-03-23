@@ -95,7 +95,7 @@ class NaturalDecoder final {
 
 #ifdef __Fuchsia__
   void DecodeHandle(zx::object_base* value, HandleAttributes attr, size_t offset,
-                    bool is_nullable) {
+                    bool is_optional) {
     zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
     switch (*handle) {
       case FIDL_HANDLE_PRESENT: {
@@ -122,7 +122,7 @@ class NaturalDecoder final {
         return;
       }
       case FIDL_HANDLE_ABSENT: {
-        if (is_nullable) {
+        if (is_optional) {
           value->reset();
         } else {
           SetError(kCodingErrorAbsentNonNullableHandle);

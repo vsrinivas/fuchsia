@@ -48,7 +48,7 @@ class NaturalEncoder {
     return reinterpret_cast<const T*>(bytes_.data() + offset);
   }
 
-  void EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset);
+  void EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset, bool is_optional);
 
   size_t CurrentLength() const { return bytes_.size(); }
 

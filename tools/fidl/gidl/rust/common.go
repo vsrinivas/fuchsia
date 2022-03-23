@@ -130,6 +130,9 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 		}
 	case nil:
 		if !decl.IsNullable() {
+			if _, ok := decl.(*gidlmixer.HandleDecl); ok {
+				return "Handle::invalid()"
+			}
 			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
 		}
 		return "None"

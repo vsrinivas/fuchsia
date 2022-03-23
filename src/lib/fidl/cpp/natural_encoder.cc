@@ -8,6 +8,9 @@
 #include <zircon/fidl.h>
 
 namespace fidl::internal {
+
+extern const char* const kCodingErrorAbsentNonNullableHandle;
+
 namespace {
 
 const size_t kSmallAllocSize = 512;
@@ -51,7 +54,8 @@ size_t NaturalEncoder::Alloc(size_t size) {
   return offset;
 }
 
-void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset) {
+void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset,
+                                  bool is_optional) {
   if (handle) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
 
@@ -67,6 +71,10 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
 
     handle_actual_++;
   } else {
+    if (!is_optional) {
+      SetError(kCodingErrorAbsentNonNullableHandle);
+      return;
+    }
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
 }

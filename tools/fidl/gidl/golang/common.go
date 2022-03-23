@@ -185,12 +185,11 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 			return onList(value, decl)
 		}
 	case nil:
+		if _, ok := decl.(*gidlmixer.HandleDecl); ok {
+			return "zx.HandleInvalid"
+		}
 		if !decl.IsNullable() {
 			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
-		}
-		_, ok := decl.(*gidlmixer.HandleDecl)
-		if ok {
-			return "zx.HandleInvalid"
 		}
 		return "nil"
 	}

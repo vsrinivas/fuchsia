@@ -1904,6 +1904,9 @@ impl Encodable for Handle {
         recursion_depth: usize,
     ) -> Result<()> {
         encoder.debug_check_bounds::<Self>(offset);
+        if self.is_invalid() {
+            return Err(Error::NotNullable);
+        }
         ALLOC_PRESENT_U32.clone().encode(encoder, offset, recursion_depth)?;
         // fidlc forbids handle types with empty rights.
         debug_assert_ne!(encoder.next_handle_rights, Rights::empty());

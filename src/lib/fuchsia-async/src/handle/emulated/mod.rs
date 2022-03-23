@@ -235,6 +235,11 @@ impl Handle {
         Handle(INVALID_HANDLE)
     }
 
+    /// Return true if this handle is invalid
+    pub fn is_invalid(&self) -> bool {
+        self.0 == INVALID_HANDLE
+    }
+
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
     pub unsafe fn from_raw(hdl: u32) -> Handle {

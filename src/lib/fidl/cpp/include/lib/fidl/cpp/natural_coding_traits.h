@@ -283,7 +283,7 @@ struct NaturalCodingTraits<
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
   }
   static void Decode(NaturalDecoder* decoder, zx::object_base* value, size_t offset,
                      size_t recursion_depth) {
@@ -540,7 +540,7 @@ struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
   }
 
   static void Decode(NaturalDecoder* decoder, ClientEnd<T>* value, size_t offset,
@@ -567,7 +567,7 @@ struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
-                          offset);
+                          offset, Constraint::is_optional);
   }
 
   static void Decode(NaturalDecoder* decoder, ServerEnd<T>* value, size_t offset,
