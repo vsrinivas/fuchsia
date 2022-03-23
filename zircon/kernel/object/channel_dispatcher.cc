@@ -37,6 +37,8 @@ KCOUNTER(channel_full, "channel.full")
 KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
+namespace {
+
 // Temporary hack to chase down bugs like fxbug.dev/47000 where upwards of 250MB of ipc
 // memory is consumed. The bet is that even if each message is at max size there
 // should be one or two channels with thousands of messages. If so, this check adds
@@ -44,6 +46,13 @@ KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 // TODO(cpu): This limit can be lower but mojo's ChannelTest.PeerStressTest sends
 // about 3K small messages. Switching to size limit is more reasonable.
 constexpr size_t kMaxPendingMessageCount = 3500;
+
+// This value is part of the zx_channel_call contract.
+constexpr uint32_t kMinKernelGeneratedTxid = 0x80000000u;
+
+bool IsKernelGeneratedTxid(zx_txid_t txid) { return txid >= kMinKernelGeneratedTxid; }
+
+}  // namespace
 
 // static
 int64_t ChannelDispatcher::get_channel_full_count() { return channel_full.Value(); }
@@ -225,6 +234,11 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   return ZX_OK;
 }
 
+zx_txid_t ChannelDispatcher::GenerateTxid() {
+  // Values 1..kMinKernelGeneratedTxid are reserved for userspace.
+  return (++txid_) | kMinKernelGeneratedTxid;
+}
+
 zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_time_t deadline,
                                     MessagePacketPtr* reply) {
   canary_.Assert();
@@ -250,10 +264,8 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
       return ZX_ERR_PEER_CLOSED;
     }
 
-    // Obtain a txid.  txid 0 is not allowed, and 1..0x7FFFFFFF are reserved
-    // for userspace.  So, bump our counter and OR in the high bit.
   alloc_txid:
-    zx_txid_t txid = (++txid_) | 0x80000000;
+    const zx_txid_t txid = GenerateTxid();
 
     // If there are waiting messages, ensure we have not allocated a txid
     // that's already in use.  This is unlikely.  It's atypical for multiple
@@ -330,20 +342,23 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   canary_.Assert();
 
   if (!waiters_.is_empty()) {
-    // If the far side is waiting for replies to messages
-    // send via "call", see if this message has a matching
-    // txid to one of the waiters, and if so, deliver it.
-    zx_txid_t txid = msg->get_txid();
-    for (auto& waiter : waiters_) {
-      // (3C) Deliver message to waiter.
-      // Remove waiter from list.
-      if (waiter.get_txid() == txid) {
-        waiters_.erase(waiter);
-        waiter.Deliver(ktl::move(msg));
-        return;
+    // If the far side has "call" waiters waiting for replies, see if this message's txid matches
+    // one of them.  If so, deliver it.  Note, because callers use a kernel generated txid we can
+    // skip checking the list if this message's txid isn't kernel generated.
+    const zx_txid_t txid = msg->get_txid();
+    if (IsKernelGeneratedTxid(txid)) {
+      for (auto& waiter : waiters_) {
+        // (3C) Deliver message to waiter.
+        // Remove waiter from list.
+        if (waiter.get_txid() == txid) {
+          waiters_.erase(waiter);
+          waiter.Deliver(ktl::move(msg));
+          return;
+        }
       }
     }
   }
+
   messages_.push_back(ktl::move(msg));
   if (messages_.size() > max_message_count_) {
     max_message_count_ = messages_.size();

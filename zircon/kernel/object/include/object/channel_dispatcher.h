@@ -114,6 +114,9 @@ class ChannelDispatcher final
   explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
   void WriteSelf(MessagePacketPtr msg) TA_REQ(get_lock());
 
+  // Generate a unique txid to be used in a channel call.
+  zx_txid_t GenerateTxid() TA_REQ(get_lock());
+
   MessageList messages_ TA_GUARDED(get_lock());
   uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
   // Tracks the process that is allowed to issue calls, for example write
