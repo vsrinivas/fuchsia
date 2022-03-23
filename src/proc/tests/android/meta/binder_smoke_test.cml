@@ -1,7 +1,6 @@
 {
-    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "data/tests/binder_smoke_test",
-        features: [ "binder" ],
+        binary: "tests/binder_smoke_test",
     },
 }

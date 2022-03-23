@@ -122,7 +122,7 @@ impl FsNodeOps for RemoteNode {
         let zxio = Arc::new(
             self.zxio
                 .open(self.rights, 0, name)
-                .map_err(|status| from_status_like_fdio!(status))?,
+                .map_err(|status| from_status_like_fdio!(status, name))?,
         );
 
         // TODO: It's unfortunate to have another round-trip. We should be able

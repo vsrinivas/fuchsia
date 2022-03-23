@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
-        binary: "/data/tests/uidgid_test",
+        binary: "tests/uidgid_test",
         args: [ "--gunit_filter=*.Setgroups" ],
         user: "root:x:0:0",
     },

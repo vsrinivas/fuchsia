@@ -1,17 +1,8 @@
 {
     program: {
         runner: "starnix",
-        binary: "system/bin/sh",
+        binary: "/system/bin/sh",
         args: [ "-i" ],
-        mounts: [
-            "/:ext4:data/system.img",
-            "/data:remotefs:data",
-            "/data/tmp:tmpfs",
-            "/dev:devtmpfs",
-            "/dev/pts:devpts",
-            "/proc:proc",
-        ],
         features: [ "binder" ],
-        apex_hack: [ "com.android.runtime" ],
     },
 }

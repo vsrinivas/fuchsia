@@ -4,6 +4,7 @@
 
 mod component_runner;
 mod exception_executor;
+mod galaxy;
 mod serve_protocols;
 mod shared;
 

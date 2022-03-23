@@ -1,7 +1,7 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "bin/sh",
+        binary: "/bin/sh",
         args: [
             "-c",
             "ls && ls",

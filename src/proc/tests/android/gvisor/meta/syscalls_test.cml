@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
-        binary: "/data/tests/syscalls_test",
+        binary: "tests/syscalls_test",
         user: "root:x:0:0",
     },
 }

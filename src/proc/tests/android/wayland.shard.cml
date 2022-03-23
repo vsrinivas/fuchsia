@@ -1,5 +1,5 @@
 {
-    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         environ: [
             "XDG_RUNTIME_DIR=/data/tmp",

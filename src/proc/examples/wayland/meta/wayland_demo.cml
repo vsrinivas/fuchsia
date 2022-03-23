@@ -1,20 +1,11 @@
 {
     program: {
         runner: "starnix",
-        binary: "data/bin/wayland_demo",
+        binary: "bin/wayland_demo",
         environ: [
             "XDG_RUNTIME_DIR=/data/tmp",
             "VIRTWL_DEVICE=/data/tmp/wayland-1",
         ],
-        mounts: [
-            "/:ext4:data/system.img",
-            "/data:remotefs:data",
-            "/dev:devtmpfs",
-            "/data/tmp:tmpfs",
-            "/proc:proc",
-        ],
-        features: [ "wayland" ],
-        apex_hack: [ "com.android.runtime" ],
     },
     capabilities: [
         { protocol: "fuchsia.ui.app.ViewProvider" },

@@ -4,6 +4,10 @@
             name: "starnix_runner",
             url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
         },
+        {
+            name: "stardroid",
+            url: "fuchsia-pkg://fuchsia.com/stardroid#meta/starnix_runner.cm",
+        },
     ],
     collections: [
         {
@@ -50,6 +54,10 @@
         {
             runner: "starnix",
             from: "#starnix_runner",
+        },
+        {
+            runner: "stardroid",
+            from: "#stardroid",
         },
         {
             // In principle, this protocol should be exposed by the

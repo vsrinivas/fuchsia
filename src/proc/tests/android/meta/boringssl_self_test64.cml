@@ -1,5 +1,5 @@
 {
-    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "/system/bin/boringssl_self_test64",
     },

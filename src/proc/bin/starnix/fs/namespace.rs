@@ -125,7 +125,7 @@ pub fn create_filesystem(
         b"sysfs" => Fs(sys_fs(kernel).clone()),
         b"tmpfs" => Fs(TmpFs::new()),
         b"binder" => Fs(BinderFs::new(kernel)?),
-        _ => return error!(ENODEV),
+        _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
     })
 }
 

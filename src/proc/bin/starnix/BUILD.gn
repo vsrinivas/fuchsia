@@ -27,6 +27,7 @@ if (target_cpu == "x64") {
 
     source_root = "main.rs"
     deps = [
+      "//garnet/lib/rust/io_util",
       "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
@@ -76,6 +77,8 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:paste",
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:scopeguard",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:slab",
       "//third_party/rust_crates:vk-sys",
     ]
@@ -108,6 +111,7 @@ if (target_cpu == "x64") {
       "device/wayland/wayland.rs",
       "execution/component_runner.rs",
       "execution/exception_executor.rs",
+      "execution/galaxy.rs",
       "execution/mod.rs",
       "execution/serve_protocols.rs",
       "execution/shared.rs",
@@ -212,10 +216,30 @@ if (target_cpu == "x64") {
     }
   }
 
+  resource("android_system_image") {
+    sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
+    outputs = [ "data/system.img" ]
+  }
+
+  resource("stardroid_config") {
+    sources = [ "//src/proc/tests/android/stardroid.json" ]
+    outputs = [ "data/runner.config" ]
+  }
+
   fuchsia_component("starnix_runner_component") {
     component_name = "starnix_runner"
     deps = [ ":starnix_runner_bin" ]
     manifest = "meta/starnix_runner.cml"
+  }
+
+  resource("starnix_data_tmp_placeholder") {
+    sources = [ "//src/proc/tests/android/placeholder" ]
+    outputs = [ "data/tmp/.placeholder" ]
+  }
+
+  resource("starnix_data_pkg_placeholder") {
+    sources = [ "//src/proc/tests/android/placeholder" ]
+    outputs = [ "data/pkg/.placeholder" ]
   }
 
   resource("starnix-test-files") {
@@ -243,7 +267,13 @@ fuchsia_package("pkg") {
   deps = [ ":starnix_manager" ]
 
   if (target_cpu == "x64") {
-    deps += [ ":starnix_runner_component" ]
+    deps += [
+      ":android_system_image",
+      ":stardroid_config",
+      ":starnix_data_pkg_placeholder",
+      ":starnix_data_tmp_placeholder",
+      ":starnix_runner_component",
+    ]
   }
 }
 

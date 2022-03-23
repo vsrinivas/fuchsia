@@ -1,7 +1,7 @@
 {
-    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/apex/com.android.art.debug/bin/dalvikvm64",
+        binary: "/system/apex/com.android.art.debug/bin/dalvikvm64",
         args: [
             "--XXlib:/system/apex/com.android.art.debug/lib64/libart.so",
             "-Xbootclasspath:/system/apex/com.android.art.debug/javalib/core-libart.jar:/system/apex/com.android.art.debug/javalib/apache-xml.jar:/system/apex/com.android.art.debug/javalib/okhttp.jar:/system/apex/com.android.art.debug/javalib/core-oj.jar:/system/apex/com.android.art.debug/javalib/service-art.jar:/system/apex/com.android.art.debug/javalib/bouncycastle.jar:/system/apex/com.android.conscrypt/javalib/conscrypt.jar:/system/apex/com.android.i18n/javalib/core-icu4j.jar",

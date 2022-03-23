@@ -20,9 +20,25 @@ group("tests") {
   }
 }
 
+if (target_cpu == "x64") {
+  fuchsia_package("stardroid") {
+    package_name = "stardroid"
+    deps = [
+      ":android_system_image",
+      ":stardroid_config",
+      "//src/proc/bin/starnix:starnix_runner_component",
+    ]
+  }
+}
+
 resource("android_system_image") {
   sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
   outputs = [ "data/system.img" ]
+}
+
+resource("stardroid_config") {
+  sources = [ "stardroid.config" ]
+  outputs = [ "data/runner.config" ]
 }
 
 fuchsia_component("init") {

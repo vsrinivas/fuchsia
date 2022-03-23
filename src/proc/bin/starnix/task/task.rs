@@ -444,10 +444,8 @@ impl Task {
             id: self.id,
             uid: self.creds.read().uid,
             parent: self.parent,
-            exit_code: self
-                .exit_code
-                .lock()
-                .expect("a process should not be exiting without an exit code"),
+            exit_code: self.exit_code.lock().unwrap_or(-1),
+            //.expect("a process should not be exiting without an exit code"),
             // TODO(tbodt): This expect condition can currently trip if the process crashes.
             // There needs to be an exit code of some kind in this case too.
         }

@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
-        binary: "/data/tests/lseek_test",
+        binary: "tests/lseek_test",
         args: [ "--gunit_filter=-*.Proc*:*.SysDir:*.EtcPasswdDup" ],
     },
 }

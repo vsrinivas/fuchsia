@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
-        binary: "system/bin/sh",
+        binary: "/system/bin/sh",
         args: [
             "-c",
             "ls && ls",

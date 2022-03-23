@@ -1,7 +1,7 @@
 {
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
-        binary: "/data/tests/pipe_test",
+        binary: "tests/pipe_test",
         args: [ "--gunit_filter=-*StatFS*:*.Flags/named*" ],
     },
 }

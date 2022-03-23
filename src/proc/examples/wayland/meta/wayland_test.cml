@@ -1,8 +1,7 @@
 {
     include: [ "//src/proc/tests/android/wayland.shard.cml" ],
     program: {
-        binary: "data/tests/wayland_test",
-        features: [ "wayland" ],
+        binary: "tests/wayland_test",
     },
     capabilities: [
         { protocol: "fuchsia.ui.app.ViewProvider" },
