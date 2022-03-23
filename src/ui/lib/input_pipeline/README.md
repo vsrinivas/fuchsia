@@ -1,6 +1,6 @@
 # input_pipeline
 
-Reviewed on: 2021-05-07
+Reviewed on: 2022-03-22
 
 `input_pipeline` is a library for creating an input pipeline. For more information,
 see [Input client library](/docs/concepts/session/input.md).
@@ -21,10 +21,7 @@ Unit tests for `input_pipeline` are available in the `input_pipeline_lib_tests` 
 $ fx test input_pipeline_lib_tests
 ```
 
-## Source layout
-The main implementation is linked in `src/lib.rs`.
-
-## Implementation notes
+## Run-time Configuration and Debugging
 
 ### Keymap handler
 
@@ -108,10 +105,6 @@ metrics at multiple places in the input pipeline.  In the example above, the
 input pipeline has been configured with two inspect handlers: one at the entry,
 and one at the pipeline exit.  Normally the latter should see no events.
 
-## Dead keys handler.
+## More documentation
 
-See [dead_keys.md] for details.
-
-## Display ownership handler.
-
-See [display_ownership_handler.md] for details.
+See the [`docs` folder](docs/).
