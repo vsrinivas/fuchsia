@@ -280,7 +280,7 @@ def copy_config_data_entries(
 
         # Append the entry to the set of entries for the package
         results.setdefault(package_name, set()).add(
-            FileEntry(dest_path=file_path, source_path=rebased_source_path))
+            FileEntry(source_path=rebased_source_path, dest_path=file_path))
 
         # Add the copy operation to the depfile
         deps.add(entry.source)

@@ -23,17 +23,17 @@ class FileEntry:
     This is a source_path=destination_path mapping type
     """
 
-    def __init__(self, dest_path: FilePath, source_path: FilePath) -> None:
+    def __init__(self, source_path: FilePath, dest_path: FilePath) -> None:
         """Constructor from source and destination paths.
         """
-        self.destination = dest_path
         self.source = source_path
+        self.destination = dest_path
 
     @classmethod
     def from_dict(cls, entry: Dict[str, str]) -> 'FileEntry':
         """Create from a dictionary (parsed JSON)
         """
-        return cls(dest_path=entry["destination"], source_path=entry["source"])
+        return cls(source_path=entry["source"], dest_path=entry["destination"])
 
     def to_dict(self) -> Dict[str, str]:
         """Serialize to a dictionary
@@ -54,19 +54,19 @@ class FileEntry:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, self.__class__):
-            return self.destination == other.destination and self.source == other.source
+            return self.source == other.source and self.destination == other.destination
         else:
             return False
 
     def __lt__(self, other) -> bool:
         if not isinstance(other, FileEntry):
             raise ValueError("other is not a FileEntry")
-        return (self.destination,
-                self.source) < (other.destination, other.source)
+        return (self.source,
+                self.destination) < (other.source, other.destination)
 
     def __repr__(self) -> str:
-        result = "FileEntry{{ destination: {}, source: {} }}".format(
-            self.destination, self.source)
+        result = "FileEntry{{ source: {}, destination: {} }}".format(
+            self.source, self.destination)
         return result
 
     # TODO(fxb/89571) Move to python module at //build/python/modules/fini_manfest

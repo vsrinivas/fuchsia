@@ -200,7 +200,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         if base_dir is not None:
             file_path_entries = [
                 FileEntry(
-                    path, os.path.relpath(os.path.join(base_dir, path), rebase))
+                    os.path.relpath(os.path.join(base_dir, path), rebase), path)
                 for path in file_paths
             ]
         else:
