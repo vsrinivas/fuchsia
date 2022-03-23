@@ -187,7 +187,6 @@ impl<K: Key, V: Value> SkipListLayer<K, V> {
             if k == key {
                 iter.erase();
             } else {
-                // TODO(csuter): Should this be something stronger?
                 log::warn!("Attempt to erase key not present!");
             }
         }
@@ -241,8 +240,8 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
     async fn insert(&self, item: Item<K, V>) {
         let mut iter = SkipListLayerIterMut::new(self, Bound::Included(&item.key)).await;
         if let Some(found_item) = iter.get() {
-            // TODO(csuter): This assertion will eventually have to go since it would be possible to
-            // trip this when replaying a malformed journal.
+            // TODO(fxbug.dev/96084): This assertion will eventually have to go since it would be
+            // possible to trip this when replaying a malformed journal.
             assert_ne!(found_item.key, &item.key);
         }
         iter.insert(item);

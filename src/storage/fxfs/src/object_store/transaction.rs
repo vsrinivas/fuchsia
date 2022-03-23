@@ -62,7 +62,9 @@ pub struct Options<'a> {
 // amount chosen here must be large enough for the maximum possible transaction that can be created,
 // so transactions always need to be bounded which might involve splitting an operation up into
 // smaller transactions.
-pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = reserved_space_from_journal_usage(24_576);
+pub const TRANSACTION_MAX_JOURNAL_USAGE: u64 = 24_576;
+pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 =
+    reserved_space_from_journal_usage(TRANSACTION_MAX_JOURNAL_USAGE);
 
 #[must_use]
 pub struct TransactionLocks<'a>(pub WriteGuard<'a>);
@@ -288,9 +290,6 @@ impl Eq for AllocatorMutation {}
 
 /// When creating a transaction, locks typically need to be held to prevent two or more writers
 /// trying to make conflicting mutations at the same time.  LockKeys are used for this.
-/// TODO(csuter): At the moment, these keys only apply to writers, but there needs to be some
-/// support for readers, since there are races that can occur whilst a transaction is being
-/// committed.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum LockKey {
     /// Used to lock changes to a particular object attribute (e.g. writes).

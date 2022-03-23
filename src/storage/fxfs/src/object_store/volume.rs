@@ -63,10 +63,11 @@ impl RootVolume {
 
         let object_id = store.get_next_object_id();
 
-        // TODO(csuter): Creating the store here writes the store-info later, so we should set the
-        // graveyard object ID before that happens.  Creating the graveyard also queues a mutation
-        // to set the graveyard object ID, which is unnececessary.  We should consider changing this
-        // so that the graveyard and root directory are created when the store is created.
+        // TODO(fxbug.dev/96081): Creating the store here writes the store-info later, so we should
+        // set the graveyard object ID before that happens.  Creating the graveyard also queues a
+        // mutation to set the graveyard object ID, which is unnececessary.  We should consider
+        // changing this so that the graveyard and root directory are created when the store is
+        // created.
         store.set_graveyard_directory_object_id(object_id);
 
         Graveyard::create(&mut transaction, &store);

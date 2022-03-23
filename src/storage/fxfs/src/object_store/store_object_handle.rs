@@ -44,8 +44,6 @@ use {
     storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
 };
 
-// TODO(csuter): We should probably be a little more frugal about what we store here since there
-// could be a lot of these structures.
 pub struct StoreObjectHandle<S: AsRef<ObjectStore> + Send + Sync + 'static> {
     owner: Arc<S>,
     pub(super) object_id: u64,
@@ -619,25 +617,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             .unwrap_or_else(|| self.get_size())
     }
 
-    // TODO(csuter): make this used
-    #[cfg(test)]
-    async fn get_allocated_size(&self) -> Result<u64, Error> {
-        if let ObjectItem {
-            value: ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. }, .. },
-            ..
-        } = self
-            .store()
-            .tree
-            .find(&ObjectKey::object(self.object_id))
-            .await?
-            .expect("Unable to find object record")
-        {
-            Ok(allocated_size)
-        } else {
-            panic!("Unexpected object value");
-        }
-    }
-
     async fn update_allocated_size(
         &self,
         transaction: &mut Transaction<'_>,
@@ -699,11 +678,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 // no need to support overwrite mode here, and it would be difficult since we'd need
                 // to transactionalize zeroing the tail of the last block with the other metadata
                 // changes, which we don't currently have a way to do.
-                // TODO(csuter): This is allocating a small buffer that we'll just end up copying.
-                // Is there a better way?
-                // TODO(csuter): This might cause an allocation when there needs be none; ideally
-                // this would know if the tail block is allocated and if it isn't, it should leave
-                // it be.
+                //
+                // TODO(fxbug.dev/88676): This is allocating a small buffer that we'll just end up
+                // copying.  Is there a better way?
+                //
+                // TODO(fxbug.dev/88676): This might cause an allocation when there needs be none;
+                // ideally this would know if the tail block is allocated and if it isn't, it should
+                // leave it be.
                 let mut buf = self.store().device.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
                 self.txn_write(transaction, size, buf.as_ref()).await?;
@@ -1843,16 +1824,19 @@ mod tests {
     async fn test_allocated_size() {
         let (fs, object) = test_filesystem_and_object_with_key(None).await;
 
-        let before = object.get_allocated_size().await.expect("get_allocated_size failed");
+        let before = object.get_properties().await.expect("get_properties failed").allocated_size;
         let mut buf = object.allocate_buffer(5);
         buf.as_mut_slice().copy_from_slice(b"hello");
         object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
-        let after = object.get_allocated_size().await.expect("get_allocated_size failed");
+        let after = object.get_properties().await.expect("get_properties failed").allocated_size;
         assert_eq!(after, before + fs.block_size() as u64);
 
         // Do the same write again and there should be no change.
         object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
-        assert_eq!(object.get_allocated_size().await.expect("get_allocated_size failed"), after);
+        assert_eq!(
+            object.get_properties().await.expect("get_properties failed").allocated_size,
+            after
+        );
 
         // extend...
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
@@ -1863,7 +1847,7 @@ mod tests {
             .await
             .expect("extend failed");
         transaction.commit().await.expect("commit failed");
-        let after = object.get_allocated_size().await.expect("get_allocated_size failed");
+        let after = object.get_properties().await.expect("get_properties failed").allocated_size;
         assert_eq!(after, before + fs.block_size() as u64);
 
         // truncate...
@@ -1875,7 +1859,7 @@ mod tests {
             .await
             .expect("extend failed");
         transaction.commit().await.expect("commit failed");
-        let after = object.get_allocated_size().await.expect("get_allocated_size failed");
+        let after = object.get_properties().await.expect("get_properties failed").allocated_size;
         assert_eq!(after, before - fs.block_size() as u64);
 
         // preallocate_range...
@@ -1886,7 +1870,7 @@ mod tests {
             .await
             .expect("extend failed");
         transaction.commit().await.expect("commit failed");
-        let after = object.get_allocated_size().await.expect("get_allocated_size failed");
+        let after = object.get_properties().await.expect("get_properties failed").allocated_size;
         assert_eq!(after, before + fs.block_size() as u64);
         fs.close().await.expect("Close failed");
     }

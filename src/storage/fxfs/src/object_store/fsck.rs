@@ -78,8 +78,9 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
 // TODO(fxbug.dev/87381): add checks for:
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
-// TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
-// take a snapshot.
+//
+// TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
+// we could take a snapshot.
 pub async fn fsck(
     filesystem: &Arc<FxFilesystem>,
     crypt: Option<Arc<dyn Crypt>>,
@@ -123,7 +124,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut merger = layer_set.merger();
     let mut iter = volume_directory.iter(&mut merger).await?;
 
-    // TODO(csuter): We could maybe iterate over stores concurrently.
+    // TODO(fxbug.dev/96076): We could maybe iterate over stores concurrently.
     while let Some((name, store_id, _)) = iter.get() {
         fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
         fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects, crypt.clone())
@@ -133,8 +134,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         fsck.verbose("Scanning volume done");
     }
 
-    // TODO(csuter): It's a bit crude how details of SimpleAllocator are leaking here. Is there
-    // a better way?
+    // TODO(fxbug.dev/96077): It's a bit crude how details of SimpleAllocator are leaking here. Is
+    // there a better way?
     let allocator = filesystem.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
     root_store_root_objects.append(&mut allocator.parent_objects());
 
@@ -249,7 +250,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
     fn new(options: FsckOptions<F>) -> Self {
         Fsck {
             options,
-            // TODO(csuter): fix magic number
+            // TODO(fxbug.dev/95981): fix magic number
             allocations: SkipListLayer::new(2048),
             errors: AtomicU64::new(0),
             warnings: AtomicU64::new(0),

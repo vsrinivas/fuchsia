@@ -330,9 +330,9 @@ impl FxFilesystem {
         options: Options<'a>,
     ) -> Result<(MetadataReservation, Option<&'a Reservation>, Option<Hold<'a>>), Error> {
         if !options.skip_journal_checks {
-            // TODO(csuter): for now, we don't allow for transactions that might be inflight but
-            // not committed.  In theory, if there are a large number of them, it would be possible
-            // to run out of journal space.  We should probably have an in-flight limit.
+            // TODO(fxbug.dev/96073): for now, we don't allow for transactions that might be
+            // inflight but not committed.  In theory, if there are a large number of them, it would
+            // be possible to run out of journal space.  We should probably have an in-flight limit.
             self.journal.check_journal_space().await?;
         }
 
@@ -509,8 +509,6 @@ impl AsRef<LockManager> for FxFilesystem {
         &self.lock_manager
     }
 }
-
-// TODO(csuter): How do we ensure sync prior to drop?
 
 #[cfg(test)]
 mod tests {

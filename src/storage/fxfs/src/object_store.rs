@@ -95,7 +95,7 @@ pub struct StoreInfo {
     // last_object_id field is the one to use in that case.
     last_object_id: u64,
 
-    // Object ids for layers.  TODO(csuter): need a layer of indirection here so we can
+    // Object ids for layers.  TODO(fxbug.dev/95971): need a layer of indirection here so we can
     // support snapshots.
     layers: Vec<u64>,
 
@@ -103,7 +103,6 @@ pub struct StoreInfo {
     root_directory_object_id: u64,
 
     // The object ID for the graveyard.
-    // TODO(csuter): Move this out of here.  This can probably be a child of the root directory.
     graveyard_directory_object_id: u64,
 
     // The number of live objects in the store.
@@ -121,8 +120,8 @@ pub struct StoreInfo {
     encrypted_mutations_object_id: u64,
 }
 
-// TODO(csuter): We should test or put checks in place to ensure this limit isn't exceeded.  It
-// will likely involve placing limits on the maximum number of layers.
+// TODO(fxbug.dev/95972): We should test or put checks in place to ensure this limit isn't exceeded.
+// It will likely involve placing limits on the maximum number of layers.
 const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
 const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = journal::RECLAIM_SIZE as usize;
@@ -499,20 +498,13 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().object_count
     }
 
-    pub async fn create_child_store<'a>(
-        self: &'a Arc<ObjectStore>,
-        transaction: &mut Transaction<'a>,
-    ) -> Result<Arc<ObjectStore>, Error> {
-        let object_id = self.get_next_object_id();
-        self.create_child_store_with_id(transaction, object_id).await
-    }
-
+    /// Creates an unencrypted child store and registers it with the object-manager.  The caller
+    /// must handle cleaning up (e.g. unregistering the store) if the transaction doesn't commit.
     async fn create_child_store_with_id<'a>(
         self: &'a Arc<Self>,
         transaction: &mut Transaction<'a>,
         object_id: u64,
     ) -> Result<Arc<ObjectStore>, Error> {
-        // TODO(csuter): if the transaction rolls back, we need to delete the store.
         let handle = ObjectStore::create_object_with_id(
             self,
             transaction,
@@ -713,7 +705,7 @@ impl ObjectStore {
     pub async fn tombstone(&self, object_id: u64, txn_options: Options<'_>) -> Result<(), Error> {
         let fs = self.filesystem();
         let mut search_key = ObjectKey::extent(object_id, 0, 0..0);
-        // TODO(csuter): There should be a test that runs fsck after each transaction.
+        // TODO(fxbug.dev/95976): There should be a test that runs fsck after each transaction.
         loop {
             let mut transaction = fs.clone().new_transaction(&[], txn_options).await?;
             let next_key = self.delete_extents(&mut transaction, &search_key).await?;
@@ -900,7 +892,7 @@ impl ObjectStore {
             result
         };
 
-        // TODO(csuter): the layer size here could be bad and cause overflow.
+        // TODO(fxbug.dev/95978): the layer size here could be bad and cause overflow.
 
         // If the store is encrypted, we can't open the object tree layers now, but we need to
         // compute the size of the layers.
@@ -1250,7 +1242,9 @@ impl Mutations for ObjectStore {
             Mutation::EncryptedObjectStore(data) => {
                 self.store_info.lock().unwrap().push_encrypted_mutation(&context.checkpoint, data);
             }
-            _ => panic!("unexpected mutation: {:?}", mutation), // TODO(csuter): can't panic
+            // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
+            // be possible with a bad mutation during replay.
+            _ => panic!("unexpected mutation: {:?}", mutation),
         }
     }
 
@@ -1269,7 +1263,8 @@ impl Mutations for ObjectStore {
         let object_manager = filesystem.object_manager();
 
         // TODO(fxbug.dev/92275): This should also flush if there are encrypted mutations that can
-        // be flushed in their unencrypted form.
+        // be flushed in their unencrypted form.  If we do that, we should make sure we don't flush
+        // an empty layer.
         if !object_manager.needs_flush(self.store_object_id) {
             return Ok(());
         }
@@ -1535,7 +1530,7 @@ impl Mutations for ObjectStore {
     }
 }
 
-// TODO(csuter): MemDataBuffer has size limits so we should check sizes before we use it.
+// TODO(fxbug.dev/95980): MemDataBuffer has size limits so we should check sizes before we use it.
 impl HandleOwner for ObjectStore {
     type Buffer = MemDataBuffer;
 
@@ -2012,6 +2007,3 @@ mod tests {
         }
     }
 }
-
-// TODO(csuter): validation of all deserialized structs.
-// TODO(csuter): check all panic! calls.

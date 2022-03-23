@@ -51,7 +51,7 @@ impl ChecksumList {
         // This can be changed to try_insert when available.
         // If this is a duplicate, we don't need to verify the checksum twice, and we want to
         // keep the first entry because it comes earlier in the journal.
-        // TODO(csuter): If this is a duplicate, we should check that the checksums match.
+        // TODO(fxbug.dev/96065): If this is a duplicate, we should check that the checksums match.
         if let Entry::Vacant(v) = self.device_offset_to_checksum_entry.entry(device_range.end) {
             v.insert(self.checksum_entries.len());
         }
@@ -92,7 +92,7 @@ impl ChecksumList {
             };
             // Figure out the overlap.
             if entry.device_range.end >= device_range.end {
-                // TODO: check that chunk size is aligned.
+                // TODO(fxbug.dev/96065): check that chunk size is aligned.
                 let checksum_index_end =
                     (device_range.end - entry.device_range.start) as usize / chunk_size;
                 // This entry covers the remainder.

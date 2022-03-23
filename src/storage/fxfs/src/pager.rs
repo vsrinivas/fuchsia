@@ -241,9 +241,6 @@ impl PagerThread {
         false
     }
 
-    // TODO(csuter): For now, all we can watch for is zero children, but this will have to change to
-    // to watch duplicates (or something equivalent) because we need to be able to accommodate size
-    // changes and child VMOs won't reflect size changes.
     fn watch_for_zero_children(&self, file: &FxFile) -> Result<(), Error> {
         file.vmo()
             .as_handle_ref()

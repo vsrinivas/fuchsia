@@ -112,7 +112,6 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         self.data.write().unwrap().layers = Vec::new();
     }
 
-    // TODO(csuter): We need to handle the case where the mutable layer is empty.
     /// Seals the current mutable layer and creates a new one.
     pub async fn seal(&self) {
         {
@@ -131,8 +130,6 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
     }
 
-    // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
-    // to compact.
     /// Writes the items yielded by the iterator into the supplied object.
     pub async fn compact_with_iterator<W: WriteBytes + Send>(
         &self,
@@ -410,5 +407,22 @@ mod tests {
         let item = tree.find(&items[1].key).await.expect("find failed").expect("not found");
         assert_eq!(item, items[1]);
         assert!(tree.find(&TestKey(100..100)).await.expect("find failed").is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_empty_seal() {
+        let tree = LSMTree::new(emit_left_merge_fn);
+        tree.seal().await;
+        let item = Item::new(TestKey(1..1), 1);
+        tree.insert(item.clone()).await;
+        let object = Arc::new(FakeObject::new());
+        let handle = FakeObjectHandle::new(object.clone());
+        tree.compact(&handle).await.expect("compact failed");
+        tree.set_layers(
+            layers_from_handles(Box::new([handle])).await.expect("layers_from_handles failed"),
+        );
+        let found_item = tree.find(&item.key).await.expect("find failed").expect("not found");
+        assert_eq!(found_item, item);
+        assert!(tree.find(&TestKey(2..2)).await.expect("find failed").is_none());
     }
 }

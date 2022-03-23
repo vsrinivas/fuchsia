@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        errors::FxfsError,
         lsm_tree::types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
@@ -11,7 +12,7 @@ use {
         round::{round_down, round_up},
         serialized_types::{Version, Versioned, VersionedLatest, LATEST_VERSION},
     },
-    anyhow::{bail, Context, Error},
+    anyhow::{bail, ensure, Context, Error},
     async_trait::async_trait,
     async_utils::event::Event,
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt},
@@ -169,7 +170,10 @@ impl SimplePersistentLayer {
         };
 
         // We expect the layer block size to be a multiple of the physical block size.
-        assert_eq!(layer_info.block_size % physical_block_size, 0);
+        ensure!(layer_info.block_size % physical_block_size == 0, FxfsError::Inconsistent);
+
+        // Catch obviously bad sizes.
+        ensure!(size < u64::MAX - layer_info.block_size, FxfsError::Inconsistent);
 
         Ok(Arc::new(SimplePersistentLayer {
             object_handle: Arc::new(object_handle),
@@ -199,7 +203,6 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
         };
         // Skip the first block. We Store version info there for now.
         let mut left_offset = self.layer_info.block_size;
-        // TODO(csuter): Add size checks.
         let mut right_offset = round_up(self.size, self.layer_info.block_size).unwrap();
         let mut left = Iterator::new(self, left_offset);
         left.advance().await?;

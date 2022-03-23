@@ -166,8 +166,6 @@ pub trait DataBuffer: Send + Sync {
 
     fn size(&self) -> u64;
     async fn resize(&self, size: u64);
-    /// Zeroes |range|.
-    fn zero(&self, range: Range<u64>);
 
     /// Read from the buffer but supply content from source where the data is not present.
     async fn read(
@@ -329,8 +327,8 @@ impl PageCell {
     }
 }
 
-// TODO(csuter): eventually, we should add some kind of LRU list which would chain through the
-// pages.
+// TODO(fxbug.dev/96090): eventually, we should add some kind of LRU list which would chain through
+// the pages.
 struct Page {
     offset: u64,
 
@@ -572,11 +570,6 @@ impl DataBuffer for MemDataBuffer {
     }
     async fn resize(&self, size: u64) {
         self.0.lock().unwrap().resize(size);
-    }
-    fn zero(&self, range: Range<u64>) {
-        let mut inner = self.0.lock().unwrap();
-        inner.buf[range.start as usize..range.end as usize].fill(0u8);
-        inner.mark_present(range);
     }
 
     fn raw_read(&self, offset: u64, buf: &mut [u8]) {

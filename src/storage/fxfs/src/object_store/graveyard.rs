@@ -148,8 +148,9 @@ impl Graveyard {
             .object_manager
             .store(store_id)
             .context(format!("Failed to get store {}", store_id))?;
-        // TODO(csuter): we shouldn't assume that all objects in the root stores use the
-        // metadata reservation.
+        // For now, it's safe to assume that all objects in the root parent and root store should
+        // return space to the metadata reservation, but we might have to revisit that if we end up
+        // with objects that are in other stores.
         let options = if store_id == self.object_manager.root_parent_store_object_id()
             || store_id == self.object_manager.root_store_object_id()
         {

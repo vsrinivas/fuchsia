@@ -105,8 +105,6 @@ impl Handle {
     }
 }
 
-// TODO(csuter): This doesn't need to be ObjectHandle any more and we could integrate this into
-// JournalReader.
 impl ObjectHandle for Handle {
     fn object_id(&self) -> u64 {
         self.object_id
@@ -123,6 +121,7 @@ impl ObjectHandle for Handle {
     fn get_size(&self) -> u64 {
         self.size
     }
+
     fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {

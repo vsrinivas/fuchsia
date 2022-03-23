@@ -33,8 +33,10 @@ use {
 // in the journal.  In the layer file, it'll take up at least as much, but we must reserve the same
 // again that so that there's enough space for compactions, and then we need some spare for
 // overheads.
-// TODO(csuter): We should come up with a better way of determining what the multiplier should be
-// here.  2x was too low, as it didn't cover any space for metadata.  4x might be too much.
+//
+// TODO(fxbug.dev/96080): We should come up with a better way of determining what the multiplier
+// should be here.  2x was too low, as it didn't cover any space for metadata.  4x might be too
+// much.
 pub const fn reserved_space_from_journal_usage(journal_usage: u64) -> u64 {
     journal_usage * 4
 }

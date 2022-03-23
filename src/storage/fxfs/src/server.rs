@@ -172,9 +172,6 @@ impl FxfsServer {
         match req {
             AdminRequest::Shutdown { responder } => {
                 log::info!("Received shutdown request");
-                // TODO(csuter): shutdown is brutal and will just drop running tasks which could
-                // leave transactions in a half completed state.  VFS should be fixed so that it
-                // drops connections at some point that isn't midway through processing a request.
                 scope.shutdown();
                 if self.closed.swap(true, atomic::Ordering::SeqCst) {
                     return Ok(true);

@@ -422,7 +422,7 @@ impl MutableDirectory for FxDirectory {
     }
 
     async fn sync(&self) -> Result<(), Status> {
-        // TODO(csuter): Support sync on root of fxfs volume.
+        // TODO(fxbug.dev/96085): Support sync on root of fxfs volume.
         Ok(())
     }
 }
@@ -563,13 +563,13 @@ impl Directory for FxDirectory {
                             "encountered error {} whilst trying to iterate directory for watch",
                             e
                         );
-                        // TODO(csuter): This really should close the watcher connection with
-                        // an epitaph so that the watcher knows.
+                        // TODO(fxbug.dev/96086): This really should close the watcher connection
+                        // with an epitaph so that the watcher knows.
                         return;
                     }
                 };
-                // TODO(csuter): It is possible that we'll duplicate entries that are added as we
-                // iterate over directories.  I suspect fixing this might be non-trivial.
+                // TODO(fxbug.dev/96087): It is possible that we'll duplicate entries that are added
+                // as we iterate over directories.  I suspect fixing this might be non-trivial.
                 controller.send_event(&mut SingleNameEventProducer::existing("."));
                 while let Some((name, _, _)) = iter.get() {
                     controller.send_event(&mut SingleNameEventProducer::existing(name));

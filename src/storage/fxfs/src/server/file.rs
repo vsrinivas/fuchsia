@@ -489,8 +489,8 @@ impl File for FxFile {
 
     async fn sync(&self) -> Result<(), Status> {
         self.handle.flush().await.map_err(map_to_status)?;
-        // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
-        // match minfs.
+        // TODO(fxbug.dev/96085): at the moment, this doesn't send a flush to the device, which
+        // doesn't match minfs.
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
     }
 

@@ -44,6 +44,7 @@ use {
             object_record::{AttributeKey, ObjectKey, ObjectKeyData},
             transaction::{
                 AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
+                TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, LockState, ObjectStore, StoreObjectHandle,
         },
@@ -58,6 +59,7 @@ use {
     once_cell::sync::OnceCell,
     rand::Rng,
     serde::{Deserialize, Serialize},
+    static_assertions::const_assert,
     std::{
         clone::Clone,
         ops::Bound,
@@ -79,6 +81,7 @@ const BLOCK_SIZE: u64 = 8192;
 
 // The journal file is extended by this amount when necessary.
 const CHUNK_SIZE: u64 = 131_072;
+const_assert!(CHUNK_SIZE > TRANSACTION_MAX_JOURNAL_USAGE);
 
 // In the steady state, the journal should fluctuate between being approximately half of this number
 // and this number.  New super-blocks will be written every time about half of this amount is
@@ -731,8 +734,6 @@ impl Journal {
     // Before we commit, we might need to extend the journal or write pending records to the
     // journal.
     async fn pre_commit(&self) -> Result<(), Error> {
-        // TODO(csuter): this currently assumes that a transaction can fit in CHUNK_SIZE.
-
         let handle;
 
         let (size, zero_offset) = {
@@ -850,7 +851,6 @@ impl Journal {
         new_super_block.journal_file_offsets = journal_file_offsets;
         new_super_block.borrowed_metadata_space = borrowed;
 
-        // TODO(csuter); the super-block needs space reserved for it.
         new_super_block
             .write(
                 &root_parent_store,

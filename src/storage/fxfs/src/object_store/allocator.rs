@@ -61,10 +61,7 @@ pub trait Allocator: ReservationOwner {
     fn info(&self) -> AllocatorInfo;
 
     /// Tries to allocate enough space for |object_range| in the specified object and returns the
-    /// device ranges allocated.
-    /// TODO(csuter): We need to think about how to deal with fragmentation e.g. returning an array
-    /// of allocations, or returning a partial allocation request for situations where that makes
-    /// sense.
+    /// device range allocated.
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
@@ -401,14 +398,11 @@ impl SimpleAllocator {
     pub fn new(filesystem: Arc<dyn Filesystem>, object_id: u64) -> SimpleAllocator {
         SimpleAllocator {
             filesystem: Arc::downgrade(&filesystem),
-            // TODO(csuter): Rather than computing the block size here, we should perhaps have the
-            // filesystem determine what it should be.  Also, it eventually needs to come from the
-            // super-block.
             block_size: filesystem.block_size(),
             device_size: filesystem.device().size(),
             object_id,
             tree: LSMTree::new(merge),
-            reserved_allocations: SkipListLayer::new(1024), // TODO(csuter): magic numbers
+            reserved_allocations: SkipListLayer::new(1024), // TODO(fxbug.dev/95981): magic numbers
             inner: Mutex::new(Inner {
                 info: AllocatorInfo::default(),
                 opened: false,
@@ -515,10 +509,10 @@ impl SimpleAllocator {
     }
 
     fn needs_sync(&self) -> bool {
-        // TODO(csuter): This will only trigger if *all* free space is taken up with committed
-        // deallocated bytes, but we might want to trigger a sync if we're low and there happens to
-        // be a lot of deallocated bytes as that might mean we can fully satisfy allocation
-        // requests.
+        // TODO(fxbug.dev/95982): This will only trigger if *all* free space is taken up with
+        // committed deallocated bytes, but we might want to trigger a sync if we're low and there
+        // happens to be a lot of deallocated bytes as that might mean we can fully satisfy
+        // allocation requests.
         self.inner.lock().unwrap().unavailable_bytes() >= self.device_size
     }
 }
@@ -973,7 +967,9 @@ impl Mutations for SimpleAllocator {
                     inner.allocated_bytes -= inner.info.allocated_bytes as i64;
                 }
             }
-            _ => panic!("unexpected mutation! {:?}", mutation), // TODO(csuter): This can't panic
+            // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
+            // be possible with a bad mutation during replay.
+            _ => panic!("unexpected mutation! {:?}", mutation),
         }
     }
 
@@ -1005,9 +1001,6 @@ impl Mutations for SimpleAllocator {
         let keys = [LockKey::flush(self.object_id())];
         let _guard = debug_assert_not_too_long!(filesystem.write_lock(&keys));
 
-        // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
-        // transactions for each stage, but we need make sure objects are cleaned up if there's a
-        // failure.
         let reservation = object_manager.metadata_reservation();
         let txn_options = Options {
             skip_journal_checks: true,
@@ -1084,7 +1077,6 @@ impl Mutations for SimpleAllocator {
         );
         root_store.remove_from_graveyard(&mut transaction, object_id);
 
-        // TODO(csuter): what if this fails.
         let layers =
             layers_from_handles(Box::new([CachingObjectHandle::new(layer_object_handle)])).await?;
         transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;

@@ -9,10 +9,7 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::{self as zx},
     once_cell::sync::Lazy,
-    std::{
-        convert::{TryFrom, TryInto},
-        ops::Range,
-    },
+    std::convert::{TryFrom, TryInto},
 };
 
 /// A DataBuffer implementation backed by a VMO.
@@ -103,13 +100,5 @@ impl DataBuffer for VmoDataBuffer {
     async fn resize(&self, size: u64) {
         let _guard = CONCURRENT_SYSCALLS.acquire().await;
         self.vmo.set_size(size).unwrap();
-    }
-
-    fn zero(&self, range: Range<u64>) {
-        // TODO(csuter): Is this used, and does it need the CONCURRENT_SYSCALLS guard?
-        if range.end == range.start {
-            return;
-        }
-        self.vmo.op_range(zx::VmoOp::ZERO, range.start, range.end - range.start).unwrap();
     }
 }

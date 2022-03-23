@@ -501,8 +501,40 @@ mod tests {
             reader.consume(amount);
         }
     }
-}
 
-// TODO(csuter): Add test that checks that the file offset *after* writing an entry that lies
-// *exactly* at the end of a journal block matches the file offset *after* reading that same entry
-// i.e. it should be *after* the checksum.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_to_block_boundary() {
+        let object = Arc::new(FakeObject::new());
+        // Make the journal file a minimum of two blocks since reading to EOF is an error.
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
+        let len = TEST_BLOCK_SIZE as usize - std::mem::size_of::<Checksum>();
+        assert_eq!(writer.write(&vec![78u8; len]).expect("write failed"), len);
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.write_or_append(Some(offset), buf.as_ref()).await.expect("overwrite failed");
+        assert_eq!(offset, 0);
+
+        // The checkpoint should be at the start of the next block.
+        let writer_checkpoint = writer.journal_file_checkpoint();
+        assert_eq!(writer_checkpoint.file_offset, TEST_BLOCK_SIZE);
+
+        let mut reader = JournalReader::new(
+            FakeObjectHandle::new(object.clone()),
+            TEST_BLOCK_SIZE,
+            &JournalCheckpoint::default(),
+        );
+        reader.set_version(LATEST_VERSION);
+
+        reader.fill_buf().await.expect("fill_buf failed");
+
+        assert_eq!(&reader.buffer()[..len], &buf.as_slice()[..len]);
+
+        reader.consume(len);
+
+        assert_eq!(reader.journal_file_checkpoint(), writer_checkpoint);
+    }
+}
