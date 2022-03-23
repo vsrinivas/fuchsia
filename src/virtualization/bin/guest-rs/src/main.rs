@@ -7,6 +7,7 @@ mod arguments;
 mod balloon;
 mod launch;
 mod list;
+mod serial;
 mod services;
 mod socat;
 
@@ -147,6 +148,10 @@ async fn main() -> Result<(), Error> {
             let output = balloon::handle_balloon_stats(balloon_controller).await?;
             println!("{}", output);
             Ok(())
+        }
+        SubCommands::Serial(serial_args) => {
+            let guest = services::connect_to_guest(serial_args.env_id, serial_args.cid)?;
+            serial::handle_serial(guest).await
         }
         SubCommands::List(..) => {
             let manager = services::connect_to_manager()?;
