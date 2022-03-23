@@ -186,7 +186,7 @@ class PlasaDiffer:
 
             except KeyError:
                 after = None
-                message = "PlaSA fragment missing in after manifest file."
+                message = "PlaSA element was deleted."
                 is_compatible = False
 
             finally:
@@ -197,7 +197,7 @@ class PlasaDiffer:
         for key, after in list(after_fragments.items()):
             del after_fragments[key]
             before = None
-            message = "PlaSA fragment addition in after manifest file."
+            message = "PlaSA element was added."
 
             # TODO(jcecil): Consider flagging new additions to the PlaSA
             # manifest here, to ensure they have sufficient CTS test coverage.
