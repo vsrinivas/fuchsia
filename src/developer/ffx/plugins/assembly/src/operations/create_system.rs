@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base_package::{construct_base_package, BasePackage};
-use crate::fvm_new::construct_fvm;
+use crate::fvm::construct_fvm;
 use crate::util;
 use crate::vbmeta;
 use crate::zbi;

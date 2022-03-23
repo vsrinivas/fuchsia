@@ -3,30 +3,13 @@
 // found in the LICENSE file.
 
 use crate::extra_hash_descriptor::ExtraHashDescriptor;
-use crate::util::read_config;
 use crate::vfs::{FilesystemProvider, RealFilesystemProvider};
 use anyhow::Result;
-use assembly_config::VBMetaConfig;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
 use assembly_images_manifest::{Image, ImagesManifest};
 use std::path::{Path, PathBuf};
 use vbmeta::VBMeta as VBMetaImage;
 use vbmeta::{HashDescriptor, Key, Salt};
-
-pub fn convert_to_new_config(name: impl AsRef<str>, config: &VBMetaConfig) -> Result<VBMeta> {
-    let VBMetaConfig { kernel_partition: _, key, key_metadata, additional_descriptor_files } =
-        config;
-    let mut additional_descriptors = Vec::new();
-    for path in additional_descriptor_files {
-        let descriptor = read_config(path)?;
-        additional_descriptors.push(descriptor);
-    }
-
-    let name = name.as_ref().to_string();
-    let key = key.clone();
-    let key_metadata = key_metadata.clone();
-    Ok(VBMeta { name, key, key_metadata, additional_descriptors })
-}
 
 pub fn construct_vbmeta(
     images_manifest: &mut ImagesManifest,
@@ -98,49 +81,15 @@ pub fn sign<FSP: FilesystemProvider>(
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_vbmeta, convert_to_new_config, sign};
+    use super::{construct_vbmeta, sign};
 
     use crate::vfs::mock::MockFilesystemProvider;
 
-    use assembly_config::VBMetaConfig;
     use assembly_images_config::VBMeta;
     use assembly_images_manifest::ImagesManifest;
-    use serde_json::json;
     use std::convert::TryFrom;
-    use std::path::PathBuf;
     use tempfile::tempdir;
     use vbmeta::{Key, Salt};
-
-    #[test]
-    fn old_config() {
-        // Write some descriptor files.
-        let dir = tempdir().unwrap();
-        let descriptor_path = dir.path().join("descriptor.json");
-        let descriptor_value = json!({
-            "name": "partition",
-            "size": 1234,
-            "flags": 1,
-            "min_avb_version": "1.0",
-        });
-        let descriptor_bytes = serde_json::to_vec(&descriptor_value).unwrap();
-        std::fs::write(&descriptor_path, descriptor_bytes).unwrap();
-
-        let old_config = VBMetaConfig {
-            kernel_partition: "kernel".into(),
-            key: "path/to/key".into(),
-            key_metadata: "path/to/key_metadata".into(),
-            additional_descriptor_files: vec![descriptor_path],
-        };
-        let new_config = convert_to_new_config("name", &old_config).unwrap();
-        assert_eq!(new_config.name, "name");
-        assert_eq!(new_config.key, PathBuf::from("path/to/key"));
-        assert_eq!(new_config.key_metadata, PathBuf::from("path/to/key_metadata"));
-        assert_eq!(new_config.additional_descriptors.len(), 1);
-        assert_eq!(new_config.additional_descriptors[0].name, "partition");
-        assert_eq!(new_config.additional_descriptors[0].size, 1234);
-        assert_eq!(new_config.additional_descriptors[0].flags, 1);
-        assert_eq!(new_config.additional_descriptors[0].min_avb_version, "1.0");
-    }
 
     #[test]
     fn construct() {

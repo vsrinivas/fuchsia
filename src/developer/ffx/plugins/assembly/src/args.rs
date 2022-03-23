@@ -24,41 +24,11 @@ pub struct AssemblyCommand {
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum OperationClass {
-    Image(ImageArgs),
     CreateSystem(CreateSystemArgs),
     CreateUpdate(CreateUpdateArgs),
     ConfigData(ConfigDataArgs),
     Product(ProductArgs),
     SizeCheck(SizeCheckArgs),
-}
-
-/// perform the assembly of images
-#[derive(Debug, FromArgs, PartialEq)]
-#[argh(subcommand, name = "image")]
-pub struct ImageArgs {
-    /// the configuration file(s) that specifies the packages, binaries, and
-    /// settings specific to the product being assembled.  If multiple files are
-    /// provided, they will be merged.  Only one can provide a kernel
-    /// configuration.
-    #[argh(option)]
-    pub product: Vec<PathBuf>,
-
-    /// the configuration file that specifies the packages, binaries, and
-    /// settings specific to the board being assembled.
-    #[argh(option)]
-    pub board: PathBuf,
-
-    /// log the external commands to gendir as `commands_log.json`.
-    #[argh(switch)]
-    pub log_commands: bool,
-
-    /// the directory to write assembled outputs to.
-    #[argh(option)]
-    pub outdir: PathBuf,
-
-    /// the directory to write generated intermediate files to.
-    #[argh(option)]
-    pub gendir: Option<PathBuf>,
 }
 
 /// create the system images.

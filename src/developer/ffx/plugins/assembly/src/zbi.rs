@@ -6,28 +6,14 @@ use crate::base_package::BasePackage;
 use crate::util::pkg_manifest_from_path;
 
 use anyhow::{anyhow, Context, Result};
-use assembly_config::{ImageAssemblyConfig, ZbiConfig};
-use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
+use assembly_config::ImageAssemblyConfig;
+use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::path::{Path, PathBuf};
 use zbi::ZbiBuilder;
-
-pub fn convert_to_new_config(zbi_config: &ZbiConfig) -> Result<Zbi> {
-    Ok(Zbi {
-        name: zbi_config.name.clone(),
-        compression: zbi_config.compression.parse()?,
-        postprocessing_script: match &zbi_config.signing_script {
-            None => None,
-            Some(signing_script) => Some(PostProcessingScript {
-                path: signing_script.tool.clone(),
-                args: signing_script.extra_arguments.clone(),
-            }),
-        },
-    })
-}
 
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
@@ -153,10 +139,10 @@ pub fn vendor_sign_zbi(
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_zbi, convert_to_new_config, vendor_sign_zbi};
+    use super::{construct_zbi, vendor_sign_zbi};
 
     use crate::base_package::BasePackage;
-    use assembly_config::{ImageAssemblyConfig, ZbiConfig, ZbiSigningScript};
+    use assembly_config::ImageAssemblyConfig;
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
     use assembly_images_manifest::ImagesManifest;
     use assembly_tool::testing::FakeToolProvider;
@@ -170,38 +156,6 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::str::FromStr;
     use tempfile::tempdir;
-
-    #[test]
-    fn old_config() {
-        let old_config = ZbiConfig {
-            name: "fuchsia".into(),
-            max_size: 0,
-            embed_fvm_in_zbi: false,
-            compression: "zstd".into(),
-            signing_script: Some(ZbiSigningScript {
-                tool: "tool".into(),
-                extra_arguments: vec!["one".to_string(), "two".to_string()],
-            }),
-        };
-        let new_config = convert_to_new_config(&old_config).unwrap();
-        assert_eq!(new_config.name, "fuchsia");
-        assert_eq!(new_config.compression, ZbiCompression::ZStd);
-        let script = new_config.postprocessing_script.unwrap();
-        assert_eq!(script.path, PathBuf::from("tool"));
-        assert_eq!(script.args, vec!["one".to_string(), "two".to_string()]);
-
-        let old_config = ZbiConfig {
-            name: "fuchsia".into(),
-            max_size: 0,
-            embed_fvm_in_zbi: false,
-            compression: "zstd.max".into(),
-            signing_script: None,
-        };
-        let new_config = convert_to_new_config(&old_config).unwrap();
-        assert_eq!(new_config.name, "fuchsia");
-        assert_eq!(new_config.compression, ZbiCompression::ZStdMax);
-        assert!(new_config.postprocessing_script.is_none());
-    }
 
     // These tests must be ran serially, because otherwise they will affect each
     // other through process spawming. If a test spawns a process while the

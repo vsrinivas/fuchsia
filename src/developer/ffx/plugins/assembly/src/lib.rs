@@ -11,7 +11,6 @@ mod blob_json_generator;
 mod blobfs;
 mod extra_hash_descriptor;
 mod fvm;
-mod fvm_new;
 mod operations;
 mod util;
 mod zbi;
@@ -25,7 +24,6 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
     // The context() is used to display which operation failed in the event of
     // an error.
     match cmd.op_class {
-        OperationClass::Image(args) => operations::image::assemble(args).context("Image Assembly"),
         OperationClass::CreateSystem(args) => {
             operations::create_system::create_system(args).context("Create System")
         }

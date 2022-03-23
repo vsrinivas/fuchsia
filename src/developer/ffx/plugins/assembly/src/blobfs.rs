@@ -6,22 +6,10 @@ use crate::base_package::BasePackage;
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
-use assembly_config::{BlobFSConfig, ImageAssemblyConfig};
+use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
 use assembly_tool::Tool;
-use std::convert::TryInto;
 use std::path::{Path, PathBuf};
-
-pub fn convert_to_new_config(config: &BlobFSConfig) -> Result<BlobFS> {
-    Ok(BlobFS {
-        name: "blob".into(),
-        layout: config.layout.as_str().try_into()?,
-        compress: config.compress,
-        maximum_bytes: None,
-        minimum_data_bytes: None,
-        minimum_inodes: None,
-    })
-}
 
 pub fn construct_blobfs(
     blobfs_tool: Box<dyn Tool>,
@@ -56,9 +44,9 @@ pub fn construct_blobfs(
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_blobfs, convert_to_new_config};
+    use super::construct_blobfs;
     use crate::base_package::BasePackage;
-    use assembly_config::{BlobFSConfig, ImageAssemblyConfig};
+    use assembly_config::ImageAssemblyConfig;
     use assembly_images_config::{BlobFS, BlobFSLayout};
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
@@ -66,23 +54,6 @@ mod tests {
     use std::collections::BTreeMap;
     use std::str::FromStr;
     use tempfile::tempdir;
-
-    #[test]
-    fn old_config() {
-        let old_config = BlobFSConfig { layout: "compact".into(), compress: true };
-        let new_config = convert_to_new_config(&old_config).unwrap();
-        assert_eq!(new_config.layout, BlobFSLayout::Compact);
-        assert_eq!(new_config.compress, true);
-
-        let old_config = BlobFSConfig { layout: "deprecated_padded".into(), compress: false };
-        let new_config = convert_to_new_config(&old_config).unwrap();
-        assert_eq!(new_config.layout, BlobFSLayout::DeprecatedPadded);
-        assert_eq!(new_config.compress, false);
-
-        let old_config = BlobFSConfig { layout: "invalid".into(), compress: false };
-        let result = convert_to_new_config(&old_config);
-        assert!(result.is_err());
-    }
 
     #[test]
     fn construct() {
