@@ -81,7 +81,12 @@ impl Resolver for RealmBuilderResolver {
         } else {
             None
         };
-        Ok(ResolvedComponent { resolved_url, decl, package, config_values })
+        Ok(ResolvedComponent {
+            resolved_url,
+            decl,
+            package: package.map(Into::into),
+            config_values,
+        })
     }
 }
 

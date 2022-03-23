@@ -11,7 +11,9 @@ use {
             },
             environment::Environment,
             error::ModelError,
-            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
+            resolver::{
+                ResolvedComponent, ResolvedPackage, Resolver, ResolverError, ResolverRegistry,
+            },
             starter::Starter,
         },
     },
@@ -33,7 +35,7 @@ use {
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Koid},
     futures::{
         channel::oneshot,
@@ -204,10 +206,9 @@ impl MockResolver {
         Ok(ResolvedComponent {
             resolved_url: format!("test:///{}_resolved", name),
             decl: decl.clone(),
-            package: Some(fsys::Package {
-                package_url: Some("pkg".to_string()),
-                package_dir: Some(client),
-                ..fsys::Package::EMPTY
+            package: Some(ResolvedPackage {
+                url: Some("pkg".to_string()),
+                directory: Some(client),
             }),
             config_values,
         })

@@ -115,7 +115,7 @@ impl FuchsiaPkgResolver {
         Ok(ResolvedComponent {
             resolved_url: component_url.to_string(),
             decl: component_decl.fidl_into_native(),
-            package: Some(package),
+            package: Some(package.into()),
             config_values,
         })
     }
@@ -136,6 +136,7 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
+        crate::model::resolver::ResolvedPackage,
         cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{self, ServerEnd},
@@ -344,7 +345,7 @@ mod tests {
         // sure that we were able to resolve.
         assert_eq!(decl.program, expected_program);
 
-        let fsys::Package { package_url, package_dir, .. } = package.unwrap();
+        let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();

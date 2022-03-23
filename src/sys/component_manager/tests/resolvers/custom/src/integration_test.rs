@@ -5,9 +5,21 @@
 use {fidl_fidl_test_components as ftest, fuchsia_component::client};
 
 #[fuchsia::test]
-async fn custom_resolved_component_serves_protocol() {
-    let trigger = client::connect_to_protocol::<ftest::TriggerMarker>()
-        .expect("failed to open trigger service");
+async fn custom_resolved_component_serves_protocol_using_sdk_protocol() {
+    let trigger = client::connect_to_protocol_at_path::<ftest::TriggerMarker>(
+        "/svc/fidl.test.components.Trigger.sdk",
+    )
+    .expect("failed to open trigger service");
+    let out = trigger.run().await.expect("trigger failed");
+    assert_eq!(out, "Triggered");
+}
+
+#[fuchsia::test]
+async fn custom_resolved_component_serves_protocol_using_internal_protocol() {
+    let trigger = client::connect_to_protocol_at_path::<ftest::TriggerMarker>(
+        "/svc/fidl.test.components.Trigger.internal",
+    )
+    .expect("failed to open trigger service");
     let out = trigger.run().await.expect("trigger failed");
     assert_eq!(out, "Triggered");
 }

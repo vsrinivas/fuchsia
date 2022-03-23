@@ -150,7 +150,12 @@ impl Resolver for FuchsiaBootResolver {
         } else {
             None
         };
-        Ok(ResolvedComponent { resolved_url, decl, package, config_values })
+        Ok(ResolvedComponent {
+            resolved_url,
+            decl,
+            package: package.map(Into::into),
+            config_values,
+        })
     }
 }
 
@@ -183,7 +188,9 @@ impl BuiltinCapability for FuchsiaBootResolver {
 mod tests {
     use {
         super::*,
-        crate::model::{component::ComponentInstance, environment::Environment},
+        crate::model::{
+            component::ComponentInstance, environment::Environment, resolver::ResolvedPackage,
+        },
         assert_matches::assert_matches,
         cm_rust::{FidlIntoNative, NativeIntoFidl},
         fidl::encoding::encode_persistent_with_context,
@@ -270,7 +277,7 @@ mod tests {
         // sure that we were able to resolve.
         assert_eq!(decl.program, expected_program);
 
-        let fsys::Package { package_url, package_dir, .. } = package.unwrap();
+        let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-boot:///packages/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();

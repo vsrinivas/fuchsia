@@ -59,6 +59,7 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// A request to route a capability, together with the data needed to do so.
+#[derive(Debug)]
 pub enum RouteRequest {
     // Route a capability from an ExposeDecl.
     ExposeDirectory(ExposeDirectoryDecl),

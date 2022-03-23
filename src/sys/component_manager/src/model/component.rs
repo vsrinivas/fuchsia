@@ -14,7 +14,7 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         namespace::IncomingNamespace,
-        resolver::ResolvedComponent,
+        resolver::{ResolvedComponent, ResolvedPackage},
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
             RouteRequest, RoutingError,
@@ -159,14 +159,14 @@ impl TryFrom<ResolvedComponent> for Component {
     }
 }
 
-impl TryFrom<fsys::Package> for Package {
+impl TryFrom<ResolvedPackage> for Package {
     type Error = ModelError;
 
-    fn try_from(package: fsys::Package) -> Result<Self, Self::Error> {
+    fn try_from(package: ResolvedPackage) -> Result<Self, Self::Error> {
         Ok(Self {
-            package_url: package.package_url.ok_or(ModelError::PackageUrlMissing)?,
+            package_url: package.url.ok_or(ModelError::PackageUrlMissing)?,
             package_dir: package
-                .package_dir
+                .directory
                 .ok_or(ModelError::PackageDirectoryMissing)?
                 .into_proxy()
                 .expect("could not convert package dir to proxy"),
