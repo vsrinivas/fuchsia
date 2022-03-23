@@ -21,7 +21,7 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     let root = fs.root();
 
     // Create ptmx
-    root.create_node(b"ptmx", FileMode::IFCHR | FileMode::from_bits(0o0), DeviceType::PTMX)
+    root.create_node(b"ptmx", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::PTMX)
         .unwrap();
 
     {

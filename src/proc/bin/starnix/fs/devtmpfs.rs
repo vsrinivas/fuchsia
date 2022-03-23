@@ -33,7 +33,7 @@ fn init_devtmpfs() -> FileSystemHandle {
     // tty related nodes
     mkdir(b"pts");
     mkchr(b"tty", DeviceType::TTY);
-    mkchr(b"ptmx", DeviceType::PTMX);
+    root.create_symlink(b"ptmx", b"pts/ptmx").unwrap();
 
     fs
 }
