@@ -33,7 +33,6 @@
 #include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
-#include "fuchsia/hardware/syscalls/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
 #include "src/devices/bus/drivers/pci/proxy_rpc.h"
 

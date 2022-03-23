@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 library fuchsia.hardware.pci;
 
-using fuchsia.hardware.syscalls.pci;
 using zx;
 
+/// PCI Configuration Header registers.
+/// PCI Local Bus Specification v3, chapter 6.1.
 type PciCfg = strict enum : uint16 {
     VENDOR_ID = 0x00;
     DEVICE_ID = 0x02;
@@ -31,6 +32,8 @@ type PciCfg = strict enum : uint16 {
     MAX_LATENCY = 0x3f;
 };
 
+/// PCI Capability ID.
+/// PCI Local Bus Specification v3, appendex H.
 type PciCapId = strict enum : uint8 {
     NULL = 0x00;
     PCI_PWR_MGMT = 0x01;
@@ -56,6 +59,8 @@ type PciCapId = strict enum : uint8 {
     FLATTENING_PORTAL_BRIDGE = 0x15;
 };
 
+/// PCI Extended Capability IDs.
+/// PCIe Base Specification rev4, chapter 7.6.
 type PciExtCapId = strict enum : uint16 {
     NULL = 0x00;
     ADVANCED_ERROR_REPORTING = 0x01;
@@ -104,61 +109,201 @@ type PciExtCapId = strict enum : uint16 {
     SYSTEM_FIRMWARE_INTERMEDIARY = 0x2c;
 };
 
+/// Used with ||SetInterruptMode| to configure an interrupt mode for the device.
+/// Devices configured to use the LEGACY Irq mode must ack their interrupt after
+/// servicing by calling |AckInterrupt|. To avoid this, LEGACY_NOACK can be
+/// used, but the driver's interrupt function will be disabled by the PCI Bus
+/// Driver if it sees excessive interrupt triggers in a given period.
 type PciIrqMode = strict enum : uint8 {
     DISABLED = 0;
+    /// Legacy interrupt mode.
     LEGACY = 1;
+    /// Legacy interrupt mode (without ACKing, see |AckInterrupt|).
     LEGACY_NOACK = 2;
+    /// MSI (messaage-signaled interrupt) mode.
     MSI = 3;
+    /// MSI-X mode.
     MSI_X = 4;
     COUNT = 5;
 };
 
+/// Returned by |GetInterruptModes|. Contains the number of interrupts supported
+/// by a given PCI device interrupt mode. 0 is returned for a mode if
+/// unsupported.
 type PciInterruptModes = struct {
+    /// The number of legacy interrupts supported. Will be 0, or 1 depending on
+    /// device support.
     legacy uint32;
+    /// The number of Message-Signaled interrupted supported. Will be in the
+    /// range of [0, 0x8) depending on device support.
     msi uint32;
+    /// The number of MSI-X interrupts supported. Will be in the range of [0,
+    /// 2048) depending on device support.
     msix uint32;
 };
 
-/// fxbug.dev/33713: Remove the zx_pcie types and implement them here
+/// Device specific information from a device's configuration header.
+/// PCI Local Bus Specification v3, chapter 6.1.
+// TODO(33713): Pcie prefix exists due to legacy syscall interactions.
+type PcieDeviceInfo = struct {
+    /// Device identification information.
+    vendor_id uint16;
+    device_id uint16;
+    base_class uint8;
+    sub_class uint8;
+    program_interface uint8;
+    revision_id uint8;
+
+    /// Information pertaining to the device's location in the bus topology.
+    bus_id uint8;
+    dev_id uint8;
+    func_id uint8;
+
+    // TODO(33713): padding exists to match up with the syscall type
+    padding1 uint8;
+};
+
+/// The type of address space used by a given Base Address Register.
+type PciBarType = strict enum : uint32 {
+    MMIO = 0;
+    IO = 1;
+};
+
+/// Describes and provides access to a given Base Address Register (BAR) for the device.
+type PciBar = resource struct {
+    /// The BAR id, [0-5).
+    id uint32;
+    type PciBarType;
+    /// The size of the region in bytes.
+    size uint64;
+    /// If |type| == PciBarType::IO then this address will represent the start
+    /// address of the IO region.
+    address uint64;
+    /// If |type| == PciBarType::MMIO then a handle to a VMO representing the
+    /// MMIO region will be returned.
+    handle zx.handle:VMO;
+};
+
+
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol Pci {
+    /// Retrieves information for a specified Base Address Register.
+    ///
+    /// Parameters:
+    /// |bar_id|: The id of the BAR being requested. Valid range is [0, 6).
+    ///
+    /// Errors:
+    /// |ZX_ERR_INTERNAL|: A bus driver error has occurred.
+    /// |ZX_ERR_INVALID_ARGS|: The |bar_id| specified is outside of the acceptable range.
+    /// |ZX_ERR_NOT_FOUND|: The specified |bar_id| does not exist for this device.
     GetBar(struct {
         bar_id uint32;
     }) -> (resource struct {
         s zx.status;
-        res fuchsia.hardware.syscalls.pci.PciBar;
+        res PciBar;
     });
+
+    /// Enables or disables the bus mastering capability for the device.
+    ///
+    /// Parameters:
+    /// |enable|: true to enable bus mastering, false to disable.
+    ///
+    /// Errors:
+    /// |ZX_ERR_BAD_STATE|: Method was called while the device is disabled.
     EnableBusMaster(struct {
         enable bool;
     }) -> (struct {
         s zx.status;
     });
+
+    /// Initiates a function level reset for the device. This is a synchronous
+    /// operation that will not return ontil the reset is complete. Interrupt
+    /// operation of the device must be disabled before initiating a reset.
+    ///
+    /// Errors:
+    /// |ZX_ERR_BAD_STATE|: Interrupts were not disabled before calling |ResetDevice|.
+    /// |ZX_ERR_NOT_SUPPORTED|: The device does not support reset.
+    /// |ZX_ERR_TIMED_OUT|: The device did not complete its reset in the
+    /// expected amount of time and is presumed to no longer be operating
+    /// properly.
     ResetDevice() -> (struct {
         s zx.status;
     });
+
+    /// Alerts the bus driver to deassert the raised legacy interrupt so that it
+    /// may be waited on again. Only used if |SetInterruptMode| was called with
+    /// |PCI_INTERRUPT_MODE_LEGACY|.
+    ///
+    /// Errors:
+    /// |ZX_ERR_BAD_STATE|: device is not configured to use the Legacy interrupt mode.
     AckInterrupt() -> (struct {
         s zx.status;
     });
+
+    /// Maps a device's interrupt to a zx:interrupt. The device's interrupt mode
+    /// must already be configured with |SetInterruptMode|, and |which_irq| must
+    /// be >= to the number of interrupts reported for that interrupt mode by
+    /// |GetInterruptModes|. A Legacy interrupt may be mapped multiple times,
+    /// but the handles will point to the same interrupt object. MSI & MSI-X
+    /// interrupts may only have one outstanding mapping at a time per
+    /// interrupt.
+    ///
+    /// Parameters:
+    /// |which_irq|: The id of the interrupt to map.
+    ///
+    /// Errors:
+    /// |ZX_ERR_ALREADY_BOUND|: The interrupt specified by |which_irq| is
+    /// already mapped to a valid handle.
+    /// |ZX_ERR_BAD_STATE|: interrupts are currently disabled for the device.
+    /// |ZX_ERR_INVALID_ARGS|: |which_irq| is invalid for the mode.
     MapInterrupt(struct {
         which_irq uint32;
     }) -> (resource struct {
         s zx.status;
         handle zx.handle:INTERRUPT;
     });
+
+    /// Returns the supported interrupt modes for a device.
     GetInterruptModes() -> (struct {
         modes PciInterruptModes;
     });
+
+    /// Configures the interrupt mode for a device. When changing from one
+    /// interrupt mode to another the driver must ensure existing interrupt
+    /// handles are freed beforehand.
+    ///
+    /// Parameters:
+    /// |mode|: The |PciIrqMode| to request from the bus driver.
+    /// |requested_irq_count|: The number of interrupts requested.
+    ///
+    /// Errors:
+    /// |ZX_ERR_BAD_STATE|: The driver attempted to change interrupt mode while
+    /// existing handles to mapped MSIs exist.
+    /// |ZX_ERR_INVALID_ARGS|: |requested_irq_count| is 0.
+    /// |ZX_ERR_NOT_SUPPORTED|: The provided |mode| is not supported, or invalid.
     SetInterruptMode(struct {
-        mode fuchsia.hardware.syscalls.pci.PciIrqMode;
+        mode PciIrqMode;
         requested_irq_count uint32;
     }) -> (struct {
         s zx.status;
     });
+
+    /// Returns a structure containing device information from the configuration header.
     GetDeviceInfo() -> (struct {
         s zx.status;
-        info fuchsia.hardware.syscalls.pci.PcieDeviceInfo;
+        info PcieDeviceInfo;
     });
+
+    /// Reads a value from the device's configuration space. |Offset| must be
+    /// within [0x0, 100) if PCI, or [0x0, 0x1000) if PCIe. For most purposes a
+    /// device will be PCIe.
+    ///
+    /// Parameters:
+    /// |offset|: The offset into the device's configuration space to read.
+    ///
+    /// Errors:
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
     ConfigRead8(struct {
         offset uint16;
     }) -> (struct {
@@ -177,6 +322,19 @@ protocol Pci {
         s zx.status;
         value uint32;
     });
+
+    /// Writes a value to the device's configuration space. The acceptable
+    /// ranges of |offset| for writes are [0x40, 0x100) if PCI, or [0x40,
+    /// 0x1000) if PCIe. For most purposes a device will be PCIe.
+    ///
+    ///
+    /// Parameters
+    /// |offset|: The offset into the device's configuration space to read.
+    /// |value|: The value to write.
+    ///
+    /// Errors:
+    /// |ZX_ERR_ACCESS_DENIED|: |offset| is within the device's configuration header.
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
     ConfigWrite8(struct {
         offset uint16;
         value uint8;
@@ -195,32 +353,82 @@ protocol Pci {
     }) -> (struct {
         s zx.status;
     });
+
+    /// Returns the offset into the device's configuration space of the first
+    /// capability matching the capability id.
+    ///
+    /// Parameters:
+    /// |id|: the capability id to search for
+    ///
+    /// Errors:
+    /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found.
     GetFirstCapability(struct {
-        id uint8;
+        id PciCapId;
     }) -> (struct {
         s zx.status;
         offset uint8;
     });
+
+    /// Returns the offset into the device's configuration space of the next
+    /// capability matching the provided capability id, starting at |offset|.
+    ///
+    /// Parameters:
+    /// |id|: the capability id to search for.
+    /// |offset|: the offset of the previous capability to start searching from.
+    ///
+    /// Errors:
+    /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found in a scan
+    /// starting from |offset|
     GetNextCapability(struct {
-        id uint8;
+        id PciCapId;
         offset uint8;
     }) -> (struct {
         s zx.status;
         offset uint8;
     });
+
+    /// Returns the offset into the device's configuration space of first
+    /// extended capability matching the provided extended capability id.
+    ///
+    /// Parameters:
+    /// |id|: the capability id to search for
+    ///
+    /// Errors:
+    /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found.
     GetFirstExtendedCapability(struct {
-        id uint16;
+        id PciExtCapId;
     }) -> (struct {
         s zx.status;
         offset uint16;
     });
+
+    /// Returns the offset into the device's configuration space of the next
+    /// extended capability matching the provided extended capability id,
+    /// starting at |offset|.
+    ///
+    /// Parameters:
+    /// |id|: the capability id to search for.
+    /// |offset|: the offset of the previous extended capability to start
+    ///           searching from.
+    ///
+    /// Errors
+    /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found in a
+    /// scan starting from |offset|.
     GetNextExtendedCapability(struct {
-        id uint16;
+        id PciExtCapId;
         offset uint16;
     }) -> (struct {
         s zx.status;
         offset uint16;
     });
+
+    /// Returns the Bus Transaction Intiator (BTI) at a given index for the device.
+    ///
+    /// Parameters:
+    /// |index|: the BTI to request.
+    ///
+    /// Errors:
+    /// |ZX_ERR_OUT_OF_RANGE|: |index| was not 0.
     GetBti(struct {
         index uint32;
     }) -> (resource struct {

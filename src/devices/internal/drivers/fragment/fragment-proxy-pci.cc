@@ -5,7 +5,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/zx/status.h>
 
-#include "fuchsia/hardware/syscalls/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/proxy_rpc.h"
 #include "src/devices/internal/drivers/fragment/fragment-proxy.h"
 #include "src/devices/internal/drivers/fragment/proxy-protocol.h"
