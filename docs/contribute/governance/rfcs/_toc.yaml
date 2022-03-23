@@ -319,3 +319,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0152_improved_oom_handling.md
 - title: "RFC-0153: Ninja Customization For The Fuchsia Build"
   path: /docs/contribute/governance/rfcs/0153_ninja_customization.md
+- title: "RFC-0154: Subpackages"
+  path: /docs/contribute/governance/rfcs/0154_subpackages.md

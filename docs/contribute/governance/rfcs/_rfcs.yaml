@@ -1994,5 +1994,18 @@
   gerrit_change_id: ['635356']
   status: 'Accepted'
   reviewers: ['shayba@google.com', 'maruel@google.com', 'abarth@google.com', 'fangism@google.com', 'jayzhuang@google.com', 'rudymathu@google.com']
-  submitted: '2021-01-22'
-  reviewed: '2021-03-17'
+  submitted: '2022-01-22'
+  reviewed: '2022-03-17'
+
+- name: 'RFC-0154'
+  title: 'Subpackages'
+  short_description: 'Allow packages to declare dependencies on version-specific subpackages, to improve hermeticity and relocatability.'
+  authors: ['richkadel@google.com', 'crjohns@google.com']
+  file: '0154_subpackages.md'
+  area: ['Software Delivery']
+  issue: ['89252']
+  gerrit_change_id: ['637489']
+  status: 'Accepted'
+  reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'wittrock@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'dgonyeo@google.com']
+  submitted: '2022-01-25'
+  reviewed: '2022-03-23'
