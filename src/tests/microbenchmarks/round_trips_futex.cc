@@ -3,18 +3,66 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/syscalls.h>
+#include <unistd.h>
 
 #include <thread>
 
 #include <perftest/perftest.h>
 
-#include "assert.h"
 #include "test_runner.h"
+
+#if defined(__Fuchsia__)
+
+#include <zircon/syscalls.h>
+
+#include "assert.h"
+
+#elif defined(__linux__)
+
+#include <sys/syscall.h>
+
+#include <linux/futex.h>
+
+#else
+#error "Unsupported operating system"
+#endif
 
 namespace {
 
-// Test the round trip time for waking up threads using Zircon futexes.
+#if defined(__Fuchsia__)
+
+void FutexWake(volatile int* ptr) { ASSERT_OK(zx_futex_wake(const_cast<int*>(ptr), 1)); }
+
+void FutexWait(volatile int* ptr, int expected_value) {
+  zx_status_t status =
+      zx_futex_wait(const_cast<int*>(ptr), expected_value, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+  // zx_futex_wait() returns ZX_ERR_BAD_STATE if *ptr != expected_value, or
+  // ZX_OK if woken by a zx_futex_wake() call.
+  FX_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
+}
+
+#elif defined(__linux__)
+
+void FutexWake(volatile int* ptr) {
+  long woken_count =
+      syscall(__NR_futex, ptr, FUTEX_WAKE | FUTEX_PRIVATE_FLAG, 1, nullptr, nullptr, 0);
+  FX_CHECK(woken_count >= 0);
+}
+
+void FutexWait(volatile int* ptr, int expected_value) {
+  long result = syscall(__NR_futex, ptr, FUTEX_WAIT | FUTEX_PRIVATE_FLAG, expected_value, nullptr,
+                        nullptr, 0);
+  // FUTEX_WAIT returns the error EAGAIN if *ptr != expected_value, or 0
+  // (success) if woken by a FUTEX_WAKE call.
+  FX_CHECK(result == 0 || (result < 0 && errno == EAGAIN));
+}
+
+#else
+#error "Unsupported operating system"
+#endif
+
+// Test the round trip time for waking up threads using futexes.
+//
 // Note that Zircon does not support cross-process futexes, only
 // within-process futexes, so there is no multi-process version of this
 // test case.
@@ -45,7 +93,7 @@ class FutexTest {
 
   void Wake(volatile int* ptr, int wake_value) {
     *ptr = wake_value;
-    ASSERT_OK(zx_futex_wake(const_cast<int*>(ptr), 1));
+    FutexWake(ptr);
   }
 
   bool Wait(volatile int* ptr) {
@@ -57,9 +105,7 @@ class FutexTest {
         // Return whether we got a request to shut down.
         return val == 2;
       }
-      zx_status_t status =
-          zx_futex_wait(const_cast<int*>(ptr), val, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
-      FX_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
+      FutexWait(ptr, val);
     }
   }
 

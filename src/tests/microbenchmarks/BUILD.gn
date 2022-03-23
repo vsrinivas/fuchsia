@@ -26,6 +26,7 @@ executable("bin") {
     "null.cc",
     "pthreads.cc",
     "random_memcpy.cc",
+    "round_trips_futex.cc",
     "round_trips_posix.cc",
   ]
   if (is_host) {
@@ -53,7 +54,6 @@ executable("bin") {
       "prng.cc",
       "pseudo_dir.cc",
       "round_trips.cc",
-      "round_trips_futex.cc",
       "sleep.cc",
       "sockets.cc",
       "streams.cc",
