@@ -157,6 +157,7 @@ pub fn dispatch_syscall(
         rt_sigprocmask[4],
         rt_sigreturn[0],
         rt_sigsuspend[2],
+        rt_tgsigqueueinfo[4],
         sched_getaffinity[3],
         sched_getscheduler[1],
         sched_setaffinity[3],

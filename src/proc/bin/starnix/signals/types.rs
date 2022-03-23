@@ -9,6 +9,7 @@ use crate::types::*;
 use parking_lot::RwLock;
 use std::collections::VecDeque;
 use std::sync::Arc;
+use zerocopy::{AsBytes, FromBytes};
 
 /// `SignalActions` contains a `sigaction_t` for each valid signal.
 #[derive(Debug)]
@@ -118,6 +119,17 @@ impl SignalState {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct SignalInfoHeader {
+    pub signo: u32,
+    pub errno: i32,
+    pub code: i32,
+    pub _pad: i32,
+}
+
+pub const SI_HEADER_SIZE: usize = std::mem::size_of::<SignalInfoHeader>();
+
 #[derive(Clone, Debug)]
 pub struct SignalInfo {
     pub signal: Signal,
@@ -164,6 +176,18 @@ impl SignalInfo {
                     ..Default::default()
                 }
             ),
+            SignalDetail::Raw { data } => {
+                let header = SignalInfoHeader {
+                    signo: self.signal.number(),
+                    errno: self.errno,
+                    code: self.code,
+                    _pad: 0,
+                };
+                let mut array: [u8; SI_MAX_SIZE as usize] = [0; SI_MAX_SIZE as usize];
+                header.write_to(&mut array[..SI_HEADER_SIZE]);
+                array[SI_HEADER_SIZE..SI_MAX_SIZE as usize].copy_from_slice(&data);
+                array
+            }
         }
     }
 }
@@ -172,6 +196,7 @@ impl SignalInfo {
 pub enum SignalDetail {
     None,
     SigChld { pid: pid_t, uid: uid_t, status: i32 },
+    Raw { data: [u8; SI_MAX_SIZE as usize - SI_HEADER_SIZE] },
 }
 
 impl Default for SignalDetail {

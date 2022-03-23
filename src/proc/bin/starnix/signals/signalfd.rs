@@ -6,6 +6,7 @@ use crate::fs::*;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 use zerocopy::AsBytes;
@@ -51,6 +52,26 @@ impl FileOps for SignalFd {
                     siginfo.ssi_pid = pid as u32;
                     siginfo.ssi_uid = uid;
                     siginfo.ssi_status = status;
+                }
+                SignalDetail::Raw { data } => {
+                    // these offsets are taken from the gVisor offsets in the SignalInfo struct
+                    // in //pkg/abi/linux/signal.go and the definition of __sifields in
+                    // /usr/include/asm-generic/siginfo.h
+                    siginfo.ssi_uid = u32::from_ne_bytes(data[4..8].try_into().unwrap());
+                    siginfo.ssi_pid = u32::from_ne_bytes(data[0..4].try_into().unwrap());
+                    siginfo.ssi_fd = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+                    siginfo.ssi_tid = u32::from_ne_bytes(data[0..4].try_into().unwrap());
+                    siginfo.ssi_band = u32::from_ne_bytes(data[0..4].try_into().unwrap());
+                    siginfo.ssi_overrun = u32::from_ne_bytes(data[4..8].try_into().unwrap());
+                    siginfo.ssi_status = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+                    siginfo.ssi_int = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+                    siginfo.ssi_ptr = u64::from_ne_bytes(data[8..16].try_into().unwrap());
+                    siginfo.ssi_addr = u64::from_ne_bytes(data[0..8].try_into().unwrap());
+                    siginfo.ssi_syscall = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+                    siginfo.ssi_call_addr = u64::from_ne_bytes(data[0..8].try_into().unwrap());
+                    siginfo.ssi_arch = u32::from_ne_bytes(data[12..16].try_into().unwrap());
+                    siginfo.ssi_utime = u64::from_ne_bytes(data[12..20].try_into().unwrap());
+                    siginfo.ssi_stime = u64::from_ne_bytes(data[20..28].try_into().unwrap());
                 }
             }
             buf.extend_from_slice(siginfo.as_bytes());

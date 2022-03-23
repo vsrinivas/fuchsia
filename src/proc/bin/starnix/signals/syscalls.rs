@@ -12,6 +12,7 @@ use crate::signals::*;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
+use zerocopy::FromBytes;
 
 pub fn sys_rt_sigaction(
     current_task: &CurrentTask,
@@ -180,6 +181,21 @@ fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Res
     Ok(())
 }
 
+fn send_unchecked_signal_info(
+    task: &Task,
+    unchecked_signal: &UncheckedSignal,
+    info: SignalInfo,
+) -> Result<(), Errno> {
+    // 0 is a sentinel value used to do permission checks.
+    let sentinel_signal = UncheckedSignal::from(0);
+    if *unchecked_signal == sentinel_signal {
+        return Ok(());
+    }
+
+    send_signal(task, info);
+    Ok(())
+}
+
 pub fn sys_kill(
     current_task: &CurrentTask,
     pid: pid_t,
@@ -273,6 +289,50 @@ pub fn sys_tgkill(
 pub fn sys_rt_sigreturn(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
     restore_from_signal_handler(current_task)?;
     Ok(SyscallResult::keep_regs(current_task))
+}
+
+pub fn sys_rt_tgsigqueueinfo(
+    current_task: &CurrentTask,
+    tgid: pid_t,
+    tid: pid_t,
+    unchecked_signal: UncheckedSignal,
+    siginfo_ref: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let mut siginfo_mem = [0u8; SI_MAX_SIZE as usize];
+    current_task.mm.read_memory(siginfo_ref, &mut siginfo_mem)?;
+
+    let header = SignalInfoHeader::read_from(&siginfo_mem[..SI_HEADER_SIZE]).unwrap();
+
+    let signal = Signal::try_from(unchecked_signal)?;
+
+    let this_pid = current_task.get_pid();
+    if this_pid == tgid {
+        if header.code >= 0 || header.code == SI_TKILL {
+            return error!(EINVAL);
+        }
+    }
+
+    let mut bytes = [0u8; SI_MAX_SIZE as usize - SI_HEADER_SIZE];
+    bytes.copy_from_slice(&siginfo_mem[SI_HEADER_SIZE..SI_MAX_SIZE as usize]);
+    let details = SignalDetail::Raw { data: bytes };
+    let signal_info = SignalInfo {
+        signal,
+        errno: header.errno,
+        code: header.code,
+        detail: details,
+        force: false,
+    };
+
+    let target = current_task.get_task(tid).ok_or(errno!(ESRCH))?;
+    if target.get_pid() != tgid {
+        return error!(EINVAL);
+    }
+    if !current_task.can_signal(&target, &unchecked_signal) {
+        return error!(EPERM);
+    }
+
+    send_unchecked_signal_info(&target, &unchecked_signal, signal_info)?;
+    Ok(SUCCESS)
 }
 
 /// Sends a signal to all thread groups in `thread_groups`.
@@ -470,6 +530,8 @@ mod tests {
     use super::*;
     use crate::mm::PAGE_SIZE;
     use fuchsia_async as fasync;
+    use std::convert::TryInto;
+    use zerocopy::AsBytes;
 
     use crate::testing::*;
 
@@ -1047,5 +1109,75 @@ mod tests {
         let zombie = ZombieTask { id: 0, uid: 0, parent: 3, exit_code: 1 };
         current_task.zombie_children.lock().push(zombie.clone());
         assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Ok(Some(zombie)));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sigqueue() {
+        let (kernel, current_task) = create_kernel_and_task();
+        let current_uid = current_task.creds.read().uid;
+        let current_pid = current_task.get_pid();
+
+        const TEST_VALUE: u64 = 101;
+
+        // Taken from gVisor of SignalInfo in  //pkg/abi/linux/signal.go
+        const PID_DATA_OFFSET: usize = SI_HEADER_SIZE;
+        const UID_DATA_OFFSET: usize = SI_HEADER_SIZE + 4;
+        const VALUE_DATA_OFFSET: usize = SI_HEADER_SIZE + 8;
+
+        let mut data = vec![0u8; SI_MAX_SIZE as usize];
+        let mut header = SignalInfoHeader::default();
+        header.code = SI_QUEUE;
+        header.write_to(&mut data[..SI_HEADER_SIZE]);
+        data[PID_DATA_OFFSET..PID_DATA_OFFSET + 4].copy_from_slice(&current_pid.to_ne_bytes());
+        data[UID_DATA_OFFSET..UID_DATA_OFFSET + 4].copy_from_slice(&current_uid.to_ne_bytes());
+        data[VALUE_DATA_OFFSET..VALUE_DATA_OFFSET + 8].copy_from_slice(&TEST_VALUE.to_ne_bytes());
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        current_task.mm.write_memory(addr, &data).unwrap();
+        let second_current = create_task(&kernel, "second task");
+        let second_pid = second_current.get_pid();
+        let second_tid = second_current.get_tid();
+        assert_eq!(second_current.signals.read().queued_count(SIGIO), 0);
+
+        assert_eq!(
+            sys_rt_tgsigqueueinfo(
+                &current_task,
+                second_pid,
+                second_tid,
+                UncheckedSignal::from(SIGIO),
+                addr
+            ),
+            Ok(SUCCESS)
+        );
+        assert_eq!(second_current.signals.read().queued_count(SIGIO), 1);
+
+        let queued_signal = second_current
+            .signals
+            .write()
+            .take_next_where(|sig| sig.signal.is_in_set(SIGIO.mask()));
+        if let Some(sig) = queued_signal {
+            assert_eq!(sig.signal, SIGIO);
+            assert_eq!(sig.errno, 0);
+            assert_eq!(sig.code, SI_QUEUE);
+            if let SignalDetail::Raw { data } = sig.detail {
+                // offsets into the raw portion of the signal info
+                let offset_pid = PID_DATA_OFFSET - SI_HEADER_SIZE;
+                let offset_uid = UID_DATA_OFFSET - SI_HEADER_SIZE;
+                let offset_value = VALUE_DATA_OFFSET - SI_HEADER_SIZE;
+                let pid =
+                    pid_t::from_ne_bytes(data[offset_pid..offset_pid + 4].try_into().unwrap());
+                let uid =
+                    uid_t::from_ne_bytes(data[offset_uid..offset_uid + 4].try_into().unwrap());
+                let value =
+                    u64::from_ne_bytes(data[offset_value..offset_value + 8].try_into().unwrap());
+                assert_eq!(pid, current_pid);
+                assert_eq!(uid, current_uid);
+                assert_eq!(value, TEST_VALUE);
+            } else {
+                panic!("incorrect signal detail");
+            }
+        } else {
+            panic!("expected a queued signal");
+        }
     }
 }
