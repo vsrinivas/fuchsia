@@ -46,12 +46,13 @@ build_api_module("sdk_source_set_list") {
 
 # Create generated file for fidldoc to read.
 generated_file("all_fidl_sdk_json") {
-  deps = [ "//sdk:fidl" ]
+  deps = [ "//sdk/fidl" ]
 
   outputs = [ "$root_build_dir/all_fidl_sdk_json.txt" ]
   data_keys = [ "fidl_json" ]
 }
 
+# TODO(96110): Remove this and use //sdk/cts:plasa_manifest.
 # Contains the list of all plasa fragment files, which have a dump of the
 # public API surfaces.
 generated_file("plasa") {
@@ -172,6 +173,7 @@ cts_sdk("cts") {
   deps = [
     ":license",
     "cts:cts_tests",
+    "cts:plasa",
   ]
 }
 
@@ -208,134 +210,6 @@ sdk_molecule("e2e_testing_tools") {
   visibility = [ ":*" ]
 
   deps = [ "//garnet/bin/trace2json:bin_sdk($host_toolchain)" ]
-}
-
-# Fuchsia IDL (FIDL) files defining much of the API for the SDK.
-sdk_molecule("fidl") {
-  visibility = [
-    ":*",
-    "//build/fidl:sdk_fidl",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.accessibility.gesture:fuchsia.accessibility.gesture_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.accessibility.virtualkeyboard:fuchsia.accessibility.virtualkeyboard_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.buildinfo.test:fuchsia.buildinfo.test_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castauth:fuchsia.castauth_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castconfig:fuchsia.castconfig_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castremotecontrol:fuchsia.castremotecontrol_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castsetup:fuchsia.castsetup_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castsysteminfo:fuchsia.castsysteminfo_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.castwindow:fuchsia.castwindow_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component:fuchsia.component_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.component.types:fuchsia.component.types_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.data:fuchsia.data_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.element:fuchsia.element_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.factory:fuchsia.factory_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.radar:fuchsia.hardware.radar_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.images:fuchsia.images_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.input:fuchsia.input_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.input.virtualkeyboard:fuchsia.input.virtualkeyboard_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.legacymetrics:fuchsia.legacymetrics_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.lightsensor:fuchsia.lightsensor_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.location:fuchsia.location_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.math:fuchsia.math_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media:fuchsia.media_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.drm:fuchsia.media.drm_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.media.target:fuchsia.media.target_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.migration:fuchsia.migration_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.power.systemmode:fuchsia.power.systemmode_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.process:fuchsia.process_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.session:fuchsia.session_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.activity.control:fuchsia.ui.activity.control_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.update:fuchsia.update_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.update.config:fuchsia.update.config_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.url:fuchsia.url_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.weave:fuchsia.weave_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.wlan.product.deprecatedclient:fuchsia.wlan.product.deprecatedclient_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration_sdk($fidl_toolchain)",
-  ]
 }
 
 # Tools and data used on a 'host' development machine; where host is often
@@ -441,11 +315,11 @@ sdk_molecule("core_idk") {
 
   deps = [
     ":core_lib",
-    ":fidl",
     ":license",
     ":version_history",
     "devices",
     "docs",
+    "//sdk/fidl",
     "//src/lib/vulkan:vulkan_layers",
     "//third_party/Vulkan-Loader:libvulkan_sdk",
     "//third_party/Vulkan-Loader:vulkan_license",

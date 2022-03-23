@@ -1,0 +1,152 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk.gni")
+
+# The list of FIDLs to include in the core IDK.
+sdk_fidl_targets = [
+  "//sdk/fidl/fuchsia.accessibility.gesture:fuchsia.accessibility.gesture",
+  "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics",
+  "//sdk/fidl/fuchsia.accessibility.virtualkeyboard:fuchsia.accessibility.virtualkeyboard",
+  "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects",
+  "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens",
+  "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp",
+  "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt",
+  "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2",
+  "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp",
+  "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le",
+  "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys",
+  "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo",
+  "//sdk/fidl/fuchsia.buildinfo.test:fuchsia.buildinfo.test",
+  "//sdk/fidl/fuchsia.camera:fuchsia.camera",
+  "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+  "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+  "//sdk/fidl/fuchsia.camera3:fuchsia.camera3",
+  "//sdk/fidl/fuchsia.castauth:fuchsia.castauth",
+  "//sdk/fidl/fuchsia.castconfig:fuchsia.castconfig",
+  "//sdk/fidl/fuchsia.castremotecontrol:fuchsia.castremotecontrol",
+  "//sdk/fidl/fuchsia.castsetup:fuchsia.castsetup",
+  "//sdk/fidl/fuchsia.castsysteminfo:fuchsia.castsysteminfo",
+  "//sdk/fidl/fuchsia.castwindow:fuchsia.castwindow",
+  "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt",
+  "//sdk/fidl/fuchsia.component:fuchsia.component",
+  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl",
+  "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution",
+  "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner",
+  "//sdk/fidl/fuchsia.component.test:fuchsia.component.test",
+  "//sdk/fidl/fuchsia.component.types:fuchsia.component.types",
+  "//sdk/fidl/fuchsia.data:fuchsia.data",
+  "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles",
+  "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics",
+  "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test",
+  "//sdk/fidl/fuchsia.element:fuchsia.element",
+  "//sdk/fidl/fuchsia.factory:fuchsia.factory",
+  "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan",
+  "//sdk/fidl/fuchsia.feedback:fuchsia.feedback",
+  "//sdk/fidl/fuchsia.fonts:fuchsia.fonts",
+  "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc",
+  "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish",
+  "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light",
+  "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol",
+  "//sdk/fidl/fuchsia.hardware.radar:fuchsia.hardware.radar",
+  "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo",
+  "//sdk/fidl/fuchsia.images:fuchsia.images",
+  "//sdk/fidl/fuchsia.input:fuchsia.input",
+  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report",
+  "//sdk/fidl/fuchsia.input.virtualkeyboard:fuchsia.input.virtualkeyboard",
+  "//sdk/fidl/fuchsia.inspect:fuchsia.inspect",
+  "//sdk/fidl/fuchsia.io:fuchsia.io",
+  "//sdk/fidl/fuchsia.kernel:fuchsia.kernel",
+  "//sdk/fidl/fuchsia.legacymetrics:fuchsia.legacymetrics",
+  "//sdk/fidl/fuchsia.lightsensor:fuchsia.lightsensor",
+  "//sdk/fidl/fuchsia.location:fuchsia.location",
+  "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace",
+  "//sdk/fidl/fuchsia.location.position:fuchsia.location.position",
+  "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor",
+  "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+  "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap",
+  "//sdk/fidl/fuchsia.math:fuchsia.math",
+  "//sdk/fidl/fuchsia.media:fuchsia.media",
+  "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio",
+  "//sdk/fidl/fuchsia.media.drm:fuchsia.media.drm",
+  "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback",
+  "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2",
+  "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds",
+  "//sdk/fidl/fuchsia.media.target:fuchsia.media.target",
+  "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec",
+  "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams",
+  "//sdk/fidl/fuchsia.mem:fuchsia.mem",
+  "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure",
+  "//sdk/fidl/fuchsia.metrics:fuchsia.metrics",
+  "//sdk/fidl/fuchsia.migration:fuchsia.migration",
+  "//sdk/fidl/fuchsia.net.http:fuchsia.net.http",
+  "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces",
+  "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns",
+  "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes",
+  "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel",
+  "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile",
+  "//sdk/fidl/fuchsia.power.systemmode:fuchsia.power.systemmode",
+  "//sdk/fidl/fuchsia.process:fuchsia.process",
+  "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+  "//sdk/fidl/fuchsia.recovery:fuchsia.recovery",
+  "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui",
+  "//sdk/fidl/fuchsia.session:fuchsia.session",
+  "//sdk/fidl/fuchsia.settings:fuchsia.settings",
+  "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy",
+  "//sdk/fidl/fuchsia.sys:fuchsia.sys",
+  "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test",
+  "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo",
+  "//sdk/fidl/fuchsia.thermal:fuchsia.thermal",
+  "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider",
+  "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity",
+  "//sdk/fidl/fuchsia.ui.activity.control:fuchsia.ui.activity.control",
+  "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app",
+  "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness",
+  "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx",
+  "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input",
+  "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3",
+  "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer",
+  "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment",
+  "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector",
+  "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy",
+  "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic",
+  "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types",
+  "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views",
+  "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound",
+  "//sdk/fidl/fuchsia.update:fuchsia.update",
+  "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel",
+  "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol",
+  "//sdk/fidl/fuchsia.update.config:fuchsia.update.config",
+  "//sdk/fidl/fuchsia.url:fuchsia.url",
+  "//sdk/fidl/fuchsia.weave:fuchsia.weave",
+  "//sdk/fidl/fuchsia.web:fuchsia.web",
+  "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy",
+  "//sdk/fidl/fuchsia.wlan.product.deprecatedclient:fuchsia.wlan.product.deprecatedclient",
+  "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration",
+]
+
+# The FIDL portion of the platform surface area (plasa).
+sdk_molecule("plasa") {
+  testonly = true
+  category = "cts"
+  deps = []
+  foreach(target, sdk_fidl_targets) {
+    deps += [ "${target}_cts_sdk($fidl_toolchain)" ]
+  }
+}
+
+# Fuchsia IDL (FIDL) files defining much of the API for the SDK.
+sdk_molecule("fidl") {
+  visibility = [
+    ":*",
+    "//build/fidl:sdk_fidl",
+    "//sdk:*",
+  ]
+
+  deps = []
+  foreach(target, sdk_fidl_targets) {
+    deps += [ "${target}_sdk($fidl_toolchain)" ]
+  }
+}
