@@ -24,8 +24,16 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     root.create_node(b"ptmx", FileMode::IFCHR | FileMode::from_bits(0o0), DeviceType::PTMX)
         .unwrap();
 
-    // Register ptmx device type
-    kernel.device_registry.write().register_chrdev(DevPtmx, DeviceType::PTMX).unwrap();
+    {
+        let mut registry = kernel.device_registry.write();
+        // Register ptmx device type
+        registry.register_chrdev(DevPtmx, DeviceType::PTMX).unwrap();
+        // Register /dev/pts/X device type
+        // See https://github.com/torvalds/linux/blob/master/Documentation/admin-guide/devices.txt
+        for n in 136..144 {
+            registry.register_default_chrdev(DevPts, n).unwrap();
+        }
+    }
 
     fs
 }
@@ -37,7 +45,12 @@ impl WithStaticDeviceId for DevPtmx {
 }
 
 impl DeviceOps for DevPtmx {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevPtmxFile))
     }
 }
@@ -45,6 +58,94 @@ impl DeviceOps for DevPtmx {
 struct DevPtmxFile;
 
 impl FileOps for DevPtmxFile {
+    fileops_impl_nonseekable!();
+
+    fn close(&self, _file: &FileObject) {}
+
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(EOPNOTSUPP)
+    }
+
+    fn write(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(EOPNOTSUPP)
+    }
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        _events: FdEvents,
+        _handler: EventHandler,
+    ) -> WaitKey {
+        WaitKey::empty()
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        _key: WaitKey,
+    ) -> bool {
+        false
+    }
+
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
+        FdEvents::empty()
+    }
+
+    fn fcntl(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _cmd: u32,
+        _arg: u64,
+    ) -> Result<SyscallResult, Errno> {
+        error!(EOPNOTSUPP)
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _request: u32,
+        _in_addr: UserAddress,
+        _out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        error!(EOPNOTSUPP)
+    }
+}
+
+pub struct DevPts;
+
+impl WithStaticDeviceId for DevPts {
+    const ID: DeviceType = DeviceType::PTMX;
+}
+
+impl DeviceOps for DevPts {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevPtsFile))
+    }
+}
+
+struct DevPtsFile;
+
+impl FileOps for DevPtsFile {
     fileops_impl_nonseekable!();
 
     fn close(&self, _file: &FileObject) {}

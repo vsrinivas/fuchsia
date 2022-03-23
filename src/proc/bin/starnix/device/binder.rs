@@ -38,7 +38,12 @@ impl BinderDev {
 }
 
 impl DeviceOps for BinderDev {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(self.clone()))
     }
 }

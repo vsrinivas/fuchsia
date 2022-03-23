@@ -18,7 +18,12 @@ impl WithStaticDeviceId for DevNull {
 }
 
 impl DeviceOps for DevNull {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevNullFile))
     }
 }
@@ -62,7 +67,12 @@ impl WithStaticDeviceId for DevZero {
 }
 
 impl DeviceOps for DevZero {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevZeroFile))
     }
 }
@@ -107,7 +117,12 @@ impl WithStaticDeviceId for DevFull {
 }
 
 impl DeviceOps for DevFull {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevFullFile))
     }
 }
@@ -152,7 +167,12 @@ impl WithStaticDeviceId for DevRandom {
 }
 
 impl DeviceOps for DevRandom {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevRandomFile))
     }
 }
@@ -165,7 +185,12 @@ impl WithStaticDeviceId for DevURandom {
 }
 
 impl DeviceOps for DevURandom {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevRandomFile))
     }
 }
@@ -211,7 +236,12 @@ impl WithStaticDeviceId for DevKmsg {
 }
 
 impl DeviceOps for DevKmsg {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevKmsgFile))
     }
 }

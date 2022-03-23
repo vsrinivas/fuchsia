@@ -23,13 +23,71 @@ pub trait WithStaticDeviceId {
 }
 
 pub trait DeviceOps: Send + Sync {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno>;
+    fn open(
+        &self,
+        _id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno>;
+}
+
+struct DeviceFamilyRegistry {
+    devices: BTreeMap<u32, Box<dyn DeviceOps>>,
+    default_device: Option<Box<dyn DeviceOps>>,
+}
+
+impl DeviceFamilyRegistry {
+    pub fn new() -> Self {
+        Self { devices: BTreeMap::new(), default_device: None }
+    }
+
+    pub fn register_device<D>(&mut self, device: D, minor: u32) -> Result<(), Errno>
+    where
+        D: DeviceOps + 'static,
+    {
+        match self.devices.entry(minor) {
+            Entry::Vacant(e) => {
+                e.insert(Box::new(device));
+                Ok(())
+            }
+            Entry::Occupied(_) => {
+                log::error!("dev type {:?} is already registered", minor);
+                error!(EINVAL)
+            }
+        }
+    }
+
+    pub fn register_default_device<D>(&mut self, device: D) -> Result<(), Errno>
+    where
+        D: DeviceOps + 'static,
+    {
+        if self.default_device.is_some() {
+            log::error!("default device is already registered");
+            return error!(EINVAL);
+        }
+        self.default_device = Some(Box::new(device));
+        Ok(())
+    }
+
+    /// Opens a device file corresponding to the device identifier `dev`.
+    pub fn open(
+        &self,
+        dev: DeviceType,
+        node: &FsNode,
+        flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        self.devices
+            .get(&dev.minor())
+            .or(self.default_device.as_ref())
+            .ok_or_else(|| errno!(ENODEV))?
+            .open(dev, node, flags)
+    }
 }
 
 /// The kernel's registry of drivers.
 pub struct DeviceRegistry {
     /// Maps device identifier to character device implementation.
-    char_devices: BTreeMap<DeviceType, Box<dyn DeviceOps>>,
+    char_devices: BTreeMap<u32, DeviceFamilyRegistry>,
     next_dynamic_minor: u32,
 }
 
@@ -56,16 +114,22 @@ impl DeviceRegistry {
     where
         D: DeviceOps + 'static,
     {
-        match self.char_devices.entry(id) {
-            Entry::Vacant(e) => {
-                e.insert(Box::new(device));
-                Ok(())
-            }
-            Entry::Occupied(_) => {
-                log::error!("dev type {:?} is already registered", id);
-                error!(EINVAL)
-            }
-        }
+        self.char_devices
+            .entry(id.major())
+            .or_insert_with(|| DeviceFamilyRegistry::new())
+            .register_device(device, id.minor())?;
+        Ok(())
+    }
+
+    pub fn register_default_chrdev<D>(&mut self, device: D, major: u32) -> Result<(), Errno>
+    where
+        D: DeviceOps + 'static,
+    {
+        self.char_devices
+            .entry(major)
+            .or_insert_with(|| DeviceFamilyRegistry::new())
+            .register_default_device(device)?;
+        Ok(())
     }
 
     /// Registers a character device with a static device identifier `dev_t`.
@@ -99,9 +163,11 @@ impl DeviceRegistry {
         mode: DeviceMode,
     ) -> Result<Box<dyn FileOps>, Errno> {
         match mode {
-            DeviceMode::Char => {
-                self.char_devices.get(&dev).ok_or_else(|| errno!(ENODEV))?.open(node, flags)
-            }
+            DeviceMode::Char => self
+                .char_devices
+                .get(&dev.major())
+                .ok_or_else(|| errno!(ENODEV))?
+                .open(dev, node, flags),
             DeviceMode::Block => error!(ENODEV),
         }
     }
@@ -159,6 +225,22 @@ mod tests {
         let node = FsNode::new_root(PlaceholderFsNodeOps);
         let _ = registry
             .open_device(&node, OpenFlags::RDONLY, device_type, DeviceMode::Char)
+            .expect("opens device");
+    }
+
+    #[test]
+    fn registry_opens_default_device() {
+        let mut registry = DeviceRegistry::new();
+        registry.register_default_chrdev(DevNull, 1).unwrap();
+
+        let node = FsNode::new_root(PlaceholderFsNodeOps);
+
+        // Open in correct mode.
+        let _ = registry
+            .open_device(&node, OpenFlags::RDONLY, DeviceType::new(1, 0), DeviceMode::Char)
+            .expect("opens device");
+        let _ = registry
+            .open_device(&node, OpenFlags::RDONLY, DeviceType::new(1, 1), DeviceMode::Char)
             .expect("opens device");
     }
 }
