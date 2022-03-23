@@ -17,7 +17,7 @@
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/storage/factory/factoryfs/directory.h"
+#include "src/storage/factory/factoryfs/directory_entry.h"
 #include "src/storage/factory/factoryfs/format.h"
 #include "src/storage/factory/factoryfs/mount.h"
 
