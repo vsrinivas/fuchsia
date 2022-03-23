@@ -765,10 +765,10 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type) string {
 	case fidlgen.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	case fidlgen.BinaryOperator:
-		if t == nil || t.declType != fidlgen.BitsDeclType {
-			panic("only bits is supported")
+		if t.declType == fidlgen.BitsDeclType {
+			return fmt.Sprintf("%s._(%s)", t.Decl, val.Value)
 		}
-		return fmt.Sprintf("%s._(%s)", t.Decl, val.Value)
+		return fmt.Sprintf("%s", val.Value)
 	default:
 		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
