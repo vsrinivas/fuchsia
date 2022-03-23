@@ -252,47 +252,36 @@ sdk_source_set("backend") {
   }
 }
 
-# TODO(fxbug.dev/62157) switch to test() template when host tests fixed
-executable("logging_cpp_unittests") {
-  testonly = true
+test("logging_cpp_unittests") {
   sources = [
     "log_settings_unittest.cc",
     "logging_unittest.cc",
   ]
+  deps = [
+    ":backend_legacy",
+    ":cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/uuid",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
   if (is_fuchsia) {
-    deps = [
-      ":backend_legacy",
-      ":cpp",
+    deps += [
       "//sdk/fidl/fuchsia.diagnostics",
       "//sdk/fidl/fuchsia.logger:fuchsia.logger",
       "//src/diagnostics/lib/cpp-log-decoder:lib",
       "//src/lib/diagnostics/accessor2logger",
       "//src/lib/fsl",
-      "//src/lib/fxl",
-      "//src/lib/fxl/test:gtest_main",
-      "//src/lib/uuid",
-      "//third_party/googletest:gmock",
-      "//third_party/googletest:gtest",
       "//third_party/rapidjson",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]
-  } else {
-    deps = [
-      ":backend_legacy",
-      ":cpp",
-      "//src/lib/fxl",
-      "//src/lib/fxl/test:gtest_main",
-      "//src/lib/uuid",
-      "//third_party/googletest:gmock",
-      "//third_party/googletest:gtest",
-    ]
   }
 }
 
-executable("logging_cpp_unittests_structured") {
-  testonly = true
+test("logging_cpp_unittests_structured") {
   sources = [ "log_structure_unittest.cc" ]
 
   deps = [
@@ -328,10 +317,8 @@ fuchsia_test_package("logging-cpp-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
+  public_deps = [
     ":logging-cpp-tests",
-
-    # Refer to the README.md for instructions on host tests
     ":logging_cpp_unittests($host_toolchain)",
   ]
 }

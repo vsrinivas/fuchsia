@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/logging_cpp_unittests_structured"
+        "binary": "test/logging_cpp_unittests_structured"
     },
     "sandbox": {
         "features": [
