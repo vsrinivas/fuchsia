@@ -1,13 +1,16 @@
 # Root Presenter
 
-This directory contains the Root Presenter, a service which manages input device lifecycle,
-lower-level input event dispatch, creation of the root of the global scene graph, and connection of
-root-level Views by clients such as Sys UI.
+This component is being deprecated, with:
+- [Input Pipeline](./../input-pipeline/README.md) managing input device lifecycle and lower-level
+  input event dispatch, and
+- [Scene Manager](./../scene_manager/README.md)) creating the root of the global scene graph and
+  connecting root-level Views by clients such as Sys UI.
 
-This collection of code has a lot of complexity, and you may find various workarounds that exist for
-very specific purposes.  Additionally, the code and comments make assumptions (both explicit and
-implicit) that may no longer hold.  Please don't make plans and patches based on what you see in the
-repository!  Instead, reach out to the OWNERS to coordinate your intended work.
+Once the above features in root presenter are replaced, this component still provides virtual
+keyboard functionality.
+
+Please reach out to the OWNERS to coordinate any intended work related to this component and its
+current or future responsibilities.
 
 ## Usage
 
