@@ -112,7 +112,7 @@ zx_status_t El2TranslationTable::Init() {
 
 zx_paddr_t El2TranslationTable::Base() const { return el2_aspace_->arch_table_phys(); }
 
-zx_status_t El2Stack::Alloc() { return page_.Alloc(0); }
+zx_status_t El2Stack::Alloc() { return page_.Alloc(0).status_value(); }
 
 zx_paddr_t El2Stack::Top() const { return page_.PhysicalAddress() + PAGE_SIZE; }
 
