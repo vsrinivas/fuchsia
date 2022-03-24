@@ -1218,7 +1218,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
 
   ASSERT_NE(fs_management::Mount(std::move(fd), fs().mount_path().c_str(),
                                  fs_management::kDiskFormatBlobfs, fs().DefaultMountOptions(),
-                                 launch_stdio_async)
+                                 fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
 

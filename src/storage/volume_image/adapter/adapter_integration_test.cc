@@ -297,7 +297,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
         fs_management::Fsck(partition_path,
                             partition.volume().name == "blobfs" ? fs_management::kDiskFormatBlobfs
                                                                 : fs_management::kDiskFormatMinfs,
-                            fsck_options, &launch_stdio_sync),
+                            fsck_options, &fs_management::LaunchStdioSync),
         ZX_OK);
   }
 }

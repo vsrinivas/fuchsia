@@ -174,8 +174,8 @@ zx::status<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_b
 zx::status<> FormatBlockDevice(const std::string &block_device_path,
                                fs_management::DiskFormat format) {
   fs_management::MkfsOptions mkfs_options;
-  zx::status<> status = zx::make_status(
-      fs_management::Mkfs(block_device_path.c_str(), format, launch_stdio_sync, mkfs_options));
+  zx::status<> status = zx::make_status(fs_management::Mkfs(
+      block_device_path.c_str(), format, fs_management::LaunchStdioSync, mkfs_options));
   if (status.is_error()) {
     // Convert the std::string_view to std::string to guarantee that it's null terminated.
     std::string format_name(DiskFormatString(format));
@@ -190,7 +190,7 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
   fs_management::MountOptions mount_options;
   fbl::unique_fd volume_fd(open(block_device_path.c_str(), O_RDWR));
   auto mounted_filesystem = fs_management::Mount(std::move(volume_fd), nullptr, format,
-                                                 mount_options, launch_stdio_async);
+                                                 mount_options, fs_management::LaunchStdioAsync);
   if (mounted_filesystem.is_error()) {
     std::string format_name(DiskFormatString(format));
     fprintf(stderr, "Failed to mount %s as %s\n", block_device_path.c_str(), format_name.c_str());

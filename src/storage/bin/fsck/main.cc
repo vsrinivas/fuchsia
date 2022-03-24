@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     printf("fs_fsck: Checking device [%s]\n", devicepath);
   }
 
-  if ((r = fs_management::Fsck(devicepath, df, options, launch_stdio_sync)) < 0) {
+  if ((r = fs_management::Fsck(devicepath, df, options, fs_management::LaunchStdioSync)) < 0) {
     fprintf(stderr, "fs_fsck: Failed to check device: %d\n", r);
   }
   return r;

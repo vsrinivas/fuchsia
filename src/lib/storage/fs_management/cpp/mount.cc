@@ -54,23 +54,14 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   auto outgoing_directory_or = fidl::CreateEndpoints<Directory>();
   if (outgoing_directory_or.is_error())
     return outgoing_directory_or.take_error();
-  std::array<zx_handle_t, 3> handles = {device.release(),
-                                        outgoing_directory_or->server.TakeChannel().release(),
-                                        crypt_client.release()};
-  std::array<uint32_t, 3> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST,
-                                 PA_HND(PA_USER0, 2)};
-
-  std::vector<std::string> argv_strings = options.as_argv(binary);
-  int argc = static_cast<int>(argv_strings.size());
-  std::vector<const char*> argv;
-  argv.reserve(argv_strings.size());
-  for (const std::string& arg : argv_strings) {
-    argv.push_back(arg.c_str());
+  std::vector<std::pair<uint32_t, zx::handle>> handles;
+  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(device)});
+  handles.push_back({PA_DIRECTORY_REQUEST, outgoing_directory_or->server.TakeChannel()});
+  if (crypt_client) {
+    handles.push_back({PA_HND(PA_USER0, 2), std::move(crypt_client)});
   }
-  argv.push_back(nullptr);
 
-  if ((status = cb(argc, argv.data(), handles.data(), ids.data(),
-                   handles[2] == ZX_HANDLE_INVALID ? 2 : 3)) != ZX_OK) {
+  if ((status = cb(options.as_argv(binary), std::move(handles)))) {
     return zx::error(status);
   }
 

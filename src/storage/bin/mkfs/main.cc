@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
   if (options.verbose) {
     printf("fs_mkfs: Formatting device [%s]\n", devicepath);
   }
-  if ((r = fs_management::Mkfs(devicepath, df, launch_stdio_sync, options)) < 0) {
+  if ((r = fs_management::Mkfs(devicepath, df, fs_management::LaunchStdioSync, options)) < 0) {
     fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
   }
   return r;

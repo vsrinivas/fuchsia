@@ -57,8 +57,8 @@ you are launching supports the option you are using, or else it may fail to laun
 If the options provided don't include a `component_child_name`, then fs_management will launch it
 using fdio_spawn_etc as a child process. This is the old way of launching filesystems. It's
 supported by all of our platform filesystems. This approach uses the launch callback provided to
-mount. In general, if you are mounting a filesystem, you should use `launch_stdio_async`, and if
-you are using Fsck or Mkfs you should use `launch_stdio_sync`. See
+mount. In general, if you are mounting a filesystem, you should use `LaunchStdioAsync`, and if
+you are using Fsck or Mkfs you should use `LaunchStdioSync`. See
 //src/lib/storage/fs_management/cpp/launch.h for additional callback options.
 
 If only the `component_child_name` is provided, then fs_management will assume the component is a
@@ -80,7 +80,7 @@ Launching a filesystem using regular processes -
 fbl::unique_fd device_fd(open("/dev/class/block/001", O_RDWR));
 ASSERT_TRUE(device_fd);
 fs_management::MountOptions options;
-auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, launch_stdio_async);
+auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
 ASSERT_EQ(fs_or.status(), ZX_OK);
 // Now /fs points at the root of the filesystem.
 ```
@@ -94,8 +94,8 @@ fs_management::MountOptions options {
   .component_child_name = "minfs",
   .component_collection_name = "fs-collection",
 };
-// launch_stdio_async doesn't matter here
-auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, launch_stdio_async);
+// LaunchStdioAsync doesn't matter here
+auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
 ASSERT_EQ(fs_or.status(), ZX_OK);
 // Now /fs points at the root of the filesystem.
 ```

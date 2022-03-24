@@ -102,7 +102,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
 
     {
       ASSERT_EQ(fs_management::Mkfs(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
-                                    launch_stdio_sync, fs_management::MkfsOptions()),
+                                    fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
                 ZX_OK);
 
       fbl::unique_fd minfs_fd(open(zxcrypt_device_path.c_str(), O_RDWR));
@@ -120,7 +120,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
 
     // Confirm we messed it up enough to trigger an fsck failure.
     ASSERT_NE(fs_management::Fsck(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
-                                  fs_management::FsckOptions(), launch_stdio_sync),
+                                  fs_management::FsckOptions(), fs_management::LaunchStdioSync),
               ZX_OK);
   }
 

@@ -63,8 +63,7 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
     };
-    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, launch_stdio_sync, mkfs_options),
-              ZX_OK)
+    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options), ZX_OK)
         << zx_status_get_string(status);
     state_ = kFormatted;
 
@@ -72,8 +71,7 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
     };
-    ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, launch_stdio_sync),
-              ZX_OK)
+    ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, LaunchStdioSync), ZX_OK)
         << zx_status_get_string(status);
 
     ASSERT_NO_FATAL_FAILURE(StartFilesystem(options_));
@@ -98,7 +96,7 @@ class OutgoingDirectoryFixture : public testing::Test {
     fbl::unique_fd device_fd(open(ramdisk_.path().c_str(), O_RDWR));
     ASSERT_TRUE(device_fd);
 
-    auto fs_or = Mount(std::move(device_fd), nullptr, format_, options, launch_stdio_async);
+    auto fs_or = Mount(std::move(device_fd), nullptr, format_, options, LaunchStdioAsync);
     ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
     export_client_ = fidl::WireSyncClient<Directory>(std::move(*fs_or).TakeExportRoot());
 

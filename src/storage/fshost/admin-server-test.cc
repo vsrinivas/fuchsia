@@ -35,7 +35,7 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   auto ram_disk_or = storage::RamDisk::Create(1024, 64 * 1024);
   ASSERT_EQ(ram_disk_or.status_value(), ZX_OK);
   ASSERT_EQ(fs_management::Mkfs(ram_disk_or->path().c_str(), fs_management::kDiskFormatMinfs,
-                                launch_stdio_sync, fs_management::MkfsOptions()),
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   std::string device_path = ram_disk_or->path();

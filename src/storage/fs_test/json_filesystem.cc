@@ -79,7 +79,7 @@ class JsonInstance : public FilesystemInstance {
         .force = true,
     };
     return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
-                                               launch_stdio_sync));
+                                               fs_management::LaunchStdioSync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }

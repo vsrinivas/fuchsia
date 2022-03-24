@@ -63,7 +63,7 @@ class RamdiskTestFixture : public testing::Test {
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     ramdisk_ = std::move(*ramdisk_or);
 
-    ASSERT_EQ(Mkfs(ramdisk_path().c_str(), kDiskFormatMinfs, launch_stdio_sync, MkfsOptions()),
+    ASSERT_EQ(Mkfs(ramdisk_path().c_str(), kDiskFormatMinfs, LaunchStdioSync, MkfsOptions()),
               ZX_OK);
   }
 
@@ -81,7 +81,7 @@ class RamdiskTestFixture : public testing::Test {
     options.readonly = read_only;
 
     auto mounted_filesystem_or =
-        Mount(ramdisk_fd(), kTestMountPath, kDiskFormatMinfs, options, launch_stdio_async);
+        Mount(ramdisk_fd(), kTestMountPath, kDiskFormatMinfs, options, LaunchStdioAsync);
     if (mounted_filesystem_or.is_error())
       return mounted_filesystem_or.take_error();
     CheckMountedFs(kTestMountPath, "minfs");
@@ -121,8 +121,7 @@ TEST_F(MountTest, MountFsck) {
   }
 
   // Fsck shouldn't require any user input for a newly mkfs'd filesystem.
-  ASSERT_EQ(Fsck(ramdisk_path().c_str(), kDiskFormatMinfs, FsckOptions(), launch_stdio_sync),
-            ZX_OK);
+  ASSERT_EQ(Fsck(ramdisk_path().c_str(), kDiskFormatMinfs, FsckOptions(), LaunchStdioSync), ZX_OK);
 }
 
 // Tests that setting read-only on the mount options works as expected.
@@ -281,14 +280,14 @@ using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
   MkfsOptions options;
   size_t base_slices = 0;
-  ASSERT_EQ(Mkfs(partition_path(), kDiskFormatMinfs, launch_stdio_sync, options), ZX_OK);
+  ASSERT_EQ(Mkfs(partition_path(), kDiskFormatMinfs, LaunchStdioSync, options), ZX_OK);
   fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
   ASSERT_TRUE(partition_fd);
   fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   GetPartitionSliceCount(caller.borrow_as<fuchsia_hardware_block_volume::Volume>(), &base_slices);
   options.fvm_data_slices += 10;
 
-  ASSERT_EQ(Mkfs(partition_path(), kDiskFormatMinfs, launch_stdio_sync, options), ZX_OK);
+  ASSERT_EQ(Mkfs(partition_path(), kDiskFormatMinfs, LaunchStdioSync, options), ZX_OK);
   size_t allocated_slices = 0;
   GetPartitionSliceCount(caller.borrow_as<fuchsia_hardware_block_volume::Volume>(),
                          &allocated_slices);

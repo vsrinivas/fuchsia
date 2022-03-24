@@ -718,7 +718,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
 
   auto mounted_filesystem_or =
       fs_management::Mount(std::move(mountpoint_dev_fd), mount_path,
-                           fs_management::kDiskFormatMinfs, {}, launch_logs_async);
+                           fs_management::kDiskFormatMinfs, {}, fs_management::LaunchLogsAsync);
   if (mounted_filesystem_or.is_error()) {
     ERROR("mount error: %s\n", mounted_filesystem_or.status_string());
     return mounted_filesystem_or.take_error();

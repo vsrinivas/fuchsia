@@ -94,7 +94,7 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
                       fd = std::move(fd), df = std::move(df), fs_manager = fs_manager_,
                       dispatcher]() mutable {
     auto mounted_filesystem_or =
-        fs_management::Mount(std::move(fd), nullptr, df, options, launch_logs_async);
+        fs_management::Mount(std::move(fd), nullptr, df, options, fs_management::LaunchLogsAsync);
     if (mounted_filesystem_or.is_error()) {
       FX_LOGS(WARNING) << "Mount failed: " << mounted_filesystem_or.status_string();
       completer.ReplyError(mounted_filesystem_or.error_value());

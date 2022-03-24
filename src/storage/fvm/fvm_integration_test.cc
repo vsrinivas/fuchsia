@@ -1857,7 +1857,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
                         fs_management::DiskFormat disk_format,
                         const query_request_t& query_request) {
   // Format the VPart as |disk_format|.
-  ASSERT_EQ(fs_management::Mkfs(partition_path, disk_format, launch_stdio_sync,
+  ASSERT_EQ(fs_management::Mkfs(partition_path, disk_format, fs_management::LaunchStdioSync,
                                 fs_management::MkfsOptions()),
             ZX_OK);
 
@@ -1915,7 +1915,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   // fs process to finish and associated fidl channels to close before continuing to try and prevent
   // race conditions with the later mount call.
   ASSERT_NE(fs_management::Mount(std::move(vp_fd), kMountPath, disk_format, mounting_options,
-                                 launch_stdio_sync)
+                                 fs_management::LaunchStdioSync)
                 .status_value(),
             ZX_OK);
 
@@ -1974,7 +1974,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
 
   // Try mount again.
   ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, disk_format, mounting_options,
-                                 launch_stdio_async)
+                                 fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
 
@@ -2229,14 +2229,14 @@ TEST_F(FvmTest, TestMounting) {
   // Format the VPart as minfs
   char partition_path[PATH_MAX];
   snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_path(), kTestPartName1);
-  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs, launch_stdio_sync,
-                                fs_management::MkfsOptions()),
+  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs,
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   // Mount the VPart
   auto mounted_filesystem_or =
       fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                           mounting_options_, launch_stdio_async);
+                           mounting_options_, fs_management::LaunchStdioAsync);
   ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
 
   // Verify that the mount was successful.
@@ -2287,37 +2287,37 @@ TEST_F(FvmTest, TestMkfs) {
   // Format the VPart as minfs.
   char partition_path[PATH_MAX];
   snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_path(), kTestPartName1);
-  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs, launch_stdio_sync,
-                                fs_management::MkfsOptions()),
+  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs,
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   // Format it as MinFS again, even though it is already formatted.
-  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs, launch_stdio_sync,
-                                fs_management::MkfsOptions()),
+  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs,
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   // Now try reformatting as blobfs.
-  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatBlobfs, launch_stdio_sync,
-                                fs_management::MkfsOptions()),
+  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatBlobfs,
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   // Demonstrate that mounting as minfs will fail, but mounting as blobfs
   // is successful.
   ASSERT_NE(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                                 mounting_options_, launch_stdio_sync)
+                                 mounting_options_, fs_management::LaunchStdioSync)
                 .status_value(),
             ZX_OK);
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
 
   ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatBlobfs,
-                                 mounting_options_, launch_stdio_async)
+                                 mounting_options_, fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
 
   // ... and reformat back to MinFS again.
-  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs, launch_stdio_sync,
-                                fs_management::MkfsOptions()),
+  ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs,
+                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
             ZX_OK);
 
   // Mount the VPart.
@@ -2325,7 +2325,7 @@ TEST_F(FvmTest, TestMkfs) {
   ASSERT_TRUE(vp_fd);
   auto mounted_filesystem_or =
       fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                           mounting_options_, launch_stdio_async);
+                           mounting_options_, fs_management::LaunchStdioAsync);
   ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
 
   // Verify that the mount was successful.

@@ -8,5 +8,6 @@ group("tests") {
     "blobfs-component:tests",
     "disk-pave:tests",
     "odu:tests",
+    "start-storage-benchmark:tests",
   ]
 }

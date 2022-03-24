@@ -47,7 +47,7 @@ class MountTestTemplate : public testing::Test {
 
     ramdisk_path_ = ramdisk_->path();
     ASSERT_EQ(fs_management::Mkfs(ramdisk_path_.c_str(), fs_management::kDiskFormatMinfs,
-                                  launch_stdio_sync, fs_management::MkfsOptions()),
+                                  fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
               0);
 
     int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_->client());

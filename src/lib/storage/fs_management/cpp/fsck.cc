@@ -46,31 +46,16 @@ zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, La
     return status;
   }
 
-  std::vector<std::string> argv_strings = options.as_argv(binary);
-  int argc = static_cast<int>(argv_strings.size());
-  std::vector<const char*> argv;
-  argv.reserve(argv_strings.size());
-  for (const std::string& arg : argv_strings) {
-    argv.push_back(arg.c_str());
+  std::vector<std::pair<uint32_t, zx::handle>> handles;
+  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device)});
+  if (crypt_client) {
+    handles.push_back({PA_HND(PA_USER0, 2), std::move(crypt_client)});
   }
-  argv.push_back(nullptr);
-
-  zx_handle_t handles[] = {block_device.release(), crypt_client.release()};
-  uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
-  return cb(argc, argv.data(), handles, ids, handles[1] == ZX_HANDLE_INVALID ? 1 : 2);
+  return cb(options.as_argv(binary), std::move(handles));
 }
 
 zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchCallback cb) {
-  const std::string binary = GetBinaryPath("fsck-msdosfs");
-  std::vector<std::string> argv_strings = options.as_argv_fat32(binary.c_str(), device_path);
-  int argc = static_cast<int>(argv_strings.size());
-  std::vector<const char*> argv;
-  argv.reserve(argv_strings.size());
-  for (const std::string& arg : argv_strings) {
-    argv.push_back(arg.c_str());
-  }
-  argv.push_back(nullptr);
-  return cb(argc, argv.data(), nullptr, nullptr, 0);
+  return cb(options.as_argv_fat32(GetBinaryPath("fsck-msdosfs").c_str(), device_path), {});
 }
 
 zx::status<> FsckComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,

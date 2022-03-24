@@ -266,8 +266,8 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
 
 zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
                       const fs_management::MkfsOptions& options) {
-  auto status =
-      zx::make_status(fs_management::Mkfs(device_path.c_str(), format, launch_stdio_sync, options));
+  auto status = zx::make_status(
+      fs_management::Mkfs(device_path.c_str(), format, fs_management::LaunchStdioSync, options));
   if (status.is_error()) {
     std::cout << "Could not format " << fs_management::DiskFormatString(format)
               << " file system: " << status.status_string() << std::endl;
@@ -293,7 +293,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsMount(
 
   // |fd| is consumed by mount.
   auto result = fs_management::Mount(std::move(fd), StripTrailingSlash(mount_path).c_str(), format,
-                                     options, launch_stdio_async);
+                                     options, fs_management::LaunchStdioAsync);
   if (result.is_error()) {
     std::cout << "Could not mount " << fs_management::DiskFormatString(format)
               << " file system: " << result.status_string() << std::endl;
@@ -495,8 +495,9 @@ class BlobfsInstance : public FilesystemInstance {
         .always_modify = false,
         .force = true,
     };
-    return zx::make_status(fs_management::Fsck(
-        device_path_.c_str(), fs_management::kDiskFormatBlobfs, options, launch_stdio_sync));
+    return zx::make_status(fs_management::Fsck(device_path_.c_str(),
+                                               fs_management::kDiskFormatBlobfs, options,
+                                               fs_management::LaunchStdioSync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }

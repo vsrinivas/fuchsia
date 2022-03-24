@@ -5,31 +5,53 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_
 
+#include <lib/zx/handle.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
+#include <string>
+#include <utility>
+#include <vector>
 
-// Callback that will launch the requested program.  |argv[argc]| is guaranteed
-// to be accessible and set to nullptr.
-typedef zx_status_t (*LaunchCallback)(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                                      size_t len);
+namespace fs_management {
+
+struct LaunchOptions {
+  bool sync = true;
+
+  enum class Logging {
+    kSilent = 0,
+    kStdio = 1,
+    kSyslog = 2,
+  } logging = Logging::kSyslog;
+};
+
+// Callback that will launch the requested program.
+using LaunchCallback = zx_status_t (*)(std::vector<std::string> args,
+                                       std::vector<std::pair<uint32_t, zx::handle>> handles);
+
+zx_status_t Launch(std::vector<std::string> args,
+                   std::vector<std::pair<uint32_t, zx::handle>> handles,
+                   const LaunchOptions& options);
 
 // Creates no logs, waits for process to terminate.
-zx_status_t launch_silent_sync(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                               size_t len);
-// Creates no logs, does not wait for process to terminate.
-zx_status_t launch_silent_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                                size_t len);
-// Creates stdio logs, waits for process to terminate.
-zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                              size_t len);
-// Creates stdio logs, does not wait for process to terminate.
-zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                               size_t len);
-// Creates kernel logs, does not wait for process to terminate.
-zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                              size_t len);
+zx_status_t LaunchSilentSync(std::vector<std::string> args,
+                             std::vector<std::pair<uint32_t, zx::handle>> handles);
 
-__END_CDECLS
+// Creates no logs, does not wait for process to terminate.
+zx_status_t LaunchSilentAsync(std::vector<std::string> args,
+                              std::vector<std::pair<uint32_t, zx::handle>> handles);
+
+// Creates stdio logs, waits for process to terminate.
+zx_status_t LaunchStdioSync(std::vector<std::string> args,
+                            std::vector<std::pair<uint32_t, zx::handle>> handles);
+
+// Creates stdio logs, does not wait for process to terminate.
+zx_status_t LaunchStdioAsync(std::vector<std::string> args,
+                             std::vector<std::pair<uint32_t, zx::handle>> handles);
+
+// Creates kernel logs, does not wait for process to terminate.
+zx_status_t LaunchLogsAsync(std::vector<std::string> args,
+                            std::vector<std::pair<uint32_t, zx::handle>> handles);
+
+}  // namespace fs_management
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_
