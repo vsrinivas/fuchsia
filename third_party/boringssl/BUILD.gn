@@ -301,10 +301,11 @@ config("internal_config") {
     defines += [ "_XOPEN_SOURCE=700" ]
   }
   cflags = [
-    "-Wno-unused-function",
     "-Wno-conversion",
     "-Wno-deprecated-copy",
     "-Wno-extra-semi",
+    "-Wno-unused-but-set-variable",
+    "-Wno-unused-function",
   ]
   configs = [
     ":boringssl_config",
