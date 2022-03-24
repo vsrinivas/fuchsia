@@ -25,6 +25,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

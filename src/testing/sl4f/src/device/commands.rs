@@ -16,6 +16,14 @@ impl Facade for DeviceFacade {
                 let result = self.get_device_name().await?;
                 Ok(to_value(result)?)
             }
+            DeviceMethod::GetProduct => {
+                let result = self.get_product().await?;
+                Ok(to_value(result)?)
+            }
+            DeviceMethod::GetVersion => {
+                let result = self.get_version().await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }

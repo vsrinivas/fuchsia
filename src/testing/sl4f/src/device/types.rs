@@ -5,6 +5,8 @@
 /// Enum for supported Device commands.
 pub enum DeviceMethod {
     GetDeviceName,
+    GetProduct,
+    GetVersion,
 }
 
 impl std::str::FromStr for DeviceMethod {
@@ -13,6 +15,8 @@ impl std::str::FromStr for DeviceMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "GetDeviceName" => Ok(DeviceMethod::GetDeviceName),
+            "GetProduct" => Ok(DeviceMethod::GetProduct),
+            "GetVersion" => Ok(DeviceMethod::GetVersion),
             _ => return Err(format_err!("invalid Device Facade method: {}", method)),
         }
     }
