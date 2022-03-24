@@ -13,7 +13,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc, lock::Mutex},
     log::info,
     rand::Rng,
@@ -23,7 +23,9 @@ use {
 
 pub struct FakeSavedNetworksManager {
     saved_networks: Mutex<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>,
-    disconnects_recorded: Mutex<Vec<DisconnectRecord>>,
+    connections_recorded: Mutex<Vec<ConnectionRecord>>,
+    connect_results_recorded: Mutex<Vec<ConnectResultRecord>>,
+    lookup_compatible_response: Mutex<LookupCompatibleResponse>,
     pub fail_all_stores: bool,
     pub active_scan_result_recorded: Arc<Mutex<bool>>,
     pub passive_scan_result_recorded: Arc<Mutex<bool>>,
@@ -31,20 +33,43 @@ pub struct FakeSavedNetworksManager {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DisconnectRecord {
+pub struct ConnectionRecord {
+    pub id: NetworkIdentifier,
+    pub credential: Credential,
+    pub data: PastConnectionData,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConnectResultRecord {
     pub id: NetworkIdentifier,
     pub credential: Credential,
     pub bssid: client_types::Bssid,
-    pub uptime: zx::Duration,
-    pub curr_time: zx::Time,
+    pub connect_result: fidl_sme::ConnectResult,
+    pub discovered_in_scan: Option<fidl_common::ScanType>,
+}
+
+/// Use a struct so that the option can be updated from None to Some to allow the response to be
+/// set after FakeSavedNetworksManager is created. Use an optional response value rather than
+/// defaulting to an empty vector so that if the response is not set, lookup_compatible will panic
+/// for easier debugging.
+struct LookupCompatibleResponse {
+    inner: Option<Vec<NetworkConfig>>,
+}
+
+impl LookupCompatibleResponse {
+    fn new() -> Self {
+        LookupCompatibleResponse { inner: None }
+    }
 }
 
 impl FakeSavedNetworksManager {
     pub fn new() -> Self {
         Self {
             saved_networks: Mutex::new(HashMap::new()),
-            disconnects_recorded: Mutex::new(vec![]),
+            connections_recorded: Mutex::new(vec![]),
+            connect_results_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
+            lookup_compatible_response: Mutex::new(LookupCompatibleResponse::new()),
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
             past_connections_response: PastConnectionList::new(),
@@ -63,33 +88,30 @@ impl FakeSavedNetworksManager {
 
         Self {
             saved_networks: Mutex::new(saved_networks),
-            disconnects_recorded: Mutex::new(vec![]),
+            connections_recorded: Mutex::new(vec![]),
+            connect_results_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
+            lookup_compatible_response: Mutex::new(LookupCompatibleResponse::new()),
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
             past_connections_response: PastConnectionList::new(),
         }
     }
 
-    /// Create FakeSavedNetworksManager, that will always respond to get_past_connections with
-    /// the specified value.
-    pub fn new_with_past_connections_response(response: PastConnectionList) -> Self {
-        Self {
-            saved_networks: Mutex::new(HashMap::new()),
-            disconnects_recorded: Mutex::new(vec![]),
-            fail_all_stores: false,
-            active_scan_result_recorded: Arc::new(Mutex::new(false)),
-            passive_scan_result_recorded: Arc::new(Mutex::new(false)),
-            past_connections_response: response,
-        }
+    /// Returns the past connections as they were recorded, rather than how they would have been
+    /// stored.
+    pub fn get_recorded_past_connections(&self) -> Vec<ConnectionRecord> {
+        self.connections_recorded
+            .try_lock()
+            .expect("expect locking self.connections_recorded to succeed")
+            .clone()
     }
 
-    pub fn drain_recorded_disconnects(&self) -> Vec<DisconnectRecord> {
-        self.disconnects_recorded
+    pub fn get_recorded_connect_reslts(&self) -> Vec<ConnectResultRecord> {
+        self.connect_results_recorded
             .try_lock()
-            .expect("expect locking self.disconnects_recorded to succeed")
-            .drain(..)
-            .collect()
+            .expect("expect locking self.connect_results_recorded to succeed")
+            .clone()
     }
 
     /// Manually change the hidden network probabiltiy of a saved network.
@@ -105,6 +127,11 @@ impl FakeSavedNetworksManager {
         for network in networks.iter_mut() {
             network.hidden_probability = hidden_prob;
         }
+    }
+
+    pub fn set_lookup_compatible_response(&self, response: Vec<NetworkConfig>) {
+        self.lookup_compatible_response.try_lock().expect("failed to get lock").inner =
+            Some(response);
     }
 }
 
@@ -139,7 +166,12 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         _ssid: &client_types::Ssid,
         _scan_security: client_types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig> {
-        unimplemented!()
+        self.lookup_compatible_response
+            .lock()
+            .await
+            .inner
+            .clone()
+            .expect("FakeSavedNetworksManager lookup_compatible response is not set")
     }
 
     /// Note that the configs-per-NetworkIdentifier limit is set to 1 in
@@ -165,29 +197,34 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
 
     async fn record_connect_result(
         &self,
-        _id: NetworkIdentifier,
-        _credential: &Credential,
-        _bssid: client_types::Bssid,
-        _connect_result: fidl_sme::ConnectResult,
-        _discovered_in_scan: Option<fidl_common::ScanType>,
+        id: NetworkIdentifier,
+        credential: &Credential,
+        bssid: client_types::Bssid,
+        connect_result: fidl_sme::ConnectResult,
+        discovered_in_scan: Option<fidl_common::ScanType>,
     ) {
+        self.connect_results_recorded.try_lock().expect("failed to record connect result").push(
+            ConnectResultRecord {
+                id: id.clone(),
+                credential: credential.clone(),
+                bssid,
+                connect_result,
+                discovered_in_scan,
+            },
+        );
     }
 
     async fn record_disconnect(
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
-        bssid: client_types::Bssid,
-        uptime: zx::Duration,
-        curr_time: zx::Time,
+        data: PastConnectionData,
     ) {
-        let mut disconnects_recorded = self.disconnects_recorded.lock().await;
-        disconnects_recorded.push(DisconnectRecord {
+        let mut connections_recorded = self.connections_recorded.lock().await;
+        connections_recorded.push(ConnectionRecord {
             id: id.clone(),
             credential: credential.clone(),
-            bssid,
-            uptime,
-            curr_time,
+            data,
         });
     }
 
@@ -242,7 +279,7 @@ pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Rece
 
 pub fn create_fake_connection_data(
     bssid: client_types::Bssid,
-    disconnect_time: zx::Time,
+    disconnect_time: fasync::Time,
 ) -> PastConnectionData {
     let mut rng = rand::thread_rng();
     PastConnectionData::new(
@@ -250,6 +287,7 @@ pub fn create_fake_connection_data(
         disconnect_time - zx::Duration::from_seconds(rng.gen::<u8>().into()),
         zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into()),
         disconnect_time,
+        zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000).into()),
         client_types::DisconnectReason::NetworkUnsaved,
         SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
         rng.gen::<u8>().into(),

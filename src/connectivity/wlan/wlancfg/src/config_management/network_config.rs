@@ -5,7 +5,7 @@
 use {
     crate::client::{connection_quality::SignalData, types as client_types},
     arbitrary::Arbitrary,
-    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync, fuchsia_zircon as zx,
     std::{
         collections::{HashMap, VecDeque},
         convert::TryFrom,
@@ -58,7 +58,7 @@ impl HiddenProbabilityStats {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PerformanceStats {
     pub failure_list: ConnectFailuresByBssid,
-    /// TODO(): Remove disconnect_list, and role entries into past_connections.
+    /// TODO(95460): Remove disconnect_list, and role entries into past_connections.
     pub disconnect_list: DisconnectList,
     pub past_connections: PastConnectionsByBssid,
 }
@@ -76,7 +76,7 @@ impl PerformanceStats {
 /// Trait for time function, for use in HistoricalList get_recent functions and AddAndGetRecent
 /// associated type
 pub trait Time {
-    fn time(&self) -> zx::Time;
+    fn time(&self) -> fasync::Time;
 }
 
 /// Trait for use in HistoricalListsByBssid generic
@@ -84,7 +84,7 @@ pub trait AddAndGetRecent {
     type Data;
 
     fn add(&mut self, historical_data: Self::Data);
-    fn get_recent(&self, earliest_time: zx::Time) -> Vec<Self::Data>;
+    fn get_recent(&self, earliest_time: fasync::Time) -> Vec<Self::Data>;
 }
 
 /// Generic struct for list that stores historical data in a VecDeque, up to the some number of most
@@ -117,7 +117,7 @@ where
 
     /// Retrieve list of entries with a time more recent than earliest_time, sorted from oldest to
     /// newest. May be empty.
-    fn get_recent(&self, earliest_time: zx::Time) -> Vec<T> {
+    fn get_recent(&self, earliest_time: fasync::Time) -> Vec<T> {
         let i = self.0.partition_point(|data| data.time() < earliest_time);
         return self.0.iter().skip(i).cloned().collect();
     }
@@ -151,7 +151,7 @@ where
 
     /// Retrieve list of Data entries to any BSS with a time more recent than earliest_time, sorted
     /// from oldest to newest. May be empty.
-    pub fn get_recent_for_network(&self, earliest_time: zx::Time) -> Vec<Data> {
+    pub fn get_recent_for_network(&self, earliest_time: fasync::Time) -> Vec<Data> {
         let mut recents: Vec<Data> = vec![];
         for bssid in self.0.keys() {
             recents.append(&mut self.get_list_for_bss(bssid).get_recent(earliest_time));
@@ -177,7 +177,7 @@ pub enum FailureReason {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConnectFailure {
     /// For determining whether this connection failure is still relevant
-    pub time: zx::Time,
+    pub time: fasync::Time,
     /// The reason that connection failed
     pub reason: FailureReason,
     /// The BSSID that we failed to connect to
@@ -185,7 +185,7 @@ pub struct ConnectFailure {
 }
 
 impl Time for ConnectFailure {
-    fn time(&self) -> zx::Time {
+    fn time(&self) -> fasync::Time {
         self.time
     }
 }
@@ -194,7 +194,7 @@ impl Time for ConnectFailure {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Disconnect {
     /// The time of the disconnect, used to determe whether this disconnect is still relevant.
-    pub time: zx::Time,
+    pub time: fasync::Time,
     /// The BSSID that we only had a short connection uptime on.
     pub bssid: client_types::Bssid,
     /// The time between connection starting and disconnecting.
@@ -202,7 +202,7 @@ pub struct Disconnect {
 }
 
 impl Time for Disconnect {
-    fn time(&self) -> zx::Time {
+    fn time(&self) -> fasync::Time {
         self.time
     }
 }
@@ -211,11 +211,13 @@ impl Time for Disconnect {
 pub struct PastConnectionData {
     pub bssid: client_types::Bssid,
     /// Time at which connect was first attempted
-    pub connection_attempt_time: zx::Time,
+    pub connection_attempt_time: fasync::Time,
     /// Duration from connection attempt to success
     pub time_to_connect: zx::Duration,
     /// Time at which the connection was ended
-    pub disconnect_time: zx::Time,
+    pub disconnect_time: fasync::Time,
+    /// The time that the connection was up - from established to disconnected.
+    pub connection_uptime: zx::Duration,
     /// Cause of disconnect or failure to connect
     pub disconnect_reason: client_types::DisconnectReason,
     /// Final signal strength measure before disconnect
@@ -227,9 +229,10 @@ pub struct PastConnectionData {
 impl PastConnectionData {
     pub fn new(
         bssid: client_types::Bssid,
-        connection_attempt_time: zx::Time,
+        connection_attempt_time: fasync::Time,
         time_to_connect: zx::Duration,
-        disconnect_time: zx::Time,
+        disconnect_time: fasync::Time,
+        connection_uptime: zx::Duration,
         disconnect_reason: client_types::DisconnectReason,
         signal_data_at_disconnect: SignalData,
         average_tx_rate: u32,
@@ -239,6 +242,7 @@ impl PastConnectionData {
             connection_attempt_time,
             time_to_connect,
             disconnect_time,
+            connection_uptime,
             disconnect_reason,
             signal_data_at_disconnect,
             average_tx_rate,
@@ -247,7 +251,7 @@ impl PastConnectionData {
 }
 
 impl Time for PastConnectionData {
-    fn time(&self) -> zx::Time {
+    fn time(&self) -> fasync::Time {
         self.disconnect_time
     }
 }
@@ -889,10 +893,10 @@ mod tests {
         );
     }
 
-    #[fuchsia::test]
-    fn test_connect_failures_by_bssid_add_and_get() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_failures_by_bssid_add_and_get() {
         let mut failure_list = ConnectFailuresByBssid::new();
-        let curr_time = zx::Time::get_monotonic();
+        let curr_time = fasync::Time::now();
 
         // Add two failures for BSSID_1
         let bssid_1 = client_types::Bssid([1; 6]);
@@ -952,10 +956,31 @@ mod tests {
         );
     }
 
-    #[fuchsia::test]
-    fn test_failure_list_add_when_full() {
+    #[fasync::run_singlethreaded(test)]
+    async fn failure_list_add_and_get() {
         let mut failure_list = ConnectFailureList::new();
-        let curr_time = zx::Time::get_monotonic();
+
+        // Get time before adding so we can get back everything we added.
+        let curr_time = fasync::Time::now();
+        assert!(failure_list.get_recent(curr_time).is_empty());
+        let bssid = client_types::Bssid([1; 6]);
+        let failure =
+            ConnectFailure { time: curr_time, bssid, reason: FailureReason::GeneralFailure };
+        failure_list.add(failure);
+
+        let result_list = failure_list.get_recent(curr_time);
+        assert_eq!(1, result_list.len());
+        assert_eq!(FailureReason::GeneralFailure, result_list[0].reason);
+        assert_eq!(bssid, result_list[0].bssid);
+        // Should not get any results if we request denials older than the specified time.
+        let later_time = fasync::Time::now();
+        assert!(failure_list.get_recent(later_time).is_empty());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_failure_list_add_when_full() {
+        let mut failure_list = ConnectFailureList::new();
+        let curr_time = fasync::Time::now();
 
         // Add to list, exceeding the capacity by one entry
         for i in 0..failure_list.0.capacity() + 1 {
@@ -972,10 +997,10 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
-    fn test_past_connections_by_bssid_add_and_get() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_past_connections_by_bssid_add_and_get() {
         let mut past_connections_list = PastConnectionsByBssid::new();
-        let curr_time = zx::Time::get_monotonic();
+        let curr_time = fasync::Time::now();
 
         // Add two past_connections for BSSID_1
         let bssid_1 = client_types::Bssid([1; 6]);
@@ -1029,10 +1054,10 @@ mod tests {
         );
     }
 
-    #[fuchsia::test]
-    fn test_past_connections_list_add_when_full() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_past_connections_list_add_when_full() {
         let mut past_connections_list = PastConnectionList::new();
-        let curr_time = zx::Time::get_monotonic();
+        let curr_time = fasync::Time::now();
 
         // Add to list, exceeding the capacity by one entry
         for i in 0..past_connections_list.0.capacity() + 1 {
@@ -1048,11 +1073,11 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
-    fn test_disconnect_list_add_and_get() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_disconnect_list_add_and_get() {
         let mut disconnects = DisconnectList::new();
 
-        let curr_time = zx::Time::get_monotonic();
+        let curr_time = fasync::Time::now();
         assert!(disconnects.get_recent(curr_time).is_empty());
         let bssid = client_types::Bssid([1; 6]);
         let uptime = zx::Duration::from_seconds(2);
@@ -1076,11 +1101,11 @@ mod tests {
         assert!(disconnects.get_recent(later_time).is_empty());
     }
 
-    #[fuchsia::test]
-    fn test_disconnect_list_add_removes_oldest_when_full() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_disconnect_list_add_removes_oldest_when_full() {
         let mut disconnects = DisconnectList::new();
 
-        assert!(disconnects.get_recent(zx::Time::ZERO).is_empty());
+        assert!(disconnects.get_recent(fasync::Time::INFINITE_PAST).is_empty());
         let disconnect_list_capacity = disconnects.0.capacity();
         // VecDequeue::with_capacity allocates at least the specified amount, not necessarily
         // equal to the specified amount.
@@ -1091,9 +1116,9 @@ mod tests {
         disconnects.add(Disconnect {
             bssid: first_bssid,
             uptime: zx::Duration::from_seconds(1),
-            time: zx::Time::get_monotonic(),
+            time: fasync::Time::now(),
         });
-        assert_variant!(disconnects.get_recent(zx::Time::ZERO).as_slice(), [d] => {
+        assert_variant!(disconnects.get_recent(fasync::Time::INFINITE_PAST).as_slice(), [d] => {
             assert_eq!(d.bssid, first_bssid);
         });
 
@@ -1102,10 +1127,10 @@ mod tests {
             disconnects.add(Disconnect {
                 bssid,
                 uptime: zx::Duration::from_seconds(2),
-                time: zx::Time::get_monotonic(),
+                time: fasync::Time::now(),
             });
         }
-        let all_disconnects = disconnects.get_recent(zx::Time::ZERO);
+        let all_disconnects = disconnects.get_recent(fasync::Time::INFINITE_PAST);
         for d in &all_disconnects {
             assert_eq!(d.bssid, bssid);
         }

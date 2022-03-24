@@ -7,7 +7,7 @@ use {
         network_config::{
             AddAndGetRecent, ConnectFailure, Credential, Disconnect, FailureReason,
             HiddenProbEvent, NetworkConfig, NetworkConfigError, NetworkIdentifier,
-            PastConnectionList, SecurityType,
+            PastConnectionData, PastConnectionList, SecurityType,
         },
         stash_conversion::*,
     },
@@ -16,8 +16,8 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{error, info},
     rand::Rng,
@@ -116,9 +116,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
-        uptime: zx::Duration,
-        curr_time: zx::Time,
+        data: PastConnectionData,
     );
 
     async fn record_periodic_metrics(&self);
@@ -400,7 +398,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                         network.perf_stats.failure_list.add(
                             bssid,
                             ConnectFailure {
-                                time: zx::Time::get_monotonic(),
+                                time: fasync::Time::now(),
                                 reason: FailureReason::CredentialRejected,
                                 bssid: bssid.clone(),
                             },
@@ -410,7 +408,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                         network.perf_stats.failure_list.add(
                             bssid,
                             ConnectFailure {
-                                time: zx::Time::get_monotonic(),
+                                time: fasync::Time::now(),
                                 reason: FailureReason::GeneralFailure,
                                 bssid: bssid.clone(),
                             },
@@ -428,10 +426,9 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
-        bssid: types::Bssid,
-        uptime: zx::Duration,
-        curr_time: zx::Time,
+        data: PastConnectionData,
     ) {
+        let bssid = data.bssid;
         let mut saved_networks = self.saved_networks.lock().await;
         let networks = match saved_networks.get_mut(&id) {
             Some(networks) => networks,
@@ -442,11 +439,14 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         };
         for network in networks.iter_mut() {
             if &network.credential == credential {
+                //TODO(95460) Use past connection data in place of the disconnect list
                 network.perf_stats.disconnect_list.add(Disconnect {
                     bssid: bssid,
-                    uptime: uptime,
-                    time: curr_time,
+                    uptime: data.connection_uptime,
+                    time: data.disconnect_time,
                 });
+                network.perf_stats.past_connections.add(bssid, data);
+                return;
             }
         }
     }
@@ -664,9 +664,8 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                Disconnect, PastConnectionsByBssid, PROB_HIDDEN_DEFAULT,
-                PROB_HIDDEN_IF_CONNECT_ACTIVE, PROB_HIDDEN_IF_CONNECT_PASSIVE,
-                PROB_HIDDEN_IF_SEEN_PASSIVE,
+                PastConnectionsByBssid, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
+                PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
             util::testing::{
                 cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
@@ -675,7 +674,7 @@ mod tests {
         },
         cobalt_client::traits::AsEventCode,
         fidl_fuchsia_cobalt::CobaltEvent,
-        fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        fidl_fuchsia_stash as fidl_stash,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
@@ -1130,7 +1129,7 @@ mod tests {
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([1; 6]);
-        let before_recording = zx::Time::get_monotonic();
+        let before_recording = fasync::Time::now();
 
         // Verify that recording connect result does not save the network.
         saved_networks
@@ -1211,7 +1210,7 @@ mod tests {
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([0; 6]);
-        let before_recording = zx::Time::get_monotonic();
+        let before_recording = fasync::Time::now();
 
         // Verify that recording connect result does not save the network.
         saved_networks
@@ -1269,10 +1268,10 @@ mod tests {
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![1; 32]);
         let bssid = types::Bssid([1; 6]);
-        let recording_time = zx::Time::get_monotonic();
-        let uptime = zx::Duration::from_seconds(1);
+        let disconnect_time = fasync::Time::now();
+        let data = create_fake_connection_data(bssid, disconnect_time);
 
-        saved_networks.record_disconnect(&id, &credential, bssid, uptime, recording_time).await;
+        saved_networks.record_disconnect(&id, &credential, data.clone()).await;
         // Verify that nothing happens if the network was not already saved.
         assert_eq!(saved_networks.saved_networks.lock().await.len(), 0);
         assert_eq!(saved_networks.known_network_count().await, 0);
@@ -1283,19 +1282,19 @@ mod tests {
             .await
             .expect("Failed to save network")
             .is_none());
-        saved_networks.record_disconnect(&id, &credential, bssid, uptime, recording_time).await;
+        saved_networks.record_disconnect(&id, &credential, data.clone()).await;
 
-        // Check that a disconnect was recorded for the network
-        let disconnects = saved_networks
+        // Check that a data was recorded about the connection that just ended.
+        let recent_connections = saved_networks
             .lookup(id)
             .await
             .pop()
             .expect("Failed to get saved network")
             .perf_stats
-            .disconnect_list
-            .get_recent(zx::Time::ZERO);
-        assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect, &Disconnect {uptime, bssid, time: recording_time});
+            .past_connections
+            .get_recent_for_network(fasync::Time::INFINITE_PAST);
+        assert_variant!(recent_connections.as_slice(), [connection_data] => {
+            assert_eq!(connection_data, &data);
         })
     }
 
@@ -2007,12 +2006,12 @@ mod tests {
             .expect("failed to create config");
         let mut past_connections = PastConnectionsByBssid::new();
         let bssid_1 = types::Bssid([1; 6]);
-        let data_1 = create_fake_connection_data(bssid_1, zx::Time::get_monotonic());
-        let data_2 = create_fake_connection_data(bssid_1, zx::Time::get_monotonic());
+        let data_1 = create_fake_connection_data(bssid_1, fasync::Time::now());
+        let data_2 = create_fake_connection_data(bssid_1, fasync::Time::now());
         past_connections.add(bssid_1, data_1.clone());
         past_connections.add(bssid_1, data_2.clone());
         let bssid_2 = types::Bssid([2; 6]);
-        let data_3 = create_fake_connection_data(bssid_2, zx::Time::get_monotonic());
+        let data_3 = create_fake_connection_data(bssid_2, fasync::Time::now());
         past_connections.add(bssid_2, data_3.clone());
         config.perf_stats.past_connections = past_connections;
 

@@ -173,7 +173,7 @@ async fn serve_fidl(
 async fn saved_networks_manager_metrics_loop(saved_networks: Arc<dyn SavedNetworksManagerApi>) {
     loop {
         saved_networks.record_periodic_metrics().await;
-        fasync::Timer::new(24.hours().after_now()).await;
+        fasync::Timer::new(1.minutes().after_now()).await;
     }
 }
 

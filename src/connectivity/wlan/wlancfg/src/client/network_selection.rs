@@ -18,6 +18,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::Node as InspectNode,
     fuchsia_inspect_contrib::{
@@ -441,13 +442,11 @@ async fn merge_saved_networks_and_scan_data<'a>(
                         recent_failures: saved_config
                             .perf_stats
                             .failure_list
-                            .get_recent_for_network(
-                                zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW,
-                            ),
+                            .get_recent_for_network(fasync::Time::now() - RECENT_FAILURE_WINDOW),
                         recent_disconnects: saved_config
                             .perf_stats
                             .disconnect_list
-                            .get_recent(zx::Time::get_monotonic() - RECENT_DISCONNECT_WINDOW),
+                            .get_recent(fasync::Time::now() - RECENT_DISCONNECT_WINDOW),
                     },
                     hasher: hasher.clone(),
                 })
@@ -991,7 +990,7 @@ mod tests {
             .expect("failed to get config")
             .perf_stats
             .failure_list
-            .get_recent_for_network(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
+            .get_recent_for_network(fasync::Time::now() - RECENT_FAILURE_WINDOW)
             .get(0)
             .expect("failed to get recent failure")
             .time;
@@ -1075,6 +1074,8 @@ mod tests {
         -71; "5GHz score is RSSI, when below threshold")]
     #[fuchsia::test(add_test_attr = false)]
     fn scoring_test(bss: types::Bss, expected_score: i16) {
+        let _exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
         let mut rng = rand::thread_rng();
 
         let network_id = types::NetworkIdentifier {
@@ -1098,8 +1099,8 @@ mod tests {
         assert_eq!(internal_bss.score(), expected_score)
     }
 
-    #[fuchsia::test]
-    fn test_score_bss_prefers_less_short_connections() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_score_bss_prefers_less_short_connections() {
         let bss_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
         let bss_better =
@@ -1129,8 +1130,8 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[fuchsia::test]
-    fn test_score_bss_prefers_less_failures() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_score_bss_prefers_less_failures() {
         let bss_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
         let bss_better =
@@ -1158,8 +1159,8 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[fuchsia::test]
-    fn test_score_bss_prefers_stronger_with_failures() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_score_bss_prefers_stronger_with_failures() {
         // Test test that if one network has a few network failures but is 5 Ghz instead of 2.4,
         // the 5 GHz network has a higher score.
         let bss_worse =
@@ -1187,8 +1188,8 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[fuchsia::test]
-    fn test_score_credentials_rejected_worse() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_score_credentials_rejected_worse() {
         // If two BSS are identical other than one failed to connect with wrong credentials and
         // the other failed with a few connect failurs, the one with wrong credentials has a lower
         // score.
@@ -1201,7 +1202,7 @@ mod tests {
         let mut failures = vec![connect_failure_with_bssid(bss_better.bssid); 4];
         failures.push(ConnectFailure {
             bssid: bss_worse.bssid,
-            time: zx::Time::get_monotonic(),
+            time: fasync::Time::now(),
             reason: FailureReason::CredentialRejected,
         });
         internal_data.recent_failures = failures;
@@ -1224,8 +1225,8 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[fuchsia::test]
-    fn score_many_penalties_do_not_cause_panic() {
+    #[fasync::run_singlethreaded(test)]
+    async fn score_many_penalties_do_not_cause_panic() {
         let bss = types::Bss { rssi: -80, channel: generate_channel(1), ..generate_random_bss() };
         let (_test_id, mut internal_data) = generate_random_saved_network();
         // Add 10 general failures and 10 rejected credentials failures
@@ -1233,7 +1234,7 @@ mod tests {
         for _ in 0..1200 {
             internal_data.recent_failures.push(ConnectFailure {
                 bssid: bss.bssid,
-                time: zx::Time::get_monotonic(),
+                time: fasync::Time::now(),
                 reason: FailureReason::CredentialRejected,
             });
         }
@@ -2809,12 +2810,16 @@ mod tests {
     }
 
     fn connect_failure_with_bssid(bssid: types::Bssid) -> ConnectFailure {
-        ConnectFailure { reason: FailureReason::GeneralFailure, time: zx::Time::INFINITE, bssid }
+        ConnectFailure {
+            reason: FailureReason::GeneralFailure,
+            time: fasync::Time::INFINITE,
+            bssid,
+        }
     }
 
     fn disconnect_with_bssid_uptime(bssid: types::Bssid, uptime: zx::Duration) -> Disconnect {
         Disconnect {
-            time: zx::Time::INFINITE, // disconnect never expires
+            time: fasync::Time::INFINITE, // disconnect never expires
             bssid,
             uptime,
         }
