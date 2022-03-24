@@ -59,6 +59,13 @@ struct Args {
     #[argh(option)]
     max_severity_logs: Option<Severity>,
 
+    /// when set, saves the output directory on the host.
+    /// Note - this option is only intended to aid in migrating OOT tests to v2. It will be
+    /// removed once existing users stop using it, and new users will not be supported.
+    // TODO(fxbug.dev/96298): remove this option once users are migrated to ffx test.
+    #[argh(option)]
+    deprecated_output_directory: Option<String>,
+
     #[argh(positional)]
     /// arguments passed to tests following `--`.
     test_args: Vec<String>,
@@ -79,6 +86,7 @@ async fn main() {
         count,
         min_severity_logs,
         max_severity_logs,
+        deprecated_output_directory,
         test_args,
         filter_ansi,
     } = args;
@@ -93,10 +101,26 @@ async fn main() {
     }
 
     let test_filters = if test_filter.len() == 0 { None } else { Some(test_filter) };
-    let reporter = run_test_suite_lib::output::ShellReporter::new(std::io::stdout());
-    let run_reporter = match filter_ansi {
-        true => run_test_suite_lib::output::RunReporter::new_ansi_filtered(reporter),
-        false => run_test_suite_lib::output::RunReporter::new(reporter),
+    let shell_reporter = run_test_suite_lib::output::ShellReporter::new(std::io::stdout());
+    let dir_reporter = match deprecated_output_directory {
+        Some(path) => match run_test_suite_lib::output::DirectoryReporter::new(path.into()) {
+            Ok(reporter) => Some(reporter),
+            Err(e) => {
+                println!("Failed to make directory reporter: {:?}", e);
+                std::process::exit(1);
+            }
+        },
+        None => None,
+    };
+    let run_reporter = match (filter_ansi, dir_reporter) {
+        (true, None) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(shell_reporter),
+        (false, None) => run_test_suite_lib::output::RunReporter::new(shell_reporter),
+        (true, Some(dir_reporter)) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(
+            run_test_suite_lib::output::MultiplexedReporter::new(shell_reporter, dir_reporter),
+        ),
+        (false, Some(dir_reporter)) => run_test_suite_lib::output::RunReporter::new(
+            run_test_suite_lib::output::MultiplexedReporter::new(shell_reporter, dir_reporter),
+        ),
     };
 
     let run_params = run_test_suite_lib::RunParams {
