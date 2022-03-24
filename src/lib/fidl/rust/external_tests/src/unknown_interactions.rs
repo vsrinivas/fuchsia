@@ -11,8 +11,12 @@ use {
         AsyncChannel, Channel, Error,
     },
     fidl_fidl_rust_test_external::{
+        UnknownInteractionsAjarProtocolEvent, UnknownInteractionsAjarProtocolProxy,
         UnknownInteractionsAjarProtocolRequest, UnknownInteractionsAjarProtocolRequestStream,
-        UnknownInteractionsClosedProtocolRequestStream, UnknownInteractionsProtocolControlHandle,
+        UnknownInteractionsAjarProtocolSynchronousProxy, UnknownInteractionsClosedProtocolProxy,
+        UnknownInteractionsClosedProtocolRequestStream,
+        UnknownInteractionsClosedProtocolSynchronousProxy,
+        UnknownInteractionsProtocolControlHandle, UnknownInteractionsProtocolEvent,
         UnknownInteractionsProtocolProxy, UnknownInteractionsProtocolRequest,
         UnknownInteractionsProtocolRequestStream, UnknownInteractionsProtocolSynchronousProxy,
     },
@@ -366,6 +370,168 @@ fn two_way_flexible_err_sync_send_error_variant() {
     assert_eq!(err, 256);
 }
 
+#[test]
+fn recieve_unknown_event_strict_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect_err("unknown event unexpectedly succeeded");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsProtocol",
+        }
+    );
+}
+
+#[test]
+fn recieve_unknown_event_flexible_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let event = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect("unknown flexible event unexpectedly failed");
+
+    assert_matches!(
+        event,
+        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+    );
+}
+
+#[test]
+fn recieve_unknown_event_strict_ajar_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsAjarProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect_err("unknown event unexpectedly succeeded");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsAjarProtocol",
+        }
+    );
+}
+
+#[test]
+fn recieve_unknown_event_flexible_ajar_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsAjarProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let event = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect("unknown flexible event unexpectedly failed");
+
+    assert_matches!(
+        event,
+        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+    );
+}
+
+#[test]
+fn recieve_unknown_event_strict_closed_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsClosedProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect_err("unknown event unexpectedly succeeded");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsClosedProtocol",
+        }
+    );
+}
+
+#[test]
+fn recieve_unknown_event_flexible_closed_sync() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client = UnknownInteractionsClosedProtocolSynchronousProxy::new(client_end);
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .wait_for_event(Time::after(2.seconds()))
+        .expect_err("unknown event unexpectedly succeeded");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsClosedProtocol",
+        }
+    );
+}
+
 /// Runs an one way client call using the async client.
 ///
 /// Even though this goes through the async client, it doesn't actually need to
@@ -701,6 +867,190 @@ async fn two_way_flexible_err_async_send_error_variant() {
     .expect("client call failed")
     .expect_err("client call unexpectedly missing application error");
     assert_eq!(err, 256);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_strict_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client = UnknownInteractionsProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect_err("client expected error for unknown strict method.");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsProtocol",
+        }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_flexible_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client = UnknownInteractionsProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let event = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect("unknown flexible event unexpectedly failed");
+
+    assert_matches!(
+        event,
+        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_strict_ajar_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client =
+        UnknownInteractionsAjarProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect_err("client expected error for unknown strict method.");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsAjarProtocol",
+        }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_flexible_ajar_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client =
+        UnknownInteractionsAjarProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let event = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect("unknown flexible event unexpectedly failed");
+
+    assert_matches!(
+        event,
+        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_strict_closed_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client =
+        UnknownInteractionsClosedProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect_err("client expected error for unknown event on closed protocol.");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsClosedProtocol",
+        }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn receive_unknown_event_flexible_closed_async() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    let client_end = AsyncChannel::from_channel(client_end).unwrap();
+    let mut client =
+        UnknownInteractionsClosedProtocolProxy::from_channel(client_end).take_event_stream();
+
+    server_end
+        .write(
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, //
+                0x10, 0xff, 0x10, 0xff, 0x10, 0xff, 0x10, 0xff, //
+            ],
+            &mut [],
+        )
+        .expect("server end failed to write event");
+
+    let err = client
+        .next()
+        .await
+        .expect("client event stream ended")
+        .expect_err("client expected error for unknown event on closed protocol.");
+
+    assert_matches!(
+        err,
+        Error::UnknownOrdinal {
+            ordinal: 0xff10ff10ff10ff10,
+            protocol_name: "(anonymous) UnknownInteractionsClosedProtocol",
+        }
+    );
 }
 
 /// Test sending an event from the server.

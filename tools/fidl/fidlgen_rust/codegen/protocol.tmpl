@@ -373,6 +373,12 @@ pub enum {{ $protocol.Name }}Event {
 	},
 	{{- end -}}
 	{{- end -}}
+
+	{{- if $protocol.OneWayUnknownInteractions }}
+	_UnknownEvent {
+		ordinal: u64,
+	},
+	{{- end }}
 }
 
 impl {{ $protocol.Name }}Event {
@@ -437,6 +443,13 @@ impl {{ $protocol.Name }}Event {
 				))
 			}
 			{{- end -}}
+			{{- end }}
+			{{- if $protocol.OneWayUnknownInteractions }}
+			_ if tx_header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+				Ok({{ $protocol.Name }}Event::_UnknownEvent {
+					ordinal: tx_header.ordinal(),
+				})
+			}
 			{{- end }}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal(),

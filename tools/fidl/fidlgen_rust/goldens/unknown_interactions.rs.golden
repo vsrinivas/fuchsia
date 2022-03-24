@@ -239,6 +239,7 @@ pub enum ExampleEvent {
     StrictEvent {},
 
     FlexibleEvent {},
+    _UnknownEvent { ordinal: u64 },
 }
 
 impl ExampleEvent {
@@ -290,6 +291,9 @@ impl ExampleEvent {
                 )?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((ExampleEvent::FlexibleEvent {}))
+            }
+            _ if tx_header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                Ok(ExampleEvent::_UnknownEvent { ordinal: tx_header.ordinal() })
             }
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: tx_header.ordinal(),

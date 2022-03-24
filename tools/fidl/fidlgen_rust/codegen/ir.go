@@ -170,16 +170,6 @@ type Protocol struct {
 	ProtocolName string
 }
 
-// Returns true if this protocol must handle one-way unknown interactions.
-func (p *Protocol) OneWayUnknownInteractions() bool {
-	return p.Openness == fidlgen.Open || p.Openness == fidlgen.Ajar
-}
-
-// Returns true if this protocol must handle two-way unknown interactions.
-func (p *Protocol) TwoWayUnknownInteractions() bool {
-	return p.Openness == fidlgen.Open
-}
-
 // Method is a method defined in a protocol.
 type Method struct {
 	// Raw JSON IR data about this method. Embedded to provide access to fields

@@ -974,6 +974,16 @@ func (d *Protocol) GetServiceName() string {
 	return ""
 }
 
+// Returns true if this protocol must handle one-way unknown interactions.
+func (p *Protocol) OneWayUnknownInteractions() bool {
+	return p.Openness == Open || p.Openness == Ajar
+}
+
+// Returns true if this protocol must handle two-way unknown interactions.
+func (p *Protocol) TwoWayUnknownInteractions() bool {
+	return p.Openness == Open
+}
+
 // Service represents the declaration of a FIDL service.
 type Service struct {
 	Decl
