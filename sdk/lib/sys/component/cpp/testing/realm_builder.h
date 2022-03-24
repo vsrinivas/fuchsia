@@ -168,6 +168,10 @@ class RealmBuilder final {
   // Factory method to create a new Realm::Builder object.
   // |svc| must outlive the RealmBuilder object and created Realm object.
   // If it's nullptr, then the current process' "/svc" namespace entry is used.
+  static RealmBuilder Create2(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+
+  // Deprecated: Use Create2. (Supports a soft migration of an underlying FIDL
+  // method change.)
   static RealmBuilder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
 
   // Same as above but the Realm will contain the contents in the manifest of
@@ -227,7 +231,8 @@ class RealmBuilder final {
                fuchsia::component::test::RealmSyncPtr test_realm_proxy);
 
   static RealmBuilder CreateImpl(cpp17::optional<std::string_view> relative_url = cpp17::nullopt,
-                                 std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+                                 std::shared_ptr<sys::ServiceDirectory> svc = nullptr,
+                                 bool call_deprecated_create = false);
 
   bool realm_commited_ = false;
   std::shared_ptr<sys::ServiceDirectory> svc_;

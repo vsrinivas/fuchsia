@@ -147,7 +147,7 @@ impl RealmBuilderFactory {
                     )?;
                     responder.send(&mut Ok(()))?;
                 }
-                ftest::RealmBuilderFactoryRequest::Create {
+                ftest::RealmBuilderFactoryRequest::CreateWithResult {
                     pkg_dir_handle,
                     realm_server_end,
                     builder_server_end,
@@ -167,6 +167,25 @@ impl RealmBuilderFactory {
                         builder_server_end,
                     )?;
                     responder.send(&mut Ok(()))?;
+                }
+                // Deprecated, and will be modified to match signature of CreateWithResult
+                // after soft transition.
+                ftest::RealmBuilderFactoryRequest::Create {
+                    pkg_dir_handle,
+                    realm_server_end,
+                    builder_server_end,
+                    responder,
+                } => {
+                    let pkg_dir = pkg_dir_handle
+                        .into_proxy()
+                        .context("failed to convert pkg_dir ClientEnd to proxy")?;
+                    self.create_realm_and_builder(
+                        RealmNode2::new(),
+                        pkg_dir,
+                        realm_server_end,
+                        builder_server_end,
+                    )?;
+                    responder.send()?;
                 }
             }
         }

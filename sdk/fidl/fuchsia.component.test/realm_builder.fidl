@@ -28,11 +28,19 @@ protocol RealmBuilderFactory {
     /// as adding new children to the realm or adding capability routes between
     /// them. The client end of `builder_server_end` is used to finalize the
     /// realm, after which point it can be launched in a collection.
-    Create(resource struct {
+    CreateWithResult(resource struct {
         pkg_dir_handle client_end:fuchsia.io.Directory;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
     }) -> (struct {}) error RealmBuilderError2;
+
+
+    @deprecated("Use CreateWithResult")
+    Create(resource struct {
+        pkg_dir_handle client_end:fuchsia.io.Directory;
+        realm_server_end server_end:Realm;
+        builder_server_end server_end:Builder;
+    }) -> ();
 
     /// Identical to `Create`, but instead of the realm being empty by default
     /// it contains the contents of the manifest located at `relative_url`

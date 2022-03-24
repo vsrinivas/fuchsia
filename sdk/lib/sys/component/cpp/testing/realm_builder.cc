@@ -149,8 +149,15 @@ std::string Realm::GetResolvedName(const std::string& child_name) {
 
 // Implementation methods for RealmBuilder.
 
-RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
+RealmBuilder RealmBuilder::Create2(std::shared_ptr<sys::ServiceDirectory> svc) {
   return CreateImpl(cpp17::nullopt, std::move(svc));
+}
+
+// This version of Create requires soft transition to Create2, due to underlying
+// FIDL API change. Please replace all calls to `Create` with calls to
+// `Create2`.
+RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
+  return CreateImpl(cpp17::nullopt, std::move(svc), /*call_deprecated_create=*/true);
 }
 
 RealmBuilder RealmBuilder::CreateFromRelativeUrl(std::string_view relative_url,
@@ -159,7 +166,8 @@ RealmBuilder RealmBuilder::CreateFromRelativeUrl(std::string_view relative_url,
 }
 
 RealmBuilder RealmBuilder::CreateImpl(cpp17::optional<std::string_view> relative_url,
-                                      std::shared_ptr<sys::ServiceDirectory> svc) {
+                                      std::shared_ptr<sys::ServiceDirectory> svc,
+                                      bool call_deprecated_create) {
   if (svc == nullptr) {
     svc = sys::ServiceDirectory::CreateFromNamespace();
   }
@@ -181,12 +189,17 @@ RealmBuilder RealmBuilder::CreateImpl(cpp17::optional<std::string_view> relative
                                              test_realm_proxy.NewRequest(),
                                              builder_proxy.NewRequest(), &result),
         result);
-  } else {
-    fuchsia::component::test::RealmBuilderFactory_Create_Result result;
-    ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+  } else if (call_deprecated_create) {
+    ZX_COMPONENT_ASSERT_STATUS_OK(
         "RealmBuilderFactory/Create",
         factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
-                              builder_proxy.NewRequest(), &result),
+                              builder_proxy.NewRequest()));
+  } else {
+    fuchsia::component::test::RealmBuilderFactory_CreateWithResult_Result result;
+    ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+        "RealmBuilderFactory/CreateWithResult",
+        factory_proxy->CreateWithResult(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
+                                        builder_proxy.NewRequest(), &result),
         result);
   }
   return RealmBuilder(svc, std::move(builder_proxy), std::move(test_realm_proxy));
