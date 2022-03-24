@@ -7,8 +7,6 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_PAGE_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_PAGE_H_
 
-#include <lib/zx/status.h>
-
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
@@ -25,15 +23,16 @@ class Page {
     }
   }
 
-  zx::status<> Alloc(uint8_t fill) {
+  zx_status_t Alloc(uint8_t fill) {
     zx_status_t status = pmm_alloc_page(0, &page_, &pa_);
     if (status != ZX_OK) {
-      return zx::error(status);
+      return status;
     }
 
     page_->set_state(vm_page_state::WIRED);
+
     memset(VirtualAddress(), fill, PAGE_SIZE);
-    return zx::ok();
+    return ZX_OK;
   }
 
   void* VirtualAddress() const {
@@ -61,15 +60,14 @@ class Page {
 template <typename T>
 class PagePtr {
  public:
-  zx::status<> Alloc() {
-    auto result = page_.Alloc(0);
-    if (result.is_error()) {
-      return result.take_error();
+  zx_status_t Alloc() {
+    zx_status_t status = page_.Alloc(0);
+    if (status != ZX_OK) {
+      return status;
     }
-
     ptr_ = page_.VirtualAddress<T>();
     new (ptr_) T;
-    return zx::ok();
+    return ZX_OK;
   }
 
   zx_paddr_t PhysicalAddress() const { return page_.PhysicalAddress(); }

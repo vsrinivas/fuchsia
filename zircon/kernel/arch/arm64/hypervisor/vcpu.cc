@@ -172,7 +172,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
 
   uint8_t vpid;
-  if (zx_status_t status = guest->AllocVpid(&vpid); status != ZX_OK) {
+  zx_status_t status = guest->AllocVpid(&vpid);
+  if (status != ZX_OK) {
     return status;
   }
   auto free_vpid = fit::defer([guest, vpid]() { guest->FreeVpid(vpid); });
@@ -189,8 +190,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
   free_vpid.cancel();
 
-  if (auto result = vcpu->el2_state_.Alloc(); result.is_ok()) {
-    return result.status_value();
+  status = vcpu->el2_state_.Alloc();
+  if (status != ZX_OK) {
+    return status;
   }
 
   vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
