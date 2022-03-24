@@ -449,7 +449,7 @@ typedef struct device_group_desc {
   size_t metadata_count;
 } device_group_desc_t;
 
-zx_status_t add_device_group(zx_device_t* dev, const char* name,
+zx_status_t device_add_group(zx_device_t* dev, const char* name,
                              const device_group_desc_t* group_desc);
 
 // Protocol Identifiers

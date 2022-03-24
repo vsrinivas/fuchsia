@@ -378,7 +378,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
       .metadata_count = 0,
   };
 
-  EXPECT_EQ(ZX_OK, add_device_group(dev.get(), "device_group", &group_desc));
+  EXPECT_EQ(ZX_OK, device_add_group(dev.get(), "device_group", &group_desc));
 
   // Join the thread running in the background, then run the rest of the tasks locally.
   ctx_.loop().Quit();

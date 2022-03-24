@@ -583,6 +583,10 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_composite(this->parent_, name, comp_desc);
   }
 
+  zx_status_t DdkAddDeviceGroup(const char* name, const device_group_desc_t* group_desc) {
+    return device_add_group(this->parent_, name, group_desc);
+  }
+
   // Schedules the removal of the device and its descendents.
   // Each device will evenutally have its unbind hook (if implemented) and release hook invoked.
   void DdkAsyncRemove() {
