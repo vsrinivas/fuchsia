@@ -12,15 +12,19 @@ use {
         object_store::journal,
     },
     anyhow::{Context, Error},
+    async_trait::async_trait,
     std::ops::Bound,
 };
 
-pub trait MajorCompactable<K, V> {
-    /// Returns an iterator that wrapps another iterator that is appropriate for major compactions.
+#[async_trait]
+pub trait MajorCompactable<K: 'static, V: 'static> {
+    /// Returns an iterator that wraps another iterator that is appropriate for major compactions.
     /// Such an iterator should elide items that don't need to be written if a major compaction is
     /// taking place.
-    fn major_iter(iter: BoxedLayerIterator<'_, K, V>) -> BoxedLayerIterator<'_, K, V> {
-        iter
+    async fn major_iter(
+        iter: BoxedLayerIterator<'_, K, V>,
+    ) -> Result<BoxedLayerIterator<'_, K, V>, Error> {
+        Ok(iter)
     }
 }
 
@@ -79,7 +83,7 @@ where
         let mut merger = layer_set.merger();
         let mut iter: BoxedLayerIterator<'_, K, V> = Box::new(merger.seek(Bound::Unbounded).await?);
         if layers_to_keep.is_empty() {
-            iter = LSMTree::<K, V>::major_iter(iter);
+            iter = LSMTree::<K, V>::major_iter(iter).await?;
         }
         let block_size = writer.handle().block_size();
         tree.compact_with_iterator(iter, writer, block_size).await.context("ObjectStore::flush")?;

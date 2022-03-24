@@ -191,23 +191,13 @@ impl Graveyard {
         graveyard_object_id: u64,
         from: u64,
     ) -> Result<GraveyardIterator<'a, 'b>, Error> {
-        let mut iter = merger
-            .seek(Bound::Included(&ObjectKey::graveyard_entry(graveyard_object_id, from)))
-            .await?;
-        // Skip deleted entries.
-        // TODO(csuter): Remove this once we've developed a filtering iterator.
-        loop {
-            match iter.get() {
-                Some(ItemRef {
-                    key: ObjectKey { object_id, .. },
-                    value: ObjectValue::None,
-                    ..
-                }) if *object_id == graveyard_object_id => {}
-                _ => break,
-            }
-            iter.advance().await?;
-        }
-        Ok(GraveyardIterator { object_id: graveyard_object_id, iter })
+        GraveyardIterator::new(
+            graveyard_object_id,
+            merger
+                .seek(Bound::Included(&ObjectKey::graveyard_entry(graveyard_object_id, from)))
+                .await?,
+        )
+        .await
     }
 }
 
@@ -216,7 +206,30 @@ pub struct GraveyardIterator<'a, 'b> {
     iter: MergerIterator<'a, 'b, ObjectKey, ObjectValue>,
 }
 
-impl GraveyardIterator<'_, '_> {
+impl<'a, 'b> GraveyardIterator<'a, 'b> {
+    async fn new(
+        object_id: u64,
+        iter: MergerIterator<'a, 'b, ObjectKey, ObjectValue>,
+    ) -> Result<GraveyardIterator<'a, 'b>, Error> {
+        let mut iter = GraveyardIterator { object_id, iter };
+        iter.skip_deleted_entries().await?;
+        Ok(iter)
+    }
+
+    async fn skip_deleted_entries(&mut self) -> Result<(), Error> {
+        loop {
+            match self.iter.get() {
+                Some(ItemRef {
+                    key: ObjectKey { object_id, .. },
+                    value: ObjectValue::None,
+                    ..
+                }) if *object_id == self.object_id => {}
+                _ => return Ok(()),
+            }
+            self.iter.advance().await?;
+        }
+    }
+
     /// Returns a tuple (object_id, sequence).
     pub fn get(&self) -> Option<(u64, u64)> {
         match self.iter.get() {
@@ -230,18 +243,8 @@ impl GraveyardIterator<'_, '_> {
     }
 
     pub async fn advance(&mut self) -> Result<(), Error> {
-        loop {
-            self.iter.advance().await?;
-            // Skip deleted entries.
-            match self.iter.get() {
-                Some(ItemRef {
-                    key: ObjectKey { object_id, .. },
-                    value: ObjectValue::None,
-                    ..
-                }) if *object_id == self.object_id => {}
-                _ => return Ok(()),
-            }
-        }
+        self.iter.advance().await?;
+        self.skip_deleted_entries().await
     }
 }
 

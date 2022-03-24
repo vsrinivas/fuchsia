@@ -36,7 +36,7 @@ use {
         errors::FxfsError,
         lsm_tree::{
             layers_from_handles,
-            types::{BoxedLayerIterator, Item, ItemRef, LayerIterator},
+            types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorFilter},
             LSMTree,
         },
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
@@ -1153,40 +1153,6 @@ impl ObjectStore {
     }
 }
 
-// In a major compaction (i.e. a compaction which involves the base layer), we have an opportunity
-// to apply a number of optimizations, such as removing tombstoned objects or deleted extents.
-// These optimizations can only be applied after the compaction completes, thus we have an explicit
-// iterator to apply these optimizations.
-struct MajorCompactionIterator<'a, K, V, F> {
-    iter: BoxedLayerIterator<'a, K, V>,
-    can_discard: F,
-}
-
-impl<'a, K, V, F> MajorCompactionIterator<'a, K, V, F> {
-    fn new(iter: BoxedLayerIterator<'a, K, V>, can_discard: F) -> Self {
-        Self { iter, can_discard }
-    }
-}
-
-#[async_trait]
-impl<K: Send + Sync, V: Send + Sync, F: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync>
-    LayerIterator<K, V> for MajorCompactionIterator<'_, K, V, F>
-{
-    async fn advance(&mut self) -> Result<(), Error> {
-        self.iter.advance().await?;
-        loop {
-            match self.iter.get() {
-                Some(item) if (self.can_discard)(item) => self.iter.advance().await?,
-                _ => return Ok(()),
-            }
-        }
-    }
-
-    fn get(&self) -> Option<ItemRef<'_, K, V>> {
-        self.iter.get()
-    }
-}
-
 #[async_trait]
 impl Mutations for ObjectStore {
     async fn apply_mutation(
@@ -1330,17 +1296,21 @@ impl Mutations for ObjectStore {
         let reservation_update: ReservationUpdate; // Must live longer than end_transaction.
         let mut end_transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
+        #[async_trait]
         impl tree::MajorCompactable<ObjectKey, ObjectValue> for LSMTree<ObjectKey, ObjectValue> {
-            fn major_iter(
+            async fn major_iter(
                 iter: BoxedLayerIterator<'_, ObjectKey, ObjectValue>,
-            ) -> BoxedLayerIterator<'_, ObjectKey, ObjectValue> {
-                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| match item {
-                    // Object Tombstone.
-                    ItemRef { value: ObjectValue::None, .. } => true,
-                    // Deleted extent.
-                    ItemRef { value: ObjectValue::Extent(ExtentValue::None), .. } => true,
-                    _ => false,
-                }))
+            ) -> Result<BoxedLayerIterator<'_, ObjectKey, ObjectValue>, Error> {
+                Ok(Box::new(
+                    iter.filter(|item: ItemRef<'_, _, _>| match item {
+                        // Object Tombstone.
+                        ItemRef { value: ObjectValue::None, .. } => false,
+                        // Deleted extent.
+                        ItemRef { value: ObjectValue::Extent(ExtentValue::None), .. } => false,
+                        _ => true,
+                    })
+                    .await?,
+                ))
             }
         }
 

@@ -299,7 +299,10 @@ mod tests {
             lsm_tree::{
                 layers_from_handles,
                 merge::{MergeLayerIterator, MergeResult},
-                types::{Item, ItemRef, LayerIterator, NextKey, OrdLowerBound, OrdUpperBound},
+                types::{
+                    Item, ItemRef, LayerIterator, LayerIteratorFilter, NextKey, OrdLowerBound,
+                    OrdUpperBound,
+                },
             },
             serialized_types::{
                 versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
@@ -424,5 +427,36 @@ mod tests {
         let found_item = tree.find(&item.key).await.expect("find failed").expect("not found");
         assert_eq!(found_item, item);
         assert!(tree.find(&TestKey(2..2)).await.expect("find failed").is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter() {
+        let items = [
+            Item::new(TestKey(1..1), 1),
+            Item::new(TestKey(2..2), 2),
+            Item::new(TestKey(3..3), 3),
+            Item::new(TestKey(4..4), 4),
+        ];
+        let tree = LSMTree::new(emit_left_merge_fn);
+        tree.insert(items[0].clone()).await;
+        tree.insert(items[1].clone()).await;
+        tree.insert(items[2].clone()).await;
+        tree.insert(items[3].clone()).await;
+
+        let layers = tree.layer_set();
+        let mut merger = layers.merger();
+
+        // Filter out odd keys (which also guarantees we skip the first key which is an edge case).
+        let mut iter = (Box::new(merger.seek(Bound::Unbounded).await.expect("seek failed"))
+            as Box<dyn LayerIterator<_, _>>)
+            .filter(|item: ItemRef<'_, TestKey, u64>| item.key.0.start % 2 == 0)
+            .await
+            .expect("filter failed");
+
+        assert_eq!(iter.get(), Some(items[1].as_item_ref()));
+        iter.advance().await.expect("advance failed");
+        assert_eq!(iter.get(), Some(items[3].as_item_ref()));
+        iter.advance().await.expect("advance failed");
+        assert!(iter.get().is_none());
     }
 }

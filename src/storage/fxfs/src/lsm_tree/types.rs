@@ -256,6 +256,25 @@ pub trait LayerIterator<K, V>: Send + Sync {
 pub type BoxedLayerIterator<'iter, K, V> = Box<dyn LayerIterator<K, V> + 'iter>;
 
 #[async_trait]
+pub trait LayerIteratorFilter<'a, K, V> {
+    /// Mirrors std::iter::Iterator::filter.
+    async fn filter<P: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync>(
+        self,
+        predicate: P,
+    ) -> Result<Filter<'a, K, V, P>, Error>;
+}
+
+#[async_trait]
+impl<'a, K, V> LayerIteratorFilter<'a, K, V> for BoxedLayerIterator<'a, K, V> {
+    async fn filter<P: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync>(
+        self,
+        predicate: P,
+    ) -> Result<Filter<'a, K, V, P>, Error> {
+        Filter::new(self, predicate).await
+    }
+}
+
+#[async_trait]
 impl<'iter, K, V> LayerIterator<K, V> for BoxedLayerIterator<'iter, K, V> {
     async fn advance(&mut self) -> Result<(), Error> {
         (**self).advance().await
@@ -320,5 +339,45 @@ impl<'a, K, V, T: AsRef<dyn Layer<K, V>>> IntoLayerRefs<'a, K, V, T, dyn Layer<K
     fn into_layer_refs(self) -> Box<[&'a dyn Layer<K, V>]> {
         let refs: Vec<_> = self.iter().map(|x| x.as_ref()).collect();
         refs.into_boxed_slice()
+    }
+}
+
+pub struct Filter<'a, K, V, P> {
+    iter: BoxedLayerIterator<'a, K, V>,
+    predicate: P,
+}
+
+impl<'a, K, V, P: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync> Filter<'a, K, V, P> {
+    async fn new(
+        iter: BoxedLayerIterator<'a, K, V>,
+        predicate: P,
+    ) -> Result<Filter<'a, K, V, P>, Error> {
+        let mut filter = Filter { iter, predicate };
+        filter.skip_filtered().await?;
+        Ok(filter)
+    }
+
+    async fn skip_filtered(&mut self) -> Result<(), Error> {
+        loop {
+            match self.iter.get() {
+                Some(item) if !(self.predicate)(item) => {}
+                _ => return Ok(()),
+            }
+            self.iter.advance().await?;
+        }
+    }
+}
+
+#[async_trait]
+impl<K: Send + Sync, V: Send + Sync, P: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync>
+    LayerIterator<K, V> for Filter<'_, K, V, P>
+{
+    async fn advance(&mut self) -> Result<(), Error> {
+        self.iter.advance().await?;
+        self.skip_filtered().await
+    }
+
+    fn get(&self) -> Option<ItemRef<'_, K, V>> {
+        self.iter.get()
     }
 }
