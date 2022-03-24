@@ -25,15 +25,7 @@ parser.add_argument(
     '--utils_dir',
     help='Path to directory holding all of the diffing tools.',
     required=True)
-parser.add_argument(
-    '--out_dir',
-    help='Path to a directory for saving output diff files.',
-    required=True)
 ARGS = parser.parse_args()
-
-# Create the out directory if it doesn't exist.
-if not os.path.exists(ARGS.out_dir):
-    os.makedirs(ARGS.out_dir)
 
 # The python_host_test build rule calls `unittest.main`.
 # So we need to get rid of the test arguments in order
@@ -51,14 +43,12 @@ class VerifyPlasaDiff(unittest.TestCase):
             self,
             manifest,
             kinds=['api_fidl', 'api_cpp'],
-            utils_dir=ARGS.utils_dir,
-            out_dir=ARGS.out_dir):
+            utils_dir=ARGS.utils_dir):
         return PlasaDiffer(
             before_manifest=manifest,
             after_manifest=manifest,
             kinds=kinds,
             utils_dir=utils_dir,
-            out_dir=out_dir,
         )
 
     def create_plasa_fragment(self, root, path, kind, write_to_disk=False):
@@ -113,7 +103,6 @@ class VerifyPlasaDiff(unittest.TestCase):
                     after_manifest=manifest,
                     kinds=kinds,
                     utils_dir=ARGS.utils_dir,
-                    out_dir=ARGS.out_dir,
                 )
             except Exception as e:
                 self.assertTrue(False, e)
@@ -124,7 +113,6 @@ class VerifyPlasaDiff(unittest.TestCase):
                     after_manifest=manifest,
                     kinds=None, # not allowed
                     utils_dir=ARGS.utils_dir,
-                    out_dir=ARGS.out_dir,
                 )
 
             with self.assertRaises(ValueError):
@@ -132,8 +120,7 @@ class VerifyPlasaDiff(unittest.TestCase):
                     before_manifest=manifest,
                     after_manifest=manifest,
                     kinds=None,
-                    utils_dir=ARGS.utils_dir,
-                    out_dir='/does/not/exist',  # not allowed
+                    utils_dir='/does/not/exist',  # not allowed
                 )
 
     def test_load_manifest(self):

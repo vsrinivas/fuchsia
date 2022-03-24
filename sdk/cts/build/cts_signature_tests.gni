@@ -135,8 +135,6 @@ template("cts_signature_tests") {
           rebase_path(test_utils_dir, root_build_dir),
           "--fragments_dir",
           rebase_path(test_fragments_dir + "fidl/", root_build_dir),
-          "--out_dir",
-          rebase_path("${_testdata_path}/cts/plasa/out", root_build_dir),
         ]
         deps = [
           ":$test_fidl_data_target_name",

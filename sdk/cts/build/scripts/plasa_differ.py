@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from typing import List
 
@@ -61,7 +62,6 @@ class PlasaDiffer:
     after_manifest: str
     kinds: List[str]
     utils_dir: str
-    out_dir: str
 
     def __post_init__(self):
         if not self.before_manifest:
@@ -72,8 +72,6 @@ class PlasaDiffer:
             raise ValueError('kinds list cannot be None or empty.')
         if not os.path.exists(self.utils_dir):
             raise ValueError('utils_dir path cannot be empty and must exist.')
-        if not os.path.exists(self.out_dir):
-            raise ValueError('out_dir path cannot be empty and must exist.')
 
     def load_manifest(self, manifest):
         """Load the PlaSA Manifest JSON file into a dictionary.
@@ -125,7 +123,8 @@ class PlasaDiffer:
         """
 
         tool = os.path.join(self.utils_dir, 'fidl_api_diff')
-        out_file = os.path.join(self.out_dir, os.path.basename(before.cts_path))
+        out_file = tempfile.NamedTemporaryFile()
+        out_file.close()
         args = [
             tool,
             '--before-file',
@@ -133,14 +132,14 @@ class PlasaDiffer:
             '--after-file',
             after.cts_path,
             '--api-diff-file',
-            out_file,
+            out_file.name,
         ]
 
         try:
             p = subprocess.run(args, check=True, capture_output=True, text=True)
             # TODO(jcecil): Make fidl_api_diff throw an exception
             # when API breaking changes are detected.
-            with open(out_file, 'r') as result:
+            with open(out_file.name, 'r') as result:
                 data = result.read()
                 result.close()
             if 'APIBreaking' in data:
@@ -174,6 +173,8 @@ class PlasaDiffer:
         # Delete them from the dictionaries so we can detect discrepancies.
         for key, before in list(before_fragments.items()):
             del before_fragments[key]
+            is_compatible = False
+            message = ""
 
             try:
                 after = after_fragments[key]
