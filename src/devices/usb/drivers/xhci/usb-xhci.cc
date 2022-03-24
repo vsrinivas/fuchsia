@@ -518,7 +518,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
         if (speed == USB_SPEED_SUPER) {
           std::optional<usb::Request<void>> request_wrapper;
           zx_status_t status =
-              usb::Request<void>::Alloc(&request_wrapper, 0, 0, sizeof(usb_request_t));
+              usb::Request<void>::Alloc(&request_wrapper, 0, 0, UsbHciGetRequestSize());
           if (status != ZX_OK) {
             return fpromise::make_error_promise(status);
           }
