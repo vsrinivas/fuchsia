@@ -48,6 +48,7 @@ group("structured_config") {
     "//vendor/google/build/pre_migration:*",
     "//vendor/google/build/recovery:*",
     "//vendor/google/build/reverse_migration:*",
+    "//vendor/google/security/fuss_testing:*",
 
     # locations where session_manager_package() is invoked:
     "//src/experiences/session_shells/ermine/session:*",

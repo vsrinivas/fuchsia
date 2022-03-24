@@ -71,6 +71,7 @@ group("non_hermetic_deps") {
     "//build/images/*",
     "//src/security/pkg_test/tests/*",
     "//third_party/network-conformance/images/*",
+    "//vendor/google/security/fuss_testing/*",
   ]
 
   # These repos are not in the default checkout.
