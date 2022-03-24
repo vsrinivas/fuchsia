@@ -164,8 +164,28 @@ int16_t ParseIpLevelControlMessage(fsocket::wire::IpSendControlData& fidl_ip, in
 
 int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ipv6, int type,
                                      const void* data, socklen_t data_len) {
-  // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IPV6 control messages.
-  return 0;
+  switch (type) {
+    case IPV6_HOPLIMIT: {
+      int hoplimit;
+      if (data_len != sizeof(hoplimit)) {
+        return EINVAL;
+      }
+      memcpy(&hoplimit, data, sizeof(hoplimit));
+      if (hoplimit < -1 || hoplimit > std::numeric_limits<uint8_t>::max()) {
+        return EINVAL;
+      }
+      // Ignore hoplimit if it's -1 as it it is interpreted as if the cmsg was not present.
+      //
+      // https://github.com/torvalds/linux/blob/eaa54b1458c/net/ipv6/udp.c#L1531
+      if (hoplimit != -1) {
+        fidl_ipv6.set_hoplimit(static_cast<uint8_t>(hoplimit));
+      }
+      return 0;
+    }
+    default:
+      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IPV6 control messages.
+      return 0;
+  }
 }
 
 int16_t ParseControlMessage(fsocket::wire::SocketSendControlData& fidl_socket,
@@ -335,8 +355,8 @@ class FidlControlDataProcessor {
       total += StoreControlMessage(IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
     }
     if (control_data.has_ttl()) {
-      // Even though the ttl class can be encoded in a single byte, Linux returns it as an `int`
-      // when it is received as a control message.
+      // Even though the ttl can be encoded in a single byte, Linux returns it as an `int` when it
+      // is received as a control message.
       // https://github.com/torvalds/linux/blob/7e57714cd0a/net/ipv4/ip_sockglue.c#L67
       const int ttl = static_cast<int>(control_data.ttl());
       total += StoreControlMessage(IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
@@ -497,7 +517,7 @@ uint8_t fidl_pkttype_to_pkttype(const fpacketsocket::wire::PacketType type) {
   }
 }
 
-// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L1012
+// https://github.com/torvalds/linux/blob/f2850dd5ee0/include/net/tcp.h#L1012
 constexpr socklen_t kTcpCANameMax = 16;
 constexpr const char kCcCubic[kTcpCANameMax] = "cubic";
 constexpr const char kCcReno[kTcpCANameMax] = "reno";

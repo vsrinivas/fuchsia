@@ -1876,6 +1876,16 @@ func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlD
 			out.HasTTL = true
 		}
 	}
+
+	if in.HasIpv6() {
+		inIpv6 := in.GetIpv6()
+		if inIpv6.HasHoplimit() {
+			hoplimit := inIpv6.GetHoplimit()
+			out.HopLimit = hoplimit
+			out.HasHopLimit = true
+		}
+	}
+
 	return 0
 }
 

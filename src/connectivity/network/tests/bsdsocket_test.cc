@@ -6699,7 +6699,7 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsg) {
         EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kHopLimit)));
         EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
         EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
-        uint8_t recv_hoplimit;
+        int recv_hoplimit;
         memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
         EXPECT_EQ(recv_hoplimit, kHopLimit);
         EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
@@ -6725,10 +6725,92 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
         EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kDefaultHopLimit)));
         EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
         EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
-        uint8_t recv_hoplimit;
+        int recv_hoplimit;
         memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
         EXPECT_EQ(recv_hoplimit, kDefaultHopLimit);
       }));
+}
+
+TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsg) {
+  constexpr int kHopLimit = 42;
+  char send_buf[] = "hello";
+  ASSERT_NO_FATAL_FAILURE(SendWithCmsg(connected().get(), send_buf, sizeof(send_buf), SOL_IPV6,
+                                       IPV6_HOPLIMIT, kHopLimit));
+
+  char recv_control[CMSG_SPACE(sizeof(kHopLimit)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      ReceiveAndCheckMessage(send_buf, sizeof(send_buf), recv_control, sizeof(recv_control),
+                             [kHopLimit](msghdr& recv_msghdr) {
+                               EXPECT_EQ(recv_msghdr.msg_controllen, CMSG_SPACE(sizeof(kHopLimit)));
+                               cmsghdr* cmsg = CMSG_FIRSTHDR(&recv_msghdr);
+                               ASSERT_NE(cmsg, nullptr);
+                               EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kHopLimit)));
+                               EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+                               EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
+                               int recv_hoplimit;
+                               memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
+                               EXPECT_EQ(recv_hoplimit, kHopLimit);
+                               EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
+                             }));
+}
+
+TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgDefaultValue) {
+  constexpr int kConfiguredHopLimit = 42;
+  ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_UNICAST_HOPS, &kConfiguredHopLimit,
+                       sizeof(kConfiguredHopLimit)),
+            0)
+      << strerror(errno);
+
+  char send_buf[] = "hello";
+  constexpr int kUseConfiguredHopLimitValue = -1;
+  ASSERT_NO_FATAL_FAILURE(SendWithCmsg(connected().get(), send_buf, sizeof(send_buf), SOL_IPV6,
+                                       IPV6_HOPLIMIT, kUseConfiguredHopLimitValue));
+
+  char recv_control[CMSG_SPACE(sizeof(kConfiguredHopLimit)) + 1];
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(
+      send_buf, sizeof(send_buf), recv_control, sizeof(recv_control),
+      [kConfiguredHopLimit](msghdr& recv_msghdr) {
+        EXPECT_EQ(recv_msghdr.msg_controllen, CMSG_SPACE(sizeof(kConfiguredHopLimit)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&recv_msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kConfiguredHopLimit)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
+        int recv_hoplimit;
+        memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
+        EXPECT_EQ(recv_hoplimit, kConfiguredHopLimit);
+        EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
+      }));
+}
+
+TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgInvalidValues) {
+  constexpr std::array<int, 2> kInvalidValues = {-2, 256};
+
+  for (int value : kInvalidValues) {
+    SCOPED_TRACE("hoplimit=" + std::to_string(value));
+    char send_buf[] = "hello";
+    iovec iov = {
+        .iov_base = send_buf,
+        .iov_len = sizeof(send_buf),
+    };
+    std::array<uint8_t, CMSG_SPACE(sizeof(value))> control;
+    msghdr msg = {
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+        .msg_control = control.data(),
+        .msg_controllen = CMSG_LEN(sizeof(value)),
+    };
+    cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+    ASSERT_NE(cmsg, nullptr);
+    *cmsg = {
+        .cmsg_len = CMSG_LEN(sizeof(value)),
+        .cmsg_level = SOL_IPV6,
+        .cmsg_type = IPV6_HOPLIMIT,
+    };
+    memcpy(CMSG_DATA(cmsg), &value, sizeof(value));
+    ASSERT_EQ(sendmsg(connected().get(), &msg, 0), -1);
+    ASSERT_EQ(errno, EINVAL) << strerror(errno);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6HopLimitTests,

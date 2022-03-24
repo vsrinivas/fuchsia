@@ -502,7 +502,16 @@ type NetworkSocketSendControlData = table {
     /// IPv6 level ancillary data.
     ///
     /// These match POSIX `SOL_IPV6` control messages.
-    3: ipv6 @generated_name("Ipv6SendControlData") table {};
+    3: ipv6 @generated_name("Ipv6SendControlData") table {
+        // Reserved for `SOL_IPV6` -> `IPV6_TCLASS` control message, to maintain
+        // a consistent order with the similar IpSendControlData table.
+        // TODO(https://fxbug.dev/96028): Replace with `IPV6_TCLASS` cmsg.
+        1: reserved;
+
+        /// The Hop Limit value to set in the IPv6 header of an outgoing
+        /// packet.
+        2: hoplimit uint8;
+    };
 };
 
 /// Flags controlling RecvMsg behavior.
