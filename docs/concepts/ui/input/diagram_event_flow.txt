@@ -1,0 +1,20 @@
+```dot
+digraph {
+  rankdir=LR
+  mouse -> input_driver -> input_pipeline -> scenic
+  scenic -> flutter
+  scenic -> chromium
+  subgraph cluster_device {
+    graph [style="dashed", label="device"]
+    mouse
+  }
+  subgraph cluster_platform {
+    graph [style="dashed", label="platform"]
+    input_driver ; input_pipeline ; scenic
+  }
+  subgraph cluster_product {
+    graph [style="dashed", label="product"]
+    flutter ; chromium
+  }
+}
+```
