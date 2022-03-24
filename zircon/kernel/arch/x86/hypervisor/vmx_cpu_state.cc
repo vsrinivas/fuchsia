@@ -191,7 +191,7 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
 
   // The maximum size for a VMXON or VMCS region is 4096, therefore
   // unconditionally allocating a page is adequate.
-  return hypervisor::Page::Alloc(fill);
+  return hypervisor::Page::Alloc(fill).status_value();
 }
 
 zx_status_t alloc_vmx_state() {
