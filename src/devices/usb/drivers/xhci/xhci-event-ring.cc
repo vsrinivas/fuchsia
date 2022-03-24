@@ -114,7 +114,6 @@ zx_status_t EventRing::AddTRB() {
     if (status != ZX_OK) {
       return status;
     }
-    new_segment_ = true;
     return ZX_OK;
   }
   return ZX_OK;
@@ -150,7 +149,7 @@ zx_status_t EventRing::AddSegment() {
     erdp_virt_ = static_cast<TRB*>(buffer->virt());
     needs_iterator = true;
   }
-  buffers_.push_back(std::move(buffer));
+  buffers_.push_back(std::make_unique<SegmentBuf>(std::move(buffer), true));
   if (needs_iterator) {
     buffers_it_ = buffers_.begin();
   }
@@ -423,16 +422,21 @@ Control EventRing::AdvanceErdp() {
   if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
                (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
     // Page transition -- next buffer
-    if (unlikely(buffers_it_ == --buffers_.end())) {
-      // Wrap around
+    auto next_buffer = buffers_it_;
+    next_buffer++;
+    ZX_DEBUG_ASSERT(next_buffer != buffers_it_);
+    if (unlikely(next_buffer == buffers_.end())) {
+      // Last buffer: wrap around
       action = WRAP_AROUND;
-    } else if (unlikely(new_segment_ && (buffers_it_ == --(--buffers_.end())))) {
-      // New segment (always the last segment and only one at a time)
+      buffers_it_->new_segment = false;
+    } else if (unlikely(next_buffer->new_segment)) {
+      // New segment
       // Check for valid Completion Code
-      if (static_cast<CommandCompletionEvent*>(buffers_.back().virt())->CompletionCode() ==
+      if (static_cast<CommandCompletionEvent*>(next_buffer->buf->virt())->CompletionCode() ==
           CommandCompletionEvent::Invalid) {
         // Invalid completion code. New segment not in use yet.
-        if (Control::FromTRB(reinterpret_cast<TRB*>(buffers_.front().virt())).Cycle() == ccs_) {
+        if (Control::FromTRB(reinterpret_cast<TRB*>(buffers_.front().buf->virt())).Cycle() ==
+            ccs_) {
           // Empty ring, according to spec, we should re-evaluate next time. Set the reevaluate_ bit
           // to true and return an invalid TRB to stop advancement of pointer.
           reevaluate_ = true;
@@ -444,11 +448,11 @@ Control EventRing::AdvanceErdp() {
         // Valid completion code. New segment already in use.
         action = NEXT;
       }
-      new_segment_ = false;
     } else {
       // Not new segment.
       action = NEXT;
     }
+    buffers_it_->new_segment = false;
   } else {
     action = INCREMENT;
   }
@@ -462,16 +466,16 @@ Control EventRing::AdvanceErdp() {
     case NEXT: {
       // Next segment
       buffers_it_++;
-      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
-      erdp_phys_ = (*buffers_it_).phys();
+      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).buf->virt());
+      erdp_phys_ = (*buffers_it_).buf->phys();
       segment_index_ = (segment_index_ + 1) & 0b111;
     } break;
     case WRAP_AROUND: {
       // Wrap around to first segment
       ccs_ = !ccs_;
       buffers_it_ = buffers_.begin();
-      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
-      erdp_phys_ = (*buffers_it_).phys();
+      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).buf->virt());
+      erdp_phys_ = (*buffers_it_).buf->phys();
       segment_index_ = 0;
     } break;
     default: {
@@ -480,6 +484,14 @@ Control EventRing::AdvanceErdp() {
   }
 
   trbs_--;
+  if (unlikely(buffers_it_->new_segment)) {
+    // New buffer. CCS is invalid. Increment only if completion code is not invalid.
+    return Control::FromTRB(erdp_virt_)
+        .set_Cycle((static_cast<CommandCompletionEvent*>(erdp_virt_)->CompletionCode() !=
+                    CommandCompletionEvent::Invalid)
+                       ? ccs_
+                       : !ccs_);
+  }
   return Control::FromTRB(erdp_virt_);
 }
 

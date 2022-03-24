@@ -120,6 +120,8 @@ class EventRing {
   // Advance ERDP according to Section 4.9.4.1. Evaluates the validity of the current TRB and the
   // direction of the next TRB. Possible directions:
   //   - If not at the end of the segment, next TRB is consecutive in address.
+  //       - If we are in a new segment, CCS bit is invalid. Evaluate if we stop by checking the
+  //         next TRB's completion code. Only continue moving on if completion code is not INVALID.
   //   - If at the end of a segment
   //       - When there are no new segments, next TRB is the beginning of the next segment..
   //       - When there are new segments, but we're not about to enter into the new segment, next
@@ -131,8 +133,8 @@ class EventRing {
   //              - If the event ring is not empty, go to the beginning of the 0th segment (because
   //                the new segment is always the last segment)
   //              - If the event ring is empty, reevaluate next time (by setting the reevaluate_ bit
-  //              to true). In this case ERDP points not to the next TRB to be evaluated (as we
-  //              usually expect), but the current TRB already evaluated.
+  //                to true). In this case ERDP points not to the next TRB to be evaluated (as we
+  //                usually expect), but the current TRB already evaluated.
   // Returns the next TRB pointed to by ERDP.
   Control AdvanceErdp();
   // USB 3.0 device attach
@@ -145,9 +147,15 @@ class EventRing {
   std::variant<bool, std::unique_ptr<TRBContext>> StallWorkaroundForDefectiveHubs(
       std::unique_ptr<TRBContext> context);
 
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_
-      __TA_GUARDED(segment_mutex_);
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>>::iterator buffers_it_
+  struct SegmentBuf : fbl::DoublyLinkedListable<std::unique_ptr<SegmentBuf>> {
+    SegmentBuf(std::unique_ptr<dma_buffer::ContiguousBuffer> b, bool n)
+        : buf(std::move(b)), new_segment(n) {}
+
+    std::unique_ptr<dma_buffer::ContiguousBuffer> buf;
+    bool new_segment;
+  };
+  fbl::DoublyLinkedList<std::unique_ptr<SegmentBuf>> buffers_ __TA_GUARDED(segment_mutex_);
+  fbl::DoublyLinkedList<std::unique_ptr<SegmentBuf>>::iterator buffers_it_
       __TA_GUARDED(segment_mutex_);
 
   // Virtual address of the event ring dequeue pointer
@@ -178,7 +186,6 @@ class EventRing {
   // Interrupt management register
   IMAN iman_reg_;
   uint8_t segment_index_ __TA_GUARDED(segment_mutex_) = 0;
-  bool new_segment_ __TA_GUARDED(segment_mutex_) = false;
   UsbXhci* hci_;
   uint8_t cap_length_;
   HCSPARAMS1 hcs_params_1_;
