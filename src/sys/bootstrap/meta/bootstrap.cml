@@ -537,7 +537,7 @@
                 "bin",
                 "blob",
                 "install",
-                "minfs",
+                "minfs-not-delayed",
                 "pkgfs",
                 "system",
                 "system-delayed",
@@ -875,7 +875,7 @@
         // -- End Archivist offers --
         {
             directory: [
-                "minfs-delayed",
+                "minfs",
                 "pkgfs-packages-delayed",
             ],
             from: "#fshost",

@@ -61,7 +61,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Minfs should be automatically mounted.
-  auto [fd, fs_type] = WaitForMount("minfs");
+  auto [fd, fs_type] = WaitForMount("minfs-not-delayed");
   EXPECT_TRUE(fd);
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 
@@ -139,7 +139,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Minfs should be automatically mounted.
-  auto [fd, fs_type] = WaitForMount("minfs");
+  auto [fd, fs_type] = WaitForMount("minfs-not-delayed");
   EXPECT_TRUE(fd);
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 

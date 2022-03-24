@@ -31,16 +31,13 @@
             path: "/fs/bin",
         },
         {
-            directory: "minfs",
+            directory: "minfs-not-delayed",
             rights: [ "rw*" ],
             path: "/fs/data",
         },
         {
-            directory: "minfs-delayed",
-            rights: [
-                "enumerate",
-                "traverse",
-            ],
+            directory: "minfs",
+            rights: [ "rw*" ],
             path: "/delayed/fs/data",
         },
         {
@@ -142,7 +139,7 @@
             from: "self",
         },
         {
-            directory: "minfs-delayed",
+            directory: "minfs-not-delayed",
             from: "self",
         },
         {

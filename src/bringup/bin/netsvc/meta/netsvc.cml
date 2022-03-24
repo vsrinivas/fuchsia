@@ -37,7 +37,11 @@
             path: "/blob",
         },
         {
-            directory: "minfs",
+            // netsvc adds all of its namespace entries to the netruncmd shell's namespace.
+            // The "not-delayed" versions of the directories are used
+            // so that e.g. running `ls /data` before minfs starts serving (or in cases where minfs
+            // will never start serving) does not hang the shell.
+            directory: "minfs-not-delayed",
             rights: [ "rw*" ],
             path: "/data",
         },

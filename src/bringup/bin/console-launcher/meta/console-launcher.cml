@@ -28,7 +28,11 @@
             path: "/blob",
         },
         {
-            directory: "minfs",
+            // console-launcher adds all of its namespace entries (except for system-delayed)
+            // to the shell's namespace. The "not-delayed" versions of the directories are used
+            // so that e.g. running `ls /data` before minfs starts serving (or in cases where minfs
+            // will never start serving) does not hang the shell.
+            directory: "minfs-not-delayed",
             rights: [ "rw*" ],
             path: "/data",
         },

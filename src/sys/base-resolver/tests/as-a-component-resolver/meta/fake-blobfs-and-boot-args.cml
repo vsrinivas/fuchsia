@@ -21,9 +21,9 @@
             path: "/blob",
         },
         {
-            directory: "minfs-delayed",
+            directory: "minfs",
             rights: [ "r*" ],
-            path: "/minfs-delayed",
+            path: "/minfs",
         },
     ],
     use: [
@@ -49,7 +49,7 @@
             from: "self",
         },
         {
-            directory: "minfs-delayed",
+            directory: "minfs",
             from: "self",
         },
     ],

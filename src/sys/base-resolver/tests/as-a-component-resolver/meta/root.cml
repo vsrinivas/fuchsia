@@ -38,7 +38,7 @@
             to: "#base_resolver",
         },
         {
-            directory: "minfs-delayed",
+            directory: "minfs",
             from: "#fake_blobfs_and_boot_args",
             to: "#base_resolver",
         },

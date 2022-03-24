@@ -32,7 +32,7 @@ pub async fn serve(stream: ComponentResolverRequestStream) -> anyhow::Result<()>
 }
 
 async fn wait_for_minfs() -> anyhow::Result<()> {
-    let minfs = io_util::directory::open_in_namespace("/minfs-delayed", fio::OPEN_RIGHT_READABLE)
+    let minfs = io_util::directory::open_in_namespace("/minfs", fio::OPEN_RIGHT_READABLE)
         .context("opening minfs")?;
     // Opening from namespace doesn't require the directory itself to respond to requests, so
     // re-open and wait for the OnDescribe event.

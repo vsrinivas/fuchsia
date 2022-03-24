@@ -60,7 +60,7 @@ async fn main() {
         },
         "blob" =>
             vfs::remote::remote_dir(blobfs.root_dir_proxy().expect("get blobfs root dir")),
-        "minfs-delayed" => vfs::pseudo_directory! {},
+        "minfs" => vfs::pseudo_directory! {},
     };
 
     let scope = vfs::execution_scope::ExecutionScope::new();

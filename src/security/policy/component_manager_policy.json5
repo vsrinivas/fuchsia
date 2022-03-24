@@ -246,9 +246,8 @@
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap",
-                    "/bootstrap/console-launcher",
+                    "/bootstrap/base_resolver",
                     "/bootstrap/fshost",
-                    "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
                     "/core/minfs",
@@ -258,11 +257,12 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
-                source_name: "minfs-delayed",
+                source_name: "minfs-not-delayed",
                 capability: "directory",
                 target_monikers: [
-                    "/bootstrap/base_resolver",
+                    "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
+                    "/bootstrap/netsvc",
                 ],
             },
             {

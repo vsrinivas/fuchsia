@@ -76,7 +76,7 @@ impl TestEnvBuilder {
                     let minfs_clone = minfs.clone();
                     let out_dir = vfs::pseudo_directory! {
                         "blob" => blobfs_clone,
-                        "minfs-delayed" => minfs_clone,
+                        "minfs" => minfs_clone,
                         "svc" => vfs::pseudo_directory! {
                             "fuchsia.boot.Arguments" =>
                                 vfs::service::host(move |stream|
@@ -113,9 +113,7 @@ impl TestEnvBuilder {
                             .rights(fio::RX_STAR_DIR),
                     )
                     .capability(
-                        Capability::directory("minfs-delayed")
-                            .path("/minfs-delayed")
-                            .rights(fio::R_STAR_DIR),
+                        Capability::directory("minfs").path("/minfs").rights(fio::R_STAR_DIR),
                     )
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .from(&local_mocks)

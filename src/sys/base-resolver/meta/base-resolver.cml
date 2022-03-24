@@ -21,12 +21,12 @@
             path: "/pkgfs/packages",
         },
         {
-            directory: "minfs-delayed",
+            directory: "minfs",
             rights: [
                 "enumerate",
                 "traverse",
             ],
-            path: "/minfs-delayed",
+            path: "/minfs",
         },
     ],
     expose: [

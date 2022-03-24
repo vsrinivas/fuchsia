@@ -186,6 +186,36 @@
                 },
                 {
                     using_node: "/bootstrap",
+                    capability: "minfs-not-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "minfs-not-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `minfs-not-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
                     capability: "pkgfs",
                     error: {
                         error: {
@@ -396,7 +426,7 @@
                 },
                 {
                     using_node: "/bootstrap/netsvc",
-                    capability: "minfs",
+                    capability: "minfs-not-delayed",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -416,12 +446,12 @@
                                                 },
                                             ],
                                         },
-                                        capability_id: "minfs",
+                                        capability_id: "minfs-not-delayed",
                                     },
                                 },
                             },
                         },
-                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs`, but no matching `expose` declaration was found in the child",
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs-not-delayed`, but no matching `expose` declaration was found in the child",
                     },
                 },
                 {
@@ -576,7 +606,7 @@
                 },
                 {
                     using_node: "/bootstrap/console-launcher",
-                    capability: "minfs",
+                    capability: "minfs-not-delayed",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -596,12 +626,12 @@
                                                 },
                                             ],
                                         },
-                                        capability_id: "minfs",
+                                        capability_id: "minfs-not-delayed",
                                     },
                                 },
                             },
                         },
-                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs`, but no matching `expose` declaration was found in the child",
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs-not-delayed`, but no matching `expose` declaration was found in the child",
                     },
                 },
                 {
