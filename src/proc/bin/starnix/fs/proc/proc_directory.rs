@@ -7,8 +7,8 @@ use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
-use maplit::hashmap;
-use std::collections::HashMap;
+use maplit::btreemap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::Weak;
 
@@ -24,27 +24,27 @@ pub struct ProcDirectory {
     kernel: Weak<Kernel>,
 
     /// A map that stores all the nodes that aren't task directories.
-    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
+    nodes: BTreeMap<&'static FsStr, FsNodeHandle>,
 }
 
 impl ProcDirectory {
     /// Returns a new `ProcDirectory` exposing information about `kernel`.
-    pub fn new(fs: &FileSystemHandle, kernel: Weak<Kernel>) -> ProcDirectory {
-        let nodes = Arc::new(hashmap! {
-            b"cmdline".to_vec() => {
+    pub fn new(fs: &FileSystemHandle, kernel: Weak<Kernel>) -> Arc<ProcDirectory> {
+        let nodes = btreemap! {
+            &b"cmdline"[..] => {
                 let cmdline = kernel.upgrade().unwrap().cmdline.clone();
                 fs.create_node_with_ops(ByteVecFile::new(cmdline), mode!(IFREG, 0o444))
             },
-            b"self".to_vec() => SelfSymlink::new(fs),
-        });
+            &b"self"[..] => SelfSymlink::new(fs),
+        };
 
-        ProcDirectory { kernel, nodes }
+        Arc::new(ProcDirectory { kernel, nodes })
     }
 }
 
-impl FsNodeOps for ProcDirectory {
+impl FsNodeOps for Arc<ProcDirectory> {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DirectoryFileOps::new(self.nodes.clone())))
+        Ok(Box::new(self.clone()))
     }
 
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
@@ -54,10 +54,7 @@ impl FsNodeOps for ProcDirectory {
                 let pid_string = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
                 let pid = pid_string.parse::<pid_t>().map_err(|_| errno!(ENOENT))?;
                 if let Some(task) = self.kernel.upgrade().unwrap().pids.read().get_task(pid) {
-                    Ok(node.fs().create_node_with_ops(
-                        PidDirectory::new(&node.fs(), task),
-                        FileMode::IFDIR | FileMode::ALLOW_ALL,
-                    ))
+                    Ok(pid_directory(&node.fs(), task))
                 } else {
                     error!(ENOENT)
                 }
@@ -66,21 +63,7 @@ impl FsNodeOps for ProcDirectory {
     }
 }
 
-/// `ProcDirectoryOps` implements `FileOps` for the `ProcDirectory`.
-///
-/// This involves responding to, for example, `readdir` requests by listing a directory for each
-/// currently running task in `self.kernel`.
-struct DirectoryFileOps {
-    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
-}
-
-impl DirectoryFileOps {
-    fn new(nodes: Arc<HashMap<FsString, FsNodeHandle>>) -> DirectoryFileOps {
-        DirectoryFileOps { nodes }
-    }
-}
-
-impl FileOps for DirectoryFileOps {
+impl FileOps for Arc<ProcDirectory> {
     fileops_impl_directory!();
 
     fn seek(
@@ -102,28 +85,20 @@ impl FileOps for DirectoryFileOps {
         let mut offset = file.offset.lock();
         emit_dotdot(file, sink, &mut offset)?;
 
-        // Subtract 2 from the offset, to account for `.` and `..`.
-        let node_offset = (*offset - 2) as usize;
-        let num_nodes = self.nodes.len();
-        if node_offset < num_nodes {
-            // Sort the keys of the nodes, to keep the traversal order consistent.
-            let mut items: Vec<_> = self.nodes.iter().collect();
-            items.sort_unstable_by(|(name1, _), (name2, _)| name1.cmp(name2));
-            // Iterate through all the named entries (i.e., non "task directories") and add them to
-            // the sink.
-            for (name, node) in items {
-                sink.add(
-                    node.inode_num,
-                    *offset,
-                    DirectoryEntryType::from_mode(node.info().mode),
-                    &name,
-                )?;
-                *offset = *offset + 1;
-            }
+        // Iterate through all the named entries (i.e., non "task directories") and add them to
+        // the sink. Subtract 2 from the offset, to account for `.` and `..`.
+        for (name, node) in self.nodes.iter().skip((*offset - 2) as usize) {
+            sink.add(
+                node.inode_num,
+                *offset,
+                DirectoryEntryType::from_mode(node.info().mode),
+                &name,
+            )?;
+            *offset = *offset + 1;
         }
 
         // Add 2 to the number of non-"task directories", to account for `.` and `..`.
-        let pid_offset = (num_nodes + 2) as i32;
+        let pid_offset = (self.nodes.len() + 2) as i32;
 
         // Adjust the offset to account for the other nodes in the directory.
         let adjusted_offset = (*offset - pid_offset as i64) as usize;
@@ -164,6 +139,6 @@ impl FsNodeOps for SelfSymlink {
     fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
-        Ok(SymlinkTarget::Path(format!("{}", current_task.id).as_bytes().to_vec()))
+        Ok(SymlinkTarget::Path(format!("{}", current_task.get_pid()).as_bytes().to_vec()))
     }
 }

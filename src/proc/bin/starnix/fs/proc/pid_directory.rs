@@ -4,236 +4,78 @@
 
 use std::sync::Arc;
 
-use crate::fs::*;
+use crate::fs::{proc::directory::*, *};
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task};
 use crate::types::*;
 
-use maplit::hashmap;
 use parking_lot::Mutex;
-use std::collections::HashMap;
 
-/// The `PidDirectory` implements the `FsNodeOps` for the `proc/<pid>` directory.
-pub struct PidDirectory {
-    /// A map that stores lazy initializers for all the entries in the directory.
-    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
+/// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
+pub fn pid_directory(fs: &FileSystemHandle, task: Arc<Task>) -> Arc<FsNode> {
+    StaticDirectoryBuilder::new(fs)
+        .add_node_entry(b"exe", ExeSymlink::new(fs, task.clone()))
+        .add_node_entry(b"fd", dynamic_directory(fs, FdDirectory { task: task.clone() }))
+        .add_node_entry(b"fdinfo", dynamic_directory(fs, FdInfoDirectory { task: task.clone() }))
+        .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
+        .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
+        .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
+        .build()
 }
 
-impl PidDirectory {
-    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> PidDirectory {
-        let nodes = Arc::new(hashmap! {
-            b"exe".to_vec() => ExeSymlink::new(fs, task.clone()),
-            b"fd".to_vec() => FdDirectory::new(fs, task.clone()),
-            b"fdinfo".to_vec() => FdInfoDirectory::new(fs, task.clone()),
-            b"maps".to_vec() => ProcMapsFile::new(fs, task.clone()),
-            b"stat".to_vec() => ProcStatFile::new(fs, task.clone()),
-            b"cmdline".to_vec() => CmdlineFile::new(fs, task.clone()),
-        });
-
-        PidDirectory { nodes }
-    }
-}
-
-impl FsNodeOps for PidDirectory {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(PidDirectoryFileOps::new(self.nodes.clone())))
-    }
-
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let node = self.nodes.get(name).ok_or(errno!(ENOENT))?;
-        Ok(node.clone())
-    }
-}
-
-/// `PidDirectoryFileOps` implements file operations for the `/proc/<pid>` directory.
-struct PidDirectoryFileOps {
-    /// The nodes that exist in the associated `PidDirectory`.
-    nodes: Arc<HashMap<FsString, FsNodeHandle>>,
-}
-
-impl PidDirectoryFileOps {
-    fn new(nodes: Arc<HashMap<FsString, FsNodeHandle>>) -> PidDirectoryFileOps {
-        PidDirectoryFileOps { nodes }
-    }
-}
-
-impl FileOps for PidDirectoryFileOps {
-    fileops_impl_directory!();
-
-    fn seek(
-        &self,
-        file: &FileObject,
-        _current_task: &CurrentTask,
-        offset: off_t,
-        whence: SeekOrigin,
-    ) -> Result<off_t, Errno> {
-        file.unbounded_seek(offset, whence)
-    }
-
-    fn readdir(
-        &self,
-        file: &FileObject,
-        _current_task: &CurrentTask,
-        sink: &mut dyn DirentSink,
-    ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        if *offset == 0 {
-            sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
-            *offset += 1;
-        }
-        if *offset == 1 {
-            sink.add(
-                file.name.entry.parent_or_self().node.inode_num,
-                2,
-                DirectoryEntryType::DIR,
-                b"..",
-            )?;
-            *offset += 1;
-        }
-
-        // Subtract 2 from the offset, to account for `.` and `..`.
-        let node_offset = (*offset - 2) as usize;
-        let num_nodes = self.nodes.len();
-        if node_offset < num_nodes {
-            // Sort the keys of the nodes, to keep the traversal order consistent.
-            let mut items: Vec<_> = self.nodes.iter().collect();
-            items.sort_unstable_by(|(name1, _), (name2, _)| name1.cmp(name2));
-            // Iterate through all the named entries (i.e., non "task directories") and add them to
-            // the sink.
-            for (name, node) in items {
-                sink.add(
-                    node.inode_num,
-                    *offset,
-                    DirectoryEntryType::from_mode(node.info().mode),
-                    &name,
-                )?;
-                *offset = *offset + 1;
-            }
-        }
-        Ok(())
-    }
-}
-
-fn parse_fd(name: &FsStr) -> Result<FdNumber, Errno> {
-    let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
-    let num = name.parse::<i32>().map_err(|_| errno!(ENOENT))?;
-    Ok(FdNumber::from_raw(num))
-}
-
-/// `FdDirectory` implements the `FsNodeOps` for a `proc/<pid>/fd` directory.
-pub struct FdDirectory {
-    /// The task from which the `FdDirectory` fetches file descriptors.
-    task: Arc<Task>,
-}
-
-impl FdDirectory {
-    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        fs.create_node_with_ops(FdDirectory { task }, FileMode::IFDIR | FileMode::ALLOW_ALL)
-    }
-}
-
-impl FsNodeOps for FdDirectory {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(FdDirectoryFileOps::new(self.task.clone())))
-    }
-
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let fd = parse_fd(name)?;
-        // Make sure that the file descriptor exists before creating the node.
-        if let Ok(_) = self.task.files.get(fd) {
-            Ok(node.fs().create_node(FdSymlink::new(self.task.clone(), fd), FdSymlink::file_mode()))
-        } else {
-            error!(ENOENT)
-        }
-    }
-}
-
-/// `FdInfoDirectory` implements the `FsNodeOps` for a `proc/<pid>/fdinfo` directory.
-pub struct FdInfoDirectory {
-    /// The task from which the `FdDirectory` fetches file descriptors.
-    task: Arc<Task>,
-}
-
-impl FdInfoDirectory {
-    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        fs.create_node_with_ops(FdInfoDirectory { task }, FileMode::IFDIR | FileMode::ALLOW_ALL)
-    }
-}
-
-impl FsNodeOps for FdInfoDirectory {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(FdDirectoryFileOps::new(self.task.clone())))
-    }
-
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let fd = parse_fd(name)?;
-
-        if let Ok(file) = self.task.files.get(fd) {
-            let pos = *file.offset.lock();
-            let flags = file.flags();
-            let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
-            Ok(node.fs().create_node(Box::new(ByteVecFile::new(data)), mode!(IFREG, 0o444)))
-        } else {
-            error!(ENOENT)
-        }
-    }
-}
-
-/// `FdDirectoryFileOps` implements `FileOps` for the `proc/<pid>/fd` and
-/// `proc/<pid>/fdinfo` directories.
+/// `FdDirectory` implements the directory listing operations for a `proc/<pid>/fd` directory.
 ///
 /// Reading the directory returns a list of all the currently open file descriptors for the
 /// associated task.
-struct FdDirectoryFileOps {
-    /// The task that is used to populate the list of open file descriptors.
+struct FdDirectory {
     task: Arc<Task>,
 }
 
-impl FdDirectoryFileOps {
-    fn new(task: Arc<Task>) -> FdDirectoryFileOps {
-        FdDirectoryFileOps { task }
+impl DirectoryDelegate for FdDirectory {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
+    }
+
+    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
+        // Make sure that the file descriptor exists before creating the node.
+        let _ = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
+        Ok(fs.create_node(FdSymlink::new(self.task.clone(), fd), FdSymlink::file_mode()))
     }
 }
 
-impl FileOps for FdDirectoryFileOps {
-    fileops_impl_directory!();
+/// `FdInfoDirectory` implements the directory listing operations for a `proc/<pid>/fdinfo`
+/// directory.
+///
+/// Reading the directory returns a list of all the currently open file descriptors for the
+/// associated task.
+struct FdInfoDirectory {
+    task: Arc<Task>,
+}
 
-    fn seek(
-        &self,
-        file: &FileObject,
-        _current_task: &CurrentTask,
-        offset: off_t,
-        whence: SeekOrigin,
-    ) -> Result<off_t, Errno> {
-        file.unbounded_seek(offset, whence)
+impl DirectoryDelegate for FdInfoDirectory {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
     }
 
-    fn readdir(
-        &self,
-        file: &FileObject,
-        _current_task: &CurrentTask,
-        sink: &mut dyn DirentSink,
-    ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
-
-        let mut fds = self.task.files.get_all_fds();
-        fds.sort();
-
-        for fd in fds {
-            if (fd.raw() as i64) >= *offset - 2 {
-                let new_offset = *offset + 1;
-                sink.add(
-                    file.fs.next_inode_num(),
-                    new_offset,
-                    DirectoryEntryType::DIR,
-                    format!("{}", fd.raw()).as_bytes(),
-                )?;
-                *offset = new_offset;
-            }
-        }
-        Ok(())
+    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
+        let file = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
+        let pos = *file.offset.lock();
+        let flags = file.flags();
+        let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
+        Ok(fs.create_node_with_ops(ByteVecFile::new(data), mode!(IFREG, 0o444)))
     }
+}
+
+fn fds_to_directory_entries(fds: Vec<FdNumber>) -> Vec<DynamicDirectoryEntry> {
+    fds.into_iter()
+        .map(|fd| DynamicDirectoryEntry {
+            entry_type: DirectoryEntryType::DIR,
+            name: fd.raw().to_string().into_bytes(),
+            inode: None,
+        })
+        .collect()
 }
 
 /// An `ExeSymlink` points to the `executable_node` (the node that contains the task's binary) of

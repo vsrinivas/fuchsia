@@ -10,7 +10,7 @@ use crate::mm::vmo::round_up_to_increment;
 use crate::task::*;
 use crate::types::*;
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
 pub struct DirectoryEntryType(u8);
 
 // These values are defined in libc.

@@ -144,6 +144,7 @@ if (target_cpu == "x64") {
       "fs/null_file.rs",
       "fs/path.rs",
       "fs/pipe.rs",
+      "fs/proc/directory.rs",
       "fs/proc/fs.rs",
       "fs/proc/mod.rs",
       "fs/proc/pid_directory.rs",
