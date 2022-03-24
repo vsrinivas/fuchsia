@@ -2321,7 +2321,7 @@ async fn route_service_from_parent_collection() {
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::Collection("coll".to_string()),
                     source_name: "foo".into(),
-
+                    source_instance_filter: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("b".to_string()),
                 }))
@@ -2374,6 +2374,7 @@ async fn list_service_instances_from_collection() {
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::Collection("coll".to_string()),
                     source_name: "foo".into(),
+                    source_instance_filter: None,
                     target_name: "foo".into(),
                     target: OfferTarget::static_child("client".to_string()),
                 }))
@@ -2492,6 +2493,7 @@ async fn use_service_from_sibling_collection() {
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::static_child("c".to_string()),
                     source_name: "my.service.Service".into(),
+                    source_instance_filter: None,
                     target: OfferTarget::static_child("b".to_string()),
                     target_name: "my.service.Service".into(),
                 }))

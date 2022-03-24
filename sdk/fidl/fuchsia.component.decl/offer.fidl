@@ -51,6 +51,12 @@ type OfferService = table {
 
     /// The name under which the capability is being offered.
     4: target_name name;
+
+    /// The list of allow listed instances to be offered. Instances of the service
+    /// not in this list will not be accessible by the target component.
+    /// If this is not set that means all instances from the source service are 
+    /// offered.
+    5: source_instance_filter vector<string:MAX_NAME_LENGTH>:MAX;
 };
 
 /// Declares a protocol offered by a component to one of its children,

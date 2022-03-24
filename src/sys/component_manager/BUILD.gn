@@ -86,6 +86,7 @@ template("component_manager") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
   ]

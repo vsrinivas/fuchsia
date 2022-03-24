@@ -1276,6 +1276,7 @@ fn create_offer_decl(
                 source_name,
                 target,
                 target_name,
+                source_instance_filter: None,
             })
         }
         ftest::Capability2::Event(event) => {
@@ -2905,6 +2906,7 @@ mod tests {
                         source_name: "fuchsia.examples.Whale".into(),
                         target: cm_rust::OfferTarget::static_child("a".to_string()),
                         target_name: "fuchsia.examples.Orca".into(),
+                        source_instance_filter: None,
                     }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                         source: cm_rust::OfferSource::static_child("a".to_string()),

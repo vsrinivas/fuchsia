@@ -344,6 +344,7 @@ pub struct OfferServiceDecl {
     pub source_name: CapabilityName,
     pub target: OfferTarget,
     pub target_name: CapabilityName,
+    pub source_instance_filter: Option<Vec<String>>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -2573,12 +2574,14 @@ mod tests {
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
                                     source_name: "netstack1".try_into().unwrap(),
+                                    source_instance_filter: None,
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
                                     source_name: "netstack2".try_into().unwrap(),
+                                    source_instance_filter: None,
                             target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),

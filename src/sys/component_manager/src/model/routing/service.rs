@@ -20,13 +20,18 @@ use {
     cm_util::channel,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    log::*,
+    log::warn,
+    tracing::error,
     moniker::AbsoluteMoniker,
-    std::{path::PathBuf, sync::Arc},
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
     vfs::{
+        common::send_on_open_with_error,
         directory::{
+            connection::io1::DerivedConnection,
             dirents_sink,
             entry::{DirectoryEntry, EntryInfo},
+            entry_container::{Directory, DirectoryWatcher},
+            immutable::connection::io1::ImmutableConnection,
             immutable::lazy,
             traversal_position::TraversalPosition,
         },
@@ -34,6 +39,214 @@ use {
     },
 };
 
+/// Provides a Service capability where the target component only has access to a subset of the
+/// Service instances exposed by the source component.
+pub struct FilteredServiceProvider {
+    /// Execution scope for requests to `dir`. This is the same scope
+    /// as the one in `collection_component`'s resolved state.
+    execution_scope: ExecutionScope,
+
+    /// Set of service instance names that are available to the target component.
+    source_instance_filter: HashSet<String>,
+
+    /// The underlying un-filtered service capability provider.
+    source_service_provider: Box<dyn CapabilityProvider>,
+}
+
+impl FilteredServiceProvider {
+    #[cfg(test)]
+    pub async fn new(
+        source_component: &Arc<ComponentInstance>,
+        source_instances: Vec<String>,
+        source_service_provider: Box<dyn CapabilityProvider>,
+    ) -> Result<Self, ModelError> {
+        let execution_scope =
+            source_component.lock_resolved_state().await?.execution_scope().clone();
+        Ok(FilteredServiceProvider {
+            execution_scope,
+            source_instance_filter: source_instances.into_iter().collect(),
+            source_service_provider,
+        })
+    }
+}
+
+/// The virtual directory implementation used by the FilteredServiceProvider to host the
+/// filtered set of service instances available to the target component.
+pub struct FilteredServiceDirectory {
+    source_instance_filter: HashSet<String>,
+    source_dir_proxy: fio::DirectoryProxy,
+}
+
+impl FilteredServiceDirectory {
+    /// Returns true if the requested path matches an allowed instance.
+    pub fn path_matches_allowed_instance(self: &Self, path: &String) -> bool {
+        self.source_instance_filter.is_empty() || self.source_instance_filter.contains(path)
+    }
+}
+
+#[async_trait]
+impl DirectoryEntry for FilteredServiceDirectory {
+    fn open(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        flags: u32,
+        mode: u32,
+        path: vfs::path::Path,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) {
+        let path_string = path.clone().into_string();
+        if self.path_matches_allowed_instance(&path_string) {
+            if let Err(e) = self.source_dir_proxy.open(flags, mode, &path_string, server_end) {
+                error!(
+                    error = %e,
+                    path = %path_string,
+                    "Error opening instance in FilteredServiceDirectory"
+                );
+            }
+            return;
+        } else if path.is_empty() {
+            // Otherwise just connect to itself as a directory.
+            ImmutableConnection::create_connection(scope, self, flags, server_end);
+        } else {
+            send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND);
+        }
+    }
+
+    fn entry_info(&self) -> EntryInfo {
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
+    }
+}
+
+#[async_trait]
+impl Directory for FilteredServiceDirectory {
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
+        mut sink: Box<dyn dirents_sink::Sink>,
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), zx::Status> {
+        let next_entry = match pos {
+            TraversalPosition::End => {
+                // Bail out early when there is no work to do.
+                // This method is always called at least once with TraversalPosition::End.
+                return Ok((TraversalPosition::End, sink.seal()));
+            }
+            TraversalPosition::Start => None,
+            TraversalPosition::Name(entry) => Some(entry),
+            TraversalPosition::Index(_) => panic!("TraversalPosition::Index is never used"),
+        };
+        match files_async::readdir(&self.source_dir_proxy).await {
+            Ok(dirent_vec) => {
+                for dirent in dirent_vec {
+                    let entry_name = dirent.name;
+                    // Only reveal allowed source instances,
+                    if !self.path_matches_allowed_instance(&entry_name.clone()) {
+                        continue;
+                    }
+                    if let Some(next_entry_name) = next_entry {
+                        if &entry_name < next_entry_name {
+                            continue;
+                        }
+                    }
+                    sink = match sink.append(
+                        &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
+                        &entry_name,
+                    ) {
+                        dirents_sink::AppendResult::Ok(sink) => sink,
+                        dirents_sink::AppendResult::Sealed(sealed) => {
+                            // There is not enough space to return this entry. Record it as the next
+                            // entry to start at for subsequent calls.
+                            return Ok((TraversalPosition::Name(entry_name), sealed));
+                        }
+                    }
+                }
+            }
+            Err(_) => return Err(zx::Status::INTERNAL),
+        }
+        return Ok((TraversalPosition::End, sink.seal()));
+    }
+
+    fn register_watcher(
+        self: Arc<Self>,
+        _scope: ExecutionScope,
+        _mask: fio::WatchMask,
+        _channel: DirectoryWatcher,
+    ) -> Result<(), zx::Status> {
+        // TODO(fxb/96023) implement watcher behavior.
+        Err(zx::Status::NOT_SUPPORTED)
+    }
+
+    fn unregister_watcher(self: Arc<Self>, _key: usize) {
+        // TODO(fxb/96023) implement watcher behavior.
+    }
+
+    /// Get this directory's attributes.
+    /// The "mode" field will be filled in by the connection.
+    async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
+        Ok(fio::NodeAttributes {
+            mode: fio::MODE_TYPE_DIRECTORY,
+            id: fio::INO_UNKNOWN,
+            content_size: 0,
+            storage_size: 0,
+            link_count: 1,
+            creation_time: 0,
+            modification_time: 0,
+        })
+    }
+
+    /// Called when the directory is closed.
+    fn close(&self) -> Result<(), zx::Status> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for FilteredServiceProvider {
+    async fn open(
+        mut self: Box<Self>,
+        task_scope: TaskScope,
+        flags: u32,
+        open_mode: u32,
+        relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<(), ModelError> {
+        let relative_path_utf8 = relative_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
+        let relative_path_vfs = if relative_path_utf8.is_empty() {
+            vfs::path::Path::dot()
+        } else {
+            vfs::path::Path::validate_and_split(relative_path_utf8)
+                .map_err(|_| ModelError::path_invalid(relative_path_utf8))?
+        };
+
+        // create a remote directory referring to the unfiltered source service directory.
+        let (source_service_proxy, source_service_server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                .map_err(|e| ModelError::stream_creation_error(e))?;
+        self.source_service_provider
+            .open(
+                task_scope,
+                flags,
+                open_mode,
+                relative_path,
+                &mut (source_service_server_end.into_channel()),
+            )
+            .await?;
+
+        Arc::new(FilteredServiceDirectory {
+            source_instance_filter: self.source_instance_filter,
+            source_dir_proxy: source_service_proxy,
+        })
+        .open(
+            self.execution_scope.clone(),
+            flags,
+            open_mode,
+            relative_path_vfs,
+            ServerEnd::new(channel::take_channel(server_end)),
+        );
+        Ok(())
+    }
+}
 /// Serves a Service directory that allows clients to list instances in a collection
 /// and to open instances.
 ///
@@ -322,6 +535,8 @@ mod tests {
         crate::{
             capability::CapabilitySource, model::testing::routing_test_helpers::RoutingTestBuilder,
         },
+        futures::StreamExt,
+        assert_matches::assert_matches,
         ::routing::{
             capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
             error::RoutingError,
@@ -367,6 +582,42 @@ mod tests {
 
         fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<ComponentInstance>> {
             Box::new(self.clone())
+        }
+    }
+
+    struct DirectoryEntryCapabilityProvider {
+        execution_scope: ExecutionScope,
+        // directory holding the service instances
+        dir_entry: Arc<dyn DirectoryEntry>,
+    }
+
+    #[async_trait]
+    impl CapabilityProvider for DirectoryEntryCapabilityProvider {
+        async fn open(
+            self: Box<Self>,
+            _task_scope: TaskScope,
+            flags: u32,
+            open_mode: u32,
+            relative_path: PathBuf,
+            server_end: &mut zx::Channel,
+        ) -> Result<(), ModelError> {
+            let relative_path_utf8 = relative_path
+                .to_str()
+                .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
+            let relative_path = if relative_path_utf8.is_empty() {
+                vfs::path::Path::dot()
+            } else {
+                vfs::path::Path::validate_and_split(relative_path_utf8)
+                    .map_err(|_| ModelError::path_invalid(relative_path_utf8))?
+            };
+            self.dir_entry.open(
+                self.execution_scope.clone(),
+                flags,
+                open_mode,
+                relative_path,
+                ServerEnd::new(channel::take_channel(server_end)),
+            );
+            Ok(())
         }
     }
 
@@ -627,5 +878,163 @@ mod tests {
         let entries = files_async::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "foo,default");
+    }
+
+    #[fuchsia::test]
+    async fn test_filtered_service() {
+        let components = create_test_component_decls();
+
+        let mock_instance_foo = pseudo_directory! {
+            "default" => pseudo_directory! {},
+            "one" => pseudo_directory! {},
+            "two" => pseudo_directory! {},
+        };
+
+        let test = RoutingTestBuilder::new("root", components)
+            .add_outgoing_path(
+                "foo",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance_foo.clone(),
+            )
+            .build()
+            .await;
+
+        test.create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDeclBuilder::new_lazy_child("foo"),
+        )
+        .await;
+        let foo_component = test
+            .model
+            .look_up(&vec!["coll:foo"].into())
+            .await
+            .expect("failed to find foo instance");
+
+        let execution_scope = foo_component
+            .lock_resolved_state()
+            .await
+            .expect("failed to get execution scope")
+            .execution_scope()
+            .clone();
+        let source_provider = DirectoryEntryCapabilityProvider {
+            execution_scope,
+            dir_entry: mock_instance_foo.clone(),
+        };
+
+        let (service_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut server_end = server_end.into_channel();
+
+        let host = Box::new(
+            FilteredServiceProvider::new(
+                &test.model.root(),
+                vec!["default".to_string(), "two".to_string()],
+                Box::new(source_provider),
+            )
+            .await
+            .expect("failed to create FilteredServiceProvider"),
+        );
+        let task_scope = TaskScope::new();
+        host.open(
+            task_scope.clone(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            PathBuf::new(),
+            &mut server_end,
+        )
+        .await
+        .expect("failed to serve");
+
+        // Choose a value such that there is only room for a single entry.
+        const MAX_BYTES: u64 = 20;
+        // Make sure expected instances are found
+        for n in ["default", "two"] {
+            let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+            let entries = files_async::parse_dir_entries(&buf);
+            assert_eq!(entries.len(), 1);
+            assert_eq!(entries[0].as_ref().expect("complete entry").name, n);
+        }
+
+        // Confirm no more entries found after allow listed instances.
+        let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let entries = files_async::parse_dir_entries(&buf);
+        assert_eq!(entries.len(), 0);
+    }
+
+    #[fuchsia::test]
+    async fn test_filtered_service_error_cases() {
+        let components = create_test_component_decls();
+
+        let mock_instance_foo = pseudo_directory! {
+            "default" => pseudo_directory! {},
+            "one" => pseudo_directory! {},
+            "two" => pseudo_directory! {},
+        };
+
+        let test = RoutingTestBuilder::new("root", components)
+            .add_outgoing_path(
+                "foo",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance_foo.clone(),
+            )
+            .build()
+            .await;
+
+        test.create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDeclBuilder::new_lazy_child("foo"),
+        )
+        .await;
+        let foo_component = test
+            .model
+            .look_up(&vec!["coll:foo"].into())
+            .await
+            .expect("failed to find foo instance");
+
+        let execution_scope = foo_component
+            .lock_resolved_state()
+            .await
+            .expect("failed to get execution scope")
+            .execution_scope()
+            .clone();
+        let source_provider = DirectoryEntryCapabilityProvider {
+            execution_scope,
+            dir_entry: mock_instance_foo.clone(),
+        };
+
+        let (service_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut server_end = server_end.into_channel();
+
+        let host = Box::new(
+            FilteredServiceProvider::new(
+                &test.model.root(),
+                vec!["default".to_string(), "two".to_string()],
+                Box::new(source_provider),
+            )
+            .await
+            .expect("failed to create FilteredServiceProvider"),
+        );
+
+        let task_scope = TaskScope::new();
+        // expect that opening an instance that is filtered out 
+        let mut path_buf = PathBuf::new();
+        path_buf.push("one");
+        host.open(
+            task_scope.clone(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            path_buf,
+            &mut server_end,
+        )
+        .await.expect("failed to open path in filtered service directory.");
+        assert_matches!(
+            service_proxy.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_FOUND, .. })
+        );
     }
 }

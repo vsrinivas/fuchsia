@@ -181,6 +181,7 @@ table/member fuchsia.component.decl/OfferRunner.target fuchsia.component.decl/Re
 table/member fuchsia.component.decl/OfferRunner.target_name string:100
 table fuchsia.component.decl/OfferRunner
 table/member fuchsia.component.decl/OfferService.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferService.source_instance_filter vector<string:100>
 table/member fuchsia.component.decl/OfferService.source_name string:100
 table/member fuchsia.component.decl/OfferService.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferService.target_name string:100
