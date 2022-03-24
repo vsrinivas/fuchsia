@@ -33,7 +33,6 @@ rustc_library("core") {
 }
 
 fuchsia_unittest_package("dhcpv6-core-test") {
-  manifest = "meta/dhcpv6-core-test.cmx"
   deps = [ ":core_test" ]
 }
 
