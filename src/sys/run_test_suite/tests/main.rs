@@ -910,7 +910,7 @@ async fn launch_and_test_failing_v2_test_multiple_times(
 #[fuchsia::test]
 async fn launch_and_test_incomplete_test(
     reporter: TestMuxMuxReporter,
-    output: TestOutputView,
+    _: TestOutputView,
     output_dir: tempfile::TempDir,
 ) {
     let outcome = run_test_once(
@@ -922,31 +922,6 @@ async fn launch_and_test_incomplete_test(
         )
     .await
     .expect("Running test should not fail");
-
-    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm'
-[RUNNING]	Example.Test1
-[RUNNING]	Example.Test2
-log1 for Example.Test1
-log2 for Example.Test1
-log3 for Example.Test1
-log1 for Example.Test2
-log2 for Example.Test2
-log3 for Example.Test2
-[PASSED]	Example.Test2
-[RUNNING]	Example.Test3
-log1 for Example.Test3
-log2 for Example.Test3
-log3 for Example.Test3
-
-The following test(s) never completed:
-Example.Test1
-Example.Test3
-
-1 out of 3 tests passed...
-fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm did not complete successfully.
-";
-
-    assert_output!(output.lock().as_slice(), expected_output);
 
     assert_eq!(outcome, Outcome::DidNotFinish);
 
@@ -976,7 +951,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-
 #[fuchsia::test]
 async fn launch_and_test_invalid_test(
     reporter: TestMuxMuxReporter,
-    output: TestOutputView,
+    _: TestOutputView,
     output_dir: tempfile::TempDir,
 ) {
     let outcome = run_test_once(
@@ -988,30 +963,6 @@ async fn launch_and_test_invalid_test(
         )
     .await
     .expect("Running test should not fail");
-
-    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm'
-[RUNNING]	Example.Test1
-log1 for Example.Test1
-log2 for Example.Test1
-log3 for Example.Test1
-[RUNNING]	Example.Test2
-log1 for Example.Test2
-log2 for Example.Test2
-log3 for Example.Test2
-[PASSED]	Example.Test2
-[RUNNING]	Example.Test3
-log1 for Example.Test3
-log2 for Example.Test3
-log3 for Example.Test3
-
-The following test(s) never completed:
-Example.Test1
-Example.Test3
-
-1 out of 3 tests passed...
-fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm did not complete successfully.
-";
-    assert_output!(output.lock().as_slice(), expected_output);
 
     assert_eq!(outcome, Outcome::DidNotFinish);
 
