@@ -47,67 +47,58 @@ for i in range(2 * len(vars(ARGS))):
 
 class VerifyPlasaDiff(unittest.TestCase):
 
+    def create_default_plasa_differ(
+            self,
+            manifest,
+            kinds=['api_fidl', 'api_cpp'],
+            utils_dir=ARGS.utils_dir,
+            out_dir=ARGS.out_dir):
+        return PlasaDiffer(
+            before_manifest=manifest,
+            after_manifest=manifest,
+            kinds=kinds,
+            utils_dir=utils_dir,
+            out_dir=out_dir,
+        )
+
+    def create_plasa_fragment(self, root, path, kind, write_to_disk=False):
+        fragment = {
+            'file': '//out/default/currently/unused',
+            'kind': kind,
+            'dest': 'tot/path/currently/unused',
+            'path': path,
+        }
+        if write_to_disk:
+            with open(os.path.join(root, fragment['path']), 'w') as f:
+                f.write("summary")
+        return fragment
+
     def create_plasa_manifest(
             self,
-            tmp_dir,
-            root="",
+            root,
             name="plasa.manifest.json",
             num_fidl=0,
             num_cpp=0,
             create_fragments=True):
 
-        root = os.path.join(tmp_dir, 'cts/plasa')
-        (not os.path.exists(root)) and os.makedirs(root)
+        fragments = []
+        for i in range(num_fidl):
+            name = 'fidl.plasa.diff{}.test.api_summary.json'.format(i)
+            fragment = self.create_plasa_fragment(
+                root, name, 'api_fidl', create_fragments)
+            fragments.append(fragment)
 
-        fragment_root = os.path.join(root, 'fragments')
-        os.makedirs(fragment_root)
-        os.makedirs(os.path.join(fragment_root, "fidl"))
-        os.makedirs(os.path.join(fragment_root, "cpp"))
-
-        def create_fragments_helper(root, count, kind, create_fragments):
-            content = []
-            for i in range(count):
-                entry = {
-                    'file':
-                        '//out/default/currently/unused',
-                    'kind':
-                        kind,
-                    'path':
-                        'tot/path/currently/unused',
-                    'dest':
-                        '{}/plasa.diff{}.test.api_summary.json'.format(
-                            kind.replace('api_', ''), i),
-                }
-                content.append(entry)
-                if create_fragments:
-                    fragment_path = os.path.join(root, entry['dest'])
-                    with open(fragment_path, 'w') as f:
-                        f.write("summary")
-            return content
-
-        content = []
-        if (num_fidl > 0):
-            content.extend(
-                create_fragments_helper(
-                    fragment_root, num_fidl, 'api_fidl', create_fragments))
-        if (num_cpp > 0):
-            content.extend(
-                create_fragments_helper(
-                    fragment_root, num_cpp, 'api_cpp', create_fragments))
+        for i in range(num_cpp):
+            name = 'cpp.plasa.diff{}.test.api_summary.json'.format(i)
+            fragment = self.create_plasa_fragment(
+                root, name, 'api_cpp', create_fragments)
+            fragments.append(fragment)
 
         plasa_manifest = os.path.join(root, name)
         with open(plasa_manifest, 'w') as f:
-            json.dump(content, f)
+            json.dump(fragments, f)
 
-        return {
-            'before_manifest': plasa_manifest,
-            'before_fragments_root': fragment_root,
-            'after_manifest': plasa_manifest,
-            'after_fragments_root': fragment_root,
-            'kinds': ['api_fidl', 'api_cpp'],
-            'utils_dir': ARGS.utils_dir,
-            'out_dir': ARGS.out_dir
-        }
+        return plasa_manifest
 
     def test_init(self):
         """Verify we can initialize the PlasaDiffer class successfully.
@@ -115,80 +106,81 @@ class VerifyPlasaDiff(unittest.TestCase):
         kinds = ["api_fidl"]
 
         with TemporaryDirectory() as root_build_dir:
-            temp_files = self.create_plasa_manifest(root_build_dir)
-            args = list(temp_files.values())
+            manifest = self.create_plasa_manifest(root_build_dir)
             try:
-                pd = PlasaDiffer(**temp_files)
+                return PlasaDiffer(
+                    before_manifest=manifest,
+                    after_manifest=manifest,
+                    kinds=kinds,
+                    utils_dir=ARGS.utils_dir,
+                    out_dir=ARGS.out_dir,
+                )
             except Exception as e:
                 self.assertTrue(False, e)
 
             with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    "/does/not/exist", args[1], args[2], args[3], args[4],
-                    args[5], args[6])
+                return PlasaDiffer(
+                    before_manifest=manifest,
+                    after_manifest=manifest,
+                    kinds=None, # not allowed
+                    utils_dir=ARGS.utils_dir,
+                    out_dir=ARGS.out_dir,
+                )
+
             with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    args[0], "/does/not/exist", args[2], args[3], args[4],
-                    args[5], args[6])
-            with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    args[0], args[1], "/does/not/exist", args[3], args[4],
-                    args[5], args[6])
-            with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    args[0], args[1], args[2], "/does/not/exist", args[4],
-                    args[5], args[6])
-            with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    args[0], args[1], args[2], args[3], [], args[5], args[6])
-            with self.assertRaises(ValueError):
-                PlasaDiffer(
-                    args[0], args[1], args[2], args[3], args[4],
-                    "/does/not/exist", args[6])
+                return PlasaDiffer(
+                    before_manifest=manifest,
+                    after_manifest=manifest,
+                    kinds=None,
+                    utils_dir=ARGS.utils_dir,
+                    out_dir='/does/not/exist',  # not allowed
+                )
 
     def test_load_manifest(self):
         """Verify we can successfully load a PlaSA manifest file into memory.
         """
 
-        def modified_manifest(
-                num_fidl, num_cpp, kinds=['api_fidl'], create_fragments=True):
-            with TemporaryDirectory() as root_build_dir:
-                #try:
-                temp_files = self.create_plasa_manifest(
-                    root_build_dir,
-                    num_fidl=num_fidl,
-                    num_cpp=num_cpp,
-                    create_fragments=create_fragments)
-                args = list(temp_files.values())
-                args[4] = kinds
-                pd = PlasaDiffer(*args)
-                result = pd.load_manifest(
-                    temp_files['before_manifest'],
-                    temp_files['before_fragments_root'])
-                return result
-                #except Exception as e:
-                #    self.assertTrue(False, e)
-
         # Ensure no fragments are found in an empty PlaSA manifest.
-        result = modified_manifest(0, 0)
-        self.assertTrue(len(result) == 0)
+        with TemporaryDirectory() as root_build_dir:
+            manifest = self.create_plasa_manifest(
+                root_build_dir, num_fidl=0, num_cpp=0)
+            pd = self.create_default_plasa_differ(manifest, kinds=['api_fidl'])
+            result = pd.load_manifest(manifest)
+            self.assertTrue(len(result) == 0)
 
         # Ensure fragments can be successfully identified in a PlaSA manifest.
-        result = modified_manifest(5, 0)
-        self.assertTrue(len(result) == 5)
+        with TemporaryDirectory() as root_build_dir:
+            manifest = self.create_plasa_manifest(
+                root_build_dir, num_fidl=5, num_cpp=0)
+            pd = self.create_default_plasa_differ(manifest, kinds=['api_fidl'])
+            result = pd.load_manifest(manifest)
+            self.assertTrue(len(result) == 5)
 
         # Ensure fragments of a different "kind" are skipped by PlasaDiffer.
-        result = modified_manifest(0, 5)
-        self.assertTrue(len(result) == 0)
+        with TemporaryDirectory() as root_build_dir:
+            manifest = self.create_plasa_manifest(
+                root_build_dir, num_fidl=0, num_cpp=5)
+            pd = self.create_default_plasa_differ(manifest, kinds=['api_fidl'])
+            result = pd.load_manifest(manifest)
+            self.assertTrue(len(result) == 0)
 
         # Ensure PlasaDiffer can diff multiple "kinds" in the same run.
-        result = modified_manifest(5, 5, kinds=['api_fidl', 'api_cpp'])
-        self.assertTrue(len(result) == 10)
+        with TemporaryDirectory() as root_build_dir:
+            manifest = self.create_plasa_manifest(
+                root_build_dir, num_fidl=5, num_cpp=5)
+            pd = self.create_default_plasa_differ(
+                manifest, kinds=['api_fidl', 'api_cpp'])
+            result = pd.load_manifest(manifest)
+            self.assertTrue(len(result) == 10)
 
         # PlasaDiffer must raise an exception if a fragment file doesn't exist.
-        with self.assertRaises(ValueError):
-            modified_manifest(
-                5, 5, kinds=['api_fidl', 'api_cpp'], create_fragments=False)
+        with TemporaryDirectory() as root_build_dir:
+            manifest = self.create_plasa_manifest(
+                root_build_dir, num_fidl=5, num_cpp=5, create_fragments=False)
+            pd = self.create_default_plasa_differ(
+                manifest, kinds=['api_fidl', 'api_cpp'])
+            with self.assertRaises(ValueError):
+                pd.load_manifest(manifest)
 
     def test_diff_fragment(self):
         """Verify we are able to diff two fragments against each other.
@@ -198,9 +190,8 @@ class VerifyPlasaDiff(unittest.TestCase):
 
         with TemporaryDirectory() as root_build_dir:
             try:
-                temp_files = self.create_plasa_manifest(root_build_dir)
-                args = temp_files.values()
-                pd = PlasaDiffer(*args)
+                manifest = self.create_plasa_manifest(root_build_dir)
+                pd = self.create_default_plasa_differ(manifest)
             except Exception as e:
                 self.assertTrue(False, e)
 

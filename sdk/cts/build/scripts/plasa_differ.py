@@ -47,7 +47,7 @@ class Match:
         Returns:
             A string representing the Fragment key and match error message.
         """
-        return '{}\n{}'.format(self.before.dest, self.message)
+        return '{}\n{}'.format(self.before.path, self.message)
 
 
 @dataclass
@@ -58,20 +58,16 @@ class PlasaDiffer:
     processing error occurs.
     """
     before_manifest: str
-    before_fragments_root: str
     after_manifest: str
-    after_fragments_root: str
     kinds: List[str]
     utils_dir: str
     out_dir: str
 
     def __post_init__(self):
-        if not (os.path.exists(self.before_manifest) and
-                os.path.exists(self.after_manifest)):
-            raise ValueError('manifest paths cannot be empty and must exist.')
-        if not (os.path.exists(self.before_fragments_root) and
-                os.path.exists(self.after_fragments_root)):
-            raise ValueError('fragment paths cannot be empty and must exist.')
+        if not self.before_manifest:
+            raise ('before manifest must not be empty.')
+        if not self.after_manifest:
+            raise ('after manifest must not be empty.')
         if self.kinds == None or len(self.kinds) == 0:
             raise ValueError('kinds list cannot be None or empty.')
         if not os.path.exists(self.utils_dir):
@@ -79,15 +75,16 @@ class PlasaDiffer:
         if not os.path.exists(self.out_dir):
             raise ValueError('out_dir path cannot be empty and must exist.')
 
-    def load_manifest(self, manifest, fragments_root):
+    def load_manifest(self, manifest):
         """Load the PlaSA Manifest JSON file into a dictionary.
 
-        The 'dest' field of each fragment acts as a unique key, and
+        The 'path' field of each fragment acts as a unique key, and
         allow us to map to the same fragment in other PlaSA manifest files.
 
         Returns:
-            A dict mapping the fragment 'dest' field to the fragment object.
+            A dict mapping the fragment 'path' field to the fragment object.
         """
+        fragments_root = os.path.dirname(manifest)
         d = {}
         with open(manifest) as f:
             data = json.load(f)
@@ -96,12 +93,12 @@ class PlasaDiffer:
                 # parallel verification. Filter out fragment types that we
                 # don't care about in this run.
                 if entry['kind'] in self.kinds:
-                    cts_path = os.path.join(fragments_root, entry['dest'])
+                    cts_path = os.path.join(fragments_root, entry['path'])
                     if not os.path.exists(cts_path):
                         raise ValueError(
                             'Fragment path {} does not exist'.format(cts_path))
                     entry['cts_path'] = cts_path
-                    d[entry['dest']] = Fragment(**entry)
+                    d[entry['path']] = Fragment(**entry)
         return d
 
     def diff_fragments(self, before, after):
@@ -167,10 +164,9 @@ class PlasaDiffer:
             RuntimeError if incompatible changes are detected.
         """
 
-        before_fragments = self.load_manifest(
-            self.before_manifest, self.before_fragments_root)
-        after_fragments = self.load_manifest(
-            self.after_manifest, self.after_fragments_root)
+        before_fragments = self.load_manifest(self.before_manifest)
+        after_fragments = self.load_manifest(self.after_manifest)
+
         matches = {}
 
         # Match fragments from the before and after PlaSA manifest files,
@@ -224,16 +220,8 @@ def main():
         help='Path to the old PlaSA manifest file, from the CTS release.',
         required=True)
     parser.add_argument(
-        '--before_fragments_root',
-        help='Path to the root directory for fragment files in the CTS archive.',
-        required=True)
-    parser.add_argument(
         '--after_manifest',
         help='Path to the new PlaSA manifest file, from an SDK release.',
-        required=True)
-    parser.add_argument(
-        '--after_fragments_root',
-        help='Path to the root directory for fragment files in the target SDK.',
         required=True)
     parser.add_argument(
         '--kinds',
