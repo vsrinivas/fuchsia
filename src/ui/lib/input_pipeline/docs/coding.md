@@ -92,3 +92,29 @@ and yielding (via the `await` operator).
 > Otherwise, the other `Task`s may execute while `handle_input_event()` is
 > suspended, and the state cached in `handle_input_event()` `Future` will be
 > (incorrectly) used instead of the value updated by the other `Task`s.
+
+## Error handling (implementation code)
+
+In the `workstation` product, the input pipeline library runs in the same
+process (`scene_manager`) as the code that sets up Scenic. Hence, if an
+`InputHandler` calls `panic!()` (or methods such as `unwrap()` or `expect()` on
+`None`/`Err` variants), all graphical programs will terminate.
+
+Hence, implementation code should avoid aborting the program, and should,
+instead, propagate errors to its caller (e.g. for callees of `handle_input_event()`),
+or log errors messages (for `Task`s that run independently of `handle_input_event()`).
+
+Note that keeping the program running allows the user has the opportunity to
+continue their work using other input modalities, which don't depend on the
+erroneous handler.
+
+Some existing handlers use `panic!()`, `unwrap()`, and `expect()`. Such code
+will be migrated over time.
+
+## Error handling (test code)
+
+When a test aborts, the test runner outputs a backtrace, which is helpful
+for debugging the test. When a test returns an `Err`, however, the test
+runner does not print a backtrace.
+
+Hence, test code, should _prefer_ to abort, rather than propagating errors.
