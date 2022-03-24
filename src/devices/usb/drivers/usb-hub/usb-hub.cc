@@ -180,9 +180,6 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
     txn_->Reply(status);
     return;
   }
-  for (size_t i = 0; i < port_status_.size(); i++) {
-    HandlePortStatusChanged(IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
-  }
   txn_->Reply(ZX_OK);
 }
 
@@ -202,6 +199,14 @@ void UsbHubDevice::HandlePortStatusChanged(PortNumber port) {
 
 void UsbHubDevice::InterruptCallback() {
   sync_completion_signal(&thread_start_);  // Signal completion. Thread is running.
+  {
+    // Process any pre-attached ports
+    fbl::AutoLock l(&async_execution_context_);
+    for (size_t i = 0; i < port_status_.size(); i++) {
+      HandlePortStatusChanged(IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
+    }
+  }
+
   // Data to be extracted from the request
   size_t hub_bit_count =
       hub_descriptor_.b_nbr_ports + 1;  // Number of ports including the hub itself
