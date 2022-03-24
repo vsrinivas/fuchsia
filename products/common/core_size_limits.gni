@@ -25,7 +25,7 @@ size_checker_input = {
   # This is set to a very generous limit because ICU data size is routinely
   # expected to grow when there is temporarily more than 1 copy.
   icu_data_creep_limit = 9230090  # 8.80 MiB
-  core_limit = 8774588  # 8.368 MiB
+  core_limit = 11780855  # 11.235 MiB
   core_creep_limit = 153416  # 0.146 MiB
   components = [
     {
@@ -55,7 +55,7 @@ size_checker_input = {
         "build/images/fuchsia/fuchsia/legacy/packages/system/pkgfs_non_static_pkgs_allowlist_eng",
         "build/images/fuchsia/fuchsia/legacy/packages/system/disable-executability-restrictions",
       ]
-      limit = 18701122  # 17.835 MiB
+      limit = 15694854  # 14.968 MiB
       creep_limit = 40136  # 0.038 MiB
     },
     {
