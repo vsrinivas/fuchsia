@@ -41,10 +41,14 @@ use crate::service::message::Delegate;
 use crate::service_context::GenerateService;
 use crate::service_context::ServiceContext;
 use crate::setup::setup_controller::SetupController;
-use anyhow::{format_err, Context, Error};
+#[cfg(test)]
+use anyhow::format_err;
+use anyhow::{Context, Error};
 use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
 use fuchsia_async as fasync;
-use fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj};
+#[cfg(test)]
+use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
 use fuchsia_inspect::component;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::{Duration, DurationNum};
@@ -117,6 +121,7 @@ pub type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 #[derive(PartialEq)]
 enum Runtime {
     Service,
+    #[cfg(test)]
     Nested(&'static str),
 }
 
@@ -216,6 +221,7 @@ impl ServiceConfiguration {
 /// EnvironmentBuilder. A nested environment (if available) is returned,
 /// along with a receiver to be notified when initialization/setup is
 /// complete.
+#[cfg(test)]
 pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
     pub delegate: Delegate,
@@ -223,6 +229,7 @@ pub struct Environment {
     pub job_seeder: Seeder,
 }
 
+#[cfg(test)]
 impl Environment {
     pub fn new(
         nested_environment: Option<NestedEnvironment>,
@@ -232,25 +239,6 @@ impl Environment {
     ) -> Environment {
         Environment { nested_environment, delegate, job_seeder, entities }
     }
-}
-
-macro_rules! register_handler {
-    (
-        $components:ident,
-        $storage_factory:ident,
-        $handler_factory:ident,
-        $setting_type:expr,
-        $controller:ty,
-        $spawn_method:expr
-    ) => {
-        if $components.contains(&$setting_type) {
-            $storage_factory
-                .initialize::<$controller>()
-                .await
-                .expect("should be initializing still");
-        }
-        $handler_factory.register($setting_type, Box::new($spawn_method));
-    };
 }
 
 /// The [EnvironmentBuilder] aggregates the parameters surrounding an [environment](Environment) and
@@ -270,6 +258,8 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
+    /// Construct a new [EnvironmentBuilder] using `storage_factory` to construct the storage for
+    /// the future [Environment].
     pub fn new(storage_factory: Arc<T>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
@@ -286,6 +276,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         }
     }
 
+    /// Overrides the default [GenerateHandler] for a specific [SettingType].
     pub fn handler(
         mut self,
         setting_type: SettingType,
@@ -302,12 +293,15 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    /// A preset configuration to load preset parameters as a base.
+    /// A preset configuration to load preset parameters as a base. Note that this will override
+    /// any configuration modifications made by [EnvironmentBuilder::fidl_interface],
+    /// [EnvironmentBuilder::policies], and [EnvironmentBuilder::flags].
     pub fn configuration(mut self, configuration: ServiceConfiguration) -> EnvironmentBuilder<T> {
         self.configuration = Some(configuration);
         self
     }
 
+    /// Will override all fidl interfaces in the [ServiceConfiguration].
     pub fn fidl_interfaces(mut self, interfaces: &[fidl::Interface]) -> EnvironmentBuilder<T> {
         if self.configuration.is_none() {
             self.configuration = Some(ServiceConfiguration::default());
@@ -320,6 +314,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Appends the [Registrant]s to the list of registrants already configured.
     pub fn registrants(mut self, mut registrants: Vec<Registrant>) -> EnvironmentBuilder<T> {
         self.registrants.append(&mut registrants);
 
@@ -359,6 +354,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Sets the mapping function used to generate an [AgentBlueprintHandle] from an [AgentType].
     pub fn agent_mapping<F>(mut self, agent_mapping_func: F) -> EnvironmentBuilder<T>
     where
         F: Fn(AgentType) -> AgentBlueprintHandle + 'static,
@@ -367,11 +363,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Appends the supplied [AgentBlueprintHandle]s to the list of agent blueprints.
     pub fn agents(mut self, blueprints: &[AgentBlueprintHandle]) -> EnvironmentBuilder<T> {
         self.agent_blueprints.append(&mut blueprints.to_vec());
         self
     }
 
+    /// Adds the specified monitors to the list of resource monitors.
     pub fn resource_monitors(
         mut self,
         monitors: &[monitor_base::monitor::Generate],
@@ -389,6 +387,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Sets the inspect node for setting proxy inspect information.
     pub fn setting_proxy_inspect_info(
         mut self,
         setting_proxy_inspect_info: &'static fuchsia_inspect::Node,
@@ -397,6 +396,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Prepares an environment so that it may be spawned. This ensures that all necessary
+    /// components are spawned and ready to handle events and FIDL requests.
     async fn prepare_env(
         mut self,
         runtime: Runtime,
@@ -523,6 +524,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         Ok((fs, delegate, job_seeder, entities))
     }
 
+    /// Spawn an [Environment] on the supplied [fasync::LocalExecutor] so that it may process
+    /// incoming FIDL requests.
     pub fn spawn(self, mut executor: fasync::LocalExecutor) -> Result<(), Error> {
         let (mut fs, ..) = executor
             .run_singlethreaded(self.prepare_env(Runtime::Service))
@@ -532,6 +535,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         Ok(())
     }
 
+    /// Spawn a nested [Environment] so that it can be used for tests.
+    #[cfg(test)]
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         let (mut fs, delegate, job_seeder, entities) =
             self.prepare_env(Runtime::Nested(env_name)).await.context("Failed to prepare env")?;
@@ -545,6 +550,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     /// NestedEnvironment. Note that this is a helper function that provides a
     /// shortcut for calling EnvironmentBuilder::name() and
     /// EnvironmentBuilder::spawn().
+    #[cfg(test)]
     pub async fn spawn_and_get_nested_environment(
         self,
         env_name: &'static str,
@@ -561,126 +567,154 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         factory_handle: &mut SettingHandlerFactoryImpl,
     ) {
         // Accessibility
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Accessibility,
-            AccessibilityController,
-            DataHandler::<AccessibilityController>::spawn
-        );
+        if components.contains(&SettingType::Accessibility) {
+            storage_factory
+                .initialize::<AccessibilityController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::Accessibility,
+                Box::new(DataHandler::<AccessibilityController>::spawn),
+            );
+        }
+
         // Audio
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Audio,
-            AudioController,
-            DataHandler::<AudioController>::spawn
-        );
+        if components.contains(&SettingType::Audio) {
+            storage_factory
+                .initialize::<AudioController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Audio, Box::new(DataHandler::<AudioController>::spawn));
+        }
+
         // Display
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Display,
-            DisplayController,
-            if controller_flags.contains(&ControllerFlag::ExternalBrightnessControl) {
-                DataHandler::<DisplayController<ExternalBrightnessControl>>::spawn
-            } else {
-                DataHandler::<DisplayController>::spawn
-            }
-        );
+        if components.contains(&SettingType::Display) {
+            storage_factory
+                .initialize::<DisplayController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::Display,
+                Box::new(
+                    if controller_flags.contains(&ControllerFlag::ExternalBrightnessControl) {
+                        DataHandler::<DisplayController<ExternalBrightnessControl>>::spawn
+                    } else {
+                        DataHandler::<DisplayController>::spawn
+                    },
+                ),
+            );
+        }
+
         // Light
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Light,
-            LightController,
-            DataHandler::<LightController>::spawn
-        );
+        if components.contains(&SettingType::Light) {
+            storage_factory
+                .initialize::<LightController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Light, Box::new(DataHandler::<LightController>::spawn));
+        }
+
         // Light sensor
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::LightSensor,
-            LightSensorController,
-            Handler::<LightSensorController>::spawn
-        );
+        if components.contains(&SettingType::LightSensor) {
+            storage_factory
+                .initialize::<LightSensorController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::LightSensor,
+                Box::new(Handler::<LightSensorController>::spawn),
+            );
+        }
+
         // Input
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Input,
-            InputController,
-            DataHandler::<InputController>::spawn
-        );
+        if components.contains(&SettingType::Input) {
+            storage_factory
+                .initialize::<InputController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Input, Box::new(DataHandler::<InputController>::spawn));
+        }
+
         // Intl
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Intl,
-            IntlController,
-            DataHandler::<IntlController>::spawn
-        );
+        if components.contains(&SettingType::Intl) {
+            storage_factory
+                .initialize::<IntlController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Intl, Box::new(DataHandler::<IntlController>::spawn));
+        }
+
         // Keyboard
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Keyboard,
-            KeyboardController,
-            DataHandler::<KeyboardController>::spawn
-        );
+        if components.contains(&SettingType::Keyboard) {
+            storage_factory
+                .initialize::<KeyboardController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::Keyboard,
+                Box::new(DataHandler::<KeyboardController>::spawn),
+            );
+        }
+
         // Do not disturb
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::DoNotDisturb,
-            DoNotDisturbController,
-            DataHandler::<DoNotDisturbController>::spawn
-        );
+        if components.contains(&SettingType::DoNotDisturb) {
+            storage_factory
+                .initialize::<DoNotDisturbController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::DoNotDisturb,
+                Box::new(DataHandler::<DoNotDisturbController>::spawn),
+            );
+        }
+
         // Factory Reset
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::FactoryReset,
-            FactoryResetController,
-            DataHandler::<FactoryResetController>::spawn
-        );
+        if components.contains(&SettingType::FactoryReset) {
+            storage_factory
+                .initialize::<FactoryResetController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::FactoryReset,
+                Box::new(DataHandler::<FactoryResetController>::spawn),
+            );
+        }
+
         // Night mode
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::NightMode,
-            NightModeController,
-            DataHandler::<NightModeController>::spawn
-        );
+        if components.contains(&SettingType::NightMode) {
+            storage_factory
+                .initialize::<NightModeController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle.register(
+                SettingType::NightMode,
+                Box::new(DataHandler::<NightModeController>::spawn),
+            );
+        }
+
         // Privacy
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Privacy,
-            PrivacyController,
-            DataHandler::<PrivacyController>::spawn
-        );
+        if components.contains(&SettingType::Privacy) {
+            storage_factory
+                .initialize::<PrivacyController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Privacy, Box::new(DataHandler::<PrivacyController>::spawn));
+        }
+
         // Setup
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Setup,
-            SetupController,
-            DataHandler::<SetupController>::spawn
-        );
+        if components.contains(&SettingType::Setup) {
+            storage_factory
+                .initialize::<SetupController>()
+                .await
+                .expect("storage should still be initializing");
+            factory_handle
+                .register(SettingType::Setup, Box::new(DataHandler::<SetupController>::spawn));
+        }
     }
 }
 
@@ -747,6 +781,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     let mut agent_authority =
         Authority::create(delegate.clone(), components.clone(), policies, monitor_actor).await?;
 
+    // TODO(fxbug.dev/96251) Handle registrants with missing dependencies.
     for registrant in registrants {
         if registrant.get_dependencies().iter().all(|dependency| dependency.is_fulfilled(&entities))
         {
