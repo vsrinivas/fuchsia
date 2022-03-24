@@ -342,6 +342,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/zircon/bin/kstress:kstress",
     "//src/zircon/testing/mutex_pi_exerciser:mutex_pi_exerciser",
     "//src/zircon/tests/profile:profile",
+    "//vendor/*",
     "//zircon/system/ulib/c/sanitizers:sanitizers",
     "//zircon/system/ulib/devmgr-integration-test:devmgr-integration-test",
     "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration",
