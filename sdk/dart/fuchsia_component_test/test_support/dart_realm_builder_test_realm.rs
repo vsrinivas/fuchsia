@@ -43,7 +43,9 @@ async fn fuchsia_component_test_dart_tests() -> Result<(), Error> {
         .add_route(
             Route::new()
                 .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
+                .capability(Capability::protocol::<fsys::EnvironmentMarker>())
                 .capability(Capability::protocol::<fsys::LauncherMarker>())
+                .capability(Capability::protocol::<fsys::LoaderMarker>())
                 .capability(Capability::storage("data"))
                 .from(Ref::parent())
                 .to(&dart_component_to_test),

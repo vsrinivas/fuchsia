@@ -959,7 +959,7 @@ impl RealmNode2 {
 
         let mut state_guard = self.state.lock().await;
         if !contains_child(state_guard.deref(), &from) {
-            return Err(RealmBuilderError::NoSuchSource(from));
+            return Err(RealmBuilderError::NoSuchSource(from, state_guard.deref().clone()));
         }
 
         for capability in capabilities {
@@ -969,7 +969,10 @@ impl RealmNode2 {
                 }
 
                 if !contains_child(state_guard.deref(), target) {
-                    return Err(RealmBuilderError::NoSuchTarget(target.clone()));
+                    return Err(RealmBuilderError::NoSuchTarget(
+                        target.clone(),
+                        state_guard.deref().clone(),
+                    ));
                 }
 
                 if is_parent_ref(&target) {
@@ -1539,12 +1542,12 @@ enum RealmBuilderError {
     ChildDeclNotVisible(String),
 
     /// The source does not exist.
-    #[error("the source for the route does not exist: {0:?}")]
-    NoSuchSource(fcdecl::Ref),
+    #[error("the source for the route does not exist: {0:?}\namong declared children of: {:#?}")]
+    NoSuchSource(fcdecl::Ref, RealmNodeState),
 
     /// A target does not exist.
-    #[error("the target for the route does not exist: {0:?}")]
-    NoSuchTarget(fcdecl::Ref),
+    #[error("the target for the route does not exist: {0:?}\namong declared children of: {:#?}")]
+    NoSuchTarget(fcdecl::Ref, RealmNodeState),
 
     /// The `capabilities` field is empty.
     #[error("the \"capabilities\" field is empty")]
@@ -1610,8 +1613,8 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
             RealmBuilderError::InvalidComponentDeclWithName(_, _, _) => Self::InvalidComponentDecl,
             RealmBuilderError::NoSuchChild(_) => Self::NoSuchChild,
             RealmBuilderError::ChildDeclNotVisible(_) => Self::ChildDeclNotVisible,
-            RealmBuilderError::NoSuchSource(_) => Self::NoSuchSource,
-            RealmBuilderError::NoSuchTarget(_) => Self::NoSuchTarget,
+            RealmBuilderError::NoSuchSource(_, _) => Self::NoSuchSource,
+            RealmBuilderError::NoSuchTarget(_, _) => Self::NoSuchTarget,
             RealmBuilderError::CapabilitiesEmpty => Self::CapabilitiesEmpty,
             RealmBuilderError::TargetsEmpty => Self::TargetsEmpty,
             RealmBuilderError::SourceAndTargetMatch(_) => Self::SourceAndTargetMatch,

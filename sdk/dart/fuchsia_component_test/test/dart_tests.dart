@@ -16,7 +16,8 @@ import 'package:test/test.dart';
 // import 'dart:convert' show utf8;
 // import 'dart:typed_data';
 
-const String v1EchoServer = '#meta/echo_server.cmx';
+const String v1EchoServer =
+    'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_server.cmx';
 const String v2EchoServer = '#meta/echo_server.cm';
 
 void main() {
@@ -113,7 +114,7 @@ void main() {
         }
       });
 
-      test('connectToNamedProtocol', () async {
+      test('connectRequestToNamedProtocol', () async {
         RealmInstance? realmInstance;
         try {
           final builder = await RealmBuilder.create();
@@ -132,6 +133,93 @@ void main() {
             ..to(Ref.parent()));
 
           realmInstance = await builder.build();
+
+          final echo = fecho.EchoProxy();
+          realmInstance.root.connectRequestToNamedProtocolAtExposedDir(
+              fecho.Echo.$serviceName, echo.ctrl.request().passChannel()!);
+
+          const testString = 'ECHO...Echo...echo...(echo)...';
+          final reply = await echo.echoString(testString);
+          expect(testString, reply);
+        } finally {
+          if (realmInstance != null) {
+            await realmInstance.root.close();
+          }
+        }
+      });
+
+      test('connectToProtocol using legacy component', () async {
+        RealmInstance? realmInstance;
+        try {
+          final builder = await RealmBuilder.create();
+
+          final testChild = await builder.addLegacyChild(
+              'testChild', v1EchoServer, ChildOptions());
+
+          await builder.addRoute(Route()
+            ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+            ..from(Ref.parent())
+            ..to(Ref.child(testChild)));
+
+          await builder.addRoute(Route()
+            ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+            ..from(Ref.child(testChild))
+            ..to(Ref.parent()));
+
+          realmInstance = await builder.build();
+
+          final echo = realmInstance.root
+              .connectToProtocolAtExposedDir(fecho.EchoProxy());
+
+          const testString = 'ECHO...Echo...echo...(echo)...';
+          final reply = await echo.echoString(testString);
+          expect(testString, reply);
+        } finally {
+          if (realmInstance != null) {
+            await realmInstance.root.close();
+          }
+        }
+      });
+
+      test('connect to child in subrealm', () async {
+        RealmInstance? realmInstance;
+        try {
+          const subRealmName = 'sub_realm';
+
+          final realmBuilder = await RealmBuilder.create();
+          final subRealmBuilder =
+              await realmBuilder.addChildRealm(subRealmName);
+
+          final testChild = await subRealmBuilder.addChild(
+              'testChild', v2EchoServer, ChildOptions()..eager());
+
+          // Route LogSink from RealmBuilder to the subRealm.
+          await realmBuilder.addRoute(Route()
+            ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+            ..from(Ref.parent())
+            ..to(Ref.childFromSubRealm(subRealmBuilder)));
+
+          // Route LogSink from the subRealm to the Echo component.
+          await subRealmBuilder.addRoute(Route()
+            ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+            ..from(Ref.parent())
+            ..to(Ref.child(testChild)));
+
+          // Route the Echo service from the Echo child component to its parent
+          // (the subRealm).
+          await subRealmBuilder.addRoute(Route()
+            ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+            ..from(Ref.child(testChild))
+            ..to(Ref.parent()));
+
+          // Route the Echo service from the subRealm child to its parent
+          // (the RealmBuilder).
+          await realmBuilder.addRoute(Route()
+            ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+            ..from(Ref.childFromSubRealm(subRealmBuilder))
+            ..to(Ref.parent()));
+
+          realmInstance = await realmBuilder.build();
 
           final echo = fecho.EchoProxy();
           realmInstance.root.connectRequestToNamedProtocolAtExposedDir(

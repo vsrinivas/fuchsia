@@ -248,8 +248,8 @@ class Ref {
   Ref.childFromSubRealm(SubRealmBuilder subRealm)
       : type = RefType.child,
         name = subRealm.realmPath.isEmpty ? null : subRealm.realmPath.last,
-        scope = subRealm.realmPath {
-    if (subRealm.realmPath.isEmpty) {
+        scope = subRealm.realmPath.toList()..removeLast() {
+    if (name == null) {
       throw Exception(
           'API bug: It should not be possible to call fromSubRealmBuilder '
           'with a top-level SubRealmBuilder');
@@ -314,8 +314,8 @@ class ChildRef {
 
   ChildRef.fromSubRealmBuilder(SubRealmBuilder input)
       : name = input.realmPath.isEmpty ? '' : input.realmPath.last,
-        scope = input.realmPath.toList() {
-    if (input.realmPath.isEmpty) {
+        scope = input.realmPath.toList()..removeLast() {
+    if (name == '') {
       throw Exception(
           'API bug: It should not be possible to call fromSubRealmBuilder '
           'with a top-level SubRealmBuilder');
@@ -612,6 +612,18 @@ class SubRealmBuilder {
 
   SubRealmBuilder({required this.realm, required this.realmPath});
 
+  /// Adds a child realm and returns a [SubRealmBuilder]. Capabilities can be
+  /// routed between parent [RealmBuilder] and the sub-realm, and then routed
+  /// to/from children of the sub-realm.
+  Future<SubRealmBuilder> addChildRealm(
+      String name, ChildOptions options) async {
+    final childRealm = ftest.RealmProxy();
+    await realm.addChildRealm(
+        name, options.toFidlType(), childRealm.ctrl.request());
+    final childPath = realmPath.toList()..add(name);
+    return SubRealmBuilder(realm: childRealm, realmPath: childPath);
+  }
+
   /// Adds a new component to the realm by URL.
   Future<ChildRef> addChild(
       String name, String url, ChildOptions options) async {
@@ -719,21 +731,28 @@ class RealmBuilder {
 
   ftest.BuilderProxy get builder => _builder;
 
+  /// Adds a child realm and returns a [SubRealmBuilder]. Capabilities can be
+  /// routed between parent [RealmBuilder] and the sub-realm, and then routed
+  /// to/from children of the sub-realm.
+  Future<SubRealmBuilder> addChildRealm(String name, [ChildOptions? options]) {
+    return rootRealm.addChildRealm(name, options ?? ChildOptions());
+  }
+
   /// Adds a new component to the realm by URL.
   Future<ChildRef> addChild(String name, String url, [ChildOptions? options]) {
     return rootRealm.addChild(name, url, options ?? ChildOptions());
   }
 
   /// Adds a new legacy component to the realm.
-  Future<ChildRef> addLegacyChild(
-      String name, String legacyUrl, ChildOptions options) {
-    return rootRealm.addLegacyChild(name, legacyUrl, options);
+  Future<ChildRef> addLegacyChild(String name, String legacyUrl,
+      [ChildOptions? options]) {
+    return rootRealm.addLegacyChild(name, legacyUrl, options ?? ChildOptions());
   }
 
   /// Adds a new component to the realm with the given component declaration
-  Future<ChildRef> addChildFromDecl(
-      String name, fdecl.Component decl, ChildOptions options) {
-    return rootRealm.addChildFromDecl(name, decl, options);
+  Future<ChildRef> addChildFromDecl(String name, fdecl.Component decl,
+      [ChildOptions? options]) {
+    return rootRealm.addChildFromDecl(name, decl, options ?? ChildOptions());
   }
 
   /// Adds a route between components within the realm
