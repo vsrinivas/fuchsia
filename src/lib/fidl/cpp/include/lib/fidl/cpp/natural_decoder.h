@@ -93,9 +93,7 @@ class NaturalDecoder final {
     return true;
   }
 
-#ifdef __Fuchsia__
-  void DecodeHandle(zx::object_base* value, HandleAttributes attr, size_t offset,
-                    bool is_optional) {
+  void DecodeHandle(fidl_handle_t* value, HandleAttributes attr, size_t offset, bool is_optional) {
     zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
     switch (*handle) {
       case FIDL_HANDLE_PRESENT: {
@@ -107,23 +105,21 @@ class NaturalDecoder final {
         zx_handle_t& body_handle = body_.handles()[handle_index_];
 
         const char* error;
-        zx_status_t status =
-            fidl::internal::ChannelTransport::EncodingConfiguration.decode_process_handle(
-                &body_handle, attr, handle_index_,
-                body_.handle_metadata<fidl::internal::ChannelTransport>(), &error);
+        zx_status_t status = body_.transport_vtable_->encoding_configuration->decode_process_handle(
+            &body_handle, attr, handle_index_, body_.message_.handle_metadata, &error);
         if (status != ZX_OK) {
           SetError(error);
           return;
         }
 
-        value->reset(body_handle);
-        body_handle = ZX_HANDLE_INVALID;
+        *value = body_handle;
+        body_handle = FIDL_HANDLE_INVALID;
         ++handle_index_;
         return;
       }
       case FIDL_HANDLE_ABSENT: {
         if (is_optional) {
-          value->reset();
+          *value = FIDL_HANDLE_INVALID;
         } else {
           SetError(kCodingErrorAbsentNonNullableHandle);
         }
@@ -135,7 +131,6 @@ class NaturalDecoder final {
       }
     }
   }
-#endif
 
   struct EnvelopeUnknownDataInfoResult {
     size_t value_offset;
@@ -173,11 +168,7 @@ class NaturalDecoder final {
 
   size_t CurrentLength() const { return next_out_of_line_; }
 
-#ifdef __Fuchsia__
   size_t CurrentHandleCount() const { return handle_index_; }
-#else
-  constexpr size_t CurrentHandleCount() const { return 0; }
-#endif
 
   zx_status_t status() { return status_; }
   const char* error() { return error_; }
@@ -189,9 +180,8 @@ class NaturalDecoder final {
   // itself a concatenation of 2 FIDL messages, the header and body), or 0 (when decoding a
   // standalone "at-rest" message body).
   uint32_t body_offset_ = 0;
-#ifdef __Fuchsia__
+
   uint32_t handle_index_ = 0;
-#endif
 
   size_t next_out_of_line_ = 0;
 

@@ -308,6 +308,8 @@ namespace internal {
 template <typename T>
 class DecodedMessageBase;
 
+class NaturalDecoder;
+
 }  // namespace internal
 
 // |IncomingMessage| represents a FIDL message on the read path.
@@ -494,6 +496,8 @@ class IncomingMessage : public ::fidl::Status {
   // Only |fidl::unstable::DecodedMessage<T>| instances may decode this message.
   template <typename T>
   friend class internal::DecodedMessageBase;
+
+  friend class internal::NaturalDecoder;
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.

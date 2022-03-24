@@ -287,12 +287,14 @@ struct NaturalCodingTraits<
   }
   static void Decode(NaturalDecoder* decoder, zx::object_base* value, size_t offset,
                      size_t recursion_depth) {
-    decoder->DecodeHandle(value,
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    decoder->DecodeHandle(&handle,
                           {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
                           offset, Constraint::is_optional);
+    value->reset(handle);
   }
 };
 #endif  // __Fuchsia__
@@ -545,14 +547,14 @@ struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
 
   static void Decode(NaturalDecoder* decoder, ClientEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    zx::channel channel;
-    decoder->DecodeHandle(&channel,
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    decoder->DecodeHandle(&handle,
                           {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
                           offset, Constraint::is_optional);
-    *value = ClientEnd<T>(std::move(channel));
+    *value = ClientEnd<T>(zx::channel(handle));
   }
 };
 
@@ -572,14 +574,14 @@ struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
 
   static void Decode(NaturalDecoder* decoder, ServerEnd<T>* value, size_t offset,
                      size_t recursion_depth) {
-    zx::channel channel;
-    decoder->DecodeHandle(&channel,
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    decoder->DecodeHandle(&handle,
                           {
                               .obj_type = Constraint::obj_type,
                               .rights = Constraint::rights,
                           },
                           offset, Constraint::is_optional);
-    *value = ServerEnd<T>(std::move(channel));
+    *value = ServerEnd<T>(zx::channel(handle));
   }
 };
 #endif  // __Fuchsia__
