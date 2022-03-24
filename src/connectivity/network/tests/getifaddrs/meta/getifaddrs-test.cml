@@ -1,0 +1,81 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        networks: [
+            {
+                name: "net",
+                endpoints: [
+                    { name: "ep1" },
+                    { name: "ep2" },
+                    { name: "ep3" },
+                    { name: "ep4" },
+                ],
+            },
+        ],
+        netstacks: [
+            {
+                name: "netstack",
+                interfaces: [
+                    {
+                        name: "ep1",
+                        static_ips: [ "192.168.0.1/20" ],
+                    },
+                    {
+                        name: "ep2",
+                        static_ips: [ "192.168.0.2/15" ],
+                    },
+                    {
+                        name: "ep3",
+                        static_ips: [ "fe80::1/64" ],
+                    },
+                    {
+                        name: "ep4",
+                        static_ips: [ "1234::5:6:7:8/120" ],
+                    },
+                ],
+            },
+        ],
+    },
+    children: [
+        {
+            name: "test-driver",
+            url: "#meta/test-driver.cm",
+        },
+        {
+            name: "netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#netstack",
+            path: "/svc/netstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#netstack",
+                "#test-driver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: "#test-driver",
+        },
+    ],
+}

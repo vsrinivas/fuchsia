@@ -5,7 +5,8 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-test("getifaddrs-test") {
+test("test") {
+  output_name = "getifaddrs-test"
   if (is_linux || is_fuchsia) {
     sources = [ "getifaddrs_test.cc" ]
   }
@@ -15,28 +16,21 @@ test("getifaddrs-test") {
   ]
 }
 
-fuchsia_component("getifaddrs-test-component") {
-  testonly = true
-  manifest = "meta/getifaddrs-test.cmx"
-  deps = [ ":getifaddrs-test" ]
+fuchsia_test_component("test-driver") {
+  manifest = "meta/test-driver.cml"
+  deps = [ ":test" ]
 }
 
-fuchsia_component("getifaddrs-netemul-test") {
-  testonly = true
-  manifest = "meta/getifaddrs-netemul-test.cmx"
-  deps = [ ":getifaddrs-test-component" ]
+fuchsia_test_component("getifaddrs-test") {
+  manifest = "meta/getifaddrs-test.cml"
+  deps = [
+    ":test-driver",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+  ]
 }
 
 fuchsia_test_package("getifaddrs-tests") {
-  package_deps_for_infra_only = [
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
-  ]
-  test_components = [ ":getifaddrs-netemul-test" ]
-  deps = [
-    "//src/connectivity/network/netstack:component-debug-legacy",
-    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
-  ]
+  test_components = [ ":getifaddrs-test" ]
 }
 
 group("tests") {
@@ -45,8 +39,5 @@ group("tests") {
   deps = [
     ":getifaddrs-test($host_toolchain)",
     ":getifaddrs-tests",
-
-    # TODO(brunodalbo): move this to component level when netemul can handle it.
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]
 }
