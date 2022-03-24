@@ -90,9 +90,8 @@ pub trait CupRequest {
 }
 
 // General trait for a decorator which knows how to decorate and verify CUPv2
-// requests. Can also be used to verify the stored signature of a CUPv2 request
-// after-the-fact; verify_response_with_signature is not hyper-aware.
-pub trait Cupv2Handler {
+// requests.
+pub trait Cupv2RequestHandler {
     /// Decorate an outgoing client request with query parameters `cup2key`.
     /// Returns a struct of request metadata, the hash of which can be stored and
     /// used later.
@@ -109,7 +108,10 @@ pub trait Cupv2Handler {
         resp: &Response<Vec<u8>>,
         public_key_id: PublicKeyId,
     ) -> Result<(), CupVerificationError>;
+}
 
+// General trait for something which can verify CUPv2 signatures.
+pub trait Cupv2Verifier {
     /// The same behavior as verify_response, but designed for verifying stored
     /// signatures which are not hyper-aware.
     fn verify_response_with_signature(
@@ -148,7 +150,7 @@ impl StandardCupv2Handler {
     }
 }
 
-impl Cupv2Handler for StandardCupv2Handler {
+impl Cupv2RequestHandler for StandardCupv2Handler {
     fn decorate_request(
         &self,
         request: &mut impl CupRequest,
@@ -226,7 +228,9 @@ impl Cupv2Handler for StandardCupv2Handler {
             public_key_id,
         )
     }
+}
 
+impl Cupv2Verifier for StandardCupv2Handler {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
