@@ -25,13 +25,11 @@ type WlanphyImplCreateIfaceReq = resource struct {
 
 const WLANPHY_ALPHA2_LEN uint8 = 2;
 
-@packed
-type WlanphyCountry = strict union {
+type WlanphyCountry = struct {
     /// ISO Alpha-2 takes two octet alphabet characters.
     /// This needs to be expanded if at least one WLAN device driver or firmware
     /// requires more than two octets.
-    1: alpha2 array<uint8, WLANPHY_ALPHA2_LEN>;
-    2: val uint16;
+    alpha2 array<uint8, WLANPHY_ALPHA2_LEN>;
 };
 
 
