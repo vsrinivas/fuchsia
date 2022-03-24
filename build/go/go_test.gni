@@ -78,7 +78,6 @@ template("go_test") {
                              [
                                "data_deps",
                                "environments",
-                               "package_deps_for_infra_only",
                                "public_deps",
                                "visibility",
                              ])

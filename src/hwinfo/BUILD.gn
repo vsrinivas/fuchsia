@@ -127,9 +127,6 @@ template("hwinfo_integration_test") {
       ":${test_name}_misc_cm",
       ":${test_name}_test_driver",
     ]
-    if (defined(invoker.package_deps_for_infra_only)) {
-      deps += invoker.package_deps_for_infra_only
-    }
     if (defined(invoker.test_specs)) {
       test_specs = invoker.test_specs
     }
