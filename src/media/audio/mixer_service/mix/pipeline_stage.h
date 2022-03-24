@@ -9,16 +9,15 @@
 #include <lib/fpromise/result.h>
 
 #include <atomic>
-#include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
+#include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/mixer_service/mix/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
 namespace media_audio_mixer_service {
-
-class PipelineStage;
-using PipelineStagePtr = std::shared_ptr<PipelineStage>;
 
 // A stage in a pipeline tree.
 //
@@ -30,7 +29,10 @@ class PipelineStage {
 
   // Returns the PipelineStage's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
-  const std::string& name() const { return name_; }
+  std::string_view name() const { return name_; }
+
+  // Returns the PipelineStage's format.
+  const media_audio::Format& format() const { return format_; }
 
   // Returns the thread which currently controls this PipelineStage.
   // It is safe to call this method on any thread, but if not called from thread(),
@@ -38,7 +40,7 @@ class PipelineStage {
   ThreadPtr thread() const { return std::atomic_load(&thread_); }
 
   // Adds a source stream.
-  // REQUIRED: caller must verify that src produces a stream with a compatible format
+  // REQUIRED: caller must verify that src produces a stream with a compatible format.
   virtual void AddSource(PipelineStagePtr src) TA_REQ(thread()->checker()) = 0;
 
   // Removes a source stream.
@@ -46,7 +48,6 @@ class PipelineStage {
   virtual void RemoveSource(PipelineStagePtr src) TA_REQ(thread()->checker()) = 0;
 
   // TODO(fxbug.dev/87651): bring in stuff from the old ReadableStream:
-  // - format
   // - timeline transform
   // - clocks
   // - delay aka lead time
@@ -58,7 +59,7 @@ class PipelineStage {
   //   void TrimDestStream(Fixed frame);
 
  protected:
-  explicit PipelineStage(std::string_view name) : name_(name) {}
+  PipelineStage(std::string_view name, media_audio::Format format) : name_(name), format_(format) {}
 
   PipelineStage(const PipelineStage&) = delete;
   PipelineStage& operator=(const PipelineStage&) = delete;
@@ -68,6 +69,7 @@ class PipelineStage {
 
  private:
   const std::string name_;
+  const media_audio::Format format_;
 
   // This is accessed with atomic instructions (std::atomic_load and std::atomic_store) so that any
   // thread can call thread()->checker(). This can't be a std::atomic<ThreadPtr> until C++20.
