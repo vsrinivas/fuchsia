@@ -128,6 +128,11 @@ fn tags_from_manifest(package_url: String, meta_far_path: &PathBuf) -> Result<Ve
     let pkg_url = PkgUrl::parse(&package_url)?;
     let cm_path =
         pkg_url.resource().ok_or(error::TestListToolError::InvalidPackageURL(package_url))?;
+    // CFv1 manifests don't generate the same FIDL declarations, so just skip generating tags
+    // from them.
+    if &cm_path[cm_path.len() - 3..] == "cmx" {
+        return Ok(vec![TestTag { key: "legacy_test".to_string(), value: "true".to_string() }]);
+    }
     let decl = cm_decl_from_meta_far(&meta_far_path, cm_path)?;
     tags_from_facets(&decl.facets.unwrap_or(fdata::Dictionary::EMPTY))
 }
