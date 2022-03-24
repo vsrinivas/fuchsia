@@ -233,43 +233,11 @@ as part of the next CTS release.
 
 ## How to remove an ABI test
 
-Users might want to permanently remove a test from CTS if the API under test is
-being deprecated and removed from the SDK in an upcoming release. To remove
-the test, simply delete its BUILD rules and source code from HEAD. It will not
-be included in the next release.
+Please see the FAQ section about [retiring tests].
 
-If you have an urgent need to remove a test before the next release is cut,
-please reach out to [fuchsia-cts-team@google.com](mailto:fuchsia-cts-team@google.com).
+## How to disable your test
 
-## How to disable an ABI test
-
-Once the test is running in Fuchsia's presubmit as part of a CTS release, it can
-be disabled by adding the test's package and component name to the list of
-`disabled_tests` on the appropriate `compatibility_test_suite` target in
-`//sdk/cts/release/BUILD.gn`.
-
-For example, a test running in Fuchsia's canary release might have the package
-URL:
-
-```
-fuchsia-pkg://fuchsia.com/my_test_canary#meta/my_test_component.cm
-```
-
-This can be disabled as follows:
-
-```
-compatibility_test_suite("canary") {
-  {{ '<strong>' }}disabled_tests = [
-    {
-      package = "my_test_canary"
-      component_name = "my_test_component"
-    },
-  ]{{ '</strong>' }}
-}
-```
-
-Please include a comment with a bug ID as a reminder to re-enable the test in
-the future, when possible.
+Please see the FAQ section about [disabling tests].
 
 [Component Manifests]: /docs/concepts/components/v2/component_manifests.md
 [Components]: /docs/concepts/components/v2
@@ -280,3 +248,6 @@ the future, when possible.
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
 [relative component URL]: /docs/reference/components/url.md#relative
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
+[disabling tests]: /docs/development/testing/cts/faq.md#disable-a-test
+[retiring tests]: /docs/development/testing/cts/faq.md#retire-a-test
+

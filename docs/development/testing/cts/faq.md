@@ -128,6 +128,70 @@ You should write a CTS test if:
 2. You want CQ to prevent backward-incompatible changes to your software
    across multiple releases of the Fuchsia platform.
 
+## How do I retire a CTS test? {#retire-a-test}
+
+A CTS test should stop guarding against breaking changes once the SDK element
+it covers is removed (deprecated and no longer supported by the platform, even
+for legacy clients). This process is called test "retirement" and allows Fuchsia
+contributors to remove things from the SDK.
+
+To retire an entire CTS test, delete the test at HEAD before the upcoming
+milestone release. The version of the test from the previous CTS release will
+continue running in CQ until the next release is cut.
+
+To retire a few test cases, follow the same procedure: Delete the test cases at
+HEAD and wait for the next milestone release.
+
+If you must immediately make changes to a previously released version of a test,
+you'll need to get approval from the Release Team to have the change cherry
+picked onto the appropriate release branch.
+
+To verify that your change will succeed, you should sync your local Fuchsia
+checkout to the release branch and test the change yourself, first.  After
+verifying, submit the CL and file a bug against the Release Team.
+
+## How do I temporarily disable a CTS test? {#disable-a-test}
+
+You can disable a test by adding the test's package and component name to the list
+of `disabled_tests` on the appropriate `compatibility_test_suite` target in
+`//sdk/cts/release/BUILD.gn`.
+
+For example, a test running in Fuchsia's canary release might have the package
+URL:
+
+```
+fuchsia-pkg://fuchsia.com/my_test_canary#meta/my_test_component.cm
+```
+
+This can be disabled as follows:
+
+```
+compatibility_test_suite("canary") {
+  {{ '<strong>' }}disabled_tests = [
+    {
+      package = "my_test_canary"
+      component_name = "my_test_component"
+    },
+  ]{{ '</strong>' }}
+}
+```
+
+Please include a comment with a bug ID as a reminder to enable the test again.
+Tests should be enabled again within 72 hours.
+
+If you need to disable a test for an extended period of time, please instead
+remove the test from the CTS release by submitting a change like the following:
+
+```
+cts_fuchsia_test_package("my_test") {
+  test_components = [ ":my_test_component" ]
+  {{ '<strong>' }}internal_only_skip_on_cq = true{{ '</strong>' }}
+}
+```
+
+Then ask the release team to cherry pick this CL onto the appropriate release
+branch which will generate a new CTS without the test.
+
 ## Additional questions
 
 For questions and clarification on this document, please reach out to this
