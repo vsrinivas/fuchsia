@@ -797,7 +797,7 @@ group("slab") {
 }
 
 group("smallvec") {
-  deps = [ ":smallvec-v1_8_0" ]
+  public_deps = [ ":smallvec-v1_8_0" ]
 }
 
 group("socket2") {
@@ -3879,6 +3879,7 @@ rust_library("ecdsa-v0_13_4") {
     "--cfg=feature=\"digest\"",
     "--cfg=feature=\"hazmat\"",
     "--cfg=feature=\"rfc6979\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"sign\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"verify\"",
@@ -3930,6 +3931,7 @@ rust_library("elliptic-curve-v0_11_12") {
   deps += [ ":group-v0_11_0" ]
   deps += [ ":rand_core-v0_6_3" ]
   deps += [ ":sec1-v0_2_1" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":subtle-v2_4_1" ]
   deps += [ ":zeroize-v1_5_3" ]
 
@@ -3948,6 +3950,7 @@ rust_library("elliptic-curve-v0_11_12") {
     "--cfg=feature=\"hazmat\"",
     "--cfg=feature=\"pkcs8\"",
     "--cfg=feature=\"sec1\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
   ]
 
@@ -7003,6 +7006,7 @@ rust_library("p256-v0_10_1") {
     "--cfg=feature=\"ecdsa\"",
     "--cfg=feature=\"ecdsa-core\"",
     "--cfg=feature=\"pkcs8\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"sha2\"",
     "--cfg=feature=\"sha256\"",
     "--cfg=feature=\"std\"",
@@ -9845,6 +9849,7 @@ rust_library("sec1-v0_2_1") {
   deps += [ ":der-v0_5_1" ]
   deps += [ ":generic-array-v0_14_5" ]
   deps += [ ":pkcs8-v0_8_0" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":subtle-v2_4_1" ]
   deps += [ ":zeroize-v1_5_3" ]
 
@@ -9857,6 +9862,7 @@ rust_library("sec1-v0_2_1") {
     "-Cextra-filename=-89480042cb9a3664",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"pkcs8\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"subtle\"",
     "--cfg=feature=\"zeroize\"",
   ]

@@ -1079,6 +1079,7 @@ dependencies = [
  "group",
  "rand_core 0.6.3",
  "sec1",
+ "serde",
  "subtle",
  "zeroize",
 ]
@@ -3442,6 +3443,7 @@ dependencies = [
  "der",
  "generic-array 0.14.5",
  "pkcs8",
+ "serde",
  "subtle",
  "zeroize",
 ]
