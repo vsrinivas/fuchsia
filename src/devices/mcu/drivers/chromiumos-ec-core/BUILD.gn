@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     ":chromiumos-ec-core-tests",
     ":chromiumos-ec-motion-tests",
+    ":chromiumos-ec-power-sensor-tests",
     ":chromiumos-ec-usb-pd-tests",
   ]
 }
@@ -90,11 +91,25 @@ source_set("usb-pd") {
   ]
 }
 
+source_set("power-sensor") {
+  sources = [
+    "power_sensor.cc",
+    "power_sensor.h",
+    "subdriver.h",
+  ]
+
+  public_deps = [
+    ":core",
+    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
+  ]
+}
+
 fuchsia_driver("driver") {
   output_name = "chromiumos-ec-core"
   deps = [
     ":core",
     ":motion",
+    ":power-sensor",
     ":usb-pd",
   ]
 }
@@ -132,6 +147,14 @@ test("chromiumos-ec-usb-pd-unit-tests") {
   ]
 }
 
+test("chromiumos-ec-power-sensor-unit-tests") {
+  sources = [ "power_sensor_test.cc" ]
+  deps = [
+    ":power-sensor",
+    ":test-common",
+  ]
+}
+
 fuchsia_unittest_package("chromiumos-ec-core-tests") {
   deps = [ ":chromiumos-ec-core-unit-tests" ]
 }
@@ -142,4 +165,8 @@ fuchsia_unittest_package("chromiumos-ec-motion-tests") {
 
 fuchsia_unittest_package("chromiumos-ec-usb-pd-tests") {
   deps = [ ":chromiumos-ec-usb-pd-unit-tests" ]
+}
+
+fuchsia_unittest_package("chromiumos-ec-power-sensor-tests") {
+  deps = [ ":chromiumos-ec-power-sensor-unit-tests" ]
 }

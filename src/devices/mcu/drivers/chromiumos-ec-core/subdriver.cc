@@ -13,11 +13,11 @@ namespace chromiumos_ec_core {
 namespace {
 
 // Supported drivers and the features that they rely on.
-// For unit testing, this file provides a weak implementation of the all of the bind() functions.
-constexpr struct DriverFeature {
+// For unit testing, this file provides a weak implementation of all of the bind() functions.
+constexpr struct FeatureDriver {
   void (*bind)(ChromiumosEcCore*);
   size_t feature;
-} kDrivers[] = {
+} kFeatureDrivers[] = {
     {
         .bind = motion::RegisterMotionDriver,
         .feature = EC_FEATURE_MOTION_SENSE,
@@ -28,11 +28,29 @@ constexpr struct DriverFeature {
     },
 };
 
+// Drivers that rely on a specific board.
+// For unit testing, this file provides a weak implementation of all of the bind() functions.
+constexpr struct BoardDriver {
+  void (*bind)(ChromiumosEcCore*);
+  const char* board;
+} kBoardDrivers[] = {
+    {
+        .bind = power_sensor::RegisterPowerSensorDriver,
+        .board = kAtlasBoardName,
+    },
+};
+
 }  // namespace
 
 void BindSubdrivers(ChromiumosEcCore* ec) {
-  for (auto& driver : kDrivers) {
+  for (auto& driver : kFeatureDrivers) {
     if (ec->HasFeature(driver.feature)) {
+      driver.bind(ec);
+    }
+  }
+
+  for (auto& driver : kBoardDrivers) {
+    if (ec->IsBoard(driver.board)) {
       driver.bind(ec);
     }
   }
@@ -47,5 +65,6 @@ void BindSubdrivers(ChromiumosEcCore* ec) {
 
 WEAK_REGISTER_SYMBOL(motion, Motion)
 WEAK_REGISTER_SYMBOL(usb_pd, UsbPd)
+WEAK_REGISTER_SYMBOL(power_sensor, PowerSensor)
 
 }  // namespace chromiumos_ec_core

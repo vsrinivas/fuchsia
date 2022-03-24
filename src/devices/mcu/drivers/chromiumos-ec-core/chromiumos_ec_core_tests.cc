@@ -50,23 +50,12 @@ TEST_F(ChromiumosEcCoreTest, LifetimeTest) { InitDevice(); }
 
 // Test inspect attributes populated by EC_CMD_GET_VERSION.
 TEST_F(ChromiumosEcCoreTest, TestGetVersionInspect) {
-  fake_ec_.AddCommand(
-      EC_CMD_GET_VERSION, 0,
-      [](const void* data, size_t data_size, FakeEcDevice::RunCommandCompleter::Sync& completer) {
-        ec_response_get_version response{
-            .version_string_ro = "A read-only version string",
-            .version_string_rw = "A read-write version string",
-            .reserved = {0},
-            .current_image = 2,
-        };
-
-        completer.ReplySuccess(EcStatus::kSuccess, MakeVectorView(response));
-      });
+  fake_ec_.SetBoard("boardname");
   InitDevice();
 
-  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRo, "A read-only version string"));
-  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRw, "A read-write version string"));
-  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropCurrentImage, 2));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRo, "boardname1234"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropVersionRw, "boardname1234"));
+  ASSERT_NO_FATAL_FAILURE(WaitAndCheckProperty(kPropCurrentImage, 1234));
 }
 
 // Test inspect attributes populated by EC_CMD_GET_BUILD_INFO.

@@ -32,6 +32,9 @@ inline constexpr const char* kPropChipRevision = "chip-revision";
 inline constexpr const char* kPropBoardVersion = "board-version";
 inline constexpr const char* kPropFeatures = "features";
 
+// Board names used to bind board-specific drivers.
+inline constexpr const char* kAtlasBoardName = "atlas";
+
 namespace fcrosec = fuchsia_hardware_google_ec::wire;
 struct CommandResult {
   // Status returned by the EC.
@@ -88,6 +91,9 @@ class ChromiumosEcCore : public DeviceType, fidl::WireServer<fuchsia_hardware_ac
 
   // Returns true if |feature| is supported by the EC.
   bool HasFeature(size_t feature);
+
+  bool IsBoard(const std::string& board) { return version_string_rw_.rfind(board, 0) == 0; }
+
   async::Executor& executor() { return executor_; }
   async::Loop& loop() { return loop_; }
 
@@ -148,6 +154,11 @@ class ChromiumosEcCore : public DeviceType, fidl::WireServer<fuchsia_hardware_ac
       fidl::ClientEnd<fuchsia_hardware_google_ec::Device> ec_client,
       fidl::ClientEnd<fuchsia_hardware_acpi::Device> acpi_client);
 
+  // Get available features from the EC.
+  fpromise::promise<void, zx_status_t> GetFeatures();
+  // Get firmware versions from the EC.
+  fpromise::promise<void, zx_status_t> GetVersion();
+
   // Run commands for populating inspect data.
   void ScheduleInspectCommands();
 
@@ -169,6 +180,7 @@ class ChromiumosEcCore : public DeviceType, fidl::WireServer<fuchsia_hardware_ac
   std::vector<NotifyHandlerCallback> callbacks_ __TA_GUARDED(callback_lock_);
 
   ec_response_get_features features_;
+  std::string version_string_rw_;
 };
 
 }  // namespace chromiumos_ec_core

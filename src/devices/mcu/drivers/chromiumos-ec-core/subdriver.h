@@ -18,6 +18,12 @@ namespace usb_pd {
 
 void RegisterUsbPdDriver(ChromiumosEcCore* ec);
 
-}
+}  // namespace usb_pd
+
+namespace power_sensor {
+
+void RegisterPowerSensorDriver(ChromiumosEcCore* ec);
+
+}  // namespace power_sensor
 
 }  // namespace chromiumos_ec_core

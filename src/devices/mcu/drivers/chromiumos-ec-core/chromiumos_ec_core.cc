@@ -94,6 +94,54 @@ zx_status_t ChromiumosEcCore::Bind() {
                     .set_flags(DEVICE_ADD_NON_BINDABLE));
 }
 
+fpromise::promise<void, zx_status_t> ChromiumosEcCore::GetFeatures() {
+  return IssueCommand(EC_CMD_GET_FEATURES, 0)
+      .and_then([this](CommandResult& result) mutable -> fpromise::result<void, zx_status_t> {
+        auto features = result.GetData<ec_response_get_features>();
+        if (features == nullptr) {
+          zxlogf(ERROR, "Did not get enough bytes for GET_FEATURE");
+          init_txn_->Reply(ZX_ERR_BUFFER_TOO_SMALL);
+          return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
+        }
+
+        features_ = *features;
+        std::string feature_str;
+        for (size_t i = 0; i < std::size(kEcFeatureNames); i++) {
+          if (HasFeature(i)) {
+            if (!feature_str.empty()) {
+              feature_str += ", ";
+            }
+            feature_str += kEcFeatureNames[i];
+          }
+        }
+
+        core_.CreateString(kPropFeatures, feature_str, &inspect_);
+
+        return fpromise::ok();
+      });
+}
+
+fpromise::promise<void, zx_status_t> ChromiumosEcCore::GetVersion() {
+  return IssueCommand(EC_CMD_GET_VERSION, 0)
+      .and_then([this](CommandResult& result) mutable -> fpromise::result<void, zx_status_t> {
+        auto version = result.GetData<ec_response_get_version>();
+        if (version == nullptr) {
+          zxlogf(ERROR, "GET_VERSION response was too short (0x%lx, want 0x%lx)",
+                 result.data.size(), sizeof(*version));
+          init_txn_->Reply(ZX_ERR_BUFFER_TOO_SMALL);
+          return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
+        }
+
+        version_string_rw_ = std::string(version->version_string_rw);
+
+        core_.CreateString(kPropVersionRo, std::string(version->version_string_ro), &inspect_);
+        core_.CreateString(kPropVersionRw, std::string(version->version_string_rw), &inspect_);
+        core_.CreateUint(kPropCurrentImage, version->current_image, &inspect_);
+
+        return fpromise::ok();
+      });
+}
+
 void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
   auto ec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_google_ec::Device>();
   if (ec_endpoints.is_error()) {
@@ -121,40 +169,30 @@ void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
   init_txn_ = std::move(txn);
   auto promise =
       BindFidlClients(std::move(ec_endpoints->client), std::move(acpi_endpoints->client))
-          .then([this](fpromise::result<void, zx_status_t>& result)
-                    -> fpromise::promise<CommandResult, zx_status_t> {
-            if (result.is_error()) {
-              return fpromise::make_result_promise<CommandResult, zx_status_t>(
-                  fpromise::error(result.error()));
-            }
-            return IssueCommand(EC_CMD_GET_FEATURES, 0);
-          })
-          .and_then([this](CommandResult& result) mutable -> fpromise::result<void, zx_status_t> {
-            ec_response_get_features* features = result.GetData<ec_response_get_features>();
-            if (features == nullptr) {
-              zxlogf(ERROR, "Did not get enough bytes for GET_FEATURE");
-              init_txn_->Reply(ZX_ERR_BUFFER_TOO_SMALL);
-              return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
-            }
+          .and_then([this]() -> fpromise::promise<void, zx_status_t> {
+            return fpromise::join_promises(GetFeatures(), GetVersion())
+                .then(
+                    [this](fpromise::result<std::tuple<fpromise::result<void, zx_status_t>,
+                                                       fpromise::result<void, zx_status_t>>,
+                                            void>& result) -> fpromise::result<void, zx_status_t> {
+                      auto results = result.take_value();
 
-            features_ = *features;
-            std::string feature_str;
-            for (size_t i = 0; i < std::size(kEcFeatureNames); i++) {
-              if (HasFeature(i)) {
-                if (!feature_str.empty()) {
-                  feature_str += ", ";
-                }
-                feature_str += kEcFeatureNames[i];
-              }
-            }
+                      auto get_features_result = std::get<0>(results);
+                      if (get_features_result.is_error()) {
+                        return get_features_result.take_error_result();
+                      }
 
-            core_.CreateString(kPropFeatures, feature_str, &inspect_);
+                      auto get_version_result = std::get<1>(results);
+                      if (get_version_result.is_error()) {
+                        return get_version_result.take_error_result();
+                      }
 
-            // Bind child drivers.
-            BindSubdrivers(this);
+                      // Bind child drivers.
+                      BindSubdrivers(this);
 
-            init_txn_->Reply(ZX_OK);
-            return fpromise::ok();
+                      init_txn_->Reply(ZX_OK);
+                      return fpromise::ok();
+                    });
           })
           .and_then([this]() { ScheduleInspectCommands(); })
           .or_else([this](zx_status_t& status) {
@@ -259,20 +297,6 @@ bool ChromiumosEcCore::HasFeature(size_t feature) {
 }
 
 void ChromiumosEcCore::ScheduleInspectCommands() {
-  executor_.schedule_task(
-      IssueCommand(EC_CMD_GET_VERSION, 0).and_then([this](CommandResult& result) {
-        auto version = result.GetData<ec_response_get_version>();
-        if (version == nullptr) {
-          zxlogf(ERROR, "GET_VERSION response was too short (0x%lx, want 0x%lx)",
-                 result.data.size(), sizeof(*version));
-          return;
-        }
-
-        core_.CreateString(kPropVersionRo, std::string(version->version_string_ro), &inspect_);
-        core_.CreateString(kPropVersionRw, std::string(version->version_string_rw), &inspect_);
-        core_.CreateUint(kPropCurrentImage, version->current_image, &inspect_);
-      }));
-
   executor_.schedule_task(
       IssueCommand(EC_CMD_GET_BUILD_INFO, 0).and_then([this](CommandResult& result) {
         core_.CreateString(

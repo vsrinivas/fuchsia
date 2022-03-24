@@ -86,6 +86,20 @@ void FakeEcDevice::RunCommand(RunCommandRequestView request, RunCommandCompleter
                            MakeVectorView(features_));
     return;
   }
+
+  if (request->command == EC_CMD_GET_VERSION) {
+    ec_response_get_version response = {
+        .reserved = "",
+        .current_image = 1234,
+    };
+    std::strcpy(response.version_string_ro, (board_ + "1234").c_str());
+    std::strcpy(response.version_string_rw, (board_ + "1234").c_str());
+
+    completer.ReplySuccess(fuchsia_hardware_google_ec::wire::EcStatus::kSuccess,
+                           MakeVectorView(response));
+    return;
+  }
+
   auto command = commands_.find(MakeKey(request->command, request->command_version));
   if (command == commands_.end()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);

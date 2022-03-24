@@ -8,6 +8,7 @@
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
 
 #include <unordered_map>
+#include <utility>
 
 #include <chromiumos-platform-ec/ec_commands.h>
 
@@ -35,6 +36,8 @@ class FakeEcDevice : public fidl::testing::WireTestBase<fuchsia_hardware_google_
     }
   }
 
+  void SetBoard(std::string board) { board_ = std::move(board); }
+
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override;
   void RunCommand(RunCommandRequestView request, RunCommandCompleter::Sync& completer) override;
 
@@ -48,6 +51,7 @@ class FakeEcDevice : public fidl::testing::WireTestBase<fuchsia_hardware_google_
   static uint32_t MakeKey(uint16_t command, uint16_t version) { return (command << 16) | version; }
   std::unordered_map<uint32_t, CommandHandler> commands_;
   ec_response_get_features features_;
+  std::string board_;
 };
 
 class ChromiumosEcTestBase : public inspect::InspectTestHelper, public zxtest::Test {
