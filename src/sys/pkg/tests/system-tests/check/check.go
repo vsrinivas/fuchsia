@@ -150,16 +150,10 @@ func ValidateDevice(
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	// FIXME(40913): every builder should at least build sl4f as a universe package.
-	if rpcClient == nil {
-		if err := device.ValidateStaticPackages(ctx); err != nil {
-			return fmt.Errorf("failed to validate static packages without sl4f: %w", err)
-		}
-	} else {
-		if err := rpcClient.ValidateStaticPackages(ctx); err != nil {
-			return fmt.Errorf("failed to validate static packages with sl4f: %w", err)
-		}
-
+	if err := device.ValidateStaticPackages(ctx); err != nil {
+		return fmt.Errorf("failed to validate static packages without sl4f: %w", err)
+	}
+	if rpcClient != nil {
 		if err := CheckABRConfig(ctx, rpcClient, expectedConfig); err != nil {
 			// FIXME(43336): during the rollout of ABR, the N-1 build might
 			// not be writing to the inactive partition, so don't

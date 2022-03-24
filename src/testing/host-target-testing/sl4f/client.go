@@ -113,14 +113,9 @@ func (c *Client) connect(ctx context.Context) error {
 
 // ping attempts to perform an sl4f command that should always succeed if the server is up.
 func (c *Client) ping(ctx context.Context) error {
-	request := struct {
-		Path string `json:"path"`
-	}{
-		Path: "/system/meta",
-	}
 	var response string
 
-	if err := c.call(ctx, "file_facade.ReadFile", request, &response); err != nil {
+	if err := c.call(ctx, "device_facade.GetDeviceName", nil, &response); err != nil {
 		return err
 	}
 

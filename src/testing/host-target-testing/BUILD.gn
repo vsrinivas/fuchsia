@@ -63,7 +63,6 @@ go_library("host-target-testing") {
     "sl4f/client.go",
     "sl4f/file.go",
     "sl4f/paver.go",
-    "sl4f/util.go",
     "updater/updater.go",
     "util/util.go",
     "util/util_test.go",
