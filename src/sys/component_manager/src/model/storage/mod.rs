@@ -474,7 +474,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -493,7 +493,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -514,7 +514,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -565,7 +565,7 @@ mod tests {
             },
             relative_moniker.clone(),
             instance_id.as_ref(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -601,7 +601,7 @@ mod tests {
             },
             relative_moniker.clone(),
             instance_id.as_ref(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -636,7 +636,7 @@ mod tests {
             },
             relative_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await;
@@ -689,7 +689,7 @@ mod tests {
             },
             child_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -708,7 +708,7 @@ mod tests {
             },
             parent_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -741,7 +741,7 @@ mod tests {
             },
             parent_moniker.clone(),
             None,
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
@@ -815,7 +815,7 @@ mod tests {
             },
             child_moniker.clone(),
             instance_id.as_ref(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            0,
             &StartReason::Eager,
         )
         .await
