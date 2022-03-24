@@ -111,7 +111,7 @@ async fn main() -> Result<(), Error> {
         TopLevel { nested: SubCommand::Mount(MountSubCommand { readonly }), verbose } => {
             let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), readonly).await?),
-                OpenOptions { trace: verbose, read_only: readonly },
+                OpenOptions { trace: verbose, read_only: readonly, ..Default::default() },
             )
             .await?;
             let server = FxfsServer::new(fs, "default", crypt).await?;

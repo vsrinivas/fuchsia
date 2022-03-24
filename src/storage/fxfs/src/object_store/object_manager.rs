@@ -46,6 +46,7 @@ pub struct ObjectManager {
     inner: RwLock<Inner>,
     metadata_reservation: OnceCell<Reservation>,
     volume_directory: OnceCell<Directory<ObjectStore>>,
+    on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>,
 }
 
 // Whilst we are flushing we need to keep track of the old checkpoint that we are hoping to flush,
@@ -118,7 +119,7 @@ impl Inner {
 }
 
 impl ObjectManager {
-    pub fn new() -> ObjectManager {
+    pub fn new(on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>) -> ObjectManager {
         ObjectManager {
             inner: RwLock::new(Inner {
                 stores: HashMap::new(),
@@ -134,6 +135,7 @@ impl ObjectManager {
             }),
             metadata_reservation: OnceCell::new(),
             volume_directory: OnceCell::new(),
+            on_new_store,
         }
     }
 
@@ -151,6 +153,9 @@ impl ObjectManager {
     }
 
     pub fn set_root_parent_store(&self, store: Arc<ObjectStore>) {
+        if let Some(on_new_store) = &self.on_new_store {
+            on_new_store(&store);
+        }
         let mut inner = self.inner.write().unwrap();
         let store_id = store.store_object_id();
         inner.stores.insert(store_id, store);
@@ -167,6 +172,9 @@ impl ObjectManager {
     }
 
     pub fn set_root_store(&self, store: Arc<ObjectStore>) {
+        if let Some(on_new_store) = &self.on_new_store {
+            on_new_store(&store);
+        }
         let mut inner = self.inner.write().unwrap();
         let store_id = store.store_object_id();
         inner.stores.insert(store_id, store);
@@ -192,14 +200,18 @@ impl ObjectManager {
                 // This assumes that all stores are children of the root store.
                 assert_ne!(store_object_id, root_parent_store_object_id);
                 assert_ne!(store_object_id, root_store.store_object_id());
-                ObjectStore::new(
+                let store = ObjectStore::new(
                     Some(root_store),
                     store_object_id,
                     fs,
                     None,
                     None,
                     LockState::Locked,
-                )
+                );
+                if let Some(on_new_store) = &self.on_new_store {
+                    on_new_store(&store);
+                }
+                store
             })
             .clone()
     }
@@ -277,6 +289,9 @@ impl ObjectManager {
     }
 
     pub fn add_store(&self, store: Arc<ObjectStore>) {
+        if let Some(on_new_store) = &self.on_new_store {
+            on_new_store(&store);
+        }
         let mut inner = self.inner.write().unwrap();
         let store_object_id = store.store_object_id();
         assert_ne!(store_object_id, inner.root_parent_store_object_id);

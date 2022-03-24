@@ -124,7 +124,7 @@ pub struct StoreInfo {
 // It will likely involve placing limits on the maximum number of layers.
 const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
-const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = journal::RECLAIM_SIZE as usize;
+const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = 8 * journal::DEFAULT_RECLAIM_SIZE as usize;
 
 #[derive(Default)]
 pub struct HandleOptions {
@@ -349,7 +349,7 @@ impl ObjectStore {
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = filesystem.block_size();
-        let store = Arc::new(ObjectStore {
+        Arc::new(ObjectStore {
             parent_store,
             store_object_id,
             device,
@@ -365,8 +365,7 @@ impl ObjectStore {
             encrypted_mutations: Mutex::new(None),
             lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
-        });
-        store
+        })
     }
 
     fn new_empty(
@@ -1727,7 +1726,7 @@ mod tests {
                 None,
             )
             .await
-            .expect("create_child failed");
+            .expect("create_object failed");
             transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.
@@ -1772,7 +1771,7 @@ mod tests {
                 None,
             )
             .await
-            .expect("create_child failed");
+            .expect("create_object failed");
             transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.

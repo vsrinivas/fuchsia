@@ -71,7 +71,7 @@ where
     // again as that has the potential to end up in an infinite loop, and so the number chosen
     // here is related to the journal's RECLAIM_SIZE.
     if layer_count == 1
-        && total_size > journal::RECLAIM_SIZE
+        && total_size > journal::DEFAULT_RECLAIM_SIZE
         && layer_set.layers[split_index - 1].handle().is_some()
     {
         split_index -= 1;

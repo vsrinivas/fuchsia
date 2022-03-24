@@ -37,7 +37,7 @@ pub struct FakeFilesystem {
 
 impl FakeFilesystem {
     pub fn new(device: DeviceHolder) -> Arc<Self> {
-        let object_manager = Arc::new(ObjectManager::new());
+        let object_manager = Arc::new(ObjectManager::new(None));
         let graveyard = Graveyard::new(object_manager.clone());
         Arc::new(FakeFilesystem {
             device,

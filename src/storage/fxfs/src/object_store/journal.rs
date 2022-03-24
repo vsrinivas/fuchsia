@@ -83,10 +83,8 @@ const BLOCK_SIZE: u64 = 8192;
 const CHUNK_SIZE: u64 = 131_072;
 const_assert!(CHUNK_SIZE > TRANSACTION_MAX_JOURNAL_USAGE);
 
-// In the steady state, the journal should fluctuate between being approximately half of this number
-// and this number.  New super-blocks will be written every time about half of this amount is
-// written to the journal.
-pub const RECLAIM_SIZE: u64 = 262_144;
+// See the comment for the `reclaim_size` member of Inner.
+pub const DEFAULT_RECLAIM_SIZE: u64 = 262_144;
 
 // Temporary space that should be reserved for the journal.  For example: space that is currently
 // used in the journal file but cannot be deallocated yet because we are flushing.
@@ -175,51 +173,70 @@ struct Inner {
     super_block: SuperBlock,
     super_block_to_write: SuperBlockCopy,
 
-    /// This event is used when we are waiting for a compaction to free up journal space.
+    // This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
 
-    /// The offset that we can zero the journal up to now that it is no longer needed.
+    // The offset that we can zero the journal up to now that it is no longer needed.
     zero_offset: Option<u64>,
 
-    /// The journal offset that we most recently flushed to the device.
+    // The journal offset that we most recently flushed to the device.
     device_flushed_offset: u64,
 
-    /// If true, indicates a DidFlushDevice record is pending.
+    // If true, indicates a DidFlushDevice record is pending.
     needs_did_flush_device: bool,
 
-    /// The writer for the journal.
+    // The writer for the journal.
     writer: JournalWriter,
 
-    /// Set when a reset is encountered during a read.
-    /// Used at write pre_commit() time to ensure we write a version first thing after a reset.
+    // Set when a reset is encountered during a read.
+    // Used at write pre_commit() time to ensure we write a version first thing after a reset.
     output_reset_version: bool,
 
-    /// Waker for the flush task.
+    // Waker for the flush task.
     flush_waker: Option<Waker>,
 
-    /// Tells the flush task to terminate.
+    // Tells the flush task to terminate.
     terminate: bool,
 
-    /// Disable compactions.
+    // Disable compactions.
     disable_compactions: bool,
 
-    /// True if compactions are running.
+    // True if compactions are running.
     compaction_running: bool,
 
-    /// Waker for the sync task for when it's waiting for the flush task to finish.
+    // Waker for the sync task for when it's waiting for the flush task to finish.
     sync_waker: Option<Waker>,
 
-    /// The last offset we flushed to the journal file.
+    // The last offset we flushed to the journal file.
     flushed_offset: u64,
 
-    /// If, after replaying, we have to discard a number of mutations (because they don't validate),
-    /// this offset specifies where we need to discard back to.  This is so that when we next replay,
-    /// we ignore those mutations and continue with new good mutations.
+    // If, after replaying, we have to discard a number of mutations (because they don't validate),
+    // this offset specifies where we need to discard back to.  This is so that when we next replay,
+    // we ignore those mutations and continue with new good mutations.
     discard_offset: Option<u64>,
+
+    // In the steady state, the journal should fluctuate between being approximately half of this
+    // number and this number.  New super-blocks will be written every time about half of this
+    // amount is written to the journal.
+    reclaim_size: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct JournalOptions {
+    /// In the steady state, the journal should fluctuate between being approximately half of this
+    /// number and this number.  New super-blocks will be written every time about half of this
+    /// amount is written to the journal.
+    pub reclaim_size: u64,
+}
+
+impl Default for JournalOptions {
+    fn default() -> Self {
+        JournalOptions { reclaim_size: DEFAULT_RECLAIM_SIZE }
+    }
 }
 
 impl Journal {
-    pub fn new(objects: Arc<ObjectManager>) -> Journal {
+    pub fn new(objects: Arc<ObjectManager>, options: JournalOptions) -> Journal {
         let starting_checksum = rand::thread_rng().gen();
         Journal {
             objects: objects,
@@ -240,6 +257,7 @@ impl Journal {
                 sync_waker: None,
                 flushed_offset: 0,
                 discard_offset: None,
+                reclaim_size: options.reclaim_size,
             }),
             commit_mutex: futures::lock::Mutex::new(()),
             writer_mutex: futures::lock::Mutex::new(()),
@@ -304,7 +322,11 @@ impl Journal {
     }
 
     /// Reads the latest super-block, and then replays journaled records.
-    pub async fn replay(&self, filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
+    pub async fn replay(
+        &self,
+        filesystem: Arc<dyn Filesystem>,
+        on_new_allocator: Option<Box<dyn Fn(Arc<dyn Allocator>) + Send + Sync>>,
+    ) -> Result<(), Error> {
         trace_duration!("Journal::replay");
         let (super_block, current_super_block, root_parent) = match futures::join!(
             self.load_superblock(filesystem.clone(), SuperBlockCopy::A),
@@ -334,6 +356,9 @@ impl Journal {
         self.objects.set_root_parent_store(root_parent.clone());
         let allocator =
             Arc::new(SimpleAllocator::new(filesystem.clone(), super_block.allocator_object_id));
+        if let Some(on_new_allocator) = on_new_allocator {
+            on_new_allocator(allocator.clone() as Arc<dyn Allocator>);
+        }
         self.objects.set_allocator(allocator.clone());
         self.objects.set_borrowed_metadata_space(super_block.borrowed_metadata_space);
         self.objects.set_last_end_offset(super_block.super_block_journal_file_offset);
@@ -381,6 +406,8 @@ impl Journal {
         let mut current_transaction = None;
         let mut device_flushed_offset = super_block.super_block_journal_file_offset;
         loop {
+            // Cache the checkpoint before we deserialize a record.
+            let checkpoint = reader.journal_file_checkpoint();
             let result = reader.deserialize().await?;
             match result {
                 ReadResult::Reset => {
@@ -408,11 +435,7 @@ impl Journal {
                         JournalRecord::Mutation { object_id, mutation } => {
                             let current_transaction = match current_transaction.as_mut() {
                                 None => {
-                                    transactions.push((
-                                        reader.journal_file_checkpoint(),
-                                        Vec::new(),
-                                        0,
-                                    ));
+                                    transactions.push((checkpoint, Vec::new(), 0));
                                     current_transaction = transactions.last_mut();
                                     current_transaction.as_mut().unwrap()
                                 }
@@ -987,7 +1010,7 @@ impl Journal {
                     break Err(anyhow!(FxfsError::JournalFlushError).context("Journal closed"));
                 }
                 if self.objects.last_end_offset() - inner.super_block.journal_checkpoint.file_offset
-                    < RECLAIM_SIZE
+                    < inner.reclaim_size
                 {
                     break Ok(());
                 }
@@ -1087,7 +1110,7 @@ impl Journal {
                     && !inner.disable_compactions
                     && self.objects.last_end_offset()
                         - inner.super_block.journal_checkpoint.file_offset
-                        > RECLAIM_SIZE / 2
+                        > inner.reclaim_size / 2
                 {
                     compact_fut = Some(self.compact().boxed());
                     inner.compaction_running = true;

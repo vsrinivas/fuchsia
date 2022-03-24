@@ -44,11 +44,21 @@ pub async fn layers_from_handles<K: Key, V: Value>(
     Ok(layers)
 }
 
+#[derive(Eq, PartialEq, Debug)]
+pub enum Operation {
+    Insert,
+    ReplaceOrInsert,
+    MergeInto,
+}
+
+pub type MutationCallback<K, V> = Option<Box<dyn Fn(Operation, &Item<K, V>) + Send + Sync>>;
+
 struct Inner<K, V> {
     // The Event allows us to wait for any impending mutations to complete.  See the seal method
     // below.
     mutable_layer: (Event, Arc<dyn MutableLayer<K, V>>),
     layers: Vec<Arc<dyn Layer<K, V>>>,
+    mutation_callback: MutationCallback<K, V>,
 }
 
 /// LSMTree manages a tree of layers to provide a key/value store.  Each layer contains deltas on
@@ -69,6 +79,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
                     skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
                 ),
                 layers: Vec::new(),
+                mutation_callback: None,
             }),
             merge_fn,
         }
@@ -86,6 +97,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
                     skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
                 ),
                 layers: layers_from_handles(handles).await?,
+                mutation_callback: None,
             }),
             merge_fn,
         })
@@ -194,19 +206,37 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
 
     /// Inserts an item into the mutable layer. Behaviour is undefined if the item already exists.
     pub async fn insert(&self, item: Item<K, V>) {
-        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = {
+            let data = self.data.read().unwrap();
+            if let Some(mutation_callback) = data.mutation_callback.as_ref() {
+                mutation_callback(Operation::Insert, &item);
+            }
+            data.mutable_layer.clone()
+        };
         mutable_layer.insert(item).await;
     }
 
     /// Replaces or inserts an item into the mutable layer.
     pub async fn replace_or_insert(&self, item: Item<K, V>) {
-        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = {
+            let data = self.data.read().unwrap();
+            if let Some(mutation_callback) = data.mutation_callback.as_ref() {
+                mutation_callback(Operation::ReplaceOrInsert, &item);
+            }
+            data.mutable_layer.clone()
+        };
         mutable_layer.replace_or_insert(item).await;
     }
 
     /// Merges the given item into the mutable layer.
     pub async fn merge_into(&self, item: Item<K, V>, lower_bound: &K) {
-        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = {
+            let data = self.data.read().unwrap();
+            if let Some(mutation_callback) = data.mutation_callback.as_ref() {
+                mutation_callback(Operation::MergeInto, &item);
+            }
+            data.mutable_layer.clone()
+        };
         mutable_layer.merge_into(item, lower_bound, self.merge_fn).await
     }
 
@@ -228,6 +258,13 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
 
     pub fn mutable_layer(&self) -> Arc<dyn MutableLayer<K, V>> {
         self.data.read().unwrap().mutable_layer.1.clone()
+    }
+
+    /// Sets a mutation callback which is a callback that is triggered whenever any mutations are
+    /// applied to the tree.  This might be useful for tests that want to record the precise
+    /// sequence of mutations that are applied to the tree.
+    pub fn set_mutation_callback(&self, mutation_callback: MutationCallback<K, V>) {
+        self.data.write().unwrap().mutation_callback = mutation_callback;
     }
 }
 

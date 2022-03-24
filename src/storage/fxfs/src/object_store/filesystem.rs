@@ -11,7 +11,7 @@ use {
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
             directory::Directory,
             graveyard::Graveyard,
-            journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
+            journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
             object_manager::ObjectManager,
             trace_duration,
             transaction::{
@@ -191,16 +191,23 @@ pub struct FxFilesystem {
     completed_transactions: UintMetric,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Default)]
 pub struct OpenOptions {
     pub trace: bool,
     pub read_only: bool,
+    pub journal_options: JournalOptions,
+
+    /// Called immediately after creating the allocator.
+    pub on_new_allocator: Option<Box<dyn Fn(Arc<dyn Allocator>) + Send + Sync>>,
+
+    /// Called each time a new store is registered with ObjectManager.
+    pub on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>,
 }
 
 impl FxFilesystem {
     pub async fn new_empty(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
-        let objects = Arc::new(ObjectManager::new());
-        let journal = Journal::new(objects.clone());
+        let objects = Arc::new(ObjectManager::new(None));
+        let journal = Journal::new(objects.clone(), JournalOptions::default());
         let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
@@ -248,8 +255,8 @@ impl FxFilesystem {
         device: DeviceHolder,
         options: OpenOptions,
     ) -> Result<OpenFxFilesystem, Error> {
-        let objects = Arc::new(ObjectManager::new());
-        let journal = Journal::new(objects.clone());
+        let objects = Arc::new(ObjectManager::new(options.on_new_store));
+        let journal = Journal::new(objects.clone(), options.journal_options);
         let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
@@ -272,7 +279,11 @@ impl FxFilesystem {
             device.flush().await.context("Device flush failed")?;
         }
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
-        filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
+        filesystem
+            .journal
+            .replay(filesystem.clone(), options.on_new_allocator)
+            .await
+            .context("Journal replay failed")?;
         filesystem.journal.set_trace(filesystem.trace);
         filesystem.root_store().set_trace(filesystem.trace);
         if !options.read_only {
@@ -513,17 +524,25 @@ impl AsRef<LockManager> for FxFilesystem {
 #[cfg(test)]
 mod tests {
     use {
-        super::{Filesystem, FxFilesystem, SyncOptions},
+        super::{Filesystem, FxFilesystem, OpenOptions, SyncOptions},
         crate::{
+            lsm_tree::{types::Item, Operation},
             object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
+                allocator::SimpleAllocator,
+                directory::replace_child,
                 directory::Directory,
                 fsck::fsck,
+                journal::JournalOptions,
                 transaction::{Options, TransactionHandler},
             },
         },
         fuchsia_async as fasync,
         futures::future::join_all,
+        std::{
+            collections::HashMap,
+            sync::{Arc, Mutex},
+        },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -566,5 +585,162 @@ mod tests {
 
         fsck(&fs, None).await.expect("fsck failed");
         fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_replay_is_identical() {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+
+        // Reopen the store, but set reclaim size to a very large value which will effectively
+        // stop the journal from flushing and allows us to track all the mutations to the store.
+        fs.close().await.expect("close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        struct Mutations<K, V>(Mutex<Vec<(Operation, Item<K, V>)>>);
+
+        impl<K: Clone, V: Clone> Mutations<K, V> {
+            fn new() -> Self {
+                Mutations(Mutex::new(Vec::new()))
+            }
+
+            fn push(&self, operation: Operation, item: &Item<K, V>) {
+                self.0.lock().unwrap().push((operation, item.clone()));
+            }
+        }
+
+        let open_fs = |device,
+                       object_mutations: Arc<Mutex<HashMap<_, _>>>,
+                       allocator_mutations: Arc<Mutations<_, _>>| async {
+            FxFilesystem::open_with_options(
+                device,
+                OpenOptions {
+                    journal_options: JournalOptions {
+                        reclaim_size: u64::MAX,
+                        ..Default::default()
+                    },
+                    on_new_allocator: Some(Box::new(move |allocator| {
+                        let allocator = allocator
+                            .as_any()
+                            .downcast::<SimpleAllocator>()
+                            .unwrap_or_else(|_| panic!("Unexpected allocator"));
+                        let allocator_mutations = allocator_mutations.clone();
+                        allocator.tree().set_mutation_callback(Some(Box::new(move |op, item| {
+                            allocator_mutations.push(op, item)
+                        })));
+                    })),
+                    on_new_store: Some(Box::new(move |store| {
+                        let mutations = Arc::new(Mutations::new());
+                        object_mutations
+                            .lock()
+                            .unwrap()
+                            .insert(store.store_object_id(), mutations.clone());
+                        store.tree().set_mutation_callback(Some(Box::new(move |op, item| {
+                            mutations.push(op, item)
+                        })));
+                    })),
+                    ..Default::default()
+                },
+            )
+            .await
+            .expect("open_with_options failed")
+        };
+
+        let allocator_mutations = Arc::new(Mutations::new());
+        let object_mutations = Arc::new(Mutex::new(HashMap::new()));
+        let fs = open_fs(device, object_mutations.clone(), allocator_mutations.clone()).await;
+
+        let root_store = fs.root_store();
+        let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
+            .await
+            .expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let object = root_directory
+            .create_child_file(&mut transaction, "test")
+            .await
+            .expect("create_child_file failed");
+        transaction.commit().await.expect("commit failed");
+
+        // Append some data.
+        let buf = object.allocate_buffer(10000);
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
+
+        // Overwrite some data.
+        object.write_or_append(Some(5000), buf.as_ref()).await.expect("write failed");
+
+        // Truncate.
+        (&object as &dyn WriteObjectHandle).truncate(3000).await.expect("truncate failed");
+
+        // Delete the object.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+
+        replace_child(&mut transaction, None, (&root_directory, "test"))
+            .await
+            .expect("replace_child failed");
+
+        transaction.commit().await.expect("commit failed");
+
+        // Finally tombstone the object.
+        root_store
+            .tombstone(object.object_id(), Options::default())
+            .await
+            .expect("tombstone failed");
+
+        // Now reopen and check that replay produces the same set of mutations.
+        fs.close().await.expect("close failed");
+
+        let metadata_reservation_amount = fs.object_manager().metadata_reservation().amount();
+
+        let device = fs.take_device().await;
+        device.reopen();
+
+        let replayed_object_mutations = Arc::new(Mutex::new(HashMap::new()));
+        let replayed_allocator_mutations = Arc::new(Mutations::new());
+        let fs = open_fs(
+            device,
+            replayed_object_mutations.clone(),
+            replayed_allocator_mutations.clone(),
+        )
+        .await;
+
+        let m1 = object_mutations.lock().unwrap();
+        let m2 = replayed_object_mutations.lock().unwrap();
+        assert_eq!(m1.len(), m2.len());
+        for (store_id, mutations) in &*m1 {
+            let mutations = mutations.0.lock().unwrap();
+            let replayed = m2.get(&store_id).expect("Found unexpected store").0.lock().unwrap();
+            assert_eq!(mutations.len(), replayed.len());
+            for ((op1, i1), (op2, i2)) in mutations.iter().zip(replayed.iter()) {
+                assert_eq!(op1, op2);
+                assert_eq!(i1.key, i2.key);
+                assert_eq!(i1.value, i2.value);
+                assert_eq!(i1.sequence, i2.sequence);
+            }
+        }
+
+        let a1 = allocator_mutations.0.lock().unwrap();
+        let a2 = replayed_allocator_mutations.0.lock().unwrap();
+        assert_eq!(a1.len(), a2.len());
+        for ((op1, i1), (op2, i2)) in a1.iter().zip(a2.iter()) {
+            assert_eq!(op1, op2);
+            assert_eq!(i1.key, i2.key);
+            assert_eq!(i1.value, i2.value);
+            assert_eq!(i1.sequence, i2.sequence);
+        }
+
+        assert_eq!(
+            fs.object_manager().metadata_reservation().amount(),
+            metadata_reservation_amount
+        );
     }
 }

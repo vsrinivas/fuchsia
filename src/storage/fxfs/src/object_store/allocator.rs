@@ -418,7 +418,6 @@ impl SimpleAllocator {
     }
 
     pub fn tree(&self) -> &LSMTree<AllocatorKey, AllocatorValue> {
-        assert!(self.inner.lock().unwrap().opened);
         &self.tree
     }
 
