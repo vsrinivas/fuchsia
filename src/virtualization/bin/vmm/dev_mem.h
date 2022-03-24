@@ -69,7 +69,7 @@ class DevMem {
   const RangeSet::const_iterator begin() const { return ranges_.begin(); }
   const RangeSet::const_iterator end() const { return ranges_.end(); }
 
-  // Generates, by calling the provided functor, all Range's that are in the
+  // Generates, by calling the provided functor, all Ranges that are in the
   // provided range, that do not overlap with any internal ranges. This means
   // the generated set is precisely the inverse of our contained ranges, unioned
   // with the provided range.
@@ -77,6 +77,10 @@ class DevMem {
   void YieldInverseRange(zx_gpaddr_t base, size_t size, F yield) const {
     zx_gpaddr_t prev = base;
     for (const auto& range : ranges_) {
+      if ((range.addr + range.size <= base) || (range.addr >= base + size)) {
+        // Ignore any device memory ranges which have zero overlap with the provided range.
+        continue;
+      }
       zx_gpaddr_t next_top = std::min(range.addr, base + size);
       if (next_top > prev) {
         yield(prev, next_top - prev);
