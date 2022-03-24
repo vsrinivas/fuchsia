@@ -13,7 +13,7 @@ use {
     std::{
         fs::File,
         io::{self, Read, Write},
-        path::{Path, PathBuf},
+        path::PathBuf,
         process::Command,
     },
 };
@@ -27,7 +27,7 @@ mod types;
 
 #[derive(FromArgs, Debug)]
 /// Generate a GN manifest for your vendored Cargo dependencies.
-struct Opt {
+pub struct Opt {
     /// cargo manifest path
     #[argh(option)]
     manifest_path: PathBuf,
@@ -195,17 +195,13 @@ define_combined_cfg!(BinaryCfg);
 
 pub fn generate_from_manifest<W: io::Write>(
     mut output: &mut W,
-    output_path: &Path,
-    metadata_path: Option<PathBuf>,
-    manifest_path: PathBuf,
-    project_root: PathBuf,
-    cargo: Option<PathBuf>,
-    skip_root: bool,
+    opt: &Opt,
 ) -> Result<(), Error> {
-    let path_from_root_to_generated = output_path
+    let manifest_path = &opt.manifest_path;
+    let path_from_root_to_generated = opt.output
         .parent()
         .unwrap()
-        .strip_prefix(&project_root)
+        .strip_prefix(&opt.project_root)
         .expect("--project-root must be a parent of --output");
     let mut emitted_metadata: Vec<CrateOutputMetadata> = Vec::new();
     let mut top_level_metadata: HashSet<String> = HashSet::new();
@@ -217,12 +213,12 @@ pub fn generate_from_manifest<W: io::Write>(
         .with_context(|| format!("while parsing parent path: {}", manifest_path.display()))?;
     cmd.current_dir(parent_dir);
     cmd.manifest_path(&manifest_path);
-    if let Some(ref cargo_path) = cargo {
+    if let Some(ref cargo_path) = opt.cargo {
         cmd.cargo_path(&cargo_path);
     }
     cmd.other_options([String::from("--frozen")]);
     let metadata = cmd.exec().with_context(|| {
-        format!("while running cargo metadata: supplied cargo binary: {:?}", &cargo)
+        format!("while running cargo metadata: supplied cargo binary: {:?}", &opt.cargo)
     })?;
 
     // read out custom gn commands from the toml file
@@ -242,7 +238,7 @@ pub fn generate_from_manifest<W: io::Write>(
         Some(resolve) => {
             let top_level_id =
                 resolve.root.as_ref().expect("the Cargo.toml file must define a package");
-            if skip_root {
+            if opt.skip_root {
                 let top_level_node = resolve
                     .nodes
                     .iter()
@@ -392,7 +388,7 @@ pub fn generate_from_manifest<W: io::Write>(
                     path_from_root_to_generated.display(),
                     bin_name
                 )),
-                path: target.package_root(&project_root),
+                path: target.package_root(&opt.project_root),
             });
             gn::write_binary_top_level_rule(&mut output, None, bin_name, target)
                 .context("writing binary top level rule")?;
@@ -490,7 +486,7 @@ pub fn generate_from_manifest<W: io::Write>(
             }
         }
 
-        let package_root = target.package_root(&project_root);
+        let package_root = target.package_root(&opt.project_root);
         let shortcut_target = if top_level_metadata.contains(target.pkg_name) {
             Some(format!("//{}:{}", path_from_root_to_generated.display(), target.pkg_name))
         } else {
@@ -512,7 +508,7 @@ pub fn generate_from_manifest<W: io::Write>(
         let _ = gn::write_rule(
             &mut output,
             &target,
-            &project_root,
+            &opt.project_root,
             global_config,
             target_cfg,
             binary_name,
@@ -520,7 +516,7 @@ pub fn generate_from_manifest<W: io::Write>(
         .context("writing rule")?;
     }
 
-    if let Some(metadata_path) = metadata_path {
+    if let Some(metadata_path) = &opt.emit_metadata {
         eprintln!("Emitting external crate metadata: {}", metadata_path.display());
         emitted_metadata.sort();
         let metadata_json = serde_json::to_string_pretty(&emitted_metadata)
@@ -555,12 +551,7 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
     let mut gn_output_buffer = vec![];
     generate_from_manifest(
         &mut gn_output_buffer,
-        &opt.output,
-        opt.emit_metadata,
-        opt.manifest_path,
-        opt.project_root,
-        opt.cargo,
-        opt.skip_root,
+        &opt
     )
     .context("generating manifest")?;
 
