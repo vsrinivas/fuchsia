@@ -10,7 +10,7 @@
 
 - name: 'Component Framework'
   api_primary: 'geb@google.com'
-  api_secondary: 'lindkvist@google.com'
+  api_secondary: 'ypomortsev@google.com'
 
 - name: 'Developer'
   api_primary: 'dschuyler@google.com'
