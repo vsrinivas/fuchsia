@@ -8,6 +8,3 @@ These services include:
 
 Scenic ([doc](/docs/development/graphics/scenic/concepts/scenic.md)) provides a retained-mode scene graph that allows graphical objects from multiple processes to be composed and rendered within a unified lighting environment.
 
-## Input
-
-The input subsystem ([doc](/docs/development/graphics/scenic/concepts/input.md)) is responsible for discovering the available input devices, and allowing clients to register for events from these devices.

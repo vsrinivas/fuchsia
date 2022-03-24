@@ -10,8 +10,6 @@ toc:
   path: /docs/development/graphics/scenic/README.md
 - title: "Scenic, the Fuchsia graphics engine"
   path: /docs/development/graphics/scenic/concepts/scenic.md
-- title: "Scenic input system"
-  path: /docs/development/graphics/scenic/concepts/input.md
 - title: "Frame Scheduling"
   path: /docs/development/graphics/scenic/concepts/frame_scheduling.md
 - title: "Life of a pixel"
