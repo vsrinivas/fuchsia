@@ -25,10 +25,7 @@
         {
             protocol: "fuchsia.camera3.DeviceWatcher",
             from: "#camera_device_watcher",
-            to: [
-                "#session-manager",
-                "#setui_service",
-            ],
+            to: [ "#session-manager" ],
         },
         {
             directory: "dev",
