@@ -702,6 +702,8 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Personal is not supported")]
+    // TODO(fxbug.dev/88496): LeakSanitizer flags leaks caused by panic.
+    #[cfg_attr(feature = "variant_asan", ignore)]
     fn unsupported_bss_type() {
         fake_fidl_bss_description!(Open, bss_type: fidl_internal::BssType::Personal);
     }

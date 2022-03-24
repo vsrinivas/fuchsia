@@ -47,9 +47,6 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(fxbug.dev/91769): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/appendable.rs",
     "src/big_endian.rs",
