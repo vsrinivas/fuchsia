@@ -15,7 +15,7 @@ use assembly_images_manifest::ImagesManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use ffx_assembly_args::{CreateSystemArgs, PackageMode};
-use fuchsia_pkg::PackagePath;
+use fuchsia_pkg::{PackageManifest, PackagePath};
 use log::info;
 use serde_json::ser;
 use std::collections::BTreeSet;
@@ -179,7 +179,7 @@ fn create_package_manifest(
     let mut packages_manifest = UpdatePackagesManifest::V1(BTreeSet::new());
     let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
         for package_path in packages {
-            let manifest = util::pkg_manifest_from_path(package_path)?;
+            let manifest = PackageManifest::try_load_from(package_path)?;
             packages_manifest
                 .add_by_manifest(manifest)
                 .context(format!("Adding manifest: {}", package_path.display()))?;

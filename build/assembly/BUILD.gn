@@ -4,24 +4,33 @@
 
 import("//build/assembly/legacy.gni")
 
-# Create an OOT-usable Image Assembly configuration, with all supporting
-# artifacts, based on the currently configured product configuration.
-#
-# This takes the image assembly config from the legacy_image_assembly label, and creates
-# a package from it that contains all the base, cache, bootfs, and config data
-# files, the kernel, and a new version of the image assembly config whose paths
-# are all relative to the file (in the same package as those artifacts.)
-legacy_assembly_input_bundle("legacy") {
-  testonly = true
-  image_assembly_label = "//build/images/fuchsia"
-  create_package_archive = true
+if (is_fuchsia) {
+  # Create an OOT-usable Image Assembly configuration, with all supporting
+  # artifacts, based on the currently configured product configuration.
+  #
+  # This takes the image assembly config from the legacy_image_assembly label, and creates
+  # a package from it that contains all the base, cache, bootfs, and config data
+  # files, the kernel, and a new version of the image assembly config whose paths
+  # are all relative to the file (in the same package as those artifacts.)
+  legacy_assembly_input_bundle("legacy") {
+    testonly = true
+    image_assembly_label = "//build/images/fuchsia"
+    create_package_archive = true
+  }
+
+  group("assembly") {
+    testonly = true
+    public_deps = [
+      ":legacy",
+      ":legacy.tgz",
+      "scripts:assembly_input_bundle_tool_install($host_toolchain)",
+    ]
+  }
 }
 
-group("assembly") {
-  testonly = true
-  public_deps = [
-    ":legacy",
-    ":legacy.tgz",
-    "scripts:assembly_input_bundle_tool_install($host_toolchain)",
-  ]
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [ "scripts:tests($host_toolchain)" ]
+  }
 }

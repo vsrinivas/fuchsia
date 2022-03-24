@@ -11,7 +11,6 @@ use std::{
     collections::BTreeMap,
     fmt,
     fs::File,
-    io::BufReader,
     path::{Path, PathBuf},
 };
 
@@ -69,12 +68,8 @@ pub fn validate_package(manifest_path: impl AsRef<Path>) -> Result<(), PackageVa
     let manifest_path = manifest_path.as_ref();
 
     // deserialize the manifest for the package
-    let file = File::open(manifest_path).map_err(|source| PackageValidationError::Open {
-        source,
-        path: manifest_path.to_owned(),
-    })?;
-    let manifest: PackageManifest = serde_json::from_reader(BufReader::new(file))
-        .map_err(PackageValidationError::JsonDecode)?;
+    let manifest = PackageManifest::try_load_from(manifest_path)
+        .map_err(PackageValidationError::LoadPackageManifest)?;
     let blobs = manifest.into_blobs();
 
     // read meta.far contents
@@ -174,7 +169,7 @@ impl fmt::Display for BootfsValidationError {
 #[derive(Debug)]
 pub enum PackageValidationError {
     Open { path: PathBuf, source: std::io::Error },
-    JsonDecode(serde_json::Error),
+    LoadPackageManifest(anyhow::Error),
     MissingMetaFar,
     ReadArchive(fuchsia_archive::Error),
     InvalidComponents(BTreeMap<String, anyhow::Error>),
@@ -185,7 +180,7 @@ impl fmt::Display for PackageValidationError {
         use PackageValidationError::*;
         match self {
             Open { path, source } => write!(f, "Unable to open `{}`: {}.", path.display(), source),
-            JsonDecode(source) => {
+            LoadPackageManifest(source) => {
                 write!(f, "Unable to decode JSON for package manifest: {}.", source)
             }
             MissingMetaFar => write!(f, "The package seems to be missing a meta/ directory."),

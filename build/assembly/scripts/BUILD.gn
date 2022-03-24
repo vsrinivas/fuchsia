@@ -4,6 +4,7 @@
 
 import("//build/host.gni")
 import("//build/python/python_binary.gni")
+import("//build/python/python_host_test.gni")
 
 assert(is_host, "Only include assembly build scripts via the host toolchain")
 
@@ -12,6 +13,16 @@ python_binary("make_legacy_config") {
   deps = [
     "//build/python/modules/assembly",
     "//build/python/modules/depfile",
+    "//build/python/modules/serialization",
+  ]
+}
+
+python_host_test("test_make_legacy_config") {
+  main_source = "test_make_legacy_config.py"
+  sources = [ "make_legacy_config.py" ]
+  libraries = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/serialization",
   ]
 }
 
@@ -42,4 +53,9 @@ copy("assembly_input_bundle_tool_install") {
   deps = [ ":assembly_input_bundle_tool" ]
   outputs = [ "${host_tools_dir}/assembly_input_bundle_tool" ]
   sources = [ "${target_out_dir}/assembly_input_bundle_tool.pyz" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":test_make_legacy_config" ]
 }

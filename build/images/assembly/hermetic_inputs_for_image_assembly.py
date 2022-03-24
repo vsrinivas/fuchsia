@@ -7,6 +7,7 @@ assembly inputs and generating a list of all the files that are read"""
 
 import argparse
 import json
+import os
 import sys
 from typing import List
 
@@ -15,13 +16,27 @@ from assembly import FileEntry, FilePath, ImageAssemblyConfig, PackageManifest
 from serialization import json_load
 
 
+def get_blob_path(relative_path: str, relative_to_file: str) -> str:
+    file_parent = os.path.dirname(relative_to_file)
+    path = os.path.join(file_parent, relative_path)
+    path = os.path.realpath(path)
+    path = os.path.relpath(path, os.getcwd())
+    return path
+
+
 def files_from_package_set(package_set: List[FilePath]) -> List[FilePath]:
     paths = []
     for manifest in package_set:
         paths.append(manifest)
         with open(manifest, 'r') as file:
-            manifest = json_load(PackageManifest, file)
-            paths.extend([blob.source_path for blob in manifest.blobs])
+            package_manifest = json_load(PackageManifest, file)
+            blob_sources = []
+            for blob in package_manifest.blobs:
+                path = blob.source_path
+                if package_manifest.blob_sources_relative:
+                    path = get_blob_path(path, manifest)
+                blob_sources.append(path)
+            paths.extend(blob_sources)
     return paths
 
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base_package::BasePackage;
-use crate::util::pkg_manifest_from_path;
 
 use anyhow::{anyhow, Context, Result};
 use assembly_config::ImageAssemblyConfig;
@@ -54,7 +53,7 @@ pub fn construct_zbi(
             .base
             .iter()
             .find_map(|p| {
-                if let Ok(m) = pkg_manifest_from_path(p) {
+                if let Ok(m) = PackageManifest::try_load_from(p) {
                     if m.name().as_ref() == "pkgfs" {
                         return Some(m);
                     }

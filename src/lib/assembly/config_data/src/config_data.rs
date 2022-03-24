@@ -5,7 +5,7 @@
 use anyhow::{anyhow, Context, Result};
 use assembly_util::{DuplicateKeyError, InsertUniqueExt, MapEntry, PathToStringExt};
 use camino::Utf8PathBuf;
-use fuchsia_pkg::PackageBuilder;
+use fuchsia_pkg::{PackageBuilder, RelativeTo};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -65,6 +65,7 @@ impl ConfigDataBuilder {
         let manifest_path = outdir.join("package_manifest.json");
 
         package_builder.manifest_path(&manifest_path);
+        package_builder.manifest_blobs_relative_to(RelativeTo::File);
 
         package_builder.build(outdir, &metafar_path).context(format!(
             "Building `config_data` package at path '{}'",

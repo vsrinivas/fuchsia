@@ -16,8 +16,6 @@ use fuchsia_pkg::PackageManifest;
 use std::path::Path;
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fs::File,
-    io::BufReader,
     path::PathBuf,
 };
 
@@ -317,9 +315,8 @@ struct PackageEntry {
 impl PackageEntry {
     fn parse_from(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_owned();
-        let file = File::open(&path).with_context(|| format!("opening {}", path.display()))?;
-        let manifest: PackageManifest = serde_json::from_reader(BufReader::new(file))
-            .with_context(|| format!("parsing {} as a package manifest", path.display()))?;
+        let manifest = PackageManifest::try_load_from(&path)
+            .context(format!("parsing {} as a package manifest", path.display()))?;
         Ok(Self { path, manifest })
     }
 
@@ -430,9 +427,8 @@ mod tests {
         // 4.  Validate the contents of the file
 
         // 1. Read the config_data package manifest
-        let config_data_manifest: PackageManifest =
-            serde_json::from_reader(File::open(expected_config_data_manifest_path).unwrap())
-                .unwrap();
+        let config_data_manifest =
+            PackageManifest::try_load_from(expected_config_data_manifest_path).unwrap();
         assert_eq!(config_data_manifest.name().as_ref(), "config-data");
 
         // and get the metafar path.

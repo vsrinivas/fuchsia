@@ -220,7 +220,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
         };
 
         for package in budget.packages.iter() {
-            let manifest: PackageManifest = read_config(Path::new(package))?;
+            let manifest = PackageManifest::try_load_from(package)?;
             for manifest_blob in manifest.into_blobs().drain(..) {
                 budget_blob.blobs.push(BlobInstance {
                     hash: manifest_blob.merkle,

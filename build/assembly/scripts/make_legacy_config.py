@@ -14,11 +14,12 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Any, Dict, Iterable, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
-from assembly import fast_copy, AssemblyInputBundle, ConfigDataEntries, ImageAssemblyConfig
-from assembly import FileEntry, FilePath
+from assembly import fast_copy, AssemblyInputBundle, BlobEntry, ConfigDataEntries
+from assembly import FileEntry, FilePath, ImageAssemblyConfig, PackageManifest
 from depfile import DepFile
+from serialization import json_load, json_dump
 
 # Some type annotations for clarity
 PackageManifestList = List[FilePath]
@@ -42,11 +43,6 @@ def copy_to_assembly_input_bundle(
         - the return value contains a list of all files read/written by the
         copying operation (ie. depfile contents)
     """
-    # Remove the existing <outdir>, and recreate it
-    if os.path.exists(outdir):
-        shutil.rmtree(outdir)
-    os.makedirs(outdir)
-
     # Track all files we read
     deps: DepSet = set()
 
@@ -154,8 +150,8 @@ def copy_packages(
     # sorted by path to the package manifest.
     for package_manifest_path in sorted(package_manifests):
         with open(package_manifest_path, 'r') as file:
-            manifest = json.load(file)
-            package_name = manifest["package"]["name"]
+            manifest = json_load(PackageManifest, file)
+            package_name = manifest.package.name
             # Track in deps, since it was opened.
             deps.add(package_manifest_path)
 
@@ -163,23 +159,52 @@ def copy_packages(
         if "config-data" == package_name:
             continue
 
-        # Add the blobs to the set of all blobs, validating that duplicates
-        # don't have conflicting sources.
-        for blob_entry in manifest["blobs"]:
-            source = blob_entry["source_path"]
-            merkle = blob_entry["merkle"]
-            blob = (merkle, source)
-            blobs.append(blob)
+        # Instead of copying the package manifest itself, the contents of the
+        # manifest needs to be rewritten to reflect the new location of the
+        # blobs within it.
+        new_manifest = PackageManifest(manifest.package, [])
 
-        # Copy the manifest to its destination.
+        # For each blob in the manifest:
+        #  1) add it to set of all blobs
+        #  2) add it to the PackageManifest that will be written to the Assembly
+        #     Input Bundle, using the correct source path for within the
+        #     Assembly Input Bundle.
+        for blob in manifest.blobs:
+            source = blob.source_path
+            if source is None:
+                raise ValueError(
+                    f"Found a blob with no source path: {package_name}::{blob.path} in {package_manifest_path}"
+                )
+            merkle = blob.merkle
+            blobs.append((merkle, source))
+
+            blob_destination = os.path.relpath(
+                make_internal_blob_path(blob.merkle), packages_dir)
+            new_manifest.blobs.append(
+                BlobEntry(
+                    blob.path,
+                    blob.merkle,
+                    blob.size,
+                    source_path=blob_destination))
+        new_manifest.set_blob_sources_relative(True)
+
+        # Write the new manifest to its destination within the input bundle.
         rebased_destination = os.path.join(packages_dir, package_name)
         package_manifest_destination = os.path.join(outdir, rebased_destination)
-        fast_copy(package_manifest_path, package_manifest_destination)
+        with open(package_manifest_destination, 'w') as new_manifest_file:
+            json_dump(new_manifest, new_manifest_file)
 
         # Track the package manifest in our set of packages
         packages.append(rebased_destination)
 
     return (packages, blobs, deps)
+
+
+def make_internal_blob_path(merkle: str) -> FilePath:
+    """Common function to compute the destination path to a blob within the
+    AssemblyInputBundle's folder hierarchy.
+    """
+    return os.path.join("blobs", merkle)
 
 
 def copy_blobs(blobs: Dict[Merkle, FilePath],
@@ -197,7 +222,7 @@ def copy_blobs(blobs: Dict[Merkle, FilePath],
 
     # Copy all blobs
     for (merkle, source) in blobs.items():
-        blob_destination = os.path.join(blobs_dir, merkle)
+        blob_destination = os.path.join(outdir, make_internal_blob_path(merkle))
         blob_paths.append(blob_destination)
         fast_copy(source, blob_destination)
         deps.add(source)
@@ -302,6 +327,11 @@ def main():
     parser.add_argument("--depfile", type=argparse.FileType('w'))
     parser.add_argument("--export-manifest", type=argparse.FileType('w'))
     args = parser.parse_args()
+
+    # Remove the existing <outdir>, and recreate it
+    if os.path.exists(args.outdir):
+        shutil.rmtree(args.outdir)
+    os.makedirs(args.outdir)
 
     # Read in the legacy config and the others to subtract from it
     legacy: ImageAssemblyConfig = ImageAssemblyConfig.load(

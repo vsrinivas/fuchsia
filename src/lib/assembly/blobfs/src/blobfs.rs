@@ -7,8 +7,6 @@ use anyhow::{Context, Result};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 
 /// Builder for BlobFS.
@@ -49,10 +47,7 @@ impl BlobFSBuilder {
     /// Add a package to blobfs by inserting every blob mentioned in the
     /// `package_manifest_path` on the host.
     pub fn add_package(&mut self, package_manifest_path: impl AsRef<Path>) -> Result<()> {
-        let manifest_file = File::open(&package_manifest_path)
-            .context(format!("Opening file: {}", &package_manifest_path.as_ref().display()))?;
-        let manifest_reader = BufReader::new(manifest_file);
-        let manifest: PackageManifest = serde_json::from_reader(manifest_reader)?;
+        let manifest = PackageManifest::try_load_from(package_manifest_path)?;
         self.manifest.add_package(manifest)
     }
 
@@ -127,6 +122,7 @@ mod tests {
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use serde_json::json;
+    use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
 

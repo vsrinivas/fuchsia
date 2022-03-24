@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::util::pkg_manifest_from_path;
-
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_manifest::{Image, ImagesManifest};
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
+use fuchsia_pkg::PackageManifest;
 use log::info;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -35,18 +34,18 @@ pub fn construct_base_package(
 
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &product.system {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
+        let pkg_manifest = PackageManifest::try_load_from(pkg_manifest_path)?;
         base_pkg_builder.add_files_from_package(pkg_manifest);
     }
     for pkg_manifest_path in &product.base {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
+        let pkg_manifest = PackageManifest::try_load_from(pkg_manifest_path)?;
         base_pkg_builder.add_base_package(pkg_manifest).context(format!(
             "Failed to add package to base package list with manifest: {}",
             pkg_manifest_path.display()
         ))?;
     }
     for pkg_manifest_path in &product.cache {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
+        let pkg_manifest = PackageManifest::try_load_from(pkg_manifest_path)?;
         base_pkg_builder.add_cache_package(pkg_manifest).context(format!(
             "Failed to add package to cache package list with manifest: {}",
             pkg_manifest_path.display()

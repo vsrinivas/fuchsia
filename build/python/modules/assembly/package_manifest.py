@@ -78,6 +78,10 @@ class PackageManifest:
     package: PackageMetaData
     blobs: List[BlobEntry]
     version: str = "1"
+    blob_sources_relative: Optional[str] = None
+
+    def set_blob_sources_relative(self, relative_to_file: bool):
+        self.blob_sources_relative = "file" if relative_to_file else "working_dir"
 
     def blobs_by_path(self) -> Dict[FilePath, BlobEntry]:
         return {blob.path: blob for blob in self.blobs}
