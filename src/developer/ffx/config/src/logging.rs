@@ -110,20 +110,13 @@ pub async fn filter_level() -> LevelFilter {
         .unwrap_or(LevelFilter::Debug)
 }
 
-pub async fn init(stdio: bool) -> Result<()> {
-    let mut file: Option<File> = None;
-
-    // XXX: The log file selection would ideally be moved up into the ffx startup where we
-    // decide if we're in the daemon or not, which would enable us to cleanup this code path
-    // and enable a "--verbose" flag to the frontend that both logs to stdio and to file.
-    // Currently that is avoided here because stdio implies "don't log to this file".
-    if is_enabled().await && !stdio {
-        file = Some(log_file(LOG_PREFIX).await?);
-    }
+pub async fn init(log_to_stdio: bool, log_to_file: bool) -> Result<()> {
+    let file: Option<File> =
+        if log_to_file && is_enabled().await { Some(log_file(LOG_PREFIX).await?) } else { None };
 
     let level = filter_level().await;
 
-    CombinedLogger::init(get_loggers(stdio, file, level)).context("initializing logger")
+    CombinedLogger::init(get_loggers(log_to_stdio, file, level)).context("initializing logger")
 }
 
 fn get_loggers(

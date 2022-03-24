@@ -45,6 +45,10 @@ pub struct Ffx {
     /// under "log.level" if you wish to preserve this between `ffx` invocations.
     pub log_level: Option<String>,
 
+    #[argh(switch, short = 'v', long = "verbose")]
+    /// logs ffx output to stdio according to log level
+    pub verbose: bool,
+
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }

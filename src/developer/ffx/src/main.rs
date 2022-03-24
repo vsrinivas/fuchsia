@@ -346,7 +346,9 @@ async fn run() -> Result<i32> {
     };
 
     ffx_config::init(&*app.config, overrides, Some(env))?;
-    ffx_config::logging::init(is_daemon(&app.subcommand)).await?;
+
+    let is_daemon = is_daemon(&app.subcommand);
+    ffx_config::logging::init(is_daemon || app.verbose, !is_daemon).await?;
 
     log::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
 
