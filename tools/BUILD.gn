@@ -61,7 +61,6 @@ group("build_infra") {
     # fuchsia and it may affect later infrastructure steps that might be skipped
     # if the build graph was considered unaffected.
     "//tools/integration/fint($host_toolchain)",
-    "//tools/size_checker/cmd:host($host_toolchain)",
   ]
 }
 
@@ -177,7 +176,6 @@ group("tests_no_e2e") {
     "//tools/pretty_serial:tests",
     "//tools/qemu:tests($host_toolchain)",
     "//tools/sdk-tools:tests($host_toolchain)",
-    "//tools/size_checker:tests($host_toolchain)",
     "//tools/staticanalysis:tests",
     "//tools/symbol-index:tests",
     "//tools/symbolizer:tests",

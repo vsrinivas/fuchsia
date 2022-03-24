@@ -5,10 +5,10 @@
 import("//build/compiled_action.gni")
 import("//build/images/args.gni")
 import("//build/images/filesystem_limits.gni")
+import("//build/images/size_checker/size_checker_input.gni")
 import("//build/python/python_action.gni")
 import("//build/tools/json_merge/json_merge.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
-import("//tools/size_checker/size_checker_input.gni")
 
 assert(!bootfs_only)
 assert(size_checker_input != {
@@ -21,6 +21,12 @@ _size_budgets_non_blobfs_file = "${_output_dir}/update_package_budget.json"
 _blobs_config = "${_output_dir}/../fuchsia/fuchsia/gen/blobs.json"
 _image_assembly_config = "${_output_dir}/../fuchsia/fuchsia/image_assembly.json"
 
+generated_file("size_checker_json") {
+  outputs = [ "$root_build_dir/size_checker.json" ]
+  contents = size_checker_input
+  output_conversion = "json"
+}
+
 action("convert_size_limits_to_size_budgets") {
   script = "//build/images/assembly/convert_size_limits.py"
   inputs = [
@@ -32,8 +38,8 @@ action("convert_size_limits_to_size_budgets") {
     _size_budgets_non_blobfs_file,
   ]
   deps = [
+    ":size_checker_json",
     "//build/images/fuchsia:fuchsia_product_assembler",
-    "//tools/size_checker/cmd:size_checker_json",
   ]
   testonly = true
   args = [

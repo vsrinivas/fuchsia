@@ -13,6 +13,7 @@ import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/flash.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/size_checker/size_checker_input.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
@@ -30,7 +31,6 @@ import("//build/zircon/tools.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
-import("//tools/size_checker/size_checker_input.gni")
 
 labels = {
   images = "//build/images/fuchsia"
