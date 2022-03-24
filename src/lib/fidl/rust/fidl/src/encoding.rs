@@ -5,6 +5,7 @@
 //! Encoding contains functions and traits for FIDL encoding and decoding.
 
 use {
+    crate::endpoints::ProtocolMarker,
     crate::handle::{
         invoke_for_handle_types, Handle, HandleBased, HandleDisposition, HandleInfo, HandleOp,
         ObjectType, Rights, Status,
@@ -3150,13 +3151,11 @@ macro_rules! fidl_table {
                                 Ok(())
                             };
                             let member_inline_size = decoder.inline_size_of::<$member_ty>();
-                            match decoder.context().wire_format_version {
-                                $crate::encoding::WireFormatVersion::V2 =>
-                                    if inlined != (member_inline_size <= 4) {
-                                        return Err($crate::Error::InvalidInlineBitInEnvelope);
-                                    },
-                                _ => (),
-                            };
+                            if let $crate::encoding::WireFormatVersion::V2 = decoder.context().wire_format_version {
+                                if inlined != (member_inline_size <= 4) {
+                                    return Err($crate::Error::InvalidInlineBitInEnvelope);
+                                }
+                            }
                             if inlined {
                                 decoder.check_inline_envelope_padding(next_offset, member_inline_size)?;
                                 decode_inner(decoder, next_offset)?;
@@ -3367,14 +3366,254 @@ where
                 ordinal => panic!("unexpected ordinal {:?}", ordinal),
             }
         };
-        match decoder.context().wire_format_version {
-            WireFormatVersion::V2 => {
-                if inlined != (member_inline_size <= 4) {
-                    return Err(Error::InvalidInlineBitInEnvelope);
+        if let WireFormatVersion::V2 = decoder.context().wire_format_version {
+            if inlined != (member_inline_size <= 4) {
+                return Err(Error::InvalidInlineBitInEnvelope);
+            }
+        }
+        if inlined {
+            decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
+            decode_inner(decoder, offset + 8)?;
+        } else {
+            decoder.read_out_of_line(member_inline_size, decode_inner)?;
+            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                return Err(Error::InvalidNumBytesInEnvelope);
+            }
+        }
+        if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+            return Err(Error::InvalidNumHandlesInEnvelope);
+        }
+        Ok(())
+    }
+}
+
+/// Helper type for encoding and decoding the results of flexible interactions.
+/// This type is not exposed in the generated APIs but is used in forming
+/// responses.
+#[derive(Debug)]
+#[must_use = "this `OpenResult` may be an `Err` or `TransportErr` variant, which should be handled"]
+#[doc(hidden)] // only exported for FIDL generated code.
+pub enum OpenResult<O, E> {
+    /// Contains the success value
+    Ok(O),
+    /// Contains the error value
+    Err(E),
+    /// Contains the transport error value
+    TransportErr(zx_status::Status),
+}
+
+impl<O> OpenResult<O, ()> {
+    /// Converts an `OpenResult` with no application error into a
+    /// `fidl::error::Result<O>`, for the return value of a flexible method on
+    /// the client side.
+    ///
+    /// If the result union used the reserved err variant,
+    /// `Error::UnknownUnionTag` will be produced. If the transport error is not
+    /// `Status::NOT_SUPPORTED`, `Error::UnrecognizedTransportErr` will be
+    /// produced instead of `Error::UnsupportedMethod`.
+    pub fn into_result<P: ProtocolMarker>(self, method_name: &'static str) -> Result<O> {
+        match self {
+            OpenResult::Ok(ok) => Ok(ok),
+            OpenResult::Err(()) => Err(Error::UnknownUnionTag),
+            OpenResult::TransportErr(status @ zx_status::Status::NOT_SUPPORTED) => {
+                Err(Error::UnsupportedMethod { status, method_name, protocol_name: P::DEBUG_NAME })
+            }
+            OpenResult::TransportErr(status) => Err(Error::UnrecognizedTransportErr(status)),
+        }
+    }
+}
+
+impl<O, E> OpenResult<O, E> {
+    /// Converts an `OpenResult` with an application error into
+    /// `fidl::error::Result<std::result::Result<O, E>>`, for the return value
+    /// of a flexible method on the client side.
+    ///
+    /// If the transport error is not `Status::NOT_SUPPORTED`,
+    /// `Error::UnrecognizedTransportErr` will be produced instead of
+    /// `Error::UnsupportedMethod`.
+    pub fn into_nested_result<P: ProtocolMarker>(
+        self,
+        method_name: &'static str,
+    ) -> Result<std::result::Result<O, E>> {
+        match self {
+            OpenResult::Ok(ok) => Ok(Ok(ok)),
+            OpenResult::Err(err) => Ok(Err(err)),
+            OpenResult::TransportErr(status @ zx_status::Status::NOT_SUPPORTED) => {
+                Err(Error::UnsupportedMethod { status, method_name, protocol_name: P::DEBUG_NAME })
+            }
+            OpenResult::TransportErr(status) => Err(Error::UnrecognizedTransportErr(status)),
+        }
+    }
+}
+
+impl<O, E> From<std::result::Result<O, E>> for OpenResult<O, E> {
+    fn from(result: std::result::Result<O, E>) -> Self {
+        match result {
+            Ok(ok) => OpenResult::Ok(ok),
+            Err(err) => OpenResult::Err(err),
+        }
+    }
+}
+
+impl<'r, O, E> From<&'r mut std::result::Result<O, E>> for OpenResult<&'r mut O, &'r mut E> {
+    fn from(result: &'r mut std::result::Result<O, E>) -> Self {
+        match result {
+            Ok(ref mut ok) => OpenResult::Ok(ok),
+            Err(ref mut err) => OpenResult::Err(err),
+        }
+    }
+}
+
+impl<O, E> Layout for OpenResult<O, E>
+where
+    O: Layout,
+    E: Layout,
+{
+    #[inline(always)]
+    fn inline_align(_context: &Context) -> usize {
+        8
+    }
+    #[inline(always)]
+    fn inline_size(context: &Context) -> usize {
+        match context.wire_format_version {
+            WireFormatVersion::V1 => 24,
+            WireFormatVersion::V2 => 16,
+        }
+    }
+}
+
+impl<O, E> Encodable for OpenResult<O, E>
+where
+    O: Encodable,
+    E: Encodable,
+{
+    #[inline]
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_, '_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
+        match self {
+            Self::Ok(val) => {
+                // Encode success ordinal
+                1u64.encode(encoder, offset, recursion_depth)?;
+                // If the inline size is 0, meaning the type is (),
+                // encode a zero byte instead because () in this context
+                // means an empty struct, not an absent payload.
+                if encoder.inline_size_of::<O>() == 0 {
+                    encode_in_envelope(&mut Some(&mut 0u8), encoder, offset + 8, recursion_depth)
+                } else {
+                    encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
                 }
             }
-            _ => (),
+            Self::Err(val) => {
+                // Generated code should never try to encode a reserved Err variant.
+                debug_assert_ne!(encoder.inline_size_of::<E>(), 0);
+                // Encode error ordinal
+                2u64.encode(encoder, offset, recursion_depth)?;
+                encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
+            }
+            Self::TransportErr(val) => {
+                // Encode unknown method ordinal.
+                3u64.encode(encoder, offset, recursion_depth)?;
+                encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
+            }
+        }
+    }
+}
+
+impl<O, E> Decodable for OpenResult<O, E>
+where
+    O: Decodable,
+    E: Decodable,
+{
+    #[inline(always)]
+    fn new_empty() -> Self {
+        OpenResult::Ok(<O as Decodable>::new_empty())
+    }
+
+    #[inline]
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
+        let (ordinal, inlined, num_bytes, num_handles) =
+            decode_xunion_inline_portion(decoder, offset)?;
+        let member_inline_size = match ordinal {
+            1 => {
+                // If the inline size is 0, meaning the type is (), use an inline
+                // size of 1 instead because () in this context means an empty
+                // struct, not an absent payload.
+                cmp::max(1, decoder.inline_size_of::<O>())
+            }
+            2 => match decoder.inline_size_of::<E>() {
+                // () means err is reserved and so should be treated as an unknown tag.
+                0 => return Err(Error::UnknownUnionTag),
+                size => size,
+            },
+            3 => decoder.inline_size_of::<zx_status::Status>(),
+            _ => return Err(Error::UnknownUnionTag),
         };
+        let next_out_of_line = decoder.next_out_of_line();
+        let handles_before = decoder.remaining_handles();
+        let mut decode_inner = |decoder: &mut Decoder<'_>, offset: usize| {
+            match ordinal {
+                1 => {
+                    if let Self::Ok(_) = self {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *self = Self::Ok(O::new_empty());
+                    }
+                    if let Self::Ok(val) = self {
+                        // If the inline size is 0, then the type is ().
+                        // () has a different wire-format representation in
+                        // a result vs outside of a result, so special case
+                        // decode.
+                        if decoder.inline_size_of::<O>() == 0 {
+                            decoder.check_padding(offset, 1)
+                        } else {
+                            val.decode(decoder, offset)
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                }
+                2 => {
+                    if let Self::Err(_) = self {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *self = Self::Err(E::new_empty());
+                    }
+                    if let Self::Err(val) = self {
+                        val.decode(decoder, offset)
+                    } else {
+                        unreachable!()
+                    }
+                }
+                3 => {
+                    if let Self::TransportErr(_) = self {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *self = Self::TransportErr(zx_status::Status::new_empty());
+                    }
+                    if let Self::TransportErr(val) = self {
+                        val.decode(decoder, offset)
+                    } else {
+                        unreachable!()
+                    }
+                }
+                // Should be unreachable, since we already checked above.
+                ordinal => panic!("unexpected ordinal {:?}", ordinal),
+            }
+        };
+        if let WireFormatVersion::V2 = decoder.context().wire_format_version {
+            if inlined != (member_inline_size <= 4) {
+                return Err(Error::InvalidInlineBitInEnvelope);
+            }
+        }
         if inlined {
             decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
             decode_inner(decoder, offset + 8)?;
@@ -3604,13 +3843,11 @@ macro_rules! fidl_union {
                     }
                     Ok(())
                 };
-                match decoder.context().wire_format_version {
-                    $crate::encoding::WireFormatVersion::V2 =>
-                        if inlined != (member_inline_size <= 4) {
-                            return Err($crate::Error::InvalidInlineBitInEnvelope);
-                        },
-                    _ => (),
-                };
+                if let $crate::encoding::WireFormatVersion::V2 = decoder.context().wire_format_version {
+                    if inlined != (member_inline_size <= 4) {
+                        return Err($crate::Error::InvalidInlineBitInEnvelope);
+                    }
+                }
                 if inlined {
                     decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
                     decode_inner(decoder, offset + 8)?;
@@ -4154,6 +4391,8 @@ pub fn decode_persistent_body<T: Persistable>(
 #[macro_export]
 macro_rules! wrap_handle_metadata {
     ($name:ident, $object_type:expr, $rights:expr) => {
+        #[repr(transparent)]
+        #[doc(hidden)]
         pub struct $name<T>(T);
 
         impl<T> $name<T> {

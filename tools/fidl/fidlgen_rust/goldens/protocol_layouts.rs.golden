@@ -30,34 +30,64 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 pub type MainProtocolTwoWayImportWithErrorResult =
     std::result::Result<(fidl_test_protocollayouts_imported::ImportUnionPayload), u32>;
 
+/// Handle-type validating wrapper for MainProtocolTwoWayImportWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolTwoWayImportWithErrorResultHandleWrapper =
     std::result::Result<(fidl_test_protocollayouts_imported::ImportUnionPayload,), u32>;
 
 pub type MainProtocolOnImportWithErrorResult =
     std::result::Result<(fidl_test_protocollayouts_imported::ImportTablePayload), u32>;
 
+/// Handle-type validating wrapper for MainProtocolOnImportWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolOnImportWithErrorResultHandleWrapper =
     std::result::Result<(fidl_test_protocollayouts_imported::ImportTablePayload,), u32>;
 
 pub type MainProtocolTwoWayLocalWithErrorResult = std::result::Result<(LocalUnionPayload), u32>;
 
+/// Handle-type validating wrapper for MainProtocolTwoWayLocalWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolTwoWayLocalWithErrorResultHandleWrapper =
     std::result::Result<(LocalUnionPayload,), u32>;
 
 pub type MainProtocolOnLocalWithErrorResult = std::result::Result<(LocalTablePayload), u32>;
 
+/// Handle-type validating wrapper for MainProtocolOnLocalWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolOnLocalWithErrorResultHandleWrapper =
     std::result::Result<(LocalTablePayload,), u32>;
 
 pub type MainProtocolTwoWayAnonWithErrorResult =
     std::result::Result<(MainProtocolTwoWayAnonWithErrorResponse), u32>;
 
+/// Handle-type validating wrapper for MainProtocolTwoWayAnonWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolTwoWayAnonWithErrorResultHandleWrapper =
     std::result::Result<(MainProtocolTwoWayAnonWithErrorResponse,), u32>;
 
 pub type MainProtocolOnAnonWithErrorResult =
     std::result::Result<(MainProtocolOnAnonWithErrorResponse), u32>;
 
+/// Handle-type validating wrapper for MainProtocolOnAnonWithErrorResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type MainProtocolOnAnonWithErrorResultHandleWrapper =
     std::result::Result<(MainProtocolOnAnonWithErrorResponse,), u32>;
 
@@ -609,15 +639,12 @@ impl MainProtocolSynchronousProxy {
         (fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult),
         fidl::Error,
     > {
-        let _value: (
-            fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult,
-        ) = self.client.send_query(
-            &mut (payload),
-            0x2ed33746b7bb119d,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
-        Ok(_value.0)
+        let _value: fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResultHandleWrapper = self.client.send_query(&mut (payload),
+				0x2ed33746b7bb119d,
+				fidl::encoding::DynamicFlags::empty(),
+				___deadline,
+			)?;
+        Ok(_value.map(|_value| _value.0))
     }
     pub fn r#one_way_named_composed(
         &self,
@@ -647,15 +674,12 @@ impl MainProtocolSynchronousProxy {
         (fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult),
         fidl::Error,
     > {
-        let _value: (
-            fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult,
-        ) = self.client.send_query(
-            &mut (payload),
-            0x30dac4182813ef7f,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
-        Ok(_value.0)
+        let _value: fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResultHandleWrapper = self.client.send_query(&mut (payload),
+				0x30dac4182813ef7f,
+				fidl::encoding::DynamicFlags::empty(),
+				___deadline,
+			)?;
+        Ok(_value.map(|_value| _value.0))
     }
     pub fn r#one_way_import(
         &self,
@@ -682,13 +706,12 @@ impl MainProtocolSynchronousProxy {
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
         ___deadline: zx::Time,
     ) -> Result<(MainProtocolTwoWayImportWithErrorResult), fidl::Error> {
-        let _value: (MainProtocolTwoWayImportWithErrorResultHandleWrapper) =
-            self.client.send_query(
-                &mut (payload),
-                0x432093586084ff0a,
-                fidl::encoding::DynamicFlags::empty(),
-                ___deadline,
-            )?;
+        let _value: MainProtocolTwoWayImportWithErrorResultHandleWrapper = self.client.send_query(
+            &mut (payload),
+            0x432093586084ff0a,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#one_way_local(&self, mut payload: LocalTablePayload) -> Result<(), fidl::Error> {
@@ -712,13 +735,12 @@ impl MainProtocolSynchronousProxy {
         mut payload: LocalTablePayload,
         ___deadline: zx::Time,
     ) -> Result<(MainProtocolTwoWayLocalWithErrorResult), fidl::Error> {
-        let _value: (MainProtocolTwoWayLocalWithErrorResultHandleWrapper) =
-            self.client.send_query(
-                &mut (payload),
-                0x4dd8e7287c4c9b57,
-                fidl::encoding::DynamicFlags::empty(),
-                ___deadline,
-            )?;
+        let _value: MainProtocolTwoWayLocalWithErrorResultHandleWrapper = self.client.send_query(
+            &mut (payload),
+            0x4dd8e7287c4c9b57,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#one_way_anon(
@@ -745,7 +767,7 @@ impl MainProtocolSynchronousProxy {
         mut payload: MainProtocolTwoWayAnonWithErrorRequest,
         ___deadline: zx::Time,
     ) -> Result<(MainProtocolTwoWayAnonWithErrorResult), fidl::Error> {
-        let _value: (MainProtocolTwoWayAnonWithErrorResultHandleWrapper) = self.client.send_query(
+        let _value: MainProtocolTwoWayAnonWithErrorResultHandleWrapper = self.client.send_query(
             &mut (payload),
             0x6bd5fcf6f7b46df1,
             fidl::encoding::DynamicFlags::empty(),
@@ -933,14 +955,12 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         mut payload: fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest,
     ) -> Self::TwoWayAnonComposedWithErrorResponseFut {
         fn transform(
-            result: Result<(
-			fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult,
-		), fidl::Error>,
+            result: Result<fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResultHandleWrapper, fidl::Error>,
         ) -> Result<
             (fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult),
             fidl::Error,
         > {
-            result.map(|_value| _value.0)
+            result.map(|_value| _value.map(|_value| _value.0))
         }
         let send_result = self.client.call_send_raw_query(
             &mut (payload),
@@ -996,10 +1016,8 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Self::TwoWayNamedComposedWithErrorResponseFut {
-		fn transform(result: Result<(
-			fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult,
-        ), fidl::Error>) -> Result<(fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult), fidl::Error>{
-            result.map(|_value| _value.0)
+        fn transform(result: Result<fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResultHandleWrapper, fidl::Error>) -> Result<(fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult), fidl::Error>{
+            result.map(|_value| _value.map(|_value| _value.0))
         }
         let send_result = self.client.call_send_raw_query(
             &mut (payload),
@@ -1054,7 +1072,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Self::TwoWayImportWithErrorResponseFut {
         fn transform(
-            result: Result<(MainProtocolTwoWayImportWithErrorResultHandleWrapper), fidl::Error>,
+            result: Result<MainProtocolTwoWayImportWithErrorResultHandleWrapper, fidl::Error>,
         ) -> Result<(MainProtocolTwoWayImportWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
@@ -1103,7 +1121,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         mut payload: LocalTablePayload,
     ) -> Self::TwoWayLocalWithErrorResponseFut {
         fn transform(
-            result: Result<(MainProtocolTwoWayLocalWithErrorResultHandleWrapper), fidl::Error>,
+            result: Result<MainProtocolTwoWayLocalWithErrorResultHandleWrapper, fidl::Error>,
         ) -> Result<(MainProtocolTwoWayLocalWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
@@ -1157,7 +1175,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         mut payload: MainProtocolTwoWayAnonWithErrorRequest,
     ) -> Self::TwoWayAnonWithErrorResponseFut {
         fn transform(
-            result: Result<(MainProtocolTwoWayAnonWithErrorResultHandleWrapper), fidl::Error>,
+            result: Result<MainProtocolTwoWayAnonWithErrorResultHandleWrapper, fidl::Error>,
         ) -> Result<(MainProtocolTwoWayAnonWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
@@ -2512,9 +2530,9 @@ impl MainProtocolTwoWayAnonComposedWithErrorResponder {
 
     fn send_raw(
         &self,
-        mut result: &mut fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult,
+        mut _result: &mut fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (result);
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -2694,9 +2712,9 @@ impl MainProtocolTwoWayNamedComposedWithErrorResponder {
 
     fn send_raw(
         &self,
-        mut result: &mut fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult,
+        mut _result: &mut fidl_test_protocollayouts_imported::ComposedProtocolTwoWayNamedComposedWithErrorResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (result);
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(

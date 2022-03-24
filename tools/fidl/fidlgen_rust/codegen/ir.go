@@ -79,13 +79,28 @@ type ResultOkEntry struct {
 	HandleWrapperName string
 }
 
+// A Result is the result type used for a method that is flexible or uses error syntax.
 type Result struct {
-	ECI       EncodedCompoundIdentifier
-	Derives   derives
-	Name      string
-	Ok        []ResultOkEntry
-	ErrOGType fidlgen.Type
-	ErrType   string
+	// Compound identifier for the result type, used for lookups.
+	ECI     EncodedCompoundIdentifier
+	Derives derives
+	// Rust UpperCamelCase name for the result type used when generating or
+	// referencing it.
+	Name              string
+	Ok                []ResultOkEntry
+	ErrOGType         *fidlgen.Type
+	ErrType           *string
+	HasTransportError bool
+}
+
+// HasAnyHandleWrappers returns true if any value in Ok uses a handle wrapper.
+func (r *Result) HasAnyHandleWrappers() bool {
+	for _, okEntry := range r.Ok {
+		if okEntry.HasHandleMetadata {
+			return true
+		}
+	}
+	return false
 }
 
 type Struct struct {
@@ -155,6 +170,16 @@ type Protocol struct {
 	ProtocolName string
 }
 
+// Returns true if this protocol must handle one-way unknown interactions.
+func (p *Protocol) OneWayUnknownInteractions() bool {
+	return p.Openness == fidlgen.Open || p.Openness == fidlgen.Ajar
+}
+
+// Returns true if this protocol must handle two-way unknown interactions.
+func (p *Protocol) TwoWayUnknownInteractions() bool {
+	return p.Openness == fidlgen.Open
+}
+
 // Method is a method defined in a protocol.
 type Method struct {
 	// Raw JSON IR data about this method. Embedded to provide access to fields
@@ -169,9 +194,18 @@ type Method struct {
 	CamelName string
 	// Parameters to this method extracted from the request type struct.
 	Request []Parameter
-	// Response payload to this method extracted from the response type struct.
-	// Note that when error syntax is used, this will contain only a single
-	// element, for the result union.
+	// Arguments used for method responses. If error syntax is used, this will
+	// contain a single element for the Result enum used in rust generated code.
+	// For methods which do not use error syntax, this will contain fields
+	// extracted from the response struct.
+	//
+	// Note that since methods being strict vs flexible is not exposed in the
+	// client API, this field does not reflect whether the method is strict or
+	// flexible. For flexible, the value is still either fields extracted from
+	// the response struct or the Rust Result enum, depending only on whether
+	// error syntax was used.  In the case of flexible methods without error
+	// syntax, the parameters are extracted from the success variant of the
+	// underlying result union.
 	Response []Parameter
 	// If error syntax was used, this will contain information about the result
 	// union.
@@ -185,6 +219,11 @@ func (m *Method) DynamicFlags() string {
 		return "fidl::encoding::DynamicFlags::empty()"
 	}
 	return "fidl::encoding::DynamicFlags::FLEXIBLE"
+}
+
+// HasErrorResult returns true if the method uses error syntax.
+func (m *Method) HasErrorResult() bool {
+	return m.Result != nil && m.Result.ErrOGType != nil
 }
 
 // A Parameter to either the requset or response of a method. Contains
@@ -231,13 +270,14 @@ type ServiceMember struct {
 }
 
 type Root struct {
-	ExternCrates           []string
-	Bits                   []Bits
-	Consts                 []Const
-	Enums                  []Enum
-	Structs                []Struct
-	ExternalStructs        []Struct
-	Unions                 []Union
+	ExternCrates    []string
+	Bits            []Bits
+	Consts          []Const
+	Enums           []Enum
+	Structs         []Struct
+	ExternalStructs []Struct
+	Unions          []Union
+	// Result types for methods with error syntax.
 	Results                []Result
 	Tables                 []Table
 	Protocols              []Protocol
@@ -502,11 +542,18 @@ var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls                  fidlgen.DeclInfoMap
-	library                fidlgen.LibraryIdentifier
-	externCrates           map[string]struct{}
-	messageBodyStructs     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
-	messageBodyTypes       fidlgen.EncodedCompoundIdentifierSet
+	decls        fidlgen.DeclInfoMap
+	library      fidlgen.LibraryIdentifier
+	externCrates map[string]struct{}
+	// Identifies which types are used as payload types, message body types, or
+	// both.
+	methodTypeUses fidlgen.MethodTypeUsageMap
+	// Collection of structs used as a method payload, wire result, or both, as
+	// described in the docs for fidlgen.MethodTypeUsage. This holds the
+	// compiled fidlgen.Struct because compileResultFromUnion needs to access
+	// the members from the compiled struct, and if the type is anonymous it
+	// will not appear Root.Structs.
+	methodTypeStructs      map[fidlgen.EncodedCompoundIdentifier]Struct
 	structs                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	results                map[fidlgen.EncodedCompoundIdentifier]Result
 	handleMetadataWrappers map[string]HandleMetadataWrapper
@@ -1005,23 +1052,25 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		ProtocolName: strings.Trim(val.GetServiceName(), "\""),
 	}
 
+	getParametersFromType := func(t *fidlgen.Type) []Parameter {
+		if _, ok := c.methodTypeUses[t.Identifier]; ok {
+			if val, ok := c.methodTypeStructs[t.Identifier]; ok {
+				return c.compileParameterArray(val.Struct)
+			}
+			return c.compileParameterSingleton(t)
+		}
+		panic(fmt.Sprintf("unknown request/response layout: %v", t.Identifier))
+	}
+
 	for _, v := range val.Methods {
 		var compiledRequestParameterList []Parameter
 		if v.RequestPayload != nil {
-			if _, ok := c.messageBodyTypes[v.RequestPayload.Identifier]; ok {
-				if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
-					if len(val.Members) > maximumAllowedParameters {
-						panic(fmt.Sprintf(
-							`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
-								`only support up to %d. See https://fxbug.dev/76655 for details.`,
-							val.Name, v.Name, len(val.Members), maximumAllowedParameters))
-					}
-					compiledRequestParameterList = c.compileParameterArray(val)
-				} else {
-					compiledRequestParameterList = c.compileParameterSingleton(v.RequestPayload)
-				}
-			} else {
-				panic(fmt.Sprintf("unknown request/response layout: %v", v.RequestPayload.Identifier))
+			compiledRequestParameterList = getParametersFromType(v.RequestPayload)
+			if len(compiledRequestParameterList) > maximumAllowedParameters {
+				panic(fmt.Sprintf(
+					`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
+						`only support up to %d. See https://fxbug.dev/76655 for details.`,
+					val.Name, v.Name, len(compiledRequestParameterList), maximumAllowedParameters))
 			}
 		}
 
@@ -1029,22 +1078,22 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		camelName := compileCamelIdentifier(v.Name)
 		var compiledResponseParameterList []Parameter
 		var foundResult *Result
-		if v.ResponsePayload != nil {
-			if _, ok := c.messageBodyTypes[v.ResponsePayload.Identifier]; ok {
-				if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
-					if len(val.Members) == 1 && val.Members[0].Type.Kind == fidlgen.IdentifierType {
-						responseType := val.Members[0].Type
-						if result, ok := c.results[responseType.Identifier]; ok {
-							foundResult = &result
-						}
-					}
-					compiledResponseParameterList = c.compileParameterArray(val)
-				} else {
-					compiledResponseParameterList = c.compileParameterSingleton(v.ResponsePayload)
-				}
-			} else {
-				panic(fmt.Sprintf("unknown request/response layout: %v", v.ResponsePayload.Identifier))
+
+		findResultType := func() *Result {
+			if result, ok := c.results[v.ResultType.Identifier]; ok {
+				return &result
 			}
+			panic(fmt.Sprintf("unknown result type: %v", v.ResultType.Identifier))
+		}
+
+		if v.HasError {
+			compiledResponseParameterList = getParametersFromType(v.ResponsePayload)
+			foundResult = findResultType()
+		} else if v.HasTransportError() {
+			compiledResponseParameterList = getParametersFromType(v.ValueType)
+			foundResult = findResultType()
+		} else if v.ResponsePayload != nil {
+			compiledResponseParameterList = getParametersFromType(v.ResponsePayload)
 		}
 
 		r.Methods = append(r.Methods, Method{
@@ -1262,13 +1311,23 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 }
 
 func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
-	r := Result{
-		ECI:       m.ResultType.Identifier,
-		Name:      c.compileCamelCompoundIdentifier(m.ResultType.Identifier),
-		ErrOGType: *m.ErrorType,
-		ErrType:   c.compileType(*m.ErrorType),
+	// Results may be compiled more than once if they are composed. In that
+	// case, just re use the existing value.
+	if r, ok := c.results[m.ResultType.Identifier]; ok {
+		return r
 	}
 
+	r := Result{
+		ECI:               m.ResultType.Identifier,
+		Name:              c.compileCamelCompoundIdentifier(m.ResultType.Identifier),
+		HasTransportError: m.HasTransportError(),
+	}
+
+	if m.HasError {
+		r.ErrOGType = m.ErrorType
+		errType := c.compileType(*m.ErrorType)
+		r.ErrType = &errType
+	}
 	declInfo, ok := c.decls[m.ValueType.Identifier]
 	if !ok {
 		panic(fmt.Sprintf("declaration not found: %v", m.ValueType.Identifier))
@@ -1276,7 +1335,7 @@ func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
 
 	switch declInfo.Type {
 	case fidlgen.StructDeclType:
-		for _, m := range root.findStruct(m.ValueType.Identifier, true).Members {
+		for _, m := range c.methodTypeStructs[m.ValueType.Identifier].Members {
 			wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
 			r.Ok = append(r.Ok, ResultOkEntry{
 				OGType:            m.OGType,
@@ -1555,7 +1614,9 @@ typeSwitch:
 			for _, ok := range result.Ok {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(ok.OGType))
 			}
-			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
+			if result.ErrOGType != nil {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(*result.ErrOGType))
+			}
 			result.Derives = derivesOut
 		} else if union := dc.root.findUnion(eci); union != nil {
 			// Check if the derives have already been calculated
@@ -1659,8 +1720,8 @@ func Compile(r fidlgen.Root) Root {
 		decls:                  r.DeclsWithDependencies(),
 		library:                thisLibParsed,
 		externCrates:           map[string]struct{}{},
-		messageBodyTypes:       r.GetMessageBodyTypeNames(),
-		messageBodyStructs:     map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
+		methodTypeUses:         r.MethodTypeUsageMap(),
+		methodTypeStructs:      map[fidlgen.EncodedCompoundIdentifier]Struct{},
 		structs:                map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 		results:                map[fidlgen.EncodedCompoundIdentifier]Result{},
 		handleMetadataWrappers: map[string]HandleMetadataWrapper{},
@@ -1691,23 +1752,25 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if _, ok := c.messageBodyTypes[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = v
+		compiled := c.compileStruct(v)
+		if _, ok := c.methodTypeUses[v.Name]; ok {
+			c.methodTypeStructs[v.Name] = compiled
 			if v.IsAnonymous() {
 				continue
 			}
 		}
-		root.Structs = append(root.Structs, c.compileStruct(v))
+		root.Structs = append(root.Structs, compiled)
 	}
 
 	for _, v := range r.ExternalStructs {
-		if _, ok := c.messageBodyTypes[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = v
+		compiled := c.compileStruct(v)
+		if _, ok := c.methodTypeUses[v.Name]; ok {
+			c.methodTypeStructs[v.Name] = compiled
 			if v.IsAnonymous() {
 				continue
 			}
 		}
-		root.ExternalStructs = append(root.ExternalStructs, c.compileStruct(v))
+		root.ExternalStructs = append(root.ExternalStructs, compiled)
 	}
 
 	for _, v := range r.Tables {
@@ -1717,10 +1780,22 @@ func Compile(r fidlgen.Root) Root {
 	for _, v := range r.Protocols {
 		for _, m := range v.Methods {
 			// A result is referenced multiple times when a method is composed.
-			// We must only compile the non-composed method to avoid generating
-			// duplicates.
-			if m.HasError && !m.IsComposed {
-				root.Results = append(root.Results, c.compileResultFromUnion(m, root))
+			// We always need to compile the result from the union, because it
+			// will be referenced when compiling the method and affects how the
+			// method handles its arguments and return value, so we always run
+			// compileResultFromUnion to ensure that c.results contains the
+			// result union.
+			//
+			// However, we only want to actually generate the type aliases for
+			// the result union once, and we especially don't want to generate
+			// aliases when those already exist in another generated library, so
+			// we don't add the result type to root.Results unless this is the
+			// original non-composed method.
+			if m.ResultType != nil {
+				result := c.compileResultFromUnion(m, root)
+				if !m.IsComposed {
+					root.Results = append(root.Results, result)
+				}
 			}
 		}
 	}

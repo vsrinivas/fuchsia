@@ -430,3 +430,12 @@ pub fn create_proxy_and_stream<T: ProtocolMarker>() -> Result<(T::Proxy, T::Requ
     let (client, server) = create_endpoints::<T>()?;
     Ok((client.into_proxy()?, server.into_stream()?))
 }
+
+/// Indicates the direction of an unknown interaction.
+#[derive(Copy, Clone, Debug)]
+pub enum UnknownInteractionDirection {
+    /// Unknown interaction was one-way.
+    OneWay,
+    /// Unknown interaction was two-way.
+    TwoWay,
+}

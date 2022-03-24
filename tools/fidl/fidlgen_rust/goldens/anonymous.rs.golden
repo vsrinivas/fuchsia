@@ -240,6 +240,11 @@ fidl_enum! {
 pub type SomeProtocolSomeMethodResult =
     std::result::Result<(BitsMember), SomeProtocolSomeMethodError>;
 
+/// Handle-type validating wrapper for SomeProtocolSomeMethodResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type SomeProtocolSomeMethodResultHandleWrapper =
     std::result::Result<(BitsMember,), SomeProtocolSomeMethodError>;
 
@@ -392,30 +397,6 @@ fidl_struct_copy! {
   size_v2: 1,
   align_v1: 1,
   align_v2: 1,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct SomeProtocolSomeMethodResponse {
-    pub bits_member: BitsMember,
-}
-
-impl fidl::encoding::Persistable for SomeProtocolSomeMethodResponse {}
-
-fidl_struct! {
-  name: SomeProtocolSomeMethodResponse,
-  members: [
-    bits_member {
-      ty: BitsMember,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 4,
-  size_v2: 4,
-  align_v1: 4,
-  align_v2: 4,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -582,7 +563,7 @@ impl SomeProtocolSynchronousProxy {
         mut table_member: TableMember,
         ___deadline: zx::Time,
     ) -> Result<(SomeProtocolSomeMethodResult), fidl::Error> {
-        let _value: (SomeProtocolSomeMethodResultHandleWrapper) = self.client.send_query(
+        let _value: SomeProtocolSomeMethodResultHandleWrapper = self.client.send_query(
             &mut (union_member, table_member),
             0x22ea52ec7a5146d8,
             fidl::encoding::DynamicFlags::empty(),
@@ -645,7 +626,7 @@ impl SomeProtocolProxyInterface for SomeProtocolProxy {
         mut table_member: TableMember,
     ) -> Self::SomeMethodResponseFut {
         fn transform(
-            result: Result<(SomeProtocolSomeMethodResultHandleWrapper), fidl::Error>,
+            result: Result<SomeProtocolSomeMethodResultHandleWrapper, fidl::Error>,
         ) -> Result<(SomeProtocolSomeMethodResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }

@@ -29,35 +29,13 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
 pub type ExampleUseOfErrorSyntaxCallWhichMayFailResult = std::result::Result<(i64), u32>;
 
+/// Handle-type validating wrapper for ExampleUseOfErrorSyntaxCallWhichMayFailResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper =
     std::result::Result<(i64,), u32>;
-
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
-    pub value: i64,
-}
-
-impl fidl::encoding::Persistable for ExampleUseOfErrorSyntaxCallWhichMayFailResponse {}
-
-fidl_struct_copy! {
-  name: ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
-  members: [
-    value {
-      ty: i64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 8,
-  size_v2: 8,
-  align_v1: 8,
-  align_v2: 8,
-}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleUseOfErrorSyntaxMarker;
@@ -116,22 +94,19 @@ impl ExampleUseOfErrorSyntaxSynchronousProxy {
         (fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult),
         fidl::Error,
     > {
-        let _value: (
-            fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
-        ) = self.client.send_query(
-            &mut (s),
-            0x3179cf8f46814221,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
-        Ok(_value.0)
+        let _value: fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResultHandleWrapper = self.client.send_query(&mut (s),
+				0x3179cf8f46814221,
+				fidl::encoding::DynamicFlags::empty(),
+				___deadline,
+			)?;
+        Ok(_value.map(|_value| _value.0))
     }
     pub fn r#call_which_may_fail(
         &self,
         mut s: &str,
         ___deadline: zx::Time,
     ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
-        let _value: (ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper) =
+        let _value: ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper =
             self.client.send_query(
                 &mut (s),
                 0x3424ff83ce3004a2,
@@ -204,14 +179,12 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         mut s: &str,
     ) -> Self::ComposedCallWhichMayFailResponseFut {
         fn transform(
-            result: Result<(
-			fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
-		), fidl::Error>,
+            result: Result<fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResultHandleWrapper, fidl::Error>,
         ) -> Result<
             (fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult),
             fidl::Error,
         > {
-            result.map(|_value| _value.0)
+            result.map(|_value| _value.map(|_value| _value.0))
         }
         let send_result = self.client.call_send_raw_query(
             &mut (s),
@@ -229,10 +202,7 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         fidl::client::QueryResponseFut<(ExampleUseOfErrorSyntaxCallWhichMayFailResult)>;
     fn r#call_which_may_fail(&self, mut s: &str) -> Self::CallWhichMayFailResponseFut {
         fn transform(
-            result: Result<
-                (ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper),
-                fidl::Error,
-            >,
+            result: Result<ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper, fidl::Error>,
         ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
@@ -536,9 +506,9 @@ impl ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponder {
 
     fn send_raw(
         &self,
-        mut result: &mut fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
+        mut _result: &mut fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (result);
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(

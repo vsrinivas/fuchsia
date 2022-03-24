@@ -139,19 +139,39 @@ fidl_enum! {
 
 pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;
 
+/// Handle-type validating wrapper for WithErrorSyntaxResponseAsStructResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type WithErrorSyntaxResponseAsStructResultHandleWrapper =
     std::result::Result<(i64, i64, i64), u32>;
 
 pub type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result<(), u32>;
 
+/// Handle-type validating wrapper for WithErrorSyntaxErrorAsPrimitiveResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = std::result::Result<(), u32>;
 
 pub type WithErrorSyntaxErrorAsEnumResult = std::result::Result<(), ErrorEnum>;
 
+/// Handle-type validating wrapper for WithErrorSyntaxErrorAsEnumResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type WithErrorSyntaxErrorAsEnumResultHandleWrapper = std::result::Result<(), ErrorEnum>;
 
 pub type WithErrorSyntaxHandleInResultResult = std::result::Result<(fidl::Handle), u32>;
 
+/// Handle-type validating wrapper for WithErrorSyntaxHandleInResultResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type WithErrorSyntaxHandleInResultResultHandleWrapper =
     std::result::Result<(HandleWrapperObjectTypeNONERights2147483648<fidl::Handle>,), u32>;
 
@@ -210,85 +230,6 @@ fidl_union! {
         },
     ],
     value_unknown_member: __Unknown,
-}
-
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct WithErrorSyntaxResponseAsStructResponse {
-    pub a: i64,
-    pub b: i64,
-    pub c: i64,
-}
-
-impl fidl::encoding::Persistable for WithErrorSyntaxResponseAsStructResponse {}
-
-fidl_struct_copy! {
-  name: WithErrorSyntaxResponseAsStructResponse,
-  members: [
-    a {
-      ty: i64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-    b {
-      ty: i64,
-      offset_v1: 8,
-      offset_v2: 8,
-    },
-    c {
-      ty: i64,
-      offset_v1: 16,
-      offset_v2: 16,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 24,
-  size_v2: 24,
-  align_v1: 8,
-  align_v2: 8,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct WithErrorSyntaxErrorAsPrimitiveResponse;
-
-impl fidl::encoding::Persistable for WithErrorSyntaxErrorAsPrimitiveResponse {}
-
-fidl_empty_struct!(WithErrorSyntaxErrorAsPrimitiveResponse);
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct WithErrorSyntaxErrorAsEnumResponse;
-
-impl fidl::encoding::Persistable for WithErrorSyntaxErrorAsEnumResponse {}
-
-fidl_empty_struct!(WithErrorSyntaxErrorAsEnumResponse);
-
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct WithErrorSyntaxHandleInResultResponse {
-    pub h: fidl::Handle,
-}
-
-fidl_struct! {
-  name: WithErrorSyntaxHandleInResultResponse,
-  members: [
-    h {
-      ty: fidl::Handle,
-      offset_v1: 0,
-      offset_v2: 0,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
-        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
-      },
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 4,
-  size_v2: 4,
-  align_v1: 4,
-  align_v2: 4,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -1136,7 +1077,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     }
 
     fn send_raw(&self) -> Result<(), fidl::Error> {
-        let mut response = ();
+        let mut response = (());
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -1300,7 +1241,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     }
 
     fn send_raw(&self) -> Result<(), fidl::Error> {
-        let mut response = ();
+        let mut response = (());
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -1459,7 +1400,7 @@ impl WithErrorSyntaxSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
-        let _value: (WithErrorSyntaxResponseAsStructResultHandleWrapper) = self.client.send_query(
+        let _value: WithErrorSyntaxResponseAsStructResultHandleWrapper = self.client.send_query(
             &mut (),
             0x3b902a6d8d24693,
             fidl::encoding::DynamicFlags::empty(),
@@ -1471,7 +1412,7 @@ impl WithErrorSyntaxSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
-        let _value: (WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper) = self.client.send_query(
+        let _value: WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = self.client.send_query(
             &mut (),
             0x602fd6bd920135e7,
             fidl::encoding::DynamicFlags::empty(),
@@ -1483,7 +1424,7 @@ impl WithErrorSyntaxSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
-        let _value: (WithErrorSyntaxErrorAsEnumResultHandleWrapper) = self.client.send_query(
+        let _value: WithErrorSyntaxErrorAsEnumResultHandleWrapper = self.client.send_query(
             &mut (),
             0x4c371e1673212f43,
             fidl::encoding::DynamicFlags::empty(),
@@ -1495,7 +1436,7 @@ impl WithErrorSyntaxSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxHandleInResultResult), fidl::Error> {
-        let _value: (WithErrorSyntaxHandleInResultResultHandleWrapper) = self.client.send_query(
+        let _value: WithErrorSyntaxHandleInResultResultHandleWrapper = self.client.send_query(
             &mut (),
             0x13092c5b835b0cbf,
             fidl::encoding::DynamicFlags::empty(),
@@ -1568,7 +1509,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
     fn r#response_as_struct(&self) -> Self::ResponseAsStructResponseFut {
         fn transform(
-            result: Result<(WithErrorSyntaxResponseAsStructResultHandleWrapper), fidl::Error>,
+            result: Result<WithErrorSyntaxResponseAsStructResultHandleWrapper, fidl::Error>,
         ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| (_value.0, _value.1, _value.2)))
         }
@@ -1588,7 +1529,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
     fn r#error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut {
         fn transform(
-            result: Result<(WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper), fidl::Error>,
+            result: Result<WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper, fidl::Error>,
         ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
@@ -1608,7 +1549,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
     fn r#error_as_enum(&self) -> Self::ErrorAsEnumResponseFut {
         fn transform(
-            result: Result<(WithErrorSyntaxErrorAsEnumResultHandleWrapper), fidl::Error>,
+            result: Result<WithErrorSyntaxErrorAsEnumResultHandleWrapper, fidl::Error>,
         ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
@@ -1628,7 +1569,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         fidl::client::QueryResponseFut<(WithErrorSyntaxHandleInResultResult)>;
     fn r#handle_in_result(&self) -> Self::HandleInResultResponseFut {
         fn transform(
-            result: Result<(WithErrorSyntaxHandleInResultResultHandleWrapper), fidl::Error>,
+            result: Result<WithErrorSyntaxHandleInResultResultHandleWrapper, fidl::Error>,
         ) -> Result<(WithErrorSyntaxHandleInResultResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0.into_inner()))
         }
@@ -1977,10 +1918,7 @@ impl WithErrorSyntaxResponseAsStructResponder {
         &self,
         mut _result: &mut WithErrorSyntaxResponseAsStructResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (match _result {
-            Ok(_result_val) => Ok((&mut _result_val.0, &mut _result_val.1, &mut _result_val.2)),
-            Err(e) => Err(e),
-        });
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -2071,10 +2009,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
         &self,
         mut _result: &mut WithErrorSyntaxErrorAsPrimitiveResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (match _result {
-            Ok(_result_val) => Ok(()),
-            Err(e) => Err(e),
-        });
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -2165,10 +2100,7 @@ impl WithErrorSyntaxErrorAsEnumResponder {
         &self,
         mut _result: &mut WithErrorSyntaxErrorAsEnumResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (match _result {
-            Ok(_result_val) => Ok(()),
-            Err(e) => Err(e),
-        });
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -2259,7 +2191,10 @@ impl WithErrorSyntaxHandleInResultResponder {
         &self,
         mut _result: &mut WithErrorSyntaxHandleInResultResult,
     ) -> Result<(), fidl::Error> {
-        let mut response = (HandleWrapperObjectTypeNONERights2147483648(_result));
+        let mut response = (match _result {
+            Ok((_0)) => Ok((HandleWrapperObjectTypeNONERights2147483648(_0))),
+            Err(e) => Err(e),
+        });
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -2943,7 +2878,7 @@ impl ChannelProtocolTakeHandleResponder {
     }
 
     fn send_raw(&self) -> Result<(), fidl::Error> {
-        let mut response = ();
+        let mut response = (());
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(

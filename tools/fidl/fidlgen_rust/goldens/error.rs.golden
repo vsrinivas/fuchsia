@@ -29,34 +29,12 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
 pub type ExampleFooResult = std::result::Result<(i64), u32>;
 
+/// Handle-type validating wrapper for ExampleFooResult responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type ExampleFooResultHandleWrapper = std::result::Result<(i64,), u32>;
-
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
-)]
-#[repr(C)]
-pub struct ExampleFooResponse {
-    pub y: i64,
-}
-
-impl fidl::encoding::Persistable for ExampleFooResponse {}
-
-fidl_struct_copy! {
-  name: ExampleFooResponse,
-  members: [
-    y {
-      ty: i64,
-      offset_v1: 0,
-      offset_v2: 0,
-    },
-  ],
-  padding_v1: [],
-  padding_v2: [],
-  size_v1: 8,
-  size_v2: 8,
-  align_v1: 8,
-  align_v2: 8,
-}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleMarker;
@@ -100,7 +78,7 @@ impl ExampleSynchronousProxy {
         mut s: &str,
         ___deadline: zx::Time,
     ) -> Result<(ExampleFooResult), fidl::Error> {
-        let _value: (ExampleFooResultHandleWrapper) = self.client.send_query(
+        let _value: ExampleFooResultHandleWrapper = self.client.send_query(
             &mut (s),
             0xf5f1179dc411e44,
             fidl::encoding::DynamicFlags::empty(),
@@ -155,7 +133,7 @@ impl ExampleProxyInterface for ExampleProxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(ExampleFooResult)>;
     fn r#foo(&self, mut s: &str) -> Self::FooResponseFut {
         fn transform(
-            result: Result<(ExampleFooResultHandleWrapper), fidl::Error>,
+            result: Result<ExampleFooResultHandleWrapper, fidl::Error>,
         ) -> Result<(ExampleFooResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }

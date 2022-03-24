@@ -1069,12 +1069,19 @@ func (m *Method) GetResponsePayloadIdentifier() (EncodedCompoundIdentifier, bool
 	return m.ResponsePayload.Identifier, true
 }
 
-// Helper for getting whether the method is strict. Strict is optional while unknown interactions
-// are experimental, and if strict is missing it should be treated as true.
-// TODO(fxbug.dev/88366): replace this method with direct access to the Strict field, once it is
-// required.
+// Helper for getting whether the method is strict. Strict is optional while
+// unknown interactions are experimental, and if strict is missing it should be
+// treated as true.
+// TODO(fxbug.dev/88366): replace this method with direct access to the Strict
+// field, once it is required.
 func (m *Method) IsStrict() bool {
 	return m.MaybeStrict == nil || *m.MaybeStrict
+}
+
+// IsFlexible is the inverse of IsStrict. Convenience for templates so they
+// don't have to use (not .IsStrict)
+func (m *Method) IsFlexible() bool {
+	return !m.IsStrict()
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
@@ -1088,6 +1095,12 @@ func (m *Method) HasRequestPayload() bool {
 
 func (m *Method) HasResponsePayload() bool {
 	return m.ResponsePayload != nil
+}
+
+// HasTransportError returns true if the method uses a result union with
+// transport_err variant. This is true if it is a flexible two-way method.
+func (m *Method) HasTransportError() bool {
+	return m.HasRequest && m.HasResponse && m.IsFlexible()
 }
 
 // Enum represents a FIDL declaration of an enum.
@@ -1373,7 +1386,7 @@ func (r *Root) payloadTypeNames() EncodedCompoundIdentifierSet {
 				ptn[method.RequestPayload.Identifier] = struct{}{}
 			}
 			if method.ResponsePayload != nil {
-				if method.HasError {
+				if method.HasError || method.HasTransportError() {
 					ptn[method.ValueType.Identifier] = struct{}{}
 				} else {
 					ptn[method.ResponsePayload.Identifier] = struct{}{}
@@ -1431,9 +1444,9 @@ func (r *Root) MethodTypeUsageMap() MethodTypeUsageMap {
 	return out
 }
 
-// deniedContexts produces a list of scopedNamingContexts. Any types/methods
-// that begin with the scopedNamingContext in that list should be denied as well
-// when run through the isDenied() function.
+// deniedContexts produces a list of scopedNamingContexts. Any types/methods that begin with the
+// scopedNamingContext in that list should be denied as well when run through the isDenied()
+// function.
 func deniedContexts(r *Root, language string) []scopedNamingContext {
 	var denied []scopedNamingContext
 

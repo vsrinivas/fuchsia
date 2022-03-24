@@ -34,7 +34,7 @@ pub enum Error {
     InvalidHeader,
 
     /// Unsupported wire format.
-    #[error("Incompatible wire format magic number: {}.", _0)]
+    #[error("Incompatible wire format magic number: {0}.")]
     IncompatibleMagicNumber(u8),
 
     /// Invalid FIDL buffer.
@@ -55,8 +55,7 @@ pub enum Error {
 
     /// Decoding the FIDL object observed non-zero value in a padding byte.
     #[error(
-        "Decoding the FIDL object observed non-zero value in the padding region starting at byte {}.",
-        padding_start
+        "Decoding the FIDL object observed non-zero value in the padding region starting at byte {padding_start}.",
     )]
     NonZeroPadding {
         /// Index of the first byte of the padding, relative to the beginning of the message.
@@ -81,14 +80,14 @@ pub enum Error {
     #[error("A FIDL message contained incorrectly encoded UTF8.")]
     Utf8Error,
 
-    /// A message was received for an ordinal value that the service does not understand.
-    /// This generally results from an attempt to call a FIDL service of a type other than
-    /// the one being served.
+    /// A message was received for an ordinal value that the service does not
+    /// understand, and either the method is not flexible or this protocol does
+    /// not allow flexible methods of this type.  This generally results from an
+    /// attempt to call a FIDL service of a type other than the one being
+    /// served.
     #[error(
-        "A message was received for ordinal value {} \
-                   that the FIDL service {} does not understand.",
-        ordinal,
-        protocol_name
+        "A message was received for ordinal value {ordinal} \
+                   that the FIDL service {protocol_name} does not understand."
     )]
     UnknownOrdinal {
         /// The unknown ordinal.
@@ -96,6 +95,26 @@ pub enum Error {
         /// The name of the service for which the message was intended.
         protocol_name: &'static str,
     },
+
+    /// A flexible method call was not recognized by the server.
+    #[error(
+        "Server for the FIDL protocol {protocol_name} did not recognize method {method_name}."
+    )]
+    UnsupportedMethod {
+        /// The status sent by the server. Currently this will always be
+        /// `Status::NOT_SUPPORTED`.
+        #[source]
+        status: zx_status::Status,
+        /// Name of the method that was called.
+        method_name: &'static str,
+        /// Name of the service for which the message was intended.
+        protocol_name: &'static str,
+    },
+
+    /// The server sent the `transport_err` variant of the result enum, but
+    /// specified a value other than `Status::NOT_SUPPORTED`.
+    #[error("Recieved a transport_err value that is not recognized: {0}")]
+    UnrecognizedTransportErr(#[source] zx_status::Status),
 
     /// Invalid bits value for a strict bits type.
     #[error("Invalid bits value for a strict bits type.")]
@@ -139,7 +158,7 @@ pub enum Error {
     InvalidHostHandle,
 
     /// The handle subtype doesn't match the expected subtype.
-    #[error("Incorrect handle subtype. Expected {}, but received {}", expected.into_raw(), received.into_raw())]
+    #[error("Incorrect handle subtype. Expected {}, but received {}", .expected.into_raw(), .received.into_raw())]
     IncorrectHandleSubtype {
         /// The expected object type.
         expected: ObjectType,
@@ -148,7 +167,7 @@ pub enum Error {
     },
 
     /// Some expected handle rights are missing.
-    #[error("Some expected handle rights are missing: {}", missing_rights.bits())]
+    #[error("Some expected handle rights are missing: {}", .missing_rights.bits())]
     MissingExpectedHandleRights {
         /// The rights that are missing.
         missing_rights: Rights,
@@ -163,43 +182,42 @@ pub enum Error {
     HandleReplace(#[source] zx_status::Status),
 
     /// A FIDL server encountered an IO error writing a response to a channel.
-    #[error("A server encountered an IO error writing a FIDL response to a channel: {}", _0)]
+    #[error("A server encountered an IO error writing a FIDL response to a channel: {0}")]
     ServerResponseWrite(#[source] zx_status::Status),
 
     /// A FIDL server encountered an IO error reading incoming requests from a channel.
     #[error(
-        "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}",
-        _0
+        "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {0}"
     )]
     ServerRequestRead(#[source] zx_status::Status),
 
     /// A FIDL server encountered an IO error writing an epitaph to a channel.
-    #[error("A FIDL server encountered an IO error writing an epitaph into a channel: {}", _0)]
+    #[error("A FIDL server encountered an IO error writing an epitaph into a channel: {0}")]
     ServerEpitaphWrite(#[source] zx_status::Status),
 
     /// A FIDL client encountered an IO error reading a response from a channel. For the
     /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
-    #[error("A FIDL client encountered an IO error reading a response from a channel: {}", _0)]
+    #[error("A FIDL client encountered an IO error reading a response from a channel: {0}")]
     ClientRead(#[source] zx_status::Status),
 
     /// A FIDL client encountered an IO error writing a request to a channel. For the
     /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
-    #[error("A FIDL client encountered an IO error writing a request into a channel: {}", _0)]
+    #[error("A FIDL client encountered an IO error writing a request into a channel: {0}")]
     ClientWrite(#[source] zx_status::Status),
 
     /// A FIDL client encountered an IO error issuing a channel call. For the
     /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
-    #[error("A FIDL client encountered an IO error issuing a channel call: {}", _0)]
+    #[error("A FIDL client encountered an IO error issuing a channel call: {0}")]
     ClientCall(#[source] zx_status::Status),
 
     /// A FIDL client encountered an IO error while waiting for an event. For the
     /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
-    #[error("A FIDL client encountered an IO error issuing a channel call: {}", _0)]
+    #[error("A FIDL client encountered an IO error issuing a channel call: {0}")]
     ClientEvent(#[source] zx_status::Status),
 
     /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
     /// `zx_status::Status::PEER_CLOSED` otherwise.
-    #[error("A FIDL client's channel to the service {} was closed: {}", protocol_name, status)]
+    #[error("A FIDL client's channel to the service {protocol_name} was closed: {status}")]
     ClientChannelClosed {
         /// The epitaph or `zx_status::Status::PEER_CLOSED`.
         #[source]
@@ -209,20 +227,17 @@ pub enum Error {
     },
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
-    #[error(
-        "There was an error creating a channel to be used for a FIDL client-server pair: {}",
-        _0
-    )]
+    #[error("There was an error creating a channel to be used for a FIDL client-server pair: {0}")]
     ChannelPairCreate(#[source] zx_status::Status),
 
     /// There was an error attaching a FIDL channel to the async executor.
-    #[error("There was an error attaching a FIDL channel to the async executor: {}", _0)]
+    #[error("There was an error attaching a FIDL channel to the async executor: {0}")]
     AsyncChannel(#[source] zx_status::Status),
 
     /// There was a miscellaneous io::Error during a test.
     #[cfg(target_os = "fuchsia")]
     #[cfg(test)]
-    #[error("Test zx_status::Status: {}", _0)]
+    #[error("Test zx_status::Status: {0}")]
     TestIo(#[source] zx_status::Status),
 }
 

@@ -27,48 +27,12 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum ExampleFlexibleTwoWayResult {
-    Response(ExampleFlexibleTwoWayResponse),
-    TransportErr(i32),
-}
-
-impl ExampleFlexibleTwoWayResult {
-    #[deprecated = "Strict unions should not use `validate`"]
-    #[inline]
-    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-        Ok(self)
-    }
-
-    #[deprecated = "Strict unions should not use `is_unknown`"]
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        false
-    }
-}
-
-impl fidl::encoding::Persistable for ExampleFlexibleTwoWayResult {}
-
-fidl_union! {
-    name: ExampleFlexibleTwoWayResult,
-    members: [
-        Response {
-            ty: ExampleFlexibleTwoWayResponse,
-            ordinal: 1,
-        },
-        TransportErr {
-            ty: i32,
-            ordinal: 3,
-        },
-    ],
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct ExampleFlexibleTwoWayResponse;
-
-impl fidl::encoding::Persistable for ExampleFlexibleTwoWayResponse {}
-
-fidl_empty_struct!(ExampleFlexibleTwoWayResponse);
+/// Request message decoding format for ExampleFlexibleTwoWayResult responses, used internally
+/// by FIDL bindings to decode flexible method results. This should only be used
+/// by generated APIs, API users should never need to use this type. It is
+/// public because it is shared with composed protocols.
+#[doc(hidden)]
+pub type ExampleFlexibleTwoWayResultWireHandleWrapper = fidl::encoding::OpenResult<(), ()>;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ExampleMarker;
@@ -84,8 +48,7 @@ pub trait ExampleProxyInterface: Send + Sync {
     fn r#flexible_one_way(&self) -> Result<(), fidl::Error>;
     type StrictTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut;
-    type FlexibleTwoWayResponseFut: std::future::Future<Output = Result<(ExampleFlexibleTwoWayResult), fidl::Error>>
-        + Send;
+    type FlexibleTwoWayResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut;
     type StrictEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     type FlexibleEventResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
@@ -128,17 +91,15 @@ impl ExampleSynchronousProxy {
         )?;
         Ok(())
     }
-    pub fn r#flexible_two_way(
-        &self,
-        ___deadline: zx::Time,
-    ) -> Result<(ExampleFlexibleTwoWayResult), fidl::Error> {
-        let _value: (ExampleFlexibleTwoWayResult,) = self.client.send_query(
+    pub fn r#flexible_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
+        let _value: ExampleFlexibleTwoWayResultWireHandleWrapper = self.client.send_query(
             &mut (),
             0x7ddf3a4404acfa2c,
             fidl::encoding::DynamicFlags::FLEXIBLE,
             ___deadline,
         )?;
-        Ok(_value.0)
+        let _value = _value.into_result::<ExampleMarker>("flexible_two_way")?;
+        Ok(())
     }
 }
 
@@ -187,9 +148,7 @@ impl ExampleProxy {
     pub fn r#strict_two_way(&self) -> fidl::client::QueryResponseFut<()> {
         ExampleProxyInterface::r#strict_two_way(self)
     }
-    pub fn r#flexible_two_way(
-        &self,
-    ) -> fidl::client::QueryResponseFut<(ExampleFlexibleTwoWayResult)> {
+    pub fn r#flexible_two_way(&self) -> fidl::client::QueryResponseFut<()> {
         ExampleProxyInterface::r#flexible_two_way(self)
     }
 }
@@ -218,12 +177,15 @@ impl ExampleProxyInterface for ExampleProxy {
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
-    type FlexibleTwoWayResponseFut = fidl::client::QueryResponseFut<(ExampleFlexibleTwoWayResult)>;
+    type FlexibleTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
     fn r#flexible_two_way(&self) -> Self::FlexibleTwoWayResponseFut {
         fn transform(
-            result: Result<(ExampleFlexibleTwoWayResult,), fidl::Error>,
-        ) -> Result<(ExampleFlexibleTwoWayResult), fidl::Error> {
-            result.map(|_value| _value.0)
+            result: Result<ExampleFlexibleTwoWayResultWireHandleWrapper, fidl::Error>,
+        ) -> Result<(), fidl::Error> {
+            result.and_then(|_value| {
+                let _value = _value.into_result::<ExampleMarker>("flexible_two_way")?;
+                Ok(())
+            })
         }
         let send_result = self.client.call_send_raw_query(
             &mut (),
@@ -461,6 +423,54 @@ impl futures::Stream for ExampleRequestStream {
                         },
                     })
                 }
+                _ if header.tx_id() == 0
+                    && header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) =>
+                {
+                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
+                    Ok(ExampleRequest::_UnknownInteraction {
+                        ordinal: header.ordinal(),
+                        control_handle,
+                        direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                    })
+                }
+                _ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+                    let control_handle = ExampleControlHandle { inner: this.inner.clone() };
+
+                    let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(
+                        zx_status::Status::NOT_SUPPORTED,
+                    );
+
+                    let mut msg = fidl::encoding::TransactionMessage {
+                        header: fidl::encoding::TransactionHeader::new(
+                            header.tx_id(),
+                            header.ordinal(),
+                            header.dynamic_flags(),
+                        ),
+                        body: &mut response,
+                    };
+
+                    // We are inside of with_tls_decode_buf, so we can't use
+                    // with_tls_encode_buf. However, we know that the unknown
+                    // interaction reply will not contain any handles, so
+                    // creating a new Vec here does not cause an allocation.
+                    let mut handles = Vec::new();
+                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/Example_UnknownInteractionResponse");
+                    fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
+                    fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+                    fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+                    control_handle
+                        .inner
+                        .channel()
+                        .write_etc(&*bytes, &mut handles)
+                        .map_err(fidl::Error::ServerResponseWrite)?;
+
+                    Ok(ExampleRequest::_UnknownInteraction {
+                        ordinal: header.ordinal(),
+                        control_handle,
+                        direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                    })
+                }
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),
                     protocol_name: <ExampleMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
@@ -471,10 +481,24 @@ impl futures::Stream for ExampleRequestStream {
 }
 #[derive(Debug)]
 pub enum ExampleRequest {
-    StrictOneWay { control_handle: ExampleControlHandle },
-    FlexibleOneWay { control_handle: ExampleControlHandle },
-    StrictTwoWay { responder: ExampleStrictTwoWayResponder },
-    FlexibleTwoWay { responder: ExampleFlexibleTwoWayResponder },
+    StrictOneWay {
+        control_handle: ExampleControlHandle,
+    },
+    FlexibleOneWay {
+        control_handle: ExampleControlHandle,
+    },
+    StrictTwoWay {
+        responder: ExampleStrictTwoWayResponder,
+    },
+    FlexibleTwoWay {
+        responder: ExampleFlexibleTwoWayResponder,
+    },
+    /// An interaction was received which does not match any known method.
+    _UnknownInteraction {
+        ordinal: u64,
+        control_handle: ExampleControlHandle,
+        direction: fidl::endpoints::UnknownInteractionDirection,
+    },
 }
 
 impl ExampleRequest {
@@ -521,6 +545,14 @@ impl ExampleRequest {
             ExampleRequest::FlexibleOneWay { .. } => "flexible_one_way",
             ExampleRequest::StrictTwoWay { .. } => "strict_two_way",
             ExampleRequest::FlexibleTwoWay { .. } => "flexible_two_way",
+            ExampleRequest::_UnknownInteraction {
+                direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                ..
+            } => "unknown one-way method",
+            ExampleRequest::_UnknownInteraction {
+                direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                ..
+            } => "unknown two-way method",
         }
     }
 }
@@ -641,7 +673,7 @@ impl ExampleStrictTwoWayResponder {
     }
 
     fn send_raw(&self) -> Result<(), fidl::Error> {
-        let mut response = ();
+        let mut response = (());
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(
@@ -705,8 +737,8 @@ impl ExampleFlexibleTwoWayResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
-    pub fn send(self, mut result: &mut ExampleFlexibleTwoWayResult) -> Result<(), fidl::Error> {
-        let r = self.send_raw(result);
+    pub fn send(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
         if r.is_err() {
             self.control_handle.shutdown();
         }
@@ -716,17 +748,14 @@ impl ExampleFlexibleTwoWayResponder {
 
     /// Similar to "send" but does not shutdown the channel if
     /// an error occurs.
-    pub fn send_no_shutdown_on_err(
-        self,
-        mut result: &mut ExampleFlexibleTwoWayResult,
-    ) -> Result<(), fidl::Error> {
-        let r = self.send_raw(result);
+    pub fn send_no_shutdown_on_err(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
         self.drop_without_shutdown();
         r
     }
 
-    fn send_raw(&self, mut result: &mut ExampleFlexibleTwoWayResult) -> Result<(), fidl::Error> {
-        let mut response = (result);
+    fn send_raw(&self) -> Result<(), fidl::Error> {
+        let mut response = (fidl::encoding::OpenResult::<_, ()>::Ok(()));
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(

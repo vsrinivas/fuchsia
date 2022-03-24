@@ -5,6 +5,7 @@
 */}}
 
 {{- define "ResultDeclaration" }}
+{{ if .ErrType -}}
 pub type {{ .Name }} = std::result::Result< (
   {{- if gt (len .Ok) 1 }}
     {{- range $ok := .Ok }}
@@ -17,6 +18,11 @@ pub type {{ .Name }} = std::result::Result< (
   {{- end }}
 ), {{ .ErrType }} >;
 
+/// Handle-type validating wrapper for {{ .Name }} responses, used internally by
+/// FIDL bindings to decode method results. This should only be used by
+/// generated APIs, API users should never need to use this type. It is public
+/// because it is shared with composed protocols.
+#[doc(hidden)]
 pub type {{ .Name }}HandleWrapper = std::result::Result< (
   {{- range $ok := .Ok }}
     {{ if $ok.HasHandleMetadata }}
@@ -26,5 +32,23 @@ pub type {{ .Name }}HandleWrapper = std::result::Result< (
     {{ end }}
   {{- end }}
 ), {{ .ErrType }} >;
+{{- end }}
+
+{{ if .HasTransportError -}}
+/// Request message decoding format for {{ .Name }} responses, used internally
+/// by FIDL bindings to decode flexible method results. This should only be used
+/// by generated APIs, API users should never need to use this type. It is
+/// public because it is shared with composed protocols.
+#[doc(hidden)]
+pub type {{ .Name }}WireHandleWrapper = fidl::encoding::OpenResult< (
+  {{- range $ok := .Ok }}
+    {{ if $ok.HasHandleMetadata }}
+    {{ $ok.HandleWrapperName }}<{{ $ok.Type }}>,
+    {{ else }}
+    {{ $ok.Type }},
+    {{ end }}
+  {{- end }}
+), {{ if .ErrType }}{{ .ErrType }}{{ else }}(){{ end }} >;
+{{- end }}
 {{- end }}
 

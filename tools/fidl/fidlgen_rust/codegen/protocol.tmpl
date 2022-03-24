@@ -5,18 +5,24 @@
 */}}
 
 {{- define "ResponseType" -}}
-{{ if .Result }}
+{{- if .IsStrict -}}
+{{- if .HasErrorResult -}}
 {{ .Result.Name }}HandleWrapper
-{{- else -}}{{/* if not .Result */}}
-{{- range $index, $response := .Response -}}
-{{- if .HasHandleMetadata -}}
-{{ .HandleWrapperName }}<{{- $response.Type -}}>,
-{{- else -}}
-{{- $response.Type -}},
+{{- else }}{{/* if not .HasErrorResult */ -}}
+(
+	{{- range $index, $response := .Response -}}
+	{{- if .HasHandleMetadata -}}
+	{{ .HandleWrapperName }}<{{- $response.Type -}}>,
+	{{- else -}}
+	{{- $response.Type -}},
+	{{- end -}}
+	{{- end }}{{/* end range */ -}}
+)
 {{- end -}}
-{{- end -}}{{/* end range */}}
-{{- end -}}
-{{- end -}}{{/* ResponseType */}}
+{{- else }}{{/* if not .IsStrict */ -}}
+{{ .Result.Name }}WireHandleWrapper
+{{- end }}{{/* end if .IsStrict/not .IsStrict */ -}}
+{{- end }}{{/* ResponseType */ -}}
 
 {{- define "WrappedName" -}}
 {{- if .HasHandleMetadata -}}
@@ -53,7 +59,7 @@ _value.{{ $index }},
 
 
 {{- define "ResponseValue" -}}
-{{ if .Result }}
+{{ if .HasErrorResult }}
 _value.map(|_value| {{ template "RemoveHandleWrappers" .Result.Ok }})
 {{ else }}
 {{ template "RemoveHandleWrappers" .Response }}
@@ -152,14 +158,12 @@ impl {{ $protocol.Name }}SynchronousProxy {
 		{{- end -}}
 	) -> Result<(
 		{{- range $index, $response := $method.Response -}}
-		{{- if (eq $index 0) -}} {{ $response.Type }}
-		{{- else -}}, {{ $response.Type }} {{- end -}}
+		{{- if (ne $index 0) -}}, {{ end -}}
+		{{ $response.Type }}
 		{{- end -}}
 	), fidl::Error> {
 		{{- if $method.HasResponse -}}
-			let _value: (
-				{{ template "ResponseType" $method }}
-			) = self.client.send_query(&mut (
+			let _value: {{ template "ResponseType" $method }} = self.client.send_query(&mut (
 				{{- range $index, $request := $method.Request -}}
 				{{- if ne $index 0 }}, {{ end -}}
 				{{- template "WrappedName" $request -}}
@@ -169,6 +173,13 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{ $method.DynamicFlags }},
 				___deadline,
 			)?;
+			{{- if $method.IsFlexible -}}
+			{{- if $method.HasErrorResult -}}
+			let _value = _value.into_nested_result::<{{ $protocol.Name }}Marker>("{{ $method.Name }}")?;
+			{{- else -}}
+			let _value = _value.into_result::<{{ $protocol.Name }}Marker>("{{ $method.Name }}")?;
+			{{- end -}}
+			{{- end -}}
 			Ok({{ template "ResponseValue" $method }})
 		{{- else -}}
 			self.client.send(&mut (
@@ -272,15 +283,24 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
 	) -> Self::{{ $method.CamelName}}ResponseFut {
-		fn transform(result: Result<(
-			{{ template "ResponseType" $method }}
-		), fidl::Error>) -> Result<(
+		fn transform(result: Result<{{ template "ResponseType" $method }}, fidl::Error>) -> Result<(
 			{{- range $index, $response := $method.Response -}}
 			{{- if (eq $index 0) -}} {{- $response.Type -}}
 			{{- else -}}, {{- $response.Type -}} {{- end -}}
 			{{- end -}}
 		), fidl::Error> {
+			{{- if $method.IsFlexible -}}
+			result.and_then(|_value| {
+				{{- if $method.HasErrorResult -}}
+				let _value = _value.into_nested_result::<{{ $protocol.Name }}Marker>("{{ $method.Name }}")?;
+				{{- else -}}
+				let _value = _value.into_result::<{{ $protocol.Name }}Marker>("{{ $method.Name }}")?;
+				{{- end -}}
+				Ok({{ template "ResponseValue" $method }})
+			})
+			{{- else -}}
 			result.map(|_value| {{ template "ResponseValue" $method }})
+			{{- end -}}
 		}
 		let send_result = self.client.call_send_raw_query(&mut (
 		{{- range $index, $request := $method.Request -}}
@@ -539,6 +559,58 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 				}
 				{{- end }}
 				{{- end }}
+				{{- if $protocol.OneWayUnknownInteractions }}
+				_ if header.tx_id() == 0 && header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+					let control_handle = {{ $protocol.Name }}ControlHandle {
+						inner: this.inner.clone(),
+					};
+					Ok({{ $protocol.Name }}Request::_UnknownInteraction {
+						ordinal: header.ordinal(),
+						control_handle,
+						{{- if $protocol.TwoWayUnknownInteractions }}
+						direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+						{{- end }}
+					})
+				}
+				{{- if $protocol.TwoWayUnknownInteractions }}
+				_ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
+					let control_handle = {{ $protocol.Name }}ControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(zx_status::Status::NOT_SUPPORTED);
+
+					let mut msg = fidl::encoding::TransactionMessage {
+						header: fidl::encoding::TransactionHeader::new(
+							header.tx_id(), header.ordinal(), header.dynamic_flags(),
+						),
+						body: &mut response,
+					};
+
+					// We are inside of with_tls_decode_buf, so we can't use
+					// with_tls_encode_buf. However, we know that the unknown
+					// interaction reply will not contain any handles, so
+					// creating a new Vec here does not cause an allocation.
+					let mut handles = Vec::new();
+					fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}_UnknownInteractionResponse");
+					fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
+					fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+					fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+					control_handle
+						.inner
+						.channel()
+						.write_etc(&*bytes, &mut handles)
+						.map_err(fidl::Error::ServerResponseWrite)?;
+
+					Ok({{ $protocol.Name }}Request::_UnknownInteraction {
+						ordinal: header.ordinal(),
+						control_handle,
+						direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+					})
+				}
+				{{- end }}
+				{{- end }}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal(),
 					protocol_name: <{{ $protocol.Name }}Marker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
@@ -569,6 +641,17 @@ pub enum {{ $protocol.Name }}Request {
 		{{- end -}}
 	},
 	{{- end }}
+	{{- end }}
+
+	{{- if $protocol.OneWayUnknownInteractions }}
+	/// An interaction was received which does not match any known method.
+	_UnknownInteraction {
+		ordinal: u64,
+		control_handle: {{ $protocol.Name}}ControlHandle,
+		{{- if $protocol.TwoWayUnknownInteractions }}
+		direction: fidl::endpoints::UnknownInteractionDirection,
+		{{- end }}
+	},
 	{{- end }}
 }
 
@@ -616,11 +699,22 @@ impl {{ $protocol.Name }}Request {
 	/// Name of the method defined in FIDL
 	pub fn method_name(&self) -> &'static str {
 		match *self {
-		{{- range $method := $protocol.Methods }}
+			{{- range $method := $protocol.Methods }}
 			{{- if $method.HasRequest }}
 			{{ $protocol.Name }}Request::{{ $method.CamelName }}{..} => "{{ $method.Name }}",
 			{{- end }}
-		{{- end }}
+			{{- end }}
+
+			{{- if $protocol.TwoWayUnknownInteractions }}
+			{{ $protocol.Name }}Request::_UnknownInteraction {
+				direction: fidl::endpoints::UnknownInteractionDirection::OneWay, ..
+			} => "unknown one-way method",
+			{{ $protocol.Name }}Request::_UnknownInteraction {
+				direction: fidl::endpoints::UnknownInteractionDirection::TwoWay, ..
+			} => "unknown two-way method",
+			{{- else if $protocol.OneWayUnknownInteractions }}
+			{{ $protocol.Name }}Request::_UnknownInteraction {..} => "unknown one-way method",
+			{{- end }}
 		}
 	}
 }
@@ -747,7 +841,7 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 
 	fn send_raw(&self,
 		{{- range $param := $method.Response -}}
-		{{- if $method.Result -}}
+		{{- if $method.HasErrorResult -}}
 		mut _result: {{ $param.BorrowedType -}},
 		{{- else -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
@@ -755,36 +849,44 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
 		let mut response = (
-			{{- if $method.Result -}}
-				(
-				{{- if eq 1 (len $method.Result.Ok )}}
-					{{- $first := (index $method.Result.Ok 0 ) -}}
-					{{- if $first.HasHandleMetadata -}}
-					{{ $first.HandleWrapperName }}(_result)
+			{{- if $method.HasErrorResult -}}
+				{{- if $method.IsFlexible -}}
+				fidl::encoding::OpenResult::from(
+				{{- end -}}
+					{{- if $method.Result.HasAnyHandleWrappers -}}
+					match _result {
+						Ok((
+							{{- range $index, $param := $method.Result.Ok -}}
+							{{- if ne 0 $index -}}, {{ end -}}
+							_{{ $index }}
+							{{- end -}}
+						)) => Ok((
+						{{- range $index, $param := $method.Result.Ok -}}
+							{{- if ne 0 $index -}}, {{ end -}}
+							{{- if $param.HasHandleMetadata -}}
+							{{ $param.HandleWrapperName }}(_{{ $index }})
+							{{- else -}}
+							_{{ $index }}
+							{{- end -}}
+						{{- end -}}
+						)),
+						Err(e) => Err(e),
+					}
 					{{- else -}}
 					_result
 					{{- end -}}
-				{{- else -}}
-				match _result {
-					Ok(_result_val) => Ok((
-					{{- range $index, $param := $method.Result.Ok -}}
-						{{- if ne 0 $index -}}, {{ end -}}
-						{{- if $param.HasHandleMetadata -}}
-						{{ $param.HandleWrapperName }}(&mut _result_val.{{ $index }})
-						{{- else -}}
-						&mut _result_val.{{ $index }}
-						{{- end -}}
-					{{- end -}}
-					)),
-					Err(e) => Err(e),
-				}
-				{{- end -}}
+				{{- if $method.IsFlexible -}}
 				)
-			{{- else -}}
-				{{- range $index, $param := $method.Response -}}
-				{{- if ne 0 $index -}}, {{ end -}}
-				{{- template "WrappedName" $param -}}
 				{{- end -}}
+			{{- else -}}
+				{{- if $method.IsFlexible -}}fidl::encoding::OpenResult::<_, ()>::Ok({{- end -}}
+				(
+					{{- range $index, $param := $method.Response -}}
+					{{- if ne 0 $index -}}, {{ end -}}
+					{{- template "WrappedName" $param -}}
+					{{- end -}}
+				)
+				{{- if $method.IsFlexible -}}){{- end -}}
 			{{- end -}}
 		);
 
@@ -810,4 +912,3 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 {{- end -}}
 {{- end -}}
 {{- end -}}
-
