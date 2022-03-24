@@ -322,7 +322,6 @@ fuchsia_unittest_component("basemgr-inspector-unittest") {
 }
 
 fuchsia_test_package("basemgr_unittests") {
-  package_deps_for_infra_only = [ "//src/modular/bin/basemgr" ]
   test_components = [
     ":basemgr-impl-unittest",
     ":basemgr-v1-to-v2-test-realm",

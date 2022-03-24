@@ -443,13 +443,6 @@ fuchsia_component("startup_annotations_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("feedback-tests") {
-  package_deps_for_infra_only = [
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/developer/forensics:copy-pkg",
-    "//src/factory/fake_factory_store_providers:fake_factory_store_providers",
-    "//src/hwinfo:fake_legacy_hwinfo",
-    "//src/sys/pkg/bin/fake-channel-control:fake-channel-control",
-  ]
   test_components = [
     ":annotation_manager_unittest",
     ":config_unittest",

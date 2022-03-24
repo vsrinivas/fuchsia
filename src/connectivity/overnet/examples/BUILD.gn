@@ -35,10 +35,6 @@ fuchsia_unittest_component("overnet_event_pair_test") {
 }
 
 fuchsia_test_package("overnet-examples-tests") {
-  package_deps_for_infra_only = [
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
-    "//src/diagnostics/archivist:archivist-for-embedding",
-  ]
   test_components = [
     ":overnet_echo_test",
     ":overnet_interface_passing_test",

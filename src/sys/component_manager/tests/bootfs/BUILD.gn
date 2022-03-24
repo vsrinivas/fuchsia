@@ -47,7 +47,5 @@ fuchsia_component("component") {
 # Run with `fx test bootfs-tests`.
 fuchsia_test_package("package") {
   package_name = "bootfs-tests"
-  package_deps_for_infra_only =
-      [ "//src/sys/component_manager:component-manager" ]
   test_components = [ ":component" ]
 }

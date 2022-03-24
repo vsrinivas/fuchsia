@@ -123,10 +123,6 @@ fuchsia_component("text-input-test-component") {
 }
 
 fuchsia_test_package("text-input-test") {
-  package_deps_for_infra_only = [
-    "//garnet/bin/trace_manager:trace_manager",
-    flutter_default_build_cfg.runner_dep,
-  ]
   test_components = [ ":text-input-test-component" ]
   deps = [
     ":scenic-test-config",

@@ -31,8 +31,6 @@ _universe_deps = [
 ]
 
 fuchsia_test_package("netstack-external-network-tests") {
-  package_deps_for_infra_only = _universe_deps
-
   test_components = [ ":test" ]
 
   deps = [

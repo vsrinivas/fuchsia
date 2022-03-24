@@ -63,10 +63,6 @@ fuchsia_component("mouse-input-test-component") {
 }
 
 fuchsia_test_package("mouse-input-test") {
-  package_deps_for_infra_only = [
-    "//garnet/bin/trace_manager:trace_manager",
-    flutter_default_build_cfg.runner_dep,
-  ]
   test_components = [ ":mouse-input-test-component" ]
   deps = [
     "mouse-input-flutter:mouse-input-flutter-component",

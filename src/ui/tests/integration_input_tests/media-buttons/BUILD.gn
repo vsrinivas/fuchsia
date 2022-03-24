@@ -45,10 +45,6 @@ fuchsia_unittest_component("mediabuttons-listener-test") {
 }
 
 fuchsia_test_package("mediabuttons-integration-tests") {
-  package_deps_for_infra_only = [
-    "//garnet/bin/trace_manager:trace_manager",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-  ]
   test_components = [ ":mediabuttons-listener-test" ]
 
   deps = [
@@ -94,10 +90,6 @@ executable("mediabuttons_listener_test_ip") {
 }
 
 fuchsia_unittest_package("mediabuttons-integration-tests-ip") {
-  package_deps_for_infra_only = [
-    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
-    "//src/ui/tests/integration_input_tests/touch:touch-input-test-ip",
-  ]
   manifest = "meta/mediabuttons_listener_test_ip.cml"
   deps = [
     ":mediabuttons_listener_test_ip",

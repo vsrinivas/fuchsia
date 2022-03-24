@@ -11,10 +11,6 @@ group("tests") {
 }
 
 fuchsia_unittest_package("lowpan-integration-tests") {
-  package_deps_for_infra_only = [
-    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver",
-    "//src/connectivity/lowpan/service:lowpanservice",
-  ]
   manifest = "meta/lowpan-integration-tests.cmx"
   deps = [ ":lowpan-integration-tests-bin" ]
 }

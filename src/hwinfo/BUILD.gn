@@ -197,8 +197,8 @@ rustc_test("hwinfo_retail_test") {
 
 hwinfo_integration_test("hwinfo_positive_tests") {
   manifest = "meta/hwinfo_positive_tests.cml"
-  deps = [ ":hwinfo_positive_test" ]
-  package_deps_for_infra_only = [
+  deps = [
+    ":hwinfo_positive_test",
     ":hwinfo_tests_config",
     ":hwinfo_tests_factory_config",
   ]
@@ -207,10 +207,6 @@ hwinfo_integration_test("hwinfo_positive_tests") {
 hwinfo_integration_test("hwinfo_negative_tests") {
   manifest = "meta/hwinfo_negative_tests.cml"
   deps = [ ":hwinfo_negative_test" ]
-  package_deps_for_infra_only = [
-    ":hwinfo_tests_factory_config",
-    "//src/factory/fake_factory_store_providers",
-  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -220,8 +216,8 @@ hwinfo_integration_test("hwinfo_negative_tests") {
 
 hwinfo_integration_test("hwinfo_retail_tests") {
   manifest = "meta/hwinfo_retail_tests.cml"
-  deps = [ ":hwinfo_retail_test" ]
-  package_deps_for_infra_only = [
+  deps = [
+    ":hwinfo_retail_test",
     ":hwinfo_retail_tests_config",
     ":hwinfo_retail_tests_factory_config",
   ]

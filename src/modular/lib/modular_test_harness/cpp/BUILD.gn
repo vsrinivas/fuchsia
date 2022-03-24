@@ -75,11 +75,6 @@ executable("test_harness_fixture_test_bin") {
 }
 
 fuchsia_unittest_package("test_harness_fixture_test") {
-  package_deps_for_infra_only = [
-    "//sdk/lib/sys/cpp/testing/environment_delegating_runner",
-    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
-    "//src/modular/bin/modular_test_harness",
-  ]
   manifest = "meta/test_harness_fixture_test_bin.cmx"
   deps = [ ":test_harness_fixture_test_bin" ]
 }

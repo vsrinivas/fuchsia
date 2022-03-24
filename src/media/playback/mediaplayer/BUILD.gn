@@ -190,8 +190,6 @@ fuchsia_unittest_component("util") {
 }
 
 fuchsia_test_package("mediaplayer_tests") {
-  package_deps_for_infra_only =
-      [ "//src/media/playback/mediaplayer:mediaplayer" ]
   test_components = [
     ":core",
     ":mediaplayer_tests_component",

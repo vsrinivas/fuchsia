@@ -161,8 +161,6 @@ go_test("clang_coverage_tests") {
   # Declare this test as a host-target interaction test, so that Fuchsia
   # should be running in an emulator before this test starts on the host.
   if (is_host && target_cpu == "x64") {
-    package_deps_for_infra_only =
-        [ ":clang_coverage_test_package($target_toolchain)" ]
     environments = [ emu_env ]
     args = [
       "--covargs",
@@ -195,8 +193,6 @@ go_test("rust_coverage_tests") {
   # Declare this test as a host-target interaction test, so that Fuchsia
   # should be running in an emulator before this test starts on the host.
   if (is_host && target_cpu == "x64") {
-    package_deps_for_infra_only =
-        [ ":rust_coverage_test_package($target_toolchain)" ]
     environments = [ emu_env ]
     args = [
       "--covargs",

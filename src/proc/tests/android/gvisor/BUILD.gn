@@ -133,7 +133,6 @@ zip_resource("gvisor_runfiles") {
 }
 
 fuchsia_test_package("starnix_gvisor_tests") {
-  package_deps_for_infra_only = [ "//src/proc/bin/starnix:pkg" ]
   deps = [
     ":gvisor_runfiles",
     "//src/proc/tests/android:android_system_image",

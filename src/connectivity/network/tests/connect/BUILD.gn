@@ -48,8 +48,6 @@ _universe_deps = [
 ]
 
 fuchsia_test_package("netstack-connect-tests") {
-  package_deps_for_infra_only = _universe_deps
-
   test_components = [ ":connect_test" ]
 
   deps = [
