@@ -471,8 +471,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
 
         std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context,
             transport_err_variant_context;
-        // TODO(fxbug.dev/88343): update this comment once top-level union support is added, and
-        //  the outer-most struct below is no longer used.
+        // TODO(fxbug.dev/95231): remove this comment when outer-most struct is no longer used.
+        //
         // The error syntax and flexible methods for protocol P and method M
         // desugars to the following type:
         //

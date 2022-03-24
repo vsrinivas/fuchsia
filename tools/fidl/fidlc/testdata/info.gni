@@ -308,7 +308,7 @@ fidl_testdata_info = [
     name = "protocol_layouts"
     target = "//tools/fidl/fidlc/testdata/protocol_layouts:test.protocollayouts"
 
-    # TODO(fxbug.dev/88343): Add backend support for syzkaller.
+    # TODO(fxbug.dev/96310): Possibly add backend support for syzkaller.
     denylist = [ "fidlgen_syzkaller" ]
   },
   {

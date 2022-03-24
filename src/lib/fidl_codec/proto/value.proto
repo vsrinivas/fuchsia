@@ -56,7 +56,6 @@ message StructField {
 // Defines a struct value.
 message Struct {
   repeated StructField fields = 1;
-  // TODO(fxbug.dev/88343): handle table and union.
 }
 
 // Defines a vector value.
