@@ -9,7 +9,9 @@
 
 #include <cstdint>
 #include <list>
-#include <unordered_map>
+#include <map>
+#include <ostream>
+#include <string_view>
 #include <vector>
 
 #include "macros.h"
@@ -85,6 +87,21 @@ class H264MultiDecoder : public VideoDecoder {
     virtual void AsyncResetStreamAfterCurrentFrame() = 0;
   };
 
+  enum class DecoderState : uint32_t {
+    // The hardware's state doesn't reflect that of the H264MultiDecoder.
+    kSwappedOut,
+
+    // Any stoppage waiting for input data or output surfaces.
+    kWaitingForInputOrOutput,
+
+    // After config change interrupt, waiting for new buffers.
+    kWaitingForConfigChange,
+
+    kRunning,
+  };
+
+  static const char* DecoderStateName(DecoderState state);
+
   H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider,
                    bool is_secure);
   H264MultiDecoder(const H264MultiDecoder&) = delete;
@@ -99,6 +116,7 @@ class H264MultiDecoder : public VideoDecoder {
   // PumpOrReschedule must be called after InitializedFrames to get the decoder to continue.
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
+  [[nodiscard]] bool IsUtilizingHardware() const override;
   [[nodiscard]] bool CanBeSwappedIn() override;
   [[nodiscard]] bool CanBeSwappedOut() const override;
   [[nodiscard]] bool MustBeSwappedOut() const override;
@@ -140,18 +158,7 @@ class H264MultiDecoder : public VideoDecoder {
   void set_use_parser(bool use_parser) { use_parser_ = use_parser; }
 
  private:
-  enum class DecoderState {
-    // The hardware's state doesn't reflect that of the H264MultiDecoder.
-    kSwappedOut,
-
-    // Any stoppage waiting for input data or output surfaces.
-    kWaitingForInputOrOutput,
-
-    // After config change interrupt, waiting for new buffers.
-    kWaitingForConfigChange,
-
-    kRunning,
-  };
+  constexpr static std::string_view kImplementationName = "H264";
 
   // This struct contains parameters for the current frame that are dumped from
   // lmem
@@ -358,7 +365,8 @@ class H264MultiDecoder : public VideoDecoder {
 
   // HW state.  We separately track some similar SW state with bool values such as
   // waiting_for_input_.
-  DecoderState state_ = DecoderState::kSwappedOut;
+  DiagnosticStateWrapper<DecoderState> state_{
+      this, DecoderState::kSwappedOut, [](DecoderState state) { return DecoderStateName(state); }};
 
   // The client doesn't round-trip these so stash them here:
   uint32_t pending_display_width_ = 0;

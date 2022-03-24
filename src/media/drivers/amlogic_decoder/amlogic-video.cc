@@ -10,8 +10,10 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <memory.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -107,6 +109,8 @@ AmlogicVideo::~AmlogicVideo() {
 // TODO: Remove once we can add single-instance decoders through
 // AddNewDecoderInstance.
 void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, bool hevc) {
+  TRACE_DURATION("media", "AmlogicVideo::SetDefaultInstance", "decoder", decoder.get(), "hevc",
+                 hevc);
   DecoderCore* core = hevc ? hevc_core_.get() : vdec1_core_.get();
   assert(!stream_buffer_);
   assert(!current_instance_);
@@ -117,10 +121,12 @@ void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, boo
 }
 
 void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance) {
+  TRACE_DURATION("media", "AmlogicVideo::AddNewDecoderInstance", "instance", instance.get());
   swapped_out_instances_.push_back(std::move(instance));
 }
 
 void AmlogicVideo::UngateClocks() {
+  TRACE_DURATION("media", "AmlogicVideo::UngateClocks");
   ToggleClock(ClockType::kClkDos, true);
   HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_aiu(0xff).set_demux(true).set_audio_in(true).WriteTo(
       &*hiubus_);
@@ -129,11 +135,13 @@ void AmlogicVideo::UngateClocks() {
 }
 
 void AmlogicVideo::UngateParserClock() {
+  TRACE_DURATION("media", "AmlogicVideo::UngateParserClock");
   is_parser_gated_ = false;
   HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_u_parser_top(true).WriteTo(&*hiubus_);
 }
 
 void AmlogicVideo::GateClocks() {
+  TRACE_DURATION("media", "AmlogicVideo::GateClocks");
   // Keep VPU interrupt enabled, as it's used for vsync by the display.
   HhiGclkMpeg1::Get()
       .ReadFrom(&*hiubus_)
@@ -147,12 +155,15 @@ void AmlogicVideo::GateClocks() {
 }
 
 void AmlogicVideo::GateParserClock() {
+  TRACE_DURATION("media", "AmlogicVideo::GateParserClock");
   is_parser_gated_ = true;
   HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_u_parser_top(false).WriteTo(&*hiubus_);
 }
 
 void AmlogicVideo::ClearDecoderInstance() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
+  TRACE_DURATION("media", "AmlogicVideo::ClearDecoderInstance", "current_instance_",
+                 current_instance_.get());
   assert(current_instance_);
   assert(swapped_out_instances_.size() == 0);
   LOG(DEBUG, "current_instance_.reset()...");
@@ -163,11 +174,13 @@ void AmlogicVideo::ClearDecoderInstance() {
 }
 
 void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
+  TRACE_DURATION("media", "AmlogicVideo::RemoveDecoder", "decoder", decoder);
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
   RemoveDecoderLocked(decoder);
 }
 
 void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
+  TRACE_DURATION("media", "AmlogicVideo::RemoveDecoderLocked", "decoder", decoder);
   DLOG("Removing decoder: %p", decoder);
   ZX_DEBUG_ASSERT(decoder);
   if (current_instance_ && current_instance_->decoder() == decoder) {
@@ -188,6 +201,7 @@ void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
 
 zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size, bool use_parser,
                                                bool is_secure) {
+  TRACE_DURATION("media", "AmlogicVideo::AllocateStreamBuffer");
   // So far, is_secure can only be true if use_parser is also true.
   ZX_DEBUG_ASSERT(!is_secure || use_parser);
   // is_writable is always true because we either need to write into this buffer using the CPU, or
@@ -209,6 +223,7 @@ zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t si
 
 zx_status_t AmlogicVideo::ConnectToTrustedApp(const uuid_t* application_uuid,
                                               fuchsia::tee::ApplicationSyncPtr* tee) {
+  TRACE_DURATION("media", "AmlogicVideo::ConnectToTrustedApp");
   ZX_DEBUG_ASSERT(application_uuid);
   ZX_DEBUG_ASSERT(tee);
 
@@ -232,6 +247,7 @@ zx_status_t AmlogicVideo::ConnectToTrustedApp(const uuid_t* application_uuid,
 }
 
 zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
+  TRACE_DURATION("media", "AmlogicVideo::EnsureSecmemSessionIsConnected");
   if (secmem_session_.has_value()) {
     return ZX_OK;
   }
@@ -256,12 +272,14 @@ zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
 }
 
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
+  TRACE_DURATION("media", "AmlogicVideo::InitializeStreamInput");
   uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
   auto buffer_size = stream_buffer_->buffer().size();
   core_->InitializeStreamInput(use_parser, buffer_address, buffer_size);
 }
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure) {
+  TRACE_DURATION("media", "AmlogicVideo::InitializeStreamBuffer");
   zx_status_t status = AllocateStreamBuffer(stream_buffer_, size, use_parser, is_secure);
   if (status != ZX_OK) {
     return status;
@@ -279,6 +297,7 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size,
 std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,
                                                            uint32_t width, uint32_t height,
                                                            uint32_t wrap, uint32_t blockmode) {
+  TRACE_DURATION("media", "AmlogicVideo::ConfigureCanvas");
   assert(width % 8 == 0);
   assert(offset % 8 == 0);
   canvas_info_t info;
@@ -313,13 +332,17 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
   return std::make_unique<CanvasEntry>(this, idx);
 }
 
-void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) { canvas_.Free(canvas->index()); }
+void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
+  TRACE_DURATION("media", "AmlogicVideo::FreeCanvas");
+  canvas_.Free(canvas->index());
+}
 
 void AmlogicVideo::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
   owner_->SetThreadProfile(std::move(thread), role);
 }
 
 void AmlogicVideo::OnSignaledWatchdog() {
+  TRACE_DURATION("media", "AmlogicVideo::OnSignaledWatchdog");
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
   // Check after taking lock to ensure a cancel didn't just happen.
   if (!watchdog_.CheckAndResetTimeout())
@@ -332,6 +355,7 @@ void AmlogicVideo::OnSignaledWatchdog() {
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                            uint32_t alignment_log2, uint32_t flags,
                                            const char* name) {
+  TRACE_DURATION("media", "AmlogicVideo::AllocateIoBuffer");
   zx_status_t status = io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2, flags);
   if (status != ZX_OK)
     return status;
@@ -347,12 +371,15 @@ fuchsia::sysmem::AllocatorSyncPtr& AmlogicVideo::SysmemAllocatorSyncPtr() {
 
 // This parser handles MPEG elementary streams.
 zx_status_t AmlogicVideo::InitializeEsParser() {
+  TRACE_DURATION("media", "AmlogicVideo::InitializeEsParser");
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
   return parser_->InitializeEsParser(current_instance_.get());
 }
 
 uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
     uint32_t write_offset, uint32_t read_offset) {
+  TRACE_DURATION("media",
+                 "AmlogicVideo::GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset");
   uint32_t available_space;
   if (read_offset > write_offset) {
     available_space = read_offset - write_offset;
@@ -366,16 +393,20 @@ uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset
 }
 
 uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset) {
+  TRACE_DURATION("media", "AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset", "write_offset",
+                 write_offset);
   uint32_t read_offset = core_->GetReadOffset();
   return GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(write_offset, read_offset);
 }
 
 uint32_t AmlogicVideo::GetStreamBufferEmptySpace() {
+  TRACE_DURATION("media", "AmlogicVideo::GetStreamBufferEmptySpace");
   return GetStreamBufferEmptySpaceAfterOffset(core_->GetStreamInputOffset());
 }
 
 zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
                                                uint32_t* written_out) {
+  TRACE_DURATION("media", "AmlogicVideo::ProcessVideoNoParser");
   return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(), written_out);
 }
 
@@ -517,6 +548,7 @@ void AmlogicVideo::TryToReschedule() {
 }
 
 void AmlogicVideo::PowerOffForError() {
+  TRACE_DURATION("media", "AmlogicVideo::PowerOffForError");
   ZX_DEBUG_ASSERT(core_);
   core_ = nullptr;
   swapped_out_instances_.push_back(std::move(current_instance_));
@@ -657,6 +689,7 @@ zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit, bool protec
 
 zx_status_t AmlogicVideo::TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
                                                   FirmwareBlob::FirmwareVdecLoadMode vdec) {
+  TRACE_DURATION("media", "AmlogicVideo::TeeSmcLoadVideoFirmware");
   ZX_DEBUG_ASSERT(is_tee_available());
   ZX_DEBUG_ASSERT(secure_monitor_);
 
@@ -684,6 +717,7 @@ zx_status_t AmlogicVideo::TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType ind
 
 zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t before_size,
                                            uint32_t max_after_size, uint32_t* after_size) {
+  TRACE_DURATION("media", "AmlogicVideo::TeeVp9AddHeaders");
   ZX_DEBUG_ASSERT(after_size);
   ZX_DEBUG_ASSERT(is_tee_available());
 
@@ -714,6 +748,7 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
 }
 
 void AmlogicVideo::ToggleClock(ClockType type, bool enable) {
+  TRACE_DURATION("media", "AmlogicVideo::ToggleClock");
   if (enable) {
     clocks_[static_cast<int>(type)].Enable();
   } else {
@@ -728,7 +763,13 @@ void AmlogicVideo::SetMetrics(CodecMetrics* metrics) {
   metrics_ = metrics;
 }
 
+void AmlogicVideo::SetDiagnostics(DriverDiagnostics* diagnostics) {
+  ZX_DEBUG_ASSERT(diagnostics);
+  diagnostics_ = diagnostics;
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
+  TRACE_DURATION("media", "AmlogicVideo::InitRegisters");
   parent_ = parent;
 
   pdev_ = ddk::PDev::FromFragment(parent_);
@@ -916,6 +957,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
 }
 
 zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
+  TRACE_DURATION("media", "AmlogicVideo::PreloadFirmwareViaTee");
   ZX_DEBUG_ASSERT(is_tee_available_);
 
   uint8_t* firmware_data;
@@ -957,6 +999,7 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
 }
 
 void AmlogicVideo::InitializeInterrupts() {
+  TRACE_DURATION("media", "AmlogicVideo::InitializeInterrupts");
   vdec0_interrupt_thread_ = std::thread([this]() {
     while (true) {
       zx_time_t time;
@@ -1005,6 +1048,7 @@ void AmlogicVideo::InitializeInterrupts() {
 }
 
 zx_status_t AmlogicVideo::InitDecoder() {
+  TRACE_DURATION("media", "AmlogicVideo::InitDecoder");
   if (is_tee_available_) {
     zx_status_t status = PreloadFirmwareViaTee();
     if (status != ZX_OK) {

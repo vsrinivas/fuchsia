@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/mmio-ptr/fake.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
@@ -56,6 +58,7 @@ class FakeOwner : public VideoDecoder::Owner {
   }
 
   CodecMetrics& metrics() override { return default_nop_metrics_; }
+  DriverDiagnostics& diagnostics() override { return default_driver_diagnostics_; }
   DosRegisterIo* dosbus() override { return dosbus_; }
   zx::unowned_bti bti() override { return video_->bti(); }
   DeviceType device_type() override { return device_type_; }
@@ -110,6 +113,8 @@ class FakeOwner : public VideoDecoder::Owner {
   bool have_set_protected() const { return have_set_protected_; }
 
  private:
+  static constexpr std::string_view kDriverName = "FakeVideoDriver";
+
   DeviceType device_type_;
   DosRegisterIo* dosbus_;
   AmlogicVideo* video_;
@@ -118,6 +123,7 @@ class FakeOwner : public VideoDecoder::Owner {
   FirmwareBlob blob_;
   bool have_set_protected_ = false;
   CodecMetrics default_nop_metrics_;
+  DriverDiagnostics default_driver_diagnostics_{kDriverName};
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x10000;

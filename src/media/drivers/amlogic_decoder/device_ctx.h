@@ -6,6 +6,9 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
 
 #include <fidl/fuchsia.hardware.mediacodec/cpp/wire.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
+#include <lib/media/codec_impl/codec_metrics.h>
 #include <lib/zx/thread.h>
 
 #include <ddktl/device.h>
@@ -48,6 +51,8 @@ class DeviceCtx : public DdkDeviceType,
   CodecAdmissionControl* codec_admission_control() { return &codec_admission_control_; }
 
   CodecMetrics& metrics();
+
+  DriverDiagnostics& diagnostics();
 
   void DdkRelease() { delete this; }
 

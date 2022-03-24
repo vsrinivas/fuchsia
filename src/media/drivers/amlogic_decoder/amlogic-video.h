@@ -14,6 +14,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/thread.h>
 #include <zircon/errors.h>
@@ -64,8 +65,15 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   ~AmlogicVideo();
 
   void SetMetrics(CodecMetrics* metrics);
+  void SetDiagnostics(DriverDiagnostics* diagnostics);
   [[nodiscard]] zx_status_t InitRegisters(zx_device_t* parent);
   [[nodiscard]] zx_status_t InitDecoder();
+
+  // VideoDecoder::Owner implementation.
+  [[nodiscard]] DriverDiagnostics& diagnostics() override {
+    ZX_DEBUG_ASSERT(diagnostics_);
+    return *diagnostics_;
+  }
 
   // VideoDecoder::Owner implementation.
   [[nodiscard]] CodecMetrics& metrics() override {
@@ -227,6 +235,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   CodecMetrics default_nop_metrics_;
   CodecMetrics* metrics_ = &default_nop_metrics_;
+
+  DriverDiagnostics* diagnostics_ = nullptr;
 
   DeviceType device_type_ = {};
   zx::resource secure_monitor_;

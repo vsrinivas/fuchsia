@@ -8,6 +8,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
+#include <cstdint>
+#include <ostream>
+#include <string_view>
 #include <vector>
 
 #include "macros.h"
@@ -66,7 +69,8 @@ class Vp9Decoder : public VideoDecoder {
     // StreamControl thread.
     virtual void AsyncResetStreamAfterCurrentFrame() { ZX_PANIC("not impemented"); }
   };
-  enum class DecoderState {
+
+  enum class DecoderState : uint32_t {
     // In these two states the decoder is stopped because UpdateDecodeSize needs to be called. The
     // difference between these two is how it needs to be restarted.
     kInitialWaitingForInput,
@@ -95,6 +99,8 @@ class Vp9Decoder : public VideoDecoder {
     kFailed,
   };
 
+  static const char* DecoderStateName(DecoderState state);
+
   Vp9Decoder(Owner* owner, Client* client, InputType input_type, bool use_compressed_output,
              bool is_secure);
   Vp9Decoder(const Vp9Decoder&) = delete;
@@ -115,6 +121,20 @@ class Vp9Decoder : public VideoDecoder {
   __WARN_UNUSED_RESULT bool CanBeSwappedOut() const override {
     return state_ == DecoderState::kFrameJustProduced ||
            state_ == DecoderState::kPausedAtEndOfStream;
+  }
+  bool IsUtilizingHardware() const override {
+    switch (static_cast<DecoderState>(state_)) {
+      case DecoderState::kInitialWaitingForInput:
+      case DecoderState::kStoppedWaitingForInput:
+      case DecoderState::kRunning:
+      case DecoderState::kPausedAtHeader:
+      case DecoderState::kFailed:
+        return true;
+      case DecoderState::kFrameJustProduced:
+      case DecoderState::kPausedAtEndOfStream:
+      case DecoderState::kSwappedOut:
+        return false;
+    }
   }
   void SetSwappedOut() override { state_ = DecoderState::kSwappedOut; }
   void SwappedIn() override { frame_data_provider_->ReadMoreInputDataFromReschedule(this); }
@@ -148,6 +168,8 @@ class Vp9Decoder : public VideoDecoder {
   friend class test::TestFrameProvider;
   friend class CodecAdapterVp9;
   class WorkingBuffer;
+
+  constexpr static std::string_view kImplementationName = "VP9";
 
   class BufferAllocator {
    public:
@@ -304,7 +326,8 @@ class Vp9Decoder : public VideoDecoder {
   FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;
-  DecoderState state_ = DecoderState::kSwappedOut;
+  DiagnosticStateWrapper<DecoderState> state_{
+      this, DecoderState::kSwappedOut, [](DecoderState state) { return DecoderStateName(state); }};
   std::unique_ptr<PowerReference> power_ref_;
 
   // While frames_ always has size() == kMaxFrames, the actual number of valid frames that are fully

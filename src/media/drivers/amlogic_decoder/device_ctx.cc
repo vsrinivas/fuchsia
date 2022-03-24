@@ -6,11 +6,13 @@
 
 #include <fidl/fuchsia.hardware.mediacodec/cpp/wire.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
 #include <zircon/threads.h>
 
+#include <ddktl/device.h>
 #include <ddktl/fidl.h>
 
 #include "amlogic-video.h"
@@ -77,6 +79,7 @@ DeviceCtx::DeviceCtx(DriverCtx* driver, zx_device_t* parent)
       codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>(this);
   video_->SetMetrics(&metrics());
+  video_->SetDiagnostics(&diagnostics());
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }
 
@@ -104,9 +107,12 @@ DeviceCtx::~DeviceCtx() {
 zx_status_t DeviceCtx::Bind() {
   SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(driver_->shared_fidl_thread())),
                    ThreadRole::kSharedFidl);
-
-  zx_status_t status = DdkAdd("amlogic_video");
+  zx_status_t status = DdkAdd(
+      ddk::DeviceAddArgs("amlogic_video").set_inspect_vmo(driver_->diagnostics().DuplicateVmo()));
   zxlogf(INFO, "amlogic-video finished initialization with status %d", status);
+
+  diagnostics().SetBindTime();
+
   return status;
 }
 
@@ -144,5 +150,7 @@ void DeviceCtx::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request
 }
 
 CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }
+
+DriverDiagnostics& DeviceCtx::diagnostics() { return driver_->diagnostics(); }
 
 }  // namespace amlogic_decoder

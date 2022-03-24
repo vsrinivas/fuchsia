@@ -11,14 +11,23 @@
 #include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_adapter.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_metrics.h>
+#include <lib/trace/event.h>
+#include <lib/trace/internal/event_common.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include <functional>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
 #include "amlogic_decoder_test_hooks.h"
 #include "decoder_core.h"
@@ -79,6 +88,7 @@ class VideoDecoder {
     };
 
     virtual __WARN_UNUSED_RESULT CodecMetrics& metrics() = 0;
+    [[nodiscard]] virtual DriverDiagnostics& diagnostics() = 0;
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
     virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
@@ -156,7 +166,7 @@ class VideoDecoder {
   };
 
   VideoDecoder(media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
-               Owner* owner, Client* client, bool is_secure);
+               std::string_view implementation_name, Owner* owner, Client* client, bool is_secure);
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
@@ -165,6 +175,8 @@ class VideoDecoder {
   virtual void ReturnFrame(std::shared_ptr<VideoFrame> frame) = 0;
   virtual void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                                  uint32_t stride) = 0;
+  // Returns true if the swapped in decoder is in a state that is using the underlying decoder core
+  [[nodiscard]] virtual bool IsUtilizingHardware() const { return false; }
   virtual void SetSwappedOut() {}
   virtual void SwappedIn() {}
   // Returns true if the instance has more data to decode and output buffers to
@@ -184,6 +196,15 @@ class VideoDecoder {
   // Initialize hardware protection.
   virtual zx_status_t SetupProtection() { return ZX_ERR_NOT_SUPPORTED; }
 
+  // Should be called by subclasses of this class when the status is updated.
+  // This function will process hooks used for the decoder diagnostics
+  void UpdateDiagnostics() {
+    // Update the diagnostic information regardless if the decoder can or can't
+    // be swapped out.
+    zx::time now = zx::clock::get_monotonic();
+    diagnostics().UpdateHardwareUtilizationStatus(now, IsUtilizingHardware());
+  }
+
   virtual ~VideoDecoder();
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }
@@ -194,6 +215,8 @@ class VideoDecoder {
     ZX_DEBUG_ASSERT(client_);
     return client_->test_hooks();
   }
+
+  CodecDiagnostics& diagnostics() { return diagnostics_; }
 
   // for debug logging
   const uint32_t decoder_id_ = 0;
@@ -212,6 +235,61 @@ class VideoDecoder {
 
  private:
   const media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation_;
+
+  CodecDiagnostics diagnostics_;
+};
+
+// Wrapper class that allows for the getting and setting of a decoder state. When setting
+// the decoder state the class will update trace data to reflect the current decoder state and
+// also calls the UpdateDiagnostics() on the VideoDecoder class to update the decoder's diagnostics.
+template <typename StateType>
+class DiagnosticStateWrapper {
+ public:
+  // State is an enum so get the underlying type for casting
+  using UnderlyingType = std::underlying_type_t<StateType>;
+  DiagnosticStateWrapper(VideoDecoder* owner, StateType state_value,
+                         fit::function<const char*(StateType)> state_name_function)
+      : owner_(owner),
+        state_value_(state_value),
+        state_name_function_(std::move(state_name_function)),
+        async_id_(TRACE_NONCE()) {
+    TRACE_ASYNC_BEGIN("media", state_name_function_(state_value_), async_id_);
+  }
+
+  ~DiagnosticStateWrapper() {
+    TRACE_ASYNC_END("media", state_name_function_(state_value_), async_id_);
+  }
+
+  // Wrapper assignment operator. When a different state is assigned, end the current trace for
+  // this decoder and start a trace for the new state, update the underlying state and call
+  // UpdateDiagnostics() so the decoder's diagnostics are updated
+  DiagnosticStateWrapper& operator=(StateType new_statue) {
+    // Only process updates if the state has changed
+    if (state_value_ != new_statue) {
+      TRACE_ASYNC_END("media", state_name_function_(state_value_), async_id_);
+      state_value_ = new_statue;
+      TRACE_ASYNC_BEGIN("media", state_name_function_(state_value_), async_id_);
+      owner_->UpdateDiagnostics();
+    }
+
+    return *this;
+  }
+
+  // Comparison operators, just passthrough to the underlying state
+  bool operator==(StateType other_state) const noexcept { return (state_value_ == other_state); }
+  bool operator!=(StateType other_state) const noexcept { return (state_value_ != other_state); }
+
+  explicit operator StateType() const noexcept { return state_value_; }
+
+  explicit operator UnderlyingType() const noexcept {
+    return static_cast<UnderlyingType>(state_value_);
+  }
+
+ private:
+  VideoDecoder* owner_;
+  StateType state_value_;
+  fit::function<const char*(StateType)> state_name_function_;
+  const trace_async_id_t async_id_;
 };
 
 }  // namespace amlogic_decoder

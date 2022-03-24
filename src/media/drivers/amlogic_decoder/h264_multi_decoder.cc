@@ -364,11 +364,26 @@ enum H264Status {
   kH264PicDataDone = 0x2,
 };
 
+const char* H264MultiDecoder::DecoderStateName(DecoderState state) {
+  switch (state) {
+    case DecoderState::kSwappedOut:
+      return "SwappedOut";
+    case DecoderState::kWaitingForInputOrOutput:
+      return "WaitingForInputOrOutput";
+    case DecoderState::kWaitingForConfigChange:
+      return "WaitingForConfigChange";
+    case DecoderState::kRunning:
+      return "Running";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
                                    bool is_secure)
     : VideoDecoder(
           media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264,
-          owner, client, is_secure),
+          kImplementationName, owner, client, is_secure),
       frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
@@ -388,6 +403,7 @@ H264MultiDecoder::~H264MultiDecoder() {
 }
 
 zx_status_t H264MultiDecoder::Initialize() {
+  TRACE_DURATION("media", "H264MultiDecoder::Initialize");
   zx_status_t status = InitializeBuffers();
   if (status != ZX_OK) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
@@ -445,6 +461,7 @@ constexpr uint32_t kAuxBufPrefixSize = 16 * 1024;
 constexpr uint32_t kAuxBufSuffixSize = 0;
 
 zx_status_t H264MultiDecoder::InitializeBuffers() {
+  TRACE_DURATION("media", "H264MultiDecoder::InitializeBuffers");
   // If the TEE is available, we'll do secure loading of the firmware in InitializeHardware().
   if (!owner_->is_tee_available()) {
     // TODO(fxbug.dev/43496): Fix this up in "CL4" to filter to the current SoC as we're loading
@@ -752,6 +769,7 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 }
 
 void H264MultiDecoder::StartFrameDecode() {
+  TRACE_DURATION("media", "H264MultiDecoder::StartFrameDecode");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
 
   if (unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_ ==
@@ -785,6 +803,7 @@ void H264MultiDecoder::StartFrameDecode() {
 }
 
 void H264MultiDecoder::ConfigureDpb() {
+  TRACE_DURATION("media", "H264MultiDecoder::ConfigureDpb");
   ZX_DEBUG_ASSERT(is_decoder_started_);
   ZX_DEBUG_ASSERT(is_hw_active_);
   owner_->watchdog()->Cancel();
@@ -1016,6 +1035,7 @@ void H264MultiDecoder::ConfigureDpb() {
 
 bool H264MultiDecoder::InitializeRefPics(
     const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list, uint32_t reg_offset) {
+  TRACE_DURATION("media", "H264MultiDecoder::InitializeRefPics");
   uint32_t ref_list[8] = {};
   uint32_t ref_index = 0;
   ZX_DEBUG_ASSERT(ref_pic_list.size() <= sizeof(ref_list));
@@ -1056,6 +1076,7 @@ bool H264MultiDecoder::InitializeRefPics(
 }
 
 void H264MultiDecoder::HandleSliceHeadDone() {
+  TRACE_DURATION("media", "H264MultiDecoder::HandleSliceHeadDone");
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
@@ -1776,6 +1797,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
           // Set these back to default state.
           ZX_DEBUG_ASSERT(!should_save_input_context_);
           force_swap_out_ = false;
+          UpdateDiagnostics();
           return;
         case media::AcceleratedVideoDecoder::kNeedContextUpdate:
           LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
@@ -1970,15 +1992,18 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
 // not currently used
 void H264MultiDecoder::FlushFrames() {
+  TRACE_DURATION("media", "H264MultiDecoder::FlushFrames");
   auto res = media_decoder_->Flush();
   DLOG("Got media decoder res %d", res);
 }
 
 uint32_t H264MultiDecoder::GetApproximateConsumedBytes() {
+  TRACE_DURATION("media", "H264MultiDecoder::GetApproximateConsumedBytes");
   return kBytesToDecode - (ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value() + 7) / 8;
 }
 
 void H264MultiDecoder::DumpStatus() {
+  TRACE_DURATION("media", "H264MultiDecoder::DumpStatus");
   auto viff_bit_cnt = ViffBitCnt::Get().ReadFrom(owner_->dosbus());
   DLOG("ViffBitCnt: %x", viff_bit_cnt.reg_value());
   DLOG("GetApproximateConsumedBytes(): 0x%x", GetApproximateConsumedBytes());
@@ -2008,6 +2033,7 @@ void H264MultiDecoder::DumpStatus() {
 }
 
 void H264MultiDecoder::HandlePicDataDone() {
+  TRACE_DURATION("media", "H264MultiDecoder::HandlePicDataDone");
   DLOG("HandlePicDataDone()");
   ZX_DEBUG_ASSERT(current_frame_);
 
@@ -2088,12 +2114,14 @@ void H264MultiDecoder::HandlePicDataDone() {
   // Set these back to default state.
   should_save_input_context_ = false;
   force_swap_out_ = false;
+  UpdateDiagnostics();
   if (state_ == DecoderState::kWaitingForInputOrOutput) {
     PumpDecoder();
   }
 }
 
 void H264MultiDecoder::HandleBufEmpty() {
+  TRACE_DURATION("media", "H264MultiDecoder::HandleBufEmpty");
   // This can happen if non-slice NALU(s) show up in a packet without any slice NALU(s).
   state_ = DecoderState::kWaitingForInputOrOutput;
   owner_->watchdog()->Cancel();
@@ -2123,10 +2151,12 @@ void H264MultiDecoder::HandleBufEmpty() {
   ZX_DEBUG_ASSERT(!should_save_input_context_);
   owner_->TryToReschedule();
   force_swap_out_ = false;
+  UpdateDiagnostics();
   PumpOrReschedule();
 }
 
 void H264MultiDecoder::OutputReadyFrames() {
+  TRACE_DURATION("media", "H264MultiDecoder::OutputReadyFrames");
   while (!frames_to_output_.empty()) {
     uint32_t index = frames_to_output_.front();
     frames_to_output_.pop_front();
@@ -2136,6 +2166,7 @@ void H264MultiDecoder::OutputReadyFrames() {
 }
 
 void H264MultiDecoder::HandleHardwareError() {
+  TRACE_DURATION("media", "H264MultiDecoder::HandleHardwareError");
   owner_->watchdog()->Cancel();
   is_hw_active_ = false;
   owner_->core()->StopDecoding();
@@ -2211,6 +2242,7 @@ void H264MultiDecoder::HandleInterrupt() {
 }
 
 void H264MultiDecoder::PumpOrReschedule() {
+  TRACE_DURATION("media", "H264MultiDecoder::PumpOrReschedule");
   if (state_ == DecoderState::kSwappedOut) {
     DLOG("PumpOrReschedule() sees kSwappedOut");
     owner_->TryToReschedule();
@@ -2219,17 +2251,19 @@ void H264MultiDecoder::PumpOrReschedule() {
   } else {
     DLOG("PumpOrReschedule() pumping");
     is_async_pump_pending_ = false;
+    UpdateDiagnostics();
     PumpDecoder();
   }
 }
 
 void H264MultiDecoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
+  TRACE_DURATION("media", "H264MultiDecoder::ReturnFrame");
   DLOG("H264MultiDecoder::ReturnFrame %d", frame->index);
   ZX_DEBUG_ASSERT(frame->index < video_frames_.size());
   ZX_DEBUG_ASSERT(video_frames_[frame->index]->frame == frame);
   video_frames_[frame->index]->in_use = false;
   waiting_for_surfaces_ = false;
-  DLOG("ReturnFrame() state_: %u", state_);
+  DLOG("ReturnFrame() state_: %u", static_cast<unsigned int>(state_));
   PumpOrReschedule();
 }
 
@@ -2237,6 +2271,7 @@ void H264MultiDecoder::CallErrorHandler() { OnFatalError(); }
 
 void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                          uint32_t coded_height, uint32_t stride) {
+  TRACE_DURATION("media", "H264MultiDecoder::InitializedFrames");
   DLOG("H264MultiDecoder::InitializedFrames");
   // not swapped out, not running
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForConfigChange);
@@ -2374,6 +2409,7 @@ void H264MultiDecoder::SubmitSliceData(SliceData data) {
 }
 
 void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id) {
+  TRACE_DURATION("media", "H264MultiDecoder::OutputFrame");
   ZX_DEBUG_ASSERT(reference_frame->in_use);
   if (reference_frame->is_for_output) {
     frames_to_output_.push_back(reference_frame->index);
@@ -2392,6 +2428,7 @@ void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts
 void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
                                             const CodecBuffer* codec_buffer,
                                             uint32_t buffer_start_offset) {
+  TRACE_DURATION("media", "H264MultiDecoder::SubmitDataToHardware");
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   zx_paddr_t phys_addr{};
   ZX_DEBUG_ASSERT(!phys_addr);
@@ -2480,6 +2517,10 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
   unwrapped_write_stream_offset_ += length;
 }
 
+bool H264MultiDecoder::IsUtilizingHardware() const {
+  return !CanBeSwappedOut() && state_ != DecoderState::kSwappedOut;
+}
+
 bool H264MultiDecoder::CanBeSwappedIn() {
   ZX_DEBUG_ASSERT(!in_pump_decoder_);
   if (fatal_error_) {
@@ -2509,13 +2550,15 @@ bool H264MultiDecoder::MustBeSwappedOut() const { return force_swap_out_; }
 bool H264MultiDecoder::ShouldSaveInputContext() const { return should_save_input_context_; }
 
 void H264MultiDecoder::SetSwappedOut() {
-  ZX_DEBUG_ASSERT_MSG(state_ == DecoderState::kWaitingForInputOrOutput, "state_: %u", state_);
+  ZX_DEBUG_ASSERT_MSG(state_ == DecoderState::kWaitingForInputOrOutput, "state_: %u",
+                      static_cast<unsigned int>(state_));
   ZX_DEBUG_ASSERT(CanBeSwappedOut());
   is_async_pump_pending_ = false;
   state_ = DecoderState::kSwappedOut;
 }
 
 void H264MultiDecoder::SwappedIn() {
+  TRACE_DURATION("media", "H264MultiDecoder::SwappedIn");
   if (!stream_buffer_size_) {
     // Stash this early when we know it's safe to do so, since it's convoluted to get.  This decoder
     // deals with stream buffer details more than other decoders.
@@ -2547,10 +2590,12 @@ void H264MultiDecoder::SwappedIn() {
   // different decoder B presently.  This avoids being in PumpDecoder() of more than one decoder
   // at the same time (on the same stack), and avoids re-entering PumpDecoder() of the same decoder.
   is_async_pump_pending_ = true;
+  UpdateDiagnostics();
   frame_data_provider_->AsyncPumpDecoder();
 }
 
 void H264MultiDecoder::OnSignaledWatchdog() {
+  TRACE_DURATION("media", "H264MultiDecoder::OnSignaledWatchdog");
   LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_WatchdogFired);
   LOG(ERROR, "Hit watchdog");
   HandleHardwareError();
@@ -2566,6 +2611,7 @@ void H264MultiDecoder::OnFatalError() {
 }
 
 void H264MultiDecoder::QueueInputEos() {
+  TRACE_DURATION("media", "H264MultiDecoder::QueueInputEos");
   DLOG("QueueInputEos()");
   ZX_DEBUG_ASSERT(!input_eos_queued_);
   input_eos_queued_ = true;
@@ -2578,6 +2624,7 @@ void H264MultiDecoder::QueueInputEos() {
 }
 
 void H264MultiDecoder::ReceivedNewInput() {
+  TRACE_DURATION("media", "H264MultiDecoder::ReceivedNewInput");
   waiting_for_input_ = false;
   PumpOrReschedule();
 }
@@ -2585,6 +2632,7 @@ void H264MultiDecoder::ReceivedNewInput() {
 void H264MultiDecoder::PropagatePotentialEos() {}
 
 void H264MultiDecoder::RequestStreamReset() {
+  TRACE_DURATION("media", "H264MultiDecoder::RequestStreamReset");
   fatal_error_ = true;
   LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamReset);
   LOG(ERROR, "fatal_error_ = true");
@@ -2615,8 +2663,8 @@ void H264MultiDecoder::PumpDecoder() {
   DLOG(
       "PumpDecoder() - waiting_for_surfaces_: %u waiting_for_input_: %u is_hw_active_: %u state_: "
       "%u sent_output_eos_to_client_: %u fatal_error_: %u",
-      waiting_for_surfaces_, waiting_for_input_, is_hw_active_, state_, sent_output_eos_to_client_,
-      fatal_error_);
+      waiting_for_surfaces_, waiting_for_input_, is_hw_active_, static_cast<unsigned int>(state_),
+      sent_output_eos_to_client_, fatal_error_);
 
   if (waiting_for_surfaces_ || waiting_for_input_ || is_hw_active_ ||
       (state_ == DecoderState::kSwappedOut) || sent_output_eos_to_client_ || fatal_error_) {
@@ -2747,6 +2795,7 @@ void H264MultiDecoder::PumpDecoder() {
 }
 
 bool H264MultiDecoder::IsUnusedReferenceFrameAvailable() {
+  TRACE_DURATION("media", "H264MultiDecoder::IsUnusedReferenceFrameAvailable");
   auto frame = GetUnusedReferenceFrame(/*is_for_output=*/true);
   if (!frame) {
     return false;
@@ -2759,6 +2808,7 @@ bool H264MultiDecoder::IsUnusedReferenceFrameAvailable() {
 
 std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedReferenceFrame(
     bool is_for_output) {
+  TRACE_DURATION("media", "H264MultiDecoder::GetUnusedReferenceFrame");
   ZX_DEBUG_ASSERT(state_ != DecoderState::kWaitingForConfigChange);
   for (auto& frame : video_frames_) {
     ZX_DEBUG_ASSERT(frame->frame->coded_width ==

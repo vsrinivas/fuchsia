@@ -9,9 +9,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/media/codec_impl/codec_metrics.h>
 
 #include <memory>
+#include <string_view>
 
 namespace amlogic_decoder {
 
@@ -62,7 +64,11 @@ class DriverCtx {
 
   CodecMetrics& metrics();
 
+  DriverDiagnostics& diagnostics();
+
  private:
+  static constexpr std::string_view kDriverName = "amlogic-video-decoder";
+
   std::unique_ptr<async::Loop> shared_fidl_loop_;
   thrd_t shared_fidl_thread_;
 
@@ -71,6 +77,9 @@ class DriverCtx {
 
   // Cobalt:
   CodecMetrics metrics_;
+
+  // Inspector diagnostics
+  DriverDiagnostics diagnostics_{kDriverName};
 };
 
 }  // namespace amlogic_decoder

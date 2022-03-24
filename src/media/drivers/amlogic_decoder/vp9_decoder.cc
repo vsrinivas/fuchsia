@@ -52,6 +52,29 @@ using HevcDecodeSize = HevcAssistScratchN;
 
 using DebugReg1 = HevcAssistScratchG;
 
+const char* Vp9Decoder::DecoderStateName(DecoderState state) {
+  switch (state) {
+    case DecoderState::kInitialWaitingForInput:
+      return "InitialWaitingForInput";
+    case DecoderState::kStoppedWaitingForInput:
+      return "StoppedWaitingForInput";
+    case DecoderState::kFrameJustProduced:
+      return "FrameJustProduced";
+    case DecoderState::kRunning:
+      return "Running";
+    case DecoderState::kPausedAtHeader:
+      return "PausedAtHeader";
+    case DecoderState::kPausedAtEndOfStream:
+      return "PausedAtEndOfStream";
+    case DecoderState::kSwappedOut:
+      return "SwappedOut";
+    case DecoderState::kFailed:
+      return "Failed";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 // The hardware takes some uncompressed header information and stores it in this structure.
 union Vp9Decoder::HardwareRenderParams {
   uint16_t data_words[0x80];
@@ -170,7 +193,7 @@ Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
                        bool use_compressed_output, bool is_secure)
     : VideoDecoder(
           media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9,
-          owner, client, is_secure),
+          kImplementationName, owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
   constexpr uint32_t kStreamOffsetBitWidth = 32;
@@ -265,6 +288,7 @@ void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
 }
 
 zx_status_t Vp9Decoder::Initialize() {
+  TRACE_DURATION("media", "Vp9Decoder::Initialize");
   zx_status_t status = InitializeBuffers();
   if (status != ZX_OK) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
@@ -275,6 +299,7 @@ zx_status_t Vp9Decoder::Initialize() {
 }
 
 zx_status_t Vp9Decoder::InitializeBuffers() {
+  TRACE_DURATION("media", "Vp9Decoder::InitializeBuffers");
   zx_status_t status = working_buffers_.AllocateBuffers(owner_, is_secure());
   if (status != ZX_OK) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
@@ -287,6 +312,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
 }
 
 zx_status_t Vp9Decoder::InitializeHardware() {
+  TRACE_DURATION("media", "Vp9Decoder::InitializeHardware");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   assert(owner_->IsDecoderCurrent(this));
   working_buffers_.CheckBuffers();
@@ -477,6 +503,7 @@ void Vp9Decoder::Frame::ReleaseIfNonreference() {
 }
 
 void Vp9Decoder::ProcessCompletedFrames() {
+  TRACE_DURATION("media", "Vp9Decoder::ProcessCompletedFrames");
   // On the first interrupt no frame will be completed.
   if (!current_frame_) {
     DLOG("!current_frame_");
@@ -517,6 +544,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
 
 void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                    uint32_t coded_height, uint32_t stride) {
+  TRACE_DURATION("media", "Vp9Decoder::InitializedFrames");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   ZX_ASSERT(owner_->IsDecoderCurrent(this));
   ZX_DEBUG_ASSERT(valid_frames_count_ == 0);
@@ -591,6 +619,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
 }
 
 void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
+  TRACE_DURATION("media", "Vp9Decoder::ReturnFrame");
   // If this isn't true, the weak ptr would have signaled the caller that we don't need the frame
   // back any more, so the caller doesn't call ReturnFrame().
   ZX_DEBUG_ASSERT(frame->index < frames_.size());
@@ -702,6 +731,7 @@ void Vp9Decoder::SetPausedAtEndOfStream() {
 }
 
 void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
+  TRACE_DURATION("media", "Vp9Decoder::AdaptProbabilityCoefficients");
   constexpr uint32_t kFrameContextSize = 0x1000;
   constexpr uint32_t kVp9FrameContextCount = 4;
   constexpr uint32_t kProbSize = 496 * 2 * 4;  // 3968 < 4096
@@ -757,7 +787,7 @@ void Vp9Decoder::HandleInterrupt() {
 
   if (state_ != DecoderState::kRunning) {
     LOG(WARNING, "spurious interrupt??? - dec_status: %x adapt_prob_status: %x state_: %u",
-        dec_status, adapt_prob_status, state_);
+        dec_status, adapt_prob_status, static_cast<unsigned int>(state_));
     return;
   }
 
@@ -821,6 +851,7 @@ void Vp9Decoder::HandleInterrupt() {
 }
 
 void Vp9Decoder::ConfigureMcrcc() {
+  TRACE_DURATION("media", "Vp9Decoder::ConfigureMcrcc");
   // The MCRCC seems to be used with processing reference frames.
   HevcdMcrccCtl1::Get().FromValue(0).set_reset(true).WriteTo(owner_->dosbus());
   if (current_frame_data_.keyframe || current_frame_data_.intra_only) {
@@ -845,6 +876,7 @@ void Vp9Decoder::ConfigureMcrcc() {
 Vp9Decoder::MpredBuffer::~MpredBuffer() {}
 
 void Vp9Decoder::ConfigureMotionPrediction() {
+  TRACE_DURATION("media", "Vp9Decoder::ConfigureMotionPrediction");
   // Intra frames and frames after intra frames can't use the previous
   // frame's mvs.
   if (current_frame_data_.keyframe || current_frame_data_.intra_only) {
@@ -887,6 +919,7 @@ void Vp9Decoder::ConfigureMotionPrediction() {
 }
 
 void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
+  TRACE_DURATION("media", "Vp9Decoder::ConfigureFrameOutput");
   // SAO stands for Sample Adaptive Offset, which is a type of filtering in
   // HEVC. Sao isn't used in VP9, but the hardware that handles it also handles
   // writing frames to memory.
@@ -1054,6 +1087,7 @@ bool Vp9Decoder::CanBeSwappedIn() {
 }
 
 void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
+  TRACE_DURATION("media", "Vp9Decoder::ShowExistingFrame");
   Frame* frame = reference_frame_map_[params->frame_to_show];
   if (!frame) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingPictureError);
@@ -1094,6 +1128,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
 }
 
 void Vp9Decoder::SkipFrameAfterFirmwareSlow() {
+  TRACE_DURATION("media", "Vp9Decoder::SkipFrameAfterFirmwareSlow");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   // This is a fairly heavy-weight way to skip a frame (~20-40 ms), but the upside is we share more
   // code this way.
@@ -1115,6 +1150,7 @@ void Vp9Decoder::SkipFrameAfterFirmwareSlow() {
 }
 
 void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
+  TRACE_DURATION("media", "Vp9Decoder::PrepareNewFrame");
   if (!client_->IsOutputReady()) {
     // Becomes false when ReturnFrame() gets called, at which point
     // PrepareNewFrame() gets another chance to check again and set back to true
@@ -1258,6 +1294,7 @@ Vp9Decoder::Frame::Frame(Vp9Decoder* parent_param) : parent(parent_param) {}
 Vp9Decoder::Frame::~Frame() { io_buffer_release(&compressed_data); }
 
 bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_checked_previously) {
+  TRACE_DURATION("media", "Vp9Decoder::FindNewFrameBuffer");
   ZX_ASSERT(!current_frame_);
   ZX_DEBUG_ASSERT(!waiting_for_empty_frames_);
   ZX_DEBUG_ASSERT(!waiting_for_new_frames_);
@@ -1475,6 +1512,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 }
 
 void Vp9Decoder::SetRefFrames(HardwareRenderParams* params) {
+  TRACE_DURATION("media", "Vp9Decoder::SetRefFrames");
   uint32_t reference_frame_count = std::size(current_reference_frames_);
   for (uint32_t i = 0; i < reference_frame_count; i++) {
     uint32_t ref = (params->ref_info >> (((reference_frame_count - 1 - i) * 4) + 1)) & 0x7;
@@ -1484,6 +1522,7 @@ void Vp9Decoder::SetRefFrames(HardwareRenderParams* params) {
 }
 
 void Vp9Decoder::ConfigureReferenceFrameHardware() {
+  TRACE_DURATION("media", "Vp9Decoder::ConfigureReferenceFrameHardware");
   // Do an autoincrementing write to one canvas table.
   HevcdMppAncCanvasAccconfigAddr::Get().FromValue(0).set_bit0(1).WriteTo(owner_->dosbus());
   for (Frame* frame : current_reference_frames_) {
@@ -1551,6 +1590,7 @@ void Vp9Decoder::ConfigureReferenceFrameHardware() {
 }
 
 zx_status_t Vp9Decoder::AllocateFrames() {
+  TRACE_DURATION("media", "Vp9Decoder::AllocateFrames");
   for (uint32_t i = 0; i < kMaxFrames; i++) {
     auto frame = std::make_unique<Frame>(this);
     if (use_compressed_output_) {
@@ -1574,6 +1614,7 @@ zx_status_t Vp9Decoder::AllocateFrames() {
 }
 
 void Vp9Decoder::InitializeHardwarePictureList() {
+  TRACE_DURATION("media", "Vp9Decoder::InitializeHardwarePictureList");
   // Signal autoincrementing writes to table.
   HevcdMppAnc2AxiTblConfAddr::Get().FromValue(0).set_bit1(1).set_bit2(1).WriteTo(owner_->dosbus());
 
@@ -1622,6 +1663,7 @@ void Vp9Decoder::InitializeHardwarePictureList() {
 }
 
 void Vp9Decoder::InitializeParser() {
+  TRACE_DURATION("media", "Vp9Decoder::InitializeParser");
   HevcParserIntControl::Get()
       .ReadFrom(owner_->dosbus())
       .set_fifo_ctl(3)
@@ -1722,6 +1764,7 @@ void Vp9Decoder::InitializeParser() {
 }
 
 void Vp9Decoder::OnSignaledWatchdog() {
+  TRACE_DURATION("media", "Vp9Decoder::OnSignaledWatchdog");
   DLOG("Watchdog timeout");
   DLOG("HevcParserLcuStart %x", HevcParserLcuStart::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("HevcStreamLevel %d", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
