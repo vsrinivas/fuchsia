@@ -966,7 +966,8 @@ static int i8042_init_thread(void* arg) {
   uint8_t ctr = 0;
   zx_status_t status = i8042_setup(&ctr);
   if (status != ZX_OK) {
-    return status;
+    device_init_reply(parent, status, NULL);
+    return 0;
   }
 
   bool have_mouse = !!(ctr & I8042_CTR_AUXDIS);
@@ -982,13 +983,17 @@ static int i8042_init_thread(void* arg) {
     ctr |= I8042_CTR_AUXINT;
   }
 
-  if (i8042_command(&ctr, I8042_CMD_CTL_WCTR) < 0)
-    return -1;
+  if (i8042_command(&ctr, I8042_CMD_CTL_WCTR) < 0) {
+    device_init_reply(parent, ZX_ERR_INTERNAL, NULL);
+    return 0;
+  }
 
   // create keyboard device
   i8042_device_t* kbd_device = calloc(1, sizeof(i8042_device_t));
-  if (!kbd_device)
-    return ZX_ERR_NO_MEMORY;
+  if (!kbd_device) {
+    device_init_reply(parent, ZX_ERR_NO_MEMORY, NULL);
+    return 0;
+  }
 
   mtx_init(&kbd_device->lock, mtx_plain);
   kbd_device->type = fuchsia_hardware_input_BootProtocol_KBD;
@@ -1013,13 +1018,42 @@ static int i8042_init_thread(void* arg) {
 
   xprintf("initialized i8042 driver\n");
 
-  return ZX_OK;
+  device_init_reply(parent, ZX_OK, NULL);
+  return 0;
 }
 
-static zx_status_t i8042_bind(void* ctx, zx_device_t* parent) {
+struct i8042_root_dev {
+  zx_device_t* zxdev;
+};
+
+static void i8042_root_init(void* ctx) {
+  struct i8042_root_dev* dev_ctx = ctx;
   thrd_t t;
-  int rc = thrd_create_with_name(&t, i8042_init_thread, parent, "i8042-init");
-  return rc;
+  int rc = thrd_create_with_name(&t, i8042_init_thread, dev_ctx->zxdev, "i8042-init");
+  if (rc != 0) {
+    device_init_reply(dev_ctx->zxdev, ZX_ERR_INTERNAL, NULL);
+  }
+}
+
+static void i8042_root_release(void* ctx) { free(ctx); }
+
+static zx_protocol_device_t i8042_root_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .init = i8042_root_init,
+    .release = i8042_root_release,
+};
+
+static zx_status_t i8042_bind(void* ctx, zx_device_t* parent) {
+  struct i8042_root_dev* dev_ctx = calloc(1, sizeof(*dev_ctx));
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "i8042",
+      .ctx = dev_ctx,
+      .ops = &i8042_root_proto,
+      .flags = DEVICE_ADD_NON_BINDABLE,
+  };
+
+  return device_add(parent, &args, &dev_ctx->zxdev);
 }
 
 static zx_driver_ops_t i8042_driver_ops = {

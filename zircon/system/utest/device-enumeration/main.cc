@@ -578,8 +578,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/platform-passthrough/acpi",
       "sys/platform/platform-passthrough/acpi/acpi-pwrbtn",
-      "acpi-KBD_-composite/i8042-keyboard/hid-device/InputReport",
-      "acpi-KBD_-composite/i8042-mouse/hid-device/InputReport",
+      "acpi-KBD_-composite/i8042/i8042-keyboard/hid-device/InputReport",
+      "acpi-KBD_-composite/i8042/i8042-mouse/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
