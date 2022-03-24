@@ -1,0 +1,20 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        binary: "driver/hid-input-report-v2.so",
+        bind: "meta/bind/hid-input-report.bindbc",
+        colocate: "true",
+    },
+    use: [
+        { protocol: "fuchsia.device.fs.Exporter" },
+        {
+            directory: "fuchsia.driver.compat.Service-default",
+            rights: [ 'rw*' ],
+            path: "/fuchsia.driver.compat.Service/default",
+        },
+    ],
+}

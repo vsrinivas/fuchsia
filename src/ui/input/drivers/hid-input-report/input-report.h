@@ -57,6 +57,7 @@ class InputReport : public fidl::WireServer<fuchsia_input_report::InputDevice>,
   zx_status_t WaitForNextReader(zx::duration timeout);
 
   zx::vmo InspectVmo() { return inspector_.DuplicateVmo(); }
+  inspect::Inspector& Inspector() { return inspector_; }
 
  private:
   // This is the static size that is used to allocate this instance's InputDescriptor.

@@ -72,6 +72,26 @@ fuchsia_driver_component("hid-input-report") {
   colocate = true
 }
 
+fuchsia_driver("hid-input-report-driver-v2") {
+  output_name = "hid-input-report-v2"
+  sources = [ "driver_v2.cc" ]
+  deps = [
+    ":driver-internals",
+    ":hid_input_report_bind",
+    "//src/devices/lib/compat",
+    "//src/devices/lib/driver2:devfs_exporter",
+    "//src/devices/lib/driver2:inspect",
+    "//src/devices/lib/driver2:llcpp",
+  ]
+}
+
+fuchsia_driver_component("hid-input-report-v2") {
+  component_name = "hid-input-report-v2"
+  manifest = "meta/hid-input-report.cml"
+  deps = [ ":hid-input-report-driver-v2" ]
+  info = "hid-input-report-info.json"
+}
+
 test("hid-input-report-test-bin") {
   sources = [
     "driver_v1.cc",

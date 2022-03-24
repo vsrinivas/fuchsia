@@ -11,6 +11,7 @@ group("drivers") {
     "hid",
     "hid-buttons",
     "hid-input-report",
+    "hid-input-report:hid-input-report-v2",
     "hidctl",
     "i2c-hid",
     "usb-hid",

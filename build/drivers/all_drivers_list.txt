@@ -308,6 +308,7 @@
 //src/ui/input/drivers/gt6853:gt6853-module-driver
 //src/ui/input/drivers/hid-buttons:hid-buttons-driver
 //src/ui/input/drivers/hid-input-report:hid-input-report-driver
+//src/ui/input/drivers/hid-input-report:hid-input-report-driver-v2
 //src/ui/input/drivers/hid:hid-driver
 //src/ui/input/drivers/hidctl:hidctl-driver
 //src/ui/input/drivers/i2c-hid:i2c-hid-driver

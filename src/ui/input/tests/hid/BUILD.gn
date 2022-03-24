@@ -47,7 +47,20 @@ fuchsia_test_package("hidctl-integration-test") {
   ]
 }
 
+fuchsia_test_package("hid-driver-test-dfv2-package") {
+  test_components = [ ":hid-driver-test-dfv2" ]
+  deps = [
+    "//src/devices/misc/drivers/test-parent",
+    "//src/ui/input/drivers/hid",
+    "//src/ui/input/drivers/hid-input-report:hid-input-report-v2",
+    "//src/ui/input/drivers/hidctl",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":hidctl-integration-test" ]
+  deps = [
+    ":hid-driver-test-dfv2-package",
+    ":hidctl-integration-test",
+  ]
 }
