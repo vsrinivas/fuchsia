@@ -4,7 +4,7 @@
 
 mod allocator;
 pub mod caching_object_handle;
-mod constants;
+pub mod constants;
 pub mod directory;
 mod extent_record;
 pub mod filesystem;

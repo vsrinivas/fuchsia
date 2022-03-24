@@ -17,8 +17,10 @@ use {
             },
             LSMTree,
         },
+        metrics::{traits::Metric as _, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
+            constants::MAX_SERIALIZED_RECORD_SIZE,
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
@@ -62,6 +64,8 @@ pub trait Allocator: ReservationOwner {
 
     /// Tries to allocate enough space for |object_range| in the specified object and returns the
     /// device range allocated.
+    /// The allocated range may be short (e.g. due to fragmentation), in which case the caller can
+    /// simply call allocate again until they have enough blocks.
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
@@ -335,7 +339,28 @@ pub struct AllocatorInfo {
     pub allocated_bytes: u64,
 }
 
-const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
+const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131_072;
+
+/// Computes the target maximum extent size based on the block size of the allocator.
+pub fn max_extent_size_for_block_size(block_size: u64) -> u64 {
+    // Each block in an extent contains an 8-byte checksum (which due to varint encoding is 9
+    // bytes), and a given extent record must be no larger MAX_SERIALIZED_RECORD_SIZE.  We also need
+    // to leave a bit of room (arbitrarily, 64 bytes) for the rest of the extent's metadata.
+    block_size * (MAX_SERIALIZED_RECORD_SIZE - 64) / 9
+}
+
+struct SimpleAllocatorStats {
+    #[allow(dead_code)]
+    max_extent_size_bytes: UintMetric,
+}
+
+impl SimpleAllocatorStats {
+    fn new(max_extent_size_bytes: u64) -> Self {
+        Self {
+            max_extent_size_bytes: UintMetric::new("max_extent_size_bytes", max_extent_size_bytes),
+        }
+    }
+}
 
 // For now this just implements a simple strategy of returning the first gap it can find (no matter
 // the size).  This is a very naiive implementation.
@@ -344,10 +369,13 @@ pub struct SimpleAllocator {
     block_size: u64,
     device_size: u64,
     object_id: u64,
+    max_extent_size_bytes: u64,
     tree: LSMTree<AllocatorKey, AllocatorValue>,
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     inner: Mutex<Inner>,
     allocation_mutex: futures::lock::Mutex<()>,
+    #[allow(dead_code)]
+    stats: SimpleAllocatorStats,
 }
 
 struct Inner {
@@ -396,11 +424,13 @@ impl Inner {
 
 impl SimpleAllocator {
     pub fn new(filesystem: Arc<dyn Filesystem>, object_id: u64) -> SimpleAllocator {
+        let max_extent_size_bytes = max_extent_size_for_block_size(filesystem.block_size());
         SimpleAllocator {
             filesystem: Arc::downgrade(&filesystem),
             block_size: filesystem.block_size(),
             device_size: filesystem.device().size(),
             object_id,
+            max_extent_size_bytes,
             tree: LSMTree::new(merge),
             reserved_allocations: SkipListLayer::new(1024), // TODO(fxbug.dev/95981): magic numbers
             inner: Mutex::new(Inner {
@@ -414,6 +444,7 @@ impl SimpleAllocator {
                 committed_deallocated_bytes: 0,
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
+            stats: SimpleAllocatorStats::new(max_extent_size_bytes),
         }
     }
 
@@ -541,6 +572,7 @@ impl Allocator for SimpleAllocator {
         mut len: u64,
     ) -> Result<Range<u64>, Error> {
         assert_eq!(len % self.block_size, 0);
+        len = std::cmp::min(len, self.max_extent_size_bytes);
 
         // Make sure we have space reserved before we try and find the space.
         let reservation = if let Some(reservation) = transaction.allocator_reservation {
@@ -1271,7 +1303,7 @@ mod tests {
     }
 
     async fn test_fs() -> (Arc<FakeFilesystem>, Arc<SimpleAllocator>, Arc<ObjectStore>) {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 4096));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1307,6 +1339,27 @@ mod tests {
         assert_eq!(device_ranges[2].length().unwrap(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
+        transaction.commit().await.expect("commit failed");
+
+        check_allocations(&allocator, &device_ranges).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocate_more_than_max_size() {
+        let (fs, allocator, _) = test_fs().await;
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        let mut device_ranges = Vec::new();
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, fs.device().size())
+                .await
+                .expect("allocate failed"),
+        );
+        assert_eq!(
+            device_ranges.last().unwrap().length().expect("Invalid range"),
+            allocator.max_extent_size_bytes
+        );
         transaction.commit().await.expect("commit failed");
 
         check_allocations(&allocator, &device_ranges).await;

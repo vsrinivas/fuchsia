@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::serialized_types::types::LATEST_VERSION,
+    crate::{
+        object_store::constants::MAX_SERIALIZED_RECORD_SIZE,
+        serialized_types::types::LATEST_VERSION,
+    },
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     serde::{Deserialize, Serialize},
 };
@@ -56,11 +59,12 @@ pub trait Versioned: Serialize + for<'de> Deserialize<'de> {
         for<'de> Self: serde::Deserialize<'de>,
     {
         match version.major {
-            // Version 3+ to use bincode 1.3.3 varint encoding and enforces a 4kiB size limit.
+            // Version 3+ to use bincode 1.3.3 varint encoding and enforces a size limit.
             3.. => {
                 use bincode::Options;
-                let options =
-                    bincode::DefaultOptions::new().with_limit(4096).allow_trailing_bytes();
+                let options = bincode::DefaultOptions::new()
+                    .with_limit(MAX_SERIALIZED_RECORD_SIZE)
+                    .allow_trailing_bytes();
                 match options.deserialize_from(reader) {
                     // Strip bincode wrapping. anyhow can take std::io::Error.
                     Err(e) => {
@@ -88,7 +92,9 @@ pub trait Versioned: Serialize + for<'de> Deserialize<'de> {
         Self: serde::Serialize,
     {
         use bincode::Options;
-        let options = bincode::DefaultOptions::new().with_limit(4096).allow_trailing_bytes();
+        let options = bincode::DefaultOptions::new()
+            .with_limit(MAX_SERIALIZED_RECORD_SIZE)
+            .allow_trailing_bytes();
         match options.serialize_into(writer, self) {
             // Strip bincode wrapping. anyhow can take std::io::Error.
             Err(e) => Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() }),
