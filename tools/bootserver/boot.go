@@ -38,6 +38,9 @@ const maxDownloadAttempts = 3
 // Can be overridden in tests to avoid sleeping.
 var downloadRetrySleep = 5 * time.Second
 
+// Arbitrary timeout for transferring an image.
+const transferTimeout = 8 * time.Minute
+
 // Maps bootserver argument to a corresponding netsvc name.
 var bootserverArgToNameMap = map[string]string{
 	"--boot":       constants.KernelNetsvcName,
@@ -403,7 +406,9 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 				if ctx.Err() != nil {
 					return nil
 				}
+				ctx, cancel := context.WithTimeout(ctx, transferTimeout)
 				err := t.Write(ctx, f.name, f.reader, f.size)
+				cancel()
 				switch err {
 				case nil:
 				case tftp.ErrShouldWait:
