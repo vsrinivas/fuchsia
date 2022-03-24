@@ -310,6 +310,20 @@ TEST_F(RealmBuilderTest, RoutesReadOnlyDirectory) {
   EXPECT_EQ(file_reader.GetContentsAt(kDirectoryName, kFilename), kContent);
 }
 
+// This test is similar to RealmBuilderTest.RoutesProtocolFromChild except
+// that its setup is done statically via a manifest. This is to assert that
+// invoking |CreateFromRelativeUrl| works as expected.
+TEST_F(RealmBuilderTest, BuildsRealmFromRelativeUrl) {
+  static constexpr char kPrePopulatedRealmUrl[] = "#meta/pre_populated_realm.cm";
+
+  auto realm_builder = RealmBuilder::CreateFromRelativeUrl(kPrePopulatedRealmUrl);
+  auto realm = realm_builder.Build(dispatcher());
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
 // test case above. The only difference is that it provides a svc directory
 // from the sys::Context singleton object to the Realm::Builder::Create method.

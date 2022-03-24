@@ -170,6 +170,11 @@ class RealmBuilder final {
   // If it's nullptr, then the current process' "/svc" namespace entry is used.
   static RealmBuilder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
 
+  // Same as above but the Realm will contain the contents in the manifest of
+  // the component referenced by the |relative_url|.
+  static RealmBuilder CreateFromRelativeUrl(std::string_view relative_url,
+                                            std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+
   RealmBuilder(RealmBuilder&&) = default;
   RealmBuilder& operator=(RealmBuilder&&) = default;
 
@@ -220,6 +225,9 @@ class RealmBuilder final {
   RealmBuilder(std::shared_ptr<sys::ServiceDirectory> svc,
                fuchsia::component::test::BuilderSyncPtr builder_proxy,
                fuchsia::component::test::RealmSyncPtr test_realm_proxy);
+
+  static RealmBuilder CreateImpl(cpp17::optional<std::string_view> relative_url = cpp17::nullopt,
+                                 std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
 
   bool realm_commited_ = false;
   std::shared_ptr<sys::ServiceDirectory> svc_;

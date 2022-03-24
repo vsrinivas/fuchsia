@@ -124,6 +124,11 @@ fuchsia_component("realm_builder_test") {
   manifest = "meta/realm_builder_test.cml"
 }
 
+fuchsia_component("pre_populated_realm") {
+  testonly = true
+  manifest = "meta/pre_populated_realm.cml"
+}
+
 fuchsia_unittest_component("internal_test") {
   deps = [ ":internal_test_bin" ]
 }
@@ -137,5 +142,6 @@ fuchsia_test_package("component_cpp_tests") {
     ":echo_server",
     ":echo_server_legacy",
     ":echo_service_server",
+    ":pre_populated_realm",
   ]
 }
