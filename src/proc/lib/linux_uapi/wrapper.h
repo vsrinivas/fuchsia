@@ -42,4 +42,6 @@
 #include <linux/wait.h>
 #include <linux/xattr.h>
 
+#include "stub/missing_includes.h"
+
 #endif  // SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_

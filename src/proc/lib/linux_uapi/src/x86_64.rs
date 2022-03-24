@@ -3412,3 +3412,13 @@ impl Default for iovec {
         }
     }
 }
+pub const _TIOCSPTLCK: __u32 = 1074025521;
+pub const TIOCSPTLCK: __u32 = 1074025521;
+pub const _TIOCGPTLCK: __u32 = 2147767353;
+pub const TIOCGPTLCK: __u32 = 2147767353;
+pub const _TIOCGPKT: __u32 = 2147767352;
+pub const TIOCGPKT: __u32 = 2147767352;
+pub const _TIOCSIG: __u32 = 1074025526;
+pub const TIOCSIG: __u32 = 1074025526;
+pub const _TIOCGPTN: __u32 = 2147767344;
+pub const TIOCGPTN: __u32 = 2147767344;
