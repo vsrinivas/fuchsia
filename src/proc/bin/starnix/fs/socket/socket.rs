@@ -236,9 +236,7 @@ impl Socket {
     }
 
     /// Locks and returns the inner state of the Socket.
-    // TODO(tbodt): Make this private. A good time to do this is in the refactor that will be
-    // necessary to support AF_INET.
-    pub fn lock(&self) -> parking_lot::MutexGuard<'_, SocketInner> {
+    fn lock(&self) -> parking_lot::MutexGuard<'_, SocketInner> {
         self.inner.lock()
     }
 
@@ -247,6 +245,33 @@ impl Socket {
     /// Returns an error if the socket could not be bound.
     pub fn bind(&self, socket_address: SocketAddress) -> Result<(), Errno> {
         self.lock().bind(socket_address)
+    }
+
+    pub fn bind_socket_to_node(
+        &self,
+        socket: &SocketHandle,
+        address: SocketAddress,
+        node: &Arc<FsNode>,
+    ) -> Result<(), Errno> {
+        let mut inner = socket.lock();
+        inner.bind(address)?;
+        node.set_socket(socket.clone());
+        Ok(())
+    }
+
+    pub fn get_linger(&self) -> uapi::linger {
+        let inner = self.lock();
+        inner.linger
+    }
+
+    pub fn set_linger(&self, linger: uapi::linger) {
+        let mut inner = self.lock();
+        inner.linger = linger;
+    }
+
+    pub fn set_passcred(&self, passcred: bool) {
+        let mut inner = self.lock();
+        inner.passcred = passcred;
     }
 
     pub fn connect(

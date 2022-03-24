@@ -681,7 +681,7 @@ pub fn sys_getsockopt(
             SO_ACCEPTCONN => if socket.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec(),
             SO_SNDBUF => (socket.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
             SO_RCVBUF => (socket.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
-            SO_LINGER => socket.lock().linger.as_bytes().to_vec(),
+            SO_LINGER => socket.get_linger().as_bytes().to_vec(),
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),
@@ -754,11 +754,11 @@ pub fn sys_setsockopt(
                 if linger.l_onoff != 0 {
                     linger.l_onoff = 1;
                 }
-                socket.lock().linger = linger;
+                socket.set_linger(linger);
             }
             SO_PASSCRED => {
                 let passcred = read::<u32>(current_task, user_optval, optlen)?;
-                socket.lock().passcred = passcred != 0;
+                socket.set_passcred(passcred != 0);
             }
             _ => return error!(ENOPROTOOPT),
         },

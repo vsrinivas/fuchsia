@@ -201,10 +201,8 @@ impl DirEntry {
         mode: FileMode,
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, mode, DeviceType::NONE, || {
-            let mut locked_socket = socket.lock();
             let node = self.node.mknod(name, mode)?;
-            locked_socket.bind(socket_address)?;
-            node.set_socket(socket.clone());
+            socket.bind_socket_to_node(&socket, socket_address, &node)?;
             Ok(node)
         })
     }

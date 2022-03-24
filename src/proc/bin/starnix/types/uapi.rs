@@ -201,7 +201,7 @@ pub struct mmsghdr {
     pub __reserved: [u8; 4usize],
 }
 
-#[derive(Debug, Default, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct linger {
     pub l_onoff: i32,
