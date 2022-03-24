@@ -21,6 +21,7 @@ const VIRTIO_BLK_S_OK: u8 = 0;
 const VIRTIO_BLK_S_IOERR: u8 = 1;
 const VIRTIO_BLK_S_UNSUPP: u8 = 2;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum VirtioBlockStatus {
     Ok,
     IoError,
