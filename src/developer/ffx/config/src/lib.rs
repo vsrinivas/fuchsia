@@ -261,6 +261,13 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
     writeln!(writer, "{}", *read_guard).context("displaying config")
 }
 
+pub async fn get_log_dirs() -> Result<Vec<String>> {
+    match get("log.dir").await {
+        Ok(log_dirs) => Ok(log_dirs),
+        Err(e) => errors::ffx_bail!("Failed to load host log directories from ffx config: {:?}", e),
+    }
+}
+
 pub async fn get_sdk() -> Result<sdk::Sdk> {
     match (get("sdk.root").await, get("sdk.type").await.unwrap_or("".to_string())) {
         (Ok(manifest), sdk_type) => {

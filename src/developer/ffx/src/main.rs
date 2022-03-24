@@ -9,6 +9,7 @@ use {
     async_utils::async_once::Once,
     buildid,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
+    ffx_config::get_log_dirs,
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
@@ -322,6 +323,27 @@ fn set_buildid_config(overrides: Option<String>) -> Result<Option<String>> {
     }
 }
 
+async fn report_log_hint(writer: &mut dyn std::io::Write) {
+    let msg = if let Ok(log_dirs) = get_log_dirs().await {
+        if log_dirs.len() == 1 {
+            format!(
+                "More information may be available in ffx host logs in directory:\n    {}",
+                log_dirs[0]
+            )
+        } else {
+            format!(
+                "More information may be available in ffx host logs in directories:\n    {}",
+                log_dirs.join("\n    ")
+            )
+        }
+    } else {
+        "More information may be available in ffx host logs, but ffx failed to retrieve configured log file locations".to_string()
+    };
+    if writeln!(writer, "{}", msg).is_err() {
+        println!("{}", msg);
+    }
+}
+
 async fn run() -> Result<i32> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
@@ -422,9 +444,10 @@ async fn run() -> Result<i32> {
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     let result = run().await;
+    let mut stderr = std::io::stderr();
 
     // unwrap because if stderr is not writable, the program should try to exit right away.
-    errors::write_result(&result, &mut std::io::stderr()).unwrap();
+    errors::write_result(&result, &mut stderr).unwrap();
     // Report BUG errors as crash events
     if result.is_err() && result.ffx_error().is_none() {
         let err_msg = format!("{}", result.as_ref().unwrap_err());
@@ -438,6 +461,7 @@ async fn main() {
         {
             log::error!("analytics failed to submit crash event: {}", e);
         }
+        report_log_hint(&mut stderr).await;
     }
 
     std::process::exit(result.exit_code());
