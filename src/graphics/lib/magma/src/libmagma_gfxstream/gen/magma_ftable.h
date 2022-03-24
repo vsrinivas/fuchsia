@@ -24,6 +24,11 @@ static const struct _magma_funcs_by_name {
 	{"magma_signal_semaphore", (void*)magma_signal_semaphore},
 	{"magma_reset_semaphore", (void*)magma_reset_semaphore},
 	{"magma_poll", (void*)magma_poll},
+	{"magma_get_error", (void*)magma_get_error},
+	{"magma_create_context", (void*)magma_create_context},
+	{"magma_release_context", (void*)magma_release_context},
+	{"magma_map_buffer_gpu", (void*)magma_map_buffer_gpu},
+	{"magma_unmap_buffer_gpu", (void*)magma_unmap_buffer_gpu},
 };
 static const int magma_num_funcs = sizeof(magma_funcs_by_name) / sizeof(struct _magma_funcs_by_name);
 

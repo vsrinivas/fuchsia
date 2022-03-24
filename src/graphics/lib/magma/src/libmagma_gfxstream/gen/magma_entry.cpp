@@ -21,6 +21,11 @@ extern "C" {
 	void magma_signal_semaphore(magma_semaphore_t semaphore);
 	void magma_reset_semaphore(magma_semaphore_t semaphore);
 	magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns);
+	magma_status_t magma_get_error(magma_connection_t connection);
+	magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out);
+	void magma_release_context(magma_connection_t connection, uint32_t context_id);
+	magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t page_offset, uint64_t page_count, uint64_t gpu_va, uint64_t map_flags);
+	void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va);
 };
 
 #ifndef GET_CONTEXT
@@ -123,5 +128,35 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
 {
 	GET_CONTEXT;
 	return ctx->magma_poll(ctx, items, count, timeout_ns);
+}
+
+magma_status_t magma_get_error(magma_connection_t connection)
+{
+	GET_CONTEXT;
+	return ctx->magma_get_error(ctx, connection);
+}
+
+magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out)
+{
+	GET_CONTEXT;
+	return ctx->magma_create_context(ctx, connection, context_id_out);
+}
+
+void magma_release_context(magma_connection_t connection, uint32_t context_id)
+{
+	GET_CONTEXT;
+	ctx->magma_release_context(ctx, connection, context_id);
+}
+
+magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t page_offset, uint64_t page_count, uint64_t gpu_va, uint64_t map_flags)
+{
+	GET_CONTEXT;
+	return ctx->magma_map_buffer_gpu(ctx, connection, buffer, page_offset, page_count, gpu_va, map_flags);
+}
+
+void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va)
+{
+	GET_CONTEXT;
+	ctx->magma_unmap_buffer_gpu(ctx, connection, buffer, gpu_va);
 }
 

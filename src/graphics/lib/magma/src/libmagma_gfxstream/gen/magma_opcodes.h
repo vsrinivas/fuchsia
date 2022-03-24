@@ -19,7 +19,12 @@
 #define OP_magma_signal_semaphore 					100013
 #define OP_magma_reset_semaphore 					100014
 #define OP_magma_poll 					100015
-#define OP_last 					100016
+#define OP_magma_get_error 					100016
+#define OP_magma_create_context 					100017
+#define OP_magma_release_context 					100018
+#define OP_magma_map_buffer_gpu 					100019
+#define OP_magma_unmap_buffer_gpu 					100020
+#define OP_last 					100021
 
 
 #endif

@@ -26,6 +26,11 @@ struct magma_client_context_t {
 	magma_signal_semaphore_client_proc_t magma_signal_semaphore;
 	magma_reset_semaphore_client_proc_t magma_reset_semaphore;
 	magma_poll_client_proc_t magma_poll;
+	magma_get_error_client_proc_t magma_get_error;
+	magma_create_context_client_proc_t magma_create_context;
+	magma_release_context_client_proc_t magma_release_context;
+	magma_map_buffer_gpu_client_proc_t magma_map_buffer_gpu;
+	magma_unmap_buffer_gpu_client_proc_t magma_unmap_buffer_gpu;
 	virtual ~magma_client_context_t() {}
 
 	typedef magma_client_context_t *CONTEXT_ACCESSOR_TYPE(void);

@@ -28,6 +28,11 @@ typedef uint64_t (magma_APIENTRY *magma_get_semaphore_id_client_proc_t) (void * 
 typedef void (magma_APIENTRY *magma_signal_semaphore_client_proc_t) (void * ctx, magma_semaphore_t);
 typedef void (magma_APIENTRY *magma_reset_semaphore_client_proc_t) (void * ctx, magma_semaphore_t);
 typedef magma_status_t (magma_APIENTRY *magma_poll_client_proc_t) (void * ctx, magma_poll_item_t*, uint32_t, uint64_t);
+typedef magma_status_t (magma_APIENTRY *magma_get_error_client_proc_t) (void * ctx, magma_connection_t);
+typedef magma_status_t (magma_APIENTRY *magma_create_context_client_proc_t) (void * ctx, magma_connection_t, uint32_t*);
+typedef void (magma_APIENTRY *magma_release_context_client_proc_t) (void * ctx, magma_connection_t, uint32_t);
+typedef magma_status_t (magma_APIENTRY *magma_map_buffer_gpu_client_proc_t) (void * ctx, magma_connection_t, magma_buffer_t, uint64_t, uint64_t, uint64_t, uint64_t);
+typedef void (magma_APIENTRY *magma_unmap_buffer_gpu_client_proc_t) (void * ctx, magma_connection_t, magma_buffer_t, uint64_t);
 
 
 #endif

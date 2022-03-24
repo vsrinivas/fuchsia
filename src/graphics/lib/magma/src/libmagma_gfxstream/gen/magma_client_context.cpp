@@ -26,6 +26,11 @@ int magma_client_context_t::initDispatchByName(void *(*getProc)(const char *, vo
 	magma_signal_semaphore = (magma_signal_semaphore_client_proc_t) getProc("magma_signal_semaphore", userData);
 	magma_reset_semaphore = (magma_reset_semaphore_client_proc_t) getProc("magma_reset_semaphore", userData);
 	magma_poll = (magma_poll_client_proc_t) getProc("magma_poll", userData);
+	magma_get_error = (magma_get_error_client_proc_t) getProc("magma_get_error", userData);
+	magma_create_context = (magma_create_context_client_proc_t) getProc("magma_create_context", userData);
+	magma_release_context = (magma_release_context_client_proc_t) getProc("magma_release_context", userData);
+	magma_map_buffer_gpu = (magma_map_buffer_gpu_client_proc_t) getProc("magma_map_buffer_gpu", userData);
+	magma_unmap_buffer_gpu = (magma_unmap_buffer_gpu_client_proc_t) getProc("magma_unmap_buffer_gpu", userData);
 	return 0;
 }
 

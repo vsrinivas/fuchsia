@@ -333,12 +333,6 @@ void encoderLog(const char* format, ...) {
 // Stubs
 extern "C" {
 
-magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-void magma_release_context(magma_connection_t connection, uint32_t context_id) {}
-
 magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
                                      struct magma_command_descriptor* descriptor) {
   return MAGMA_STATUS_UNIMPLEMENTED;
@@ -384,15 +378,6 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
-                                    uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
-                                    uint64_t map_flags) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
-}
-
 magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,
                                      uint32_t options, uint64_t start_offset, uint64_t length) {
   return MAGMA_STATUS_UNIMPLEMENTED;
@@ -403,8 +388,6 @@ magma_status_t magma_read_notification_channel2(magma_connection_t connection, v
                                                 magma_bool_t* more_data_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
-
-magma_status_t magma_get_error(magma_connection_t connection) { return MAGMA_STATUS_UNIMPLEMENTED; }
 
 magma_status_t magma_flush(magma_connection_t connection) { return MAGMA_STATUS_UNIMPLEMENTED; }
 }
