@@ -149,6 +149,33 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/system");
       PushDirectoryFromPath("/tmp");
       PushDirectoryFromPath("/hub-v2");
+    } else if (feature == "deprecated-global-data") {
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+        PushDirectoryFromPath("/data");
+      } else {
+        FX_LOGS(WARNING) << "Component " << ns_id
+                         << " is not allowlisted to use deprecated-global-data."
+                         << " See: https://fxbug.dev/36227#c43";
+      }
+    } else if (feature == "deprecated-global-tmp") {
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+        PushDirectoryFromPath("/tmp");
+      } else {
+        FX_LOGS(WARNING) << "Component " << ns_id
+                         << " is not allowlisted to use deprecated-global-tmp."
+                         << " See: https://fxbug.dev/36227#c43";
+      }
+    } else if (feature == "deprecated-global-hub") {
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+        PushDirectoryFromPath("/hub-v2");
+      } else {
+        FX_LOGS(WARNING) << "Component " << ns_id
+                         << " is not allowlisted to use deprecated-global-hub."
+                         << " See: https://fxbug.dev/36227#c43";
+      }
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "vulkan") {

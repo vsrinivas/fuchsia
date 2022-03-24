@@ -16,8 +16,6 @@ group("scenic") {
   public_deps = [ "//src/ui/tools:scenic" ]
 }
 
-# TODO(fxbug.dev/36227): sl4f is explicitly excluded here, we can consider adding it back once it
-# migrates off 'deprecated-shell'
 group("all") {
   testonly = true
   public_deps = [ ":scenic" ]

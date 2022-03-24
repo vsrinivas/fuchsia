@@ -16,7 +16,9 @@
         ],
         "features": [
             "build-info",
-            "deprecated-shell",
+            "deprecated-global-data",
+            "deprecated-global-hub",
+            "deprecated-global-tmp",
             "hub"
         ],
         "services": [
