@@ -6,7 +6,7 @@ Reviewed on: 2022-03-22
 
 The input pipeline library is single-threaded. More precisely:
 
-* `input_handler::InputHandler::handle_input_event()` is not `Send`.
+* `input_handler::InputHandler::handle_input_event()` is not [`Send`](https://doc.rust-lang.org/std/marker/trait.Send.html).
 
 * `input_pipeline::InputPipelineAssembly` is not `Send`. This is because
   * `handle_input_event()` is not `Send`, which means that

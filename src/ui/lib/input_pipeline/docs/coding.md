@@ -24,8 +24,6 @@ writing code that uses some other option.
    * A secondary benefit is that there's no confusion over which wrapper is
      being used. (`Mutex` is very confusing given that there are three commonly
      used implementations.)
-   * A teritary benefit, largely speculative, is that performance may be better.
-     As with `Rc` vs. `Arc`, `RefCell` doesn't require cross-core synchronization.
 
 ## Background tasks
 
@@ -62,14 +60,13 @@ migrated over time.
 ## Re-entrancy
 
 Some `InputHandler`s need to maintain state which depends on the order in which
-events are received. If `handle_input_event()` could be invoked re-entrantly,
-a handler would probably need to buffer the re-entrant calls internally, to
-avoid corrupting mutable state.
+events are received. If [`handle_input_event()`](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/input_handler.rs;drc=736d1cff60799806705e26b3473457acbfb31bb7;l=30) could be invoked re-entrantly, a handler would probably need to buffer the re-entrant
+calls internally, to avoid corrupting mutable state.
 
-Instead, the `handle_input_event()` API is documented as _not_ being reentrant-safe,
-and the `InputPipeline` struct always waits for an `InputHandler` to complete
-processing an `InputEvent`, before invoking `handle_input_event()` again on the
-same handler.
+Instead, the `handle_input_event()` API is [documented as _not_ being reentrant-safe](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/input_handler.rs?q=%22should%20not%20be%20invoked%20concurrently%22),
+and the `InputPipeline` struct [always waits for an `InputHandler` to complete
+processing](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/input_pipeline.rs?q=handle_input_event%5C(event%5C).await&ss=fuchsia%2Ffuchsia) an `InputEvent`,
+before invoking `handle_input_event()` again on the same handler.
 
 Consequently, `InputHandler`s _should_ assume that `handle_input_event()`
 is not invoked concurrently.
