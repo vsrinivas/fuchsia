@@ -71,6 +71,7 @@ enum/member fuchsia.accessibility.semantics/Role.HEADER 3
 enum/member fuchsia.accessibility.semantics/Role.IMAGE 4
 enum/member fuchsia.accessibility.semantics/Role.LINK 7
 enum/member fuchsia.accessibility.semantics/Role.LIST 10
+enum/member fuchsia.accessibility.semantics/Role.LIST_ELEMENT 11
 enum/member fuchsia.accessibility.semantics/Role.LIST_ELEMENT_MARKER 12
 enum/member fuchsia.accessibility.semantics/Role.PARAGRAPH 21
 enum/member fuchsia.accessibility.semantics/Role.RADIO_BUTTON 9

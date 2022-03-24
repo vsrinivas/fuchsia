@@ -57,6 +57,11 @@ type Role = strict enum {
     /// Role used to represent lists.
     LIST = 10;
 
+    /// Role used to represent an element in a list, including its marker and
+    /// its content. For example, a element tagged <li>, or an element with the
+    /// ARIA listitem role.
+    LIST_ELEMENT = 11;
+
     /// Role used to represent a list marker (e.g. a bullet point, number, roman
     /// numeral, etc.).
     LIST_ELEMENT_MARKER = 12;
