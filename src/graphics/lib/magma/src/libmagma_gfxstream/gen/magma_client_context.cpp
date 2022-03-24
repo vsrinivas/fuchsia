@@ -20,6 +20,12 @@ int magma_client_context_t::initDispatchByName(void *(*getProc)(const char *, vo
 	magma_get_buffer_id = (magma_get_buffer_id_client_proc_t) getProc("magma_get_buffer_id", userData);
 	magma_get_buffer_size = (magma_get_buffer_size_client_proc_t) getProc("magma_get_buffer_size", userData);
 	magma_get_buffer_handle2 = (magma_get_buffer_handle2_client_proc_t) getProc("magma_get_buffer_handle2", userData);
+	magma_create_semaphore = (magma_create_semaphore_client_proc_t) getProc("magma_create_semaphore", userData);
+	magma_release_semaphore = (magma_release_semaphore_client_proc_t) getProc("magma_release_semaphore", userData);
+	magma_get_semaphore_id = (magma_get_semaphore_id_client_proc_t) getProc("magma_get_semaphore_id", userData);
+	magma_signal_semaphore = (magma_signal_semaphore_client_proc_t) getProc("magma_signal_semaphore", userData);
+	magma_reset_semaphore = (magma_reset_semaphore_client_proc_t) getProc("magma_reset_semaphore", userData);
+	magma_poll = (magma_poll_client_proc_t) getProc("magma_poll", userData);
 	return 0;
 }
 

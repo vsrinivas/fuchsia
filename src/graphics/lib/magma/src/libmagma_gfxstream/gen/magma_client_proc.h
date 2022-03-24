@@ -22,6 +22,12 @@ typedef void (magma_APIENTRY *magma_release_buffer_client_proc_t) (void * ctx, m
 typedef uint64_t (magma_APIENTRY *magma_get_buffer_id_client_proc_t) (void * ctx, magma_buffer_t);
 typedef uint64_t (magma_APIENTRY *magma_get_buffer_size_client_proc_t) (void * ctx, magma_buffer_t);
 typedef magma_status_t (magma_APIENTRY *magma_get_buffer_handle2_client_proc_t) (void * ctx, magma_buffer_t, magma_handle_t*);
+typedef magma_status_t (magma_APIENTRY *magma_create_semaphore_client_proc_t) (void * ctx, magma_connection_t, magma_semaphore_t*);
+typedef void (magma_APIENTRY *magma_release_semaphore_client_proc_t) (void * ctx, magma_connection_t, magma_semaphore_t);
+typedef uint64_t (magma_APIENTRY *magma_get_semaphore_id_client_proc_t) (void * ctx, magma_semaphore_t);
+typedef void (magma_APIENTRY *magma_signal_semaphore_client_proc_t) (void * ctx, magma_semaphore_t);
+typedef void (magma_APIENTRY *magma_reset_semaphore_client_proc_t) (void * ctx, magma_semaphore_t);
+typedef magma_status_t (magma_APIENTRY *magma_poll_client_proc_t) (void * ctx, magma_poll_item_t*, uint32_t, uint64_t);
 
 
 #endif

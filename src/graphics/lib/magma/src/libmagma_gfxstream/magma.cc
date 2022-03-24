@@ -12,6 +12,7 @@
 #include <xf86drm.h>
 
 #include <mutex>
+#include <thread>
 
 #include "AddressSpaceStream.h"
 #include "EncoderDebug.h"
@@ -26,6 +27,13 @@
 #define VIRTIO_GPU_CAPSET_CROSS_DOMAIN 5
 
 class IOStream;
+
+static uint64_t get_ns_monotonic(bool raw) {
+    struct timespec time;
+    int ret = clock_gettime(raw ? CLOCK_MONOTONIC_RAW : CLOCK_MONOTONIC, &time);
+    if (ret < 0) return 0;
+    return static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + time.tv_nsec;
+}
 
 class MagmaClientContext : public magma_encoder_context_t {
  public:
@@ -43,19 +51,23 @@ class MagmaClientContext : public magma_encoder_context_t {
                                     magma_handle_t* handle_out, uint64_t* value_out);
   static magma_status_t magma_get_buffer_handle2(void* self, magma_buffer_t buffer,
                                                  magma_handle_t* handle_out);
+  static magma_status_t magma_poll(void* self, magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns);
 
   magma_device_import_client_proc_t magma_device_import_enc_;
   magma_query_client_proc_t magma_query_enc_;
+  magma_poll_client_proc_t magma_poll_enc_;
 };
 
 MagmaClientContext::MagmaClientContext(AddressSpaceStream* stream)
     : magma_encoder_context_t(stream, new ChecksumCalculator) {
   magma_device_import_enc_ = magma_client_context_t::magma_device_import;
   magma_query_enc_ = magma_client_context_t::magma_query;
+  magma_poll_enc_ = magma_client_context_t::magma_poll;
 
   magma_client_context_t::magma_device_import = &MagmaClientContext::magma_device_import;
   magma_client_context_t::magma_query = &MagmaClientContext::magma_query;
   magma_client_context_t::magma_get_buffer_handle2 = &MagmaClientContext::magma_get_buffer_handle2;
+  magma_client_context_t::magma_poll = &MagmaClientContext::magma_poll;
 }
 
 // static
@@ -233,6 +245,45 @@ static int virtgpuOpen(uint32_t capset_id) {
   return fd;
 }
 
+// We can't pass a non-zero timeout to the server, as that would block the server from handling requests from
+// other threads.  So we busy wait here, which isn't ideal; however if the server did block, gfxstream would
+// busy wait for the response anyway.
+magma_status_t MagmaClientContext::magma_poll(void* self, magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
+   auto context = reinterpret_cast<MagmaClientContext*>(self);
+
+    int64_t time_start = static_cast<int64_t>(get_ns_monotonic(false));
+
+    int64_t abs_timeout_ns = time_start + timeout_ns;
+
+    if (abs_timeout_ns < time_start) {
+        abs_timeout_ns = std::numeric_limits<int64_t>::max();
+    }
+
+    bool warned_for_long_poll = false;
+
+    while (true) {
+       magma_status_t status = context->magma_poll_enc_(self, items, count, 0);
+
+       if (status != MAGMA_STATUS_TIMED_OUT)
+          return status;
+
+       std::this_thread::yield();
+
+       int64_t time_now = static_cast<int64_t>(get_ns_monotonic(false));
+
+       // TODO(fxb/TBD) - the busy loop should probably backoff after some time
+       if (!warned_for_long_poll && time_now - time_start > 5000000000) {
+          ALOGE("magma_poll: long poll detected (%lu us)", (time_now - time_start) / 1000);
+          warned_for_long_poll = true;
+       }
+
+       if (time_now >= abs_timeout_ns)
+          break;
+    }
+
+    return MAGMA_STATUS_TIMED_OUT;
+}
+
 magma_client_context_t* GetMagmaContext() {
   static MagmaClientContext* s_context;
   static std::once_flag once_flag;
@@ -299,19 +350,6 @@ magma_status_t magma_execute_immediate_commands2(
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_create_semaphore(magma_connection_t connection,
-                                      magma_semaphore_t* semaphore_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-void magma_release_semaphore(magma_connection_t connection, magma_semaphore_t semaphore) {}
-
-uint64_t magma_get_semaphore_id(magma_semaphore_t semaphore) { return 0; }
-
-void magma_signal_semaphore(magma_semaphore_t semaphore) {}
-
-void magma_reset_semaphore(magma_semaphore_t semaphore) {}
-
 magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer,
                             magma_handle_t* buffer_handle_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
@@ -343,10 +381,6 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
 
 magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_buffer_t image,
                                          magma_image_info_t* image_info_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 

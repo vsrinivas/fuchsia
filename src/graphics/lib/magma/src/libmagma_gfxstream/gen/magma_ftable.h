@@ -18,6 +18,12 @@ static const struct _magma_funcs_by_name {
 	{"magma_get_buffer_id", (void*)magma_get_buffer_id},
 	{"magma_get_buffer_size", (void*)magma_get_buffer_size},
 	{"magma_get_buffer_handle2", (void*)magma_get_buffer_handle2},
+	{"magma_create_semaphore", (void*)magma_create_semaphore},
+	{"magma_release_semaphore", (void*)magma_release_semaphore},
+	{"magma_get_semaphore_id", (void*)magma_get_semaphore_id},
+	{"magma_signal_semaphore", (void*)magma_signal_semaphore},
+	{"magma_reset_semaphore", (void*)magma_reset_semaphore},
+	{"magma_poll", (void*)magma_poll},
 };
 static const int magma_num_funcs = sizeof(magma_funcs_by_name) / sizeof(struct _magma_funcs_by_name);
 

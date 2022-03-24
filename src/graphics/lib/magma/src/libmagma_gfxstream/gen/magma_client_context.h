@@ -20,6 +20,12 @@ struct magma_client_context_t {
 	magma_get_buffer_id_client_proc_t magma_get_buffer_id;
 	magma_get_buffer_size_client_proc_t magma_get_buffer_size;
 	magma_get_buffer_handle2_client_proc_t magma_get_buffer_handle2;
+	magma_create_semaphore_client_proc_t magma_create_semaphore;
+	magma_release_semaphore_client_proc_t magma_release_semaphore;
+	magma_get_semaphore_id_client_proc_t magma_get_semaphore_id;
+	magma_signal_semaphore_client_proc_t magma_signal_semaphore;
+	magma_reset_semaphore_client_proc_t magma_reset_semaphore;
+	magma_poll_client_proc_t magma_poll;
 	virtual ~magma_client_context_t() {}
 
 	typedef magma_client_context_t *CONTEXT_ACCESSOR_TYPE(void);

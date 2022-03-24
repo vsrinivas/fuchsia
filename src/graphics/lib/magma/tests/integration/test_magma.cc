@@ -1270,6 +1270,16 @@ TEST_F(Magma, BufferMapDuplicates) {
 
 TEST_F(Magma, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
 
+class MagmaSemaphore : public testing::TestWithParam<uint32_t> {};
+
+TEST_P(MagmaSemaphore, Semaphore) {
+  uint32_t count = GetParam();
+  TestConnection test;
+  test.Semaphore(count);
+}
+
+INSTANTIATE_TEST_SUITE_P(MagmaSemaphore, MagmaSemaphore, ::testing::Values(1, 2, 3));
+
 TEST_F(Magma, BufferImportExport) {
   TestConnection test1;
   TestConnection test2;
@@ -1281,13 +1291,6 @@ TEST_F(Magma, BufferImportExport) {
   uint64_t exported_id;
   test1.BufferExport(&handle, &exported_id);
   test2.BufferImport(handle, exported_id);
-}
-
-TEST_F(Magma, Semaphore) {
-  TestConnection test;
-  test.Semaphore(1);
-  test.Semaphore(2);
-  test.Semaphore(3);
 }
 
 TEST_F(Magma, SemaphoreImportExport) {
