@@ -9,6 +9,6 @@
             ],
         },
     ],
-    poll_rate_sec: 300,
+    poll_rate_sec: 1200,
     project_id: 13,
 }

@@ -4,4 +4,559 @@
         label: "Archivist",
         moniker: "bootstrap/archivist",
     },
+    {
+        id: 102,
+        label: "Accessibility Manager",
+        moniker: "a11y-manager.cmx",
+    },
+    {
+        id: 103,
+        label: "Audio Core",
+        moniker: "audio_core.cmx",
+    },
+    {
+        id: 104,
+        label: "Driver Manager",
+        moniker: "bootstrap/driver_manager",
+    },
+    {
+        id: 105,
+        label: "FS Host",
+        moniker: "bootstrap/fshost",
+    },
+    {
+        id: 106,
+        label: "Power Manager",
+        moniker: "bootstrap/power_manager",
+    },
+    {
+        id: 107,
+        label: "Cobalt Sys Metrics",
+        moniker: "cobalt_system_metrics.cmx",
+    },
+    {
+        id: 108,
+        label: "App Manager",
+        moniker: "core/appmgr",
+    },
+    {
+        id: 109,
+        label: "Cobalt",
+        moniker: "core/cobalt",
+    },
+    {
+        id: 110,
+        label: "Detect",
+        moniker: "core/detect",
+    },
+    {
+        id: 111,
+        label: "Diagnostics KCounter",
+        moniker: "core/diagnostics-kcounter",
+    },
+    {
+        id: 112,
+        label: "Diagnostics Persistence",
+        moniker: "core/diagnostics-persistence",
+    },
+    {
+        id: 113,
+        label: "Exceptions",
+        moniker: "core/exceptions",
+    },
+    {
+        id: 114,
+        label: "Feedback",
+        moniker: "core/feedback",
+    },
+    {
+        id: 115,
+        label: "Font Provider",
+        moniker: "core/font_provider",
+    },
+    {
+        id: 116,
+        label: "Log Stats",
+        moniker: "core/log-stats",
+    },
+    {
+        id: 117,
+        label: "Memory Monitor",
+        moniker: "core/memory_monitor",
+    },
+    {
+        id: 118,
+        label: "DNS Resolver",
+        moniker: "core/network/dns-resolver",
+    },
+    {
+        id: 119,
+        label: "Netstack",
+        moniker: "core/network/netstack",
+    },
+    {
+        id: 120,
+        label: "Package Cache",
+        moniker: "core/pkg-cache",
+    },
+    {
+        id: 121,
+        label: "Package Resolver",
+        moniker: "core/pkg-resolver",
+    },
+    {
+        id: 122,
+        label: "Sampler",
+        moniker: "core/sampler",
+    },
+    {
+        id: 123,
+        label: "SetUI",
+        moniker: "core/setui_service",
+    },
+    {
+        id: 124,
+        label: "Stash",
+        moniker: "core/stash",
+    },
+    {
+        id: 125,
+        label: "Stash Secure",
+        moniker: "core/stash_secure",
+    },
+    {
+        id: 126,
+        label: "Update Checker",
+        moniker: "core/system-update-checker",
+    },
+    {
+        id: 127,
+        label: "Update Committer",
+        moniker: "core/system-update-committer",
+    },
+    {
+        id: 128,
+        label: "Updater",
+        moniker: "core/system-updater",
+    },
+    {
+        id: 129,
+        label: "Vulkan Loader",
+        moniker: "core/vulkan_loader",
+    },
+    {
+        id: 130,
+        label: "WLAN Config",
+        moniker: "core/wlancfg",
+    },
+    {
+        id: 131,
+        label: "WLAN Monitor",
+        moniker: "core/wlandevicemonitor",
+    },
+    {
+        id: 132,
+        label: "WLAN Stack",
+        moniker: "core/wlanstack",
+    },
+    {
+        id: 133,
+        label: "DateTime Source",
+        moniker: "httpsdate_time_source.cmx",
+    },
+    {
+        id: 134,
+        label: "Reachability",
+        moniker: "reachability.cmx",
+    },
+    {
+        id: 135,
+        label: "Scenic",
+        moniker: "scenic.cmx",
+    },
+    {
+        id: 136,
+        label: "Timekeeper",
+        moniker: "timekeeper.cmx",
+    },
+    {
+        id: 137,
+        label: "CPU Perf Provider",
+        moniker: "cpuperf_provider.cmx",
+    },
+    {
+        id: 138,
+        label: "Internationalization Services",
+        moniker: "intl_services.cmx",
+    },
+    {
+        id: 139,
+        label: "KTrace Provider",
+        moniker: "ktrace_provider.cmx",
+    },
+    {
+        id: 140,
+        label: "Overnet",
+        moniker: "overnetstack.cmx",
+    },
+    {
+        id: 141,
+        label: "SSHD Host",
+        moniker: "sshd-host.cmx",
+    },
+    {
+        id: 142,
+        label: "Text Manager",
+        moniker: "text_manager.cmx",
+    },
+    {
+        id: 143,
+        label: "Trace Manager",
+        moniker: "trace_manager.cmx",
+    },
+    {
+        id: 144,
+        label: "Base Resolver",
+        moniker: "bootstrap/base_resolver",
+    },
+    {
+        id: 145,
+        label: "Console",
+        moniker: "bootstrap/console",
+    },
+    {
+        id: 146,
+        label: "Console Launcher",
+        moniker: "bootstrap/console-launcher",
+    },
+    {
+        id: 147,
+        label: "Decompressor",
+        moniker: "bootstrap/decompressor",
+    },
+    {
+        id: 148,
+        label: "Device Name Provider",
+        moniker: "bootstrap/device_name_provider",
+    },
+    {
+        id: 149,
+        label: "Driver Index",
+        moniker: "bootstrap/driver_index",
+    },
+    {
+        id: 150,
+        label: "Misc Service",
+        moniker: "bootstrap/miscsvc",
+    },
+    {
+        id: 151,
+        label: "Net Service",
+        moniker: "bootstrap/netsvc",
+    },
+    {
+        id: 152,
+        label: "Power Button Monitor",
+        moniker: "bootstrap/pwrbtn-monitor",
+    },
+    {
+        id: 153,
+        label: "Shutdown Shim",
+        moniker: "bootstrap/shutdown_shim",
+    },
+    {
+        id: 154,
+        label: "Service Host",
+        moniker: "bootstrap/svchost",
+    },
+    {
+        id: 155,
+        label: "System Info",
+        moniker: "bootstrap/sysinfo",
+    },
+    {
+        id: 156,
+        label: "Virtual Console",
+        moniker: "bootstrap/virtual_console",
+    },
+    {
+        id: 157,
+        label: "Activity",
+        moniker: "core/activity",
+    },
+    {
+        id: 158,
+        label: "Brightness Manager",
+        moniker: "core/brightness_manager",
+    },
+    {
+        id: 159,
+        label: "Build Info",
+        moniker: "core/build-info",
+    },
+    {
+        id: 160,
+        label: "Full Resolver",
+        moniker: "core/full-resolver",
+    },
+    {
+        id: 161,
+        label: "Hardware Info",
+        moniker: "core/hwinfo",
+    },
+    {
+        id: 162,
+        label: "DHCPD",
+        moniker: "core/network/dhcpd",
+    },
+    {
+        id: 163,
+        label: "DHCP V6 Client",
+        moniker: "core/network/dhcpv6-client",
+    },
+    {
+        id: 164,
+        label: "HTTP Client",
+        moniker: "core/network/http-client",
+    },
+    {
+        id: 165,
+        label: "Net Config",
+        moniker: "core/network/netcfg",
+    },
+    {
+        id: 166,
+        label: "Regulatory Region",
+        moniker: "core/regulatory_region",
+    },
+    {
+        id: 167,
+        label: "Remote Control",
+        moniker: "core/remote-control",
+    },
+    {
+        id: 168,
+        label: "Diagnostics Bridge",
+        moniker: "core/remote-diagnostics-bridge",
+    },
+    {
+        id: 169,
+        label: "Session Manger",
+        moniker: "core/session-manager",
+    },
+    {
+        id: 170,
+        label: "Sys Memory Connector",
+        moniker: "core/sysmem_connector",
+    },
+    {
+        id: 171,
+        label: "Crash Reports",
+        moniker: "crash_reports.cmx",
+    },
+    {
+        id: 172,
+        label: "Feedback Data",
+        moniker: "feedback_data.cmx",
+    },
+    {
+        id: 173,
+        label: "Screen Saver",
+        moniker: "screensaver.cmx",
+    },
+    {
+        id: 174,
+        label: "Shortcut Manager",
+        moniker: "shortcut_manager.cmx",
+    },
+    {
+        id: 175,
+        label: "PTY Service",
+        moniker: "bootstrap/ptysvc",
+    },
+    {
+        id: 176,
+        label: "Password Authenticator",
+        moniker: "core/account/password_authenticator",
+    },
+    {
+        id: 177,
+        label: "Battery Manager",
+        moniker: "core/battery_manager",
+    },
+    {
+        id: 178,
+        label: "Configurator",
+        moniker: "core/configurator",
+    },
+    {
+        id: 179,
+        label: "Last Reboot",
+        moniker: "core/last_reboot",
+    },
+    {
+        id: 180,
+        label: "Dart JIT Runner",
+        moniker: "core/session-manager/session\:session/dart_jit_runner",
+    },
+    {
+        id: 181,
+        label: "Element Manager",
+        moniker: "core/session-manager/session\:session/element_manager",
+    },
+    {
+        id: 182,
+        label: "Flutter JIT Runner",
+        moniker: "core/session-manager/session\:session/flutter_jit_runner",
+    },
+    {
+        id: 183,
+        label: "Scene Manager",
+        moniker: "core/session-manager/session\:session/scene_manager",
+    },
+    {
+        id: 184,
+        label: "Base Manager",
+        moniker: "basemgr.cmx",
+    },
+    {
+        id: 185,
+        label: "BT Snoop",
+        moniker: "bt-snoop.cmx",
+    },
+    {
+        id: 186,
+        label: "BT A2DP",
+        moniker: "core/bt-a2dp",
+    },
+    {
+        id: 187,
+        label: "BT AVRCP",
+        moniker: "core/bt-avrcp",
+    },
+    {
+        id: 188,
+        label: "BT HFP Audio",
+        moniker: "core/bt-hfp-audio-gateway",
+    },
+    {
+        id: 189,
+        label: "Root Presenter",
+        moniker: "root_presenter.cmx",
+    },
+    {
+        id: 190,
+        label: "Camera Watcher",
+        moniker: "camera_device_watcher.cmx",
+    },
+    {
+        id: 191,
+        label: "Bluetooth Core",
+        moniker: "core/bluetooth-core",
+    },
+    {
+        id: 192,
+        label: "AVRCP Target",
+        moniker: "core/bt-a2dp/bt-avrcp-target",
+    },
+    {
+        id: 193,
+        label: "Codec Factory",
+        moniker: "core/codec_factory",
+    },
+    {
+        id: 194,
+        label: "Timezone",
+        moniker: "timezone.cmx",
+    },
+    {
+        id: 195,
+        label: "BlobFS",
+        moniker: "bootstrap/fshost/blobfs",
+    },
+    {
+        id: 196,
+        label: "Camera",
+        moniker: "camera_device.cmx",
+    },
+    {
+        id: 197,
+        label: "BT Gap",
+        moniker: "core/bluetooth-core/bt-gap",
+    },
+    {
+        id: 198,
+        label: "BT RF Comm",
+        moniker: "core/bluetooth-core/bt-rfcomm",
+    },
+    {
+        id: 199,
+        label: "WeaveStack",
+        moniker: "core/weavestack",
+    },
+    {
+        id: 200,
+        label: "LoWPAN Service",
+        moniker: "lowpanservice.cmx",
+    },
+    {
+        id: 201,
+        label: "Media Session",
+        moniker: "mediasession.cmx",
+    },
+    {
+        id: 202,
+        label: "Stash 2",
+        moniker: "core/stash2",
+    },
+    {
+        id: 203,
+        label: "Session Manager",
+        moniker: "sessionmgr.cmx",
+    },
+    {
+        id: 204,
+        label: "Factory Store Providers",
+        moniker: "factory_store_providers.cmx",
+    },
+    {
+        id: 205,
+        label: "Spinel Driver",
+        moniker: "lowpan-spinel-driver.cmx",
+    },
+    {
+        id: 206,
+        label: "TEE Manager",
+        moniker: "tee_manager.cmx",
+    },
+    {
+        id: 207,
+        label: "Emergency",
+        moniker: "core/emergency",
+    },
+    {
+        id: 208,
+        label: "Factory Reset",
+        moniker: "core/factory_reset",
+    },
+    {
+        id: 209,
+        label: "Network TUN",
+        moniker: "core/network-tun",
+    },
+    {
+        id: 210,
+        label: "Sound Player",
+        moniker: "core/soundplayer",
+    },
+    {
+        id: 211,
+        label: "Component Manager",
+        moniker: "<component_manager>",
+    },
+    {
+        id: 212,
+        label: "Sys Manager",
+        moniker: "sysmgr.cmx",
+    },
 ]
