@@ -843,6 +843,13 @@ impl Right {
 ///
 /// [doc-static-children]: /docs/concepts/components/v2/realms.md#static-children
 /// [doc-collections]: /docs/concepts/components/v2/realms.md#collections
+/// [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+/// [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
+/// [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
+/// [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+/// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
+/// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
+/// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
 ///
 /// ## Top-level keys
 #[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
@@ -1033,91 +1040,10 @@ pub struct Document {
     /// Capabilities that are [offered](#offer) or [exposed](#expose) from `self` must be declared
     /// here.
     ///
-    /// These capabilities often map to a node in the
-    /// [outgoing directory][glossary.outgoing directory].
+    /// One and only one of the capability type keys (`protocol`, `directory`, `service`, ...) is required.
     ///
-    /// Each entry in `capabilities` must conform to one of the following schemas:
-    ///
-    /// -   [`protocol`](#capability-protocol)
-    /// -   [`directory`](#capability-directory)
-    /// -   [`storage`](#capability-storage)
-    /// -   [`runner`](#capability-runner)
-    /// -   [`resolver`](#capability-resolver)
-    ///
-    /// # protocol {#capability-protocol}
-    ///
-    /// A definition of a [protocol capability][doc-protocol].
-    ///
-    /// -   `protocol`: The [name](#name) for this protocol capability, or
-    ///     an array of names to define multiple protocols.
-    /// -   `path` _(optional)_: The path in the component's outgoing directory from
-    ///     which this protocol is served. Only supported when `protocol` is a single
-    ///     name. Defaults to `/svc/${protocol}`.
-    ///
-    /// # directory {#capability-directory}
-    ///
-    /// A definition of a [directory capability][doc-directory].
-    ///
-    /// -   `directory`: The [name](#name) for this directory capability.
-    /// -   `subdir` _(optional)_: A subdirectory within the source component's
-    ///     directory capability. This will expose only the given subdirectory as the
-    ///     root of the target directory capability. If absent, the source directory's
-    ///     root will be exposed.
-    /// -   `path`: The path in the component's outgoing directory from which this
-    ///     directory is served.
-    /// -   `rights`: The maximum [directory rights][doc-directory-rights] that may be set
-    ///     when using this directory.
-    ///
-    /// # storage {#capability-storage}
-    ///
-    /// A definition of a [storage capability][doc-storage].
-    ///
-    /// -   `storage`: The [name](#name) for this storage capability.
-    /// -   `from`: The source of the existing directory capability backing this storage
-    ///     capability, one of:
-    ///     -   `parent`: The component's parent.
-    ///     -   `self`: This component.
-    ///     -   `#<child-name>`: A [reference](#references) to a child component
-    ///         instance.
-    /// -   `backing_dir`: The [name](#name) of the directory backing the
-    ///     storage.
-    /// -   `subdir`: The subdirectory within `backing_dir` where per-component isolated
-    ///     storage directories are created.
-    /// -   `storage_id`: The identifier used to isolated storage for a component, one
-    ///     of:
-    ///     -   `static_instance_id`: The instance ID in the component ID index is used
-    ///         as the key for a component's storage. Components which are not listed in
-    ///         the component ID index will not be able to use this storage capability.
-    ///     -   `static_instance_id_or_moniker`: If the component is listed in the
-    ///         component ID index, the instance ID is used as the key for a component's
-    ///         storage. Otherwise, the component's relative moniker from the storage
-    ///         capability is used.
-    ///
-    /// # runner {#capability-runner}
-    ///
-    /// A definition of a [runner capability][doc-runners].
-    ///
-    /// -   `runner`: The [name](#name) for this runner capability.
-    /// -   `path`: The path in the component's outgoing directory from which the
-    ///     `fuchsia.component.runner.ComponentRunner` protocol is served.
-    ///
-    /// # resolver {#capability-resolver}
-    ///
-    /// A definition of a [resolver capability][doc-resolvers].
-    ///
-    /// -   `resolver`: The [name](#name) for this resolver capability.
-    /// -   `path`: The path in the component's outgoing directory from which the
-    ///     `fuchsia.sys2.ComponentResolver` protocol is served.
-    ///
-    /// [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
-    /// [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
-    /// [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
-    /// [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
-    /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
-    /// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
-    /// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
     /// [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
-    #[reference_doc(json_type = "object")]
+    #[reference_doc(recurse)]
     pub capabilities: Option<Vec<Capability>>,
 
     /// For executable components, declares capabilities that this
@@ -1896,22 +1822,81 @@ pub struct ResolverRegistration {
     pub scheme: cm_types::UrlScheme,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone, ReferenceDoc)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list")]
 pub struct Capability {
+    /// The [name](#name) for this service capability. Specifying `path` is valid
+    /// only when this value is a string.
     pub service: Option<OneOrMany<Name>>,
+
+    /// The [name](#name) for this protocol capability. Specifying `path` is valid
+    /// only when this value is a string.
     pub protocol: Option<OneOrMany<Name>>,
+
+    /// The [name](#name) for this directory capability.
     pub directory: Option<Name>,
+
+    /// The [name](#name) for this storage capability.
     pub storage: Option<Name>,
+
+    /// The [name](#name) for this runner capability.
     pub runner: Option<Name>,
+
+    /// The [name](#name) for this resolver capability.
     pub resolver: Option<Name>,
+
+    /// The [name](#name) for this event capability.
     pub event: Option<Name>,
+
+    /// The [name](#name) for this event_stream capability.
     pub event_stream: Option<OneOrMany<Name>>,
-    pub from: Option<CapabilityFromRef>,
+
+    /// The path within the [outgoing directory][glossary.outgoing directory] of the component's
+    /// program to source the capability.
+    ///
+    /// For `protocol` and `service`, defaults to `/svc/${protocol}`, otherwise required.
+    ///
+    /// For `protocol`, the target of the path MUST be a channel, which tends to speak
+    /// the protocol matching the name of this capability.
+    ///
+    /// For `service`, `directory`, the target of the path MUST be a directory.
+    ///
+    /// For `runner`, the target of the path MUST be a channel and MUST speak
+    /// the protocol `fuchsia.component.runner.ComponentRunner`.
+    ///
+    /// For `resolver`, the target of the path MUST be a channel and MUST speak
+    /// the protocol `fuchsia.sys2.ComponentResolver`.
     pub path: Option<Path>,
+
+    /// (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set
+    /// when using this directory.
     pub rights: Option<Rights>,
+
+    /// (`storage` only) The source component of an existing directory capability backing this
+    /// storage capability, one of:
+    /// -   `parent`: The component's parent.
+    /// -   `self`: This component.
+    /// -   `#<child-name>`: A [reference](#references) to a child component
+    ///     instance.
+    pub from: Option<CapabilityFromRef>,
+
+    /// (`storage` only) The [name](#name) of the directory capability backing the storage. The
+    /// capability must be available from the component referenced in `from`.
     pub backing_dir: Option<Name>,
+
+    /// (`storage` only) A subdirectory within `backing_dir` where per-component isolated storage
+    /// directories are created
     pub subdir: Option<RelativePath>,
+
+    /// (`storage only`) The identifier used to isolated storage for a component, one of:
+    /// -   `static_instance_id`: The instance ID in the component ID index is used
+    ///     as the key for a component's storage. Components which are not listed in
+    ///     the component ID index will not be able to use this storage capability.
+    /// -   `static_instance_id_or_moniker`: If the component is listed in the
+    ///     component ID index, the instance ID is used as the key for a component's
+    ///     storage. Otherwise, the component's relative moniker from the storage
+    ///     capability is used.
     pub storage_id: Option<StorageId>,
 }
 

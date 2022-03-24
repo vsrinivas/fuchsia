@@ -411,7 +411,7 @@ fn indent_lines_with_spaces(s: &str, n: usize, ignore_first: usize) -> String {
             .enumerate()
             .map(
                 |(i, part)| {
-                    if i < ignore_first {
+                    if i < ignore_first || part.is_empty() {
                         part.to_string()
                     } else {
                         prefix.clone() + part
