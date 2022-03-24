@@ -258,8 +258,10 @@ pub fn is_derive_debug(maybe_attrs: &Option<Vec<Attribute>>) -> Result<bool, Err
 }
 
 pub fn for_banjo_transport(maybe_attrs: &Option<Vec<Attribute>>) -> bool {
-    apply_to_attr(maybe_attrs, ATTR_NAME_TRANSPORT, |_, attr_value| attr_value == "Banjo")
-        .unwrap_or(false)
+    apply_to_attr(maybe_attrs, ATTR_NAME_TRANSPORT, |_, attr_value| {
+        attr_value == "Banjo" || attr_value == "Driver"
+    })
+    .unwrap_or(false)
 }
 
 //---------------------------------------------

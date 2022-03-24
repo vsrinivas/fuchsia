@@ -80,6 +80,18 @@ constexpr void CheckSynchronousBaseProtocolSubclass() {
 
 }
 
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_driver_transport_protocol_status, DriverTransportStatus,
+        zx_status_t (C::*)(zx_status_t status));
+
+
+template <typename D>
+constexpr void CheckDriverTransportProtocolSubclass() {
+    static_assert(internal::has_driver_transport_protocol_status<D>::value,
+        "DriverTransportProtocol subclasses must implement "
+        "zx_status_t DriverTransportStatus(zx_status_t status);");
+
+}
+
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_status, AsyncBaseStatus,
         void (C::*)(zx_status_t status, async_base_status_callback callback, void* cookie));
 

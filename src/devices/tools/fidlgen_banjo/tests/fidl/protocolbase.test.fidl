@@ -188,3 +188,12 @@ protocol WrongTransport {
         off_2 zx.off;
     });
 };
+
+@transport("Driver")
+protocol DriverTransport {
+    Status(struct {
+        status zx.status;
+    }) -> (struct {
+        status zx.status;
+    });
+};

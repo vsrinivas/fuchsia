@@ -175,6 +175,54 @@ private:
     const synchronous_base_protocol_t proto_;
 };
 
+// This class mocks a device by providing a driver_transport_protocol_t.
+// Users can set expectations on how the protocol ops are called and what values they return. After
+// the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.
+// See the following example test:
+//
+// ddk::MockDriverTransport driver_transport;
+//
+// /* Set some expectations on the device by calling driver_transport.Expect... methods. */
+//
+// SomeDriver dut(driver_transport.GetProto());
+//
+// EXPECT_OK(dut.SomeMethod());
+// ASSERT_NO_FATAL_FAILURES(driver_transport.VerifyAndClear());
+//
+// Note that users must provide the equality operator for struct types, for example:
+// bool operator==(const a_struct_type& lhs, const a_struct_type& rhs)
+
+class MockDriverTransport : ddk::DriverTransportProtocol<MockDriverTransport> {
+public:
+    MockDriverTransport() : proto_{&driver_transport_protocol_ops_, this} {}
+
+    virtual ~MockDriverTransport() {}
+
+    const driver_transport_protocol_t* GetProto() const { return &proto_; }
+
+    virtual MockDriverTransport& ExpectStatus(zx_status_t out_status, zx_status_t status) {
+        mock_status_.ExpectCall({out_status}, status);
+        return *this;
+    }
+
+    void VerifyAndClear() {
+        mock_status_.VerifyAndClear();
+    }
+
+    virtual zx_status_t DriverTransportStatus(zx_status_t status) {
+        std::tuple<zx_status_t> ret = mock_status_.Call(status);
+        return std::get<0>(ret);
+    }
+
+    mock_function::MockFunction<std::tuple<zx_status_t>, zx_status_t>& mock_status() { return mock_status_; }
+
+protected:
+    mock_function::MockFunction<std::tuple<zx_status_t>, zx_status_t> mock_status_;
+
+private:
+    const driver_transport_protocol_t proto_;
+};
+
 // This class mocks a device by providing a async_base_protocol_t.
 // Users can set expectations on how the protocol ops are called and what values they return. After
 // the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.

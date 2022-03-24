@@ -63,6 +63,32 @@
 // };
 // :: Proxies ::
 //
+// ddk::DriverTransportProtocolClient is a simple wrapper around
+// driver_transport_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::DriverTransportProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the driver-transport protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_DRIVER_TRANSPORT device.
+// class DriverTransportDevice;
+// using DriverTransportDeviceType = ddk::Device<DriverTransportDevice, /* ddk mixins */>;
+//
+// class DriverTransportDevice : public DriverTransportDeviceType,
+//                      public ddk::DriverTransportProtocol<DriverTransportDevice> {
+//   public:
+//     DriverTransportDevice(zx_device_t* parent)
+//         : DriverTransportDeviceType(parent) {}
+//
+//     zx_status_t DriverTransportStatus(zx_status_t status);
+//
+//     ...
+// };
+// :: Proxies ::
+//
 // ddk::AsyncBaseProtocolClient is a simple wrapper around
 // async_base_protocol_t. It does not own the pointers passed to it.
 //
@@ -281,6 +307,112 @@ public:
 
 private:
     synchronous_base_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+template <typename D, typename Base = internal::base_mixin>
+class DriverTransportProtocol : public Base {
+public:
+    DriverTransportProtocol() {
+        internal::CheckDriverTransportProtocolSubclass<D>();
+        driver_transport_protocol_ops_.status = DriverTransportStatus;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_DRIVER_TRANSPORT;
+            dev->ddk_proto_ops_ = &driver_transport_protocol_ops_;
+        }
+    }
+
+protected:
+    driver_transport_protocol_ops_t driver_transport_protocol_ops_ = {};
+
+private:
+    static zx_status_t DriverTransportStatus(void* ctx, zx_status_t status) {
+        auto ret = static_cast<D*>(ctx)->DriverTransportStatus(status);
+        return ret;
+    }
+};
+
+class DriverTransportProtocolClient {
+public:
+    DriverTransportProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    DriverTransportProtocolClient(const driver_transport_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    DriverTransportProtocolClient(zx_device_t* parent) {
+        driver_transport_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_DRIVER_TRANSPORT, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    DriverTransportProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        driver_transport_protocol_t proto;
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_DRIVER_TRANSPORT, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a DriverTransportProtocolClient from the given parent device + "fragment".
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        DriverTransportProtocolClient* result) {
+        driver_transport_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_DRIVER_TRANSPORT, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = DriverTransportProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    // Create a DriverTransportProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        DriverTransportProtocolClient* result) {
+        driver_transport_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_DRIVER_TRANSPORT, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = DriverTransportProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    void GetProto(driver_transport_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    zx_status_t Status(zx_status_t status) const {
+        return ops_->status(ctx_, status);
+    }
+
+private:
+    driver_transport_protocol_ops_t* ops_;
     void* ctx_;
 };
 

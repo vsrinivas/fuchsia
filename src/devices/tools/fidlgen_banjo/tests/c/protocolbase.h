@@ -17,6 +17,8 @@ __BEGIN_CDECLS
 
 typedef struct synchronous_base_protocol synchronous_base_protocol_t;
 typedef struct synchronous_base_protocol_ops synchronous_base_protocol_ops_t;
+typedef struct driver_transport_protocol driver_transport_protocol_t;
+typedef struct driver_transport_protocol_ops driver_transport_protocol_ops_t;
 typedef void (*async_base_status_callback)(void* ctx, zx_status_t status, zx_status_t status_2);
 typedef void (*async_base_time_callback)(void* ctx, zx_time_t time, zx_time_t time_2);
 typedef void (*async_base_duration_callback)(void* ctx, zx_duration_t duration, zx_duration_t duration_2);
@@ -46,6 +48,16 @@ struct synchronous_base_protocol_ops {
 
 struct synchronous_base_protocol {
     synchronous_base_protocol_ops_t* ops;
+    void* ctx;
+};
+
+struct driver_transport_protocol_ops {
+    zx_status_t (*status)(void* ctx, zx_status_t status);
+};
+
+
+struct driver_transport_protocol {
+    driver_transport_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -104,6 +116,10 @@ static inline zx_gpaddr_t synchronous_base_gpaddr(const synchronous_base_protoco
 
 static inline zx_off_t synchronous_base_off(const synchronous_base_protocol_t* proto, zx_off_t off, zx_off_t* out_off_2) {
     return proto->ops->off(proto->ctx, off, out_off_2);
+}
+
+static inline zx_status_t driver_transport_status(const driver_transport_protocol_t* proto, zx_status_t status) {
+    return proto->ops->status(proto->ctx, status);
 }
 
 static inline void async_base_status(const async_base_protocol_t* proto, zx_status_t status, async_base_status_callback callback, void* cookie) {
