@@ -160,6 +160,7 @@ pub fn map_elf_segments(
     mapper_base: usize,
     vaddr_bias: usize,
 ) -> Result<(), ElfLoadError> {
+    let page_size = zx::system_get_page_size() as usize;
     // We intentionally use wrapping subtraction here, in case the ELF file happens to use vaddr's
     // that are higher than the VMAR base chosen by the kernel. Wrapping addition will be used when
     // adding this bias to vaddr values.
@@ -243,6 +244,8 @@ pub fn map_elf_segments(
                 anon_vmo
                     .set_name(&vmo_name_with_prefix(&vmo_name, VMO_NAME_PREFIX_BSS))
                     .map_err(ElfLoadError::SetVmoName)?;
+                let mut page_buf = Vec::with_capacity(page_size);
+                page_buf.resize(page_size, 0u8);
                 mapper
                     .map(virt_addr + bss_vmo_start, &anon_vmo, 0, bss_vmo_size, flags)
                     .map_err(ElfLoadError::VmarMap)?;
@@ -311,7 +314,7 @@ fn elf_to_vmar_perm_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
 mod tests {
     use {
         super::*, crate::elf_parse, anyhow::Error, assert_matches::assert_matches,
-        fidl::HandleBased, std::cell::RefCell, std::mem::size_of,
+        fidl::HandleBased, lazy_static::lazy_static, std::cell::RefCell, std::mem::size_of,
     };
 
     #[test]
@@ -437,30 +440,36 @@ mod tests {
     fn map_read_only_with_page_unaligned_bss() {
         const ELF_DATA: &[u8; 8] = b"FUCHSIA!";
 
-        /// Contains a PT_LOAD segment where the filesz is less than memsz (BSS).
-        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
-            &[elf_parse::Elf64ProgramHeader {
-                segment_type: elf_parse::SegmentType::Load as u32,
-                flags: elf_parse::SegmentFlags::from_bits_truncate(
-                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
-                )
-                .bits(),
-                offset: util::PAGE_SIZE,
-                vaddr: 0x10000,
-                paddr: 0x10000,
-                filesz: ELF_DATA.len() as u64,
-                memsz: 0x100,
-                align: util::PAGE_SIZE as u64,
-            }];
-
-        let headers =
-            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
-        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        // Contains a PT_LOAD segment where the filesz is less than memsz (BSS).
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::READ.bits()
+                            | elf_parse::SegmentFlags::EXECUTE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: ELF_DATA.len() as u64,
+                    memsz: 0x100,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
 
         // Fill the VMO with 0xff, so that we can verify that the BSS section is correctly zeroed.
-        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+        let data = vec![0xff; *PAGE_SIZE * 2];
+        vmo.write(&data, 0).expect("fill VMO with 0xff");
         // Write the PT_LOAD segment's data at the defined offset.
-        vmo.write(ELF_DATA, util::PAGE_SIZE as u64).expect("write data to VMO");
+        vmo.write(ELF_DATA, *PAGE_SIZE as u64).expect("write data to VMO");
 
         // Remove the ZX_RIGHT_WRITE right. Page zeroing should happen in a COW VMO.
         let vmo =
@@ -475,7 +484,7 @@ mod tests {
         let mapping = mapping_iter.next().expect("mapping from ELF VMO");
 
         // Read a page of data that was "mapped".
-        let mut data = [0; util::PAGE_SIZE];
+        let mut data = vec![0; *PAGE_SIZE];
         mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read VMO");
 
         // Construct the expected memory, which is ASCII "FUCHSIA!" followed by 0s for the rest of
@@ -483,7 +492,7 @@ mod tests {
         let expected = ELF_DATA
             .into_iter()
             .cloned()
-            .chain(std::iter::repeat(0).take(util::PAGE_SIZE - ELF_DATA.len()))
+            .chain(std::iter::repeat(0).take(*PAGE_SIZE - ELF_DATA.len()))
             .collect::<Vec<u8>>();
 
         assert_eq!(&expected, &data);
@@ -495,25 +504,32 @@ mod tests {
     #[test]
     fn map_read_only_vmo_with_page_aligned_bss() {
         // Contains a PT_LOAD segment where the BSS starts at a page boundary.
-        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
-            &[elf_parse::Elf64ProgramHeader {
-                segment_type: elf_parse::SegmentType::Load as u32,
-                flags: elf_parse::SegmentFlags::from_bits_truncate(
-                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
-                )
-                .bits(),
-                offset: util::PAGE_SIZE,
-                vaddr: 0x10000,
-                paddr: 0x10000,
-                filesz: util::PAGE_SIZE as u64,
-                memsz: util::PAGE_SIZE as u64 * 2,
-                align: util::PAGE_SIZE as u64,
-            }];
-        let headers =
-            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
-        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::READ.bits()
+                            | elf_parse::SegmentFlags::EXECUTE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE as usize,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: *PAGE_SIZE as u64,
+                    memsz: *PAGE_SIZE as u64 * 2,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
         // Fill the VMO with 0xff, so we can verify the BSS section is correctly allocated.
-        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+        let pattern = vec![0xff; *PAGE_SIZE * 2];
+        vmo.write(&pattern, 0).expect("fill VMO with 0xff");
 
         // Remove the ZX_RIGHT_WRITE right. Since the BSS ends at a page boundary, we shouldn't
         // need to zero out any of the pages in this VMO.
@@ -531,17 +547,18 @@ mod tests {
         let mapping = mapping_iter.next().expect("mapping from ELF VMO");
         assert_eq!(mapping.vmo.get_koid().unwrap(), vmo.get_koid().unwrap());
 
-        let mut data = [0u8; util::PAGE_SIZE];
+        let mut data = vec![0; *PAGE_SIZE];
 
         // Ensure the first page is from the ELF.
         mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read ELF VMO");
-        assert_eq!(&data, &[0xffu8; util::PAGE_SIZE]);
+        assert_eq!(&data, &pattern[0..*PAGE_SIZE]);
 
         let mapping = mapping_iter.next().expect("mapping from BSS VMO");
 
         // Ensure the second page is BSS.
         mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read BSS VMO");
-        assert_eq!(&data, &[0u8; util::PAGE_SIZE]);
+        let zero = vec![0; *PAGE_SIZE];
+        assert_eq!(&data, &zero);
 
         // No more mappings expected.
         assert_matches!(mapping_iter.next(), None);
@@ -550,25 +567,32 @@ mod tests {
     #[test]
     fn map_read_only_vmo_with_no_bss() {
         // Contains a PT_LOAD segment where there is no BSS.
-        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
-            &[elf_parse::Elf64ProgramHeader {
-                segment_type: elf_parse::SegmentType::Load as u32,
-                flags: elf_parse::SegmentFlags::from_bits_truncate(
-                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::EXECUTE.bits(),
-                )
-                .bits(),
-                offset: util::PAGE_SIZE,
-                vaddr: 0x10000,
-                paddr: 0x10000,
-                filesz: util::PAGE_SIZE as u64,
-                memsz: util::PAGE_SIZE as u64,
-                align: util::PAGE_SIZE as u64,
-            }];
-        let headers =
-            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
-        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::READ.bits()
+                            | elf_parse::SegmentFlags::EXECUTE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE as usize,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: *PAGE_SIZE as u64,
+                    memsz: *PAGE_SIZE as u64,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
         // Fill the VMO with 0xff, so we can verify the BSS section is correctly allocated.
-        vmo.write(&[0xff; util::PAGE_SIZE * 2], 0).expect("fill VMO with 0xff");
+        let pattern = vec![0xff; *PAGE_SIZE * 2];
+        vmo.write(&pattern, 0).expect("fill VMO with 0xff");
 
         // Remove the ZX_RIGHT_WRITE right. Since the BSS ends at a page boundary, we shouldn't
         // need to zero out any of the pages in this VMO.
@@ -586,11 +610,11 @@ mod tests {
         let mapping = mapping_iter.next().expect("mapping from ELF VMO");
         assert_eq!(mapping.vmo.get_koid().unwrap(), vmo.get_koid().unwrap());
 
-        let mut data = [0u8; util::PAGE_SIZE];
+        let mut data = vec![0; *PAGE_SIZE];
 
         // Ensure the first page is from the ELF.
         mapping.vmo.read(&mut data, mapping.vmo_offset).expect("read ELF VMO");
-        assert_eq!(&data, &[0xffu8; util::PAGE_SIZE]);
+        assert_eq!(&data, &pattern[0..*PAGE_SIZE]);
 
         // No more mappings expected.
         assert_matches!(mapping_iter.next(), None);
@@ -599,23 +623,29 @@ mod tests {
     #[test]
     fn map_read_only_vmo_with_write_flag() {
         // Contains a PT_LOAD segment where there is no BSS.
-        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
-            &[elf_parse::Elf64ProgramHeader {
-                segment_type: elf_parse::SegmentType::Load as u32,
-                flags: elf_parse::SegmentFlags::from_bits_truncate(
-                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::WRITE.bits(),
-                )
-                .bits(),
-                offset: util::PAGE_SIZE,
-                vaddr: 0x10000,
-                paddr: 0x10000,
-                filesz: util::PAGE_SIZE as u64,
-                memsz: util::PAGE_SIZE as u64,
-                align: util::PAGE_SIZE as u64,
-            }];
-        let headers =
-            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
-        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::READ.bits()
+                            | elf_parse::SegmentFlags::WRITE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE as usize,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: *PAGE_SIZE as u64,
+                    memsz: *PAGE_SIZE as u64,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
 
         // Remove the ZX_RIGHT_WRITE right. Since the segment has a WRITE flag, a COW child VMO
         // will be created.
@@ -643,23 +673,29 @@ mod tests {
     #[test]
     fn segment_with_zero_file_size() {
         // Contains a PT_LOAD segment whose filesz is 0.
-        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
-            &[elf_parse::Elf64ProgramHeader {
-                segment_type: elf_parse::SegmentType::Load as u32,
-                flags: elf_parse::SegmentFlags::from_bits_truncate(
-                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::WRITE.bits(),
-                )
-                .bits(),
-                offset: util::PAGE_SIZE,
-                vaddr: 0x10000,
-                paddr: 0x10000,
-                filesz: 0,
-                memsz: 1,
-                align: util::PAGE_SIZE as u64,
-            }];
-        let headers =
-            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
-        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+        lazy_static! {
+            static ref PAGE_SIZE: usize = zx::system_get_page_size() as usize;
+            static ref ELF_PROGRAM_HEADER: elf_parse::Elf64ProgramHeader =
+                elf_parse::Elf64ProgramHeader {
+                    segment_type: elf_parse::SegmentType::Load as u32,
+                    flags: elf_parse::SegmentFlags::from_bits_truncate(
+                        elf_parse::SegmentFlags::READ.bits()
+                            | elf_parse::SegmentFlags::WRITE.bits(),
+                    )
+                    .bits(),
+                    offset: *PAGE_SIZE as usize,
+                    vaddr: 0x10000,
+                    paddr: 0x10000,
+                    filesz: 0,
+                    memsz: 1,
+                    align: *PAGE_SIZE as u64,
+                };
+        }
+        let headers = elf_parse::Elf64Headers::new_for_test(
+            ELF_FILE_HEADER,
+            Some(std::slice::from_ref(&ELF_PROGRAM_HEADER)),
+        );
+        let vmo = zx::Vmo::create(*PAGE_SIZE as u64 * 2).expect("create VMO");
 
         let mapper = TrackingMapper::new();
         map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");

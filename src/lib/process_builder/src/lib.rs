@@ -1205,12 +1205,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_big_stack() -> Result<(), Error> {
-        const STACK_SIZE: usize = util::PAGE_SIZE * 10;
+        let stack_size: usize = zx::system_get_page_size() as usize * 10;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
-        builder.set_min_stack_size(STACK_SIZE);
+        builder.set_min_stack_size(stack_size);
         let built = builder.build().await?;
-        assert!(built.stack_vmo.get_size()? >= STACK_SIZE as u64);
+        assert!(built.stack_vmo.get_size()? >= stack_size as u64);
 
         let process = built.start()?;
         check_process_running(&process)?;

@@ -8,7 +8,6 @@
 #![allow(missing_docs)]
 
 use {
-    crate::util,
     bitflags::bitflags,
     fuchsia_zircon as zx,
     num_derive::FromPrimitive,
@@ -356,6 +355,7 @@ impl Elf64ProgramHeader {
 
 impl Validate for [Elf64ProgramHeader] {
     fn validate(&self) -> Result<(), ElfParseError> {
+        let page_size = zx::system_get_page_size() as usize;
         let mut vaddr_high: usize = 0;
         for hdr in self {
             if hdr.filesz > hdr.memsz {
@@ -373,7 +373,7 @@ impl Validate for [Elf64ProgramHeader] {
                     vaddr_high = hdr.vaddr + hdr.memsz as usize;
 
                     // Segment alignment should be a multiple of the system page size.
-                    if hdr.align % util::PAGE_SIZE as u64 != 0 {
+                    if hdr.align % page_size as u64 != 0 {
                         return Err(ElfParseError::InvalidProgramHeader(
                             "Alignment must be multiple of the system page size",
                         ));
@@ -601,10 +601,11 @@ mod tests {
 
     #[test]
     fn test_parse_program_header_bad_alignment() {
+        let page_size = zx::system_get_page_size() as usize;
         let headers = [Elf64ProgramHeader {
             segment_type: SegmentType::Load as u32,
             flags: (SegmentFlags::READ | SegmentFlags::EXECUTE).bits,
-            align: util::PAGE_SIZE as u64 + 1024,
+            align: page_size as u64 + 1024,
             offset: 0x1000,
             vaddr: 0x1000,
             paddr: 0x1000,
@@ -621,10 +622,11 @@ mod tests {
 
     #[test]
     fn test_parse_program_header_bad_offset_and_vaddr() {
+        let page_size = zx::system_get_page_size() as usize;
         let headers = [Elf64ProgramHeader {
             segment_type: SegmentType::Load as u32,
             flags: (SegmentFlags::READ | SegmentFlags::EXECUTE).bits,
-            align: util::PAGE_SIZE as u64,
+            align: page_size as u64,
             offset: 0x1001,
             vaddr: 0x1002,
             paddr: 0x1000,
