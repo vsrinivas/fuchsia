@@ -186,6 +186,16 @@
         },
         {
             "event_codes": [
+                1,
+                2,
+                0
+            ],
+            "metric_id": 11,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:interrogation_complete_count"
+        },
+        {
+            "event_codes": [
                 0,
                 0,
                 1
