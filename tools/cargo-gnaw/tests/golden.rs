@@ -76,49 +76,49 @@ fn main() {
         manifest_path: Vec<&'static str>,
         /// Expected file (`BUILD.gn`); relative to the base test directory.
         golden_expected_filename: Vec<&'static str>,
-        /// If set, the flag `--skip-root` is added to `cargo_gnaw` invocation.
-        skip_root: bool,
+        /// Extra arguments to pass to gnaw.
+        extra_args: Vec<&'static str>,
     }
 
     let tests = vec![
         TestCase {
             manifest_path: vec!["simple", "Cargo.toml"],
             golden_expected_filename: vec!["simple", "BUILD.gn"],
-            skip_root: false,
+            extra_args: vec![],
         },
         TestCase {
             manifest_path: vec!["simple_deps", "Cargo.toml"],
             golden_expected_filename: vec!["simple_deps", "BUILD.gn"],
-            skip_root: false,
+            extra_args: vec![],
         },
         TestCase {
             manifest_path: vec!["simple_deps", "Cargo.toml"],
             golden_expected_filename: vec!["simple_deps", "BUILD_WITH_NO_ROOT.gn"],
-            skip_root: true,
+            extra_args: vec!["--skip-root"],
         },
         TestCase {
             manifest_path: vec!["platform_deps", "Cargo.toml"],
             golden_expected_filename: vec!["platform_deps", "BUILD.gn"],
-            skip_root: true,
+            extra_args: vec!["--skip-root"],
         },
         TestCase {
             manifest_path: vec!["binary", "Cargo.toml"],
             golden_expected_filename: vec!["binary", "BUILD.gn"],
-            skip_root: false,
+            extra_args: vec![],
         },
         TestCase {
             manifest_path: vec!["multiple_crate_types", "Cargo.toml"],
             golden_expected_filename: vec!["multiple_crate_types", "BUILD.gn"],
-            skip_root: false,
+            extra_args: vec![],
         },
         TestCase {
             manifest_path: vec!["feature_review", "Cargo.toml"],
             golden_expected_filename: vec!["feature_review", "BUILD.gn"],
-            skip_root: false,
+            extra_args: vec![],
         },
     ];
 
-    let run_gnaw = |manifest_path: &[&str], skip_root| {
+    let run_gnaw = |manifest_path: &[&str], extra_args: &[&str]| {
         let test_dir = tempfile::TempDir::new().unwrap();
         let mut manifest_path: PathBuf =
             test_dir.path().join(manifest_path.iter().collect::<PathBuf>());
@@ -156,9 +156,7 @@ fn main() {
             // is necessary here.
             absolute_cargo_binary_path.to_str().unwrap(),
         ];
-        if skip_root {
-            args.push("--skip-root");
-        }
+        args.extend(extra_args);
         gnaw_lib::run(&args)
             .with_context(|| format!("error running gnaw with args: {:?}\n\t", &args))?;
         let output = std::fs::read_to_string(&output)
@@ -168,7 +166,7 @@ fn main() {
     };
 
     for test in tests {
-        let output = run_gnaw(&test.manifest_path, test.skip_root)
+        let output = run_gnaw(&test.manifest_path, &test.extra_args)
             .with_context(|| format!("\n\ttest was: {:?}", &test))
             .expect("gnaw_lib::run should succeed");
 
@@ -195,31 +193,31 @@ fn main() {
         manifest_path: Vec<&'static str>,
         /// Expected string to search for in returned error.
         expected_error_substring: &'static str,
-        /// If set, the flag `--skip-root` is added to `cargo_gnaw` invocation.
-        skip_root: bool,
+        /// Extra arguments to pass to gnaw.
+        extra_args: Vec<&'static str>,
     }
     let tests = vec![
         ExpectFailCase {
             manifest_path: vec!["feature_review", "Cargo_unreviewed_feature.toml"],
             expected_error_substring:
                 "crate_with_features 0.1.0 is included with unreviewed features [\"feature1\"]",
-            skip_root: false,
+            extra_args: vec![],
         },
         ExpectFailCase {
             manifest_path: vec!["feature_review", "Cargo_missing_review.toml"],
             expected_error_substring:
                 "crate_with_features 0.1.0 requires feature review but reviewed features not found",
-            skip_root: false,
+            extra_args: vec![],
         },
         ExpectFailCase {
             manifest_path: vec!["feature_review", "Cargo_extra_review.toml"],
             expected_error_substring:
                 "crate_with_features 0.1.0 sets reviewed_features but crate_with_features was not found in require_feature_reviews",
-            skip_root: false,
+            extra_args: vec![],
         },
     ];
     for test in tests {
-        let result = run_gnaw(&test.manifest_path, test.skip_root);
+        let result = run_gnaw(&test.manifest_path, &test.extra_args);
         let error = match result {
             Ok(_) => panic!("gnaw unexpectedly succeeded for {:?}", test),
             Err(e) => e,
