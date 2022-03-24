@@ -25,6 +25,7 @@ version = "0.1.0"
 # Keep this sorted alphabetically, please.
 aes = { version = "0.7.5", features = ["armv8"] }
 aes-gcm = "0.9"
+aes-gcm-siv = "0.10.3"
 ansi_term = "0.11.0"
 anyhow = "1.0.38"
 arbitrary = { version = "1.0.3", features = ["derive"] }

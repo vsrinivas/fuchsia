@@ -12,6 +12,10 @@ group("aes-gcm") {
   public_deps = [ ":aes-gcm-v0_9_4" ]
 }
 
+group("aes-gcm-siv") {
+  public_deps = [ ":aes-gcm-siv-v0_10_3" ]
+}
+
 group("ansi_term") {
   public_deps = [ ":ansi_term-v0_11_0" ]
 }
@@ -1151,6 +1155,39 @@ rust_library("aes-gcm-v0_9_4") {
     "--edition=2018",
     "-Cmetadata=b3b4c1600168536c",
     "-Cextra-filename=-b3b4c1600168536c",
+    "--cfg=feature=\"aes\"",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"default\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("aes-gcm-siv-v0_10_3") {
+  crate_name = "aes_gcm_siv"
+  crate_root = "//third_party/rust_crates/vendor/aes-gcm-siv/src/lib.rs"
+  output_name = "aes_gcm_siv-bd7280f12b265dea"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":aead-v0_4_3" ]
+  deps += [ ":aes-v0_7_5" ]
+  deps += [ ":cipher-v0_3_0" ]
+  deps += [ ":ctr-v0_8_0" ]
+  deps += [ ":polyval-v0_5_3" ]
+  deps += [ ":subtle-v2_4_1" ]
+  deps += [ ":zeroize-v1_3_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=bd7280f12b265dea",
+    "-Cextra-filename=-bd7280f12b265dea",
     "--cfg=feature=\"aes\"",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
@@ -3201,7 +3238,7 @@ rust_library("crypto-bigint-v0_3_2") {
   deps += [ ":generic-array-v0_14_5" ]
   deps += [ ":rand_core-v0_6_3" ]
   deps += [ ":subtle-v2_4_1" ]
-  deps += [ ":zeroize-v1_5_3" ]
+  deps += [ ":zeroize-v1_3_0" ]
 
   rustenv = []
 
@@ -3933,7 +3970,7 @@ rust_library("elliptic-curve-v0_11_12") {
   deps += [ ":sec1-v0_2_1" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":subtle-v2_4_1" ]
-  deps += [ ":zeroize-v1_5_3" ]
+  deps += [ ":zeroize-v1_3_0" ]
 
   rustenv = []
 
@@ -7658,7 +7695,7 @@ rust_library("pkcs8-v0_8_0") {
   deps = []
   deps += [ ":der-v0_5_1" ]
   deps += [ ":spki-v0_5_4" ]
-  deps += [ ":zeroize-v1_5_3" ]
+  deps += [ ":zeroize-v1_3_0" ]
 
   rustenv = []
 
@@ -9039,7 +9076,7 @@ rust_library("rfc6979-v0_1_0") {
   deps = []
   deps += [ ":crypto-bigint-v0_3_2" ]
   deps += [ ":hmac-v0_11_0" ]
-  deps += [ ":zeroize-v1_5_3" ]
+  deps += [ ":zeroize-v1_3_0" ]
 
   rustenv = []
 
@@ -9851,7 +9888,7 @@ rust_library("sec1-v0_2_1") {
   deps += [ ":pkcs8-v0_8_0" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":subtle-v2_4_1" ]
-  deps += [ ":zeroize-v1_5_3" ]
+  deps += [ ":zeroize-v1_3_0" ]
 
   rustenv = []
 
@@ -13143,10 +13180,10 @@ rust_library("yaml-rust-v0_4_5") {
   visibility = [ ":*" ]
 }
 
-rust_library("zeroize-v1_5_3") {
+rust_library("zeroize-v1_3_0") {
   crate_name = "zeroize"
   crate_root = "//third_party/rust_crates/vendor/zeroize/src/lib.rs"
-  output_name = "zeroize-e20e6438ededcf5f"
+  output_name = "zeroize-2201a258b0081f1f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -13159,8 +13196,8 @@ rust_library("zeroize-v1_5_3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e20e6438ededcf5f",
-    "-Cextra-filename=-e20e6438ededcf5f",
+    "-Cmetadata=2201a258b0081f1f",
+    "-Cextra-filename=-2201a258b0081f1f",
     "--cfg=feature=\"alloc\"",
   ]
 

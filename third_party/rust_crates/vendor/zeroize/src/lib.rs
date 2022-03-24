@@ -1,13 +1,4 @@
-#![no_std]
-#![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(
-    html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
-    html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
-    html_root_url = "https://docs.rs/zeroize/1.5.3"
-)]
-#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
-
-//! Securely zero memory with a simple trait ([`Zeroize`]) built on stable Rust
+//! Securely zero memory with a simple trait ([Zeroize]) built on stable Rust
 //! primitives which guarantee the operation will not be "optimized away".
 //!
 //! ## About
@@ -17,8 +8,8 @@
 //! many documented "tricks" to attempt to avoid these optimizations and ensure
 //! that a zeroing routine is performed reliably.
 //!
-//! This crate isn't about tricks: it uses [`core::ptr::write_volatile`]
-//! and [`core::sync::atomic`] memory fences to provide easy-to-use, portable
+//! This crate isn't about tricks: it uses [core::ptr::write_volatile]
+//! and [core::sync::atomic] memory fences to provide easy-to-use, portable
 //! zeroing behavior which works on all of Rust's core number types and slices
 //! thereof, implemented in pure Rust with no usage of FFI or assembly.
 //!
@@ -31,7 +22,7 @@
 //!
 //! ## Minimum Supported Rust Version
 //!
-//! Requires Rust **1.51** or newer.
+//! Requires Rust **1.47** or newer.
 //!
 //! In the future, we reserve the right to change MSRV (i.e. MSRV is out-of-scope
 //! for this crate's SemVer guarantees), however when we do it will be accompanied
@@ -53,19 +44,19 @@
 //! }
 //! ```
 //!
-//! The [`Zeroize`] trait is impl'd on all of Rust's core scalar types including
+//! The [Zeroize] trait is impl'd on all of Rust's core scalar types including
 //! integers, floats, `bool`, and `char`.
 //!
 //! Additionally, it's implemented on slices and `IterMut`s of the above types.
 //!
 //! When the `alloc` feature is enabled (which it is by default), it's also
 //! impl'd for `Vec<T>` for the above types as well as `String`, where it provides
-//! [`Vec::clear`] / [`String::clear`]-like behavior (truncating to zero-length)
+//! [Vec::clear()] / [String::clear()]-like behavior (truncating to zero-length)
 //! but ensures the backing memory is securely zeroed with some caveats.
 //! (NOTE: see "Stack/Heap Zeroing Notes" for important `Vec`/`String` details)
 //!
-//! The [`DefaultIsZeroes`] marker trait can be impl'd on types which also
-//! impl [`Default`], which implements [`Zeroize`] by overwriting a value with
+//! The [DefaultIsZeroes] marker trait can be impl'd on types which also
+//! impl [Default], which implements [Zeroize] by overwriting a value with
 //! the default value.
 //!
 //! ## Custom Derive Support
@@ -75,30 +66,20 @@
 //! which automatically calls `zeroize()` on all members of a struct
 //! or tuple struct.
 //!
-//! Attributes supported for `Zeroize`:
+//! Additionally it supports the following attribute:
 //!
-//! On the item level:
-//! - `#[zeroize(drop)]`: *deprecated* use `ZeroizeOnDrop` instead
-//! - `#[zeroize(bound = "T: MyTrait")]`: this replaces any trait bounds
-//!   inferred by zeroize
-//!
-//! On the field level:
-//! - `#[zeroize(skip)]`: skips this field or variant when calling `zeroize()`
-//!
-//! Attributes supported for `ZeroizeOnDrop`:
-//!
-//! On the field level:
-//! - `#[zeroize(skip)]`: skips this field or variant when calling `zeroize()`
+//! - `#[zeroize(drop)]`: call `zeroize()` when this item is dropped
 //!
 //! Example which derives `Drop`:
 //!
 //! ```
-//! # #[cfg(feature = "zeroize_derive")]
+//! # #[cfg(feature = "derive")]
 //! # {
-//! use zeroize::{Zeroize, ZeroizeOnDrop};
+//! use zeroize::Zeroize;
 //!
 //! // This struct will be zeroized on drop
-//! #[derive(Zeroize, ZeroizeOnDrop)]
+//! #[derive(Zeroize)]
+//! #[zeroize(drop)]
 //! struct MyStruct([u8; 32]);
 //! # }
 //! ```
@@ -106,25 +87,12 @@
 //! Example which does not derive `Drop` (useful for e.g. `Copy` types)
 //!
 //! ```
-//! #[cfg(feature = "zeroize_derive")]
+//! #[cfg(feature = "derive")]
 //! # {
 //! use zeroize::Zeroize;
 //!
 //! // This struct will *NOT* be zeroized on drop
 //! #[derive(Copy, Clone, Zeroize)]
-//! struct MyStruct([u8; 32]);
-//! # }
-//! ```
-//!
-//! Example which only derives `Drop`:
-//!
-//! ```
-//! # #[cfg(feature = "zeroize_derive")]
-//! # {
-//! use zeroize::ZeroizeOnDrop;
-//!
-//! // This struct will be zeroized on drop
-//! #[derive(ZeroizeOnDrop)]
 //! struct MyStruct([u8; 32]);
 //! # }
 //! ```
@@ -167,11 +135,10 @@
 //! [these remarks have been removed] and the specific usage pattern in this
 //! crate is considered to be well-defined.
 //!
-//! Additionally this crate leverages [`core::sync::atomic::compiler_fence`]
-//! with the strictest ordering
-//! ([`Ordering::SeqCst`]) as a
-//! precaution to help ensure reads are not reordered before memory has been
-//! zeroed.
+//! Additionally this crate leverages [compiler_fence] from
+//! [core::sync::atomic] with the strictest ordering ([Ordering::SeqCst])
+//! as a precaution to help ensure reads are not reordered before memory has
+//! been zeroed.
 //!
 //! All of that said, there is still potential for microarchitectural attacks
 //! (ala Spectre/Meltdown) to leak "zeroized" secrets through covert channels.
@@ -185,12 +152,12 @@
 //! However, be aware several operations in Rust can unintentionally leave
 //! copies of data in memory. This includes but is not limited to:
 //!
-//! - Moves and [`Copy`]
-//! - Heap reallocation when using [`Vec`] and [`String`]
+//! - Moves and `Copy`
+//! - Heap reallocation when using `Vec` and `String`
 //! - Borrowers of a reference making copies of the data
 //!
-//! [`Pin`][`core::pin::Pin`] can be leveraged in conjunction with this crate
-//! to ensure data kept on the stack isn't moved.
+//! [`Pin`][pin] can be leveraged in conjunction with this crate to ensure
+//! data kept on the stack isn't moved.
 //!
 //! The `Zeroize` impls for `Vec` and `String` zeroize the entire capacity of
 //! their backing buffer, but cannot guarantee copies of the data were not
@@ -224,11 +191,25 @@
 //! `unsafe` memory protection systems and just trying to make the best memory
 //! zeroing crate available.
 //!
+//! [Zeroize]: https://docs.rs/zeroize/latest/zeroize/trait.Zeroize.html
 //! [Zeroing memory securely is hard]: http://www.daemonology.net/blog/2014-09-04-how-to-zero-a-buffer.html
+//! [Vec::clear()]: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.clear
+//! [String::clear()]: https://doc.rust-lang.org/std/string/struct.String.html#method.clear
+//! [DefaultIsZeroes]: https://docs.rs/zeroize/latest/zeroize/trait.DefaultIsZeroes.html
+//! [Default]: https://doc.rust-lang.org/std/default/trait.Default.html
+//! [core::ptr::write_volatile]: https://doc.rust-lang.org/core/ptr/fn.write_volatile.html
 //! [Unsafe Code Guidelines Working Group]: https://github.com/rust-lang/unsafe-code-guidelines
 //! [these remarks have been removed]: https://github.com/rust-lang/rust/pull/60972
+//! [core::sync::atomic]: https://doc.rust-lang.org/stable/core/sync/atomic/index.html
+//! [Ordering::SeqCst]: https://doc.rust-lang.org/std/sync/atomic/enum.Ordering.html#variant.SeqCst
+//! [compiler_fence]: https://doc.rust-lang.org/stable/core/sync/atomic/fn.compiler_fence.html
+//! [pin]: https://doc.rust-lang.org/std/pin/struct.Pin.html
 //! [good cryptographic hygiene]: https://github.com/veorq/cryptocoding#clean-memory-of-secret-data
-//! [`Ordering::SeqCst`]: core::sync::atomic::Ordering::SeqCst
+
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(html_root_url = "https://docs.rs/zeroize/1.3.0")]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(test, macro_use)]
@@ -236,17 +217,11 @@ extern crate alloc;
 
 #[cfg(feature = "zeroize_derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "zeroize_derive")))]
-pub use zeroize_derive::{Zeroize, ZeroizeOnDrop};
+pub use zeroize_derive::Zeroize;
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod x86;
 
-use core::marker::{PhantomData, PhantomPinned};
-use core::mem::{self, MaybeUninit};
-use core::num::{
-    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
-};
 use core::{ops, ptr, slice::IterMut, sync::atomic};
 
 #[cfg(feature = "alloc")]
@@ -257,34 +232,6 @@ pub trait Zeroize {
     /// Zero out this object from memory using Rust intrinsics which ensure the
     /// zeroization operation is not "optimized away" by the compiler.
     fn zeroize(&mut self);
-}
-
-/// Marker trait signifying that this type will [`zeroize`](Zeroize::zeroize) itself on [`Drop`].
-pub trait ZeroizeOnDrop {}
-
-#[doc(hidden)]
-pub mod __internal {
-    use super::*;
-
-    /// Auto-deref workaround for deriving `ZeroizeOnDrop`.
-    pub trait AssertZeroizeOnDrop {
-        fn zeroize_or_on_drop(self);
-    }
-
-    impl<T: ZeroizeOnDrop + ?Sized> AssertZeroizeOnDrop for &&mut T {
-        fn zeroize_or_on_drop(self) {}
-    }
-
-    /// Auto-deref workaround for deriving `ZeroizeOnDrop`.
-    pub trait AssertZeroize {
-        fn zeroize_or_on_drop(&mut self);
-    }
-
-    impl<T: Zeroize + ?Sized> AssertZeroize for T {
-        fn zeroize_or_on_drop(&mut self) {
-            self.zeroize()
-        }
-    }
 }
 
 /// Marker trait for types whose `Default` is the desired zeroization result
@@ -310,46 +257,28 @@ impl_zeroize_with_default!(i8, i16, i32, i64, i128, isize);
 impl_zeroize_with_default!(u8, u16, u32, u64, u128, usize);
 impl_zeroize_with_default!(f32, f64, char, bool);
 
-macro_rules! impl_zeroize_for_non_zero {
-    ($($type:ty),+) => {
-        $(impl Zeroize for $type
-        {
-            fn zeroize(&mut self) {
-                volatile_write(self, unsafe { <$type>::new_unchecked(1) });
-                atomic_fence();
-            }
-        })+
-    };
-}
-
-impl_zeroize_for_non_zero!(
-    NonZeroI8,
-    NonZeroI16,
-    NonZeroI32,
-    NonZeroI64,
-    NonZeroI128,
-    NonZeroIsize
-);
-impl_zeroize_for_non_zero!(
-    NonZeroU8,
-    NonZeroU16,
-    NonZeroU32,
-    NonZeroU64,
-    NonZeroU128,
-    NonZeroUsize
-);
-
 /// Implement `Zeroize` on arrays of types that impl `Zeroize`
-impl<Z, const N: usize> Zeroize for [Z; N]
-where
-    Z: Zeroize,
-{
-    fn zeroize(&mut self) {
-        self.iter_mut().zeroize();
-    }
+macro_rules! impl_zeroize_for_array {
+    ($($size:expr),+) => {
+        $(
+            impl<Z> Zeroize for [Z; $size]
+            where
+                Z: Zeroize
+            {
+                fn zeroize(&mut self) {
+                    self.iter_mut().zeroize();
+                }
+            }
+        )+
+     };
 }
-/// Implement `ZeroizeOnDrop` on arrays of types that impl `ZeroizeOnDrop`
-impl<Z, const N: usize> ZeroizeOnDrop for [Z; N] where Z: ZeroizeOnDrop {}
+
+// TODO(tarcieri): const generics
+impl_zeroize_for_array!(
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+    51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
+);
 
 impl<'a, Z> Zeroize for IterMut<'a, Z>
 where
@@ -385,7 +314,7 @@ where
         // The memory pointed to by `self` is valid for `mem::size_of::<Self>()` bytes.
         // It is also properly aligned, because `u8` has an alignment of `1`.
         unsafe {
-            volatile_set(self as *mut _ as *mut u8, 0, mem::size_of::<Self>());
+            volatile_set(self as *mut _ as *mut u8, 0, core::mem::size_of::<Self>());
         }
 
         // Ensures self is overwritten with the default bit pattern. volatile_write can't be
@@ -398,29 +327,6 @@ where
         // done so by take().
         unsafe { ptr::write_volatile(self, Option::default()) }
 
-        atomic_fence();
-    }
-}
-
-impl<Z> ZeroizeOnDrop for Option<Z> where Z: ZeroizeOnDrop {}
-
-/// Impl `Zeroize` on slices of MaybeUninit types
-/// This impl can eventually be optimized using an memset intrinsic,
-/// such as `core::intrinsics::volatile_set_memory`.
-/// This fills the slice with zeros
-/// Note that this ignore invariants that Z might have, because MaybeUninit removes all invariants.
-impl<Z> Zeroize for [MaybeUninit<Z>] {
-    fn zeroize(&mut self) {
-        let ptr = self.as_mut_ptr() as *mut MaybeUninit<u8>;
-        let size = self.len().checked_mul(mem::size_of::<Z>()).unwrap();
-        assert!(size <= core::isize::MAX as usize);
-        // Safety:
-        //
-        // This is safe, because every valid pointer is well aligned for u8
-        // and it is backed by a single allocated object for at least `self.len() * size_pf::<Z>()` bytes.
-        // and 0 is a valid value for `MaybeUninit<Z>`
-        // The memory of the slice should not wrap around the address space.
-        unsafe { volatile_set(ptr, MaybeUninit::new(0), size) }
         atomic_fence();
     }
 }
@@ -461,29 +367,39 @@ where
     /// Ensures the entire capacity of the `Vec` is zeroed. Cannot ensure that
     /// previous reallocations did not leave values on the heap.
     fn zeroize(&mut self) {
-        use core::slice;
-        // Zeroize all the initialized elements.
         self.iter_mut().zeroize();
 
-        // Set the Vec's length to 0 and drop all the elements.
+        // Zero the capacity of the `Vec` that is not initialized.
+        {
+            // Safety:
+            //
+            // This is safe, because `Vec` never allocates more than `isize::MAX` bytes.
+            // This exact use case is even mentioned in the documentation of `pointer::add`.
+            let extra_capacity_start = unsafe { self.as_mut_ptr().add(self.len()) as *mut u8 };
+            let extra_capacity_len = self.capacity().saturating_sub(self.len());
+
+            // Safety:
+            // The memory pointed to by `extra_capacity_start` is valid for `extra_capacity_len *
+            // mem::size_of::<Z>()` bytes, because the allocation of the `Vec` has enough reported
+            // capacity for elements of type `Z`.
+            // It is also properly aligned, because the `T` here is `u8`, which has an alignment of
+            // `1`.
+            // `extra_capacity_len` is not larger than an `isize`, because `Vec` never allocates
+            // more than `isize::MAX` bytes.
+            // The `Vec` allocation also guarantees to never wrap around the address space.
+            unsafe {
+                volatile_set(
+                    extra_capacity_start,
+                    0,
+                    extra_capacity_len * core::mem::size_of::<Z>(),
+                )
+            };
+            atomic_fence();
+        }
+
         self.clear();
-        // Zero the full capacity of `Vec`.
-        // Safety:
-        //
-        // This is safe, because `Vec` never allocates more than `isize::MAX` bytes.
-        // This exact use case is even mentioned in the documentation of `pointer::add`.
-        // This is safe because MaybeUninit ignores all invariants,
-        // so we can create a slice of MaybeUninit<Z> using the full capacity of the Vec
-        let uninit_slice = unsafe {
-            slice::from_raw_parts_mut(self.as_mut_ptr() as *mut MaybeUninit<Z>, self.capacity())
-        };
-        uninit_slice.zeroize();
     }
 }
-
-#[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-impl<Z> ZeroizeOnDrop for Vec<Z> where Z: ZeroizeOnDrop {}
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
@@ -497,10 +413,6 @@ where
         self.iter_mut().zeroize();
     }
 }
-
-#[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-impl<Z> ZeroizeOnDrop for Box<[Z]> where Z: ZeroizeOnDrop {}
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
@@ -525,7 +437,7 @@ pub trait TryZeroize {
 
 /// `Zeroizing` is a a wrapper for any `Z: Zeroize` type which implements a
 /// `Drop` handler which zeroizes dropped values.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Zeroizing<Z: Zeroize>(Z);
 
 impl<Z> Zeroizing<Z>
@@ -536,17 +448,6 @@ where
     /// zeroized when it's dropped.
     pub fn new(value: Z) -> Self {
         value.into()
-    }
-}
-
-impl<Z: Zeroize + Clone> Clone for Zeroizing<Z> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-
-    fn clone_from(&mut self, source: &Self) {
-        self.0.zeroize();
-        self.0.clone_from(&source.0);
     }
 }
 
@@ -587,8 +488,6 @@ where
         self.0.zeroize();
     }
 }
-
-impl<Z> ZeroizeOnDrop for Zeroizing<Z> where Z: Zeroize {}
 
 impl<Z> Drop for Zeroizing<Z>
 where
@@ -639,154 +538,17 @@ unsafe fn volatile_set<T: Copy + Sized>(dst: *mut T, src: T, count: usize) {
     }
 }
 
-/// `PhantomData` is always zero sized so provide a Zeroize implementation.
-impl<Z> Zeroize for PhantomData<Z> {
-    fn zeroize(&mut self) {}
-}
-/// `PhantomData` is always zero sized so provide a ZeroizeOnDrop implementation.
-impl<Z> ZeroizeOnDrop for PhantomData<Z> {}
-/// `PhantomPinned` is zero sized so provide a Zeroize implementation.
-impl Zeroize for PhantomPinned {
-    fn zeroize(&mut self) {}
-}
-/// `PhantomPinned` is zero sized so provide a ZeroizeOnDrop implementation.
-impl ZeroizeOnDrop for PhantomPinned {}
-/// `()` is zero sized so provide a Zeroize implementation.
-impl Zeroize for () {
-    fn zeroize(&mut self) {}
-}
-/// `()` is zero sized so provide a ZeroizeOnDrop implementation.
-impl ZeroizeOnDrop for () {}
-
-/// Generic implementation of Zeroize for tuples up to 10 parameters.
-impl<A: Zeroize> Zeroize for (A,) {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
-    }
-}
-/// Generic implementation of ZeroizeOnDrop for tuples up to 10 parameters.
-impl<A: ZeroizeOnDrop> ZeroizeOnDrop for (A,) {}
-macro_rules! impl_zeroize_tuple {
-    ( $( $type_name:ident )+ ) => {
-        impl<$($type_name: Zeroize),+> Zeroize for ($($type_name),+) {
-            fn zeroize(&mut self) {
-                #[allow(non_snake_case)]
-                let ($($type_name),+) = self;
-                $($type_name.zeroize());+
-            }
-        }
-
-        impl<$($type_name: ZeroizeOnDrop),+> ZeroizeOnDrop for ($($type_name),+) { }
-    }
-}
-// Generic implementations for tuples up to 10 parameters.
-impl_zeroize_tuple! { A B }
-impl_zeroize_tuple! { A B C }
-impl_zeroize_tuple! { A B C D }
-impl_zeroize_tuple! { A B C D E }
-impl_zeroize_tuple! { A B C D E F }
-impl_zeroize_tuple! { A B C D E F G }
-impl_zeroize_tuple! { A B C D E F G H }
-impl_zeroize_tuple! { A B C D E F G H I }
-impl_zeroize_tuple! { A B C D E F G H I L }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use core::mem::size_of;
-
     #[cfg(feature = "alloc")]
     use alloc::boxed::Box;
 
-    #[derive(Clone, Debug, PartialEq)]
-    struct ZeroizedOnDrop(u64);
-
-    impl Drop for ZeroizedOnDrop {
-        fn drop(&mut self) {
-            self.0.zeroize();
-        }
-    }
-
-    #[test]
-    fn non_zero() {
-        macro_rules! non_zero_test {
-            ($($type:ty),+) => {
-                $(let mut value = <$type>::new(42).unwrap();
-                value.zeroize();
-                assert_eq!(value.get(), 1);)+
-            };
-        }
-
-        non_zero_test!(
-            NonZeroI8,
-            NonZeroI16,
-            NonZeroI32,
-            NonZeroI64,
-            NonZeroI128,
-            NonZeroIsize
-        );
-        non_zero_test!(
-            NonZeroU8,
-            NonZeroU16,
-            NonZeroU32,
-            NonZeroU64,
-            NonZeroU128,
-            NonZeroUsize
-        );
-    }
-
     #[test]
     fn zeroize_byte_arrays() {
-        let mut arr = [42u8; 137];
+        let mut arr = [42u8; 64];
         arr.zeroize();
-        assert_eq!(arr.as_ref(), [0u8; 137].as_ref());
-    }
-
-    #[test]
-    fn zeroize_on_drop_byte_arrays() {
-        let mut arr = [ZeroizedOnDrop(42); 1];
-        unsafe { core::ptr::drop_in_place(&mut arr) };
-        assert_eq!(arr.as_ref(), [ZeroizedOnDrop(0); 1].as_ref());
-    }
-
-    #[test]
-    fn zeroize_maybeuninit_byte_arrays() {
-        let mut arr = [MaybeUninit::new(42u64); 64];
-        arr.zeroize();
-        let arr_init: [u64; 64] = unsafe { core::mem::transmute(arr) };
-        assert_eq!(arr_init, [0u64; 64]);
-    }
-
-    #[test]
-    fn zeroize_check_zerosize_types() {
-        // Since we assume these types have zero size, we test this holds for
-        // the current version of Rust.
-        assert_eq!(size_of::<()>(), 0);
-        assert_eq!(size_of::<PhantomPinned>(), 0);
-        assert_eq!(size_of::<PhantomData<usize>>(), 0);
-    }
-
-    #[test]
-    fn zeroize_check_tuple() {
-        let mut tup1 = (42u8,);
-        tup1.zeroize();
-        assert_eq!(tup1, (0u8,));
-
-        let mut tup2 = (42u8, 42u8);
-        tup2.zeroize();
-        assert_eq!(tup2, (0u8, 0u8));
-    }
-
-    #[test]
-    fn zeroize_on_drop_check_tuple() {
-        let mut tup1 = (ZeroizedOnDrop(42),);
-        unsafe { core::ptr::drop_in_place(&mut tup1) };
-        assert_eq!(tup1, (ZeroizedOnDrop(0),));
-
-        let mut tup2 = (ZeroizedOnDrop(42), ZeroizedOnDrop(42));
-        unsafe { core::ptr::drop_in_place(&mut tup2) };
-        assert_eq!(tup2, (ZeroizedOnDrop(0), ZeroizedOnDrop(0)));
+        assert_eq!(arr.as_ref(), [0u8; 64].as_ref());
     }
 
     #[cfg(feature = "alloc")]

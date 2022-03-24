@@ -1,4 +1,4 @@
-# [RustCrypto]: zeroize
+# [zeroize].rs 🄌 <a href="https://www.iqlusion.io"><img src="https://storage.googleapis.com/iqlusion-production-web/img/logo/iqlusion-rings-sm.png" alt="iqlusion" width="24" height="24"></a>
 
 [![Crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -6,7 +6,7 @@
 ![MSRV][rustc-image]
 [![Build Status][build-image]][build-link]
 
-Securely zero memory (a.k.a. [zeroize]) while avoiding compiler optimizations.
+Securely zero memory while avoiding compiler optimizations.
 
 This crate implements a portable approach to securely zeroing memory using
 techniques which guarantee they won't be "optimized away" by the compiler.
@@ -36,7 +36,7 @@ thereof, implemented in pure Rust with no usage of FFI or assembly.
 
 ## Minimum Supported Rust Version
 
-Rust **1.51** or newer.
+Rust **1.47** or newer.
 
 In the future, we reserve the right to change MSRV (i.e. MSRV is out-of-scope
 for this crate's SemVer guarantees), however when we do it will be accompanied by
@@ -44,18 +44,17 @@ a minor version bump.
 
 ## License
 
-Licensed under either of:
+**zeroize** is distributed under the terms of either the MIT license
+or the Apache License (Version 2.0), at your option.
 
-* [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-* [MIT license](http://opensource.org/licenses/MIT)
+See [LICENSE] (Apache License, Version 2.0) file in the `iqlusioninc/crates`
+toplevel directory of this repository or [LICENSE-MIT] for details.
 
-at your option.
+## Contribution
 
-### Contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
-dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you shall be dual licensed as above,
+without any additional terms or conditions.
 
 [//]: # (badges)
 
@@ -64,13 +63,12 @@ dual licensed as above, without any additional terms or conditions.
 [docs-image]: https://docs.rs/zeroize/badge.svg
 [docs-link]: https://docs.rs/zeroize/
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.51+-blue.svg
-[build-image]: https://github.com/RustCrypto/utils/actions/workflows/zeroize.yml/badge.svg
-[build-link]: https://github.com/RustCrypto/utils/actions/workflows/zeroize.yml
+[rustc-image]: https://img.shields.io/badge/rustc-1.47+-blue.svg
+[build-image]: https://github.com/iqlusioninc/crates/actions/workflows/zeroize.yml/badge.svg
+[build-link]: https://github.com/iqlusioninc/crates/actions/workflows/zeroize.yml
 
 [//]: # (general links)
 
-[RustCrypto]: https://github.com/RustCrypto
 [zeroize]: https://en.wikipedia.org/wiki/Zeroisation
 [`Zeroize` trait]: https://docs.rs/zeroize/latest/zeroize/trait.Zeroize.html
 [Documentation]: https://docs.rs/zeroize/
@@ -78,3 +76,5 @@ dual licensed as above, without any additional terms or conditions.
 [core::ptr::write_volatile]: https://doc.rust-lang.org/core/ptr/fn.write_volatile.html
 [core::sync::atomic]: https://doc.rust-lang.org/stable/core/sync/atomic/index.html
 [good cryptographic hygiene]: https://github.com/veorq/cryptocoding#clean-memory-of-secret-data
+[LICENSE]: https://github.com/iqlusioninc/crates/blob/main/LICENSE
+[LICENSE-MIT]: https://github.com/iqlusioninc/crates/blob/main/zeroize/LICENSE-MIT
