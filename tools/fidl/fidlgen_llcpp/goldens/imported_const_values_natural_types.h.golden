@@ -99,7 +99,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_importedconstvalues::MyStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_importedconstvalues::MyStruct, 1, 1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_importedconstvalues::MyStruct> {};
 
 }  // namespace fidl

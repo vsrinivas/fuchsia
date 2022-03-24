@@ -3722,9 +3722,8 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
@@ -3770,9 +3769,8 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
-};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response> {};
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;

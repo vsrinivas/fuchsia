@@ -395,6 +395,21 @@ struct NaturalStructCodingTraits {
   }
 };
 
+template <typename T>
+struct NaturalEmptyStructCodingTraits {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {}
+
+  static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
+    if (*decoder->GetPtr<uint8_t>(offset) != 0) {
+      decoder->SetError(kCodingErrorInvalidPaddingBytes);
+    }
+  }
+};
+
 // This holds metadata about a table member: its ordinal, a member pointer to the member's value in
 // the table's Storage_ type, and optionally handle information.
 template <typename T, typename Field, typename Constraint_>

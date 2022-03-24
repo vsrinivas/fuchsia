@@ -165,11 +165,11 @@ constexpr bool IsMemcpyCompatible =
     fidl::internal::NaturalIsMemcpyCompatible<T, fidl::internal::NaturalCodingConstraintEmpty>();
 
 TEST(Struct, MemcpyCompatibility) {
-  static_assert(IsMemcpyCompatible<test_types::EmptyStruct>);
   static_assert(IsMemcpyCompatible<test_types::StructWithoutPadding>);
   static_assert(IsMemcpyCompatible<test_types::FlexibleBits>);
   static_assert(IsMemcpyCompatible<test_types::FlexibleEnum>);
 
+  static_assert(!IsMemcpyCompatible<test_types::EmptyStruct>);
   static_assert(!IsMemcpyCompatible<test_types::HandleStruct>);
   static_assert(!IsMemcpyCompatible<test_types::VectorStruct>);
   static_assert(!IsMemcpyCompatible<test_types::StructWithPadding>);

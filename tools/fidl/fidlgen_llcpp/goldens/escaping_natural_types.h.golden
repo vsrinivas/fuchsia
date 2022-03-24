@@ -94,7 +94,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_escaping::DocCommentWithQuotes,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_escaping::DocCommentWithQuotes, 1, 1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_escaping::DocCommentWithQuotes> {};
 
 }  // namespace fidl

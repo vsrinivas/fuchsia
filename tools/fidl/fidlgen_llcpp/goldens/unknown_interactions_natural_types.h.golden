@@ -299,9 +299,8 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_unknowninteractions::Example_FlexibleTwoWay_Response,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_unknowninteractions::Example_FlexibleTwoWay_Response> {};
 
 extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;

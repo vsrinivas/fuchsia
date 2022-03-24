@@ -2985,9 +2985,8 @@ struct ::fidl::internal::TypeTraits<::test_union::Empty> final {
 template <>
 struct internal::NaturalCodingTraits<
     ::test_union::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
-                                                         1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_union::Empty> {};
 
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 

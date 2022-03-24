@@ -345,8 +345,8 @@ struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
 template <>
 struct internal::NaturalCodingTraits<
     ::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::Empty, 1, 1> {};
+    final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
+                ::test_emptystruct::Empty> {};
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 

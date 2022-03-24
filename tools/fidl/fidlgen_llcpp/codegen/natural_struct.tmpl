@@ -151,8 +151,12 @@ class {{ .Name }} {
 
   template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
+  {{- if .IsEmpty }}
+    : public ::fidl::internal::NaturalEmptyStructCodingTraits<{{ . }}> {};
+  {{- else }}
     : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
         {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
+  {{- end }}
 
   {{ if .IsResourceType }}
   {{- EndifFuchsia -}}
