@@ -12,7 +12,7 @@ use fuchsia_zircon::{self as zx, prelude::*};
 use mapped_vmo::Mapping;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct MoldImage(pub(crate) usize);
+pub struct FormaImage(pub(crate) usize);
 
 #[derive(Debug)]
 pub(crate) struct VmoImage {
@@ -30,9 +30,9 @@ pub(crate) struct VmoImage {
     len_bytes: u64,
     mapping: Arc<Mapping>,
     stride: usize,
-    pub(crate) buffer_layer_cache: Option<(usize, mold::buffer::BufferLayerCache)>,
+    pub(crate) buffer_layer_cache: Option<(usize, forma::buffer::BufferLayerCache)>,
     coherency_domain: CoherencyDomain,
-    layout: mold::buffer::layout::LinearLayout,
+    layout: forma::buffer::layout::LinearLayout,
 }
 
 impl VmoImage {
@@ -50,7 +50,7 @@ impl VmoImage {
             stride: (width * 4) as usize,
             buffer_layer_cache: None,
             coherency_domain: CoherencyDomain::Cpu,
-            layout: mold::buffer::layout::LinearLayout::new(
+            layout: forma::buffer::layout::LinearLayout::new(
                 width as usize,
                 (width * 4) as usize,
                 height as usize,
@@ -95,7 +95,7 @@ impl VmoImage {
             stride: (width * 4) as usize,
             buffer_layer_cache: None,
             coherency_domain: CoherencyDomain::Cpu,
-            layout: mold::buffer::layout::LinearLayout::new(
+            layout: forma::buffer::layout::LinearLayout::new(
                 width as usize,
                 (width * 4) as usize,
                 height as usize,
@@ -150,7 +150,7 @@ impl VmoImage {
             stride,
             buffer_layer_cache: None,
             coherency_domain: buffers.settings.buffer_settings.coherency_domain,
-            layout: mold::buffer::layout::LinearLayout::new(
+            layout: forma::buffer::layout::LinearLayout::new(
                 width as usize,
                 stride,
                 height as usize,
@@ -173,11 +173,11 @@ impl VmoImage {
 
     pub fn as_buffer(
         &mut self,
-    ) -> mold::buffer::Buffer<'_, '_, mold::buffer::layout::LinearLayout> {
+    ) -> forma::buffer::Buffer<'_, '_, forma::buffer::layout::LinearLayout> {
         #[derive(Debug)]
         struct SliceFlusher;
 
-        impl mold::buffer::layout::Flusher for SliceFlusher {
+        impl forma::buffer::layout::Flusher for SliceFlusher {
             fn flush(&self, slice: &mut [u8]) {
                 unsafe {
                     sys::zx_cache_flush(
@@ -192,7 +192,7 @@ impl VmoImage {
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
         let raw_buffer = unsafe { slice::from_raw_parts_mut(data as *mut u8, len) };
 
-        let mut buffer = mold::buffer::BufferBuilder::new(raw_buffer, &mut self.layout);
+        let mut buffer = forma::buffer::BufferBuilder::new(raw_buffer, &mut self.layout);
 
         if let Some(buffer_layer_cache) =
             self.buffer_layer_cache.as_ref().map(|(_, cache)| cache).cloned()
@@ -219,7 +219,7 @@ impl VmoImage {
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
         let buffer = unsafe { slice::from_raw_parts_mut(data as *mut u8, len) };
 
-        mold::clear_buffer(buffer, clear_color);
+        forma::clear_buffer(buffer, clear_color);
 
         if coherency_domain == CoherencyDomain::Ram {
             unsafe {

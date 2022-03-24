@@ -15,13 +15,13 @@ use fuchsia_framebuffer::PixelFormat;
 
 use crate::{color::Color, drawing::DisplayRotation, Point, ViewAssistantContext};
 
-pub mod mold;
+pub mod forma;
 pub mod spinel;
 
-pub use self::mold::Mold;
+pub use self::forma::Forma;
 pub use spinel::Spinel;
 
-/// Either Spinel or Mold. Zero-sized.
+/// Either Spinel or Forma. Zero-sized.
 pub trait Backend: Copy + Debug + Default + Eq + Hash + Ord + Sized + 'static {
     /// Buffer-backed image that can be used for rendering or storing pixel data.
     type Image: Copy + Debug + Eq + Hash + Ord;

@@ -6,7 +6,7 @@ pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientTy
 use crate::{
     color::Color,
     render::generic::{
-        self, mold::*, spinel::*, Composition as _, Context as _, PathBuilder as _, Raster as _,
+        self, forma::*, spinel::*, Composition as _, Context as _, PathBuilder as _, Raster as _,
         RasterBuilder as _,
     },
     Point, ViewAssistantContext,
@@ -25,7 +25,7 @@ pub struct Image {
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum ImageInner {
-    Mold(MoldImage),
+    Forma(FormaImage),
     Spinel(SpinelImage),
 }
 /// Rectangular copy region.
@@ -77,23 +77,23 @@ pub struct Context {
 }
 #[derive(Debug)]
 pub enum ContextInner {
-    Mold(MoldContext),
+    Forma(FormaContext),
     Spinel(SpinelContext),
 }
 impl Context {
     /// Returns the context's pixel format.
     pub fn pixel_format(&self) -> PixelFormat {
         match &self.inner {
-            ContextInner::Mold(context) => context.pixel_format(),
+            ContextInner::Forma(context) => context.pixel_format(),
             ContextInner::Spinel(context) => context.pixel_format(),
         }
     }
     /// Optionally returns a `PathBuilder`. May return `None` of old builder is still alive.
     pub fn path_builder(&self) -> Option<PathBuilder> {
         match &self.inner {
-            ContextInner::Mold(context) => context
+            ContextInner::Forma(context) => context
                 .path_builder()
-                .map(|path_builder| PathBuilder { inner: PathBuilderInner::Mold(path_builder) }),
+                .map(|path_builder| PathBuilder { inner: PathBuilderInner::Forma(path_builder) }),
             ContextInner::Spinel(context) => context
                 .path_builder()
                 .map(|path_builder| PathBuilder { inner: PathBuilderInner::Spinel(path_builder) }),
@@ -102,8 +102,8 @@ impl Context {
     /// Optionally returns a `RasterBuilder`. May return `None` of old builder is still alive.
     pub fn raster_builder(&self) -> Option<RasterBuilder> {
         match &self.inner {
-            ContextInner::Mold(context) => context.raster_builder().map(|raster_builder| {
-                RasterBuilder { inner: RasterBuilderInner::Mold(raster_builder) }
+            ContextInner::Forma(context) => context.raster_builder().map(|raster_builder| {
+                RasterBuilder { inner: RasterBuilderInner::Forma(raster_builder) }
             }),
             ContextInner::Spinel(context) => context.raster_builder().map(|raster_builder| {
                 RasterBuilder { inner: RasterBuilderInner::Spinel(raster_builder) }
@@ -113,8 +113,8 @@ impl Context {
     /// Creates a new image with `size`.
     pub fn new_image(&mut self, size: Size2D<u32>) -> Image {
         match &mut self.inner {
-            ContextInner::Mold(ref mut context) => {
-                Image { inner: ImageInner::Mold(context.new_image(size)) }
+            ContextInner::Forma(ref mut context) => {
+                Image { inner: ImageInner::Forma(context.new_image(size)) }
             }
             ContextInner::Spinel(ref mut context) => {
                 Image { inner: ImageInner::Spinel(context.new_image(size)) }
@@ -128,8 +128,8 @@ impl Context {
     ) -> Result<Image, Error> {
         Ok(Image {
             inner: match &mut self.inner {
-                ContextInner::Mold(ref mut context) => {
-                    ImageInner::Mold(context.new_image_from_png(reader)?)
+                ContextInner::Forma(ref mut context) => {
+                    ImageInner::Forma(context.new_image_from_png(reader)?)
                 }
                 ContextInner::Spinel(ref mut context) => {
                     ImageInner::Spinel(context.new_image_from_png(reader)?)
@@ -140,8 +140,8 @@ impl Context {
     /// Returns the image at `image_index`.
     pub fn get_image(&mut self, image_index: u32) -> Image {
         match &mut self.inner {
-            ContextInner::Mold(ref mut render_context) => {
-                Image { inner: ImageInner::Mold(render_context.get_image(image_index)) }
+            ContextInner::Forma(ref mut render_context) => {
+                Image { inner: ImageInner::Forma(render_context.get_image(image_index)) }
             }
             ContextInner::Spinel(ref mut render_context) => {
                 Image { inner: ImageInner::Spinel(render_context.get_image(image_index)) }
@@ -151,8 +151,8 @@ impl Context {
     /// Returns the `context`'s current image.
     pub fn get_current_image(&mut self, context: &ViewAssistantContext) -> Image {
         match &mut self.inner {
-            ContextInner::Mold(ref mut render_context) => {
-                Image { inner: ImageInner::Mold(render_context.get_current_image(context)) }
+            ContextInner::Forma(ref mut render_context) => {
+                Image { inner: ImageInner::Forma(render_context.get_current_image(context)) }
             }
             ContextInner::Spinel(ref mut render_context) => {
                 Image { inner: ImageInner::Spinel(render_context.get_current_image(context)) }
@@ -188,15 +188,15 @@ impl Context {
         let background_color = composition.background_color;
 
         match &mut self.inner {
-            ContextInner::Mold(ref mut context) => {
-                if let ImageInner::Mold(image) = image.inner {
+            ContextInner::Forma(ref mut context) => {
+                if let ImageInner::Forma(image) = image.inner {
                     let ext = generic::RenderExt {
                         pre_clear: ext
                             .pre_clear
                             .clone()
                             .map(|pre_clear| generic::PreClear { color: pre_clear.color }),
                         pre_copy: ext.pre_copy.clone().map(|pre_copy| generic::PreCopy {
-                            image: if let ImageInner::Mold(image) = pre_copy.image.inner {
+                            image: if let ImageInner::Forma(image) = pre_copy.image.inner {
                                 image
                             } else {
                                 panic!("mismatched backends");
@@ -208,7 +208,7 @@ impl Context {
                             },
                         }),
                         post_copy: ext.post_copy.clone().map(|post_copy| generic::PostCopy {
-                            image: if let ImageInner::Mold(image) = post_copy.image.inner {
+                            image: if let ImageInner::Forma(image) = post_copy.image.inner {
                                 image
                             } else {
                                 panic!("mismatched backends");
@@ -222,12 +222,12 @@ impl Context {
                     };
                     composition.with_inner_composition(|inner| {
                         let mut composition = match inner {
-                            CompositionInner::Mold(composition) => composition,
-                            CompositionInner::Empty => MoldComposition::new(background_color),
+                            CompositionInner::Forma(composition) => composition,
+                            CompositionInner::Empty => FormaComposition::new(background_color),
                             _ => panic!("mismatched backends"),
                         };
                         context.render_with_clip(&mut composition, clip, image, &ext);
-                        CompositionInner::Mold(composition)
+                        CompositionInner::Forma(composition)
                     });
                 } else {
                     panic!("mismatched backends");
@@ -292,7 +292,7 @@ pub struct Path {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum PathInner {
-    Mold(MoldPath),
+    Forma(FormaPath),
     Spinel(SpinelPath),
 }
 /// Builds one closed path.
@@ -302,14 +302,14 @@ pub struct PathBuilder {
 }
 #[derive(Debug)]
 enum PathBuilderInner {
-    Mold(MoldPathBuilder),
+    Forma(FormaPathBuilder),
     Spinel(SpinelPathBuilder),
 }
 impl PathBuilder {
     /// Move end-point to.
     pub fn move_to(&mut self, point: Point) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.move_to(point);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -321,7 +321,7 @@ impl PathBuilder {
     /// Create line from end-point to point and update end-point.
     pub fn line_to(&mut self, point: Point) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.line_to(point);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -333,7 +333,7 @@ impl PathBuilder {
     /// Create quadratic Bézier from end-point to `p2` with `p1` as control point.
     pub fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.quad_to(p1, p2);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -345,7 +345,7 @@ impl PathBuilder {
     /// Create cubic Bézier from end-point to `p3` with `p1` and `p2` as control points.
     pub fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.cubic_to(p1, p2, p3);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -358,7 +358,7 @@ impl PathBuilder {
     /// and `w` as its weight.
     pub fn rat_quad_to(&mut self, p1: Point, p2: Point, w: f32) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.rat_quad_to(p1, p2, w);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -371,7 +371,7 @@ impl PathBuilder {
     /// points, and `w1` and `w2` their weights.
     pub fn rat_cubic_to(&mut self, p1: Point, p2: Point, p3: Point, w1: f32, w2: f32) -> &mut Self {
         match &mut self.inner {
-            PathBuilderInner::Mold(ref mut path_builder) => {
+            PathBuilderInner::Forma(ref mut path_builder) => {
                 path_builder.rat_cubic_to(p1, p2, p3, w1, w2);
             }
             PathBuilderInner::Spinel(ref mut path_builder) => {
@@ -385,8 +385,8 @@ impl PathBuilder {
     /// Consumes the builder; another one can be requested from the `Context`.
     pub fn build(self) -> Path {
         match self.inner {
-            PathBuilderInner::Mold(path_builder) => {
-                Path { inner: PathInner::Mold(path_builder.build()) }
+            PathBuilderInner::Forma(path_builder) => {
+                Path { inner: PathInner::Forma(path_builder.build()) }
             }
             PathBuilderInner::Spinel(path_builder) => {
                 Path { inner: PathInner::Spinel(path_builder.build()) }
@@ -401,15 +401,15 @@ pub struct Raster {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum RasterInner {
-    Mold(MoldRaster),
+    Forma(FormaRaster),
     Spinel(SpinelRaster),
 }
 impl Raster {
     /// Translate raster.
     pub fn translate(self, translation: Vector2D<i32>) -> Self {
         match self.inner {
-            RasterInner::Mold(raster) => {
-                Raster { inner: RasterInner::Mold(raster.translate(translation)) }
+            RasterInner::Forma(raster) => {
+                Raster { inner: RasterInner::Forma(raster.translate(translation)) }
             }
             RasterInner::Spinel(raster) => {
                 Raster { inner: RasterInner::Spinel(raster.translate(translation)) }
@@ -421,9 +421,9 @@ impl Add for Raster {
     type Output = Self;
     fn add(self, other: Self) -> Self::Output {
         match self.inner {
-            RasterInner::Mold(raster) => Raster {
-                inner: if let RasterInner::Mold(other_raster) = other.inner {
-                    RasterInner::Mold(raster + other_raster)
+            RasterInner::Forma(raster) => Raster {
+                inner: if let RasterInner::Forma(other_raster) = other.inner {
+                    RasterInner::Forma(raster + other_raster)
                 } else {
                     panic!("mismatched backends");
                 },
@@ -445,7 +445,7 @@ pub struct RasterBuilder {
 }
 #[derive(Debug)]
 enum RasterBuilderInner {
-    Mold(MoldRasterBuilder),
+    Forma(FormaRasterBuilder),
     Spinel(SpinelRasterBuilder),
 }
 impl RasterBuilder {
@@ -456,8 +456,8 @@ impl RasterBuilder {
     /// Add a path to the raster with transform.
     pub fn add_with_transform(&mut self, path: &Path, transform: &Transform2D<f32>) -> &mut Self {
         match &mut self.inner {
-            RasterBuilderInner::Mold(ref mut raster_builder) => {
-                if let PathInner::Mold(path) = &path.inner {
+            RasterBuilderInner::Forma(ref mut raster_builder) => {
+                if let PathInner::Forma(path) = &path.inner {
                     raster_builder.add_with_transform(path, transform);
                 } else {
                     panic!("mismatched backends");
@@ -478,8 +478,8 @@ impl RasterBuilder {
     /// Consumes the builder; another one can be requested from the `Context`.
     pub fn build(self) -> Raster {
         match self.inner {
-            RasterBuilderInner::Mold(raster_builder) => {
-                Raster { inner: RasterInner::Mold(raster_builder.build()) }
+            RasterBuilderInner::Forma(raster_builder) => {
+                Raster { inner: RasterInner::Forma(raster_builder.build()) }
             }
             RasterBuilderInner::Spinel(raster_builder) => {
                 Raster { inner: RasterInner::Spinel(raster_builder.build()) }
@@ -505,7 +505,7 @@ pub struct Composition {
 }
 #[derive(Debug)]
 enum CompositionInner {
-    Mold(MoldComposition),
+    Forma(FormaComposition),
     Spinel(SpinelComposition),
     Empty,
 }
@@ -521,7 +521,7 @@ impl Composition {
     /// Resets composition by removing all layers.
     pub fn clear(&mut self) {
         match &mut self.inner {
-            CompositionInner::Mold(composition) => composition.clear(),
+            CompositionInner::Forma(composition) => composition.clear(),
             CompositionInner::Spinel(composition) => composition.clear(),
             CompositionInner::Empty => (),
         }
@@ -530,9 +530,9 @@ impl Composition {
     pub fn insert(&mut self, order: Order, layer: Layer) {
         if let CompositionInner::Empty = self.inner {
             match layer {
-                Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. } => {
+                Layer { raster: Raster { inner: RasterInner::Forma(_) }, .. } => {
                     self.inner =
-                        CompositionInner::Mold(MoldComposition::new(self.background_color));
+                        CompositionInner::Forma(FormaComposition::new(self.background_color));
                 }
                 Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. } => {
                     self.inner =
@@ -541,16 +541,16 @@ impl Composition {
             }
         }
         match &mut self.inner {
-            CompositionInner::Mold(composition) => composition.insert(
+            CompositionInner::Forma(composition) => composition.insert(
                 order,
                 generic::Layer {
-                    raster: if let RasterInner::Mold(raster) = layer.raster.inner {
+                    raster: if let RasterInner::Forma(raster) = layer.raster.inner {
                         raster
                     } else {
                         panic!("mismatched backends");
                     },
                     clip: layer.clip.map(|clip| {
-                        if let RasterInner::Mold(clip) = clip.inner {
+                        if let RasterInner::Forma(clip) = clip.inner {
                             clip
                         } else {
                             panic!("mismatched backends");
@@ -583,7 +583,7 @@ impl Composition {
     /// Remove layer from composition.
     pub fn remove(&mut self, order: Order) {
         match &mut self.inner {
-            CompositionInner::Mold(composition) => composition.remove(order),
+            CompositionInner::Forma(composition) => composition.remove(order),
             CompositionInner::Spinel(composition) => composition.remove(order),
             _ => (),
         }

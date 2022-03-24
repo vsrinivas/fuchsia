@@ -590,8 +590,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_render_cell() {
         let size = size2(64, 64);
-        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let forma_context = generic::Forma::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let mut renderer = Renderer::new(&FONT_SET, &Size::new(8.0, 16.0));
         let layers = vec![
             RenderableLayer {

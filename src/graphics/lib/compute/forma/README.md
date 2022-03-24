@@ -1,7 +1,7 @@
-# mold. The parallel CPU vector renderer
+# forma. The parallel CPU vector renderer
 
 
-*mold* is a highly efficient vector content renderer and composer that makes use of all processor cores and vector units.
+*forma* is a highly efficient vector content renderer and composer that makes use of all processor cores and vector units.
 
 It currently supports:
 
@@ -19,15 +19,15 @@ The renderer achieves its performance through a few principles that are present 
 * tight loops are as branchless as possible and are easily auto-vectorized
 * high-quality efficient linear-to-sRGB approximation
 
-## Getting started with mold
+## Getting started with forma
 
-* read the mold [API reference](https://fuchsia-docs.firebaseapp.com/rust/mold/)
+* read the forma [API reference](https://fuchsia-docs.firebaseapp.com/rust/forma/)
 * check out the [Carnelian clockface example](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/lib/ui/carnelian/examples/clockface.rs)
 
 ## Example
 
 ```rust
-use mold::{Buffer, BufferBuilder, Composition, LinearLayout, Fill, Point, Style};
+use forma::{Buffer, BufferBuilder, Composition, LinearLayout, Fill, Point, Style};
 
 fn main() {
     const WIDTH: usize = 256;

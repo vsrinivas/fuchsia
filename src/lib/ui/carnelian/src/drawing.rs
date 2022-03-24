@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Functions for drawing in Carnelian
-//! Carnelian uses the Render abstraction over Mold and Spinel
+//! Carnelian uses the Render abstraction over Forma and Spinel
 //! to put pixels on screen. The items in this module are higher-
 //! level drawing primitives.
 
@@ -757,14 +757,14 @@ mod tests {
             })
             .await
             .expect("token");
-        let mold_context = generic::Mold::new_context(context_token, size, DisplayRotation::Deg0);
+        let forma_context = generic::Forma::new_context(context_token, size, DisplayRotation::Deg0);
         let _buffers_result = buffer_allocator
             .allocate_buffers(true)
             .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
                 panic!("Timed out while waiting for sysmem bufers")
             })
             .await;
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let mut glyphs = GlyphMap::new();
         let text =
             Text::new(&mut render_context, "Good Morning", 20.0, 200.0, &FONT_FACE, &mut glyphs);

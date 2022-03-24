@@ -119,7 +119,7 @@ impl Plumber {
                     DisplayRotation::Deg0,
                 ))
             } else {
-                ContextInner::Mold(generic::Mold::new_context(
+                ContextInner::Forma(generic::Forma::new_context(
                     context_token,
                     size,
                     DisplayRotation::Deg0,
@@ -177,7 +177,7 @@ impl Plumber {
                 .set_image_blending_function(&mut flatland_image_id, blend_mode)
                 .expect("fidl error");
             // Get all the images at this point, since if we wait until we need them for
-            // rendering, Mold's private connection to sysmem has closed and it fails.
+            // rendering, Forma's private connection to sysmem has closed and it fails.
             // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=83543
             context.get_image(index as u32);
         }

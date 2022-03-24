@@ -12,8 +12,8 @@ group("compute") {
   deps = [
     "common",
     "common/vk",
+    "forma",
     "hotsort",
-    "mold",
     "rive-rs",
     "spinel",
     "spinel-rs",
@@ -49,7 +49,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":graphics-compute-unittests",
-    "mold:mold-tests",
+    "forma:forma-tests",
     "rive-rs:rive-rs-tests",
     "spinel-rs:spinel-rs-tests",
     "spinel-rs-sys:tests",

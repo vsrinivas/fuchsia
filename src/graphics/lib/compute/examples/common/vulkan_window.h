@@ -63,7 +63,7 @@ class VulkanWindow {
     bool require_swapchain_image_shader_storage = false;
 
     // Set to true if this window requires that buffers or images
-    // be copied to swapchain images. For example when unsing the Mold
+    // be copied to swapchain images. For example when using the forma
     // library to render into a VkBuffer, then copying it into the
     // swapchain's VkImage.
     bool require_swapchain_transfers = false;

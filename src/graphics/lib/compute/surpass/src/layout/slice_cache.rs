@@ -344,7 +344,7 @@ impl SliceCache {
                 .is_err()
             {
                 // This spin lock here is mostly for being able to run tests in parallel. Being
-                // able to render to `mold::Composition`s in parallel is currently not supported
+                // able to render to `forma::Composition`s in parallel is currently not supported
                 // and might poor performance due to priority inversion.
                 hint::spin_loop();
             }

@@ -23,8 +23,9 @@ use fuchsia_zircon::sys;
 use crate::{
     drawing::DisplayRotation,
     render::generic::{
-        mold::{
-            image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
+        forma::{
+            image::VmoImage, Forma, FormaComposition, FormaImage, FormaPathBuilder,
+            FormaRasterBuilder,
         },
         Context, CopyRegion, PostCopy, PreClear, PreCopy, RenderExt,
     },
@@ -140,7 +141,7 @@ fn copy_region_to_image(
 }
 
 #[derive(Debug)]
-pub struct MoldContext {
+pub struct FormaContext {
     buffer_collection: Option<BufferCollectionSynchronousProxy>,
     size: Size2D<u32>,
     display_rotation: DisplayRotation,
@@ -149,7 +150,7 @@ pub struct MoldContext {
     composition_id: usize,
 }
 
-impl MoldContext {
+impl FormaContext {
     pub(crate) fn new(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
@@ -193,21 +194,21 @@ impl MoldContext {
     }
 }
 
-impl Context<Mold> for MoldContext {
+impl Context<Forma> for FormaContext {
     fn pixel_format(&self) -> PixelFormat {
         fuchsia_framebuffer::PixelFormat::RgbX888
     }
 
-    fn path_builder(&self) -> Option<MoldPathBuilder> {
-        Some(MoldPathBuilder::new())
+    fn path_builder(&self) -> Option<FormaPathBuilder> {
+        Some(FormaPathBuilder::new())
     }
 
-    fn raster_builder(&self) -> Option<MoldRasterBuilder> {
-        Some(MoldRasterBuilder::new())
+    fn raster_builder(&self) -> Option<FormaRasterBuilder> {
+        Some(FormaRasterBuilder::new())
     }
 
-    fn new_image(&mut self, size: Size2D<u32>) -> MoldImage {
-        let image = MoldImage(self.images.len());
+    fn new_image(&mut self, size: Size2D<u32>) -> FormaImage {
+        let image = FormaImage(self.images.len());
         self.images.push(RefCell::new(VmoImage::new(size.width, size.height)));
 
         image
@@ -216,14 +217,14 @@ impl Context<Mold> for MoldContext {
     fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
-    ) -> Result<MoldImage, Error> {
-        let image = MoldImage(self.images.len());
+    ) -> Result<FormaImage, Error> {
+        let image = FormaImage(self.images.len());
         self.images.push(RefCell::new(VmoImage::from_png(reader)?));
 
         Ok(image)
     }
 
-    fn get_image(&mut self, image_index: u32) -> MoldImage {
+    fn get_image(&mut self, image_index: u32) -> FormaImage {
         let buffer_collection = self.buffer_collection.as_mut().expect("buffer_collection");
         let images = &mut self.images;
         let width = self.size.width;
@@ -241,19 +242,19 @@ impl Context<Mold> for MoldContext {
             index
         });
 
-        MoldImage(*index)
+        FormaImage(*index)
     }
 
-    fn get_current_image(&mut self, context: &ViewAssistantContext) -> MoldImage {
+    fn get_current_image(&mut self, context: &ViewAssistantContext) -> FormaImage {
         self.get_image(context.image_index)
     }
 
     fn render_with_clip(
         &mut self,
-        composition: &mut MoldComposition,
+        composition: &mut FormaComposition,
         clip: Rect<u32>,
-        image: MoldImage,
-        ext: &RenderExt<Mold>,
+        image: FormaImage,
+        ext: &RenderExt<Forma>,
     ) {
         let image_id = image;
         let mut image = self
@@ -314,17 +315,17 @@ impl Context<Mold> for MoldContext {
                 .map(|cache| (composition.id.unwrap(), cache));
         }
 
-        duration_begin!("gfx", "render::Context<Mold>::render_composition");
+        duration_begin!("gfx", "render::Context<Forma>::render_composition");
         composition.composition.render(
             &mut image.as_buffer(),
-            mold::BGRA,
-            mold::Color::from(&composition.background_color),
-            Some(mold::Rect::new(
+            forma::BGRA,
+            forma::Color::from(&composition.background_color),
+            Some(forma::Rect::new(
                 clip.origin.x as usize..(clip.origin.x + clip.size.width) as usize,
                 clip.origin.y as usize..(clip.origin.y + clip.size.height) as usize,
             )),
         );
-        duration_end!("gfx", "render::Context<Mold>::render_composition");
+        duration_end!("gfx", "render::Context<Forma>::render_composition");
 
         composition.current_layer_ids.clear();
 

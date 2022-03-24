@@ -624,8 +624,8 @@ mod tests {
             CursorStyle::HollowBlock,
         ];
         let size = size2(64, 64);
-        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let forma_context = generic::Forma::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let cell_size = Size::new(8.0, 16.0);
         for cursor_style in SUPPORTED_CURSOR_STYLES {
             let result =
@@ -638,8 +638,8 @@ mod tests {
     #[test]
     fn check_strikeout_path() -> Result<(), Error> {
         let size = size2(64, 64);
-        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let forma_context = generic::Forma::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let cell_size = Size::new(8.0, 16.0);
         let textgrid = TextGrid::new(&FONT_FACE, &cell_size);
         let _ = path_for_strikeout(
@@ -656,8 +656,8 @@ mod tests {
     #[test]
     fn check_underline_path() -> Result<(), Error> {
         let size = size2(64, 64);
-        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let forma_context = generic::Forma::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let cell_size = Size::new(8.0, 16.0);
         let textgrid = TextGrid::new(&FONT_FACE, &cell_size);
         let _ = path_for_underline(
@@ -679,8 +679,8 @@ mod tests {
             '\u{e0b1}', '\u{e0b2}', '\u{e0b3}', '\u{e0ba}', '\u{e0bc}',
         ];
         let size = size2(64, 64);
-        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let forma_context = generic::Forma::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Forma(forma_context) };
         let cell_size = Size::new(8.0, 16.0);
         for c in SUPPORTED_UNICODE_CHARS {
             let result = maybe_path_for_char(&mut render_context, *c, &cell_size);

@@ -18,47 +18,47 @@ mod image;
 mod path;
 mod raster;
 
-pub use composition::MoldComposition;
-pub use context::MoldContext;
-pub use image::MoldImage;
-pub use path::{MoldPath, MoldPathBuilder};
-pub use raster::{MoldRaster, MoldRasterBuilder};
+pub use composition::FormaComposition;
+pub use context::FormaContext;
+pub use image::FormaImage;
+pub use path::{FormaPath, FormaPathBuilder};
+pub use raster::{FormaRaster, FormaRasterBuilder};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Mold;
+pub struct Forma;
 
-impl Mold {
+impl Forma {
     // Available for tests.
     pub fn new_context_without_token(
         size: Size2D<u32>,
         display_rotation: DisplayRotation,
-    ) -> MoldContext {
-        MoldContext::without_token(size, display_rotation)
+    ) -> FormaContext {
+        FormaContext::without_token(size, display_rotation)
     }
 }
 
-impl Backend for Mold {
-    type Image = MoldImage;
-    type Context = MoldContext;
-    type Path = MoldPath;
-    type PathBuilder = MoldPathBuilder;
-    type Raster = MoldRaster;
-    type RasterBuilder = MoldRasterBuilder;
-    type Composition = MoldComposition;
+impl Backend for Forma {
+    type Image = FormaImage;
+    type Context = FormaContext;
+    type Path = FormaPath;
+    type PathBuilder = FormaPathBuilder;
+    type Raster = FormaRaster;
+    type RasterBuilder = FormaRasterBuilder;
+    type Composition = FormaComposition;
 
     fn new_context(
         token: ClientEnd<BufferCollectionTokenMarker>,
         size: Size2D<u32>,
         display_rotation: DisplayRotation,
-    ) -> MoldContext {
-        MoldContext::new(token, size, display_rotation)
+    ) -> FormaContext {
+        FormaContext::new(token, size, display_rotation)
     }
 }
 
-impl From<&Color> for mold::Color {
+impl From<&Color> for forma::Color {
     fn from(color: &Color) -> Self {
         let Color { r, g, b, a } = color;
-        mold::Color {
+        forma::Color {
             r: srgb_to_linear(*r),
             g: srgb_to_linear(*g),
             b: srgb_to_linear(*b),
@@ -78,11 +78,11 @@ mod tests {
     use crate::{drawing::DisplayRotation, render::generic};
 
     #[test]
-    fn mold_init() {
+    fn forma_init() {
         generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-            Mold::new_context(token, size2(100, 100), DisplayRotation::Deg0);
+            Forma::new_context(token, size2(100, 100), DisplayRotation::Deg0);
         });
     }
 }

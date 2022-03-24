@@ -5,8 +5,8 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("mold") {
-  name = "mold"
+rustc_library("forma") {
+  name = "forma"
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
@@ -19,7 +19,7 @@ rustc_library("mold") {
   # TODO(fxbug.dev/56138): Fix the leaks and remove this.
   test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  configs += [ ":mold-performance" ]
+  configs += [ ":forma-performance" ]
 
   sources = [
     "src/buffer.rs",
@@ -30,7 +30,7 @@ rustc_library("mold") {
   ]
 }
 
-config("mold-performance") {
+config("forma-performance") {
   # Enable all optimizations that benefit speed, even if they increase size
   configs = [ "//build/config:optimize_speed" ]
 
@@ -51,6 +51,6 @@ config("mold-performance") {
   }
 }
 
-fuchsia_unittest_package("mold-tests") {
-  deps = [ ":mold_test" ]
+fuchsia_unittest_package("forma-tests") {
+  deps = [ ":forma_test" ]
 }

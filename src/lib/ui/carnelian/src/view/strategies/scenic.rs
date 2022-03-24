@@ -78,7 +78,7 @@ impl Plumber {
                     DisplayRotation::Deg0,
                 ))
             } else {
-                ContextInner::Mold(generic::Mold::new_context(
+                ContextInner::Forma(generic::Forma::new_context(
                     context_token,
                     size,
                     DisplayRotation::Deg0,

@@ -97,7 +97,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/developer/shell/josh/*",
     "//src/devices/usb/drivers/xhci/*",
     "//src/graphics/lib/compute/*",
-    "//src/graphics/lib/compute/mold/*",
+    "//src/graphics/lib/compute/forma/*",
     "//src/graphics/lib/compute/surpass/*",
     "//src/lib/scoped_task/*",
     "//src/media/audio/drivers/intel-hda/controller/*",

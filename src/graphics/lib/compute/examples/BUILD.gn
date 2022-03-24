@@ -85,7 +85,7 @@ template("graphics_compute_spinel_demo_executable") {
 
 # Defines several executable targets for a Spinel API demo.
 #
-# Each one with a spinel_${target_name} or mold_${target_name} prefix.
+# Each one with a spinel_${target_name} mold_${target_name} prefix.
 # This makes it easy to share common demo code between several backends.
 #
 template("graphics_compute_spinel_demo") {

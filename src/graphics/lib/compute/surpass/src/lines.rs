@@ -40,7 +40,7 @@ impl LinesBuilder {
         Self::default()
     }
 
-    // This type is only used in mold where it does not need `is_empty`.
+    // This type is only used in forma where it does not need `is_empty`.
     #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
@@ -293,7 +293,7 @@ pub struct Lines {
 }
 
 impl Lines {
-    // This type is only used in mold where it does not need `is_empty`.
+    // This type is only used in forma where it does not need `is_empty`.
     #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {

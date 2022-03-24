@@ -8,31 +8,31 @@ use euclid::default::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
 
 use crate::render::generic::{
-    mold::{Mold, MoldPath},
+    forma::{Forma, FormaPath},
     Raster, RasterBuilder,
 };
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Print {
-    pub(crate) path: mold::Path,
+    pub(crate) path: forma::Path,
     pub(crate) transform: Transform2D<f32>,
 }
 
 #[derive(Clone, Debug)]
-pub struct MoldRaster {
+pub struct FormaRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
-    pub(crate) layer_details: Rc<RefCell<Option<(mold::LayerId, Vector2D<f32>)>>>,
+    pub(crate) layer_details: Rc<RefCell<Option<(forma::LayerId, Vector2D<f32>)>>>,
     pub(crate) translation: Vector2D<f32>,
 }
 
-impl Raster for MoldRaster {
+impl Raster for FormaRaster {
     fn translate(mut self, translation: Vector2D<i32>) -> Self {
         self.translation += translation.to_f32();
         self
     }
 }
 
-impl Add for MoldRaster {
+impl Add for FormaRaster {
     type Output = Self;
 
     fn add(mut self, other: Self) -> Self::Output {
@@ -63,33 +63,33 @@ impl Add for MoldRaster {
     }
 }
 
-impl Eq for MoldRaster {}
+impl Eq for FormaRaster {}
 
-impl PartialEq for MoldRaster {
+impl PartialEq for FormaRaster {
     fn eq(&self, _other: &Self) -> bool {
         todo!()
     }
 }
 
 #[derive(Debug)]
-pub struct MoldRasterBuilder {
+pub struct FormaRasterBuilder {
     prints: SmallVec<[Print; 1]>,
 }
 
-impl MoldRasterBuilder {
+impl FormaRasterBuilder {
     pub(crate) fn new() -> Self {
         Self { prints: smallvec![] }
     }
 }
 
-impl RasterBuilder<Mold> for MoldRasterBuilder {
-    fn add_with_transform(&mut self, path: &MoldPath, transform: &Transform2D<f32>) -> &mut Self {
+impl RasterBuilder<Forma> for FormaRasterBuilder {
+    fn add_with_transform(&mut self, path: &FormaPath, transform: &Transform2D<f32>) -> &mut Self {
         self.prints.push(Print { path: path.path.clone(), transform: *transform });
         self
     }
 
-    fn build(self) -> MoldRaster {
-        MoldRaster {
+    fn build(self) -> FormaRaster {
+        FormaRaster {
             prints: self.prints,
             layer_details: Rc::new(RefCell::new(None)),
             translation: Vector2D::zero(),
