@@ -38,7 +38,7 @@
 
 namespace {
 
-const char kTestHelper[] = "/bin/debugdata-test-helper";
+constexpr char kTestHelper[] = "/pkg/bin/debugdata-test-helper";
 
 struct DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
   std::unordered_map<std::string, zx::vmo> data;
@@ -80,8 +80,7 @@ void RunHelper(const char* mode, const size_t action_count, const fdio_spawn_act
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &test_job));
   auto auto_call_kill_job = fit::defer([&test_job]() { test_job.kill(); });
 
-  std::string test_helper = std::string(getenv("TEST_ROOT_DIR")) + kTestHelper;
-  const char* args[] = {test_helper.c_str(), mode, nullptr};
+  const char* args[] = {kTestHelper, mode, nullptr};
 
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];

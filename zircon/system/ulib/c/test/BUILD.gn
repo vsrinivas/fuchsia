@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
 import("//build/testing/environments.gni")
 import("../libc.gni")
 
@@ -151,6 +150,7 @@ group("test") {
   testonly = true
   deps = [
     ":atexit-test-pkg",
+    ":cdebugdata-test-pkg",
     ":gwp-asan-test-pkg",
     ":libc-unittests-pkg",
     ":posix-clocks-test-pkg",
@@ -168,10 +168,10 @@ fuchsia_unittest_package("atexit-test-pkg") {
   test_specs = libc_test_specs
 }
 
-# TODO(gboone): Convert to fuchsia_unittest_package() and move to core.
-bootfs_test("cdebugdata-test-bootfs-test") {
-  name = "cdebugdata-test"
+fuchsia_unittest_package("cdebugdata-test-pkg") {
+  manifest = "cdebugdata-test.cml"
   deps = [ ":cdebugdata-test" ]
+  test_specs = libc_test_specs
 }
 
 fuchsia_unittest_package("posix-clocks-test-pkg") {
