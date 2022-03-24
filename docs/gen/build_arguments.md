@@ -124,7 +124,7 @@ AVB metadata which will be used to validate public key
 
 **Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
 
-From //boards/arm64.gni:51
+From //boards/arm64.gni:52
 
 **Overridden from the default:** `""`
 
@@ -143,7 +143,7 @@ a key which will be used to sign VBMETA and images for AVB
 
 **Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
 
-From //boards/arm64.gni:53
+From //boards/arm64.gni:54
 
 **Overridden from the default:** `""`
 
@@ -375,7 +375,19 @@ From //build/board.gni:10
 A list of driver package labels to include in the 'base' package set. Used
 by the board definition rather than the product definition.
 
-**Current value (from the default):** `[]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
+
+From //boards/arm64.gni:29
+
+**Overridden from the default:** `[]`
+
+From //build/board.gni:17
+
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
+
+From //boards/common/x64-common.gni:50
+
+**Overridden from the default:** `[]`
 
 From //build/board.gni:17
 
@@ -415,7 +427,7 @@ physical/virtual device spec or both.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:43
+From //boards/arm64.gni:44
 
 **Overridden from the default:** `false`
 
@@ -433,7 +445,7 @@ From //build/board.gni:77
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //boards/arm64.gni:44
+From //boards/arm64.gni:45
 
 **Overridden from the default:** `true`
 
@@ -468,7 +480,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
 
-From //boards/arm64.gni:33
+From //boards/arm64.gni:34
 
 **Overridden from the default:** `[]`
 
@@ -519,7 +531,7 @@ From //build/board.gni:72
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//garnet/packages/prod:wlan_drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:wlan_drivers"]`
 
 From //boards/arm64.gni:27
 
@@ -527,11 +539,7 @@ From //boards/arm64.gni:27
 
 From //build/board.gni:50
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
-
-From //boards/common/x64-common.gni:50
-
-**Overridden from the default:** `[]`
+**Current value (from the default):** `[]`
 
 From //build/board.gni:50
 
@@ -719,7 +727,7 @@ Generate a UEFI disk image
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:47
+From //boards/arm64.gni:48
 
 **Overridden from the default:** `false`
 
@@ -2757,7 +2765,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:39
+From //boards/arm64.gni:40
 
 **Overridden from the default:** `0`
 
@@ -2780,7 +2788,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:40
+From //boards/arm64.gni:41
 
 **Overridden from the default:** `0`
 
@@ -4117,7 +4125,7 @@ size_checker_input = {
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/size_checker_input.gni:84
+From //build/images/size_checker/size_checker_input.gni:84
 
 ### smp_max_cpus
 
@@ -4458,7 +4466,7 @@ Build the gigaboot bootloader.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:48
+From //boards/arm64.gni:49
 
 **Overridden from the default:** `false`
 
@@ -4602,7 +4610,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:49
+From //boards/arm64.gni:50
 
 **Overridden from the default:** `false`
 
