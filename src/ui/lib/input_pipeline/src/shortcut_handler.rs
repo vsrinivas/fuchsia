@@ -113,7 +113,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ui_shortcut::ManagerMarker>()
                 .expect("Failed to create ShortcutManagerProxy and stream");
 
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             loop {
                 match shortcut_manager_request_stream.next().await {
                     Some(Ok(ui_shortcut::ManagerRequest::HandleKey3Event {

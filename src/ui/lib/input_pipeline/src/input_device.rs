@@ -155,7 +155,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
             &mut Sender<InputEvent>,
         ) -> Option<InputReport>,
 {
-    fasync::Task::spawn(async move {
+    fasync::Task::local(async move {
         let mut previous_report: Option<InputReport> = None;
         let (report_reader, server_end) = match fidl::endpoints::create_proxy() {
             Ok(res) => res,

@@ -397,7 +397,7 @@ impl KeyboardBinding {
             event_time: zx::Time,
             mut input_event_sender: Sender<input_device::InputEvent>,
         ) {
-            fasync::Task::spawn(async move {
+            fasync::Task::local(async move {
                 let mut event_time = event_time;
                 for (key, event_type) in key_events.into_iter() {
                     match input_event_sender
