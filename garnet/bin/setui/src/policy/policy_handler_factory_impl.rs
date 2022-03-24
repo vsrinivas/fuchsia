@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::DeviceStorageFactory;
 use crate::base::SettingType;
 use crate::policy::{
     BoxedHandler, Context, GenerateHandler, PolicyHandlerFactory, PolicyHandlerFactoryError,

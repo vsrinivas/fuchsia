@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };

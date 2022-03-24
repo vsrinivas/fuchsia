@@ -109,6 +109,7 @@ rustc_library("lib") {
     "src/agent/storage/device_storage.rs",
     "src/agent/storage/fidl_storage.rs",
     "src/agent/storage/storage_agent.rs",
+    "src/agent/storage/storage_factory.rs",
     "src/audio.rs",
     "src/audio/audio_controller.rs",
     "src/audio/audio_default_settings.rs",

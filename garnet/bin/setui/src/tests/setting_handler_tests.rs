@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::storage::device_storage::DeviceStorageCompatible;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::agent::{restore_agent, Blueprint};
 use crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo};
 use crate::handler::base::{ContextBuilder, Request};

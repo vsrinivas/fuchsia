@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::Request;

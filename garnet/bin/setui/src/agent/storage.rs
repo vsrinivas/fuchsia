@@ -10,3 +10,6 @@ pub mod device_storage;
 
 /// Storage that interacts with persistent fidl.
 pub(crate) mod fidl_storage;
+
+/// Exposes a factory struct and trait to generate storage.
+pub mod storage_factory;

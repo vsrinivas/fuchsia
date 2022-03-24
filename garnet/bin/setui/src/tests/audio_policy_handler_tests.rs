@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
-use crate::agent::storage::device_storage::{
-    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
-};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
+use crate::agent::storage::storage_factory::DeviceStorageFactory;
 use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};

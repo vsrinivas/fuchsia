@@ -7,7 +7,7 @@
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
-use crate::agent::storage::device_storage::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::DeviceStorageFactory;
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
 use crate::audio::audio_controller::AudioController;
 use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;

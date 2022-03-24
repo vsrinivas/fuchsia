@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::storage::device_storage::DeviceStorage;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::ingress::fidl::Interface;
 use crate::keyboard::types::{Autorepeat, KeyboardInfo, KeymapId};

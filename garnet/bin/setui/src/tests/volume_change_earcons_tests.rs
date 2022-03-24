@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::storage::device_storage::DeviceStorage;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::audio::default_audio_info;
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::ingress::fidl::Interface;

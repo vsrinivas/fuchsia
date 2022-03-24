@@ -10,7 +10,7 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_inspect::component;
 use fuchsia_syslog::{self as syslog, fx_log_info};
 use lazy_static::lazy_static;
-use settings::agent::storage::device_storage::StashDeviceStorageFactory;
+use settings::agent::storage::storage_factory::StashDeviceStorageFactory;
 use settings::agent::BlueprintHandle as AgentBlueprintHandle;
 use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};

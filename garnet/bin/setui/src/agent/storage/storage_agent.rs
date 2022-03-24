@@ -13,7 +13,8 @@ use futures::future::BoxFuture;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
 
-use super::device_storage::{DeviceStorageConvertible, DeviceStorageFactory};
+use super::device_storage::DeviceStorageConvertible;
+use super::storage_factory::DeviceStorageFactory;
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
 use crate::audio::policy as audio_policy;
@@ -327,7 +328,7 @@ where
 payload_convert!(Storage, Payload);
 #[cfg(test)]
 mod tests {
-    use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+    use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
     use crate::async_property_test;
     use crate::display::types::LightData;
     use crate::message::base::Audience;

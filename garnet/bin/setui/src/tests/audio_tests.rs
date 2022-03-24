@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::storage::device_storage::DeviceStorage;
+use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::audio::types::{
     AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
 };
