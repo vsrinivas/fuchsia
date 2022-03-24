@@ -12,6 +12,14 @@ driver_bind_rules("i8042_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
+# TODO(fxbug.dev/93333): remove this once DFv2 has stabilised.
+driver_bind_rules("i8042_bind_dfv2") {
+  rules = "i8042-dfv2.bind"
+  header_output = "i8042_bind_dfv2.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":i8042_bind_test" ]
@@ -25,7 +33,7 @@ fuchsia_driver("pc-ps2-driver") {
   ]
   sources = [ "i8042.c" ]
   deps = [
-    ":i8042_bind",
+    ":i8042_bind_header",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_c",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//src/devices/lib/driver",
@@ -43,7 +51,22 @@ fuchsia_driver("pc-ps2-driver") {
 
 fuchsia_driver_component("pc-ps2") {
   component_name = "pc-ps2"
-  deps = [ ":pc-ps2-driver" ]
+  deps = [
+    ":i8042_bind",
+    ":pc-ps2-driver",
+  ]
+  info = "pc-ps2-info.json"
+  colocate = true
+  root_resource = true
+}
+
+# TODO(fxbug.dev/93333): remove this once DFv2 has stabilised.
+fuchsia_driver_component("pc-ps2-dfv2") {
+  component_name = "pc-ps2"
+  deps = [
+    ":i8042_bind_dfv2",
+    ":pc-ps2-driver",
+  ]
   info = "pc-ps2-info.json"
   colocate = true
   root_resource = true
