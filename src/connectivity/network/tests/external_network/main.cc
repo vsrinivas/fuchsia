@@ -15,13 +15,12 @@
 
 namespace {
 
-// This is the expected derived device name for the mac address
-// aa:bb:cc:dd:ee:ff, specified in meta/netstack_external_network_test.cmx
-// (see facets.fuchsia.netemul.networks.endpoints[0].mac).
+// This is the device name we expect to get from the device name provider,
+// specified in meta/device-name-provider.cml.
 //
 // Since this only used on Fuchsia, it is conditionally compiled.
 #if defined(__Fuchsia__)
-constexpr char kDerivedDeviceName[] = "fuchsia-aabb-ccdd-eeff";
+constexpr char kDerivedDeviceName[] = "fuchsia-test-node-name";
 #endif
 
 TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {

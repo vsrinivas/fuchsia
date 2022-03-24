@@ -15,39 +15,32 @@ test("bin") {
   ]
 }
 
-fuchsia_test_component("client") {
+fuchsia_unittest_component("client") {
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
-  manifest = "meta/client.cmx"
 }
 
-fuchsia_unittest_component("test") {
-  deps = [ ":client" ]
-  manifest = "meta/test.cmx"
+fuchsia_test_component("device-name-provider") {
+  manifest = "meta/device-name-provider.cml"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
 }
 
-_universe_deps = [
-  # netemul-runner is used to create hermetic test environments.
-  "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
-]
+fuchsia_test_component("test") {
+  manifest = "meta/test.cml"
+  deps = [
+    ":client",
+    ":device-name-provider",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+  ]
+}
 
 fuchsia_test_package("netstack-external-network-tests") {
   test_components = [ ":test" ]
-
-  deps = [
-    # device_name_provider provides fuchsia.device.NameProvider.
-    "//src/connectivity/network/tests:device_name_provider",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug-legacy",
-
-    # netstack-cfg is used to configure netstack in test environments.
-    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
-  ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = _universe_deps + [ ":netstack-external-network-tests" ]
+  public_deps = [ ":netstack-external-network-tests" ]
 
   if (host_os == "linux") {
     public_deps += [ ":client($host_toolchain)" ]

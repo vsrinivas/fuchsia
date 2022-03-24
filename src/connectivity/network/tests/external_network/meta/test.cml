@@ -1,0 +1,79 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        networks: [
+            {
+                name: "external_network",
+                endpoints: [
+                    { name: "device" },
+                ],
+            },
+        ],
+        netstacks: [
+            {
+                name: "netstack",
+                interfaces: [
+                    {
+                        name: "device",
+                        static_ips: [
+                            "192.168.0.1/24",
+                            "192.168.0.2/24",
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    children: [
+        {
+            name: "client",
+            url: "#meta/client.cm",
+        },
+        {
+            name: "netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+        {
+            name: "device-name-provider",
+            url: "#meta/device-name-provider.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#client",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#netstack",
+            path: "/svc/netstack",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#client",
+                "#device-name-provider",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: "#client",
+        },
+        {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "#device-name-provider",
+            to: "#client",
+        },
+    ],
+}
