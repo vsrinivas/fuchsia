@@ -75,6 +75,12 @@ if (rustc_prefix == default_rustc_prefix &&
 rebased_rustc_prefix = rebase_path(rustc_prefix, root_build_dir)
 rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
 
+# similar to the above rebased rust paths, but the toolchain is one copied to
+# the output directory for host tests. Test targets that use this sysroot must
+# depend on //build/rust:prebuilt_toolchain_host_test_data
+out_rustc_prefix = rebase_path("$root_out_dir/rust-sysroot/bin", root_build_dir)
+out_rust_sysroot = rebase_path("$root_out_dir/rust-sysroot", root_build_dir)
+
 if (is_fuchsia) {
   rust_panic = "abort"
 } else {

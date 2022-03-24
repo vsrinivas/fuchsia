@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/testing/host_test_data.gni")
+import("config.gni")
 
 group("disable_strict_sources_check_allowlist") {
   #  ________  _________  ________  ________
@@ -109,17 +110,33 @@ group("rust_test_metadata") {
   }
 }
 
-# Multiple integration tests rely on having a Rust toolchain available on the host test runner,
-# and host_test_data does not appear to support multiple definitions of the same output path in
-# the same build, so we provide a central target here to be used by integration tests that need
-# cargo or rustc.
+# Multiple integration tests rely on having a Rust toolchain available on the host test
+# runner, and host_test_data does not appear to support multiple definitions of the
+# same output path in the same build, so we provide a central target here to be used
+# by integration tests that need cargo or rustc.
 if (is_host) {
-  host_test_data("prebuilt_toolchain_host_test_data") {
-    sources = [
-      "//prebuilt/third_party/rust/${host_platform}/bin/cargo",
-      "//prebuilt/third_party/rust/${host_platform}/bin/rustc",
-      "//prebuilt/third_party/rust/${host_platform}/lib",
+  action("make_toolchain_host_binaries") {
+    script = "//build/rust/copy_tree_wrapper.sh"
+
+    # TODO: When specifying a custom toolchain locally this input wont exist, which
+    # causes this action to always run, even on no-op rebuilds.
+    inputs = [ "$rebased_rust_sysroot/.versions/rust.cipd_version" ]
+    _stamp = "rust-sysroot/make_toolchain_host_binaries.stamp"
+    args = [
+      rebase_path("//build/copy_tree.py", root_build_dir),
+      rebased_rust_sysroot,
+      out_rust_sysroot,
+      _stamp,
     ]
+    outputs = [
+      "$root_build_dir/$_stamp",
+      "$root_build_dir/$out_rust_sysroot",
+    ]
+  }
+
+  host_test_data("prebuilt_toolchain_host_test_data") {
+    deps = [ ":make_toolchain_host_binaries" ]
+    sources = [ "$root_build_dir/$out_rust_sysroot" ]
   }
 }
 
