@@ -101,10 +101,12 @@ pub fn create_galaxy(
     let galaxy_args: Arguments =
         serde_json::from_str(&std::fs::read_to_string(CONFIGURATION_FILE_PATH)?)?;
 
-    let chan: fasync::Channel =
-        io_util::open_directory_in_namespace(COMPONENT_PKG_PATH, io_util::OPEN_RIGHT_READABLE)?
-            .into_channel()
-            .map_err(|_| anyhow!("Failed to open pkg"))?;
+    let chan: fasync::Channel = io_util::open_directory_in_namespace(
+        COMPONENT_PKG_PATH,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+    )?
+    .into_channel()
+    .map_err(|_| anyhow!("Failed to open pkg"))?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(chan.into_zx_channel());
     let mut kernel = Kernel::new(&galaxy_args.name)?;
     kernel.cmdline = galaxy_args.kernel_cmdline.as_bytes().to_vec();
