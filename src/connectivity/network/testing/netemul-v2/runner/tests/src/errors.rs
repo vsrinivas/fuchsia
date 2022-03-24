@@ -11,9 +11,8 @@ fn test_url(component: &str) -> String {
     format!("fuchsia-pkg://fuchsia.com/netemul-runner-errors-tests#meta/{component}.cm")
 }
 
-#[test_case("invalid-config"; "config file provided but contains invalid configuration")]
-#[test_case("missing-config-file"; "specified config file is missing from package")]
-#[test_case("missing-config-field"; "no config file is specified")]
+#[test_case("invalid-config"; "configuration is provided but is invalid")]
+#[test_case("missing-config"; "configuration is not included in `program` section of manifest")]
 #[test_case(
     "test-suite-not-used";
     "the `fuchsia.test/Suite` protocol is not available in the test root component's namespace"

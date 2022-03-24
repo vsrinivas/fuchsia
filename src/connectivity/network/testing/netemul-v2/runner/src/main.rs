@@ -47,39 +47,20 @@ async fn test_setup(
     program: fdata::Dictionary,
     namespace: Vec<frunner::ComponentNamespaceEntry>,
 ) -> Result<(config::NetworkEnvironment, fio::DirectoryProxy), anyhow::Error> {
-    // Retrieve the '/svc' and '/pkg' directories from the test root's namespace, so
-    // we can access the `fuchsia.test/Suite` protocol from the test driver, the
-    // network configuration file, and any netstacks that need to be configured.
-    let (svc_dir, pkg_dir) = namespace.into_iter().fold(
-        (None, None),
-        |(svc_dir, pkg_dir), frunner::ComponentNamespaceEntry { path, directory, .. }| match path
-            .as_ref()
-            .map(|s| s.as_str())
-        {
-            Some("/svc") => {
-                assert_eq!(svc_dir, None);
-                (Some(directory), pkg_dir)
-            }
-            Some("/pkg") => {
-                assert_eq!(pkg_dir, None);
-                (svc_dir, Some(directory))
-            }
-            _ => (svc_dir, pkg_dir),
-        },
-    );
-    let svc_dir = svc_dir
+    // Retrieve the '/svc' directory from the test root's namespace so we can access
+    // the `fuchsia.test/Suite` protocol from the test driver and any netstacks that
+    // need to be configured.
+    let svc_dir = namespace
+        .into_iter()
+        .find_map(|frunner::ComponentNamespaceEntry { path, directory, .. }| {
+            path.as_ref().and_then(|path| (path == "/svc").then(|| directory))
+        })
         .context("/svc directory not in namespace")?
         .context("directory field not set for /svc namespace entry")?
         .into_proxy()
         .context("client end into proxy")?;
-    let pkg_dir = pkg_dir
-        .context("/pkg directory not in namespace")?
-        .context("directory field not set for /pkg namespace entry")?
-        .into_proxy()
-        .context("client end into proxy")?;
 
-    let env = config::Config::load_from_program(program, &pkg_dir)
-        .await
+    let env = config::Config::load_from_program(program)
         .context("retrieving and parsing network configuration")?
         .apply(|name| {
             fuchsia_component::client::connect_to_named_protocol_at_dir_root::<

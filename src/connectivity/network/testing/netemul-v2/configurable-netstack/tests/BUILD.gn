@@ -68,19 +68,10 @@ fuchsia_test_component("server-component") {
   deps = [ ":server" ]
 }
 
-# TODO(https://fxbug.dev/95219): read the configurations directly from the
-# `program` section of the component's manifest rather than from a packaged
-# config file.
-resource("config") {
-  sources = [ "config.json" ]
-  outputs = [ "config.json" ]
-}
-
 fuchsia_test_component("configurable-netstack-test") {
   manifest = "meta/configurable-netstack-test.cml"
   deps = [
     ":client-component",
-    ":config",
     ":server-component",
     "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
     "//src/connectivity/network/testing/netemul-v2/sync-manager",

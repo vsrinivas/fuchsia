@@ -8,12 +8,8 @@ fuchsia_test_component("invalid-config") {
   manifest = "meta/invalid-config.cml"
 }
 
-fuchsia_test_component("missing-config-field") {
-  manifest = "meta/missing-config-field.cml"
-}
-
-fuchsia_test_component("missing-config-file") {
-  manifest = "meta/missing-config-file.cml"
+fuchsia_test_component("missing-config") {
+  manifest = "meta/missing-config.cml"
 }
 
 fuchsia_test_component("test-suite-not-used") {
@@ -24,8 +20,7 @@ group("invalid") {
   testonly = true
   deps = [
     ":invalid-config",
-    ":missing-config-field",
-    ":missing-config-file",
+    ":missing-config",
     ":test-suite-not-used",
   ]
 }

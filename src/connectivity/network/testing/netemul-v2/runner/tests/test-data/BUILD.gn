@@ -29,10 +29,7 @@ foreach(test, tests) {
 
 group("test-data") {
   testonly = true
-  deps = [
-    "config",
-    "invalid",
-  ]
+  deps = [ "invalid" ]
   foreach(test, tests) {
     deps += [ ":${test}-test" ]
   }

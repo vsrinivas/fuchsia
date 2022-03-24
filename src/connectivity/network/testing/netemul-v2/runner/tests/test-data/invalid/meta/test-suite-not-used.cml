@@ -4,6 +4,7 @@
 {
     include: [ "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml" ],
     program: {
-        network_config: "empty.json",
+        networks: [],
+        netstacks: [],
     },
 }
