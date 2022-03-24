@@ -223,6 +223,38 @@
             "metric_id": 11,
             "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:outgoing_connection_failure_count"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 18,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:disconnect_explicit_disconnect_count"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 18,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:disconnect_link_error_count"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 18,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:disconnect_zero_ref_count"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 18,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:disconnect_remote_disconnection_count"
         }
     ],
     "poll_rate_sec": 1800,
