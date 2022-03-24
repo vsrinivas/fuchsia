@@ -1,4 +1,4 @@
-# Implement a FIDL server
+# Implement an HLCPP FIDL server
 
 ## Prerequisites
 
