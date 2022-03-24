@@ -16,11 +16,13 @@ rustc_binary("virtio_block_bin") {
   with_unit_tests = true
 
   sources = [
+    "src/backend.rs",
     "src/main.rs",
     "src/wire.rs",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -32,6 +34,7 @@ rustc_binary("virtio_block_bin") {
     "//src/virtualization/lib/machina-virtio-device",
     "//src/virtualization/lib/virtio-device",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
 }
