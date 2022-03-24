@@ -255,6 +255,46 @@
             "metric_id": 18,
             "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/bt-host/adapter/low_energy_discovery_manager:disconnect_remote_disconnection_count"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 19,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:disconnect_local_api_request_count"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 19,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:disconnect_interrogation_failed_count"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 19,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:disconnect_pairing_failed_count"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 19,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:disconnect_acl_link_error_count"
+        },
+        {
+            "event_codes": [
+                5
+            ],
+            "metric_id": 19,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/bt-host/adapter/bredr_connection_manager:disconnect_peer_disconnection_count"
         }
     ],
     "poll_rate_sec": 1800,
