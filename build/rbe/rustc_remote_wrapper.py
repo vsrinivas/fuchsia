@@ -17,7 +17,7 @@ This script was ported over from bin/rbe/rustc-remote-wrapper.sh.
 import argparse
 import os
 import sys
-from typing import Sequence
+from typing import Iterable, Sequence
 
 # Global constants
 _ARGV = sys.argv
@@ -52,7 +52,7 @@ _FSATRACE_PATH = os.path.join(
 _DETAIL_DIFF = os.path.join(_SCRIPT_DIR, 'detail-diff.sh')
 
 
-def main_arg_parser() -> argparse.ArgumentParser:
+def _main_arg_parser() -> argparse.ArgumentParser:
     """Construct the argument parser, called by main()."""
     parser = argparse.ArgumentParser(
         description="Wraps a Rust command for remote execution",
@@ -93,10 +93,106 @@ def main_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _compile_command_parser() -> argparse.ArgumentParser:
+    """Parse a Rust compile command and extract some parameters from flags."""
+    parser = argparse.ArgumentParser(
+        description="Wraps a Rust command for remote execution",
+        argument_default=[],
+    )
+    parser.add_argument(
+        '--remote-disable',
+        action='store_true',
+        default=False,
+        help='Force local execution')
+
+    # TODO(fangism): update these to not require comma-separation, allow
+    # space-separation appending, and update remove_command_pseudo_flags()
+    # accordingly.
+    parser.add_argument(
+        '--remote-inputs',
+        type=str,
+        help='Comma-separated input files needed for remote execution')
+    parser.add_argument(
+        '--remote-outputs',
+        type=str,
+        help='Comma-separated output files to fetch after remote execution')
+
+    parser.add_argument(
+        '--remote-flag',
+        action='append',
+        help='Additional remote execution flags for rewrapper')
+    return parser
+
+
+def apply_remote_flags_from_pseudo_flags(main_config, command_params):
+    """Apply some flags from the command to the rewrapper configuration.
+
+    Args:
+      main_config: main configuration (modified-by-reference).
+      command_params: command parameters inferred from parsing the command.
+    """
+    if command_params.remote_disable:
+        main_config.local = True
+
+
+def remove_command_pseudo_flags(command: Iterable[str]) -> Iterable[str]:
+    """Remove pseudo flags from the command.
+
+    These pseudo flags exist to provide a means of influencing remote
+    execution in the position where normal tool flags appear to make
+    up for the inability to pass the same information to the wrapper
+    prefix in GN.
+
+    Semantic handling of these flags is handled in compile_command_parser().
+    """
+    ignore_next_token = False
+    for token in command:
+        if ignore_next_token:
+            ignore_next_token = False
+            continue
+        elif token == '--remote-disable':
+            pass
+        elif token == '--remote-inputs':
+            ignore_next_token = True
+        elif token.startswith('--remote-inputs='):
+            pass
+        elif token == '--remote-outputs':
+            ignore_next_token = True
+        elif token.startswith('--remote-outputs='):
+            pass
+        elif token == '--remote-flag':
+            ignore_next_token = True
+        elif token.startswith('--remote-flag='):
+            pass
+        else:
+            yield token
+
+
+# Global singleton parser objects (considered immutable).
+_MAIN_PARSER = _main_arg_parser()
+_COMMAND_PARSER = _compile_command_parser()
+
+
+def parse_main_args(command: Sequence[str]):
+    return _MAIN_PARSER.parse_args(command)
+
+
+def parse_compile_command(command: Sequence[str]):
+    return _COMMAND_PARSER.parse_args(command)
+
+
 def main(argv: Sequence[str]):
-    parser = main_arg_parser()
-    args = parser.parse_args(argv[1:])  # drop argv[0], which is this script
-    # The command to run is in args.command
+    main_config = parse_main_args(
+        argv[1:])  # drop argv[0], which is this script
+
+    # The command to run remotely is in main_config.command.
+    command_params = parse_compile_command(main_config.command)
+
+    # Import some remote parameters back to the main_config.
+    apply_remote_flags_from_pseudo_flags(main_config, command_params)
+
+    # Remove pseudo flags from the remote command.
+    filtered_command = remove_command_pseudo_flags(main_config.command)
 
     # TODO: infer inputs and outputs for remote execution
     # TODO: construct remote execution command and run it
