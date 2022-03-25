@@ -216,6 +216,7 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libna
   if (status != ZX_OK) {
     return status;
   }
+  dev->flags |= DEV_CTX_BOUND;
   dev->device_controller()->BindDriver(
       fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
       [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
@@ -231,7 +232,6 @@ zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libna
           return;
         }
       });
-  dev->flags |= DEV_CTX_BOUND;
   return ZX_OK;
 }
 
