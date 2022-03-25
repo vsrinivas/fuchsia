@@ -11,8 +11,14 @@ group("test") {
 }
 
 test("fastboot-test") {
-  sources = [ "fastboot-test.cc" ]
-  include_dirs = [ "../include" ]
+  sources = [
+    "fastboot-test.cc",
+    "payload-streamer-test.cc",
+  ]
+  include_dirs = [
+    "..",
+    "../include",
+  ]
   deps = [
     "..:lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
@@ -20,6 +26,7 @@ test("fastboot-test") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/testing:fake-paver",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",

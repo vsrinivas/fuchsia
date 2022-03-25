@@ -11,7 +11,10 @@ config("include") {
 }
 
 source_set("lib") {
-  sources = [ "fastboot.cc" ]
+  sources = [
+    "fastboot.cc",
+    "payload-streamer.cc",
+  ]
   public_configs = [ ":include" ]
   public_deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
@@ -24,6 +27,9 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/storage/lib/paver",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]

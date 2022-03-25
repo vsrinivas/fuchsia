@@ -18,6 +18,8 @@
 
 namespace fastboot {
 
+constexpr char kSshKeyFilePath[] = "ssh/authorized_keys";
+
 // Communication between the fastboot host and device is in the unit of
 // "packet". Each fastboot command and response message (INFO, OKAY, FAIL,
 // DATA) is a single packet. In the DATA phase, the data to download or upload

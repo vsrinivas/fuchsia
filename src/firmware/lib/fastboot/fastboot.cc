@@ -4,6 +4,9 @@
 
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/default.h>
 #include <lib/fastboot/fastboot.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -15,6 +18,7 @@
 #include <string_view>
 #include <vector>
 
+#include "payload-streamer.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -384,6 +388,35 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   } else if (info.partition == "vbmeta" && info.configuration) {
     return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kVerifiedBootMetadata,
                       transport, data_sink);
+  } else if (info.partition == "fvm.sparse") {
+    // Flashing the sparse format FVM image via the paver. Note that at the time this code is
+    // written, the format of FVM for fuchsia has not reached at a stable point yet. However, the
+    // implementation of the paver fidl interface `WriteVolumes()` depends on the format of the FVM.
+    // Therefore, it is important make sure that the device is running the latest version of paver
+    // before using this fastboot command. This typically means flashing the latest kernel and
+    // reboot first. Otherwise, if FVM format changes and the currently running paver is not
+    // up-to-date, the FVM may be flashed wrongly.
+    auto streamer_endpoints = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
+    if (streamer_endpoints.is_error()) {
+      return SendResponse(ResponseType::kFail, "Failed to create payload streamer", transport,
+                          zx::error(streamer_endpoints.status_value()));
+    }
+    auto [client, server] = std::move(*streamer_endpoints);
+
+    // Launch thread which implements interface.
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    internal::PayloadStreamer streamer(std::move(server), download_vmo_mapper_.start(),
+                                       download_vmo_mapper_.size());
+    loop.StartThread("fastboot-payload-stream");
+
+    auto result = data_sink->WriteVolumes(std::move(client));
+    zx_status_t status = result.ok() ? result.value().status : result.status();
+    if (status != ZX_OK) {
+      return SendResponse(ResponseType::kFail, "Failed to write fvm", transport, zx::error(status));
+    }
+
+    download_vmo_mapper_.Reset();
+    return SendResponse(ResponseType::kOkay, "", transport);
   } else {
     return SendResponse(ResponseType::kFail, "Unsupported partition", transport);
   }
