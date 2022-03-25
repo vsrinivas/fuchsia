@@ -17,7 +17,7 @@ This script was ported over from bin/rbe/rustc-remote-wrapper.sh.
 import argparse
 import os
 import sys
-from typing import Iterable, Sequence
+from typing import Iterable, Sequence, Tuple
 
 # Global constants
 _ARGV = sys.argv
@@ -50,78 +50,6 @@ _FSATRACE_PATH = os.path.join(
     _PROJECT_ROOT_REL, 'prebuilt', 'fsatrace', 'fsatrace')
 
 _DETAIL_DIFF = os.path.join(_SCRIPT_DIR, 'detail-diff.sh')
-
-
-def _main_arg_parser() -> argparse.ArgumentParser:
-    """Construct the argument parser, called by main()."""
-    parser = argparse.ArgumentParser(
-        description="Wraps a Rust command for remote execution",
-        argument_default=[],
-    )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        default=False,
-        help='Stop before remote execution, and display some diagnostics.')
-    parser.add_argument(
-        '--local',
-        action='store_true',
-        default=False,
-        help="Run the original command locally, not remotely.",
-    )
-    parser.add_argument(
-        '--verbose',
-        action='store_true',
-        default=False,
-        help="Display debug information during processing.",
-    )
-    parser.add_argument(
-        '--fsatrace',
-        action='store_true',
-        default=False,
-        help=
-        "Trace file access during (local or remote) execution when the path to an fsatrace binary is given.",
-    )
-    # TODO: if needed, add --project-root override
-    # TODO: if needed, add --source override
-    # TODO: if needed, add --depfile override
-
-    # Positional args are the command and arguments to run.
-    # '--' also forces remaining args to treated positionally,
-    # and is recommended for visual separation.
-    parser.add_argument('command', nargs="*", help="The command to execute")
-    return parser
-
-
-def _compile_command_parser() -> argparse.ArgumentParser:
-    """Parse a Rust compile command and extract some parameters from flags."""
-    parser = argparse.ArgumentParser(
-        description="Wraps a Rust command for remote execution",
-        argument_default=[],
-    )
-    parser.add_argument(
-        '--remote-disable',
-        action='store_true',
-        default=False,
-        help='Force local execution')
-
-    # TODO(fangism): update these to not require comma-separation, allow
-    # space-separation appending, and update remove_command_pseudo_flags()
-    # accordingly.
-    parser.add_argument(
-        '--remote-inputs',
-        type=str,
-        help='Comma-separated input files needed for remote execution')
-    parser.add_argument(
-        '--remote-outputs',
-        type=str,
-        help='Comma-separated output files to fetch after remote execution')
-
-    parser.add_argument(
-        '--remote-flag',
-        action='append',
-        help='Additional remote execution flags for rewrapper')
-    return parser
 
 
 def apply_remote_flags_from_pseudo_flags(main_config, command_params):
@@ -168,25 +96,122 @@ def remove_command_pseudo_flags(command: Iterable[str]) -> Iterable[str]:
             yield token
 
 
-# Global singleton parser objects (considered immutable).
-_MAIN_PARSER = _main_arg_parser()
-_COMMAND_PARSER = _compile_command_parser()
+def parse_main_args(
+        command: Sequence[str]) -> Tuple[argparse.Namespace, Sequence[str]]:
+    """Scan a the main args for parameters.
+
+    Interface matches that of argparse.ArgumentParser.parse_known_args().
+    All unhandled tokens are intended to be forwarded to rewrapper.
+
+    Args:
+      command: command, like sys.argv
+
+    Returns:
+      A namespace struct with parameters, and a sequence of unhandled tokens.
+    """
+    params = argparse.Namespace(
+        local=False,
+        dry_run=False,
+        verbose=False,
+        fsatrace=False,
+        command=[],  # compile command
+    )
+    forward_to_rewrapper = []
+
+    opt_arg_func = None
+    for i, token in enumerate(command):
+        # Handle detached --option argument
+        if opt_arg_func is not None:
+            opt_arg_func(token)
+            opt_arg_func = None
+            continue
+
+        opt, sep, arg = token.partition('=')
+
+        # TODO(fangism): add --help
+        if token == '--local':
+            params.local = True
+        elif token == '--dry-run':
+            params.dry_run = True
+        elif token == '--verbose':
+            params.verbose = True
+        elif token == '--fsatrace':
+            params.fsatrace = True
+        elif token == '--':  # stop option processing
+            params.command = command[i + 1:]
+            break
+        # TODO: if needed, add --project-root override
+        # TODO: if needed, add --source override
+        # TODO: if needed, add --depfile override
+        else:
+            forward_to_rewrapper.append(token)
+
+    return params, forward_to_rewrapper
 
 
-def parse_main_args(command: Sequence[str]):
-    return _MAIN_PARSER.parse_args(command)
+def parse_compile_command(
+        command: Sequence[str]) -> Tuple[argparse.Namespace, Sequence[str]]:
+    """Scan a compile command for parameters.
 
+    Interface matches that of argparse.ArgumentParser.parse_known_args().
 
-def parse_compile_command(command: Sequence[str]):
-    return _COMMAND_PARSER.parse_args(command)
+    Args:
+      command: command to scan
+
+    Returns:
+      a namespace struct with parameters, and a filtered version of the
+      command to remotely execute (with pseudo-flags removed).
+    """
+    params = argparse.Namespace(
+        remote_disable=False,
+        remote_inputs=[],
+        remote_outputs=[],
+        remote_flags=[],
+    )
+    forward_as_compile_command = []
+
+    # Workaround inability to use assign statement inside lambda.
+    def set_params_attr(attr: str, value):
+        setattr(params, attr, value)
+
+    opt_arg_func = None
+    for token in command:
+        # Handle detached --option argument
+        if opt_arg_func is not None:
+            opt_arg_func(token)
+            opt_arg_func = None
+            continue
+
+        opt, sep, arg = token.partition('=')
+
+        if token == '--remote-disable':
+            params.remote_disable = True
+        elif token == '--remote-inputs':
+            opt_arg_func = lambda x: set_params_attr('remote_inputs', x)
+        elif opt == '--remote-inputs' and sep == '=':
+            params.remote_inputs = arg
+        elif token == '--remote-outputs':
+            opt_arg_func = lambda x: set_params_attr('remote_outputs', x)
+        elif opt == '--remote-outputs' and sep == '=':
+            params.remote_outputs = arg
+        elif token == '--remote-flag':
+            opt_arg_func = lambda x: params.remote_flags.append(x)
+        elif opt == '--remote-flag' and sep == '=':
+            params.remote_flags.append(arg)
+        else:
+            forward_as_compile_command.append(token)
+
+    return params, forward_as_compile_command
 
 
 def main(argv: Sequence[str]):
-    main_config = parse_main_args(
+    # Parse flags, and forward all unhandled flags to rewrapper.
+    main_config, forwarded_rewrapper_args = parse_main_args(
         argv[1:])  # drop argv[0], which is this script
 
     # The command to run remotely is in main_config.command.
     command_params = parse_compile_command(main_config.command)
+    forwarded_rewrapper_args.extend(command_params.remote_flags)
 
     # Import some remote parameters back to the main_config.
     apply_remote_flags_from_pseudo_flags(main_config, command_params)

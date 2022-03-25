@@ -13,15 +13,16 @@ from unittest import mock
 class MainArgParseTests(unittest.TestCase):
 
     def testDefaults(self):
-        args = rustc_remote_wrapper.parse_main_args([])
+        args, forward = rustc_remote_wrapper.parse_main_args([])
         self.assertFalse(args.dry_run)
         self.assertFalse(args.local)
         self.assertFalse(args.verbose)
         self.assertFalse(args.fsatrace)
         self.assertEqual(args.command, [])
+        self.assertEqual(forward, [])
 
     def testDefaultOpposites(self):
-        args = rustc_remote_wrapper.parse_main_args(
+        args, forward = rustc_remote_wrapper.parse_main_args(
             [
                 '--dry-run', '--local', '--verbose', '--fsatrace', '--',
                 'rustc', 'src/lib.rs'
@@ -31,60 +32,92 @@ class MainArgParseTests(unittest.TestCase):
         self.assertTrue(args.verbose)
         self.assertTrue(args.fsatrace)
         self.assertEqual(args.command, ['rustc', 'src/lib.rs'])
+        self.assertEqual(forward, [])
+
+    def testForwardRewrapperArgs(self):
+        args, forward = rustc_remote_wrapper.parse_main_args(
+            [
+                '--local', '--forward-me', 'arg1', '--forward-me=too',
+                '--verbose', '--', 'rustc', 'src/lib.rs'
+            ])
+        self.assertTrue(args.local)
+        self.assertTrue(args.verbose)
+        self.assertEqual(forward, ['--forward-me', 'arg1', '--forward-me=too'])
+        self.assertEqual(args.command, ['rustc', 'src/lib.rs'])
 
 
 class CommandArgParseTests(unittest.TestCase):
 
     def testDefaults(self):
-        args = rustc_remote_wrapper.parse_compile_command([])
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command([])
         self.assertFalse(args.remote_disable)
         self.assertEqual(args.remote_inputs, [])
         self.assertEqual(args.remote_outputs, [])
-        self.assertEqual(args.remote_flag, [])
+        self.assertEqual(args.remote_flags, [])
+        self.assertEqual(filtered_command, [])
+
+    def testNormalCommand(self):
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+            ['echo', 'hello'])
+        self.assertFalse(args.remote_disable)
+        self.assertEqual(args.remote_inputs, [])
+        self.assertEqual(args.remote_outputs, [])
+        self.assertEqual(args.remote_flags, [])
+        self.assertEqual(filtered_command, ['echo', 'hello'])
 
     def testRemoteDisable(self):
-        args = rustc_remote_wrapper.parse_compile_command(['--remote-disable'])
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+            ['--remote-disable'])
         self.assertTrue(args.remote_disable)
+        self.assertEqual(filtered_command, [])
 
     def testRemoteInputs(self):
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-inputs', 'aaa,bbb'])
         self.assertEqual(args.remote_inputs, 'aaa,bbb')
+        self.assertEqual(filtered_command, [])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-inputs=aaa,bbb'])
         self.assertEqual(args.remote_inputs, 'aaa,bbb')
+        self.assertEqual(filtered_command, [])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-inputs', 'aaa', '--remote-inputs', 'bbb'])
         self.assertEqual(args.remote_inputs, 'bbb')
+        self.assertEqual(filtered_command, [])
 
     def testRemoteOutputs(self):
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-outputs', 'xxx,yyy'])
         self.assertEqual(args.remote_outputs, 'xxx,yyy')
+        self.assertEqual(filtered_command, [])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-outputs=xxx,yyy'])
         self.assertEqual(args.remote_outputs, 'xxx,yyy')
+        self.assertEqual(filtered_command, [])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-outputs', 'xxx', '--remote-outputs', 'yyy'])
         self.assertEqual(args.remote_outputs, 'yyy')
+        self.assertEqual(filtered_command, [])
 
     def testRemoteFlag(self):
         # argparse does not handle this:
         # args = rustc_remote_wrapper.parse_compile_command(['--remote-flag', '--some-rewrapper-flag=foobar'])
-        # self.assertEqual(args.remote_flag, ['--some-rewrapper-flag=foobar'])
+        # self.assertEqual(args.remote_flags, ['--some-rewrapper-flag=foobar'])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-flag=--some-rewrapper-flag=foobar'])
-        self.assertEqual(args.remote_flag, ['--some-rewrapper-flag=foobar'])
+        self.assertEqual(args.remote_flags, ['--some-rewrapper-flag=foobar'])
+        self.assertEqual(filtered_command, [])
 
-        args = rustc_remote_wrapper.parse_compile_command(
+        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
             ['--remote-flag=--some-rewrapper-flag=foobar', '--remote-flag=baz'])
         self.assertEqual(
-            args.remote_flag, ['--some-rewrapper-flag=foobar', 'baz'])
+            args.remote_flags, ['--some-rewrapper-flag=foobar', 'baz'])
+        self.assertEqual(filtered_command, [])
 
 
 class RemoteCommandPseudoFlagsTests(unittest.TestCase):
@@ -135,8 +168,9 @@ class ApplyRemoteFlagsFromPseudoFlagsTests(unittest.TestCase):
             (['--', '--remote-disable'], True),
         ]
         for i, test_case in enumerate(test_cases):
-            main_config = rustc_remote_wrapper.parse_main_args(test_case[0])
-            command_params = rustc_remote_wrapper.parse_compile_command(
+            main_config, rewrapper_opts = rustc_remote_wrapper.parse_main_args(
+                test_case[0])
+            command_params, filtered_command = rustc_remote_wrapper.parse_compile_command(
                 main_config.command)
             rustc_remote_wrapper.apply_remote_flags_from_pseudo_flags(
                 main_config, command_params)
