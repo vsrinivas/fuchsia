@@ -506,20 +506,11 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
-  // Not all devices supply an valid "out" argument, but some that do need "out" to be set
-  // immediately, because we call DdkInit() from within parent->Add().
   zx_device_t* child;
-  zx_device_t** ptr = &child;
-  if (out) {
-    ptr = out;
-  }
-  zx_status_t status = parent->Add(args, ptr);
+  zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
     FDF_LOG(ERROR, "Failed to add device %s: %s", args->name, zx_status_get_string(status));
     return status;
-  }
-  if (out) {
-    child = *out;
   }
 
   // Wait for the device to initialize, then export to dev, then
@@ -550,6 +541,10 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
                   .wrap_with(child->scope())
                   .wrap_with(scope_);
   executor_.schedule_task(std::move(task));
+
+  if (out) {
+    *out = child;
+  }
 
   return ZX_OK;
 }

@@ -193,10 +193,6 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 
   children_.push_back(std::move(device));
 
-  if (out) {
-    *out = device_ptr->ZxDevice();
-  }
-
   // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
   // init task after adding the device.
   if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
@@ -207,6 +203,9 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     device_ptr->InitReply(ZX_OK);
   }
 
+  if (out) {
+    *out = device_ptr->ZxDevice();
+  }
   return ZX_OK;
 }
 
