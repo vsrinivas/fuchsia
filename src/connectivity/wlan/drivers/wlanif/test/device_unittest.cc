@@ -712,8 +712,8 @@ TEST(QueryTest, QuerySecuritySupport) {
 
   proto_ops.query_security_support = [](void* ctx, security_support_t* out_support) {
     *out_support = {};
-    out_support->sae.supported = true;
-    out_support->sae.handler = SAE_HANDLER_SME;
+    out_support->sae.driver_handler_supported = true;
+    out_support->sae.sme_handler_supported = true;
     out_support->mfp.supported = true;
   };
   QueryTestContext ctx;
@@ -729,8 +729,8 @@ TEST(QueryTest, QuerySecuritySupport) {
   fuchsia::wlan::common::SecuritySupport support;
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
   ASSERT_EQ(mlme_proxy.QuerySecuritySupport(&support), ZX_OK);
-  EXPECT_TRUE(support.sae.supported);
-  EXPECT_EQ(support.sae.handler, wlan_common::SaeHandler::SME);
+  EXPECT_TRUE(support.sae.driver_handler_supported);
+  EXPECT_TRUE(support.sae.sme_handler_supported);
   EXPECT_TRUE(support.mfp.supported);
 
   device->Unbind();

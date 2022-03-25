@@ -2790,8 +2790,8 @@ mod tests {
         assert_variant!(me.handle_mlme_msg(mlme_req), Ok(()));
         let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
         assert_eq!(resp.mfp.supported, false);
-        assert_eq!(resp.sae.supported, false);
-        assert_eq!(resp.sae.handler, fidl_common::SaeHandler::Sme);
+        assert_eq!(resp.sae.driver_handler_supported, false);
+        assert_eq!(resp.sae.sme_handler_supported, false);
     }
 
     #[test]

@@ -238,8 +238,8 @@ mod tests {
             },
             security_support: fidl_wlan_common::SecuritySupport {
                 sae: fidl_wlan_common::SaeFeature {
-                    supported: false,
-                    handler: fidl_wlan_common::SaeHandler::Sme,
+                    driver_handler_supported: false,
+                    sme_handler_supported: false,
                 },
                 mfp: fidl_wlan_common::MfpFeature { supported: false },
             },

@@ -4203,7 +4203,7 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
   // features
   security_support_t security_support;
   brcmf_if_query_security_support(ndev, &security_support);
-  if (security_support.sae.supported && security_support.sae.handler == SAE_HANDLER_SME) {
+  if (security_support.sae.sme_handler_supported) {
     info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
   }
   if (security_support.mfp.supported) {
@@ -4395,9 +4395,8 @@ void brcmf_if_query_security_support(net_device* ndev, security_support_t* resp)
 
   memset(resp, 0, sizeof(*resp));
 
-  resp->sae.supported = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_EXTSAE);
-  if (resp->sae.supported) {
-    resp->sae.handler = SAE_HANDLER_SME;
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_EXTSAE)) {
+    resp->sae.sme_handler_supported = true;
   }
 
   resp->mfp.supported = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP);

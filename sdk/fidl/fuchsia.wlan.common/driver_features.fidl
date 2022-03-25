@@ -79,18 +79,15 @@ type MacSublayerSupport = struct {
     device DeviceExtension;
 };
 
-/// Indicates where simultaneous authentication of equals (SAE) is handled.
-type SaeHandler = strict enum : uint8 {
-    DRIVER = 1;
-    SME = 2;
-};
-
 /// Simultaneous Authentication of Equals.
 /// See IEEE 802.11-2016 12.4.
 /// This is a security feature, usable for fullmac or softmac.
 type SaeFeature = struct {
-    supported bool;
-    handler SaeHandler;
+    // A driver may support more than one SAE handler mechanism.
+    /// SAE can be handled by the driver.
+    driver_handler_supported bool;
+    /// SAE can be handled by SME.
+    sme_handler_supported bool;
 };
 
 /// Management Frame Protection.

@@ -50,8 +50,8 @@ TEST_F(SimTest, ClientIfcQuerySecuritySupport) {
                              zx::sec(1));
   env_->Run(kSimulatedClockDuration);
 
-  EXPECT_TRUE(resp.sae.supported);
-  EXPECT_EQ(resp.sae.handler, SAE_HANDLER_SME);
+  EXPECT_FALSE(resp.sae.driver_handler_supported);
+  EXPECT_TRUE(resp.sae.sme_handler_supported);
   EXPECT_TRUE(resp.mfp.supported);
 }
 

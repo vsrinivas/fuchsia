@@ -57,8 +57,8 @@ pub(crate) fn create_wlantap_config(
         },
         security_support: fidl_common::SecuritySupport {
             sae: fidl_common::SaeFeature {
-                supported: false,
-                handler: fidl_common::SaeHandler::Sme,
+                driver_handler_supported: false,
+                sme_handler_supported: false,
             },
             mfp: fidl_common::MfpFeature { supported: true },
         },

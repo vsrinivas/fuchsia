@@ -95,18 +95,8 @@ zx_status_t ConvertSecuritySupportToFidl(const security_support_t& in,
                                          fidl_common::SecuritySupport* out) {
   *out = {};
   out->mfp.supported = in.mfp.supported;
-  out->sae.supported = in.sae.supported;
-  switch (in.sae.handler) {
-    case SAE_HANDLER_DRIVER:
-      out->sae.handler = fidl_common::SaeHandler::DRIVER;
-      break;
-    case SAE_HANDLER_SME:
-      out->sae.handler = fidl_common::SaeHandler::SME;
-      break;
-    default:
-      errorf("SAE handler %hhu not supported", in.sae.handler);
-      return ZX_ERR_INVALID_ARGS;
-  }
+  out->sae.driver_handler_supported = in.sae.driver_handler_supported;
+  out->sae.sme_handler_supported = in.sae.sme_handler_supported;
   return ZX_OK;
 }
 
@@ -114,18 +104,8 @@ zx_status_t ConvertSecuritySupportToDdk(const fidl_common::SecuritySupport& in,
                                         security_support_t* out) {
   *out = {};
   out->mfp.supported = in.mfp.supported;
-  out->sae.supported = in.sae.supported;
-  switch (in.sae.handler) {
-    case fidl_common::SaeHandler::DRIVER:
-      out->sae.handler = SAE_HANDLER_DRIVER;
-      break;
-    case fidl_common::SaeHandler::SME:
-      out->sae.handler = SAE_HANDLER_SME;
-      break;
-    default:
-      errorf("SAE handler %hhu not supported", in.sae.handler);
-      return ZX_ERR_INVALID_ARGS;
-  }
+  out->sae.driver_handler_supported = in.sae.driver_handler_supported;
+  out->sae.sme_handler_supported = in.sae.sme_handler_supported;
   return ZX_OK;
 }
 

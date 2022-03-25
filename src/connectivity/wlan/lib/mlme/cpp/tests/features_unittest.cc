@@ -41,11 +41,12 @@ const fidl_common::MacSublayerSupport kMacSublayerSupportFidl{
 };
 
 // DDK and FIDL versions representing the same security features.
-const security_support_t kSecuritySupportDdk{.sae = {.supported = true, .handler = SAE_HANDLER_SME},
-                                             .mfp = {.supported = true}};
+const security_support_t kSecuritySupportDdk{
+    .sae = {.driver_handler_supported = true, .sme_handler_supported = true},
+    .mfp = {.supported = true}};
 
 const fidl_common::SecuritySupport kSecuritySupportFidl{
-    .sae = {.supported = true, .handler = fidl_common::SaeHandler::SME},
+    .sae = {.driver_handler_supported = true, .sme_handler_supported = true},
     .mfp = {.supported = true}};
 
 // DDK and FIDL versions representing the same spectrum management features.
@@ -107,8 +108,8 @@ TEST(SecuritySupportConversionTest, DdkToFidl) {
   const fidl_common::SecuritySupport& expected = kSecuritySupportFidl;
   fidl_common::SecuritySupport actual;
   ASSERT_EQ(ConvertSecuritySupportToFidl(kSecuritySupportDdk, &actual), ZX_OK);
-  EXPECT_EQ(actual.sae.supported, expected.sae.supported);
-  EXPECT_EQ(actual.sae.handler, expected.sae.handler);
+  EXPECT_EQ(actual.sae.driver_handler_supported, expected.sae.driver_handler_supported);
+  EXPECT_EQ(actual.sae.sme_handler_supported, expected.sae.sme_handler_supported);
   EXPECT_EQ(actual.mfp.supported, expected.mfp.supported);
 }
 
@@ -116,20 +117,9 @@ TEST(SecuritySupportConversionTest, FidlToDdk) {
   const security_support_t& expected = kSecuritySupportDdk;
   security_support_t actual;
   ASSERT_EQ(ConvertSecuritySupportToDdk(kSecuritySupportFidl, &actual), ZX_OK);
-  EXPECT_EQ(actual.sae.supported, expected.sae.supported);
-  EXPECT_EQ(actual.sae.handler, expected.sae.handler);
+  EXPECT_EQ(actual.sae.driver_handler_supported, expected.sae.driver_handler_supported);
+  EXPECT_EQ(actual.sae.sme_handler_supported, expected.sae.sme_handler_supported);
   EXPECT_EQ(actual.mfp.supported, expected.mfp.supported);
-}
-
-TEST(SecuritySupportConversionTest, InvalidDdkInputRecognized) {
-  // Create a malformed data structure.
-  security_support_t invalid;
-  memcpy(&invalid, &kSecuritySupportDdk, sizeof(kSecuritySupportDdk));
-  const uint8_t invalid_sae_handler = 0;
-  invalid.sae.handler = invalid_sae_handler;
-
-  fidl_common::SecuritySupport actual;
-  ASSERT_NE(ConvertSecuritySupportToFidl(invalid, &actual), ZX_OK);
 }
 
 TEST(SpectrumManagementSupportConversionTest, DdkToFidl) {

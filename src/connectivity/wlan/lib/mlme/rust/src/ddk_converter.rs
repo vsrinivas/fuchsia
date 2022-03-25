@@ -186,17 +186,10 @@ pub fn convert_ddk_security_support(
     support: banjo_common::SecuritySupport,
 ) -> Result<fidl_common::SecuritySupport, Error> {
     let mfp = fidl_common::MfpFeature { supported: support.mfp.supported };
-    let handler = match support.sae.handler {
-        banjo_common::SaeHandler::DRIVER => fidl_common::SaeHandler::Driver,
-        banjo_common::SaeHandler::SME => fidl_common::SaeHandler::Sme,
-        _ => {
-            return Err(format_err!(
-                "Unexpected banjo_comon::SaeHandler value {}",
-                support.sae.handler.0
-            ))
-        }
+    let sae = fidl_common::SaeFeature {
+        driver_handler_supported: support.sae.driver_handler_supported,
+        sme_handler_supported: support.sae.sme_handler_supported,
     };
-    let sae = fidl_common::SaeFeature { supported: support.sae.supported, handler };
     Ok(fidl_common::SecuritySupport { sae, mfp })
 }
 
@@ -487,8 +480,11 @@ mod tests {
         let support_ddk = fake_security_support();
         let support_fidl =
             convert_ddk_security_support(support_ddk).expect("Failed to convert security support");
-        assert_eq!(support_fidl.sae.supported, support_ddk.sae.supported);
-        assert_eq!(support_fidl.sae.handler, fidl_common::SaeHandler::Sme);
+        assert_eq!(
+            support_fidl.sae.driver_handler_supported,
+            support_ddk.sae.driver_handler_supported
+        );
+        assert_eq!(support_fidl.sae.sme_handler_supported, support_ddk.sae.sme_handler_supported);
         assert_eq!(support_fidl.mfp.supported, support_ddk.mfp.supported);
     }
 

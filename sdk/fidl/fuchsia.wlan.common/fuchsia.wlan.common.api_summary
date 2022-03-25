@@ -60,12 +60,9 @@ enum/member fuchsia.wlan.common/RequestStatus.REJECTED_DUPLICATE_REQUEST 4
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_INCOMPATIBLE_MODE 2
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_NOT_SUPPORTED 1
 strict enum fuchsia.wlan.common/RequestStatus uint32
-struct/member fuchsia.wlan.common/SaeFeature.handler fuchsia.wlan.common/SaeHandler
-struct/member fuchsia.wlan.common/SaeFeature.supported bool
+struct/member fuchsia.wlan.common/SaeFeature.driver_handler_supported bool
+struct/member fuchsia.wlan.common/SaeFeature.sme_handler_supported bool
 struct fuchsia.wlan.common/SaeFeature
-enum/member fuchsia.wlan.common/SaeHandler.DRIVER 1
-enum/member fuchsia.wlan.common/SaeHandler.SME 2
-strict enum fuchsia.wlan.common/SaeHandler uint8
 struct/member fuchsia.wlan.common/ScanOffloadExtension.supported bool
 struct fuchsia.wlan.common/ScanOffloadExtension
 enum/member fuchsia.wlan.common/ScanType.ACTIVE 1

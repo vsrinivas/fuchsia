@@ -226,7 +226,8 @@ TEST_F(WlanSoftmacDeviceTest, SecurityFeatureQuery) {
   security_support_t support;
   device_->WlanSoftmacQuerySecuritySupport(&support);
   EXPECT_TRUE(support.mfp.supported);
-  EXPECT_FALSE(support.sae.supported);
+  EXPECT_FALSE(support.sae.driver_handler_supported);
+  EXPECT_FALSE(support.sae.sme_handler_supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, SpectrumManagementFeatureQuery) {

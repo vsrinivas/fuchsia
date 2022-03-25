@@ -1134,8 +1134,8 @@ pub(crate) mod test_utils {
         banjo_common::SecuritySupport {
             mfp: banjo_common::MfpFeature { supported: false },
             sae: banjo_common::SaeFeature {
-                supported: false,
-                handler: banjo_common::SaeHandler::SME,
+                driver_handler_supported: false,
+                sme_handler_supported: false,
             },
         }
     }
