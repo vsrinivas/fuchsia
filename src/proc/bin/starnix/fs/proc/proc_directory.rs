@@ -36,6 +36,7 @@ impl ProcDirectory {
                 fs.create_node_with_ops(ByteVecFile::new(cmdline), mode!(IFREG, 0o444))
             },
             &b"self"[..] => SelfSymlink::new(fs),
+            &b"thread-self"[..] => ThreadSelfSymlink::new(fs),
         };
 
         Arc::new(ProcDirectory { kernel, nodes })
@@ -54,7 +55,7 @@ impl FsNodeOps for Arc<ProcDirectory> {
                 let pid_string = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
                 let pid = pid_string.parse::<pid_t>().map_err(|_| errno!(ENOENT))?;
                 if let Some(task) = self.kernel.upgrade().unwrap().pids.read().get_task(pid) {
-                    Ok(pid_directory(&node.fs(), task))
+                    Ok(pid_directory(&node.fs(), &task))
                 } else {
                     error!(ENOENT)
                 }
@@ -139,6 +140,26 @@ impl FsNodeOps for SelfSymlink {
     fs_node_impl_symlink!();
 
     fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
-        Ok(SymlinkTarget::Path(format!("{}", current_task.get_pid()).as_bytes().to_vec()))
+        Ok(SymlinkTarget::Path(current_task.get_pid().to_string().into_bytes()))
+    }
+}
+
+/// A node that represents a symlink to `proc/<pid>/task/<tid>` where <pid> and <tid> are derived
+/// from the task reading the symlink.
+struct ThreadSelfSymlink;
+
+impl ThreadSelfSymlink {
+    fn new(fs: &FileSystemHandle) -> FsNodeHandle {
+        fs.create_node_with_ops(Self, FileMode::IFLNK | FileMode::ALLOW_ALL)
+    }
+}
+
+impl FsNodeOps for ThreadSelfSymlink {
+    fs_node_impl_symlink!();
+
+    fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
+        Ok(SymlinkTarget::Path(
+            format!("{}/task/{}", current_task.get_pid(), current_task.get_tid()).into_bytes(),
+        ))
     }
 }

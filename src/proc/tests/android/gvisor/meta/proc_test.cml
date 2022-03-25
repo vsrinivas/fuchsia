@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "tests/proc_test",
+        args: [ "--gunit_filter=Proc.ResolveSymlinkToProc:Proc.NoDuplicates:ProcTaskFd.FstatatFollowsSymlink:ProcPidCmdline.MatchesArgv:ParseProcStatusTest.DetectsMissingTabs:ParseProcStatusTest.DetectsDuplicateKeys:ParseProcStatusTest.ParsesSimpleStatusFileWithMixedWhitespaceCorrectly:ProcSelfStat.PopulateNoneRSS:ProcCmdline.IsPresent:ProcSelfExe.Absolute:ProcSelfFdInfo.CorrectFds:ProcSelfFd.OpenFd:ProcSelfTest.IsThreadGroupLeader:ProcTest.NotFoundInRoot:ProcThreadSelfTest.*:ProcTask.Basic:ProcTask.NewThreadAppears:ProcTask.KilledThreadsDisappear:ProcTask.ChildTaskDir" ],
+    },
+}

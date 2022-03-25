@@ -6,13 +6,32 @@ use std::sync::Arc;
 
 use crate::fs::{proc::directory::*, *};
 use crate::mm::{ProcMapsFile, ProcStatFile};
-use crate::task::{CurrentTask, Task};
+use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
 
 use parking_lot::Mutex;
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
-pub fn pid_directory(fs: &FileSystemHandle, task: Arc<Task>) -> Arc<FsNode> {
+pub fn pid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {
+    static_directory_builder_with_common_task_entries(fs, task)
+        .add_node_entry(
+            b"task",
+            dynamic_directory(fs, TaskListDirectory { thread_group: task.thread_group.clone() }),
+        )
+        .build()
+}
+
+/// Creates an [`FsNode`] that represents the `/proc/<pid>/task/<tid>` directory for `task`.
+fn tid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {
+    static_directory_builder_with_common_task_entries(fs, task).build()
+}
+
+/// Creates a [`StaticDirectoryBuilder`] and pre-populates it with files that are present in both
+/// `/pid/<pid>` and `/pid/<pid>/task/<tid>`.
+fn static_directory_builder_with_common_task_entries<'a>(
+    fs: &'a FileSystemHandle,
+    task: &Arc<Task>,
+) -> StaticDirectoryBuilder<'a> {
     StaticDirectoryBuilder::new(fs)
         .add_node_entry(b"exe", ExeSymlink::new(fs, task.clone()))
         .add_node_entry(b"fd", dynamic_directory(fs, FdDirectory { task: task.clone() }))
@@ -20,7 +39,6 @@ pub fn pid_directory(fs: &FileSystemHandle, task: Arc<Task>) -> Arc<FsNode> {
         .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
         .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
         .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
-        .build()
 }
 
 /// `FdDirectory` implements the directory listing operations for a `proc/<pid>/fd` directory.
@@ -76,6 +94,41 @@ fn fds_to_directory_entries(fds: Vec<FdNumber>) -> Vec<DynamicDirectoryEntry> {
             inode: None,
         })
         .collect()
+}
+
+/// Directory that lists the task IDs (tid) in a process. Located at `/proc/<pid>/task/`.
+struct TaskListDirectory {
+    thread_group: Arc<ThreadGroup>,
+}
+
+impl DirectoryDelegate for TaskListDirectory {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        Ok(self
+            .thread_group
+            .tasks
+            .read()
+            .iter()
+            .map(|tid| DynamicDirectoryEntry {
+                entry_type: DirectoryEntryType::DIR,
+                name: tid.to_string().into_bytes(),
+                inode: None,
+            })
+            .collect())
+    }
+
+    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        let tid = std::str::from_utf8(name)
+            .map_err(|_| errno!(ENOENT))?
+            .parse::<pid_t>()
+            .map_err(|_| errno!(ENOENT))?;
+        // Make sure the tid belongs to this process.
+        if !self.thread_group.tasks.read().contains(&tid) {
+            return error!(ENOENT);
+        }
+        let task =
+            self.thread_group.kernel.pids.read().get_task(tid).ok_or_else(|| errno!(ENOENT))?;
+        Ok(tid_directory(fs, &task))
+    }
 }
 
 /// An `ExeSymlink` points to the `executable_node` (the node that contains the task's binary) of
