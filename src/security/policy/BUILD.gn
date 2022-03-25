@@ -27,6 +27,7 @@ group("appmgr_policy_eng") {
     ":appmgr_irq_resource_allowlist_eng",
     ":appmgr_mmio_resource_allowlist_eng",
     ":appmgr_nn_model_executor_allowlist_eng",
+    ":appmgr_openthread_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
     ":appmgr_package_resolver_allowlist_eng",
     ":appmgr_pkgfs_versions_allowlist_eng",
@@ -207,6 +208,12 @@ config_data("appmgr_weave_signer_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "weave_signer_allowlist_eng.txt" ]
   outputs = [ "allowlist/weave_signer.txt" ]
+}
+
+config_data("appmgr_openthread_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "openthread_allowlist_eng.txt" ]
+  outputs = [ "allowlist/openthread.txt" ]
 }
 
 config_data("appmgr_cr50_allowlist_eng") {

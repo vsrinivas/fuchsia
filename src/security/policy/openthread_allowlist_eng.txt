@@ -1,0 +1,7 @@
+# CLI
+fuchsia-pkg://fuchsia.com/lowpanctl#meta/lowpanctl.cmx
+# Tests
+fuchsia-pkg://fuchsia.com/lowpan-driver-tests#meta/lowpan-driver-provision-mock.cmx
+fuchsia-pkg://fuchsia.com/lowpan-integration-tests#meta/lowpan-integration-tests.cmx
+fuchsia-pkg://fuchsia.com/lowpanctl-integration-test#meta/lowpanctl-integration-test.cmx
+fuchsia-pkg://fuchsia.com/lowpanservice-test#meta/lowpanservice-test.cmx
