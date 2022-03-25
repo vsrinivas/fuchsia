@@ -97,7 +97,7 @@ TEST(ExceptionsTest, InstructionAbort) {
   // Trigger an instruction abort by attempting to execute instructions on a page
   // without executable permissions. This produces a 4-byte aligned undefined
   // instruction set.
-  uintptr_t pc = static_cast<uintptr_t>(kUdf0);
+  uintptr_t pc = reinterpret_cast<uintptr_t>(&kUdf0);
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
   uintptr_t sp = compute_initial_stack_pointer(reinterpret_cast<uintptr_t>(thread_stack.get()),
                                                kThreadStackSize);
@@ -109,6 +109,7 @@ TEST(ExceptionsTest, InstructionAbort) {
   ASSERT_EQ(GetEC(report.context.arch.u.arm_64.esr),
             arch::ArmExceptionSyndromeRegister::ExceptionClass::kInstructionAbortLowerEl);
   ASSERT_EQ(report.context.arch.u.arm_64.far, pc);
+  ASSERT_NE(report.context.arch.u.arm_64.far, 0);
 }
 
 #ifdef __clang__
