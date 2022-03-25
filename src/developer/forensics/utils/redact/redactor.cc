@@ -34,70 +34,70 @@ constexpr std::string_view kHexPattern = R"((\b[0-9a-fA-F]{32}\b))";
 constexpr std::string_view kGaiaPattern = R"((\b1[0-9]{20}\b))";
 
 constexpr std::string_view kUnredactedCanary =
-    R"(Log redaction canary:)"
-    R"(Email: alice@website.tld, )"
-    R"(IPv4: 8.8.8.8, )"
-    R"(IPv4_New: 8.9.10.42, )"
-    R"(IPv4_Dup: 8.8.8.8, )"
-    R"(IPv4_WithPort: 8.8.8.8:8080, )"
-    R"(IPv461: ::ffff:12.34.56.78, )"
-    R"(IPv462: ::ffff:ab12:cd34, )"
-    R"(IPv6: 2001:503:eEa3:0:0:0:0:30, )"
-    R"(IPv6_WithPort: [2001:503:eEa3:0:0:0:0:30]:8080, )"
-    R"(IPv6C: fec8::7d84:c1dc:ab34:656a, )"
-    R"(IPv6LL: fe80::7d84:c1dc:ab34:656a, )"
-    R"(UUID: ddd0fA34-1016-11eb-adc1-0242ac120002, )"
-    R"(MAC: de:ad:BE:EF:42:5a, )"
-    R"(SSID: <ssid-666F6F>, )"
-    R"(HTTP: http://fuchsia.dev/fuchsia/testing?q=Test, )"
-    R"(HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test, )"
-    R"(HEX: 1234567890abcdefABCDEF0123456789, )"
-    R"(v4Current: 0.1.2.3, )"
-    R"(v4Loopback: 127.1.2.3, )"
-    R"(v4LocalAddr: 169.254.12.34, )"
-    R"(v4LocalMulti: 224.0.0.123, )"
-    R"(v4Multi: 224.0.1.123, )"
-    R"(broadcast: 255.255.255.255, )"
-    R"(v6zeroes: :: ::1, )"
-    R"(v6LeadingZeroes: ::abcd:dcba:bcde:f, )"
-    R"(v6TrailingZeroes: f:e:d:c:abcd:dcba:bcde::, )"
-    R"(v6LinkLocal: feB2:111:222:333:444:555:666:777, )"
-    R"(v6LocalMulticast: ff72:111:222:333:444:555:666:777, )"
-    R"(v6Multicast: ff77:111:222:333:444:555:666:777, )"
-    R"(obfuscatedGaiaId: 106986199446298680449)";
+    R"(Log redaction canary:
+Email: alice@website.tld,
+IPv4: 8.8.8.8,
+IPv4_New: 8.9.10.42,
+IPv4_Dup: 8.8.8.8,
+IPv4_WithPort: 8.8.8.8:8080,
+IPv461: ::ffff:12.34.56.78,
+IPv462: ::ffff:ab12:cd34,
+IPv6: 2001:503:eEa3:0:0:0:0:30,
+IPv6_WithPort: [2001:503:eEa3:0:0:0:0:30]:8080,
+IPv6C: fec8::7d84:c1dc:ab34:656a,
+IPv6LL: fe80::7d84:c1dc:ab34:656a,
+UUID: ddd0fA34-1016-11eb-adc1-0242ac120002,
+MAC: de:ad:BE:EF:42:5a,
+SSID: <ssid-666F6F>,
+HTTP: http://fuchsia.dev/fuchsia/testing?q=Test,
+HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test,
+HEX: 1234567890abcdefABCDEF0123456789,
+v4Current: 0.1.2.3,
+v4Loopback: 127.1.2.3,
+v4LocalAddr: 169.254.12.34,
+v4LocalMulti: 224.0.0.123,
+v4Multi: 224.0.1.123,
+broadcast: 255.255.255.255,
+v6zeroes: :: ::1,
+v6LeadingZeroes: ::abcd:dcba:bcde:f,
+v6TrailingZeroes: f:e:d:c:abcd:dcba:bcde::,
+v6LinkLocal: feB2:111:222:333:444:555:666:777,
+v6LocalMulticast: ff72:111:222:333:444:555:666:777,
+v6Multicast: ff77:111:222:333:444:555:666:777,
+obfuscatedGaiaId: 106986199446298680449)";
 
 constexpr std::string_view kRedactedCanary =
-    R"(Log redaction canary:)"
-    R"(Email: <REDACTED-EMAIL>, )"
-    R"(IPv4: <REDACTED-IPV4: 1>, )"
-    R"(IPv4_New: <REDACTED-IPV4: 2>, )"
-    R"(IPv4_Dup: <REDACTED-IPV4: 1>, )"
-    R"(IPv4_WithPort: <REDACTED-IPV4: 1>:8080, )"
-    R"(IPv461: ::ffff:<REDACTED-IPV4: 3>, )"
-    R"(IPv462: ::ffff:<REDACTED-IPV4: 5>, )"
-    R"(IPv6: <REDACTED-IPV6: 6>, )"
-    R"(IPv6_WithPort: [<REDACTED-IPV6: 6>]:8080, )"
-    R"(IPv6C: <REDACTED-IPV6: 7>, )"
-    R"(IPv6LL: fe80:<REDACTED-IPV6-LL: 8>, )"
-    R"(UUID: <REDACTED-UUID>, )"
-    R"(MAC: de:ad:BE:<REDACTED-MAC: 13>, )"
-    R"(SSID: <REDACTED-SSID: 14>, )"
-    R"(HTTP: <REDACTED-URL>, )"
-    R"(HTTPS: <REDACTED-URL>, )"
-    R"(HEX: <REDACTED-HEX: 15>, )"
-    R"(v4Current: 0.1.2.3, )"
-    R"(v4Loopback: 127.1.2.3, )"
-    R"(v4LocalAddr: 169.254.12.34, )"
-    R"(v4LocalMulti: 224.0.0.123, )"
-    R"(v4Multi: <REDACTED-IPV4: 4>, )"
-    R"(broadcast: 255.255.255.255, )"
-    R"(v6zeroes: :: ::1, )"
-    R"(v6LeadingZeroes: <REDACTED-IPV6: 9>, )"
-    R"(v6TrailingZeroes: <REDACTED-IPV6: 10>, )"
-    R"(v6LinkLocal: feB2:<REDACTED-IPV6-LL: 11>, )"
-    R"(v6LocalMulticast: ff72:111:222:333:444:555:666:777, )"
-    R"(v6Multicast: ff77:<REDACTED-IPV6-MULTI: 12>, )"
-    R"(obfuscatedGaiaId: <REDACTED-OBFUSCATED-GAIA-ID: 16>)";
+    R"(Log redaction canary:
+Email: <REDACTED-EMAIL>,
+IPv4: <REDACTED-IPV4: 1>,
+IPv4_New: <REDACTED-IPV4: 2>,
+IPv4_Dup: <REDACTED-IPV4: 1>,
+IPv4_WithPort: <REDACTED-IPV4: 1>:8080,
+IPv461: ::ffff:<REDACTED-IPV4: 3>,
+IPv462: ::ffff:<REDACTED-IPV4: 5>,
+IPv6: <REDACTED-IPV6: 6>,
+IPv6_WithPort: [<REDACTED-IPV6: 6>]:8080,
+IPv6C: <REDACTED-IPV6: 7>,
+IPv6LL: fe80:<REDACTED-IPV6-LL: 8>,
+UUID: <REDACTED-UUID>,
+MAC: de:ad:BE:<REDACTED-MAC: 13>,
+SSID: <REDACTED-SSID: 14>,
+HTTP: <REDACTED-URL>,
+HTTPS: <REDACTED-URL>,
+HEX: <REDACTED-HEX: 15>,
+v4Current: 0.1.2.3,
+v4Loopback: 127.1.2.3,
+v4LocalAddr: 169.254.12.34,
+v4LocalMulti: 224.0.0.123,
+v4Multi: <REDACTED-IPV4: 4>,
+broadcast: 255.255.255.255,
+v6zeroes: :: ::1,
+v6LeadingZeroes: <REDACTED-IPV6: 9>,
+v6TrailingZeroes: <REDACTED-IPV6: 10>,
+v6LinkLocal: feB2:<REDACTED-IPV6-LL: 11>,
+v6LocalMulticast: ff72:111:222:333:444:555:666:777,
+v6Multicast: ff77:<REDACTED-IPV6-MULTI: 12>,
+obfuscatedGaiaId: <REDACTED-OBFUSCATED-GAIA-ID: 16>)";
 
 }  // namespace
 

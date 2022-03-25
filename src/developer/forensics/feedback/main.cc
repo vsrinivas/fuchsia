@@ -27,19 +27,18 @@
 #include "src/developer/forensics/feedback/namespace_init.h"
 #include "src/developer/forensics/feedback/reboot_log/annotations.h"
 #include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
+#include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/feedback_data/default_annotations.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics::feedback {
 
 int main() {
   syslog::SetTags({"forensics", "feedback"});
-
-  // TODO(fxbug.dev/655811): Remove once redaction can be enabled.
-  FX_CHECK(!files::IsFile(kEnableRedactDataPath));
 
   // Delay serving the outgoing directory because the migration happens asynchronously and the
   // component's services cannot be used until the migration has completed.
@@ -152,6 +151,16 @@ int main() {
                 }
 
                 const auto startup_annotations = GetStartupAnnotations(reboot_log);
+
+                // Emit the log redaction canary during startup. Split it by newlines to prevent
+                // data from being sent in multiple messages.
+                const auto canary =
+                    RedactorFromConfig(nullptr /*inspect not needed*/)->UnredactedCanary();
+                for (const auto& line :
+                     fxl::SplitStringCopy(canary, "\n", fxl::WhiteSpaceHandling::kTrimWhitespace,
+                                          fxl::SplitResult::kSplitWantNonEmpty)) {
+                  FX_LOGS(INFO) << line;
+                }
 
                 main_service = std::make_unique<MainService>(
                     component.Dispatcher(), component.Services(), component.Clock(),

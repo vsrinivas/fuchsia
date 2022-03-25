@@ -43,6 +43,7 @@ group("user_configs") {
   deps = [
     ":crash_reports_user_config",
     ":feedback_data_limit_inspect_data",
+    ":feedback_redact_data",
   ]
 }
 

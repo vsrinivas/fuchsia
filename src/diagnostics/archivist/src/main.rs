@@ -9,7 +9,7 @@
 
 use {
     anyhow::{Context, Error},
-    archivist_lib::{archivist::Archivist, configs, diagnostics, logs},
+    archivist_lib::{archivist::Archivist, configs, diagnostics},
     argh::FromArgs,
     fdio::service_connect,
     fuchsia_async::{LocalExecutor, SendExecutor},
@@ -103,8 +103,6 @@ fn init_diagnostics(opt: &Args) -> Result<Option<zx::Socket>, Error> {
 
     if opt.consume_own_logs || opt.log_to_debuglog {
         info!("Logging started.");
-        // Always emit the log redaction canary during startup.
-        logs::redact::emit_canary();
     }
 
     diagnostics::init();

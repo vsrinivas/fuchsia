@@ -32,6 +32,8 @@ struct PipelineParameters {
     name: &'static str,
     protocol_name: &'static str,
     empty_behavior: configs::EmptyBehavior,
+    // TODO(fxbug.dev/96118): Remove Redactor from Pipeline parameters and delete its code once
+    // there's complete confidence in redaction in Feedback.
     redactor: Redactor,
     moniker_rewriter: Option<MonikerRewriter>,
 }
@@ -84,7 +86,7 @@ impl Pipeline {
             has_config: true,
             name: "feedback",
             empty_behavior: configs::EmptyBehavior::DoNotFilter,
-            redactor: Redactor::with_static_patterns(),
+            redactor: Redactor::noop(),
             protocol_name: constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: None,
         };

@@ -33,10 +33,6 @@ class RedactorBase {
 };
 
 // Redacts PII from text.
-//
-// TODO(fxbug.dev/94086): keep this class in sync with the Rust redactor until its deleted (located
-// in
-// https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/diagnostics/archivist/src/logs/redact.rs
 class Redactor : public RedactorBase {
  public:
   Redactor(int starting_id, inspect::UintProperty cache_size,
