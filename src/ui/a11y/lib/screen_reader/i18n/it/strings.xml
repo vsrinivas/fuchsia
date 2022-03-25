@@ -47,7 +47,7 @@
   <string name="role_list_item">Voce elenco</string>
   <string name="role_ordered_list">Elenco ordinato</string>
   <string name="role_list">Elenco</string>
-  <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}one{con # voci}other{con # voci}}</string>
+  <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}other{con # voci}}</string>
   <string name="normal_navigation_granularity">Navigazione normale</string>
   <string name="default_navigation_granularity">Predefinita</string>
   <string name="adjust_value_granularity">Regola valore</string>
