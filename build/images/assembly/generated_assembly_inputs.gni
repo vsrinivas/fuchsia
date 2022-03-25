@@ -6,8 +6,6 @@
 # infrastructure.
 #
 # Arguments
-#   product_config (required)
-#     [path] The path to the product config.
 #
 #   images_config (required)
 #     [path] The path to the images config.
@@ -15,11 +13,10 @@
 #   output_path (required)
 #     [path] Where to write the output list.
 #
-#   directories (optional)
-#     [list of str] Additional directories to list as inputs.
+#   sources (optional)
+#     [list of str] Additional files or directories to list as inputs.
 #
 template("generated_assembly_inputs") {
-  assert(defined(invoker.product_config), "Need to define product_config")
   assert(defined(invoker.images_config), "Need to define images_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
@@ -31,30 +28,21 @@ template("generated_assembly_inputs") {
                              "visibility",
                            ])
     script = "//build/images/assembly/make_assembly_inputs.py"
-    depfile_path = "${target_out_dir}/${target_name}.d"
-    depfile = depfile_path
 
     outputs = [ invoker.output_path ]
-    inputs = [
-      invoker.product_config,
-      invoker.images_config,
-    ]
+    inputs = [ invoker.images_config ]
 
     args = [
-      "--product-config",
-      rebase_path(invoker.product_config, root_build_dir),
       "--images-config",
       rebase_path(invoker.images_config, root_build_dir),
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
-      "--depfile",
-      rebase_path(depfile_path, root_build_dir),
     ]
 
-    if (defined(invoker.directories)) {
-      args += [ "--directories" ]
-      foreach(directory, invoker.directories) {
-        args += [ rebase_path(directory, root_build_dir) ]
+    if (defined(invoker.sources)) {
+      args += [ "--sources" ]
+      foreach(source, invoker.sources) {
+        args += [ rebase_path(source, root_build_dir) ]
       }
     }
   }

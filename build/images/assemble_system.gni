@@ -584,23 +584,6 @@ template("assemble_system") {
     check_production_tag = invoker.check_production_tag
   }
 
-  generated_assembly_inputs(labels.assembly_inputs) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    product_config = files.image_assembly_config
-    images_config = files.images_config
-    output_path = files.assembly_inputs
-    directories = [ "${files.outdir}/legacy" ]
-
-    deps = [
-      ":${labels.image_assembly_config}",
-      ":${labels.images_config}",
-    ]
-  }
-
   generated_file(labels.product_assembly_config) {
     outputs = [ files.product_assembly_config ]
     output_conversion = "json"
@@ -608,6 +591,26 @@ template("assemble_system") {
       platform = platform_config
       product = product_config
     }
+  }
+
+  generated_assembly_inputs(labels.assembly_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    images_config = files.images_config
+    output_path = files.assembly_inputs
+
+    sources = [
+      "${files.outdir}/legacy",
+      "${files.product_assembly_config}",
+    ]
+
+    deps = [
+      ":${labels.images_config}",
+      ":${labels.product_assembly_config}",
+    ]
   }
 
   # Create the legacy assembly input bundle for the above-generated image

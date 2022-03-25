@@ -15,20 +15,13 @@ def main():
         'Create a flat list of files included in the images. This is used to inform infrastructure what files to upload'
     )
     parser.add_argument(
-        '--product-config', type=argparse.FileType('r'), required=True)
-    parser.add_argument(
         '--images-config', type=argparse.FileType('r'), required=True)
-    parser.add_argument('--directories', type=str, nargs='*')
+    parser.add_argument('--sources', type=str, nargs='*')
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
-    parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
     # The files to put in the output with source mapped to destination.
     file_mapping = {}
-
-    # The files that are read in this script, and the build system needs to be
-    # aware of. This will be written to a depfile.
-    depfiles = []
 
     # Add a file or directory path to one of the lists, relative to CWD.
     # The destination is the path when placed inside "built/artifacts".
@@ -47,37 +40,6 @@ def main():
             destination = os.path.join("built/artifacts", source)
         file_mapping[source] = destination
 
-    def add_depfile(file_path):
-        depfiles.append(os.path.relpath(file_path, os.getcwd()))
-
-    # Add all the blobs in a package to the list.
-    def add_package(package_manifest_path):
-        add_source(package_manifest_path)
-        add_depfile(package_manifest_path)
-        with open(package_manifest_path, 'r') as f:
-            package_manifest = json.load(f)
-            if "blobs" in package_manifest:
-                for blob in package_manifest["blobs"]:
-                    add_source(blob["source_path"])
-
-    # Add the product config.
-    add_source(args.product_config.name)
-    product_config = json.load(args.product_config)
-    if "base" in product_config:
-        for package_path in product_config["base"]:
-            add_package(package_path)
-    if "cache" in product_config:
-        for package_path in product_config["cache"]:
-            add_package(package_path)
-    if "system" in product_config:
-        for package_path in product_config["system"]:
-            add_package(package_path)
-    if "kernel" in product_config:
-        add_source(product_config["kernel"]["path"])
-    if "bootfs_files" in product_config:
-        for bootfs_file in product_config["bootfs_files"]:
-            add_source(bootfs_file["source"])
-
     # Add the images config.
     add_source(args.images_config.name)
     images = json.load(args.images_config).get("images", [])
@@ -92,9 +54,9 @@ def main():
             if "postprocessing_script" in image:
                 add_source(image["postprocessing_script"]["path"])
 
-    # Add any additional directories to copy.
-    for directory in args.directories:
-        add_source(directory)
+    # Add any additional sources to copy.
+    for source in args.sources:
+        add_source(source)
 
     # Convert the map into a list of maps.
     files = []
@@ -106,9 +68,6 @@ def main():
 
     # Write the list.
     json.dump(files, args.output, indent=2)
-
-    # Write the depfile.
-    args.depfile.write('build.ninja: ' + ' '.join(depfiles))
 
 
 if __name__ == '__main__':
