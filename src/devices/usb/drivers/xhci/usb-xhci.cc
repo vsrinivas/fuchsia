@@ -881,13 +881,13 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   pending_transfer.complete = false;
   pending_transfer.index = index;
   pending_transfer.context = state.GetTransferRing(index).AllocateContext();
-  pending_transfer.context->request = std::move(request);
-  pending_transfer.slot = state.GetSlot();
   if (!pending_transfer.context) {
     transaction_lock.release();
-    pending_transfer.context->request->Complete(ZX_ERR_NO_MEMORY, 0);
+    request.Complete(ZX_ERR_NO_MEMORY, 0);
     return;
   }
+  pending_transfer.context->request = std::move(request);
+  pending_transfer.slot = state.GetSlot();
 
   if (pending_transfer.is_isochronous_transfer) {
     // Release the lock while we're sleeping to avoid blocking
