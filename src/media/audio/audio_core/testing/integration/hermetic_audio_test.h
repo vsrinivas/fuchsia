@@ -124,6 +124,9 @@ class HermeticAudioTest : public TestFixture {
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
   fuchsia::media::AudioDeviceEnumeratorPtr TakeOwnershipOfAudioDeviceEnumerator();
 
+  // Change the output pipeline's thermal state, blocking until the state change completes.
+  zx_status_t ConfigurePipelineForThermal(uint32_t thermal_state);
+
   // Direct access to FIDL channels. Using these objects directly may not play well with this class.
   // These are provided for special cases only.
   fuchsia::media::AudioCorePtr audio_core_;

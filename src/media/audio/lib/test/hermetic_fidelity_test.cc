@@ -247,59 +247,6 @@ std::vector<HermeticFidelityTest::Frequency> HermeticFidelityTest::GetTestFreque
   return frequencies;
 }
 
-// Retrieve the number of thermal subscribers, and set them all to the specified thermal_state.
-// thermal_test_control is synchronous: when SetThermalState returns, a change is committed.
-zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_state) {
-  constexpr size_t kMaxRetries = 100;
-  constexpr zx::duration kRetryPeriod = zx::msec(10);
-
-  std::optional<size_t> audio_subscriber;
-
-  std::vector<::test::thermal::SubscriberInfo> subscriber_data;
-  // We might query thermal::test::Control before AudioCore has subscribed, so wait for it.
-  for (size_t retries = 0u; retries < kMaxRetries; ++retries) {
-    auto status = thermal_test_control()->GetSubscriberInfo(&subscriber_data);
-    if (status != ZX_OK) {
-      ADD_FAILURE() << "GetSubscriberInfo failed: " << status;
-      return status;
-    }
-
-    // There is only one thermal subscriber for audio; there might be others of non-audio types.
-    for (auto subscriber_num = 0u; subscriber_num < subscriber_data.size(); ++subscriber_num) {
-      if (subscriber_data[subscriber_num].actor_type == fuchsia::thermal::ActorType::AUDIO) {
-        audio_subscriber = subscriber_num;
-        break;
-      }
-    }
-    if (audio_subscriber.has_value()) {
-      break;
-    }
-    zx::nanosleep(zx::deadline_after(kRetryPeriod));
-  }
-
-  if (!audio_subscriber.has_value()) {
-    ADD_FAILURE() << "No audio-related thermal subscribers. "
-                     "Don't set thermal_state if a pipeline has no thermal support";
-    return ZX_ERR_TIMED_OUT;
-  }
-
-  auto max_thermal_state = subscriber_data[audio_subscriber.value()].num_thermal_states - 1;
-  if (thermal_state > max_thermal_state) {
-    ADD_FAILURE() << "Subscriber cannot be put into thermal_state " << thermal_state << " (max "
-                  << max_thermal_state << ")";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto status = this->thermal_test_control()->SetThermalState(
-      static_cast<int32_t>(audio_subscriber.value()), thermal_state);
-  if (status != ZX_OK) {
-    ADD_FAILURE() << "SetThermalState failed: " << status;
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 // Render source such that first input frame will be rendered into first ring buffer frame.
 // Create a renderer, submit packets, play, wait for them to be rendered, shut down the renderer,
 // and extract the output from the VAD ring buffer.

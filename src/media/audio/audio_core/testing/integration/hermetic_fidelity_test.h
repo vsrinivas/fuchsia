@@ -176,9 +176,6 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   void VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case,
                      const std::vector<HermeticFidelityTest::Frequency>& frequencies_to_verify);
 
-  // Change the output pipeline's thermal state, blocking until the state change completes.
-  zx_status_t ConfigurePipelineForThermal(uint32_t thermal_state);
-
  private:
   bool save_fidelity_wav_files_;
 };
