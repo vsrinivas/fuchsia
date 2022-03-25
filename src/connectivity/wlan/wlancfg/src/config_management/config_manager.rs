@@ -5,9 +5,9 @@
 use {
     super::{
         network_config::{
-            AddAndGetRecent, ConnectFailure, Credential, Disconnect, FailureReason,
-            HiddenProbEvent, NetworkConfig, NetworkConfigError, NetworkIdentifier,
-            PastConnectionData, PastConnectionList, SecurityType,
+            ConnectFailure, Credential, FailureReason, HiddenProbEvent, NetworkConfig,
+            NetworkConfigError, NetworkIdentifier, PastConnectionData, PastConnectionList,
+            SecurityType,
         },
         stash_conversion::*,
     },
@@ -439,12 +439,6 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         };
         for network in networks.iter_mut() {
             if &network.credential == credential {
-                //TODO(95460) Use past connection data in place of the disconnect list
-                network.perf_stats.disconnect_list.add(Disconnect {
-                    bssid: bssid,
-                    uptime: data.connection_uptime,
-                    time: data.disconnect_time,
-                });
                 network.perf_stats.past_connections.add(bssid, data);
                 return;
             }
@@ -664,8 +658,9 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                PastConnectionsByBssid, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
-                PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
+                network_config::AddAndGetRecent, PastConnectionsByBssid, PROB_HIDDEN_DEFAULT,
+                PROB_HIDDEN_IF_CONNECT_ACTIVE, PROB_HIDDEN_IF_CONNECT_PASSIVE,
+                PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
             util::testing::{
                 cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},

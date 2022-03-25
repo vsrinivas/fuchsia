@@ -58,8 +58,6 @@ impl HiddenProbabilityStats {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PerformanceStats {
     pub failure_list: ConnectFailuresByBssid,
-    /// TODO(95460): Remove disconnect_list, and role entries into past_connections.
-    pub disconnect_list: DisconnectList,
     pub past_connections: PastConnectionsByBssid,
 }
 
@@ -67,7 +65,6 @@ impl PerformanceStats {
     pub fn new() -> Self {
         Self {
             failure_list: ConnectFailuresByBssid::new(),
-            disconnect_list: DisconnectList::new(),
             past_connections: PastConnectionsByBssid::new(),
         }
     }
@@ -190,22 +187,6 @@ impl Time for ConnectFailure {
     }
 }
 
-/// Unexpected disconnects, either from the AP sending a disconnect or a loss of signal.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Disconnect {
-    /// The time of the disconnect, used to determe whether this disconnect is still relevant.
-    pub time: fasync::Time,
-    /// The BSSID that we only had a short connection uptime on.
-    pub bssid: client_types::Bssid,
-    /// The time between connection starting and disconnecting.
-    pub uptime: zx::Duration,
-}
-
-impl Time for Disconnect {
-    fn time(&self) -> fasync::Time {
-        self.time
-    }
-}
 /// Data points related to historical connection
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PastConnectionData {
@@ -258,7 +239,6 @@ impl Time for PastConnectionData {
 
 /// Data structures for storing historical connection information for a BSS.
 pub type ConnectFailureList = HistoricalList<ConnectFailure>;
-pub type DisconnectList = HistoricalList<Disconnect>;
 pub type PastConnectionList = HistoricalList<PastConnectionData>;
 
 /// Data structures storing historical connection information for whole networks (one or more BSSs)
@@ -1042,7 +1022,7 @@ mod tests {
         // Verify get_recent_for_network(curr_time) is empty
         assert_eq!(past_connections_list.get_recent_for_network(curr_time), vec![]);
 
-        // Verify get_list_for_bss retrieves correct PastConnectionsLists
+        // Verify get_list_for_bss retrieves correct PastConnectionLists
         assert_eq!(
             past_connections_list.get_list_for_bss(&bssid_1),
             PastConnectionList { 0: VecDeque::from_iter([data_1_bssid_1, data_2_bssid_1]) }
@@ -1074,67 +1054,29 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_disconnect_list_add_and_get() {
-        let mut disconnects = DisconnectList::new();
-
+    async fn test_past_connections_list_add_and_get() {
+        let mut past_connections_list = PastConnectionList::new();
         let curr_time = fasync::Time::now();
-        assert!(disconnects.get_recent(curr_time).is_empty());
+        assert!(past_connections_list.get_recent(curr_time).is_empty());
+
         let bssid = client_types::Bssid([1; 6]);
-        let uptime = zx::Duration::from_seconds(2);
-        let disconnect = Disconnect { bssid, uptime, time: curr_time };
-        // Add a disconnect and check that we get it back.
-        disconnects.add(disconnect.clone());
+        let past_connection_data = create_fake_connection_data(bssid, curr_time);
+        // Add a past connection
+        past_connections_list.add(past_connection_data.clone());
 
-        // We should get back the added disconnect when specifying the same or an earlier time.
-
-        assert_eq!(disconnects.get_recent(curr_time).len(), 1);
-        assert_variant!(disconnects.get_recent(curr_time).as_slice(), [d] => {
-            assert_eq!(d, &disconnect.clone());
+        // We should get back the added data when specifying the same or an earlier time.
+        assert_eq!(past_connections_list.get_recent(curr_time).len(), 1);
+        assert_variant!(past_connections_list.get_recent(curr_time).as_slice(), [data] => {
+            assert_eq!(data, &past_connection_data.clone());
         });
         let earlier_time = curr_time - zx::Duration::from_seconds(1);
-        assert_variant!(disconnects.get_recent(earlier_time).as_slice(), [d] => {
-            assert_eq!(d, &disconnect.clone());
+        assert_variant!(past_connections_list.get_recent(earlier_time).as_slice(), [data] => {
+            assert_eq!(data, &data.clone());
         });
-        // The results should be empty if the requested time is after the disconnect's time.
-        // The disconnect is considered stale.
+        // The results should be empty if the requested time is after the latest past connection's
+        // time.
         let later_time = curr_time + zx::Duration::from_seconds(1);
-        assert!(disconnects.get_recent(later_time).is_empty());
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_disconnect_list_add_removes_oldest_when_full() {
-        let mut disconnects = DisconnectList::new();
-
-        assert!(disconnects.get_recent(fasync::Time::INFINITE_PAST).is_empty());
-        let disconnect_list_capacity = disconnects.0.capacity();
-        // VecDequeue::with_capacity allocates at least the specified amount, not necessarily
-        // equal to the specified amount.
-        assert!(disconnect_list_capacity >= NUM_CONNECTION_RESULTS_PER_BSS);
-
-        // Insert first disconnect, which we will check was pushed out of the list
-        let first_bssid = client_types::Bssid([10; 6]);
-        disconnects.add(Disconnect {
-            bssid: first_bssid,
-            uptime: zx::Duration::from_seconds(1),
-            time: fasync::Time::now(),
-        });
-        assert_variant!(disconnects.get_recent(fasync::Time::INFINITE_PAST).as_slice(), [d] => {
-            assert_eq!(d.bssid, first_bssid);
-        });
-
-        let bssid = client_types::Bssid([0; 6]);
-        for _i in 0..disconnect_list_capacity {
-            disconnects.add(Disconnect {
-                bssid,
-                uptime: zx::Duration::from_seconds(2),
-                time: fasync::Time::now(),
-            });
-        }
-        let all_disconnects = disconnects.get_recent(fasync::Time::INFINITE_PAST);
-        for d in &all_disconnects {
-            assert_eq!(d.bssid, bssid);
-        }
-        assert_eq!(all_disconnects.len(), disconnect_list_capacity);
+        assert!(past_connections_list.get_recent(later_time).is_empty());
     }
 
     #[fuchsia::test]

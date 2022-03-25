@@ -17,7 +17,7 @@ use {
     futures::{channel::mpsc, lock::Mutex},
     log::info,
     rand::Rng,
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, convert::TryInto, sync::Arc},
     wlan_common::hasher::WlanHasher,
 };
 
@@ -289,6 +289,27 @@ pub fn create_fake_connection_data(
         disconnect_time,
         zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000).into()),
         client_types::DisconnectReason::NetworkUnsaved,
+        SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
+        rng.gen::<u8>().into(),
+    )
+}
+
+/// Create past connection data with all random values. Tests can set the values they care about.
+pub fn random_connection_data() -> PastConnectionData {
+    let mut rng = rand::thread_rng();
+    let connect_time = fasync::Time::from_nanos(rng.gen::<u16>().into());
+    let time_to_connect = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into());
+    let uptime = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000).into());
+    let disconnect_time = connect_time + time_to_connect + uptime;
+    PastConnectionData::new(
+        client_types::Bssid(
+            (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
+        ),
+        connect_time,
+        time_to_connect,
+        disconnect_time,
+        uptime,
+        client_types::DisconnectReason::DisconnectDetectedFromSme,
         SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
         rng.gen::<u8>().into(),
     )
