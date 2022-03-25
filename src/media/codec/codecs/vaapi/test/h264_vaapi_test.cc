@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
 #include <stdio.h>
+
+#include <thread>
 
 #include <gtest/gtest.h>
 #include <va/va.h>
@@ -10,6 +13,7 @@
 #include "src/lib/files/file.h"
 #include "src/media/codec/codecs/test/test_codec_packets.h"
 #include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_decoder.h"
+#include "src/media/codec/codecs/vaapi/codec_runner_app.h"
 #include "src/media/codec/codecs/vaapi/vaapi_utils.h"
 
 int vaMaxNumEntrypoints(VADisplay dpy) { return 2; }
@@ -295,6 +299,52 @@ TEST(H264Vaapi, CodecList) {
   EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
   auto codec_list = GetCodecList();
   EXPECT_EQ(2u, codec_list.size());
+}
+
+// Test that we can connect using the CodecFactory.
+TEST(CodecFactory, Init) {
+  EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
+  fidl::InterfaceRequest<fuchsia::io::Directory> directory_request;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  auto codec_services = sys::ServiceDirectory::CreateWithRequest(&directory_request);
+
+  std::thread codec_thread([directory_request = std::move(directory_request)]() mutable {
+    CodecRunnerApp<CodecAdapterVaApiDecoder, NoAdapter> runner_app;
+    runner_app.Init();
+    fidl::InterfaceHandle<fuchsia::io::Directory> outgoing_directory;
+    EXPECT_EQ(ZX_OK, runner_app.component_context()->outgoing()->Serve(
+                         outgoing_directory.NewRequest().TakeChannel()));
+    EXPECT_EQ(ZX_OK, fdio_service_connect_at(outgoing_directory.channel().get(), "svc",
+                                             directory_request.TakeChannel().release()));
+    runner_app.Run();
+  });
+
+  fuchsia::mediacodec::CodecFactorySyncPtr codec_factory;
+  codec_services->Connect(codec_factory.NewRequest());
+  fuchsia::media::StreamProcessorPtr stream_processor;
+  fuchsia::mediacodec::CreateDecoder_Params params;
+  fuchsia::media::FormatDetails input_details;
+  input_details.set_mime_type("video/h264");
+  params.set_input_details(std::move(input_details));
+  params.set_require_hw(true);
+  EXPECT_EQ(ZX_OK, codec_factory->CreateDecoder(std::move(params), stream_processor.NewRequest()));
+
+  stream_processor.set_error_handler([&](zx_status_t status) {
+    loop.Quit();
+    EXPECT_TRUE(false);
+  });
+
+  stream_processor.events().OnInputConstraints =
+      [&](fuchsia::media::StreamBufferConstraints constraints) {
+        loop.Quit();
+        stream_processor.Unbind();
+      };
+
+  loop.Run();
+  codec_factory.Unbind();
+
+  codec_thread.join();
 }
 
 }  // namespace
