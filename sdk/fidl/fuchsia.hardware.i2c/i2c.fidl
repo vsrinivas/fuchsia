@@ -49,6 +49,7 @@ type I2CBusMetadata = table {
 };
 
 // A previous `Device` is now removed.
+@discoverable
 protocol Device2 {
     /// Write and read segments of data for a particular I2C device.
     ///
