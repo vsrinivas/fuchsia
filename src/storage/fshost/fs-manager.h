@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -28,6 +27,8 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace fshost {
 
@@ -184,7 +185,7 @@ class FsManager {
   // The Root VFS manages the following filesystems:
   // - The global root filesystem (including the mount points)
   // - "/tmp"
-  std::unique_ptr<memfs::Vfs> root_vfs_;
+  std::unique_ptr<memfs::Memfs> root_vfs_;
 
   std::unique_ptr<async::Loop> global_loop_;
   fs::ManagedVfs outgoing_vfs_;

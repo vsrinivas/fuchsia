@@ -183,7 +183,7 @@ zx_status_t FsManager::Initialize(
   global_loop_->StartThread("root-dispatcher");
 
   zx_status_t status =
-      memfs::Vfs::Create(global_loop_->dispatcher(), "<root>", &root_vfs_, &global_root_);
+      memfs::Memfs::Create(global_loop_->dispatcher(), "<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
     return status;
   }

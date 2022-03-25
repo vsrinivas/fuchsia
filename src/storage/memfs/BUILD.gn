@@ -5,11 +5,6 @@
 import("//build/cpp/sdk_source_set.gni")
 import("//build/zircon/zx_library.gni")
 
-# TODO(brettw) remove this when callers are updated to use full paths.
-config("memfs_config") {
-  include_dirs = [ "include" ]
-}
-
 # The in-memory filesystem implementation.
 #
 # Most users will want to consume the shared library rather than statically linking this
@@ -34,19 +29,8 @@ static_library("lib") {
     "vnode_vmo.cc",
   ]
 
-  public_configs = [ ":memfs_config" ]
-
   public_deps = [
-    # <lib/memfs/cpp/vnode.h> has #include <lib/fdio/io.h>
-    "//sdk/lib/fdio",
-
-    # <lib/memfs/cpp/vnode.h> has #include <fbl/ref_ptr.h>
-    "//zircon/system/ulib/fbl",
-
-    # <lib/memfs/cpp/vnode.h> has #include <lib/zx/vmo.h>
-    "//zircon/system/ulib/zx",
-
-    # <lib/memfs/cpp/vnode.h> has #include "src/lib/storage/vfs/cpp/vfs.h> and many other <fs/*.h"
+    # <memfs.h> has #include "src/lib/storage/vfs/*.h"
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]

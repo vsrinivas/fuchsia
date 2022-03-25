@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <sys/inotify.h>
 
 #include "src/lib/storage/vfs/cpp/inotify_test_base.h"

@@ -12,7 +12,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
@@ -28,6 +27,9 @@
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace {
 
@@ -52,7 +54,7 @@ zx_rights_t get_rights(const zx::object_base& handle) {
 //
 // If the dispatch loop is terminated too before the vfs shutdown task completes, it may see
 // "ZX_ERR_CANCELED" posted to the "vfs.Shutdown" closure instead.
-void shutdown_vfs(std::unique_ptr<memfs::Vfs> vfs) {
+void shutdown_vfs(std::unique_ptr<memfs::Memfs> vfs) {
   sync_completion_t completion;
   vfs->Shutdown([&completion](zx_status_t status) {
     EXPECT_OK(status);
@@ -69,9 +71,9 @@ TEST(VmofileTests, test_vmofile_basic) {
   zx::status directory_endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(directory_endpoints.status_value());
 
-  std::unique_ptr<memfs::Vfs> vfs;
+  std::unique_ptr<memfs::Memfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  ASSERT_OK(memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root));
+  ASSERT_OK(memfs::Memfs::Create(dispatcher, "<tmp>", &vfs, &root));
 
   zx::vmo read_only_vmo;
   ASSERT_OK(zx::vmo::create(64, 0, &read_only_vmo));
@@ -166,9 +168,9 @@ TEST(VmofileTests, test_vmofile_exec) {
   zx::status directory_endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(directory_endpoints.status_value());
 
-  std::unique_ptr<memfs::Vfs> vfs;
+  std::unique_ptr<memfs::Memfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  ASSERT_OK(memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root));
+  ASSERT_OK(memfs::Memfs::Create(dispatcher, "<tmp>", &vfs, &root));
 
   zx::vmo read_exec_vmo;
   ASSERT_OK(zx::vmo::create(64, 0, &read_exec_vmo));

@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <lib/zx/resource.h>
 
 #include <memory>
@@ -20,6 +19,9 @@
 
 #include "src/lib/loader_service/loader_service.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace loader {
 namespace test {
@@ -82,7 +84,7 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
  private:
   async::Loop fs_loop_;
   async::Loop loader_loop_;
-  std::unique_ptr<memfs::Vfs> vfs_;
+  std::unique_ptr<memfs::Memfs> vfs_;
   fbl::RefPtr<memfs::VnodeDir> root_dir_;
 };
 

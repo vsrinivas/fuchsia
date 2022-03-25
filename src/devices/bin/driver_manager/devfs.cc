@@ -10,7 +10,6 @@
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/types.h>

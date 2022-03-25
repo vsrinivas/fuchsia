@@ -6,7 +6,6 @@
 #define SRC_BRINGUP_BIN_BOOTSVC_BOOTFS_SERVICE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/memfs/cpp/vnode.h>
 #include <lib/zbitl/vmo.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
@@ -15,6 +14,10 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+
+#include "src/storage/memfs/memfs.h"
+#include "src/storage/memfs/vnode.h"
+#include "src/storage/memfs/vnode_dir.h"
 
 namespace bootsvc {
 
@@ -67,7 +70,7 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
   // owned_vmos contains all VMOs that are claimed by the underlying VFS
   std::vector<zx::vmo> owned_vmos_;
 
-  std::unique_ptr<memfs::Vfs> vfs_;
+  std::unique_ptr<memfs::Memfs> vfs_;
   // root of the vfs
   fbl::RefPtr<memfs::VnodeDir> root_;
   zx::resource vmex_rsrc_;

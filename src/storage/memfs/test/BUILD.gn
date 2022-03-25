@@ -24,7 +24,6 @@ test("memfs-inotify-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp:inotify_test_base",
     "//src/storage/memfs",
     "//src/storage/memfs:lib",
