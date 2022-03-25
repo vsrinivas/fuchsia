@@ -1,7 +1,7 @@
 # Scenic Input Injection Tool
 
 This directory contains input, a simple tool to inject input events into
-Scenic.
+Scenic using the [input-synthesis](/src/lib/ui/input-synthesis/README.md) library.
 
 ## usage
 
@@ -53,12 +53,12 @@ decimal HID usage code, prior to any remapping the IME may do.
 
 Common usage codes:
 
-key       | code
-----------|-----
-enter     | 40
-escape    | 41
-backspace | 42
-tab       | 43
+| key       | code |
+| --------- | ---- |
+| enter     | 40   |
+| escape    | 41   |
+| backspace | 42   |
+| tab       | 43   |
 
 ### `tap`/`swipe`
 

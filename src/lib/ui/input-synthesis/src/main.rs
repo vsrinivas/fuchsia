@@ -13,15 +13,6 @@
 //!
 //! If you can link to Rust code directly, you can use the `input_synthesis`
 //! library directly too, without this complication.
-//!
-//! For context, the `input_synthesis` library allows test code to pretend to
-//! be one or more input devices, such as a keyboard, mouse or touchpad. It then
-//! allows the test fixture to send high-level commands that get converted into
-//! low-level input messages, rather than needing to write these commands
-//! directly.  For example, it will convert a command `Text.Send("hello")` into
-//! a sequence of presses and releases of the keys `h`, `e`, `l`, `l`, and `o` in
-//! a rapid succession.  The input pipeline can not distinguish these fake key
-//! presses from those typed up on a real keyboard.
 
 use anyhow::Result;
 use fidl_test_inputsynthesis::{MouseRequest, MouseRequestStream, TextRequest, TextRequestStream};
