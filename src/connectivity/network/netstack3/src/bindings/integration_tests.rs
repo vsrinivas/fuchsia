@@ -27,8 +27,8 @@ use netstack3_core::{
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     initialize_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
-    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, UdpConnId,
-    UdpContext, UdpListenerId,
+    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder,
+    UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -132,11 +132,7 @@ where
 }
 
 impl<I: SocketCollectionIpExt<Udp> + IcmpIpExt> UdpContext<I> for TestDispatcher {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        err: I::ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
         UdpContext::receive_icmp_error(&mut self.disp, id, err)
     }
 }

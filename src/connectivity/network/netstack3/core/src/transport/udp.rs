@@ -424,6 +424,30 @@ impl<I: Ip> IdMapCollectionKey for UdpListenerId<I> {
     }
 }
 
+/// A unique identifier for a bound UDP connection or listener.
+///
+/// Contains either a [`UdpConnId`] or [`UdpListenerId`] in contexts where either
+/// can be present.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum UdpBoundId<I: Ip> {
+    /// A UDP connection.
+    Connected(UdpConnId<I>),
+    /// A UDP listener.
+    Listening(UdpListenerId<I>),
+}
+
+impl<I: Ip> From<UdpConnId<I>> for UdpBoundId<I> {
+    fn from(id: UdpConnId<I>) -> Self {
+        Self::Connected(id)
+    }
+}
+
+impl<I: Ip> From<UdpListenerId<I>> for UdpBoundId<I> {
+    fn from(id: UdpListenerId<I>) -> Self {
+        Self::Listening(id)
+    }
+}
+
 /// An execution context for the UDP protocol.
 pub trait UdpContext<I: IcmpIpExt> {
     /// Receives an ICMP error message related to a previously-sent UDP packet.
@@ -439,31 +463,19 @@ pub trait UdpContext<I: IcmpIpExt> {
     /// from a previous socket with the same addresses, it may be the result of
     /// packet corruption on the network, it may have been injected by a
     /// malicious party, etc.
-    fn receive_icmp_error(
-        &mut self,
-        _id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        _err: I::ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, _id: UdpBoundId<I>, _err: I::ErrorCode) {
         log_unimplemented!((), "UdpContext::receive_icmp_error: not implemented");
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv4> for Ctx<D, C> {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<Ipv4>, UdpListenerId<Ipv4>>,
-        err: Icmpv4ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv4>, err: Icmpv4ErrorCode) {
         UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv6> for Ctx<D, C> {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<Ipv6>, UdpListenerId<Ipv6>>,
-        err: Icmpv6ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv6>, err: Icmpv6ErrorCode) {
         UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
     }
 }
@@ -676,9 +688,9 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
                 ctx.get_first_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
             {
                 let id = match socket {
-                    LookupResult::Conn(id, _) => Ok(id),
+                    LookupResult::Conn(id, _) => id.into(),
                     LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => {
-                        Err(id)
+                        id.into()
                     }
                 };
                 ctx.receive_icmp_error(id, err);
@@ -1229,7 +1241,7 @@ mod tests {
     /// An ICMP error delivered to a [`DummyUdpCtx`].
     #[derive(Debug, Eq, PartialEq)]
     struct IcmpError<I: TestIpExt> {
-        id: Result<UdpConnId<I>, UdpListenerId<I>>,
+        id: UdpBoundId<I>,
         err: I::ErrorCode,
     }
 
@@ -1349,11 +1361,7 @@ mod tests {
     }
 
     impl<I: TestIpExt> UdpContext<I> for DummyCtx<I> {
-        fn receive_icmp_error(
-            &mut self,
-            id: Result<UdpConnId<I>, UdpListenerId<I>>,
-            err: I::ErrorCode,
-        ) {
+        fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
             self.get_mut().icmp_errors.push(IcmpError { id, err })
         }
     }
@@ -2523,21 +2531,21 @@ mod tests {
             receive_icmp_error(&mut ctx, src_ip.get(), dst_ip.get(), 3, 4, err, f);
             assert_eq!(
                 ctx.get_ref().icmp_errors.as_slice(),
-                [IcmpError { id: Ok(UdpConnId::new(0)), err }]
+                [IcmpError { id: UdpConnId::new(0).into(), err }]
             );
 
             // Test that we receive an error for the listener.
             receive_icmp_error(&mut ctx, src_ip.get(), dst_ip.get(), 2, 4, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[1..],
-                [IcmpError { id: Err(UdpListenerId::new_specified(0)), err }]
+                [IcmpError { id: UdpListenerId::new_specified(0).into(), err }]
             );
 
             // Test that we receive an error for the wildcard listener.
             receive_icmp_error(&mut ctx, src_ip.get(), dst_ip.get(), 1, 4, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[2..],
-                [IcmpError { id: Err(UdpListenerId::new_wildcard(0)), err }]
+                [IcmpError { id: UdpListenerId::new_wildcard(0).into(), err }]
             );
 
             // Test that we receive an error for the wildcard listener even if
@@ -2545,7 +2553,7 @@ mod tests {
             receive_icmp_error(&mut ctx, src_ip.get(), other_remote_ip, 1, 5, err, f);
             assert_eq!(
                 &ctx.get_ref().icmp_errors.as_slice()[3..],
-                [IcmpError { id: Err(UdpListenerId::new_wildcard(0)), err }]
+                [IcmpError { id: UdpListenerId::new_wildcard(0).into(), err }]
             );
 
             // Test that an error that doesn't correspond to any connection or

@@ -30,8 +30,9 @@ use netstack3_core::{
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BlanketCoreContext,
     BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
     IdMapCollection, IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError,
-    LocalAddressError, TransportIpContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId,
-    UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpStateContext,
+    LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    UdpStateContext,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -350,15 +351,11 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
 }
 
 impl<I: icmp::IcmpIpExt> UdpContext<I> for SocketCollection<I, Udp> {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        err: I::ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
         let Self { binding_data, conns, listeners } = self;
-        let id = match id.as_ref() {
-            Ok(conn) => conns.get(conn),
-            Err(listener) => listeners.get(listener),
+        let id = match &id {
+            UdpBoundId::Connected(conn) => conns.get(conn),
+            UdpBoundId::Listening(listener) => listeners.get(listener),
         };
         let binding_data = id.copied().and_then(|id| binding_data.get(id));
         // NB: Logging at error as a means of failing tests that provoke this condition.

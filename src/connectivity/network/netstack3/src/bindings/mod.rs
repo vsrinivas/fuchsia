@@ -57,7 +57,7 @@ use netstack3_core::{
     set_ipv6_configuration, BlanketCoreContext, BufferUdpContext, Ctx, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpDeviceConfiguration,
     IpExt, IpSockCreationError, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId,
-    UdpConnId, UdpContext, UdpListenerId,
+    UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -354,11 +354,7 @@ impl<I> UdpContext<I> for BindingsDispatcher
 where
     I: socket::datagram::SocketCollectionIpExt<socket::datagram::Udp> + icmp::IcmpIpExt,
 {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        err: I::ErrorCode,
-    ) {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
         I::get_collection_mut(self).receive_icmp_error(id, err)
     }
 }
