@@ -36,6 +36,9 @@ struct DirEntryState {
     /// DirEntries are added to this cache when they are looked up and removed
     /// when they are no longer referenced.
     children: BTreeMap<FsString, Weak<DirEntry>>,
+
+    /// The number of filesystem mounted on the directory entry.
+    mount_count: u32,
 }
 
 /// An entry in a directory.
@@ -70,8 +73,25 @@ impl DirEntry {
     ) -> DirEntryHandle {
         Arc::new(DirEntry {
             node,
-            state: RwLock::new(DirEntryState { parent, local_name, children: BTreeMap::new() }),
+            state: RwLock::new(DirEntryState {
+                parent,
+                local_name,
+                children: BTreeMap::new(),
+                mount_count: 0,
+            }),
         })
+    }
+
+    /// Register that a filesystem is mounted on the directory.
+    pub fn register_mount(&self) {
+        self.state.write().mount_count += 1;
+    }
+
+    /// Unregister that a filesystem is mounted on the directory.
+    pub fn unregister_mount(&self) {
+        let mut state = self.state.write();
+        assert!(state.mount_count > 0);
+        state.mount_count -= 1;
     }
 
     /// The name that this node's parent calls this node.
@@ -252,25 +272,16 @@ impl DirEntry {
         Ok(())
     }
 
-    pub fn unlink(
-        parent_name: &NamespaceNode,
-        name: &FsStr,
-        kind: UnlinkKind,
-    ) -> Result<(), Errno> {
+    pub fn unlink(self: &DirEntryHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         assert!(!DirEntry::is_reserved_name(name));
-        let parent = &parent_name.entry;
-        let mut parent_state = parent.state.write();
+        let mut state = self.state.write();
 
-        let child = parent.component_lookup_locked(&mut parent_state, name)?;
+        let child = self.component_lookup_locked(&mut state, name)?;
+        let child_state = child.state.read();
 
-        // TODO: We should hold a read lock on the mount points for this
-        //       namespace to prevent the child from becoming a mount point
-        //       while this function is executing.
-        if parent_name.child_is_mountpoint(&child) {
+        if child_state.mount_count > 0 {
             return error!(EBUSY);
         }
-
-        let child_state = child.state.read();
 
         match kind {
             UnlinkKind::Directory => {
@@ -291,16 +302,16 @@ impl DirEntry {
             }
         }
 
-        parent.node.unlink(name, &child.node)?;
-        parent_state.children.remove(name);
+        self.node.unlink(name, &child.node)?;
+        state.children.remove(name);
 
         std::mem::drop(child_state);
         // We drop the state lock before we drop the child so that we do
         // not trigger a deadlock in the Drop trait for FsNode, which attempts
         // to remove the FsNode from its parent's child list.
-        std::mem::drop(parent_state);
+        std::mem::drop(state);
 
-        parent.node.fs().will_destroy_dir_entry(&child);
+        self.node.fs().will_destroy_dir_entry(&child);
 
         std::mem::drop(child);
         Ok(())

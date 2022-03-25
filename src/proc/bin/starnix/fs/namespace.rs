@@ -43,13 +43,13 @@ impl Namespace {
         let root = fs.root().clone();
         if namespace
             .root_mount
-            .set(Arc::new(Mount {
-                namespace: Arc::downgrade(&namespace),
-                mountpoint: None,
+            .set(Arc::new(Mount::new(
+                Arc::downgrade(&namespace),
+                None,
                 root,
-                _flags: MountFlags::empty(),
-                _fs: fs,
-            }))
+                MountFlags::empty(),
+                fs,
+            )))
             .is_err()
         {
             panic!("there's no way namespace.root_mount could have been set");
@@ -85,6 +85,17 @@ struct Mount {
 type MountHandle = Arc<Mount>;
 
 impl Mount {
+    fn new(
+        namespace: Weak<Namespace>,
+        mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
+        root: DirEntryHandle,
+        flags: MountFlags,
+        fs: FileSystemHandle,
+    ) -> Self {
+        mountpoint.as_ref().map(|(_mount, node)| node.register_mount());
+        Self { namespace, mountpoint, root, _flags: flags, _fs: fs }
+    }
+
     pub fn root(self: &MountHandle) -> NamespaceNode {
         NamespaceNode { mount: Some(Arc::clone(self)), entry: Arc::clone(&self.root) }
     }
@@ -92,6 +103,12 @@ impl Mount {
     fn mountpoint(&self) -> Option<NamespaceNode> {
         let (ref mount, ref node) = &self.mountpoint.as_ref()?;
         Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
+    }
+}
+
+impl Drop for Mount {
+    fn drop(&mut self) {
+        self.mountpoint.as_ref().map(|(_mount, node)| node.unregister_mount());
     }
 }
 
@@ -270,7 +287,7 @@ impl NamespaceNode {
                 UnlinkKind::NonDirectory => error!(ENOTDIR),
             }
         } else {
-            DirEntry::unlink(self, name, kind)
+            self.entry.unlink(name, kind)
         }
     }
 
@@ -395,13 +412,13 @@ impl NamespaceNode {
                 }
                 WhatToMount::Dir(entry) => (entry.node.fs(), entry),
             };
-            mounts_at_point.push(Arc::new(Mount {
-                namespace: mount.namespace.clone(),
-                mountpoint: Some((Arc::downgrade(&mount), self.entry.clone())),
+            mounts_at_point.push(Arc::new(Mount::new(
+                mount.namespace.clone(),
+                Some((Arc::downgrade(&mount), self.entry.clone())),
                 root,
-                _flags: flags,
-                _fs: fs,
-            }));
+                flags,
+                fs,
+            )));
             Ok(())
         } else {
             error!(EBUSY)
@@ -581,6 +598,24 @@ mod test {
             &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
             foofs2.root()
         ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_unlink_mounted_directory() -> anyhow::Result<()> {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
+        let ns1 = Namespace::new(root_fs.clone());
+        let ns2 = Namespace::new(root_fs.clone());
+        let _foo_node = root_fs.root().create_dir(b"foo")?;
+        let mut context = LookupContext::default();
+        let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
+
+        let foofs = TmpFs::new();
+        foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;
+
+        assert_eq!(errno!(EBUSY), ns2.root().unlink(b"foo", UnlinkKind::Directory).unwrap_err());
 
         Ok(())
     }
