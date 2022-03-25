@@ -36,7 +36,6 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<Mutex> lock{&guest->vcpu_mutex_};
   status = hypervisor::GuestPhysicalAddressSpace::Create(vmid, &guest->gpas_);
   if (status != ZX_OK) {
     return status;
