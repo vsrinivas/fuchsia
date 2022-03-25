@@ -152,7 +152,7 @@ class InterruptTracker {
   void Cancel() { event_.Signal(ZX_ERR_INTERNAL_INTR_RETRY); }
 
   // Waits for an interrupt.
-  zx_status_t Wait(zx_time_t deadline, StateInvalidator* invalidator) {
+  zx::status<> Wait(zx_time_t deadline, StateInvalidator* invalidator) {
     if (invalidator != nullptr) {
       invalidator->Invalidate();
     }
@@ -165,13 +165,13 @@ class InterruptTracker {
           continue;
         case ZX_ERR_TIMED_OUT:
           // If the event timed out, return ZX_OK to resume the VCPU.
-          return ZX_OK;
+          return zx::ok();
         default:
           // Otherwise, return the status.
-          return status;
+          return zx::error(status);
       }
     } while (!Pending());
-    return ZX_OK;
+    return zx::ok();
   }
 
  private:
