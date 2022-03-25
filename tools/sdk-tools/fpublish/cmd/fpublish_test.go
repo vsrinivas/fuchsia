@@ -123,29 +123,18 @@ func TestFakeFPublish(t *testing.T) {
 }
 
 func handleFakeFFX(args []string) {
-	if args[0] == "config" && args[1] == "env" {
-		if len(args) == 3 && args[2] == "get" {
-			fmt.Printf("Environment:\n")
-			fmt.Printf("User: none\n")
-			fmt.Printf("Build: none\n")
-			fmt.Printf("Global: none\n")
-			os.Exit(0)
-		} else if args[2] == "set" {
-			os.Exit(0)
-		}
-	}
 	if args[0] == "config" && args[1] == "get" {
-		if args[2] == "DeviceConfiguration" {
+		if args[2] == "DeviceConfiguration" || args[2] == "device_config" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration._DEFAULT_DEVICE_" {
-			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
-			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration.remote-target-name" {
+		} else if args[2] == "DeviceConfiguration.remote-target-name" || args[2] == "device_config.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
 		}
 
+	}
+	if args[0] == "config" && (args[1] == "set" || args[1] == "remove") {
+		os.Exit(0)
 	}
 	if args[0] == "target" && args[1] == "default" && args[2] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
@@ -157,11 +146,24 @@ func handleFakeFFX(args []string) {
 		os.Exit(0)
 	}
 
+	if args[2] == "target" && args[3] == "get-ssh-address" {
+		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_GET_SSH_ADDRESS"))
+		os.Exit(0)
+	}
+
 	if args[0] == "debug" && args[1] == "symbol-index" && args[2] == "add" {
 		os.Exit(0)
 	}
 	fmt.Fprintf(os.Stderr, "Unexpected ffx sub command: %v", args)
 	os.Exit(2)
+}
+
+func clearEnvVars() {
+	os.Unsetenv("TEST_EXPECTED_ARGS")
+	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DATA")
+	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
+	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
+	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
 }
 
 func TestMain(t *testing.T) {
@@ -175,79 +177,83 @@ func TestMain(t *testing.T) {
 		sdkcommon.ExecCommand = exec.Command
 		os.Args = savedArgs
 		flag.CommandLine = savedCommandLine
+		clearEnvVars()
 	}()
 	tests := []struct {
-		args                []string
-		deviceConfiguration string
-		defaultConfigDevice string
-		ffxDefaultDevice    string
-		ffxTargetList       string
-		ffxTargetDefault    string
-		expectedArgs        []string
+		name                   string
+		args                   []string
+		deviceConfiguration    string
+		ffxTargetList          string
+		ffxTargetGetSSHAddress string
+		ffxTargetDefault       string
+		expectedArgs           []string
 	}{
-		// Test case for no configuration, but 1 device discoverable.
 		{
-			args:          []string{os.Args[0], "-data-path", dataDir, "package.far"},
-			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "<unknown>", "packages/amber-files"), "-f", "package.far"},
-			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			name:                   "No configured devices in ffx but 1 discoverable device",
+			args:                   []string{os.Args[0], "-data-path", dataDir, "package.far"},
+			expectedArgs:           []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "some-device", "packages/amber-files"), "-f", "package.far"},
+			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
 		{
-			args:          []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
-			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
-			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			name:         "Using the non-default device by passing --device-name to fpublish",
+			args:         []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
+			expectedArgs: []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
+			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]},
+			{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::ff"]}]`,
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
-				"device-ip":"::1f",
 				"device-name":"remote-target-name",
 				"image":"release",
 				"package-port":"",
 				"package-repo":"",
-				"ssh-port":"2202",
-				"default": "true"},
-				"test-device":{
-					"bucket":"fuchsia-bucket",
-					"device-ip":"::ff",
-					"device-name":"test-device",
-					"image":"release",
-					"package-port":"",
-					"package-repo":"",
-					"ssh-port":"",
-					"default": "true"}
+				"default": "true"
+			},
+			"test-device":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"test-device",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "false"
+			}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetGetSSHAddress: `[::ff]:22`,
+			ffxTargetDefault:       "remote-target-name",
 		},
 		{
+			name:          "Using a device that is discoverable but isn't saved in ffx by passing the --device-name to fpublish",
 			args:          []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
-				"device-ip":"::1f",
 				"device-name":"remote-target-name",
 				"image":"release",
 				"package-port":"",
 				"package-repo":"",
-				"ssh-port":"2202",
-				"default": "true"},
-				"test-device2":{
-					"bucket":"fuchsia-bucket",
-					"device-ip":"::ff",
-					"device-name":"test-device2",
-					"image":"release",
-					"package-port":"",
-					"package-repo":"",
-					"ssh-port":"",
-					"default": "true"}
+				"default": "true"
+			},
+			"test-device2":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"test-device2",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "false"
+			}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetGetSSHAddress: `[::1f]:22`,
+			ffxTargetDefault:       "remote-target-name",
 		},
 		{
+			name:          "Using the default device from ffx",
 			args:          []string{os.Args[0], "-data-path", dataDir, "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", "/some/custom/repo/path", "-f", "package.far"},
-			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-ip":"::1f",
@@ -256,32 +262,34 @@ func TestMain(t *testing.T) {
 				"package-port":"",
 				"package-repo":"/some/custom/repo/path",
 				"ssh-port":"2202",
-				"default": "true"},
-				"test-device":{
-					"bucket":"fuchsia-bucket",
-					"device-ip":"::ff",
-					"device-name":"test-device",
-					"image":"release",
-					"package-port":"",
-					"package-repo":"",
-					"ssh-port":"",
-					"default": "true"}
+				"default": "true"
+			},
+			"test-device":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"test-device",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "false"
+			}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetGetSSHAddress: `[::1f]:22`,
+			ffxTargetDefault:       "remote-target-name",
 		},
 	}
-	for testcase, test := range tests {
-		t.Run(fmt.Sprintf("testcase_%d", testcase), func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearEnvVars()
 			os.Args = test.args
 			os.Setenv("TEST_EXPECTED_ARGS", strings.Join(test.expectedArgs, ","))
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
-			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
 				if code != 0 {
-					t.Fatalf("Non-zero error code %d", code)
+					t.Errorf("Non-zero error code %d", code)
 				}
 			}
 			main()

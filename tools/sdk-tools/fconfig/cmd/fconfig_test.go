@@ -18,6 +18,14 @@ type testSDKProperties struct {
 	defaultDeviceName string
 }
 
+func (sdk testSDKProperties) SetDeviceIP(deviceIP, sshPort string) error {
+	return nil
+}
+
+func (sdk testSDKProperties) MigrateGlobalData() error {
+	return nil
+}
+
 func (sdk testSDKProperties) GetDeviceConfiguration(name string) (sdkcommon.DeviceConfig, error) {
 	for _, config := range sdk.currentConfigs {
 		if config.DeviceName == name {
@@ -40,7 +48,6 @@ func (sdk testSDKProperties) GetDefaultDevice(deviceName string) (sdkcommon.Devi
 }
 
 func (sdk testSDKProperties) GetFuchsiaProperty(deviceName string, property string) (string, error) {
-
 	device := deviceName
 	if device == "" {
 		device = sdk.defaultDeviceName
@@ -79,7 +86,6 @@ func (sdk testSDKProperties) GetDeviceConfigurations() ([]sdkcommon.DeviceConfig
 }
 
 func (sdk testSDKProperties) SaveDeviceConfiguration(newConfig sdkcommon.DeviceConfig) error {
-
 	index := -1
 	for i, config := range sdk.currentConfigs {
 		if config.DeviceName == newConfig.DeviceName {

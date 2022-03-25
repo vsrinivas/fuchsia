@@ -7,6 +7,7 @@ package sdkcommon
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -91,4 +92,19 @@ func DirectoryExists(dirname string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+// WriteTempFile writes a file with content `contents` and returns the path
+// to the file. The caller is responsible for cleaning up this file.
+func WriteTempFile(contents []byte) (string, error) {
+	f, err := ioutil.TempFile(os.TempDir(), "sdkcommon-")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	path := f.Name()
+	if _, err = f.Write(contents); err != nil {
+		return "", err
+	}
+	return path, nil
 }

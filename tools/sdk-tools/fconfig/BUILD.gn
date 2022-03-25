@@ -8,7 +8,10 @@ import("//build/go/go_test.gni")
 
 go_library("main") {
   source_dir = "cmd"
-  deps = [ "//tools/sdk-tools/sdkcommon" ]
+  deps = [
+    "//third_party/golibs:go.uber.org/multierr",
+    "//tools/sdk-tools/sdkcommon",
+  ]
   sources = [
     "fconfig.go",
     "fconfig_test.go",
