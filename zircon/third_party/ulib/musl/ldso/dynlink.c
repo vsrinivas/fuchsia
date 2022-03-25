@@ -835,7 +835,6 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
   size_t phsize;
   size_t addr_min = SIZE_MAX, addr_max = 0, map_len;
   size_t this_min, this_max;
-  size_t nsegs = 0;
   const Ehdr* const eh = &buf.ehdr;
   Phdr *ph, *ph0;
   unsigned char *map = MAP_FAILED, *base;
@@ -873,7 +872,6 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
   for (i = eh->e_phnum; i; i--, ph = (void*)((char*)ph + eh->e_phentsize)) {
     switch (ph->p_type) {
       case PT_LOAD:
-        nsegs++;
         if (ph->p_vaddr < addr_min) {
           addr_min = ph->p_vaddr;
         }
