@@ -36,7 +36,6 @@ pub struct EmuAcceleration<'a> {
 
 pub fn linux_check_cpu_virtualization(command_runner: &CommandRunner) -> Result<bool> {
     let (status, stdout, stderr) = (command_runner)(&vec!["cat", "/proc/cpuinfo"])?;
-    print!("{}", stdout.as_str());
     if !status.success() {
         return Err(anyhow!(
             "Could not exec `cat /proc/cpuinfo`: exited with code {}, stdout: {}, stderr: {}",
