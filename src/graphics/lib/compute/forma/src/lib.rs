@@ -26,7 +26,7 @@ pub use utils::clear_buffer;
 pub use surpass::{
     painter::{
         BlendMode, Channel, Color, Fill, FillRule, Func, Gradient, GradientBuilder, GradientType,
-        Image, Props, Rect, Style, Texture, BGRA, RGBA,
+        Image, Props, Rect, Style, Texture, BGR0, BGR1, BGRA, RGB0, RGB1, RGBA,
     },
     AffineTransform, GeomPresTransform, GeomPresTransformError, Path, PathBuilder, Point,
 };

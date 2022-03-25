@@ -6,36 +6,52 @@ use std::{fmt, sync::Arc};
 
 use crate::{simd::f32x8, AffineTransform, Point};
 
+pub(crate) trait Ratio {
+    fn zero() -> Self;
+    fn one() -> Self;
+}
+
+impl Ratio for f32x8 {
+    #[inline]
+    fn zero() -> Self {
+        f32x8::splat(0.0)
+    }
+
+    #[inline]
+    fn one() -> Self {
+        f32x8::splat(1.0)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Channel {
     Red,
     Green,
     Blue,
     Alpha,
+    Zero,
+    One,
 }
 
 impl Channel {
-    pub(crate) fn select<T>(self, r: T, g: T, b: T, a: T) -> T {
+    pub(crate) fn select<R: Ratio>(self, r: R, g: R, b: R, a: R) -> R {
         match self {
             Channel::Red => r,
             Channel::Green => g,
             Channel::Blue => b,
             Channel::Alpha => a,
-        }
-    }
-
-    pub(crate) fn select_from_color(self, color: Color) -> f32 {
-        match self {
-            Channel::Red => color.r,
-            Channel::Green => color.g,
-            Channel::Blue => color.b,
-            Channel::Alpha => color.a,
+            Channel::Zero => R::zero(),
+            Channel::One => R::one(),
         }
     }
 }
 
 pub const RGBA: [Channel; 4] = [Channel::Red, Channel::Green, Channel::Blue, Channel::Alpha];
 pub const BGRA: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
+pub const RGB0: [Channel; 4] = [Channel::Red, Channel::Green, Channel::Blue, Channel::Zero];
+pub const BGR0: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Zero];
+pub const RGB1: [Channel; 4] = [Channel::Red, Channel::Green, Channel::Blue, Channel::One];
+pub const BGR1: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::One];
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Color {
@@ -77,6 +93,8 @@ impl Color {
             Channel::Green => self.g,
             Channel::Blue => self.b,
             Channel::Alpha => self.a,
+            Channel::Zero => 0.0,
+            Channel::One => 1.0,
         }
     }
 }
@@ -807,6 +825,16 @@ mod tests {
         }};
     }
 
+    impl Ratio for [f32; 8] {
+        fn zero() -> Self {
+            [0.0; 8]
+        }
+
+        fn one() -> Self {
+            [1.0; 8]
+        }
+    }
+
     fn colors(separate: &[f32x8; 4]) -> [[f32; 4]; 8] {
         let mut colors = [[0.0, 0.0, 0.0, 0.0]; 8];
 
@@ -1024,20 +1052,54 @@ mod tests {
     #[test]
     fn channel_select() {
         let channels: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
-        let red = [3f32; 8];
-        let green = [2f32; 8];
-        let blue = [1f32; 8];
-        let alpha = [1f32; 8];
+        let red = [3.0; 8];
+        let green = [2.0; 8];
+        let blue = [1.0; 8];
+        let alpha = [1.0; 8];
         let color = channels.map(|c| c.select(red, green, blue, alpha));
         assert_eq!(color, [blue, green, red, alpha]);
+    }
+
+    #[test]
+    fn channel_select_zero() {
+        let red = [4.0; 8];
+        let green = [3.0; 8];
+        let blue = [2.0; 8];
+        let alpha = [2.0; 8];
+        let color = BGR0.map(|c| c.select(red, green, blue, alpha));
+        assert_eq!(color, [blue, green, red, [0.0; 8]]);
+    }
+
+    #[test]
+    fn channel_select_one() {
+        let red = [4.0; 8];
+        let green = [3.0; 8];
+        let blue = [2.0; 8];
+        let alpha = [2.0; 8];
+        let color = BGR1.map(|c| c.select(red, green, blue, alpha));
+        assert_eq!(color, [blue, green, red, [1.0; 8]]);
     }
 
     #[test]
     fn channel_select_from_color() {
         let channels: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
         let color = Color { r: 3.0, g: 2.0, b: 1.0, a: 1.0 };
-        let color = channels.map(|c| c.select_from_color(color));
+        let color = channels.map(|c| color.channel(c));
         assert_eq!(color, [1.0, 2.0, 3.0, 1.0]);
+    }
+
+    #[test]
+    fn channel_select_from_color_zero() {
+        let color = Color { r: 4.0, g: 3.0, b: 2.0, a: 2.0 };
+        let color = BGR0.map(|c| color.channel(c));
+        assert_eq!(color, [2.0, 3.0, 4.0, 0.0]);
+    }
+
+    #[test]
+    fn channel_select_from_color_one() {
+        let color = Color { r: 4.0, g: 3.0, b: 2.0, a: 2.0 };
+        let color = BGR1.map(|c| color.channel(c));
+        assert_eq!(color, [2.0, 3.0, 4.0, 1.0]);
     }
 
     #[test]

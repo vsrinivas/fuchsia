@@ -31,7 +31,7 @@ pub use style::{
     BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Image, Style, Texture,
 };
 
-pub use self::style::{Channel, Color, BGRA, RGBA};
+pub use self::style::{Channel, Color, BGR0, BGR1, BGRA, RGB0, RGB1, RGBA};
 
 const PIXEL_AREA: usize = PIXEL_WIDTH * PIXEL_WIDTH;
 const PIXEL_DOUBLE_AREA: usize = 2 * PIXEL_AREA;
@@ -148,7 +148,10 @@ fn to_u32x4(val: f32x4) -> u32x4 {
 
 #[inline]
 fn to_srgb_bytes(color: [f32; 4]) -> [u8; 4] {
-    to_u32x4(linear_to_srgb_approx_simdx4(f32x4::new([color[0], color[1], color[2], 1.0]))).into()
+    let linear = f32x4::new([color[0], color[1], color[2], 0.0]);
+    let srgb = to_u32x4(linear_to_srgb_approx_simdx4(linear).set::<3>(color[3]));
+
+    srgb.into()
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -443,21 +446,19 @@ impl Painter {
     }
 
     fn compute_srgb(&mut self, channels: [Channel; 4]) {
-        for channel in self.red.iter_mut() {
-            *channel = linear_to_srgb_approx_simdx8(*channel);
-        }
-        for channel in self.green.iter_mut() {
-            *channel = linear_to_srgb_approx_simdx8(*channel);
-        }
-        for channel in self.blue.iter_mut() {
-            *channel = linear_to_srgb_approx_simdx8(*channel);
-        }
-
-        for (((&red, &green), &blue), srgb) in
-            self.red.iter().zip(self.green.iter()).zip(self.blue.iter()).zip(self.srgb.iter_mut())
+        for ((((&red, &green), &blue), &alpha), srgb) in self
+            .red
+            .iter()
+            .zip(self.green.iter())
+            .zip(self.blue.iter())
+            .zip(self.alpha.iter())
+            .zip(self.srgb.iter_mut())
         {
-            let unpacked =
-                channels.map(|c| to_u32x8(c.select(red, green, blue, f32x8::splat(1.0))));
+            let red = linear_to_srgb_approx_simdx8(red);
+            let green = linear_to_srgb_approx_simdx8(green);
+            let blue = linear_to_srgb_approx_simdx8(blue);
+
+            let unpacked = channels.map(|c| to_u32x8(c.select(red, green, blue, alpha)));
 
             *srgb = u8x32::from_u32_interleaved(unpacked);
         }
@@ -554,7 +555,7 @@ impl Painter {
             match workbench.drive_tile_painting(self, &context) {
                 TileWriteOp::None => (),
                 TileWriteOp::Solid(color) => {
-                    let color = channels.map(|c| c.select_from_color(color));
+                    let color = channels.map(|c| color.channel(c));
                     L::write(slices, flusher, TileFill::Solid(to_srgb_bytes(color)))
                 }
                 TileWriteOp::ColorBuffer => {
@@ -1130,7 +1131,8 @@ mod tests {
             // Should convert linearly.
             0.5,
         ];
-        assert_eq!(to_srgb_bytes(premultiplied), [2, 89, 137, 255]);
+
+        assert_eq!(to_srgb_bytes(premultiplied), [2, 89, 137, 128]);
     }
 
     #[test]
