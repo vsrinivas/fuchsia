@@ -41,6 +41,8 @@ pub enum ModelError {
     },
     #[error("source for dynamic offer not found: {:?}", offer)]
     DynamicOfferSourceNotFound { offer: cm_rust::OfferDecl },
+    #[error("name length is longer than the allowed max {}", max_len)]
+    NameTooLong { max_len: usize },
     #[error("context not found")]
     ContextNotFound,
     #[error("{} is not supported", feature)]
@@ -205,6 +207,10 @@ impl ModelError {
 
     pub fn dynamic_offer_source_not_found(offer: cm_rust::OfferDecl) -> ModelError {
         ModelError::DynamicOfferSourceNotFound { offer }
+    }
+
+    pub fn name_too_long(max_len: usize) -> ModelError {
+        ModelError::NameTooLong { max_len }
     }
 
     pub fn context_not_found() -> ModelError {

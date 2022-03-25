@@ -140,10 +140,22 @@ pub fn validate_capabilities(
     }
 }
 
-/// Validates an independent Child. Performs the same validation on it as `validate`.
-pub fn validate_child(child: &fdecl::Child) -> Result<(), ErrorList> {
+/// An interface to call into either `check_dynamic_name()` or `check_name()`, depending on the context
+/// of the caller.
+type CheckChildNameFn = fn(Option<&String>, &str, &str, &mut Vec<Error>) -> bool;
+
+pub fn validate_dynamic_child(child: &fdecl::Child) -> Result<(), ErrorList> {
+    validate_child(child, check_dynamic_name)
+}
+
+/// Validates an independent Child. Performs the same validation on it as `validate`. A
+/// `check_name_fn` is passed into specify the function used to validate the child name.
+fn validate_child(
+    child: &fdecl::Child,
+    check_child_name: CheckChildNameFn,
+) -> Result<(), ErrorList> {
     let mut errors = vec![];
-    check_name(child.name.as_ref(), "Child", "name", &mut errors);
+    check_child_name(child.name.as_ref(), "Child", "name", &mut errors);
     check_url(child.url.as_ref(), "Child", "url", &mut errors);
     if child.startup.is_none() {
         errors.push(Error::missing_field("Child", "startup"));
@@ -843,7 +855,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_child_decl(&mut self, child: &'a fdecl::Child) {
-        if let Err(mut e) = validate_child(child) {
+        if let Err(mut e) = validate_child(child, check_name) {
             self.errors.append(&mut e.errs);
         }
         if let Some(name) = child.name.as_ref() {
@@ -7559,6 +7571,21 @@ mod tests {
                 Error::extraneous_field("OfferResolver", "target"),
                 Error::extraneous_field("OfferEvent", "target"),
             ]))
+        );
+    }
+
+    #[test]
+    fn test_validate_dynamic_child() {
+        assert_eq!(
+            Ok(()),
+            validate_dynamic_child(&fdecl::Child {
+                name: Some("a".repeat(MAX_DYNAMIC_NAME_LENGTH).to_string()),
+                url: Some("test:///child".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                on_terminate: None,
+                environment: None,
+                ..fdecl::Child::EMPTY
+            })
         );
     }
 

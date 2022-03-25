@@ -29,7 +29,7 @@ async fn main() {
     expect_dir_listing("/hub/children", vec!["coll:simple_instance"]).await;
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "id", "url"],
+        vec!["children", "component_type", "debug", "id", "moniker", "url"],
     )
     .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec![]).await;
@@ -41,7 +41,7 @@ async fn main() {
 
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "exec", "id", "moniker", "resolved", "url"],
     )
     .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec!["child"]).await;
@@ -53,7 +53,7 @@ async fn main() {
 
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "id", "moniker", "resolved", "url"],
     )
     .await;
 

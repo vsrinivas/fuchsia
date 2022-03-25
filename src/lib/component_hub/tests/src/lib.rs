@@ -18,11 +18,11 @@ async fn list() {
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
     let list::Component { name, is_cmx, is_running, url, children, ancestors: _ancestors } =
-        list::Component::parse("test".to_string(), hub_dir).await.unwrap();
+        list::Component::parse("test_root".to_string(), hub_dir).await.unwrap();
 
     assert!(!is_cmx);
     assert!(is_running);
-    assert_eq!(name, "test");
+    assert_eq!(name, "test_root");
     assert!(Regex::new(URL_REGEX).unwrap().is_match(&url));
     assert_eq!(children.len(), 1);
 

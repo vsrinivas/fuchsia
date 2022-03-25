@@ -558,6 +558,12 @@ impl ComponentInstance {
                 }
             }
 
+            if !collection_decl.allow_long_names
+                && child_decl.name.len() > cm_types::MAX_NAME_LENGTH
+            {
+                return Err(ModelError::name_too_long(cm_types::MAX_NAME_LENGTH));
+            }
+
             let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
                 if !dynamic_offers.is_empty()
                     && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic

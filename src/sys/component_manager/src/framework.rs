@@ -168,8 +168,8 @@ impl RealmCapabilityHost {
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
-            debug!("validate_child() failed: {}", e);
+        cm_fidl_validator::validate_dynamic_child(&child_decl).map_err(|e| {
+            debug!("validate_dynamic_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
         })?;
         if child_decl.environment.is_some() {
@@ -194,9 +194,8 @@ impl RealmCapabilityHost {
                 ModelError::CollectionNotFound { .. } => Err(fcomponent::Error::CollectionNotFound),
                 ModelError::DynamicOffersNotAllowed { .. }
                 | ModelError::DynamicOfferInvalid { .. }
-                | ModelError::DynamicOfferSourceNotFound { .. } => {
-                    Err(fcomponent::Error::InvalidArguments)
-                }
+                | ModelError::DynamicOfferSourceNotFound { .. }
+                | ModelError::NameTooLong { .. } => Err(fcomponent::Error::InvalidArguments),
                 ModelError::Unsupported { .. } => Err(fcomponent::Error::Unsupported),
                 _ => Err(fcomponent::Error::Internal),
             },
@@ -543,7 +542,14 @@ mod tests {
         let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
-                ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_collection(
+                            CollectionDeclBuilder::new().name("coll").allow_long_names(true),
+                        )
+                        .build(),
+                ),
             ],
             vec!["system"].into(),
         )
@@ -552,9 +558,14 @@ mod tests {
         let (_event_source, mut event_stream) =
             test.new_event_stream(vec![EventType::Discovered.into()], EventMode::Sync).await;
 
-        // Create children "a" and "b" in collection. Expect a Discovered event for each.
+        // Test that a dynamic child with a long name can also be created.
+        let long_name = &"c".repeat(cm_types::MAX_DYNAMIC_NAME_LENGTH);
+
+        // Create children "a", "b", and "<long_name>" in collection. Expect a Discovered event for each.
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-        for (name, moniker) in [("a", "coll:a:1"), ("b", "coll:b:2")] {
+        for (name, moniker) in
+            [("a", "coll:a:1"), ("b", "coll:b:2"), (long_name, &format!("coll:{}:3", long_name))]
+        {
             let mut create = fasync::Task::spawn(test.realm_proxy.create_child(
                 &mut collection_ref,
                 child_decl(name),
@@ -580,8 +591,9 @@ mod tests {
         let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
         expected_children.insert("coll:a".into());
         expected_children.insert("coll:b".into());
+        expected_children.insert(format!("coll:{}", long_name).as_str().into());
         assert_eq!(actual_children, expected_children);
-        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
+        assert_eq!(format!("(system(coll:a,coll:b,coll:{}))", long_name), test.hook.print());
     }
 
     #[fuchsia::test]
@@ -597,6 +609,7 @@ mod tests {
                             CollectionDeclBuilder::new()
                                 .name("pcoll")
                                 .durability(fdecl::Durability::Persistent)
+                                .allow_long_names(true)
                                 .build(),
                         )
                         .add_collection(
@@ -637,6 +650,42 @@ mod tests {
                 url: Some("test:///a".to_string()),
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: Some("env".to_string()),
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+        // Long dynamic child name violations.
+        {
+            // `allow_long_names` is not set
+            let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("a".repeat(cm_types::MAX_NAME_LENGTH + 1).to_string()),
+                url: None,
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+
+            // Name length exceeds the MAX_DYNAMIC_LENGTH_LIMIT when `allow_long_names` is set.
+            let mut collection_ref = fdecl::CollectionRef { name: "pcoll".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("a".repeat(cm_types::MAX_DYNAMIC_NAME_LENGTH + 1).to_string()),
+                url: None,
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
                 ..fdecl::Child::EMPTY
             };
             let err = test

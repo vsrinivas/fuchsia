@@ -29,8 +29,9 @@ use {
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase},
+    rand::Rng,
     std::{
-        collections::HashMap,
+        collections::hash_map::HashMap,
         convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Weak},
@@ -91,6 +92,7 @@ struct Instance {
     pub has_resolved_directory: bool,
     pub directory: Directory,
     pub children_directory: Directory,
+    pub uuid: u128,
 }
 
 /// The Hub is a directory tree representing the component topology. Through the Hub,
@@ -187,13 +189,23 @@ impl Hub {
         instanced_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
-    ) -> Result<Option<Directory>, ModelError> {
+    ) -> Result<Option<(u128, Directory)>, ModelError> {
         trace::duration!("component_manager", "hub:add_instance_if_necessary");
         if instance_map.contains_key(&instanced_moniker) {
             return Ok(None);
         }
 
         let instance = pfs::simple();
+
+        // Add a 'moniker' file.
+        // The child moniker is stored in the `moniker` file in case it gets truncated when used as
+        // the directory name. Root has an empty moniker file because it doesn't have a child moniker.
+        let moniker = if let Some(instanced) = instanced_moniker.leaf() {
+            instanced.to_child_moniker().to_string()
+        } else {
+            "".to_string()
+        };
+        instance.add_node("moniker", read_only_static(moniker.into_bytes()), &instanced_moniker)?;
 
         // Add a 'url' file.
         instance.add_node(
@@ -230,6 +242,9 @@ impl Hub {
 
         Self::add_debug_directory(lifecycle_controller, instance.clone(), instanced_moniker)?;
 
+        let mut rng = rand::thread_rng();
+        let instance_uuid: u128 = rng.gen();
+
         instance_map.insert(
             instanced_moniker.clone(),
             Instance {
@@ -237,10 +252,26 @@ impl Hub {
                 has_resolved_directory: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
+                uuid: instance_uuid.clone(),
             },
         );
 
-        Ok(Some(instance))
+        Ok(Some((instance_uuid, instance)))
+    }
+
+    // Child directory names created from monikers include both collection and child names
+    // (ie "<coll>:<name>"). It's possible for the total moniker length to exceed the
+    // `fidl_fuchsia_io::MAX_NAME_LENGTH` limit. In that case, the moniker is truncated and the
+    // instance uuid is appended to produce a directory name within the `MAX_NAME_LENGTH` limit.
+    fn child_dir_name(moniker: &str, uuid: u128) -> String {
+        let max_name_len = fidl_fuchsia_io::MAX_NAME_LENGTH as usize;
+        if moniker.len() > max_name_len {
+            let encoded_uuid = format!("{:x}", uuid);
+            let new_len = max_name_len - 1 - encoded_uuid.len();
+            format!("{}#{}", moniker.get(..new_len).unwrap(), encoded_uuid)
+        } else {
+            moniker.to_string()
+        }
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
@@ -249,7 +280,7 @@ impl Hub {
         component_url: String,
         mut instance_map: &'a mut HashMap<InstancedAbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
-        let controlled = match Hub::add_instance_if_necessary(
+        let (uuid, controlled) = match Hub::add_instance_if_necessary(
             lifecycle_controller,
             &instanced_moniker,
             component_url,
@@ -267,7 +298,7 @@ impl Hub {
                 Some(instance) => {
                     let child_moniker = leaf.to_child_moniker();
                     instance.children_directory.add_node(
-                        child_moniker.as_str(),
+                        &Hub::child_dir_name(child_moniker.as_str(), uuid),
                         controlled.clone(),
                         &instanced_moniker,
                     )?;
@@ -638,19 +669,25 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let mut instance_map = self.instances.lock().await;
+
+        let instance = instance_map
+            .get(&target_moniker)
+            .ok_or(ModelError::instance_not_found(target_moniker.to_absolute_moniker()))?;
+
+        let instanced_child = target_moniker.leaf().expect("A root component cannot be destroyed");
+        // In the children directory, the child's instance id is not used
+        let child_name = instanced_child.to_child_moniker().to_string();
+        let child_entry = Hub::child_dir_name(&child_name, instance.uuid);
+
         let parent_instance = match instance_map.get_mut(&parent_moniker) {
             Some(i) => i,
             // TODO(fxbug.dev/89503): This failsafe was originally introduce to protect against a
-            // duplicate disptach of Destroyed, which should no longer be possible since it is now
+            // duplicate dispatch of Destroyed, which should no longer be possible since it is now
             // wrapped in an action. However, other races may be possible, such as this Destroyed
             // arriving before the parent's Discovered. Ideally we should fix all the races and
             // fail instead.
             None => return Ok(()),
         };
-
-        let instanced_child = target_moniker.leaf().expect("A root component cannot be destroyed");
-        // In the children directory, the child's instance id is not used
-        let child_entry = instanced_child.to_child_moniker().to_string();
 
         parent_instance.children_directory.remove_node(&child_entry)?.ok_or_else(|| {
             log::warn!(
@@ -925,7 +962,58 @@ mod tests {
         assert_eq!("static", read_file(&hub_proxy, "component_type").await);
         assert_eq!("static", read_file(&hub_proxy, "children/a/component_type").await);
 
+        // Verify Moniker Files
+        // AbsoluteMoniker::root() has an empty moniker file.
+        assert_eq!("", read_file(&hub_proxy, "moniker").await);
+        assert_eq!("a", read_file(&hub_proxy, "children/a/moniker").await);
+
         assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
+    }
+
+    #[fuchsia::test]
+    async fn hub_child_dir_name() {
+        // the maximum length for an instance name
+        let max_dir_len = usize::try_from(fidl_fuchsia_io::MAX_NAME_LENGTH).unwrap();
+        // the maximum length for a moniker (without the collection name)
+        let max_name_len = max_dir_len - "coll:".len();
+
+        // test long moniker that exceeds the MAX_NAME_LENGTH is truncated
+        let long_moniker = format!("coll:{}", "a".repeat(max_name_len + 1));
+        let first_entry = Hub::child_dir_name(&long_moniker, 12345);
+        assert_eq!(first_entry.len(), max_dir_len);
+        assert_eq!(
+            first_entry,
+            "coll:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaa#3039"
+        );
+
+        // test long monikers with slight variations generate unique dir names
+        let different = format!("{}b", long_moniker);
+        let second_entry = Hub::child_dir_name(&different, 67890);
+        assert_eq!(second_entry.len(), max_dir_len);
+        assert_eq!(
+            second_entry,
+            "coll:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+            aaaaaaaaaaaaaa#10932"
+        );
+
+        // test moniker meets the MAX_NAME_LENGTH is not truncated
+        let meets_max = format!("coll:{}", "a".repeat(max_name_len));
+        let entry_name = Hub::child_dir_name(&meets_max, 0);
+        assert_eq!(entry_name.len(), max_dir_len);
+        assert_eq!(entry_name, meets_max);
+
+        // test moniker less than the MAX_NAME_LENGTH is not truncated
+        let less_than_max = format!("coll:{}", "a".repeat(max_name_len - 1));
+        let entry_name = Hub::child_dir_name(&less_than_max, 0);
+        assert!(entry_name.len() < max_dir_len);
+        assert_eq!(entry_name, less_than_max);
     }
 
     #[fuchsia::test]
@@ -1155,7 +1243,7 @@ mod tests {
         assert_eq!(vec!["fake_file"], list_sub_directory(&use_dir, "pkg").await);
 
         assert_eq!(
-            vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
+            vec!["children", "component_type", "debug", "exec", "id", "moniker", "resolved", "url"],
             list_sub_directory(&use_dir, "hub").await
         );
     }

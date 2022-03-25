@@ -63,10 +63,11 @@ fn find_components_internal(
         let mut futures = vec![];
         let children_dir = hub_dir.open_dir_readable("children")?;
 
-        for child_name in children_dir.entries().await? {
+        for child_dir in children_dir.entries().await? {
+            let child_hub_dir = children_dir.open_dir_readable(&child_dir)?;
+            let child_name = child_hub_dir.read_file("moniker").await?;
             let child_moniker = ChildMoniker::parse(&child_name)?;
             let child_moniker = moniker.child(child_moniker);
-            let child_hub_dir = children_dir.open_dir_readable(&child_name)?;
             let child_future =
                 find_components_internal(query.clone(), child_name, child_moniker, child_hub_dir);
             futures.push(child_future);
@@ -599,11 +600,7 @@ impl std::fmt::Display for Component {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        std::fs::{self, File},
-        std::io::Write,
-        tempfile::TempDir,
-    };
+    use {std::fs, tempfile::TempDir};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn cml_find_by_name() {
@@ -620,24 +617,16 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let stash = root.join("children/stash");
             fs::create_dir(&stash).unwrap();
             fs::create_dir(stash.join("children")).unwrap();
-            File::create(stash.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
-                .unwrap();
-            File::create(stash.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm".as_bytes())
-                .unwrap();
+            fs::write(stash.join("component_type"), "static").unwrap();
+            fs::write(stash.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
+            fs::write(stash.join("moniker"), "stash").unwrap();
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -667,24 +656,16 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let stash = root.join("children/abcd");
             fs::create_dir(&stash).unwrap();
             fs::create_dir(stash.join("children")).unwrap();
-            File::create(stash.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
-                .unwrap();
-            File::create(stash.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
-                .unwrap();
+            fs::write(stash.join("component_type"), "static").unwrap();
+            fs::write(stash.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
+            fs::write(stash.join("moniker"), "abcd").unwrap();
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -718,37 +699,24 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let abcd = root.join("children/abcd");
             fs::create_dir(&abcd).unwrap();
             fs::create_dir(abcd.join("children")).unwrap();
-            File::create(abcd.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
-                .unwrap();
-            File::create(abcd.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm".as_bytes())
-                .unwrap();
+            fs::write(abcd.join("component_type"), "static").unwrap();
+            fs::write(abcd.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
+            fs::write(abcd.join("moniker"), "abcd").unwrap();
 
             {
                 let efgh = abcd.join("children/efgh");
                 fs::create_dir(&efgh).unwrap();
                 fs::create_dir(efgh.join("children")).unwrap();
-                File::create(efgh.join("component_type"))
-                    .unwrap()
-                    .write_all("static".as_bytes())
-                    .unwrap();
-                File::create(efgh.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/efgh#meta/efgh.cm".as_bytes())
-                    .unwrap();
+                fs::write(efgh.join("component_type"), "static").unwrap();
+                fs::write(efgh.join("url"), "fuchsia-pkg://fuchsia.com/efgh#meta/efgh.cm").unwrap();
+                fs::write(efgh.join("moniker"), "efgh").unwrap();
             }
         }
 
@@ -783,38 +751,25 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let stash_1 = root.join("children/stash_1");
             fs::create_dir(&stash_1).unwrap();
             fs::create_dir(stash_1.join("children")).unwrap();
-            File::create(stash_1.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
-                .unwrap();
-            File::create(stash_1.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm".as_bytes())
-                .unwrap();
+            fs::write(stash_1.join("component_type"), "static").unwrap();
+            fs::write(stash_1.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
+            fs::write(stash_1.join("moniker"), "stash_1").unwrap();
         }
 
         {
             let stash_2 = root.join("children/stash_2");
             fs::create_dir(&stash_2).unwrap();
             fs::create_dir(stash_2.join("children")).unwrap();
-            File::create(stash_2.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
-                .unwrap();
-            File::create(stash_2.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm".as_bytes())
-                .unwrap();
+            fs::write(stash_2.join("component_type"), "static").unwrap();
+            fs::write(stash_2.join("url"), "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cm").unwrap();
+            fs::write(stash_2.join("moniker"), "stash_2").unwrap();
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -855,22 +810,13 @@ mod tests {
         //       |- verbosity
         //    |- instance_id
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
         fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
         fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
         fs::create_dir_all(root.join("resolved/config")).unwrap();
-        File::create(root.join("resolved/instance_id"))
-            .unwrap()
-            .write_all("abc".as_bytes())
-            .unwrap();
-        File::create(root.join("resolved/config/verbosity"))
-            .unwrap()
-            .write_all("Single(Text(\"DEBUG\"))".as_bytes())
-            .unwrap();
+        fs::write(root.join("resolved/instance_id"), "abc").unwrap();
+        fs::write(root.join("resolved/config/verbosity"), "Single(Text(\"DEBUG\"))").unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let components = find_components("stash".to_string(), hub_dir).await.unwrap();
@@ -921,11 +867,8 @@ mod tests {
         //    |- expose
         //       |- minfs
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
         fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
         fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
 
@@ -971,44 +914,27 @@ mod tests {
         //       |- pkg
         //          |- meta
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
         fs::create_dir_all(root.join("resolved/expose")).unwrap();
         fs::create_dir_all(root.join("resolved/use/pkg")).unwrap();
         fs::create_dir_all(root.join("exec/out/minfs")).unwrap();
         fs::create_dir_all(root.join("exec/runtime/elf")).unwrap();
 
-        File::create(root.join("exec/start_reason"))
-            .unwrap()
-            .write_all("Instance is the root".as_bytes())
-            .unwrap();
-        File::create(root.join("resolved/use/pkg/meta"))
-            .unwrap()
-            .write_all("1234".as_bytes())
-            .unwrap();
+        fs::write(root.join("exec/start_reason"), "Instance is the root").unwrap();
+        fs::write(root.join("resolved/use/pkg/meta"), "1234").unwrap();
 
-        File::create(root.join("exec/runtime/elf/job_id"))
-            .unwrap()
-            .write_all("5454".as_bytes())
-            .unwrap();
+        fs::write(root.join("exec/runtime/elf/job_id"), "5454").unwrap();
 
-        File::create(root.join("exec/runtime/elf/process_id"))
-            .unwrap()
-            .write_all("9898".as_bytes())
-            .unwrap();
+        fs::write(root.join("exec/runtime/elf/process_id"), "9898").unwrap();
 
-        File::create(root.join("exec/runtime/elf/process_start_time"))
-            .unwrap()
-            .write_all("101010101010".as_bytes())
-            .unwrap();
+        fs::write(root.join("exec/runtime/elf/process_start_time"), "101010101010").unwrap();
 
-        File::create(root.join("exec/runtime/elf/process_start_time_utc_estimate"))
-            .unwrap()
-            .write_all("Mon 12 Jul 2021 03:53:33 PM UTC".as_bytes())
-            .unwrap();
+        fs::write(
+            root.join("exec/runtime/elf/process_start_time_utc_estimate"),
+            "Mon 12 Jul 2021 03:53:33 PM UTC",
+        )
+        .unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let components = find_components("stash".to_string(), hub_dir).await.unwrap();
@@ -1066,17 +992,11 @@ mod tests {
         //    |- in
         //    |- out
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm").unwrap();
         fs::create_dir_all(root.join("exec/in")).unwrap();
         fs::create_dir_all(root.join("exec/out")).unwrap();
-        File::create(root.join("exec/start_reason"))
-            .unwrap()
-            .write_all("Instance is the root".as_bytes())
-            .unwrap();
+        fs::write(root.join("exec/start_reason"), "Instance is the root").unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let components = find_components("stash".to_string(), hub_dir).await.unwrap();
@@ -1132,24 +1052,17 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let appmgr = root.join("children/appmgr");
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
-            File::create(appmgr.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
+            fs::write(appmgr.join("component_type"), "static").unwrap();
+            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
                 .unwrap();
-            File::create(appmgr.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
-                .unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             fs::create_dir_all(appmgr.join("exec/in")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
@@ -1160,19 +1073,11 @@ mod tests {
                 fs::create_dir_all(sshd.join("in/pkg")).unwrap();
                 fs::create_dir_all(sshd.join("out/dev")).unwrap();
 
-                File::create(sshd.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd.join("in/pkg/meta"))
-                    .unwrap()
-                    .write_all("1234".as_bytes())
-                    .unwrap();
-                File::create(sshd.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
-                File::create(sshd.join("process-id"))
-                    .unwrap()
-                    .write_all("9898".as_bytes())
-                    .unwrap();
+                fs::write(sshd.join("in/pkg/meta"), "1234").unwrap();
+                fs::write(sshd.join("job-id"), "5454").unwrap();
+                fs::write(sshd.join("process-id"), "9898").unwrap();
             }
         }
 
@@ -1259,24 +1164,17 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let appmgr = root.join("children/appmgr");
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
-            File::create(appmgr.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
+            fs::write(appmgr.join("component_type"), "static").unwrap();
+            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
                 .unwrap();
-            File::create(appmgr.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
-                .unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             fs::create_dir_all(appmgr.join("exec/in")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
@@ -1287,15 +1185,10 @@ mod tests {
                 fs::create_dir(sshd_1.join("in")).unwrap();
                 fs::create_dir(sshd_1.join("out")).unwrap();
 
-                File::create(sshd_1.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd_1.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd_1.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
-                File::create(sshd_1.join("process-id"))
-                    .unwrap()
-                    .write_all("8787".as_bytes())
-                    .unwrap();
+                fs::write(sshd_1.join("job-id"), "5454").unwrap();
+                fs::write(sshd_1.join("process-id"), "8787").unwrap();
             }
 
             {
@@ -1304,15 +1197,10 @@ mod tests {
                 fs::create_dir(sshd_2.join("in")).unwrap();
                 fs::create_dir(sshd_2.join("out")).unwrap();
 
-                File::create(sshd_2.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd_2.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd_2.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
-                File::create(sshd_2.join("process-id"))
-                    .unwrap()
-                    .write_all("9898".as_bytes())
-                    .unwrap();
+                fs::write(sshd_2.join("job-id"), "5454").unwrap();
+                fs::write(sshd_2.join("process-id"), "9898").unwrap();
             }
         }
 
@@ -1392,24 +1280,17 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let appmgr = root.join("children/appmgr");
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
-            File::create(appmgr.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
+            fs::write(appmgr.join("component_type"), "static").unwrap();
+            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
                 .unwrap();
-            File::create(appmgr.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
-                .unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             fs::create_dir_all(appmgr.join("exec/in")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
@@ -1421,15 +1302,10 @@ mod tests {
                 fs::create_dir(sshd_1.join("in")).unwrap();
                 fs::create_dir(sshd_1.join("out")).unwrap();
 
-                File::create(sshd_1.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd_1.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd_1.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
-                File::create(sshd_1.join("process-id"))
-                    .unwrap()
-                    .write_all("8787".as_bytes())
-                    .unwrap();
+                fs::write(sshd_1.join("job-id"), "5454").unwrap();
+                fs::write(sshd_1.join("process-id"), "8787").unwrap();
             }
 
             {
@@ -1438,11 +1314,9 @@ mod tests {
                 fs::create_dir(sshd_2.join("in")).unwrap();
                 fs::create_dir(sshd_2.join("out")).unwrap();
 
-                File::create(sshd_2.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd_2.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd_2.join("job-id")).unwrap().write_all("1765".as_bytes()).unwrap();
+                fs::write(sshd_2.join("job-id"), "1765").unwrap();
             }
         }
 
@@ -1518,24 +1392,17 @@ mod tests {
         // |- component_type
         // |- url
         fs::create_dir(root.join("children")).unwrap();
-        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
-        File::create(root.join("url"))
-            .unwrap()
-            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
-            .unwrap();
+        fs::write(root.join("component_type"), "static").unwrap();
+        fs::write(root.join("url"), "fuchsia-boot:///#meta/root.cm").unwrap();
 
         {
             let appmgr = root.join("children/appmgr");
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
-            File::create(appmgr.join("component_type"))
-                .unwrap()
-                .write_all("static".as_bytes())
+            fs::write(appmgr.join("component_type"), "static").unwrap();
+            fs::write(appmgr.join("url"), "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm")
                 .unwrap();
-            File::create(appmgr.join("url"))
-                .unwrap()
-                .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
-                .unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             fs::create_dir_all(appmgr.join("exec/in")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
@@ -1546,30 +1413,20 @@ mod tests {
                 fs::create_dir(sshd.join("in")).unwrap();
                 fs::create_dir(sshd.join("out")).unwrap();
 
-                File::create(sshd.join("url"))
-                    .unwrap()
-                    .write_all("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".as_bytes())
+                fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx")
                     .unwrap();
-                File::create(sshd.join("job-id")).unwrap().write_all("5454".as_bytes()).unwrap();
-                File::create(sshd.join("process-id"))
-                    .unwrap()
-                    .write_all("8787".as_bytes())
-                    .unwrap();
+                fs::write(sshd.join("job-id"), "5454").unwrap();
+                fs::write(sshd.join("process-id"), "8787").unwrap();
                 {
                     let foo = sshd.join("c/foo.cmx/1234");
                     fs::create_dir_all(&foo).unwrap();
                     fs::create_dir(foo.join("in")).unwrap();
                     fs::create_dir(foo.join("out")).unwrap();
 
-                    File::create(foo.join("url"))
-                        .unwrap()
-                        .write_all("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".as_bytes())
+                    fs::write(foo.join("url"), "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx")
                         .unwrap();
-                    File::create(foo.join("job-id")).unwrap().write_all("1234".as_bytes()).unwrap();
-                    File::create(foo.join("process-id"))
-                        .unwrap()
-                        .write_all("4536".as_bytes())
-                        .unwrap();
+                    fs::write(foo.join("job-id"), "1234").unwrap();
+                    fs::write(foo.join("process-id"), "4536").unwrap();
                 }
             }
         }

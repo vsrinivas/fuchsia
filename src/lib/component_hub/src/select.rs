@@ -41,10 +41,11 @@ fn find_components_internal(
         let mut futures = vec![];
         let children_dir = hub_dir.open_dir_readable("children")?;
 
-        for child_name in children_dir.entries().await? {
+        for child_dir in children_dir.entries().await? {
+            let child_hub_dir = children_dir.open_dir_readable(&child_dir)?;
+            let child_name = child_hub_dir.read_file("moniker").await?;
             let child_moniker = ChildMoniker::parse(&child_name)?;
             let child_moniker = moniker.child(child_moniker);
-            let child_hub_dir = children_dir.open_dir_readable(&child_name)?;
             let child_future = find_components_internal(
                 capability.clone(),
                 child_name,
@@ -396,6 +397,7 @@ mod tests {
             fs::create_dir_all(core.join("children")).unwrap();
             fs::create_dir_all(core.join("resolved/expose")).unwrap();
             fs::create_dir_all(core.join("resolved/use/minfs")).unwrap();
+            fs::write(core.join("moniker"), "core").unwrap();
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -438,6 +440,7 @@ mod tests {
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             {
                 let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
@@ -490,6 +493,7 @@ mod tests {
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             {
                 let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
@@ -539,6 +543,7 @@ mod tests {
             fs::create_dir(&appmgr).unwrap();
             fs::create_dir(appmgr.join("children")).unwrap();
             fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
+            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
 
             {
                 let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");

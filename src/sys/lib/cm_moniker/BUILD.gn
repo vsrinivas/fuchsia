@@ -22,7 +22,10 @@ rustc_library("cm_moniker") {
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 
-  deps = [ "//src/sys/lib/moniker" ]
+  deps = [
+    "//src/sys/lib/cm_types",
+    "//src/sys/lib/moniker",
+  ]
 
   test_deps = [ "//third_party/rust_crates:anyhow" ]
 

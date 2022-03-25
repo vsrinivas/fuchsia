@@ -71,6 +71,9 @@ macro_rules! symmetrical_enums {
     };
 }
 
+pub const MAX_NAME_LENGTH: usize = 100;
+pub const MAX_DYNAMIC_NAME_LENGTH: usize = 1024;
+
 /// A name that can refer to a component, collection, or other entity in the
 /// Component Manifest.
 #[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -99,11 +102,12 @@ impl Name {
     /// characters in length, and consist of one or more of the
     /// following characters: `a-z`, `0-9`, `_`, `.`, `-`.
     pub fn new(name: String) -> Result<Self, ParseError> {
-        Self::from_str_impl(Cow::Owned(name))
+        Self::validate(Cow::Owned(name.clone()), MAX_NAME_LENGTH)?;
+        Ok(Self(name))
     }
 
-    fn from_str_impl(name: Cow<'_, str>) -> Result<Self, ParseError> {
-        if name.is_empty() || name.len() > 100 {
+    pub fn validate(name: Cow<'_, str>, max_name_len: usize) -> Result<(), ParseError> {
+        if name.is_empty() || name.len() > max_name_len {
             return Err(ParseError::InvalidLength);
         }
         let mut char_iter = name.chars();
@@ -115,7 +119,7 @@ impl Name {
         if !char_iter.all(valid_fn) {
             return Err(ParseError::InvalidValue);
         }
-        Ok(Self(name.into_owned()))
+        Ok(())
     }
 
     pub fn as_str(&self) -> &str {
@@ -139,7 +143,8 @@ impl FromStr for Name {
     type Err = ParseError;
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        Self::from_str_impl(Cow::Borrowed(name))
+        Self::validate(Cow::Borrowed(name), MAX_NAME_LENGTH)?;
+        Ok(Self(name.to_owned()))
     }
 }
 
@@ -467,7 +472,7 @@ impl UrlScheme {
     /// Validates `url_scheme` but does not construct a new `UrlScheme` object.
     /// See [`UrlScheme::new`] for validation details.
     pub fn validate(url_scheme: &str) -> Result<(), ParseError> {
-        if url_scheme.is_empty() || url_scheme.len() > 100 {
+        if url_scheme.is_empty() || url_scheme.len() > MAX_NAME_LENGTH {
             return Err(ParseError::InvalidLength);
         }
         let mut iter = url_scheme.chars();

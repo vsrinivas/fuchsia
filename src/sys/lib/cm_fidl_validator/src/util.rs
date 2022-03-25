@@ -5,8 +5,9 @@
 use {crate::error::*, std::collections::HashMap};
 
 const MAX_PATH_LENGTH: usize = 1024;
-const MAX_NAME_LENGTH: usize = 100;
 const MAX_URL_LENGTH: usize = 4096;
+pub const MAX_NAME_LENGTH: usize = 100;
+pub const MAX_DYNAMIC_NAME_LENGTH: usize = 1024;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum AllowableIds {
@@ -117,14 +118,33 @@ pub(crate) fn check_relative_path(
     start_err_len == errors.len()
 }
 
+pub(crate) fn check_dynamic_name(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    check_name_impl(prop, decl_type, keyword, MAX_DYNAMIC_NAME_LENGTH, errors)
+}
+
 pub(crate) fn check_name(
     prop: Option<&String>,
     decl_type: &str,
     keyword: &str,
     errors: &mut Vec<Error>,
 ) -> bool {
+    check_name_impl(prop, decl_type, keyword, MAX_NAME_LENGTH, errors)
+}
+
+fn check_name_impl(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    max_len: usize,
+    errors: &mut Vec<Error>,
+) -> bool {
     let start_err_len = errors.len();
-    check_presence_and_length(MAX_NAME_LENGTH, prop, decl_type, keyword, errors);
+    check_presence_and_length(max_len, prop, decl_type, keyword, errors);
     let mut invalid_field = false;
     if let Some(name) = prop {
         let mut char_iter = name.chars();
@@ -369,6 +389,11 @@ mod tests {
         },
 
         // name
+        test_identifier_dynamic_name_valid => {
+            check_fn = check_dynamic_name,
+            input = &format!("{}", "a".repeat(MAX_DYNAMIC_NAME_LENGTH)),
+            result = Ok(()),
+        },
         test_identifier_name_valid => {
             check_fn = check_name,
             input = "abcdefghijklmnopqrstuvwxyz0123456789_-.",
@@ -381,7 +406,12 @@ mod tests {
         },
         test_identifier_name_too_long => {
             check_fn = check_name,
-            input = &format!("{}", "a".repeat(101)),
+            input = &format!("{}", "a".repeat(MAX_NAME_LENGTH + 1)),
+            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+        },
+        test_identifier_dynamic_name_too_long => {
+            check_fn = check_dynamic_name,
+            input = &format!("{}", "a".repeat(MAX_DYNAMIC_NAME_LENGTH + 1)),
             result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
         },
 
