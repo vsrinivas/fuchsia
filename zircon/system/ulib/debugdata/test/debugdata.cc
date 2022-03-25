@@ -39,25 +39,26 @@ constexpr uint8_t kTestData[] = {0x00, 0x11, 0x22, 0x33};
 
 TEST(DebugDataTest, PublishData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
+  ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
-  debugdata::DebugData svc(
-      loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
-      [&](std::string data_sink, zx::vmo vmo) { data[data_sink].push_back(std::move(vmo)); });
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server), &svc);
+  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                           [&](const std::string& data_sink, zx::vmo vmo) {
+                             data[data_sink].push_back(std::move(vmo));
+                           });
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &svc);
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
-  zx::channel token_client, token_server;
-  ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
-  ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                ->Publish(kTestSink, std::move(vmo), std::move(token_server))
+  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugDataVmoToken>();
+  ASSERT_OK(token_endpoints.status_value());
+  ASSERT_OK(fidl::WireCall(endpoints->client)
+                ->Publish(kTestSink, std::move(vmo), std::move(token_endpoints->server))
                 .status());
   // close the client channel to indicate the VMO is ready to process.
-  token_client.reset();
+  token_endpoints->client.reset();
 
   ASSERT_OK(loop.RunUntilIdle());
   loop.Shutdown();
@@ -75,22 +76,23 @@ TEST(DebugDataTest, PublishData) {
 
 TEST(DebugDataTest, DrainData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
+  ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
-  debugdata::DebugData svc(
-      loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
-      [&](std::string data_sink, zx::vmo vmo) { data[data_sink].push_back(std::move(vmo)); });
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server), &svc);
+  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+                           [&](const std::string& data_sink, zx::vmo vmo) {
+                             data[data_sink].push_back(std::move(vmo));
+                           });
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &svc);
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
-  zx::channel token_client, token_server;
-  ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
-  ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                ->Publish(kTestSink, std::move(vmo), std::move(token_server))
+  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugDataVmoToken>();
+  ASSERT_OK(token_endpoints.status_value());
+  ASSERT_OK(fidl::WireCall(endpoints->client)
+                ->Publish(kTestSink, std::move(vmo), std::move(token_endpoints->server))
                 .status());
 
   ASSERT_OK(loop.RunUntilIdle());
@@ -124,30 +126,30 @@ TEST(DebugDataTest, LoadConfig) {
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   dir->AddEntry(filename.c_str(), fbl::MakeRefCounted<fs::VmoFile>(data, 0, sizeof(kTestData)));
 
-  zx::channel c1, c2;
-  ASSERT_OK(zx::channel::create(0, &c1, &c2));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
 
   vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
-  ASSERT_OK(vfs->ServeDirectory(std::move(dir), std::move(c1)));
+  ASSERT_OK(vfs->ServeDirectory(std::move(dir), std::move(endpoints->server)));
   ASSERT_OK(loop.StartThread());
 
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_get_installed(&ns));
-  ASSERT_OK(fdio_ns_bind(ns, directory.c_str(), c2.release()));
+  ASSERT_OK(fdio_ns_bind(ns, directory.c_str(), endpoints->client.TakeChannel().release()));
   auto unbind = fit::defer([&]() { fdio_ns_unbind(ns, directory.c_str()); });
 
   async::Loop svc_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::status debugdata_endpoints = fidl::CreateEndpoints<fuchsia_debugdata::DebugData>();
+  ASSERT_OK(debugdata_endpoints.status_value());
   debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{fdio_ns_opendir(ns)},
-                           [&](std::string, zx::vmo) {});
-  fidl::BindSingleInFlightOnly(svc_loop.dispatcher(), std::move(server), &svc);
+                           [&](const std::string&, zx::vmo) {});
+  fidl::BindSingleInFlightOnly(svc_loop.dispatcher(), std::move(debugdata_endpoints->server), &svc);
   ASSERT_OK(svc_loop.StartThread());
 
   const auto path = (directory / filename).string();
 
-  auto result = fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                    ->LoadConfig(fidl::StringView::FromExternal(path));
+  auto result =
+      fidl::WireCall(debugdata_endpoints->client)->LoadConfig(fidl::StringView::FromExternal(path));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

@@ -59,18 +59,20 @@ struct DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
   }
 
   void Serve(async_dispatcher_t* dispatcher, std::unique_ptr<fs::SynchronousVfs>* vfs,
-             zx::channel* client) {
+             fidl::ClientEnd<fuchsia_io::Directory>* client_end) {
     auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    auto node = fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) {
-      return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), this);
-    });
+    auto node = fbl::MakeRefCounted<fs::Service>(
+        [dispatcher, this](fidl::ServerEnd<fuchsia_debugdata::DebugData> server_end) {
+          return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
+        });
     dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>, node);
 
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0, client, &server));
+    zx::status server_end = fidl::CreateEndpoints(client_end);
+    ASSERT_OK(server_end.status_value());
 
     *vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
-    ASSERT_OK((*vfs)->ServeDirectory(std::move(dir), std::move(server), fs::Rights::ReadWrite()));
+    ASSERT_OK((*vfs)->ServeDirectory(std::move(dir), std::move(server_end.value()),
+                                     fs::Rights::ReadWrite()));
   }
 };
 
@@ -95,14 +97,15 @@ void RunHelper(const char* mode, const size_t action_count, const fdio_spawn_act
   ASSERT_EQ(expected_return_code, proc_info.return_code);
 }
 
-void RunHelperWithSvc(const char* mode, zx::channel svc_handle, int expected_return_code) {
+void RunHelperWithSvc(const char* mode, fidl::ClientEnd<fuchsia_io::Directory> client_end,
+                      int expected_return_code) {
   fdio_spawn_action_t fdio_actions[] = {
       fdio_spawn_action_t{
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
           .ns =
               {
                   .prefix = "/svc",
-                  .handle = svc_handle.release(),
+                  .handle = client_end.TakeChannel().release(),
               },
       },
   };
@@ -116,11 +119,11 @@ void RunHelperWithoutSvc(const char* mode, int expected_return_code) {
 TEST(DebugDataTests, PublishData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
+  fidl::ClientEnd<fuchsia_io::Directory> client_end;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client_end));
 
-  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("publish_data", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("publish_data", std::move(client_end), 0));
 
   ASSERT_OK(loop.RunUntilIdle());
 
@@ -142,9 +145,9 @@ TEST(DebugDataTests, PublishDataWithoutSvc) {
 TEST(DebugDataTests, LoadConfig) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
+  fidl::ClientEnd<fuchsia_io::Directory> client_end;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client_end));
   ASSERT_OK(loop.StartThread("debugdata"));
 
   zx::vmo vmo;
@@ -153,7 +156,7 @@ TEST(DebugDataTests, LoadConfig) {
 
   svc.configs.emplace(kTestName, std::move(vmo));
 
-  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client_end), 0));
 
   loop.Shutdown();
   vfs.reset();
@@ -162,12 +165,13 @@ TEST(DebugDataTests, LoadConfig) {
 TEST(DebugDataTests, LoadConfigNotFound) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
-  zx::channel client;
+  fidl::ClientEnd<fuchsia_io::Directory> client_end;
   DebugData svc;
-  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client));
+  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client_end));
   ASSERT_OK(loop.StartThread("debugdata"));
 
-  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client), ZX_ERR_PEER_CLOSED));
+  ASSERT_NO_FATAL_FAILURE(
+      RunHelperWithSvc("load_config", std::move(client_end), ZX_ERR_PEER_CLOSED));
 
   loop.Shutdown();
   vfs.reset();
@@ -184,18 +188,16 @@ TEST(DebugDataTests, LoadConfigWithoutSvc) {
 TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   namespace fio = fuchsia_io;
 
-  ASSERT_EQ(fuchsia_io_MAX_PATH, fio::wire::kMaxPath);
-  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::wire::kOpenRightReadable);
-  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::wire::kOpenRightWritable);
+  static_assert(fuchsia_io_MAX_PATH == fio::wire::kMaxPath);
+  static_assert(fuchsia_io_OPEN_RIGHT_READABLE == fio::wire::kOpenRightReadable);
+  static_assert(fuchsia_io_OPEN_RIGHT_WRITABLE == fio::wire::kOpenRightWritable);
+  static_assert(fuchsia_io_DirectoryOpenOrdinal ==
+                fidl::internal::WireOrdinal<fio::Directory::Open>::value);
 
-  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal,
-            fidl::internal::WireOrdinal<fio::Directory::Open>::value);
-
-  zx::channel ch1, ch2;
-  ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
-  fidl::ServerEnd<fio::Node> server_end(std::move(ch2));
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_OK(endpoints.status_value());
   fidl::internal::TransactionalRequest<fio::Directory::Open> request{0, 0, fidl::StringView(""),
-                                                                     std::move(server_end)};
+                                                                     std::move(endpoints->server)};
   fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fio::Directory::Open>>
       msg{&request};
   ASSERT_OK(msg.status());

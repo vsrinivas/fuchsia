@@ -207,8 +207,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/ui/light/drivers/aml-light:aml-light-test",
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_runner:bin",
-    "//zircon/system/ulib/c/test:cdebugdata-test",
-    "//zircon/system/ulib/debugdata/test:debugdata",
     "//zircon/system/ulib/fdio-caller/test:fdio-caller",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test",
     "//zircon/system/ulib/log-writer-logger",
