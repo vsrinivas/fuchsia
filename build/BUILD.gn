@@ -18,6 +18,7 @@ group("tests") {
     "fidl:tests",
     "images:tests",
     "python:tests",
+    "rbe:tests",
     "rust:tests",
     "sdk:tests",
     "testing:tests",
