@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//!
+//! This module contains stubs for the various metric property types so that they can be used on
+//! unsupported platforms.
+//!
+
 use {
     crate::metrics::traits::{Metric, NumericMetric},
     std::marker::PhantomData,
 };
-
-///
-/// This file contains stubs for the various metric property types so that they can be used on
-/// unsupported platforms.
-///
 
 /// Metric equivalent to [`fuchsia_inspect::StringProperty`].
 pub type StringMetric<'a> = ScalarMetric<&'a str>;

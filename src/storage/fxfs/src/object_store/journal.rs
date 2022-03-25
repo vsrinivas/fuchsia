@@ -25,6 +25,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
+        metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, SimpleAllocator},
@@ -62,12 +63,14 @@ use {
     static_assertions::const_assert,
     std::{
         clone::Clone,
+        convert::TryInto as _,
         ops::Bound,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc, Mutex,
         },
         task::{Poll, Waker},
+        time::SystemTime,
         vec::Vec,
     },
     storage_device::buffer::Buffer,
@@ -167,6 +170,7 @@ pub struct Journal {
     writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
     trace: AtomicBool,
+    metrics: JournalMetrics,
 }
 
 struct Inner {
@@ -235,6 +239,24 @@ impl Default for JournalOptions {
     }
 }
 
+struct JournalMetrics {
+    /// Time we wrote the most recent superblock in milliseconds since [`std::time::UNIX_EPOCH`].
+    /// Uses [`std::time::SystemTime`] as the clock source.
+    last_super_block_update_time_ms: UintMetric,
+
+    /// Offset of the most recent superblock we wrote in the journal.
+    last_super_block_offset: UintMetric,
+}
+
+impl Default for JournalMetrics {
+    fn default() -> Self {
+        JournalMetrics {
+            last_super_block_update_time_ms: UintMetric::new("last_super_block_update_time_ms", 0),
+            last_super_block_offset: UintMetric::new("last_super_block_offset", 0),
+        }
+    }
+}
+
 impl Journal {
     pub fn new(objects: Arc<ObjectManager>, options: JournalOptions) -> Journal {
         let starting_checksum = rand::thread_rng().gen();
@@ -263,6 +285,7 @@ impl Journal {
             writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
             trace: AtomicBool::new(false),
+            metrics: JournalMetrics::default(),
         }
     }
 
@@ -887,12 +910,24 @@ impl Journal {
             )
             .await?;
 
+        let new_journal_offset = new_super_block.super_block_journal_file_offset;
+
         {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = new_super_block;
             inner.super_block_to_write = super_block_to_write.next();
             inner.zero_offset = Some(round_down(old_super_block_offset, BLOCK_SIZE));
         }
+
+        self.metrics.last_super_block_offset.set(new_journal_offset);
+        self.metrics.last_super_block_update_time_ms.set(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                .try_into()
+                .unwrap_or(0u64),
+        );
 
         Ok(())
     }

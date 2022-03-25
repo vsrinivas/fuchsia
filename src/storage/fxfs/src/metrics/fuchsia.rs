@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///
-/// This file contains implementations for metric property types backed by [`fuchsia_inspect`].
-/// Any metrics created will be attached to the fs.detail node in the fxfs inspect tree and remain
-/// available until the metric object itself is dropped.
-///
+//!
+//! This module contains implementations for metric property types backed by [`fuchsia_inspect`].
+//! Any metrics created will be attached to the fs.detail node in the fxfs inspect tree and remain
+//! available until the metric object itself is dropped.
+//!
+
 use {
     crate::metrics::traits::{Metric, NumericMetric},
     fuchsia_inspect::{NumericProperty, Property},
@@ -24,6 +25,7 @@ pub type UintMetric = ScalarMetric<fuchsia_inspect::UintProperty>;
 pub type DoubleMetric = ScalarMetric<fuchsia_inspect::DoubleProperty>;
 
 /// Root "fxfs" node to which all filesystem metrics will be attached.
+///
 /// We cannot attach properties directly to the root node as all Inspect trees are forwarded by
 /// fshost, and thus we need a uniquely named root node in order for Inspect queries to
 /// differentiate different filesystems.
@@ -34,8 +36,8 @@ pub static FXFS_ROOT_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
 static DETAIL_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
     Lazy::new(|| Mutex::new(FXFS_ROOT_NODE.lock().unwrap().create_child("fs.detail")));
 
-/// Generic type to help implementing scalar metric types. Do not use directly - use named metric
-/// types above instead (e.g. [`StringMetric`], [`IntMetric`]).
+/// Generic type to help implementing scalar metrics. Use named type definitions instead (e.g.
+/// [`StringMetric`], [`UintMetric`]).
 pub struct ScalarMetric<InspectType> {
     inner: Mutex<InspectType>,
 }

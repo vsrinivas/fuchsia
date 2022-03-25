@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
         serialized_types::{Versioned, LATEST_VERSION},
@@ -28,6 +29,9 @@ pub struct JournalWriter {
 
     // The buffered data for the current block.
     buf: Vec<u8>,
+
+    // Current journal offset based on the checkpoint of the last write
+    journal_checkpoint_offset: UintMetric,
 }
 
 impl JournalWriter {
@@ -36,7 +40,13 @@ impl JournalWriter {
         // formatting as part of creating the allocator and must be ready to go.
         let checkpoint =
             JournalCheckpoint { version: LATEST_VERSION, ..JournalCheckpoint::default() };
-        JournalWriter { block_size, checkpoint, last_checksum, buf: Vec::new() }
+        JournalWriter {
+            block_size,
+            checkpoint,
+            last_checksum,
+            buf: Vec::new(),
+            journal_checkpoint_offset: UintMetric::new("journal_checkpoint_offset", 0),
+        }
     }
 
     /// Serializes a new journal record to the journal stream.
@@ -78,6 +88,7 @@ impl JournalWriter {
         let mut buf = handle.allocate_buffer(to_do);
         buf.as_mut_slice()[..to_do].copy_from_slice(&self.buf[..to_do]);
         let offset = self.checkpoint.file_offset;
+        self.journal_checkpoint_offset.set(offset);
         self.buf.drain(..to_do);
         self.checkpoint.file_offset += to_do as u64;
         self.checkpoint.checksum = self.last_checksum;
@@ -98,6 +109,7 @@ impl JournalWriter {
         assert!(checkpoint.file_offset % self.block_size as u64 == 0);
         self.checkpoint = checkpoint;
         self.last_checksum = self.checkpoint.checksum;
+        self.journal_checkpoint_offset.set(self.checkpoint.file_offset);
     }
 }
 

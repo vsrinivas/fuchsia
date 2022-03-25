@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///
-/// This module contains traits that have signatures similar to the corresponding property traits
-/// from [`fuchsia_inspect`], but with "Property" replaced with "Metric".
-///
+//!
+//! This module contains traits that have signatures similar to the corresponding property traits
+//! from [`fuchsia_inspect`], but with "Property" replaced with "Metric".
+//!
 
 /// Wrapper for the [`fuchsia_inspect::Property`] trait. Used for all scalar metric types (e.g.
 /// [`crate::metrics::StringMetric`], [`crate::metrics::IntMetric`]).
