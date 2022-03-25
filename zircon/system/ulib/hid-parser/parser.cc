@@ -192,8 +192,6 @@ class ParseState {
     size_t ifr = 0u;
 
     for (const ReportID& report_id : report_ids_) {
-      size_t field_count = 0;
-
       // If we don't have report ids, we start at 0 offset.
       // Otherwise we start at an 8 bit offset because the first
       // byte is the report id.
@@ -252,7 +250,6 @@ class ParseState {
             break;
         }
 
-        ++field_count;
         ++ix;
       }
 
