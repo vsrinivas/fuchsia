@@ -335,11 +335,26 @@ impl Socket {
         self.lock().read(task, user_buffers, self.socket_type, flags)
     }
 
-    /// Reads all the available messages out of this socket.
+    /// Reads all the available messages out of this socket, blocking if no messages are immediately
+    /// available.
     ///
-    /// If no data is available, or this socket is not readable, then an empty vector is returned.
-    pub fn read_kernel(&self) -> Vec<Message> {
-        self.lock().read_kernel()
+    /// Returns `Err` if the socket was shutdown.
+    pub fn blocking_read_kernel(&self) -> Result<Vec<Message>, Errno> {
+        loop {
+            let mut inner = self.lock();
+            let messages = inner.read_kernel()?;
+            if !messages.is_empty() {
+                return Ok(messages);
+            }
+            let waiter = Waiter::new();
+            inner.waiters.wait_async_events(
+                &waiter,
+                FdEvents::POLLIN | FdEvents::POLLHUP,
+                WaitCallback::none(),
+            );
+            drop(inner);
+            waiter.wait_kernel(zx::Time::INFINITE)?;
+        }
     }
 
     /// Writes the data in the provided user buffers to this socket.
@@ -565,20 +580,22 @@ impl SocketInner {
 
     /// Reads all the available messages out of this socket.
     ///
-    /// If no data is available, or this socket is not readable, then an empty vector is returned.
-    pub fn read_kernel(&mut self) -> Vec<Message> {
-        if self.is_shutdown {
-            return vec![];
-        }
-
+    /// An empty vector is returned if no data is immediately available.
+    /// An `Err` is returned if the socket was shutdown.
+    pub fn read_kernel(&mut self) -> Result<Vec<Message>, Errno> {
         let bytes_read = self.messages.len();
         let messages = self.messages.take_messages();
+
+        // Only signal a broken pipe once the messages have been drained.
+        if messages.is_empty() && self.is_shutdown {
+            return error!(EPIPE);
+        }
 
         if bytes_read > 0 {
             self.waiters.notify_events(FdEvents::POLLOUT);
         }
 
-        messages
+        Ok(messages)
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket.
@@ -843,11 +860,20 @@ mod tests {
         let server_socket = socket.accept(current_task.as_ucred()).unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, vec![]);
-        server_socket.write_kernel(message.clone()).expect("Failed to write.");
+        let expected_message = message.clone();
 
-        assert_eq!(connecting_socket.read_kernel(), vec![message]);
+        // Do a blocking read in another thread.
+        let handle = std::thread::spawn(move || {
+            assert_eq!(connecting_socket.blocking_read_kernel(), Ok(vec![expected_message]));
+            assert_eq!(connecting_socket.blocking_read_kernel(), error!(EPIPE));
+        });
 
+        server_socket.write_kernel(message).expect("Failed to write.");
         server_socket.close();
+
+        // The thread should finish now that messages have been written.
+        handle.join().expect("failed to join thread");
+
         assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
     }
 

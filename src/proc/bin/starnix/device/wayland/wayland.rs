@@ -23,7 +23,7 @@ use crate::device::wayland::BufferCollectionFile;
 use crate::fs::buffers::*;
 use crate::fs::socket::*;
 use crate::fs::*;
-use crate::task::{CurrentTask, Kernel, WaitCallback, Waiter};
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
 /// The services that are exposed in the component's outgoing directory by the wayland server.
@@ -182,7 +182,8 @@ fn handle_client_data(
     display_socket: &SocketHandle,
     wayland_sender: &UnboundedSender<zx::MessageBuf>,
 ) {
-    let messages = display_socket.read_kernel();
+    let messages =
+        display_socket.blocking_read_kernel().expect("Failed to wait for display socket data.");
 
     for message in messages {
         let mut handles = vec![];
@@ -232,10 +233,6 @@ fn handle_client_data(
             }
         }
     }
-
-    let waiter = Waiter::new();
-    display_socket.wait_async(&waiter, FdEvents::POLLIN | FdEvents::POLLHUP, WaitCallback::none());
-    waiter.wait_kernel(zx::Time::INFINITE).expect("Failed to wait for display socket data.");
 }
 
 /// Reads data from the wayland bridge and sends it to the wayland client via the display socket.

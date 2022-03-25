@@ -12,6 +12,7 @@
     ],
     "kernel_cmdline": "androidboot.hardware=starnix",
     "features": [
-        "binder"
+        "binder",
+        "logd"
     ]
 }

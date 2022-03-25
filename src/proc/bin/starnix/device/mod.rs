@@ -4,6 +4,7 @@
 
 mod binder;
 mod features;
+mod logd;
 mod registry;
 
 pub use binder::*;
