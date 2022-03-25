@@ -40,7 +40,7 @@ rm -r examples/fidl/llcpp/unittests/*
    } // namespace
    ```
 
-1. Define a `test` target, and a package containg the test in
+1. Define a `test` target, and a package containing the test in
    `examples/fidl/llcpp/unittests/BUILD.gn`:
 
    ```gn

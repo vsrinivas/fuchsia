@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-
 # [START imports]
 import("//build/components.gni")
+import("//build/test.gni")
 
 # [END imports]
 
@@ -30,9 +29,8 @@ fuchsia_unittest_package("fidl-example-llcpp-test") {
   deps = [ ":test" ]
 }
 
-# [END package]
-
 group("unittests") {
   testonly = true
   deps = [ ":fidl-example-llcpp-test" ]
 }
+# [END package]
