@@ -37,7 +37,7 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   }
 
   auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid);
-  if (status != ZX_OK) {
+  if (gpas.is_error()) {
     return gpas.status_value();
   }
   guest->gpas_ = ktl::move(*gpas);
