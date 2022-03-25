@@ -34,7 +34,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     file layout::
 
         ./
-        manifest.json
+        assembly_config.json
         package_manifests/
             base/
                 <package name>
@@ -50,7 +50,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         kernel/
             kernel.zbi
 
-    manifest schema::
+    assembly_config.json schema::
 
         {
             "base": [ "package1", "package2" ],
@@ -202,6 +202,11 @@ class AssemblyInputBundle(ImageAssemblyConfig):
                 FileEntry(
                     os.path.relpath(os.path.join(base_dir, path), rebase), path)
                 for path in file_paths
+            ]
+            file_path_entries += [
+                FileEntry(
+                    os.path.join(base_dir, "assembly_config.json"),
+                    "assembly_config.json")
             ]
         else:
             file_path_entries = [FileEntry(path, path) for path in file_paths]
