@@ -148,12 +148,12 @@ impl DeviceOps for DevPtmx {
 }
 
 struct DevPtmxFile {
-    _terminal: Arc<Terminal>,
+    terminal: Arc<Terminal>,
 }
 
 impl DevPtmxFile {
     pub fn new(terminal: Arc<Terminal>) -> Self {
-        Self { _terminal: terminal }
+        Self { terminal }
     }
 }
 
@@ -217,11 +217,25 @@ impl FileOps for DevPtmxFile {
     fn ioctl(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _request: u32,
-        _user_addr: UserAddress,
+        current_task: &CurrentTask,
+        request: u32,
+        user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        error!(EOPNOTSUPP)
+        match request {
+            TIOCGPTN => {
+                if user_addr.is_null() {
+                    return error!(EINVAL);
+                }
+                let addr = UserRef::<u32>::new(user_addr);
+                let value: u32 = self.terminal.id as u32;
+                current_task.mm.write_object(addr, &value)?;
+                Ok(SUCCESS)
+            }
+            _ => {
+                log::error!("ptmx received unknown ioctl request 0x{:08x}", request);
+                error!(EINVAL)
+            }
+        }
     }
 }
 
@@ -431,5 +445,63 @@ mod tests {
         root.unlink(b"0", UnlinkKind::NonDirectory).unwrap();
         assert!(root.component_lookup(b"0").is_err());
         std::mem::drop(opened_ptmx0);
+    }
+
+    #[test]
+    fn test_unknown_ioctl() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let root = fs.root();
+        let ptmx = root.component_lookup(b"ptmx")?;
+        let opened_file0 = FileObject::new_anonymous(
+            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
+            ptmx.node.clone(),
+            OpenFlags::RDONLY,
+        );
+        opened_file0.ioctl(&task, 42, UserAddress::default()).unwrap_err();
+
+        let pts = root.component_lookup(b"0")?;
+        let opened_file1 = FileObject::new_anonymous(
+            pts.node.open(&kernel, OpenFlags::RDONLY)?,
+            pts.node.clone(),
+            OpenFlags::RDONLY,
+        );
+        opened_file1.ioctl(&task, 42, UserAddress::default()).unwrap_err();
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tiocgptn_ioctl() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let root = fs.root();
+        let ptmx = root.component_lookup(b"ptmx")?;
+        let opened_file0 = FileObject::new_anonymous(
+            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
+            ptmx.node.clone(),
+            OpenFlags::RDONLY,
+        );
+        let opened_file1 = FileObject::new_anonymous(
+            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
+            ptmx.node.clone(),
+            OpenFlags::RDONLY,
+        );
+
+        opened_file0.ioctl(&task, TIOCGPTN, UserAddress::default()).unwrap_err();
+
+        let address = map_memory(&task, UserAddress::default(), 4);
+        let address_ref = UserRef::<u32>::new(address);
+        let mut result: u32 = 0;
+
+        opened_file0.ioctl(&task, TIOCGPTN, address)?;
+        task.mm.read_object(address_ref, &mut result)?;
+        assert_eq!(result, 0);
+
+        opened_file1.ioctl(&task, TIOCGPTN, address)?;
+        task.mm.read_object(address_ref, &mut result)?;
+        assert_eq!(result, 1);
+
+        Ok(())
     }
 }
