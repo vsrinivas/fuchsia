@@ -27,7 +27,7 @@ template("generated_assembly_inputs") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/make_assembly_inputs.py"
+    script = "//build/images/assembly/generated_assembly_inputs.py"
 
     outputs = [ invoker.output_path ]
     inputs = [ invoker.images_config ]
