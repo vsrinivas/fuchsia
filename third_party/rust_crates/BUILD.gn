@@ -3734,6 +3734,7 @@ rust_proc_macro("derivative-v2_2_0") {
     "--edition=2015",
     "-Cmetadata=ecd51d3b9027d2b0",
     "-Cextra-filename=-ecd51d3b9027d2b0",
+    "--cfg=feature=\"use_core\"",
   ]
 
   visibility = [ ":*" ]
