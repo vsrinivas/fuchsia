@@ -290,6 +290,7 @@ fn main() {
                 name: Some("modular".to_string()),
                 durability: Some(Durability::Persistent),
                 allowed_offers: None,
+                allow_long_names: None,
                 environment: None,
                 ..Collection::EMPTY
             },
@@ -297,6 +298,7 @@ fn main() {
                 name: Some("explicit_static".to_string()),
                 durability: Some(Durability::Persistent),
                 allowed_offers: Some(AllowedOffers::StaticOnly),
+                allow_long_names: None,
                 environment: None,
                 ..Collection::EMPTY
             },
@@ -304,6 +306,15 @@ fn main() {
                 name: Some("explicit_dynamic".to_string()),
                 durability: Some(Durability::Persistent),
                 allowed_offers: Some(AllowedOffers::StaticAndDynamic),
+                allow_long_names: None,
+                environment: None,
+                ..Collection::EMPTY
+            },
+            Collection {
+                name: Some("long_child_names".to_string()),
+                durability: Some(Durability::Persistent),
+                allowed_offers: None,
+                allow_long_names: Some(true),
                 environment: None,
                 ..Collection::EMPTY
             },

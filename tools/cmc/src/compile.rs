@@ -450,6 +450,7 @@ mod tests {
                         name: Some("coll".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: None,
+                        allow_long_names: None,
                         environment: None,
                         ..fdecl::Collection::EMPTY
                     }
@@ -595,6 +596,7 @@ mod tests {
                         name: Some("coll".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: None,
+                        allow_long_names: None,
                         environment: None,
                         ..fdecl::Collection::EMPTY
                     }
@@ -630,18 +632,47 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
                         allowed_offers: None,
+                        allow_long_names: None,
                         ..fdecl::Collection::EMPTY
                     },
                     fdecl::Collection {
                         name: Some("tests".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         ..fdecl::Collection::EMPTY
                     },
                     fdecl::Collection {
                         name: Some("dynamic_offers".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
+                        allow_long_names: None,
+                        ..fdecl::Collection::EMPTY
+                    }
+                  ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+    }}
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::AllowLongNames]), {
+        test_compile_allow_long_names => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "long_child_names",
+                        "durability": "transient",
+                        "allow_long_names": true,
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                collections: Some(vec![
+                   fdecl::Collection {
+                        name: Some("long_child_names".to_string()),
+                        durability: Some(fdecl::Durability::Transient),
+                        allowed_offers: None,
+                        allow_long_names: Some(true),
                         ..fdecl::Collection::EMPTY
                     }
                 ]),

@@ -95,6 +95,7 @@ fuchsia_component_manifest("example_component_manifest") {
     "services",
     "dynamic_offers",
     "structured_config",
+    "allow_long_names",
   ]
   component_name = "example"
   manifest = "meta/example.cml"

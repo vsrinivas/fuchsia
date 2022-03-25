@@ -19,6 +19,13 @@ type Collection = table {
     /// this field.
     4: allowed_offers AllowedOffers;
 
+    /// Whether child instances in this collection can have names longer than
+    /// the default length limit of 100.
+    ///
+    /// Only components using the `allow_long_names` restricted feature may set
+    /// this field.
+    5: allow_long_names bool;
+
     /// The environment assigned to child instances in this collection.
     ///
     /// Must be non-empty, reference an environment defined in the containing

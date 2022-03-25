@@ -677,6 +677,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
         name: collection_name.clone(),
         durability: fcdecl::Durability::Transient,
         allowed_offers: cm_types::AllowedOffers::StaticOnly,
+        allow_long_names: false,
         environment: None,
     });
     echo_client_decl.capabilities.push(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {

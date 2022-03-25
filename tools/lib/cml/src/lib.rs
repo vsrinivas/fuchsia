@@ -2174,6 +2174,7 @@ pub struct Collection {
     pub name: Name,
     pub durability: Durability,
     pub allowed_offers: Option<AllowedOffers>,
+    pub allow_long_names: Option<bool>,
     pub environment: Option<EnvironmentRef>,
 }
 

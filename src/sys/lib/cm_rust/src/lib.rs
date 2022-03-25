@@ -756,6 +756,8 @@ pub struct CollectionDecl {
 
     #[fidl_decl(default)]
     pub allowed_offers: cm_types::AllowedOffers,
+    #[fidl_decl(default)]
+    pub allow_long_names: bool,
     pub environment: Option<String>,
 }
 
@@ -2340,6 +2342,7 @@ mod tests {
                          name: Some("modular".to_string()),
                          durability: Some(fdecl::Durability::Persistent),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                         allow_long_names: Some(true),
                          environment: None,
                          ..fdecl::Collection::EMPTY
                      },
@@ -2347,6 +2350,7 @@ mod tests {
                          name: Some("tests".to_string()),
                          durability: Some(fdecl::Durability::Transient),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
+                         allow_long_names: Some(true),
                          environment: Some("test_env".to_string()),
                          ..fdecl::Collection::EMPTY
                      },
@@ -2644,12 +2648,14 @@ mod tests {
                             name: "modular".to_string(),
                             durability: fdecl::Durability::Persistent,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            allow_long_names: true,
                             environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fdecl::Durability::Transient,
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
+                            allow_long_names: true,
                             environment: Some("test_env".to_string()),
                         },
                     ],
@@ -2903,6 +2909,7 @@ mod tests {
                          name: Some("modular".to_string()),
                          durability: Some(fdecl::Durability::Persistent),
                          allowed_offers: None,
+                         allow_long_names: None,
                          environment: None,
                          ..fdecl::Collection::EMPTY
                      },
@@ -2910,6 +2917,7 @@ mod tests {
                          name: Some("tests".to_string()),
                          durability: Some(fdecl::Durability::Transient),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                         allow_long_names: None,
                          environment: Some("test_env".to_string()),
                          ..fdecl::Collection::EMPTY
                      },
@@ -2917,6 +2925,14 @@ mod tests {
                          name: Some("dyn_offers".to_string()),
                          durability: Some(fdecl::Durability::Transient),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
+                         allow_long_names: None,
+                         ..fdecl::Collection::EMPTY
+                     },
+                 fdecl::Collection {
+                         name: Some("long_child_names".to_string()),
+                         durability: Some(fdecl::Durability::Transient),
+                         allowed_offers: None,
+                         allow_long_names: Some(true),
                          ..fdecl::Collection::EMPTY
                      },
                 ]),
@@ -2946,18 +2962,28 @@ mod tests {
                             name: "modular".to_string(),
                             durability: fdecl::Durability::Persistent,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            allow_long_names: false,
                             environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fdecl::Durability::Transient,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            allow_long_names: false,
                             environment: Some("test_env".to_string()),
                         },
                         CollectionDecl {
                             name: "dyn_offers".to_string(),
                             durability: fdecl::Durability::Transient,
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
+                            allow_long_names: false,
+                            environment: None,
+                        },
+                        CollectionDecl {
+                            name: "long_child_names".to_string(),
+                            durability: fdecl::Durability::Transient,
+                            allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                            allow_long_names: true,
                             environment: None,
                         },
                     ],

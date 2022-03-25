@@ -13,14 +13,15 @@ flexible union fuchsia.component.decl/Capability
 struct/member fuchsia.component.decl/CapabilityRef.name string:100
 struct fuchsia.component.decl/CapabilityRef
 table/member fuchsia.component.decl/Child.environment string:100
-table/member fuchsia.component.decl/Child.name string:100
+table/member fuchsia.component.decl/Child.name string:1024
 table/member fuchsia.component.decl/Child.on_terminate fuchsia.component.decl/OnTerminate
 table/member fuchsia.component.decl/Child.startup fuchsia.component.decl/StartupMode
 table/member fuchsia.component.decl/Child.url string:4096
 table fuchsia.component.decl/Child
 struct/member fuchsia.component.decl/ChildRef.collection string:<100,optional>
-struct/member fuchsia.component.decl/ChildRef.name string:100
+struct/member fuchsia.component.decl/ChildRef.name string:1024
 struct fuchsia.component.decl/ChildRef
+table/member fuchsia.component.decl/Collection.allow_long_names bool
 table/member fuchsia.component.decl/Collection.allowed_offers fuchsia.component.decl/AllowedOffers
 table/member fuchsia.component.decl/Collection.durability fuchsia.component.decl/Durability
 table/member fuchsia.component.decl/Collection.environment string:100
@@ -137,6 +138,7 @@ union/member fuchsia.component.decl/LayoutConstraint.max_size uint32
 flexible union fuchsia.component.decl/LayoutConstraint
 union/member fuchsia.component.decl/LayoutParameter.nested_type fuchsia.component.decl/ConfigType
 flexible union fuchsia.component.decl/LayoutParameter
+const fuchsia.component.decl/MAX_CHILD_NAME_LENGTH uint32 1024
 const fuchsia.component.decl/MAX_MONIKER_LENGTH uint32 4096
 const fuchsia.component.decl/MAX_NAME_LENGTH uint32 100
 const fuchsia.component.decl/MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS uint64 100

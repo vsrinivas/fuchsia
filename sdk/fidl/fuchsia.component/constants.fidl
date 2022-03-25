@@ -4,6 +4,7 @@
 library fuchsia.component;
 
 const MAX_NAME_LENGTH uint32 = 100;
+const MAX_CHILD_NAME_LENGTH uint32 = 1024;
 const MAX_PATH_LENGTH uint32 = 1024;
 const MAX_MONIKER_LENGTH uint32 = 4096;
 const MAX_URL_SCHEME_LENGTH uint32 = 100;

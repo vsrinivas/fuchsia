@@ -875,7 +875,7 @@ impl<'a> ValidationContext<'a> {
         if collection.durability.is_none() {
             self.errors.push(Error::missing_field("Collection", "durability"));
         }
-        // Allow `allowed_offers` to be unset, for backwards compatibility.
+        // Allow `allowed_offers` & `allow_long_names` to be unset, for backwards compatibility.
         if let Some(environment) = collection.environment.as_ref() {
             if !self.all_environment_names.contains(environment.as_str()) {
                 self.errors.push(Error::invalid_environment(
@@ -4102,6 +4102,7 @@ mod tests {
                     name: Some("col".to_string()),
                     durability: Some(fdecl::Durability::Transient),
                     allowed_offers: None,
+                    allow_long_names: None,
                     ..fdecl::Collection::EMPTY
                 }]);
                 decl.exposes = Some(vec![
@@ -4153,6 +4154,7 @@ mod tests {
                         name: Some("col".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]);
@@ -5259,6 +5261,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
+                        allow_long_names: None,
                         environment: None,
                         ..fdecl::Collection::EMPTY
                     },
@@ -5443,6 +5446,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         environment: None,
                         ..fdecl::Collection::EMPTY
                     },
@@ -5647,6 +5651,7 @@ mod tests {
                         name: Some("col".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]);
@@ -5727,6 +5732,7 @@ mod tests {
                         name: Some("col".to_string()),
                         durability: Some(fdecl::Durability::Transient),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]);
@@ -5793,6 +5799,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        allow_long_names: None,
                         environment: None,
                         ..fdecl::Collection::EMPTY
                     },
@@ -6514,6 +6521,7 @@ mod tests {
                     name: None,
                     durability: None,
                     allowed_offers: None,
+                    allow_long_names: None,
                     environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
@@ -6531,6 +6539,7 @@ mod tests {
                     name: Some("^bad".to_string()),
                     durability: Some(fdecl::Durability::Persistent),
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                    allow_long_names: None,
                     environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
@@ -6547,6 +6556,7 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     durability: Some(fdecl::Durability::Transient),
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                    allow_long_names: None,
                     environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
@@ -6563,6 +6573,7 @@ mod tests {
                     name: Some("foo".to_string()),
                     durability: Some(fdecl::Durability::Transient),
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                    allow_long_names: None,
                     environment: Some("test_env".to_string()),
                     ..fdecl::Collection::EMPTY
                 }]);

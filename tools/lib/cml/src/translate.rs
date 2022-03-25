@@ -639,6 +639,7 @@ fn translate_collections(
             name: Some(collection.name.clone().into()),
             durability: Some(collection.durability.clone().into()),
             allowed_offers: collection.allowed_offers.clone().map(|a| a.into()),
+            allow_long_names: collection.allow_long_names.clone(),
             environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
             ..fdecl::Collection::EMPTY
         });

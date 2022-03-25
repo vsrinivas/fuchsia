@@ -28,6 +28,11 @@
             durability: "persistent",
             allowed_offers: "static_and_dynamic",
         },
+        {
+            name: "long_child_names",
+            durability: "persistent",
+            allow_long_names: true,
+        },
     ],
     capabilities: [
         {

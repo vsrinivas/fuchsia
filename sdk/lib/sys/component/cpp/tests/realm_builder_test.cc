@@ -363,6 +363,32 @@ TEST_F(RealmBuilderTest, UsesRandomChildName) {
   EXPECT_NE(child_name_1, child_name_2);
 }
 
+TEST_F(RealmBuilderTest, CanCreateLongChildName) {
+  std::string child_name_1;
+  {
+    auto realm_builder = RealmBuilder::Create();
+    {
+      const std::string long_child_name(fuchsia::component::MAX_NAME_LENGTH + 1, 'a');
+      // AddChild should not panic.
+      realm_builder.AddChild(std::move(long_child_name), kEchoServerUrl);
+    }
+    {
+      const std::string long_child_name(fuchsia::component::MAX_CHILD_NAME_LENGTH, 'a');
+      // AddChild should not panic.
+      realm_builder.AddChild(std::move(long_child_name), kEchoServerUrl);
+    }
+    {
+      ASSERT_DEATH(
+          {
+            const std::string too_long_child_name(fuchsia::component::MAX_CHILD_NAME_LENGTH + 1,
+                                                  'a');
+            realm_builder.AddChild(std::move(too_long_child_name), kEchoServerUrl);
+          },
+          "");
+    }
+  }
+}
+
 TEST_F(RealmBuilderTest, PanicsWhenBuildCalledMultipleTimes) {
   ASSERT_DEATH(
       {

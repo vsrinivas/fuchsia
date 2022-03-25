@@ -29,7 +29,7 @@ type ChildRef = struct {
     /// The name assigned to the child by its parent. If `collection` is set,
     /// `name` is scoped to `collection` and the child is a dynamic instance.
     /// Required.
-    name name;
+    name child_name;
     /// The collection `name` belongs to. If omitted, `name` references a static
     /// instance. This field must be omitted if the `ChildRef` is being used in
     /// a component declaration. Optional.

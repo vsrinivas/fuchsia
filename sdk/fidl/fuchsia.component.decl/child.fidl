@@ -11,7 +11,7 @@ type Child = table {
     ///
     /// Must be non-empty, unique among all siblings, and contain only the
     /// following characters: [a-z0-9-_.].
-    1: name name;
+    1: name child_name;
 
     /// The child component's URL.
     ///

@@ -319,6 +319,9 @@ impl<'a> ValidationContext<'a> {
         if collection.allowed_offers.is_some() {
             self.features.check(Feature::DynamicOffers)?;
         }
+        if collection.allow_long_names.is_some() {
+            self.features.check(Feature::AllowLongNames)?;
+        }
         if let Some(environment_ref) = &collection.environment {
             match environment_ref {
                 cml::EnvironmentRef::Named(environment_name) => {
@@ -5570,6 +5573,51 @@ mod tests {
                 ],
             }),
             Err(Error::RestrictedFeature(s)) if s == "hub"
+        ),
+    }
+
+    // Tests the use of `allow_long_names` when the "AllowLongNames" feature is set.
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::AllowLongNames]), {
+        test_cml_validate_set_allow_long_names_true(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allow_long_names": true
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_validate_set_allow_long_names_false(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allow_long_names": false
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+    }}
+
+    // Tests that the use of `allow_long_names` fails when the "AllowLongNames"
+    // feature is not set.
+    test_validate_cml! {
+        test_cml_allow_long_names_without_feature(
+            json!({
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "allow_long_names": true
+                    },
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "allow_long_names"
         ),
     }
 

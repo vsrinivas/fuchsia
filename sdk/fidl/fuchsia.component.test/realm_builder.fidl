@@ -255,7 +255,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddChild(struct {
         /// The name of the child that is being added.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
 
         /// The component's URL.
         url fuchsia.url.Url;
@@ -284,7 +284,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddLegacyChild(struct {
         /// The name of the child that is being added.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
 
         /// The component's legacy URL (commonly ends with `.cmx`).
         legacy_url fuchsia.url.Url;
@@ -305,7 +305,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddChildFromDecl(struct {
         /// The name of the child that is being added.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
 
         /// The component's declaration.
         decl fuchsia.component.decl.Component;
@@ -328,7 +328,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddLocalChild(struct {
         /// The name of the child that is being added.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
 
         /// Additional properties for the child.
         options ChildOptions;
@@ -372,7 +372,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     GetComponentDecl(struct {
         /// The name of the component whose declaration is being retrieved.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
     }) -> (struct {
         component_decl fuchsia.component.decl.Component;
     }) error RealmBuilderError2;
@@ -399,7 +399,7 @@ protocol Realm {
     ///   for this realm, and thus this `Realm` channel can no longer be used.
     ReplaceComponentDecl(struct {
         /// The name of the component whose declaration is being replaced.
-        name fuchsia.component.name;
+        name fuchsia.component.child_name;
 
         /// The new component declaration for `name`.
         component_decl fuchsia.component.decl.Component;

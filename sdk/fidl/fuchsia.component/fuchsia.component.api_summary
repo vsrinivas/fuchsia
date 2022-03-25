@@ -18,6 +18,7 @@ enum/member fuchsia.component/Error.RESOURCE_UNAVAILABLE 10
 enum/member fuchsia.component/Error.UNSUPPORTED 3
 strict enum fuchsia.component/Error uint32
 const fuchsia.component/MAX_CHILD_COUNT uint32 128
+const fuchsia.component/MAX_CHILD_NAME_LENGTH uint32 1024
 const fuchsia.component/MAX_DYNAMIC_OFFER_COUNT uint32 128
 const fuchsia.component/MAX_HANDLE_COUNT uint32 128
 const fuchsia.component/MAX_MONIKER_LENGTH uint32 4096

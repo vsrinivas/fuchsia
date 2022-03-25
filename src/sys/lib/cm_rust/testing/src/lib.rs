@@ -233,6 +233,7 @@ impl CollectionDeclBuilder {
             name: String::new(),
             durability: fdecl::Durability::Transient,
             allowed_offers: cm_types::AllowedOffers::StaticOnly,
+            allow_long_names: false,
             environment: None,
         })
     }
@@ -263,6 +264,13 @@ impl CollectionDeclBuilder {
     /// collection.
     pub fn allowed_offers(mut self, allowed_offers: cm_types::AllowedOffers) -> Self {
         self.0.allowed_offers = allowed_offers;
+        self
+    }
+
+    // Sets the flag to allow the collection to have child names that exceed the default length
+    // limit.
+    pub fn allow_long_names(mut self, allow_long_names: bool) -> Self {
+        self.0.allow_long_names = allow_long_names;
         self
     }
 
