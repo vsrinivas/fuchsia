@@ -37,7 +37,7 @@ protocol Relay {
     /// Registers the buffer and eventpair used to exchange test data. This is called by the unit
     /// test both at the start of a test, and after a fuzzer process exits and closes its end of the
     /// eventpair. This allows for the libFuzzer workflows that consist of multiple, sequential
-    /// fuzzer processes. This call blocks until |Finish| is called..
+    /// fuzzer processes. This call blocks until |Finish| is called.
     SetTestData(resource struct {
         data SignaledBuffer;
     }) -> ();
