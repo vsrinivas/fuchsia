@@ -45,6 +45,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",

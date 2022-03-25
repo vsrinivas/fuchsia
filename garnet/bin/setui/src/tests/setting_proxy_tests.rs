@@ -527,7 +527,7 @@ async fn inspect_catches_errors() {
     assert_data_tree!(inspector, root: {
         test: {
             errors: {
-                "00000000000000000000": {
+                "0": {
                     timestamp: "0.000000000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 }
@@ -580,43 +580,43 @@ async fn inspect_errors_roll_after_limit() {
     assert_data_tree!(inspector, root: {
         test: {
             errors: {
-                "00000000000000000001": {
+                "1": {
                     timestamp: "0.000001000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000002": {
+                "2": {
                     timestamp: "0.000002000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000003": {
+                "3": {
                     timestamp: "0.000003000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000004": {
+                "4": {
                     timestamp: "0.000004000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000005": {
+                "5": {
                     timestamp: "0.000005000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000006": {
+                "6": {
                     timestamp: "0.000006000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000007": {
+                "7": {
                     timestamp: "0.000007000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000008": {
+                "8": {
                     timestamp: "0.000008000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000009": {
+                "9": {
                     timestamp: "0.000009000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },
-                "00000000000000000010": {
+                "10": {
                     timestamp: "0.000010000",
                     value: "HandlerStartupError(Unknown, \"test error\")"
                 },

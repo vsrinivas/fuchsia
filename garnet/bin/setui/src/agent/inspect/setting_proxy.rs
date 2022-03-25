@@ -22,11 +22,12 @@ use crate::service::TryFromWithClient;
 use crate::{service, trace};
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_inspect::{self as inspect, component};
+use fuchsia_inspect_contrib::nodes::BoundedListNode;
 use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::StreamExt;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 blueprint_definition!(
@@ -39,10 +40,10 @@ const INSPECT_REQUESTS_COUNT: usize = 25;
 /// Information about a setting to be written to inspect.
 #[derive(Inspect)]
 struct SettingTypeInspectInfo {
-    /// Map from the name of the Request variant to a RequestTypeInspectInfo that holds a list of
+    /// Map from the name of the Request variant to a BoundedListNode that holds a list of
     /// recent requests.
     #[inspect(skip)]
-    requests_by_type: HashMap<String, RequestTypeInspectInfo>,
+    requests_by_type: HashMap<String, BoundedListNode>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -60,26 +61,6 @@ impl SettingTypeInspectInfo {
     }
 }
 
-/// Information for all requests of a particular SettingType variant for a given setting type.
-#[derive(Inspect)]
-struct RequestTypeInspectInfo {
-    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
-    #[inspect(skip)]
-    last_requests: VecDeque<RequestInspectInfo>,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
-
-impl RequestTypeInspectInfo {
-    fn new() -> Self {
-        Self {
-            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
-            inspect_node: inspect::Node::default(),
-        }
-    }
-}
-
 /// Information about a request to be written to inspect.
 #[derive(Inspect)]
 struct RequestInspectInfo {
@@ -91,16 +72,6 @@ struct RequestInspectInfo {
 
     /// Node of this info.
     inspect_node: inspect::Node,
-}
-
-impl RequestInspectInfo {
-    fn new() -> Self {
-        Self {
-            request: inspect::StringProperty::default(),
-            timestamp: inspect::StringProperty::default(),
-            inspect_node: inspect::Node::default(),
-        }
-    }
 }
 
 /// The SettingProxyInspectAgent is responsible for listening to requests to the setting
@@ -205,32 +176,19 @@ impl SettingProxyInspectAgent {
         });
 
         let key = request.for_inspect().to_string();
-        let setting_type_inspect_node = &setting_type_info.inspect_node;
-        let request_type_info =
-            setting_type_info.requests_by_type.entry(key.clone()).or_insert_with(|| {
-                // `with_inspect` will only return an error on types with
-                // interior mutability. Since none are used here, this
-                // should be fine.
-                RequestTypeInspectInfo::new()
-                    .with_inspect(setting_type_inspect_node, key)
-                    .expect("failed to create RequestTypeInspectInfo inspect node")
-            });
+        let list_inspect_node = setting_type_info.inspect_node.create_child(key.clone());
+        let bounded_list_node = setting_type_info
+            .requests_by_type
+            .entry(key)
+            .or_insert_with(|| BoundedListNode::new(list_inspect_node, INSPECT_REQUESTS_COUNT));
 
-        let last_requests = &mut request_type_info.last_requests;
-        if last_requests.len() >= INSPECT_REQUESTS_COUNT {
-            let _ = last_requests.pop_back();
-        }
-
+        let entry = bounded_list_node.create_entry();
+        let timestamp = clock::inspect_format_now();
         let count = setting_type_info.count;
         setting_type_info.count += 1;
-        let timestamp = clock::inspect_format_now();
-        // std::u64::MAX maxes out at 20 digits.
-        let request_info = RequestInspectInfo::new()
-            .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
-            .expect("failed to create RequestInspectInfo inspect node");
-        request_info.request.set(&format!("{:?}", request));
-        request_info.timestamp.set(&timestamp);
-        last_requests.push_front(request_info);
+        entry.record_string("request_number", &format!("{}", count));
+        entry.record_string("request", &format!("{:?}", request));
+        entry.record_string("timestamp", &timestamp);
     }
 }
 
@@ -335,7 +293,8 @@ mod tests {
             switchboard: {
                 "Display": {
                     "SetDisplayInfo": {
-                        "00000000000000000000": {
+                        "0": {
+                            request_number: "0",
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
                                 auto_brightness_value: None, \
@@ -346,7 +305,8 @@ mod tests {
                             })",
                             timestamp: "0.000000000",
                         },
-                        "00000000000000000001": {
+                        "1": {
+                            request_number: "1",
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
                                 auto_brightness_value: None, \
@@ -361,7 +321,8 @@ mod tests {
                 },
                 "Intl": {
                     "SetIntlInfo": {
-                        "00000000000000000000": {
+                        "0": {
+                            request_number: "0",
                             request: "SetIntlInfo(IntlInfo { \
                                 locales: Some([LocaleId { id: \"en-US\" }]), \
                                 temperature_unit: Some(Celsius), \
@@ -417,7 +378,8 @@ mod tests {
             switchboard: {
                 "Display": {
                     "SetDisplayInfo": {
-                        "00000000000000000000": {
+                        "0": {
+                            request_number: "0",
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
                                 auto_brightness_value: None, \
@@ -428,7 +390,8 @@ mod tests {
                             })",
                             timestamp: "0.000000000",
                         },
-                        "00000000000000000002": {
+                        "1": {
+                            request_number: "2",
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
                                 auto_brightness_value: None, \
@@ -441,11 +404,13 @@ mod tests {
                         },
                     },
                     "Get": {
-                        "00000000000000000001": {
+                        "0": {
+                            request_number: "1",
                             request: "Get",
                             timestamp: "0.000000000",
                         },
-                        "00000000000000000003": {
+                        "1": {
+                            request_number: "3",
                             request: "Get",
                             timestamp: "0.000000000",
                         },
@@ -498,8 +463,7 @@ mod tests {
             let mut request_assertion = TreeAssertion::new("SetDisplayInfo", true);
 
             for i in 1..INSPECT_REQUESTS_COUNT + 1 {
-                request_assertion
-                    .add_child_assertion(TreeAssertion::new(&format!("{:020}", i), false));
+                request_assertion.add_child_assertion(TreeAssertion::new(&format!("{}", i), false));
             }
             tree_assertion.add_child_assertion(request_assertion);
             tree_assertion
@@ -510,7 +474,8 @@ mod tests {
                 display_subtree_assertion(),
                 "Intl": {
                     "SetIntlInfo": {
-                        "00000000000000000000": {
+                        "0": {
+                            request_number: "0",
                             request: AnyProperty,
                             timestamp: "0.000000000",
                         }
