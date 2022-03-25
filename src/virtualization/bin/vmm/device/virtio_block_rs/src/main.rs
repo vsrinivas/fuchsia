@@ -3,22 +3,40 @@
 // found in the LICENSE file.
 
 mod backend;
+mod file_backend;
 mod wire;
 
 use {
+    crate::backend::*,
+    crate::file_backend::FileBackend,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
+    fidl_fuchsia_virtualization::BlockFormat,
     fidl_fuchsia_virtualization_hardware::VirtioBlockRequestStream,
     fuchsia_component::server,
     fuchsia_syslog::{self as syslog},
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
 };
+
+fn create_backend(
+    format: BlockFormat,
+    channel: zx::Channel,
+) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
+    match format {
+        BlockFormat::File => {
+            let file_backend = FileBackend::new(channel)?;
+            Ok(Box::new(file_backend))
+        }
+        _ => Err(anyhow!("Unsupported BlockFormat {:?}", format)),
+    }
+}
 
 async fn run_virtio_block(
     mut virtio_block_fidl: VirtioBlockRequestStream,
 ) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
-    let (start_info, _id, _mode, _format, _client, responder) = virtio_block_fidl
+    let (start_info, _id, _mode, format, client, responder) = virtio_block_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Failed to read fidl message from the channel."))?
@@ -27,8 +45,13 @@ async fn run_virtio_block(
 
     // Prepare the device builder
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
-    // TODO(fxbug.dev/95529: Report accurate values here once implemented.
-    responder.send(0 /* capacity */, 0 /* block size */)?;
+
+    let backend = create_backend(format, client)?;
+    let device_attrs = backend.get_attrs().await?;
+    responder.send(
+        device_attrs.capacity.to_bytes().unwrap(),
+        device_attrs.block_size.unwrap_or(wire::VIRTIO_BLOCK_SECTOR_SIZE as u32),
+    )?;
 
     // Complete the setup of queues and get a device.
     let mut virtio_device_fidl = virtio_block_fidl.cast_stream();
