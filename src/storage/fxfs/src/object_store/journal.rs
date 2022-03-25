@@ -1184,13 +1184,14 @@ impl Journal {
         .await;
     }
 
-    async fn flush(&self, offset: u64, buf: Buffer<'_>) -> Result<(), Error> {
-        self.handle.get().unwrap().overwrite(offset, buf.as_ref()).await?;
+    async fn flush(&self, offset: u64, mut buf: Buffer<'_>) -> Result<(), Error> {
+        let len = buf.len() as u64;
+        self.handle.get().unwrap().overwrite(offset, buf.as_mut()).await?;
         let mut inner = self.inner.lock().unwrap();
         if let Some(waker) = inner.sync_waker.take() {
             waker.wake();
         }
-        inner.flushed_offset = offset + buf.len() as u64;
+        inner.flushed_offset = offset + len;
         Ok(())
     }
 

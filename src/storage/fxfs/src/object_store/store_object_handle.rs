@@ -155,23 +155,33 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
 
     // Writes potentially unaligned data at `device_offset` and returns checksums if requested. The
     // data will be encrypted if necessary.
+    // `buf` is mutable as an optimization, since the write may require encryption, we can encrypt
+    // the buffer in-place rather than copying to another buffer if the write is already aligned.
     async fn write_at(
         &self,
         offset: u64,
-        buf: BufferRef<'_>,
+        buf: MutableBufferRef<'_>,
         device_offset: u64,
         compute_checksum: bool,
     ) -> Result<Checksums, Error> {
-        let (aligned, mut transfer_buf) = self.align_buffer(offset, buf).await?;
+        let mut transfer_buf;
+        let bs = self.block_size();
+        let (range, mut transfer_buf_ref) = if offset % bs == 0 && buf.len() as u64 % bs == 0 {
+            (offset..offset + buf.len() as u64, buf)
+        } else {
+            let (range, buf) = self.align_buffer(offset, buf.as_ref()).await?;
+            transfer_buf = buf;
+            (range, transfer_buf.as_mut())
+        };
 
         if let Some(keys) = &self.keys {
             // TODO(https://fxbug.dev/92975): Support key_id != 0.
-            keys.encrypt(aligned.start, 0, transfer_buf.as_mut_slice())?;
+            keys.encrypt(range.start, 0, transfer_buf_ref.as_mut_slice())?;
         }
 
         self.write_aligned(
-            transfer_buf.as_ref(),
-            device_offset - (offset - aligned.start),
+            transfer_buf_ref.as_ref(),
+            device_offset - (offset - range.start),
             compute_checksum,
         )
         .await
@@ -537,7 +547,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
 
     // All the extents for the range must have been preallocated using preallocate_range or from
     // existing writes.
-    pub async fn overwrite(&self, mut offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+    // `buf` is mutable as an optimization, since the write may require encryption, we can encrypt
+    // the buffer in-place rather than copying to another buffer if the write is already aligned.
+    pub async fn overwrite(
+        &self,
+        mut offset: u64,
+        mut buf: MutableBufferRef<'_>,
+    ) -> Result<(), Error> {
         let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -548,7 +564,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 AttributeKey::Extent(ExtentKey::search_key_from_offset(offset)),
             )))
             .await?;
-        let mut pos = 0;
         loop {
             let (device_offset, to_do) = match iter.get() {
                 Some(ItemRef {
@@ -574,16 +589,17 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 {
                     (
                         device_offset + (offset - range.start),
-                        min(buf.len() - pos, (range.end - offset) as usize),
+                        min(buf.len(), (range.end - offset) as usize),
                     )
                 }
                 _ => bail!("offset {} not allocated/has checksums", offset),
             };
-            self.write_at(offset, buf.subslice(pos..pos + to_do), device_offset, false).await?;
-            pos += to_do;
-            if pos == buf.len() {
+            let (part, remainder) = buf.split_at_mut(to_do);
+            self.write_at(offset, part, device_offset, false).await?;
+            if remainder.len() == 0 {
                 break;
             }
+            buf = remainder;
             offset += to_do as u64;
             iter.advance().await?;
         }
@@ -1522,7 +1538,7 @@ mod tests {
             .expect("write failed");
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, fs.block_size()).unwrap();
-        object.overwrite(offset, buf.as_ref()).await.expect("write failed");
+        object.overwrite(offset, buf.as_mut()).await.expect("write failed");
 
         // Make sure there were no more allocations.
         assert_eq!(allocator.get_allocated_bytes(), allocated_after);
@@ -1587,7 +1603,7 @@ mod tests {
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, fs.block_size()).unwrap();
-        object.overwrite(offset, buf.as_ref()).await.expect_err("write succeeded");
+        object.overwrite(offset, buf.as_mut()).await.expect_err("write succeeded");
         fs.close().await.expect("Close failed");
     }
 

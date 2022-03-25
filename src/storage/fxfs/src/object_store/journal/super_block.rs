@@ -261,7 +261,7 @@ impl SuperBlock {
         let mut buf =
             handle.store().device().allocate_buffer(handle.store().device().block_size() as usize);
         buf.as_mut_slice().fill(0u8);
-        handle.overwrite(0, buf.as_ref()).await
+        handle.overwrite(0, buf.as_mut()).await
     }
 
     /// Read the super-block header, and return it and a reader that produces the records that are
@@ -385,8 +385,8 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> SuperBlockWriter<'a, S> 
     }
 
     async fn flush_buffer(&mut self) -> Result<(), Error> {
-        let (offset, buf) = self.writer.take_buffer(&self.handle).unwrap();
-        self.handle.overwrite(offset, buf.as_ref()).await
+        let (offset, mut buf) = self.writer.take_buffer(&self.handle).unwrap();
+        self.handle.overwrite(offset, buf.as_mut()).await
     }
 }
 
