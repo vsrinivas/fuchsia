@@ -206,8 +206,6 @@ fidl("fidl") {
     "testdata/xunionmigration.fidl",
   ]
 
-  experimental_flags = [ "non_struct_payloads" ]
-
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
@@ -216,8 +214,6 @@ fidl("fidl-composed") {
 
   sources = [ "testdata/composed_into.test.fidl" ]
 
-  experimental_flags = [ "non_struct_payloads" ]
-
   public_deps = [ ":fidl" ]
 }
 
@@ -225,8 +221,6 @@ fidl("fidl-sys") {
   name = "test.fidlcodec.sys"
 
   sources = [ "testdata/sys.test.fidl" ]
-
-  experimental_flags = [ "non_struct_payloads" ]
 
   public_deps = [ "//zircon/vdso/zx" ]
 }

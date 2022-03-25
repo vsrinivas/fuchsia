@@ -1023,7 +1023,7 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
-    GenerateArray(all_libraries_->DirectAndComposedDependencies(library, experimental_flags_));
+    GenerateArray(all_libraries_->DirectAndComposedDependencies(library));
 
     GenerateObjectMember("bits_declarations", library->bits_declarations);
     GenerateObjectMember("const_declarations", library->const_declarations);

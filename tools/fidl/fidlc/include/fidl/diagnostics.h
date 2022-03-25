@@ -165,8 +165,6 @@ constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListDecl(
     "'{}' cannot be used as a parameter list");
 constexpr ErrorDef<const flat::Type *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
-constexpr ErrorDef<const flat::Decl *> ErrNotYetSupportedParameterListType(
-    "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/88343)");
 constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<std::string_view> ErrEmptyPayloadStructs(

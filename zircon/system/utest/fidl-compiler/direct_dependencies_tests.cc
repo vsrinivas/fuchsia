@@ -58,8 +58,7 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
                     &shared);
     ASSERT_COMPILED(lib);
 
-    fidl::ExperimentalFlags flags;
-    auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library(), flags);
+    auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());
     ASSERT_EQ(deps.size(), 2);
     auto iter = deps.cbegin();
     EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");
@@ -103,8 +102,7 @@ protocol CapturesDependencyThroughCompose {
                   &shared);
   ASSERT_COMPILED(lib);
 
-  fidl::ExperimentalFlags flags;
-  auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library(), flags);
+  auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());
   ASSERT_EQ(deps.size(), 1);
   auto iter = deps.cbegin();
   EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");

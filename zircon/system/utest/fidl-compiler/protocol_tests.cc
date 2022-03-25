@@ -264,7 +264,7 @@ protocol D {
   EXPECT_EQ(protocol_d->all_methods.size(), 4);
 }
 
-TEST(ProtocolTests, GoodValidOpenClosedProtocolCompoition) {
+TEST(ProtocolTests, GoodValidOpenClosedProtocolComposition) {
   auto experiment_flags =
       fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
@@ -306,7 +306,7 @@ open protocol ComposeInOpen {
   EXPECT_EQ(compose_in_open->composed_protocols.size(), 3);
 }
 
-TEST(ProtocolTests, BadInavlidComposeOpenInClosed) {
+TEST(ProtocolTests, BadInvalidComposeOpenInClosed) {
   auto experiment_flags =
       fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
@@ -323,7 +323,7 @@ closed protocol Composing {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
 
-TEST(ProtocolTests, BadInavlidComposeAjarInClosed) {
+TEST(ProtocolTests, BadInvalidComposeAjarInClosed) {
   auto experiment_flags =
       fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
@@ -340,7 +340,7 @@ closed protocol Composing {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
 
-TEST(ProtocolTests, BadInavlidComposeOpenInAjar) {
+TEST(ProtocolTests, BadInvalidComposeOpenInAjar) {
   auto experiment_flags =
       fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
@@ -954,36 +954,6 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
-// TODO(fxbug.dev/88343): Delete once --non_struct_payloads feature flag has been disabled.
-TEST(ProtocolTests, BadMethodTableLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(table {
-    1: foo bool;
-  });
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table");
-}
-
-// TODO(fxbug.dev/88343): Delete once --non_struct_payloads feature flag has been disabled.
-TEST(ProtocolTests, BadMethodUnionLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(union {
-    1: foo bool;
-  });
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "union");
-}
-
 TEST(ProtocolTests, BadMethodEmptyResponseWithError) {
   TestLibrary library(R"FIDL(
 library example;
@@ -1182,8 +1152,6 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodTableSizeConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1200,8 +1168,7 @@ protocol MyProtocol {
     1: b bool;
   }) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
 
   // Both uses of "MyTable" use too many handles.
@@ -1215,8 +1182,6 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodTableSimpleLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1226,14 +1191,11 @@ protocol MyProtocol {
     1: b bool;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
 }
 
 TEST(ProtocolTests, GoodMethodTableRequest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1249,14 +1211,11 @@ protocol MyProtocol {
   });
   MyMethodTwoWay(MyTable) -> ();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodTableResponse) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1272,14 +1231,11 @@ protocol MyProtocol {
   });
   -> OnMyEvent(MyTable);
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodTableResultPayload) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1295,14 +1251,11 @@ protocol MyProtocol {
     1: b bool;
   }) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodUnionRequest) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1318,14 +1271,11 @@ protocol MyProtocol {
   });
   MyMethodTwoWay(MyUnion) -> ();
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodUnionResponse) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1341,14 +1291,11 @@ protocol MyProtocol {
   });
   -> OnMyEvent(MyUnion);
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodUnionResultPayload) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1364,14 +1311,11 @@ protocol MyProtocol {
     1: b bool;
   }) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, BadMethodUnionSizeConstraints) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1388,8 +1332,7 @@ protocol MyProtocol {
     1: b bool;
   }) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_FALSE(library.Compile());
 
   // Both uses of "MyUnion" use too many handles.
@@ -1403,8 +1346,6 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodUnionSimpleLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1414,8 +1355,7 @@ protocol MyProtocol {
     1: b bool;
   });
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
 }
 

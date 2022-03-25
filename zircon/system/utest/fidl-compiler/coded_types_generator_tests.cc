@@ -1619,8 +1619,6 @@ protocol UseOfProtocol {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesTableMessage) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(library example;
 
 type OnReceivePayload = table {
@@ -1634,8 +1632,7 @@ protocol UseOfProtocol {
     });
     -> OnReceive(OnReceivePayload);
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
@@ -1677,8 +1674,6 @@ protocol UseOfProtocol {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesTableMessageErrorSyntax) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(library example;
 
 type OnReceivePayload = table {
@@ -1692,8 +1687,7 @@ protocol UseOfProtocol {
     }) error uint32;
     -> OnReceive(OnReceivePayload) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
@@ -1791,8 +1785,6 @@ protocol UseOfProtocol {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesUnionMessage) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(library example;
 
 type OnReceivePayload = strict union {
@@ -1806,8 +1798,7 @@ protocol UseOfProtocol {
     });
     -> OnReceive(OnReceivePayload);
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
@@ -1851,8 +1842,6 @@ protocol UseOfProtocol {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesUnionMessageErrorSyntax) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
   TestLibrary library(R"FIDL(library example;
 
 type OnReceivePayload = flexible union {
@@ -1866,8 +1855,7 @@ protocol UseOfProtocol {
     }) error uint32;
     -> OnReceive(OnReceivePayload) error uint32;
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();

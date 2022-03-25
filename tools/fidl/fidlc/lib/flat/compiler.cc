@@ -4,7 +4,6 @@
 
 #include "fidl/flat/compiler.h"
 
-#include "fidl/experimental_flags.h"
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat/consume_step.h"
@@ -124,7 +123,7 @@ std::vector<const Decl*> Libraries::DeclarationOrder() const {
 }
 
 std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependencies(
-    const Library* library, const ExperimentalFlags& experimental_flags) const {
+    const Library* library) const {
   std::set<const Library*, LibraryComparator> direct_dependencies;
 
   auto add_constant_deps = [&](const Constant* constant) {
@@ -178,14 +177,10 @@ std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependen
           }
           case Decl::Kind::kTable:
           case Decl::Kind::kUnion: {
-            if (experimental_flags.IsFlagEnabled(ExperimentalFlags::Flag::kNonStructPayloads)) {
-              // Table/union payloads are never flattened by backend generators, so we don't need to
-              // inspect their members, only the top-level type itself.
-              if (auto dep_library = type->name.library()) {
-                direct_dependencies.insert(dep_library);
-              }
-            } else {
-              assert(false && "should have failed compilation as --non_struct_payloads flag unset");
+            // Table/union payloads are never flattened by backend generators, so we don't need to
+            // inspect their members, only the top-level type itself.
+            if (auto dep_library = type->name.library()) {
+              direct_dependencies.insert(dep_library);
             }
             break;
           }
@@ -207,14 +202,10 @@ std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependen
           }
           case Decl::Kind::kTable:
           case Decl::Kind::kUnion: {
-            if (experimental_flags.IsFlagEnabled(ExperimentalFlags::Flag::kNonStructPayloads)) {
-              // Table/union payloads are never flattened by backend generators, so we don't need to
-              // inspect their members, only the top-level type itself.
-              if (auto dep_library = type->name.library()) {
-                direct_dependencies.insert(dep_library);
-              }
-            } else {
-              assert(false && "should have failed compilation as --non_struct_payloads flag unset");
+            // Table/union payloads are never flattened by backend generators, so we don't need to
+            // inspect their members, only the top-level type itself.
+            if (auto dep_library = type->name.library()) {
+              direct_dependencies.insert(dep_library);
             }
             break;
           }

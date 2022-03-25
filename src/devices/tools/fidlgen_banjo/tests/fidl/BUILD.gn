@@ -12,7 +12,6 @@ foreach(test, fidlgen_tests) {
     name = test.library_name
     sources = test.sources
     public_deps = test.deps
-    experimental_flags = [ "non_struct_payloads" ]
   }
   fidl_library_deps += [ test.dep ]
 }

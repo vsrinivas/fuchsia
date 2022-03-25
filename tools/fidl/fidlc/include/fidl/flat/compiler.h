@@ -118,7 +118,7 @@ class Libraries : private ReporterMixin {
   // indirect dependencies that come from protocol composition, i.e. what would
   // need to be imported if the composed methods were copied and pasted.
   std::set<const Library*, LibraryComparator> DirectAndComposedDependencies(
-      const Library* library, const ExperimentalFlags& experimental_flags) const;
+      const Library* library) const;
 
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);

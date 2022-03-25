@@ -12,7 +12,6 @@ import("//build/rust/rustc_binary.gni")
 fidl("fidl_import") {
   name = "fidl.test.imported"
   sources = [ "compatibility_imported.test.fidl" ]
-  experimental_flags = [ "non_struct_payloads" ]
 }
 
 # The protocol used in the test.
@@ -20,7 +19,6 @@ fidl("fidl_service") {
   name = "fidl.test.compatibility"
   sources = [ "compatibility_service.test.fidl" ]
   public_deps = [ ":fidl_import" ]
-  experimental_flags = [ "non_struct_payloads" ]
 }
 
 # Shared between the hlcpp test server and the test harness

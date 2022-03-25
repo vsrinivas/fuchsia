@@ -8,7 +8,6 @@
 #include <optional>
 
 #include "fidl/diagnostics.h"
-#include "fidl/experimental_flags.h"
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/type_resolver.h"
 #include "fidl/flat_ast.h"
@@ -1023,9 +1022,6 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       }
       case Decl::Kind::kTable:
       case Decl::Kind::kUnion: {
-        if (!experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kNonStructPayloads)) {
-          Fail(ErrNotYetSupportedParameterListType, method_name, decl);
-        }
         break;
       }
       case Decl::Kind::kTypeAlias: {
