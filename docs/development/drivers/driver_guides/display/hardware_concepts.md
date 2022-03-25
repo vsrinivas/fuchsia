@@ -133,6 +133,7 @@ explains the details of timing.
 [display-port]: https://en.wikipedia.org/wiki/DisplayPort#Connectors_and_pin_configuration
 [display-timing]: https://en.wikipedia.org/wiki/Raster_scan#video_timing
 [dvi]: https://en.wikipedia.org/wiki/Digital_Visual_Interface#Connector
+[edid]: https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
 [edid-lib]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/edid
 [hdmi]: https://en.wikipedia.org/wiki/HDMI#Connectors
 [novak-gamma]: https://blog.johnnovak.net/2016/09/21/what-every-coder-should-know-about-gamma/
