@@ -13,6 +13,11 @@ group("tests") {
 fuchsia_unittest_package("lowpan-integration-tests") {
   manifest = "meta/lowpan-integration-tests.cmx"
   deps = [ ":lowpan-integration-tests-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "WARN"
+    }
+  }
 }
 
 rustc_test("lowpan-integration-tests-bin") {

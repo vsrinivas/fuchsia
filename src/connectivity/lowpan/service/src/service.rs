@@ -152,7 +152,7 @@ macro_rules! impl_serve_to_driver {
                                     }),
                                     Err(err) => server_end.close_with_epitaph(err.into()),
                                 } {
-                                    fx_log_err!("{:?}", err);
+                                    fx_log_warn!("{:?}", err);
                                 }
                             }
                         }
