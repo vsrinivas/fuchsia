@@ -1,0 +1,77 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [ ":component" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "init-test.bind"
+  header_output = "init-test-bind.h"
+  bind_output = "init-test.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "init-test"
+  sources = [ "init-test.cc" ]
+  deps = [
+    ":bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "init-test"
+  deps = [ ":driver" ]
+  info = "init-test-info.json"
+}
+
+rustc_test("init-test") {
+  testonly = true
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample-rustc",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+fuchsia_unittest_package("package") {
+  package_name = "ddk-init-test"
+  deps = [
+    ":component",
+    ":init-test",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
