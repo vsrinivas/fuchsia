@@ -116,6 +116,26 @@ fn main() {
             golden_expected_filename: vec!["feature_review", "BUILD.gn"],
             extra_args: vec![],
         },
+        TestCase {
+            manifest_path: vec!["cargo_features", "Cargo.toml"],
+            golden_expected_filename: vec!["cargo_features", "BUILD-default.gn"],
+            extra_args: vec![],
+        },
+        TestCase {
+            manifest_path: vec!["cargo_features", "Cargo.toml"],
+            golden_expected_filename: vec!["cargo_features", "BUILD-all-features.gn"],
+            extra_args: vec!["--all-features"],
+        },
+        TestCase {
+            manifest_path: vec!["cargo_features", "Cargo.toml"],
+            golden_expected_filename: vec!["cargo_features", "BUILD-no-default-features.gn"],
+            extra_args: vec!["--no-default-features"],
+        },
+        TestCase {
+            manifest_path: vec!["cargo_features", "Cargo.toml"],
+            golden_expected_filename: vec!["cargo_features", "BUILD-featurefoo.gn"],
+            extra_args: vec!["--features", "featurefoo"],
+        },
     ];
 
     let run_gnaw = |manifest_path: &[&str], extra_args: &[&str]| {

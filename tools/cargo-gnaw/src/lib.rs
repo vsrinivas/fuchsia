@@ -7,7 +7,7 @@ use {
     anyhow::{Context, Error},
     argh::FromArgs,
     camino::Utf8PathBuf,
-    cargo_metadata::DependencyKind,
+    cargo_metadata::{CargoOpt, DependencyKind},
     serde_derive::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashMap, HashSet},
     std::{
@@ -62,6 +62,18 @@ pub struct Opt {
     /// don't generate a target for the root crate
     #[argh(switch)]
     skip_root: bool,
+
+    /// run cargo with `--all-features`
+    #[argh(switch)]
+    all_features: bool,
+
+    /// run cargo with `--no-default-features`
+    #[argh(switch)]
+    no_default_features: bool,
+
+    /// run cargo with `--features <FEATURES>`
+    #[argh(option)]
+    features: Vec<String>,
 }
 
 type PackageName = String;
@@ -215,6 +227,15 @@ pub fn generate_from_manifest<W: io::Write>(
     cmd.manifest_path(&manifest_path);
     if let Some(ref cargo_path) = opt.cargo {
         cmd.cargo_path(&cargo_path);
+    }
+    if opt.all_features {
+        cmd.features(CargoOpt::AllFeatures);
+    }
+    if opt.no_default_features {
+        cmd.features(CargoOpt::NoDefaultFeatures);
+    }
+    if !opt.features.is_empty() {
+        cmd.features(CargoOpt::SomeFeatures(opt.features.clone()));
     }
     cmd.other_options([String::from("--frozen")]);
     let metadata = cmd.exec().with_context(|| {

@@ -1,0 +1,12 @@
+[package]
+name = "sub-crate-with-feature"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sub-crate-for-feature = { path = "../sub-crate-for-feature", optional = true }
+
+[features]
+featurefoo = ["sub-crate-for-feature"]

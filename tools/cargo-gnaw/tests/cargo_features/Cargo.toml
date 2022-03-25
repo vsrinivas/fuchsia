@@ -1,0 +1,15 @@
+[package]
+name = "cargo_features"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sub-crate-default = { path = "./sub-crate-default", optional = true }
+sub-crate-non-default = { path = "./sub-crate-non-default", optional = true }
+sub-crate-with-feature = { path = "./sub-crate-with-feature" }
+
+[features]
+default = ["sub-crate-default"]
+featurefoo = ["sub-crate-with-feature/featurefoo"]
