@@ -178,7 +178,7 @@ pub async fn write_fidl<T: Persistable>(file: &fio::FileProxy, data: &mut T) -> 
     write(
         file,
         encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             data,
         )?,
     )
@@ -197,7 +197,7 @@ pub async fn write_fidl_in_namespace<T: Persistable>(
     write_in_namespace(
         path,
         encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             data,
         )?,
     )
@@ -545,7 +545,7 @@ mod tests {
 
         // Binary encoded FIDL message, with header and padding.
         let fidl_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut data,
         )
         .unwrap();
