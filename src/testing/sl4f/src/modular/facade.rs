@@ -40,10 +40,11 @@ use {
 const BASEMGR_LEGACY_URL: &str = fuchsia_single_component_package_url!("basemgr");
 
 /// Glob pattern for the path to sessionmgr's debug services for sessionctl.
-const SESSIONCTL_GLOB: &str = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
+const SESSIONCTL_GLOB: &str = "/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl";
 
 /// Glob pattern for the path to basemgr's debug service when basemgr is running as a legacy component.
-const BASEMGR_DEBUG_LEGACY_GLOB: &str = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
+const BASEMGR_DEBUG_LEGACY_GLOB: &str =
+    "/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/basemgr.cmx/*/out/debug/basemgr";
 
 // Maximum number of story commands to send to a single Enqueue call.
 const STORY_COMMAND_CHUNK_SIZE: usize = 32;

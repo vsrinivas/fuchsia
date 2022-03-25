@@ -96,6 +96,7 @@ rustc_library("lib") {
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/wlan-service-util",
     "//src/lib/async-utils",
+    "//src/lib/component_hub",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

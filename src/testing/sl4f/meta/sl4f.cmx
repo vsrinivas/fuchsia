@@ -18,8 +18,7 @@
             "build-info",
             "deprecated-global-data",
             "deprecated-global-hub",
-            "deprecated-global-tmp",
-            "hub"
+            "deprecated-global-tmp"
         ],
         "services": [
             "fuchsia.bluetooth.a2dp.ComponentLifecycle",

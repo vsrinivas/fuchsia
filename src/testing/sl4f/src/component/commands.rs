@@ -13,11 +13,11 @@ impl Facade for ComponentFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.parse()? {
             ComponentMethod::List => {
-                let result = self.list()?;
+                let result = self.list().await?;
                 Ok(to_value(result)?)
             }
             ComponentMethod::Search => {
-                let result = self.search(args)?;
+                let result = self.search(args).await?;
                 Ok(to_value(result)?)
             }
             ComponentMethod::Launch => {
