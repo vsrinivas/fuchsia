@@ -532,7 +532,7 @@ build_api_module("sdk_archives") {
   testonly = true
   data_keys = [ "sdk_archives" ]
   deps = [
-           "//sdk:archives",
+           "//sdk:ddk_archive",
            "//sdk:merged",
          ] + sdk_archive_labels
 }
