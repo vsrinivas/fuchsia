@@ -184,7 +184,11 @@ zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device
       break;
     }
   }
-  ZX_ASSERT_MSG(fragment != nullptr, "Attempted to bind fragment that wasn't unbound!\n");
+
+  if (!fragment) {
+    LOGF(ERROR, "Attempted to bind bound fragment %zu in composite device %p", index, name_.data());
+    return ZX_OK;
+  }
 
   zx_status_t status = fragment->Bind(dev);
   if (status != ZX_OK) {
