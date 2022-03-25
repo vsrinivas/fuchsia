@@ -19,7 +19,7 @@ namespace fidl::internal {
 // It enforces an invariant that |SendTwoWay| must be called exactly once.
 class ThenableBase {
  public:
-  explicit ThenableBase(ClientBase* client_base);
+  explicit ThenableBase(ClientBase* client_base, fidl::WriteOptions options);
   ~ThenableBase();
 
   ClientBase* client_base() const { return client_base_; }
@@ -28,6 +28,7 @@ class ThenableBase {
 
  private:
   ClientBase* client_base_;
+  fidl::WriteOptions options_;
 };
 
 // |WireThenableImpl| kick-starts a two-way client FIDL call: it stores an
@@ -48,8 +49,9 @@ template <typename FidlMethod, typename EncodedRequestMessage>
 class [[nodiscard]] WireThenableImpl : private ThenableBase {
  public:
   template <typename... Args>
-  explicit WireThenableImpl(ClientBase* client_base, Args&&... args)
-      : ThenableBase(client_base), request_message_(std::forward<Args>(args)...) {}
+  explicit WireThenableImpl(ClientBase* client_base, fidl::WriteOptions options, Args&&... args)
+      : ThenableBase(client_base, std::move(options)),
+        request_message_(std::forward<Args>(args)...) {}
 
   // |Then| takes a callback, and implements "at most once" semantics: it
   // invokes the callback at most once until the client goes away. In other
@@ -88,7 +90,7 @@ class [[nodiscard]] WireThenableImpl : private ThenableBase {
   template <typename Fn>
   void Then(Fn&& fn) && {
     std::move(*this).ThenExactlyOnce(MakeWireResponseContext<FidlMethod>(
-        WeakCallbackFactory<fidl::WireUnownedResult<FidlMethod>>{
+        WeakCallbackFactory<fidl::internal::WireUnownedResultType<FidlMethod>>{
             client_base()->client_object_lifetime()}
             .Then(std::forward<Fn>(fn))));
   }

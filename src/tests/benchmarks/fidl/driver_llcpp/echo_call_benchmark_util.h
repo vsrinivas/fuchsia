@@ -9,6 +9,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl_driver/cpp/wire_messaging.h>
 #include <lib/fit/defer.h>
@@ -72,13 +73,14 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
       state->NextStep();  // End: Setup. Begin: EchoCall.
 
-      client.buffer(*arena)->Echo(
-          std::move(aligned_value),
-          [&state, &completion](fdf::WireUnownedResult<typename ProtocolType::Echo>& result) {
-            state->NextStep();  // End: EchoCall. Begin: Teardown
-            ZX_ASSERT(result.ok());
-            completion.Signal();
-          });
+      client.buffer(*arena)
+          ->Echo(std::move(aligned_value))
+          .ThenExactlyOnce(
+              [&state, &completion](fdf::WireUnownedResult<typename ProtocolType::Echo>& result) {
+                state->NextStep();  // End: EchoCall. Begin: Teardown
+                ZX_ASSERT(result.ok());
+                completion.Signal();
+              });
     });
     ZX_ASSERT(ZX_OK == completion.Wait());
   }

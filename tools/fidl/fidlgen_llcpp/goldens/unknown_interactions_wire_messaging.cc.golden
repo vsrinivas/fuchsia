@@ -302,7 +302,8 @@ fidl::internal::WireWeakAsyncClientImpl<
       _request{};
   return ::fidl::internal::WireThenable<
       ::test_unknowninteractions::Example::StrictTwoWay>{
-      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+      _client_base(), ::fidl::WriteOptions{},
+      ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_unknowninteractions::Example>::
@@ -392,7 +393,8 @@ fidl::internal::WireWeakAsyncClientImpl<
       _request{};
   return ::fidl::internal::WireThenable<
       ::test_unknowninteractions::Example::FlexibleTwoWay>{
-      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+      _client_base(), ::fidl::WriteOptions{},
+      ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_unknowninteractions::Example>::StrictOneWay() {
@@ -471,7 +473,8 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _request{};
   return ::fidl::internal::WireBufferThenable<
       ::test_unknowninteractions::Example::StrictTwoWay>{
-      _client_base(), _allocator(), _buffer_size, &_request};
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
+      &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_unknowninteractions::Example>::
@@ -511,7 +514,8 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _request{};
   return ::fidl::internal::WireBufferThenable<
       ::test_unknowninteractions::Example::FlexibleTwoWay>{
-      _client_base(), _allocator(), _buffer_size, &_request};
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
+      &_request};
 }
 
 ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>

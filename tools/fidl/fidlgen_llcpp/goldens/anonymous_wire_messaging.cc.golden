@@ -183,7 +183,8 @@ fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>::
       _request{union_member, table_member};
   return ::fidl::internal::WireThenable<
       ::test_anonymous::SomeProtocol::SomeMethod>{
-      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+      _client_base(), ::fidl::WriteOptions{},
+      ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
@@ -223,8 +224,9 @@ fidl::internal::WireWeakAsyncBufferClientImpl<::test_anonymous::SomeProtocol>::
       ::test_anonymous::SomeProtocol::SomeMethod>
       _request{union_member, table_member};
   return ::fidl::internal::WireBufferThenable<
-      ::test_anonymous::SomeProtocol::SomeMethod>{_client_base(), _allocator(),
-                                                  _buffer_size, &_request};
+      ::test_anonymous::SomeProtocol::SomeMethod>{
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
+      &_request};
 }
 
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> fidl::internal::

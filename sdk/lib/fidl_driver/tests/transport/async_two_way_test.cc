@@ -7,6 +7,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -29,12 +30,12 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
 
     // Test using a different arena in the response.
     auto response_arena = fdf::Arena::Create(0, "");
-    fdf_response_arena = response_arena->get();
     completer.buffer(*response_arena).Reply(kResponsePayload);
+    fdf_response_arena = std::move(*response_arena);
   }
 
   fdf_arena_t* fdf_request_arena;
-  fdf_arena_t* fdf_response_arena;
+  fdf::Arena fdf_response_arena;
 };
 
 TEST(DriverTransport, TwoWayAsync) {
@@ -61,11 +62,12 @@ TEST(DriverTransport, TwoWayAsync) {
   auto bind_and_run_on_dispatcher_thread = [&] {
     client.Bind(std::move(client_end), dispatcher->get());
 
-    client.buffer(*arena)->TwoWay(
-        kRequestPayload, [&](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+    client.buffer(*arena)
+        ->TwoWay(kRequestPayload)
+        .ThenExactlyOnce([&](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
           ASSERT_OK(result.status());
           ASSERT_EQ(kResponsePayload, result->payload);
-          ASSERT_EQ(server->fdf_response_arena, result.arena().get());
+          ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
           sync_completion_signal(&called);
         });
   };
@@ -101,17 +103,31 @@ TEST(DriverTransport, TwoWayAsyncShared) {
   auto arena = fdf::Arena::Create(0, "");
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
-  sync_completion_t done;
-  client.buffer(*arena)->TwoWay(
-      kRequestPayload,
-      [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+
+  // Test |ThenExactlyOnce|.
+  libsync::Completion done;
+  client.buffer(*arena)
+      ->TwoWay(kRequestPayload)
+      .ThenExactlyOnce(
+          [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+            ASSERT_OK(result.status());
+            ASSERT_EQ(kResponsePayload, result->payload);
+            ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
+            done.Signal();
+          });
+  ASSERT_OK(done.Wait());
+
+  // Test |Then|.
+  done.Reset();
+  client.buffer(*arena)
+      ->TwoWay(kRequestPayload)
+      .Then([&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
         ASSERT_OK(result.status());
         ASSERT_EQ(kResponsePayload, result->payload);
-        ASSERT_EQ(server->fdf_response_arena, result.arena().get());
-        sync_completion_signal(&done);
+        ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
+        done.Signal();
       });
-
-  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+  ASSERT_OK(done.Wait());
 }
 
 }  // namespace

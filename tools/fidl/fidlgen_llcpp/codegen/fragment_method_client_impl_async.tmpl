@@ -110,7 +110,8 @@
   {{ .WireThenable }} {{ .Protocol.WireWeakAsyncClientImpl.NoLeading }}::{{ .Name }}(
         {{- RenderParams .RequestArgs }}) {
     {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-    return {{ .WireThenable }}{_client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+    return {{ .WireThenable }}{
+        _client_base(), ::fidl::WriteOptions{}, ::fidl::internal::AllowUnownedInputRef{}, &_request};
   }
 
 {{- end }}

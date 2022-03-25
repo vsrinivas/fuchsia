@@ -314,7 +314,8 @@ fidl::internal::WireWeakAsyncClientImpl<
       _request{s};
   return ::fidl::internal::WireThenable<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>{
-      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+      _client_base(), ::fidl::WriteOptions{},
+      ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncClientImpl<
     ::test_requestflexibleenvelope::Protocol>::
@@ -413,7 +414,8 @@ fidl::internal::WireWeakAsyncClientImpl<
       _request{s};
   return ::fidl::internal::WireThenable<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>{
-      _client_base(), ::fidl::internal::AllowUnownedInputRef{}, &_request};
+      _client_base(), ::fidl::WriteOptions{},
+      ::fidl::internal::AllowUnownedInputRef{}, &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_requestflexibleenvelope::Protocol>::
@@ -460,7 +462,8 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _request{s};
   return ::fidl::internal::WireBufferThenable<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>{
-      _client_base(), _allocator(), _buffer_size, &_request};
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
+      &_request};
 }
 void fidl::internal::WireWeakAsyncBufferClientImpl<
     ::test_requestflexibleenvelope::Protocol>::
@@ -507,7 +510,8 @@ fidl::internal::WireWeakAsyncBufferClientImpl<
       _request{s};
   return ::fidl::internal::WireBufferThenable<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>{
-      _client_base(), _allocator(), _buffer_size, &_request};
+      _client_base(), ::fidl::WriteOptions{}, _allocator(), _buffer_size,
+      &_request};
 }
 
 ::fidl::WireResult<

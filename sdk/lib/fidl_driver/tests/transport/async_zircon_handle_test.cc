@@ -51,16 +51,17 @@ TEST(DriverTransport, SendZirconHandleAsync) {
   zx_handle_t handle = ev.get();
 
   sync_completion_t done;
-  client.buffer(*arena)->SendZirconHandle(
-      std::move(ev),
-      [&done,
-       handle](fdf::WireUnownedResult<::test_transport::SendZirconHandleTest::SendZirconHandle>&
-                   result) {
-        ASSERT_OK(result.status());
-        ASSERT_TRUE(result->h.is_valid());
-        ASSERT_EQ(handle, result->h.get());
-        sync_completion_signal(&done);
-      });
+  client.buffer(*arena)
+      ->SendZirconHandle(std::move(ev))
+      .ThenExactlyOnce(
+          [&done,
+           handle](fdf::WireUnownedResult<::test_transport::SendZirconHandleTest::SendZirconHandle>&
+                       result) {
+            ASSERT_OK(result.status());
+            ASSERT_TRUE(result->h.is_valid());
+            ASSERT_EQ(handle, result->h.get());
+            sync_completion_signal(&done);
+          });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

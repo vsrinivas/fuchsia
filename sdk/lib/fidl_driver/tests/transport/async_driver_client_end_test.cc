@@ -52,16 +52,16 @@ TEST(DriverTransport, SendDriverClientEnd) {
   fidl_handle_t handle = client_end_to_send.handle()->get();
 
   sync_completion_t done;
-  client.buffer(*arena)->SendDriverClientEnd(
-      std::move(client_end_to_send),
-      [&done, handle](
-          fdf::WireUnownedResult<::test_transport::SendDriverClientEndTest::SendDriverClientEnd>&
-              result) {
-        ASSERT_OK(result.status());
-        ASSERT_TRUE(result->h.is_valid());
-        ASSERT_EQ(handle, result->h.handle()->get());
-        sync_completion_signal(&done);
-      });
+  client.buffer(*arena)
+      ->SendDriverClientEnd(std::move(client_end_to_send))
+      .ThenExactlyOnce(
+          [&done, handle](fdf::WireUnownedResult<
+                          ::test_transport::SendDriverClientEndTest::SendDriverClientEnd>& result) {
+            ASSERT_OK(result.status());
+            ASSERT_TRUE(result->h.is_valid());
+            ASSERT_EQ(handle, result->h.handle()->get());
+            sync_completion_signal(&done);
+          });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

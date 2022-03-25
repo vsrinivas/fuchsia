@@ -517,21 +517,6 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 
   // Caller provides the backing storage for FIDL message.
-  void Add(uint16_t addend1, uint16_t addend2,
-           ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb);
-
-  // Caller provides the backing storage for FIDL message.
-  void Add(uint16_t addend1, uint16_t addend2,
-           ::fit::callback<
-               void(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*)>
-               _cb);
-
-  // Caller provides the backing storage for FIDL message.
-  void Add(
-      uint16_t addend1, uint16_t addend2,
-      ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
-
-  // Caller provides the backing storage for FIDL message.
   ::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add> Add(
       uint16_t addend1, uint16_t addend2);
 };

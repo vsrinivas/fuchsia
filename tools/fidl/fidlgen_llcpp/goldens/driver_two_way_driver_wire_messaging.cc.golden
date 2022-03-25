@@ -52,65 +52,9 @@ namespace test_drivertwoway {
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
 
-void fidl::internal::
-    WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
-        uint16_t addend1, uint16_t addend2,
-        ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
-                      result) override {
-      cb_(result);
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-  auto* _context = new ResponseContext(std::move(_cb));
-
-  Add(addend1, addend2, _context);
-}
-
-void fidl::internal::
-    WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
-        uint16_t addend1, uint16_t addend2,
-        ::fit::callback<
-            void(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*)>
-            _cb) {
-  using Callback = decltype(_cb);
-  class ResponseContext final
-      : public ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add> {
-   public:
-    ResponseContext(Callback cb) : cb_(std::move(cb)) {}
-
-    void OnResult(::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>&
-                      result) override {
-      if (result.ok()) {
-        ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response =
-            result.Unwrap();
-        cb_(response);
-      }
-      delete this;
-    }
-
-   private:
-    Callback cb_;
-  };
-  auto* _context = new ResponseContext(std::move(_cb));
-
-  Add(addend1, addend2, _context);
-}
-
-void fidl::internal::
-    WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
-        uint16_t addend1, uint16_t addend2,
-        ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>*
-            _context) {
+::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add>
+fidl::internal::WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
+    uint16_t addend1, uint16_t addend2) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
           ::test_drivertwoway::TwoWay::Add>();
@@ -118,16 +62,12 @@ void fidl::internal::
 
   ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
       _request{addend1, addend2};
-  ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>,
-      ::fidl::internal::DriverTransport>
-      _request_message(_buffer, _buffer_size, &_request);
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<
           ::fidl::internal::DriverTransport>(_arena().get());
-  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context,
-                             std::move(_options));
+  return ::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add>{
+      _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
 }
 namespace test_drivertwoway {
 #endif  // __Fuchsia__

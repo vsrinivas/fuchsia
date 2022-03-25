@@ -69,8 +69,8 @@ TEST(Client, ServerResetMidCall) {
   auto arena = fdf::Arena::Create(0, "");
   ASSERT_OK(arena.status_value());
   sync_completion_t call_completion;
-  client.buffer(*arena)->TwoWay(
-      0u, [&call_completion](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+  client.buffer(*arena)->TwoWay(0u).ThenExactlyOnce(
+      [&call_completion](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
         EXPECT_TRUE(result.is_peer_closed());
         sync_completion_signal(&call_completion);
       });
