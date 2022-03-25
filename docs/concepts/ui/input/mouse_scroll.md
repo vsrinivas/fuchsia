@@ -20,8 +20,6 @@ effect, is dependent on a number of components that handle scroll wheel events.
 
 ## Protocols and event flow
 
-{% include "docs/concepts/ui/input/diagram_event_flow.txt" %}
-
 ### Input driver
 
 The input driver reads how many detents have moved on the scroll wheel via the
