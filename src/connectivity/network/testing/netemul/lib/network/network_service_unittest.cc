@@ -219,11 +219,8 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
   }
 
   void TearDown() override {
-    async::PostTask(svc_loop_->dispatcher(), [this]() {
-      svc_.reset();
-      svc_loop_->Quit();
-    });
-    svc_loop_->JoinThreads();
+    svc_loop_ = nullptr;
+    svc_ = nullptr;
   }
 
   std::shared_ptr<sys::ServiceDirectory> real_services_;
