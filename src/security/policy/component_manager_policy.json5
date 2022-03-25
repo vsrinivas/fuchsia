@@ -485,6 +485,39 @@
                     "/core/lowpan-ot-driver",
                 ],
             },
+            {
+                source_moniker: "/core/lowpanservice",
+                source: "component",
+                source_name: "fuchsia.factory.lowpan.FactoryLookup",
+                capability: "protocol",
+                target_monikers: [
+                    "/core",
+                    "/core/appmgr",
+                    "/core/lowpanservice",
+                ],
+            },
+            {
+                source_moniker: "/core/lowpanservice",
+                source: "component",
+                source_name: "fuchsia.lowpan.device.DeviceExtraConnector",
+                capability: "protocol",
+                target_monikers: [
+                    "/core",
+                    "/core/appmgr",
+                    "/core/lowpanservice",
+                ],
+            },
+            {
+                source_moniker: "/core/lowpanservice",
+                source: "component",
+                source_name: "fuchsia.lowpan.device.DeviceRouterExtraConnector",
+                capability: "protocol",
+                target_monikers: [
+                    "/core",
+                    "/core/appmgr",
+                    "/core/lowpanservice",
+                ],
+            },
         ],
         child_policy: {
             reboot_on_terminate: [

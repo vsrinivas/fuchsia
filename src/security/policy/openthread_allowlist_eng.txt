@@ -1,3 +1,5 @@
+# Component
+fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx
 # CLI
 fuchsia-pkg://fuchsia.com/lowpanctl#meta/lowpanctl.cmx
 # Tests

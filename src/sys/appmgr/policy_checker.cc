@@ -38,7 +38,7 @@ constexpr char kSmcResourceAllowList[] = "allowlist/smc_resource.txt";
 constexpr char kSystemUpdaterAllowList[] = "allowlist/system_updater.txt";
 constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
 constexpr char kWeaveSignerAllowList[] = "allowlist/weave_signer.txt";
-
+constexpr char kOpenthreadRestrictedConnectorAllowlist[] = "allowlist/openthread.txt";
 }  // end of namespace.
 
 PolicyChecker::PolicyChecker(fbl::unique_fd config) : config_(std::move(config)) {}
@@ -157,6 +157,24 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasService("fuchsia.weave.Signer") && !CheckWeaveSigner(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.weave.Signer";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.factory.lowpan.FactoryLookup") &&
+      !CheckOpenthreadRestrictedConnector(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.lowpan.factory.FactoryLookup";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.lowpan.device.DeviceExtraConnector") &&
+      !CheckOpenthreadRestrictedConnector(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.lowpan.device.DeviceExtraConnector";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.lowpan.device.DeviceRouterExtraConnector") &&
+      !CheckOpenthreadRestrictedConnector(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.lowpan.device.DeviceRouterExtraConnector";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
@@ -315,6 +333,11 @@ bool PolicyChecker::CheckVmexResource(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckWeaveSigner(const FuchsiaPkgUrl& pkg_url) {
   AllowList weave_signer_allowlist(config_, kWeaveSignerAllowList);
   return weave_signer_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckOpenthreadRestrictedConnector(const FuchsiaPkgUrl& pkg_url) {
+  AllowList openthread_restricted_connector(config_, kOpenthreadRestrictedConnectorAllowlist);
+  return openthread_restricted_connector.IsAllowed(pkg_url);
 }
 
 }  // namespace component
