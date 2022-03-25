@@ -106,11 +106,12 @@ impl TTYState {
 struct Terminal {
     state: Arc<TTYState>,
     id: u32,
+    locked: RwLock<bool>,
 }
 
 impl Terminal {
     pub fn new(state: Arc<TTYState>, id: u32) -> Self {
-        Self { state, id }
+        Self { state, id, locked: RwLock::new(true) }
     }
 }
 
@@ -231,6 +232,25 @@ impl FileOps for DevPtmxFile {
                 current_task.mm.write_object(addr, &value)?;
                 Ok(SUCCESS)
             }
+            TIOCGPTLCK => {
+                if user_addr.is_null() {
+                    return error!(EINVAL);
+                }
+                let addr = UserRef::<i32>::new(user_addr);
+                let value = if *self.terminal.locked.read() { 1 } else { 0 };
+                current_task.mm.write_object(addr, &value)?;
+                Ok(SUCCESS)
+            }
+            TIOCSPTLCK => {
+                if user_addr.is_null() {
+                    return error!(EINVAL);
+                }
+                let addr = UserRef::<i32>::new(user_addr);
+                let mut value = 0;
+                current_task.mm.read_object(addr, &mut value)?;
+                *self.terminal.locked.write() = value != 0;
+                Ok(SUCCESS)
+            }
             _ => {
                 log::error!("ptmx received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
@@ -258,6 +278,9 @@ impl DeviceOps for DevPts {
     ) -> Result<Box<dyn FileOps>, Errno> {
         let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
         let terminal = self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
+        if *terminal.locked.read() {
+            return error!(EIO);
+        }
         Ok(Box::new(DevPtsFile::new(terminal)))
     }
 }
@@ -378,73 +401,113 @@ mod tests {
     use super::*;
     use crate::testing::*;
 
-    #[test]
-    fn opening_ptmx_creates_pts() {
-        let (kernel, _task) = create_kernel_and_task();
-        let fs = dev_pts_fs(&kernel);
-        let root = fs.root();
-        assert!(root.component_lookup(b"0").is_err());
-        let ptmx = root.component_lookup(b"ptmx").unwrap();
-        let _opened_ptmx = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        assert!(root.component_lookup(b"0").is_ok());
+    fn ioctl<T: zerocopy::AsBytes + zerocopy::FromBytes + Copy>(
+        task: &CurrentTask,
+        file: &FileHandle,
+        command: u32,
+        value: &T,
+    ) -> Result<T, Errno> {
+        let address = map_memory(&task, UserAddress::default(), std::mem::size_of::<T>() as u64);
+        let address_ref = UserRef::<T>::new(address);
+        task.mm.write_object(address_ref, value)?;
+        file.ioctl(&task, command, address)?;
+        let mut result = *value;
+        task.mm.read_object(address_ref, &mut result)?;
+        Ok(result)
+    }
+
+    fn open_ptmx_and_unlock(
+        kernel: &Kernel,
+        task: &CurrentTask,
+        fs: &FileSystemHandle,
+    ) -> Result<FileHandle, Errno> {
+        let ptmx = fs.root().component_lookup(b"ptmx")?;
+        let file = FileObject::new_anonymous(
+            ptmx.node.open(kernel, OpenFlags::RDONLY)?,
+            ptmx.node.clone(),
+            OpenFlags::RDWR,
+        );
+
+        // Unlock terminal
+        ioctl::<i32>(task, &file, TIOCSPTLCK, &0)?;
+
+        Ok(file)
     }
 
     #[test]
-    fn closing_ptmx_closes_pts() {
-        let (kernel, _task) = create_kernel_and_task();
+    fn opening_ptmx_creates_pts() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        assert!(root.component_lookup(b"0").is_err());
-        let ptmx = root.component_lookup(b"ptmx").unwrap();
-        ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        assert!(root.component_lookup(b"0").is_err());
+        root.component_lookup(b"0").unwrap_err();
+        let _ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        root.component_lookup(b"0")?;
+
+        Ok(())
     }
 
     #[test]
-    fn pts_are_reused() {
-        let (kernel, _task) = create_kernel_and_task();
+    fn closing_ptmx_closes_pts() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        assert!(root.component_lookup(b"0").is_err());
-        let ptmx = root.component_lookup(b"ptmx").unwrap();
-        let _opened_ptmx0 = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        let mut _opened_ptmx1 = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        let _opened_ptmx2 = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        assert!(root.component_lookup(b"0").is_ok());
-        assert!(root.component_lookup(b"1").is_ok());
-        assert!(root.component_lookup(b"2").is_ok());
-        std::mem::drop(_opened_ptmx1);
-        assert!(root.component_lookup(b"1").is_err());
-        _opened_ptmx1 = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        assert!(root.component_lookup(b"1").is_ok());
+        root.component_lookup(b"0").unwrap_err();
+        open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        root.component_lookup(b"0").unwrap_err();
+
+        Ok(())
     }
 
     #[test]
-    fn opening_inexistant_replica_fails() {
+    fn pts_are_reused() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let root = fs.root();
+
+        let _ptmx0 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let mut _ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let _ptmx2 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+
+        root.component_lookup(b"0")?;
+        root.component_lookup(b"1")?;
+        root.component_lookup(b"2")?;
+
+        std::mem::drop(_ptmx1);
+        root.component_lookup(b"1").unwrap_err();
+
+        _ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        root.component_lookup(b"1")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn opening_inexistant_replica_fails() -> Result<(), anyhow::Error> {
         let (kernel, _task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let pts = fs
-            .root()
-            .create_node(
-                b"custom_pts",
-                FileMode::IFCHR | FileMode::from_bits(0o666),
-                DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
-            )
-            .unwrap();
+        let pts = fs.root().create_node(
+            b"custom_pts",
+            FileMode::IFCHR | FileMode::from_bits(0o666),
+            DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
+        )?;
         assert!(pts.node.open(&kernel, OpenFlags::RDONLY).is_err());
+
+        Ok(())
     }
 
     #[test]
-    fn deleting_pts_nodes_do_not_crash() {
-        let (kernel, _task) = create_kernel_and_task();
+    fn deleting_pts_nodes_do_not_crash() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        let ptmx = root.component_lookup(b"ptmx").unwrap();
-        let opened_ptmx0 = ptmx.node.open(&kernel, OpenFlags::RDONLY).unwrap();
-        assert!(root.component_lookup(b"0").is_ok());
-        root.unlink(b"0", UnlinkKind::NonDirectory).unwrap();
-        assert!(root.component_lookup(b"0").is_err());
-        std::mem::drop(opened_ptmx0);
+        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        root.component_lookup(b"0")?;
+        root.unlink(b"0", UnlinkKind::NonDirectory)?;
+        root.component_lookup(b"0").unwrap_err();
+
+        std::mem::drop(ptmx);
+
+        Ok(())
     }
 
     #[test]
@@ -452,21 +515,17 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
-        let ptmx = root.component_lookup(b"ptmx")?;
-        let opened_file0 = FileObject::new_anonymous(
-            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
-            ptmx.node.clone(),
-            OpenFlags::RDONLY,
-        );
-        opened_file0.ioctl(&task, 42, UserAddress::default()).unwrap_err();
+
+        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        ptmx.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
         let pts = root.component_lookup(b"0")?;
-        let opened_file1 = FileObject::new_anonymous(
+        let pts_file = FileObject::new_anonymous(
             pts.node.open(&kernel, OpenFlags::RDONLY)?,
             pts.node.clone(),
             OpenFlags::RDONLY,
         );
-        opened_file1.ioctl(&task, 42, UserAddress::default()).unwrap_err();
+        pts_file.ioctl(&task, 42, UserAddress::default()).unwrap_err();
 
         Ok(())
     }
@@ -475,32 +534,53 @@ mod tests {
     fn test_tiocgptn_ioctl() -> Result<(), anyhow::Error> {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let root = fs.root();
-        let ptmx = root.component_lookup(b"ptmx")?;
-        let opened_file0 = FileObject::new_anonymous(
+        let ptmx0 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let ptmx1 = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+
+        let pts0 = ioctl::<u32>(&task, &ptmx0, TIOCGPTN, &0)?;
+        assert_eq!(pts0, 0);
+
+        let pts1 = ioctl::<u32>(&task, &ptmx1, TIOCGPTN, &0)?;
+        assert_eq!(pts1, 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_new_terminal_is_locked() -> Result<(), anyhow::Error> {
+        let (kernel, _task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let ptmx = fs.root().component_lookup(b"ptmx")?;
+        let _ptmx_file = FileObject::new_anonymous(
             ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
             ptmx.node.clone(),
-            OpenFlags::RDONLY,
-        );
-        let opened_file1 = FileObject::new_anonymous(
-            ptmx.node.open(&kernel, OpenFlags::RDONLY)?,
-            ptmx.node.clone(),
-            OpenFlags::RDONLY,
+            OpenFlags::RDWR,
         );
 
-        opened_file0.ioctl(&task, TIOCGPTN, UserAddress::default()).unwrap_err();
+        let pts = fs.root().component_lookup(b"0")?;
+        assert_eq!(pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err(), EIO);
 
-        let address = map_memory(&task, UserAddress::default(), 4);
-        let address_ref = UserRef::<u32>::new(address);
-        let mut result: u32 = 0;
+        Ok(())
+    }
 
-        opened_file0.ioctl(&task, TIOCGPTN, address)?;
-        task.mm.read_object(address_ref, &mut result)?;
-        assert_eq!(result, 0);
+    #[test]
+    fn test_lock_ioctls() -> Result<(), anyhow::Error> {
+        let (kernel, task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let ptmx = open_ptmx_and_unlock(&kernel, &task, &fs)?;
+        let pts = fs.root().component_lookup(b"0")?;
 
-        opened_file1.ioctl(&task, TIOCGPTN, address)?;
-        task.mm.read_object(address_ref, &mut result)?;
-        assert_eq!(result, 1);
+        // Check that the lock is not set.
+        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 0);
+        // /dev/pts/0 can be opened
+        pts.node.open(&kernel, OpenFlags::RDONLY)?;
+
+        // Lock the terminal
+        ioctl::<i32>(&task, &ptmx, TIOCSPTLCK, &42)?;
+        // Check that the lock is set.
+        assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 1);
+        // /dev/pts/0 cannot be opened
+        pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err();
 
         Ok(())
     }
