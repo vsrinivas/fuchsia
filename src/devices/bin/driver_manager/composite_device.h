@@ -123,6 +123,9 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
                             fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
 
+  static zx::status<std::unique_ptr<CompositeDevice>> CreateForDeviceGroup(
+      std::string_view name, fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc);
+
   static zx_status_t CreateFromDriverIndex(MatchedCompositeDriverInfo driver,
                                            std::unique_ptr<CompositeDevice>* out);
 

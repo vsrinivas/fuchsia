@@ -16,6 +16,31 @@
 
 namespace fdm = fuchsia_device_manager;
 
+namespace {
+
+fbl::Array<StrProperty> ConvertStringProperties(
+    fidl::VectorView<fdm::wire::DeviceStrProperty> str_props) {
+  fbl::Array<StrProperty> str_properties(new StrProperty[str_props.count()], str_props.count());
+  for (size_t i = 0; i < str_props.count(); i++) {
+    str_properties[i].key = str_props[i].key.get();
+    if (str_props[i].value.is_int_value()) {
+      str_properties[i].value.emplace<StrPropValueType::Integer>(str_props[i].value.int_value());
+    } else if (str_props[i].value.is_str_value()) {
+      str_properties[i].value.emplace<StrPropValueType::String>(
+          std::string(str_props[i].value.str_value().get()));
+    } else if (str_props[i].value.is_bool_value()) {
+      str_properties[i].value.emplace<StrPropValueType::Bool>(str_props[i].value.bool_value());
+    } else if (str_props[i].value.is_enum_value()) {
+      str_properties[i].value.emplace<StrPropValueType::Enum>(
+          std::string(str_props[i].value.enum_value().get()));
+    }
+  }
+
+  return str_properties;
+}
+
+}  // namespace
+
 // CompositeDevice methods
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
@@ -51,24 +76,7 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   fbl::Array<std::unique_ptr<Metadata>> metadata(
       new std::unique_ptr<Metadata>[comp_desc.metadata.count()], comp_desc.metadata.count());
 
-  fbl::Array<StrProperty> str_properties(new StrProperty[comp_desc.str_props.count()],
-                                         comp_desc.str_props.count());
-  for (size_t i = 0; i < comp_desc.str_props.count(); i++) {
-    str_properties[i].key = comp_desc.str_props[i].key.get();
-    if (comp_desc.str_props[i].value.is_int_value()) {
-      str_properties[i].value.emplace<StrPropValueType::Integer>(
-          comp_desc.str_props[i].value.int_value());
-    } else if (comp_desc.str_props[i].value.is_str_value()) {
-      str_properties[i].value.emplace<StrPropValueType::String>(
-          std::string(comp_desc.str_props[i].value.str_value().get()));
-    } else if (comp_desc.str_props[i].value.is_bool_value()) {
-      str_properties[i].value.emplace<StrPropValueType::Bool>(
-          comp_desc.str_props[i].value.bool_value());
-    } else if (comp_desc.str_props[i].value.is_enum_value()) {
-      str_properties[i].value.emplace<StrPropValueType::Enum>(
-          std::string(comp_desc.str_props[i].value.enum_value().get()));
-    }
-  }
+  fbl::Array<StrProperty> str_properties = ConvertStringProperties(comp_desc.str_props);
 
   for (size_t i = 0; i < comp_desc.metadata.count(); i++) {
     std::unique_ptr<Metadata> md;
@@ -112,6 +120,52 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   }
   *out = std::move(dev);
   return ZX_OK;
+}
+
+zx::status<std::unique_ptr<CompositeDevice>> CompositeDevice::CreateForDeviceGroup(
+    std::string_view name, fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
+  fbl::String name_obj(name);
+
+  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[group_desc.props.count() + 1],
+                                          group_desc.props.count() + 1);
+  memcpy(properties.data(), group_desc.props.data(),
+         group_desc.props.count() * sizeof(group_desc.props.data()[0]));
+
+  // Set a property unique to composite devices.
+  properties[group_desc.props.count()].id = BIND_COMPOSITE;
+  properties[group_desc.props.count()].value = 1;
+
+  fbl::Array<std::unique_ptr<Metadata>> metadata(
+      new std::unique_ptr<Metadata>[group_desc.metadata.count()], group_desc.metadata.count());
+
+  fbl::Array<StrProperty> str_properties = ConvertStringProperties(group_desc.str_props);
+
+  for (size_t i = 0; i < group_desc.metadata.count(); i++) {
+    std::unique_ptr<Metadata> md;
+    zx_status_t status = Metadata::Create(group_desc.metadata[i].data.count(), &md);
+    if (status != ZX_OK) {
+      return zx::error(status);
+      ;
+    }
+
+    md->type = group_desc.metadata[i].key;
+    md->length = group_desc.metadata[i].data.count();
+    memcpy(md->Data(), group_desc.metadata[i].data.data(), md->length);
+    metadata[i] = std::move(md);
+  }
+
+  auto dev = std::make_unique<CompositeDevice>(
+      std::move(name), std::move(properties), std::move(str_properties),
+      group_desc.fragments.count(), 0, group_desc.spawn_colocated, std::move(metadata), false);
+  for (uint32_t i = 0; i < group_desc.fragments.count(); ++i) {
+    const auto& node = group_desc.fragments[i];
+    std::string name(node.name.data(), node.name.size());
+    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), name, i,
+                                                              fbl::Array<const zx_bind_inst_t>());
+    dev->unbound_fragments_.push_back(std::move(fragment));
+  }
+
+  return zx::ok(std::move(dev));
 }
 
 zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedCompositeDriverInfo driver,

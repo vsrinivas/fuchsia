@@ -236,6 +236,18 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   return result.value() == libname;
 }
 
+zx_status_t DriverLoader::AddDeviceGroup(std::string_view topological_path,
+                                         fidl::VectorView<fdf::wire::DeviceGroupNode> nodes) {
+  fidl::Arena allocator;
+  auto result = driver_index_.sync()->AddDeviceGroup(fidl::StringView(allocator, topological_path),
+                                                     std::move(nodes));
+  if (!result.ok()) {
+    LOGF(ERROR, "DriverIndex::AddDeviceGroup failed: %d", result.status());
+  }
+
+  return result.status();
+}
+
 const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
     const fbl::RefPtr<Device>& dev, const MatchDeviceConfig& config) {
   if (!driver_index_.is_valid()) {

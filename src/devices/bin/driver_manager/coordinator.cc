@@ -846,6 +846,38 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   }
 }
 
+zx_status_t Coordinator::AddDeviceGroup(
+    const fbl::RefPtr<Device>& dev, std::string_view name,
+    fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
+  if (group_desc.fragments.count() == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  char device_path[fdm::wire::kDevicePathMax + 1];
+  zx_status_t status = GetTopologicalPath(dev, device_path, sizeof(device_path));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Append the device name to the path.
+  auto topological_path = std::string(device_path) + "/";
+  topological_path.append(name);
+
+  status = driver_loader_.AddDeviceGroup(topological_path, group_desc.fragments);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add device group to the driver index.\n");
+    return status;
+  }
+
+  status = bind_driver_manager_->AddDeviceGroup(topological_path, name, group_desc);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add device group to the bind driver manager.\n");
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Coordinator::BindDriver(Driver* drv) {
   zx_status_t status = bind_driver_manager_->MatchAndBind(root_device_, drv, true /* autobind */);
   if (status != ZX_ERR_NEXT) {

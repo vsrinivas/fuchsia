@@ -154,7 +154,12 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void BindFallbackDrivers();
   void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
+  zx_status_t BindDriverToDeviceGroup(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
+
   void DriverAdded(Driver* drv, const char* version);
+
+  zx_status_t AddDeviceGroup(const fbl::RefPtr<Device>& dev, std::string_view name,
+                             fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc);
 
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;

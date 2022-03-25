@@ -786,10 +786,16 @@ void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,
   }
 }
 
-// TODO(fxb/91510): Implement support for device groups.
 void Device::AddDeviceGroup(AddDeviceGroupRequestView request,
                             AddDeviceGroupCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto dev = fbl::RefPtr(this);
+  zx_status_t status =
+      this->coordinator->AddDeviceGroup(dev, request->name.get(), std::move(request->group_desc));
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess();
+  }
 }
 
 bool Device::DriverLivesInSystemStorage() const {

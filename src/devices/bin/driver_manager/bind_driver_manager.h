@@ -22,6 +22,8 @@ class CompositeDevice;
 using AttemptBindFunc =
     fit::function<zx_status_t(const Driver* drv, const fbl::RefPtr<Device>& dev)>;
 
+using CompositeDeviceMap = std::unordered_map<std::string, std::unique_ptr<CompositeDevice>>;
+
 class BindDriverManager {
  public:
   BindDriverManager(const BindDriverManager&) = delete;
@@ -61,8 +63,16 @@ class BindDriverManager {
   // Binds all the devices to the drivers in the Driver Index.
   void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
 
+  zx_status_t AddDeviceGroup(std::string_view topological_path, std::string_view group_name,
+                             fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc);
+
   // Public for testing only.
   void set_attempt_bind(AttemptBindFunc attempt_bind) { attempt_bind_ = std::move(attempt_bind); }
+
+  // Only exposed for testing.
+  const std::unordered_map<std::string, std::unique_ptr<CompositeDevice>>& device_groups() const {
+    return device_groups_;
+  }
 
  private:
   // Find and return matching drivers for |dev| in the Driver Index.
@@ -73,10 +83,16 @@ class BindDriverManager {
   zx_status_t MatchAndBindWithDriverIndex(const fbl::RefPtr<Device>& dev,
                                           const DriverLoader::MatchDeviceConfig& config);
 
+  zx_status_t MatchAndBindDeviceGroup(const fbl::RefPtr<Device>& dev,
+                                      std::string_view topological_path);
+
   // Binds the matched fragment in |driver| to |dev|. If a CompositeDevice for |driver| doesn't
   // exists in |driver_index_composite_devices_|, this function creates and adds it.
   zx_status_t BindDriverToFragment(const MatchedCompositeDriverInfo& driver,
                                    const fbl::RefPtr<Device>& dev);
+
+  zx_status_t BindDriverToDeviceGroup(const MatchedDeviceGroupInfo& device_group,
+                                      const fbl::RefPtr<Device>& dev);
 
   // Owner. Must outlive BindDriverManager.
   Coordinator* coordinator_;
@@ -87,7 +103,11 @@ class BindDriverManager {
 
   // All the composite devices received from the DriverIndex.
   // This maps driver URLs to the CompositeDevice object.
-  std::unordered_map<std::string, std::unique_ptr<CompositeDevice>> driver_index_composite_devices_;
+  CompositeDeviceMap driver_index_composite_devices_;
+
+  // All the composite devices for device groups received from the DriverIndex.
+  // This maps topological paths to the CompositeDevice object.
+  CompositeDeviceMap device_groups_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_BIND_DRIVER_MANAGER_H_

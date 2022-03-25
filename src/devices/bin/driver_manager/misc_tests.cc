@@ -518,4 +518,96 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   loop.RunUntilIdle();
 }
 
+TEST(MiscTestCase, AddDeviceGroup) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop index_loop(&kAsyncLoopConfigNeverAttachToThread);
+  ASSERT_OK(index_loop.StartThread("test-thread"));
+
+  InspectManager inspect_manager(loop.dispatcher());
+  FakeDriverIndex fake_driver_index(index_loop.dispatcher(),
+                                    [&](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+                                      return zx::error(ZX_ERR_NOT_FOUND);
+                                    });
+
+  auto config = NullConfig();
+  config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
+      std::move(fake_driver_index.Connect().value()), loop.dispatcher());
+
+  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),
+                          loop.dispatcher());
+
+  ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator));
+
+  auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+  ASSERT_OK(controller_endpoints.status_value());
+
+  auto coordinator_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
+  ASSERT_OK(coordinator_endpoints.status_value());
+
+  // Add the device.
+  fbl::RefPtr<Device> device;
+  auto status = coordinator.device_manager()->AddDevice(
+      coordinator.sys_device(), std::move(controller_endpoints->client),
+      std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
+      nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
+      {} /* driver_path */, {} /* args */, true /* skip_autobind */, false /* has_init */,
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /*outgoing_dir*/, &device);
+  ASSERT_OK(status);
+  ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
+
+  fidl::Arena allocator;
+  fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty> str_props(allocator, 2);
+  str_props[0] = fuchsia_device_manager::wire::DeviceStrProperty{
+      fidl::StringView(allocator, "scoter"),
+      fuchsia_device_manager::wire::PropertyValue::WithStrValue(fidl::ObjectView<fidl::StringView>(
+          allocator, fidl::StringView(allocator, "bufflehead")))};
+  str_props[1] = fuchsia_device_manager::wire::DeviceStrProperty{
+      fidl::StringView(allocator, "merganser"),
+      fuchsia_device_manager::wire::PropertyValue::WithIntValue(1000)};
+
+  fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty> props(allocator, 2);
+  props[0] = fuchsia_device_manager::wire::DeviceProperty{1, 0, 1};
+  props[1] = fuchsia_device_manager::wire::DeviceProperty{2, 0, 1};
+
+  fidl::VectorView<fdf::wire::NodeProperty> node_properties(allocator, 2);
+  node_properties[0] = fdf::wire::NodeProperty(allocator);
+  node_properties[0].set_key(fidl::ObjectView<fdf::wire::NodePropertyKey>(
+      allocator, fdf::wire::NodePropertyKey::WithIntValue(100)));
+  node_properties[0].set_value(fidl::ObjectView<fdf::wire::NodePropertyValue>(
+      allocator, fdf::wire::NodePropertyValue::WithBoolValue(false)));
+
+  node_properties[1] = fdf::wire::NodeProperty(allocator);
+  node_properties[1].set_key(fidl::ObjectView<fdf::wire::NodePropertyKey>(
+      allocator, fdf::wire::NodePropertyKey::WithIntValue(5)));
+  node_properties[1].set_value(fidl::ObjectView<fdf::wire::NodePropertyValue>(
+      allocator, fdf::wire::NodePropertyValue::WithIntValue(20)));
+
+  fidl::VectorView<fdf::wire::DeviceGroupNode> fragments(allocator, 1);
+  fragments[0] = fdf::wire::DeviceGroupNode{
+      .name = fidl::StringView(allocator, "mallard"),
+      .properties = node_properties,
+  };
+
+  fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata> metadata(allocator, 0);
+
+  fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc =
+      fuchsia_device_manager::wire::DeviceGroupDescriptor{
+          .props = props,
+          .str_props = str_props,
+          .fragments = fragments,
+          .spawn_colocated = false,
+          .metadata = metadata,
+      };
+
+  ASSERT_OK(coordinator.AddDeviceGroup(device, "group", group_desc));
+  loop.RunUntilIdle();
+  ZX_ASSERT(
+      coordinator.bind_driver_manager()->device_groups().count("/dev/sys/mock-device/group") != 0);
+
+  controller_endpoints->server.reset();
+  coordinator_endpoints->client.reset();
+  loop.RunUntilIdle();
+}
+
 int main(int argc, char** argv) { return RUN_ALL_TESTS(argc, argv); }

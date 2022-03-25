@@ -51,6 +51,9 @@ class DriverLoader {
     bool only_return_base_and_fallback_drivers = false;
   };
 
+  zx_status_t AddDeviceGroup(std::string_view topological_path,
+                             fidl::VectorView<fdf::wire::DeviceGroupNode> nodes);
+
   const std::vector<MatchedDriver> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
                                                           const MatchDeviceConfig& config);
   const std::vector<MatchedDriver> MatchPropertiesDriverIndex(
