@@ -478,3 +478,31 @@ fn test_safe_json() {
 
     assert_eq!(parsed_json, valid_json);
 }
+
+#[test]
+fn test_update_check() {
+    let all_packages =
+        vec![Package::with_name("update_package"), Package::with_name("update_package2")];
+    let update_check = UpdateCheck {
+        manifest: Some(Manifest {
+            packages: Packages { package: all_packages.clone() },
+            ..Manifest::default()
+        }),
+        ..UpdateCheck::ok(["http://url/base/", "https://url/base/"])
+    };
+
+    assert_eq!(
+        update_check.get_all_url_codebases().collect::<Vec<_>>(),
+        vec!["http://url/base/", "https://url/base/"]
+    );
+    assert_eq!(update_check.get_all_packages().cloned().collect::<Vec<_>>(), all_packages);
+    assert_eq!(
+        update_check.get_all_full_urls().collect::<Vec<_>>(),
+        vec![
+            "http://url/base/update_package",
+            "http://url/base/update_package2",
+            "https://url/base/update_package",
+            "https://url/base/update_package2"
+        ]
+    );
+}

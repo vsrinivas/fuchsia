@@ -134,11 +134,32 @@ pub struct UpdateCheck {
 }
 
 impl UpdateCheck {
-    pub fn ok(urls: Vec<String>) -> Self {
-        UpdateCheck { urls: Some(URLs::new(urls)), ..UpdateCheck::default() }
+    pub fn ok(urls: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        UpdateCheck {
+            urls: Some(URLs::new(urls.into_iter().map(Into::into).collect())),
+            ..UpdateCheck::default()
+        }
     }
+
     pub fn no_update() -> Self {
         UpdateCheck { status: OmahaStatus::NoUpdate, ..UpdateCheck::default() }
+    }
+
+    /// Returns an iterator of all url codebases in this `updatecheck`.
+    pub fn get_all_url_codebases(&self) -> impl Iterator<Item = &str> {
+        self.urls.iter().flat_map(|urls| &urls.url).map(|url| url.codebase.as_str())
+    }
+
+    /// Returns an iterator of all packages in this `updatecheck`.
+    pub fn get_all_packages(&self) -> impl Iterator<Item = &Package> {
+        self.manifest.iter().flat_map(|m| &m.packages.package)
+    }
+
+    /// Returns an iterator of all full urls in this `updatecheck`.
+    pub fn get_all_full_urls(&self) -> impl Iterator<Item = String> + '_ {
+        self.get_all_url_codebases().flat_map(move |codebase| {
+            self.get_all_packages().map(move |package| format!("{}{}", codebase, package.name))
+        })
     }
 }
 

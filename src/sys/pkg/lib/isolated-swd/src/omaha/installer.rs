@@ -157,16 +157,8 @@ fn try_create_install_plan(
         )));
     };
 
-    let urls = match update_check.status {
-        OmahaStatus::Ok => {
-            if let Some(urls) = &update_check.urls {
-                &urls.url
-            } else {
-                return Err(IsolatedInstallError::InstallPlan(anyhow!(
-                    "No urls in Omaha response"
-                )));
-            }
-        }
+    let mut urls = match update_check.status {
+        OmahaStatus::Ok => update_check.get_all_url_codebases(),
         OmahaStatus::NoUpdate => {
             return Err(IsolatedInstallError::InstallPlan(anyhow!(
                 "Was asked to create an install plan for a NoUpdate Omaha response"
@@ -182,33 +174,27 @@ fn try_create_install_plan(
             )));
         }
     };
-    let (url, rest) = if let Some((url, rest)) = urls.split_first() {
-        (url, rest)
-    } else {
-        return Err(IsolatedInstallError::InstallPlan(anyhow!("No url in Omaha response")));
-    };
+    let url = urls
+        .next()
+        .ok_or_else(|| IsolatedInstallError::InstallPlan(anyhow!("No url in Omaha response")))?;
 
-    if !rest.is_empty() {
-        warn!("Only 1 url is supported, found {}", urls.len());
+    let rest_count = urls.count();
+    if rest_count != 0 {
+        warn!("Only 1 url is supported, found {}", rest_count + 1);
     }
 
-    let manifest = if let Some(manifest) = &update_check.manifest {
-        manifest
-    } else {
-        return Err(IsolatedInstallError::InstallPlan(anyhow!("No manifest in Omaha response")));
-    };
+    let mut packages = update_check.get_all_packages();
+    let package = packages.next().ok_or_else(|| {
+        IsolatedInstallError::InstallPlan(anyhow!("No package in Omaha response"))
+    })?;
 
-    let (package, rest) = if let Some((package, rest)) = manifest.packages.package.split_first() {
-        (package, rest)
-    } else {
-        return Err(IsolatedInstallError::InstallPlan(anyhow!("No package in Omaha response")));
-    };
-
-    if !rest.is_empty() {
-        warn!("Only 1 package is supported, found {}", manifest.packages.package.len());
+    let rest_count = packages.count();
+    if rest_count != 0 {
+        warn!("Only 1 package is supported, found {}", rest_count + 1);
     }
 
-    let full_url = url.codebase.clone() + &package.name;
+    let full_url = url.to_owned() + &package.name;
+
     match PkgUrl::parse(&full_url) {
         Ok(url) => Ok(FuchsiaInstallPlan { url, install_source: request_params.source.clone() }),
         Err(err) => Err(IsolatedInstallError::InstallPlan(anyhow!(
@@ -233,7 +219,7 @@ mod tests {
     #[test]
     fn test_simple_response() {
         let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.manifest = Some(Manifest {
             packages: Packages {
                 package: vec![Package {
@@ -267,7 +253,7 @@ mod tests {
     #[test]
     fn test_multiple_app() {
         let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.manifest = Some(Manifest {
             packages: Packages {
                 package: vec![Package {
@@ -348,7 +334,7 @@ mod tests {
         let request_params = RequestParams::default();
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec!["invalid-url".to_string()])),
+                update_check: Some(UpdateCheck::ok(["invalid-url"])),
                 ..App::default()
             }],
             ..Response::default()
@@ -364,7 +350,7 @@ mod tests {
         let request_params = RequestParams::default();
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])),
+                update_check: Some(UpdateCheck::ok([TEST_URL_BASE])),
                 ..App::default()
             }],
             ..Response::default()

@@ -307,14 +307,8 @@ fn try_create_install_plan_impl(
             return Err(FuchsiaInstallError::Failure(anyhow!("No update_check in Omaha response")));
         };
 
-        let urls = match update_check.status {
-            OmahaStatus::Ok => {
-                if let Some(urls) = &update_check.urls {
-                    &urls.url
-                } else {
-                    return Err(FuchsiaInstallError::Failure(anyhow!("No urls in Omaha response")));
-                }
-            }
+        let mut urls = match update_check.status {
+            OmahaStatus::Ok => update_check.get_all_url_codebases(),
             OmahaStatus::NoUpdate => {
                 continue;
             }
@@ -328,34 +322,26 @@ fn try_create_install_plan_impl(
                 )));
             }
         };
-        let (url, rest) = if let Some((url, rest)) = urls.split_first() {
-            (url, rest)
-        } else {
-            return Err(FuchsiaInstallError::Failure(anyhow!("No url in Omaha response")));
-        };
+        let url = urls
+            .next()
+            .ok_or_else(|| FuchsiaInstallError::Failure(anyhow!("No url in Omaha response")))?;
 
-        if !rest.is_empty() {
-            warn!("Only 1 url is supported, found {}", urls.len());
+        let rest_count = urls.count();
+        if rest_count != 0 {
+            warn!("Only 1 url is supported, found {}", rest_count + 1);
         }
 
-        let manifest = if let Some(manifest) = &update_check.manifest {
-            manifest
-        } else {
-            return Err(FuchsiaInstallError::Failure(anyhow!("No manifest in Omaha response")));
-        };
+        let mut packages = update_check.get_all_packages();
+        let package = packages
+            .next()
+            .ok_or_else(|| FuchsiaInstallError::Failure(anyhow!("No package in Omaha response")))?;
 
-        let (package, rest) = if let Some((package, rest)) = manifest.packages.package.split_first()
-        {
-            (package, rest)
-        } else {
-            return Err(FuchsiaInstallError::Failure(anyhow!("No package in Omaha response")));
-        };
-
-        if !rest.is_empty() {
-            warn!("Only 1 package is supported, found {}", manifest.packages.package.len());
+        let rest_count = packages.count();
+        if rest_count != 0 {
+            warn!("Only 1 package is supported, found {}", rest_count + 1);
         }
 
-        let full_url = url.codebase.clone() + &package.name;
+        let full_url = url.to_owned() + &package.name;
 
         let pkg_url = match PkgUrl::parse(&full_url) {
             Ok(pkg_url) => pkg_url,
@@ -715,7 +701,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_simple_response() {
         let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.manifest = Some(Manifest {
             packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
             ..Manifest::default()
@@ -760,7 +746,7 @@ mod tests {
                     packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
                     ..Manifest::default()
                 }),
-                ..UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])
+                ..UpdateCheck::ok([TEST_URL_BASE])
             }),
             id: "system_id".into(),
             ..App::default()
@@ -797,7 +783,7 @@ mod tests {
                     packages: Packages::new(vec![Package::with_name("package1")]),
                     ..Manifest::default()
                 }),
-                ..UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])
+                ..UpdateCheck::ok([TEST_URL_BASE])
             }),
             id: "package1_id".into(),
             ..App::default()
@@ -813,7 +799,7 @@ mod tests {
                     packages: Packages::new(vec![Package::with_name("package3")]),
                     ..Manifest::default()
                 }),
-                ..UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])
+                ..UpdateCheck::ok([TEST_URL_BASE])
             }),
             id: "package3_id".into(),
             ..App::default()
@@ -844,7 +830,7 @@ mod tests {
                     packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
                     ..Manifest::default()
                 }),
-                ..UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])
+                ..UpdateCheck::ok([TEST_URL_BASE])
             }),
             id: "system_id".into(),
             ..App::default()
@@ -855,7 +841,7 @@ mod tests {
                     packages: Packages::new(vec![Package::with_name("some-package")]),
                     ..Manifest::default()
                 }),
-                ..UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])
+                ..UpdateCheck::ok([TEST_URL_BASE])
             }),
             id: "package_id".into(),
             ..App::default()
@@ -942,7 +928,7 @@ mod tests {
         let request_params = RequestParams::default();
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec!["invalid-url".to_string()])),
+                update_check: Some(UpdateCheck::ok(["invalid-url"])),
                 id: "system_id".into(),
                 ..App::default()
             }],
@@ -960,7 +946,7 @@ mod tests {
         let request_params = RequestParams::default();
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])),
+                update_check: Some(UpdateCheck::ok([TEST_URL_BASE])),
                 id: "system_id".into(),
                 ..App::default()
             }],
@@ -976,7 +962,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_urgent_update_attribute_true() {
         let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.urgent_update = Some(true);
         update_check.manifest = Some(Manifest {
             packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
@@ -1000,7 +986,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_urgent_update_attribute_false() {
         let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.urgent_update = Some(false);
         update_check.manifest = Some(Manifest {
             packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
