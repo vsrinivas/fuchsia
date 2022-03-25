@@ -3697,6 +3697,7 @@ rust_library("der-v0_5_1") {
 
   deps = []
   deps += [ ":const-oid-v0_7_1" ]
+  deps += [ ":pem-rfc7468-v0_3_1" ]
 
   rustenv = []
 
@@ -3708,6 +3709,8 @@ rust_library("der-v0_5_1") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"const-oid\"",
     "--cfg=feature=\"oid\"",
+    "--cfg=feature=\"pem\"",
+    "--cfg=feature=\"pem-rfc7468\"",
   ]
 
   visibility = [ ":*" ]
@@ -3916,6 +3919,8 @@ rust_library("ecdsa-v0_13_4") {
     "--cfg=feature=\"der\"",
     "--cfg=feature=\"digest\"",
     "--cfg=feature=\"hazmat\"",
+    "--cfg=feature=\"pem\"",
+    "--cfg=feature=\"pkcs8\"",
     "--cfg=feature=\"rfc6979\"",
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"sign\"",
@@ -3967,6 +3972,7 @@ rust_library("elliptic-curve-v0_11_12") {
   deps += [ ":ff-v0_11_0" ]
   deps += [ ":generic-array-v0_14_5" ]
   deps += [ ":group-v0_11_0" ]
+  deps += [ ":pem-rfc7468-v0_3_1" ]
   deps += [ ":rand_core-v0_6_3" ]
   deps += [ ":sec1-v0_2_1" ]
   deps += [ ":serde-v1_0_116" ]
@@ -3986,6 +3992,8 @@ rust_library("elliptic-curve-v0_11_12") {
     "--cfg=feature=\"ff\"",
     "--cfg=feature=\"group\"",
     "--cfg=feature=\"hazmat\"",
+    "--cfg=feature=\"pem\"",
+    "--cfg=feature=\"pem-rfc7468\"",
     "--cfg=feature=\"pkcs8\"",
     "--cfg=feature=\"sec1\"",
     "--cfg=feature=\"serde\"",
@@ -7043,6 +7051,7 @@ rust_library("p256-v0_10_1") {
     "--cfg=feature=\"digest\"",
     "--cfg=feature=\"ecdsa\"",
     "--cfg=feature=\"ecdsa-core\"",
+    "--cfg=feature=\"pem\"",
     "--cfg=feature=\"pkcs8\"",
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"sha2\"",
@@ -7333,6 +7342,31 @@ rust_library("pem-v0_8_3") {
     "--edition=2018",
     "-Cmetadata=cdefa2bfba638b2c",
     "-Cextra-filename=-cdefa2bfba638b2c",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("pem-rfc7468-v0_3_1") {
+  crate_name = "pem_rfc7468"
+  crate_root = "//third_party/rust_crates/vendor/pem-rfc7468/src/lib.rs"
+  output_name = "pem_rfc7468-976fc188214f6ac2"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":base64ct-v1_0_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2021",
+    "-Cmetadata=976fc188214f6ac2",
+    "-Cextra-filename=-976fc188214f6ac2",
+    "--cfg=feature=\"alloc\"",
   ]
 
   visibility = [ ":*" ]
@@ -7706,6 +7740,7 @@ rust_library("pkcs8-v0_8_0") {
     "-Cmetadata=6e834054930928d8",
     "-Cextra-filename=-6e834054930928d8",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"pem\"",
     "--cfg=feature=\"zeroize\"",
   ]
 
@@ -9899,6 +9934,7 @@ rust_library("sec1-v0_2_1") {
     "-Cmetadata=89480042cb9a3664",
     "-Cextra-filename=-89480042cb9a3664",
     "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"pem\"",
     "--cfg=feature=\"pkcs8\"",
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"subtle\"",
@@ -10646,6 +10682,7 @@ rust_library("spki-v0_5_4") {
     "-Cextra-filename=-418b5e0d7e09ea3",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"base64ct\"",
+    "--cfg=feature=\"pem\"",
   ]
 
   visibility = [ ":*" ]
