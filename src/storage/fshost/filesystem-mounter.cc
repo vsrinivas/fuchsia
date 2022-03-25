@@ -6,10 +6,12 @@
 
 #include <dirent.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.fxfs/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
@@ -29,6 +31,11 @@
 namespace fshost {
 
 namespace fio = fuchsia_io;
+
+constexpr unsigned char kInsecureCryptKey[32] = {
+    0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+};
 
 zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
                                                   fuchsia_fs_startup::wire::StartOptions options,
@@ -289,6 +296,42 @@ void FilesystemMounter::ReportMinfsCorruption() {
   fshost_.mutable_metrics()->LogMinfsCorruption();
   fshost_.FlushMetrics();
   fshost_.FileReport(FsManager::ReportReason::kMinfsCorrupted);
+}
+
+zx::status<> FilesystemMounter::MaybeInitCryptClient() {
+  if (config_.data_filesystem_binary_path != kFxfsPath) {
+    FX_LOGS(INFO) << "Not initializing Crypt client due to configuration";
+    return zx::ok();
+  }
+  FX_LOGS(INFO) << "Initializing Crypt client";
+  auto management_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::CryptManagement>();
+  if (management_endpoints_or.is_error())
+    return zx::error(management_endpoints_or.status_value());
+  if (zx_status_t status =
+          fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_fxfs::CryptManagement>,
+                               management_endpoints_or->server.TakeChannel().release());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  auto client = fidl::BindSyncClient(std::move(management_endpoints_or->client));
+  // TODO(fxbug.dev/94587): A hardware source should be used for keys.
+  unsigned char key[32] = {0};
+  std::copy(std::begin(kInsecureCryptKey), std::end(kInsecureCryptKey), key);
+  if (auto result = client->AddWrappingKey(0, fidl::VectorView<unsigned char>::FromExternal(key));
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to add wrapping key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kData, 0); !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to set active data key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kMetadata, 0);
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to set active data key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  return zx::ok();
 }
 
 zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {

@@ -9,10 +9,15 @@
     },
     capabilities: [
         { protocol: "fuchsia.fxfs.Crypt" },
+        { protocol: "fuchsia.fxfs.CryptManagement" },
     ],
     expose: [
         {
             protocol: "fuchsia.fxfs.Crypt",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.fxfs.CryptManagement",
             from: "self",
         },
     ],

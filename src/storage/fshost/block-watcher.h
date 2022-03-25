@@ -42,6 +42,8 @@ class BlockWatcher {
   // Shut down the block watcher.  This will block until complete.
   void ShutDown();
 
+  FilesystemMounter& mounter() { return mounter_; }
+
  private:
   void Thread();
 

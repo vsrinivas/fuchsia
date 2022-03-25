@@ -13,6 +13,10 @@
             protocol: "fuchsia.fxfs.Crypt",
             from: "#fxfs-crypt",
         },
+        {
+            protocol: "fuchsia.fxfs.CryptManagement",
+            from: "#fxfs-crypt",
+        },
     ],
     offer: [
         {
