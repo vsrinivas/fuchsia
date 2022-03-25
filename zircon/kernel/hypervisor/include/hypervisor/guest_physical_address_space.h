@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_
 
+#include <lib/zx/status.h>
+
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <vm/vm_address_region.h>
@@ -20,18 +22,16 @@ namespace hypervisor {
 // portion of guest physical memory for faster access.
 class GuestPtr {
  public:
-  GuestPtr() = default;
   GuestPtr(fbl::RefPtr<VmMapping> mapping, zx_vaddr_t offset)
       : mapping_(ktl::move(mapping)), offset_(offset) {}
-  GuestPtr(GuestPtr&& o) : mapping_(ktl::move(o.mapping_)), offset_(o.offset_) {}
   ~GuestPtr() { reset(); }
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GuestPtr);
 
-  GuestPtr& operator=(GuestPtr&& o) {
-    mapping_ = ktl::move(o.mapping_);
-    offset_ = o.offset_;
-    return *this;
-  }
+  GuestPtr() = default;
+  GuestPtr(GuestPtr&&) = default;
+  GuestPtr& operator=(GuestPtr&&) = default;
+
+  GuestPtr(const GuestPtr&) = delete;
+  GuestPtr& operator=(const GuestPtr&) = delete;
 
   void reset() {
     if (mapping_) {
@@ -55,25 +55,33 @@ class GuestPtr {
 
 class GuestPhysicalAddressSpace {
  public:
-  static zx_status_t Create(
+  static zx::status<GuestPhysicalAddressSpace> Create(
 #ifdef ARCH_ARM64
-      uint8_t vmid,
+      uint8_t vmid
 #endif
-      ktl::unique_ptr<GuestPhysicalAddressSpace>* gpas);
-
+  );
   ~GuestPhysicalAddressSpace();
 
+  GuestPhysicalAddressSpace() = default;
+  GuestPhysicalAddressSpace(GuestPhysicalAddressSpace&&) = default;
+  GuestPhysicalAddressSpace& operator=(GuestPhysicalAddressSpace&&) = default;
+
+  GuestPhysicalAddressSpace(const GuestPhysicalAddressSpace&) = delete;
+  GuestPhysicalAddressSpace& operator=(const GuestPhysicalAddressSpace&) = delete;
+
   size_t size() const { return guest_aspace_->size(); }
-  ArchVmAspace* arch_aspace() { return &guest_aspace_->arch_aspace(); }
+  zx_paddr_t arch_table_phys() const { return guest_aspace_->arch_aspace().arch_table_phys(); }
+#if ARCH_ARM64
+  uint16_t arch_asid() const { return guest_aspace_->arch_aspace().arch_asid(); }
+#endif
   fbl::RefPtr<VmAddressRegion> RootVmar() { return guest_aspace_->RootVmar(); }
 
-  zx_status_t MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
-  zx_status_t UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
-  zx_status_t GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr);
-  zx_status_t PageFault(zx_gpaddr_t guest_paddr);
-  zx_status_t QueryFlags(zx_gpaddr_t guest_paddr, uint* mmu_flags);
-  zx_status_t CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name,
-                             GuestPtr* guest_ptr);
+  zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
+  zx::status<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
+  zx::status<zx_paddr_t> GetPage(zx_gpaddr_t guest_paddr);
+  zx::status<> PageFault(zx_gpaddr_t guest_paddr);
+  zx::status<uint> QueryFlags(zx_gpaddr_t guest_paddr);
+  zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
 
  private:
   fbl::RefPtr<VmAspace> guest_aspace_;

@@ -57,10 +57,11 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   }
   defer.cancel();
 
-  status = hypervisor::GuestPhysicalAddressSpace::Create(&guest->gpas_);
-  if (status != ZX_OK) {
-    return status;
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
+  if (gpas.is_error()) {
+    return gpas.status_value();
   }
+  guest->gpas_ = ktl::move(*gpas);
 
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;
@@ -115,9 +116,8 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
   if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status = gpas_->UnmapRange(addr, len);
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = gpas_.UnmapRange(addr, len); result.is_error()) {
+    return result.status_value();
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
 }

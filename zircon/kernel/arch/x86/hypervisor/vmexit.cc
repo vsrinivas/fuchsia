@@ -962,10 +962,11 @@ static zx_status_t get_page(hypervisor::GuestPhysicalAddressSpace* gpas, zx_vadd
   };
   zx_paddr_t pa;
   for (size_t level = 0; level <= X86_PAGING_LEVELS; level++) {
-    zx_status_t status = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr), &pa);
-    if (status != ZX_OK) {
-      return status;
+    auto result = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr));
+    if (result.is_error()) {
+      return result.status_value();
     }
+    pa = *result;
     if (level == X86_PAGING_LEVELS || IS_LARGE_PAGE(pt_addr)) {
       break;
     }
@@ -1091,11 +1092,11 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  status = gpas->PageFault(guest_paddr);
-  if (status != ZX_OK) {
+  if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n", guest_paddr);
+    return result.status_value();
   }
-  return status;
+  return ZX_OK;
 }
 
 static zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs* vmcs,
@@ -1104,13 +1105,12 @@ static zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVm
   vmcs->Invalidate();
 
   zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
-  uint mmu_flags = 0;
-  zx_status_t status = gpas->QueryFlags(guest_paddr, &mmu_flags);
-  if (status != ZX_OK) {
-    return status;
+  auto mmu_flags = gpas->QueryFlags(guest_paddr);
+  if (mmu_flags.is_error()) {
+    return mmu_flags.status_value();
   }
 
-  dprintf(CRITICAL, "hypervisor: EPT misconfiguration %#lx flags %#x\n", guest_paddr, mmu_flags);
+  dprintf(CRITICAL, "hypervisor: EPT misconfiguration %#lx flags %#x\n", guest_paddr, *mmu_flags);
   return ZX_ERR_INTERNAL;
 }
 

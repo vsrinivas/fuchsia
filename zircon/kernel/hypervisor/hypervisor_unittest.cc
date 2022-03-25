@@ -34,24 +34,20 @@ static bool hypervisor_supported() {
   return true;
 }
 
+static zx::status<hypervisor::GuestPhysicalAddressSpace> create_gpas() {
+#if ARCH_ARM64
+  return hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */);
+#elif ARCH_X86
+  return hypervisor::GuestPhysicalAddressSpace::Create();
+#endif
+}
+
 static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObjectPaged>* vmo) {
   return VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, vmo_size, vmo);
 }
 
 static zx_status_t commit_vmo(fbl::RefPtr<VmObjectPaged> vmo) {
-  zx_status_t status = vmo->CommitRange(0, vmo->size());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
-}
-
-static zx_status_t create_gpas(ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
-#if ARCH_ARM64
-  return hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */, gpas);
-#elif ARCH_X86
-  return hypervisor::GuestPhysicalAddressSpace::Create(gpas);
-#endif
+  return vmo->CommitRange(0, vmo->size());
 }
 
 static zx_status_t create_mapping(fbl::RefPtr<VmAddressRegion> vmar, fbl::RefPtr<VmObjectPaged> vmo,
@@ -75,23 +71,22 @@ static bool guest_physical_address_space_unmap_range() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
   // Unmap page.
-  status = gpas->UnmapRange(0, PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "Failed to unmap page from GuestPhysicalAddressSpace\n");
+  auto result = gpas->UnmapRange(0, PAGE_SIZE);
+  EXPECT_EQ(ZX_OK, result.status_value(), "Failed to unmap page from GuestPhysicalAddressSpace\n");
 
   // Verify GetPage for unmapped address fails.
-  zx_paddr_t gpas_paddr;
-  status = gpas->GetPage(0, &gpas_paddr);
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "GetPage returning unexpected value for unmapped address\n");
+  auto gpas_paddr = gpas->GetPage(0);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
+            "GetPage returning unexpected value for unmapped address\n");
 
   END_TEST;
 }
@@ -104,18 +99,17 @@ static bool guest_physical_address_space_unmap_range_outside_of_mapping() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
   // Unmap page.
-  status = gpas->UnmapRange(PAGE_SIZE * 8, PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "Failed to unmap page from GuestPhysicalAddressSpace\n");
+  auto result = gpas->UnmapRange(PAGE_SIZE * 8, PAGE_SIZE);
+  EXPECT_EQ(ZX_OK, result.status_value(), "Failed to unmap page from GuestPhysicalAddressSpace\n");
 
   END_TEST;
 }
@@ -128,12 +122,11 @@ static bool guest_physical_address_space_unmap_range_multiple_mappings() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
 
   fbl::RefPtr<VmObjectPaged> vmo1;
-  status = create_vmo(PAGE_SIZE * 2, &vmo1);
+  zx_status_t status = create_vmo(PAGE_SIZE * 2, &vmo1);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo1, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -145,22 +138,24 @@ static bool guest_physical_address_space_unmap_range_multiple_mappings() {
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
   // Unmap pages.
-  status = gpas->UnmapRange(PAGE_SIZE, PAGE_SIZE * 3);
-  EXPECT_EQ(ZX_OK, status, "Failed to multiple unmap pages from GuestPhysicalAddressSpace\n");
+  auto result = gpas->UnmapRange(PAGE_SIZE, PAGE_SIZE * 3);
+  EXPECT_EQ(ZX_OK, result.status_value(),
+            "Failed to multiple unmap pages from GuestPhysicalAddressSpace\n");
 
   // Verify GetPage for unmapped addresses fails.
-  zx_paddr_t gpas_paddr = 0;
   for (zx_gpaddr_t addr = PAGE_SIZE; addr < PAGE_SIZE * 4; addr += PAGE_SIZE) {
-    status = gpas->GetPage(addr, &gpas_paddr);
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, status,
+    auto gpas_paddr = gpas->GetPage(addr);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
               "GetPage returning unexpected value for unmapped address\n");
   }
 
   // Verify GetPage for mapped addresses succeeds.
-  status = gpas->GetPage(0, &gpas_paddr);
-  EXPECT_EQ(ZX_OK, status, "Failed to read page from GuestPhysicalAddressSpace\n");
-  status = gpas->GetPage(PAGE_SIZE * 4, &gpas_paddr);
-  EXPECT_EQ(ZX_OK, status, "Failed to read page from GuestPhysicalAddressSpace\n");
+  auto gpas_paddr = gpas->GetPage(0);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
+  gpas_paddr = gpas->GetPage(PAGE_SIZE * 4);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
 
   END_TEST;
 }
@@ -173,15 +168,14 @@ static bool guest_physical_address_space_unmap_range_sub_region() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmAddressRegion> root_vmar = gpas->RootVmar();
   // To test partial unmapping within sub-VMAR:
   // Sub-VMAR from [0, PAGE_SIZE * 2).
   // Map within sub-VMAR from [PAGE_SIZE, PAGE_SIZE * 2).
   fbl::RefPtr<VmAddressRegion> sub_vmar1;
-  status = create_sub_vmar(root_vmar, 0, PAGE_SIZE * 2, &sub_vmar1);
+  zx_status_t status = create_sub_vmar(root_vmar, 0, PAGE_SIZE * 2, &sub_vmar1);
   EXPECT_EQ(ZX_OK, status, "Failed to create sub-VMAR\n");
   EXPECT_TRUE(sub_vmar1->has_parent(), "Sub-VMAR does not have a parent");
   fbl::RefPtr<VmObjectPaged> vmo1;
@@ -210,20 +204,21 @@ static bool guest_physical_address_space_unmap_range_sub_region() {
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
   // Unmap pages from [PAGE_SIZE, PAGE_SIZE * 4).
-  status = gpas->UnmapRange(PAGE_SIZE, PAGE_SIZE * 3);
-  EXPECT_EQ(ZX_OK, status, "Failed to multiple unmap pages from GuestPhysicalAddressSpace\n");
+  auto result = gpas->UnmapRange(PAGE_SIZE, PAGE_SIZE * 3);
+  EXPECT_EQ(ZX_OK, result.status_value(),
+            "Failed to multiple unmap pages from GuestPhysicalAddressSpace\n");
 
   // Verify GetPage for unmapped addresses fails.
-  zx_paddr_t gpas_paddr = 0;
   for (zx_gpaddr_t addr = 0; addr < PAGE_SIZE * 4; addr += PAGE_SIZE) {
-    status = gpas->GetPage(addr, &gpas_paddr);
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, status,
+    auto gpas_paddr = gpas->GetPage(addr);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
               "GetPage returning unexpected value for unmapped address\n");
   }
 
   // Verify GetPage for mapped addresses succeeds.
-  status = gpas->GetPage(PAGE_SIZE * 4, &gpas_paddr);
-  EXPECT_EQ(ZX_OK, status, "Failed to read page from GuestPhysicalAddressSpace\n");
+  auto gpas_paddr = gpas->GetPage(PAGE_SIZE * 4);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
 
   // Verify that sub-VMARs still have a parent.
   EXPECT_TRUE(sub_vmar1->has_parent(), "Sub-VMAR does not have a parent");
@@ -242,11 +237,10 @@ static bool guest_physical_address_space_get_page() {
   AutoVmScannerDisable scanner_disable;
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -265,10 +259,10 @@ static bool guest_physical_address_space_get_page() {
   EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 
   // Read physical address from GPAS & compare with address read from VMO.
-  zx_paddr_t gpas_paddr = 0;
-  status = gpas->GetPage(0, &gpas_paddr);
-  EXPECT_EQ(ZX_OK, status, "Failed to read page from GuestPhysicalAddressSpace\n");
-  EXPECT_EQ(vmo_paddr, gpas_paddr,
+  auto gpas_paddr = gpas->GetPage(0);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
+  EXPECT_EQ(vmo_paddr, *gpas_paddr,
             "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage\n");
 
   END_TEST;
@@ -307,9 +301,8 @@ static bool guest_physical_address_space_get_page_complex() {
   fbl::RefPtr<VmObjectPaged> vmo1;
   zx_status_t status = create_vmo(ROOT_VMO_SIZE, &vmo1);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmAddressRegion> root_vmar = gpas->RootVmar();
   status = create_mapping(root_vmar, vmo1, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -347,11 +340,12 @@ static bool guest_physical_address_space_get_page_complex() {
   EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 
   // Read physical address from GPAS.
-  zx_paddr_t gpas_paddr = 0;
-  status = gpas->GetPage(ROOT_VMO_SIZE, &gpas_paddr);
-  EXPECT_EQ(ZX_OK, status, "Failed to read page from GuestPhysicalAddressSpace\n");
-  EXPECT_EQ(vmo_paddr, gpas_paddr,
+  auto gpas_paddr = gpas->GetPage(ROOT_VMO_SIZE);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
+  EXPECT_EQ(vmo_paddr, *gpas_paddr,
             "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage\n");
+
   END_TEST;
 }
 
@@ -365,11 +359,10 @@ static bool guest_physical_address_space_get_page_not_present() {
   AutoVmScannerDisable scanner_disable;
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -379,9 +372,9 @@ static bool guest_physical_address_space_get_page_not_present() {
   EXPECT_EQ(ZX_OK, status, "Failed to commit VMO\n");
 
   // Query unmapped address.
-  zx_paddr_t gpas_paddr = 0;
-  status = gpas->GetPage(UINTPTR_MAX, &gpas_paddr);
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "GetPage returning unexpected value for unmapped address\n");
+  auto gpas_paddr = gpas->GetPage(UINTPTR_MAX);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
+            "GetPage returning unexpected value for unmapped address\n");
 
   END_TEST;
 }
@@ -394,11 +387,10 @@ static bool guest_physical_address_space_page_fault() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -413,8 +405,8 @@ static bool guest_physical_address_space_page_fault() {
 
   // Fault in each page.
   for (zx_gpaddr_t addr = 0; addr < PAGE_SIZE * 4; addr += PAGE_SIZE) {
-    status = gpas->PageFault(addr);
-    EXPECT_EQ(ZX_OK, status, "Failed to fault page\n");
+    auto result = gpas->PageFault(addr);
+    EXPECT_EQ(ZX_OK, result.status_value(), "Failed to fault page\n");
   }
 
   END_TEST;
@@ -428,11 +420,10 @@ static bool guest_physical_address_space_map_interrupt_controller() {
   }
 
   // Setup.
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  zx_status_t status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = create_vmo(PAGE_SIZE, &vmo);
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
   EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
@@ -444,9 +435,9 @@ static bool guest_physical_address_space_map_interrupt_controller() {
   EXPECT_EQ(ZX_OK, status, "Unable to allocate a page\n");
 
   // Map interrupt controller page in an arbitrary location.
-  const vaddr_t APIC_ADDRESS = 0xffff0000;
-  status = gpas->MapInterruptController(APIC_ADDRESS, paddr, PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "Failed to map APIC page\n");
+  const vaddr_t kGicvAddress = 0x800001000;
+  auto result = gpas->MapInterruptController(kGicvAddress, paddr, PAGE_SIZE);
+  EXPECT_EQ(ZX_OK, result.status_value(), "Failed to map APIC page\n");
 
   // Cleanup
   pmm_free_page(vm_page);
@@ -467,9 +458,8 @@ static bool guest_physical_address_space_uncached() {
   status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED);
   EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
@@ -490,9 +480,8 @@ static bool guest_physical_address_space_uncached_device() {
   status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
   EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
@@ -513,9 +502,8 @@ static bool guest_physical_address_space_write_combining() {
   status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_WRITE_COMBINING);
   EXPECT_EQ(ZX_OK, status, "Failed to set cache policy\n");
 
-  ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
-  status = create_gpas(&gpas);
-  EXPECT_EQ(ZX_OK, status, "Failed to create GuestPhysicalAddressSpace\n");
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
   status = create_mapping(gpas->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 

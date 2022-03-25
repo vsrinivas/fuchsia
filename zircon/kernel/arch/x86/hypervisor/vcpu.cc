@@ -803,7 +803,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   thread->SetMigrateFn([vcpu = vcpu.get()](Thread* thread, auto stage)
                            TA_NO_THREAD_SAFETY_ANALYSIS { vcpu->MigrateCpu(thread, stage); });
 
-  zx_paddr_t pml4_address = gpas->arch_aspace()->arch_table_phys();
+  zx_paddr_t pml4_address = gpas->arch_table_phys();
   status =
       vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
                 pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
@@ -922,7 +922,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
       // Invalidate TLB mappings for the EPT.
-      zx_paddr_t pml4_address = guest_->AddressSpace()->arch_aspace()->arch_table_phys();
+      zx_paddr_t pml4_address = guest_->AddressSpace()->arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
       break;
     }

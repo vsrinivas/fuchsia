@@ -14,35 +14,42 @@
 #include <vm/page_source.h>
 #include <vm/vm_object_physical.h>
 
-static constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
+namespace {
 
-static constexpr uint kInterruptMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-
-static constexpr uint kGuestMmuFlags =
+constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
+constexpr uint kInterruptMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+constexpr uint kGuestMmuFlags =
     ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+fbl::RefPtr<VmMapping> FindMapping(fbl::RefPtr<VmAddressRegion> region, zx_gpaddr_t guest_paddr) {
+  for (fbl::RefPtr<VmAddressRegionOrMapping> next; (next = region->FindRegion(guest_paddr));
+       region = next->as_vm_address_region()) {
+    if (next->is_mapping()) {
+      return next->as_vm_mapping();
+    }
+  }
+  return nullptr;
+}
+
+}  // namespace
 
 namespace hypervisor {
 
-zx_status_t GuestPhysicalAddressSpace::Create(
+zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create(
 #if ARCH_ARM64
-    uint8_t vmid,
+    uint8_t vmid
 #endif
-    ktl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
-  fbl::AllocChecker ac;
-  auto gpas = ktl::make_unique<GuestPhysicalAddressSpace>(&ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  gpas->guest_aspace_ = VmAspace::Create(VmAspace::Type::GuestPhys, "guest_paspace");
-  if (!gpas->guest_aspace_) {
-    return ZX_ERR_NO_MEMORY;
+) {
+  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhys, "guest_aspace");
+  if (!guest_aspace) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 #if ARCH_ARM64
-  gpas->arch_aspace()->arch_set_asid(vmid);
+  guest_aspace->arch_aspace().arch_set_asid(vmid);
 #endif
-  *_gpas = ktl::move(gpas);
-  return ZX_OK;
+  GuestPhysicalAddressSpace gpas;
+  gpas.guest_aspace_ = ktl::move(guest_aspace);
+  return zx::ok(ktl::move(gpas));
 }
 
 GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
@@ -54,17 +61,17 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
   }
 }
 
-zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_paddr,
-                                                              zx_paddr_t host_paddr, size_t len) {
+zx::status<> GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_paddr,
+                                                               zx_paddr_t host_paddr, size_t len) {
   fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t status = VmObjectPhysical::Create(host_paddr, len, &vmo);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   status = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // The root VMAR will maintain a reference to the VmMapping internally so
@@ -74,45 +81,42 @@ zx_status_t GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_
                                        VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
                                        kInterruptMmuFlags, "guest_interrupt_vmo", &mapping);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // Write mapping to page table.
   status = mapping->MapRange(0, vmo->size(), true);
   if (status != ZX_OK) {
     mapping->Destroy();
-    return status;
+    return zx::error(status);
   }
-  return ZX_OK;
+
+  return zx::ok();
 }
 
-zx_status_t GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
-  return RootVmar()->UnmapAllowPartial(guest_paddr, len);
+zx::status<> GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
+  zx_status_t status = RootVmar()->UnmapAllowPartial(guest_paddr, len);
+  return zx::make_status(status);
 }
 
-static fbl::RefPtr<VmMapping> FindMapping(fbl::RefPtr<VmAddressRegion> region,
-                                          zx_gpaddr_t guest_paddr) {
-  for (fbl::RefPtr<VmAddressRegionOrMapping> next; (next = region->FindRegion(guest_paddr));
-       region = next->as_vm_address_region()) {
-    if (next->is_mapping()) {
-      return next->as_vm_mapping();
-    }
-  }
-  return nullptr;
-}
-
-zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr) {
+zx::status<zx_paddr_t> GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr) {
   fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
   if (!mapping) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   // Lookup the physical address of this page in the VMO.
   zx_gpaddr_t offset = guest_paddr - mapping->base();
-  return mapping->vmo()->GetPageBlocking(offset, kPfFlags, nullptr, nullptr, host_paddr);
+  zx_paddr_t host_paddr;
+  zx_status_t status =
+      mapping->vmo()->GetPageBlocking(offset, kPfFlags, nullptr, nullptr, &host_paddr);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(host_paddr);
 }
 
-zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
+zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   // TOOD(fxb/94078): Enforce no other locks are held here since we may wait on the page request.
   __UNINITIALIZED LazyPageRequest page_request;
 
@@ -120,7 +124,7 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   do {
     fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
     if (!mapping) {
-      return ZX_ERR_NOT_FOUND;
+      return zx::error(ZX_ERR_NOT_FOUND);
     }
 
     // In order to avoid re-faulting if the guest changes how it accesses guest
@@ -144,44 +148,49 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       zx_status_t st = page_request->Wait();
       if (st != ZX_OK) {
-        return st;
+        return zx::error(st);
       }
     }
   } while (status == ZX_ERR_SHOULD_WAIT);
 
-  return status;
+  return zx::make_status(status);
 }
 
-zx_status_t GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr, uint* mmu_flags) {
+zx::status<uint> GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr) {
   fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
   if (!mapping) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   zx_gpaddr_t offset = guest_paddr - mapping->base();
-  return mapping->aspace()->arch_aspace().Query(offset, nullptr, mmu_flags);
+  uint mmu_flags;
+  zx_status_t status = mapping->aspace()->arch_aspace().Query(offset, nullptr, &mmu_flags);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(mmu_flags);
 }
 
-zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
-                                                      const char* name, GuestPtr* guest_ptr) {
+zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
+                                                               const char* name) {
   const zx_gpaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
   const zx_gpaddr_t end = ROUNDUP(guest_paddr + len, PAGE_SIZE);
   const zx_gpaddr_t mapping_len = end - begin;
   if (begin > end || !InRange(begin, mapping_len, size())) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
   fbl::RefPtr<VmAddressRegionOrMapping> region = RootVmar()->FindRegion(begin);
   if (!region) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
   fbl::RefPtr<VmMapping> guest_mapping = region->as_vm_mapping();
   if (!guest_mapping) {
-    return ZX_ERR_WRONG_TYPE;
+    return zx::error(ZX_ERR_WRONG_TYPE);
   }
   const uint64_t intra_mapping_offset = begin - guest_mapping->base();
   if (!InRange(intra_mapping_offset, mapping_len, guest_mapping->size())) {
     // The address range is not contained within a single mapping.
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
   uint64_t mapping_object_offset;
@@ -197,16 +206,15 @@ zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, s
       /* vmar_flags */ 0, guest_mapping->vmo(), mapping_object_offset + intra_mapping_offset,
       kGuestMmuFlags, name, &host_mapping);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   // Pre-populate the page tables so there's no need for kernel page faults.
   status = host_mapping->MapRange(0, mapping_len, true);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  *guest_ptr = GuestPtr(ktl::move(host_mapping), guest_paddr - begin);
-  return ZX_OK;
+  return zx::ok(GuestPtr(ktl::move(host_mapping), guest_paddr - begin));
 }
 
 }  // namespace hypervisor

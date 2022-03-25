@@ -68,13 +68,12 @@ zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpa
                                       zx_vaddr_t guest_paddr) {
   // Zircon does not maintain a UTC or local time to set a meaningful boot time
   // hence the value is fixed at zero.
-  hypervisor::GuestPtr guest_ptr;
-  zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
-                                            "pv_clock-boot-time-guest-mapping", &guest_ptr);
-  if (status != ZX_OK) {
-    return status;
+  auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
+                                        "pv_clock-boot-time-guest-mapping");
+  if (guest_ptr.is_error()) {
+    return guest_ptr.status_value();
   }
-  auto boot_time = guest_ptr.as<pv_clock_boot_time>();
+  auto boot_time = guest_ptr->as<pv_clock_boot_time>();
   if (boot_time == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -85,17 +84,17 @@ zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpa
 zx_status_t pv_clock_reset_clock(PvClockState* pv_clock,
                                  hypervisor::GuestPhysicalAddressSpace* gpas,
                                  zx_vaddr_t guest_paddr) {
-  zx_status_t status =
-      gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
-                           "pv_clock-system-time-guest-mapping", &pv_clock->guest_ptr);
-  if (status != ZX_OK) {
-    return status;
+  auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
+                                        "pv_clock-system-time-guest-mapping");
+  if (guest_ptr.is_error()) {
+    return guest_ptr.status_value();
   }
-  pv_clock->system_time = pv_clock->guest_ptr.as<pv_clock_system_time>();
+  pv_clock->system_time = guest_ptr->as<pv_clock_system_time>();
   if (pv_clock->system_time == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   memset(pv_clock->system_time, 0, sizeof(*pv_clock->system_time));
+  pv_clock->guest_ptr = ktl::move(*guest_ptr);
   return ZX_OK;
 }
 
@@ -131,13 +130,12 @@ void pv_clock_stop_clock(PvClockState* pv_clock) {
 
 zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
                                      zx_vaddr_t guest_paddr) {
-  hypervisor::GuestPtr guest_ptr;
-  zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset),
-                                            "pv_clock-offset-guest-mapping", &guest_ptr);
-  if (status != ZX_OK) {
-    return status;
+  auto guest_ptr =
+      gpas->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset), "pv_clock-offset-guest-mapping");
+  if (guest_ptr.is_error()) {
+    return guest_ptr.status_value();
   }
-  auto offset = guest_ptr.as<PvClockOffset>();
+  auto offset = guest_ptr->as<PvClockOffset>();
   if (offset == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

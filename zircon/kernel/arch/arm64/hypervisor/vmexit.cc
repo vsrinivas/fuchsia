@@ -252,7 +252,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       if (mmu_enabled && dcaches_enabled) {
         // Clean/invalidate the pages. We don't strictly need the clean, but it
         // doesn't hurt.
-        clean_invalidate_cache(gpas->arch_aspace()->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpas->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
 
         // Stop trapping MMU register accesses to improve performance.
         //
@@ -323,7 +323,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       // been cleaned.
       uint32_t set_way = BITS_SHIFT(reg, 31, 4);
       if (set_way == 0) {
-        clean_invalidate_cache(gpas->arch_aspace()->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpas->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
       }
 
       // If the MMU or caches are off, start monitoring guest SCTLR register
@@ -360,11 +360,11 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
 static zx_status_t handle_instruction_abort(GuestState* guest_state,
                                             hypervisor::GuestPhysicalAddressSpace* gpas) {
   const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
-  zx_status_t status = gpas->PageFault(guest_paddr);
-  if (status != ZX_OK) {
+  if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled guest instruction abort %#lx\n", guest_paddr);
+    return result.status_value();
   }
-  return status;
+  return ZX_OK;
 }
 
 static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
@@ -375,11 +375,11 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
   zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
   switch (status) {
     case ZX_ERR_NOT_FOUND:
-      status = gpas->PageFault(guest_paddr);
-      if (status != ZX_OK) {
+      if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
         dprintf(CRITICAL, "hypervisor: Unhandled guest data abort %#lx\n", guest_paddr);
+        return result.status_value();
       }
-      return status;
+      return ZX_OK;
     case ZX_OK:
       break;
     default:

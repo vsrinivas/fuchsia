@@ -260,8 +260,8 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     return ZX_ERR_BAD_STATE;
   }
 
-  const ArchVmAspace& aspace = *guest_->AddressSpace()->arch_aspace();
-  zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
+  const auto& gpas = *guest_->AddressSpace();
+  zx_paddr_t vttbr = arm64_vttbr(gpas.arch_asid(), gpas.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
   IchState* ich_state = &el2_state_->ich_state;
   zx_status_t status;

@@ -36,23 +36,24 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = hypervisor::GuestPhysicalAddressSpace::Create(vmid, &guest->gpas_);
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid);
   if (status != ZX_OK) {
-    return status;
+    return gpas.status_value();
   }
+  guest->gpas_ = ktl::move(*gpas);
 
   zx_paddr_t gicv_paddr;
   status = gic_get_gicv(&gicv_paddr);
 
-  // If status == ZX_ERR_NOT_FOUND, we are running GICv3
-  // There is no need to map GICV to the guest
-  // Handle other cases below
+  // If `status` is ZX_OK, we are running GICv2. We then need to map GICV.
+  // If `status is ZX_ERR_NOT_FOUND, we are running GICv3.
+  // Otherwise, return `status`.
   if (status == ZX_OK) {
-    status = guest->gpas_->MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
-    if (status != ZX_OK) {
-      return status;
+    if (auto result = guest->gpas_.MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
+        result.is_error()) {
+      return result.status_value();
     }
-  } else if (status == ZX_ERR_NOT_SUPPORTED) {
+  } else if (status != ZX_ERR_NOT_FOUND) {
     return status;
   }
 
@@ -86,9 +87,8 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status = gpas_->UnmapRange(addr, len);
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = gpas_.UnmapRange(addr, len); result.is_error()) {
+    return result.status_value();
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
 }
