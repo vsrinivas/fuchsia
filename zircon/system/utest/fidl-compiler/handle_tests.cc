@@ -19,7 +19,7 @@
 namespace {
 
 TEST(HandleTests, GoodHandleRightsTest) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -28,6 +28,7 @@ type MyStruct = resource struct {
     h zx.handle:<THREAD, zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
@@ -47,7 +48,7 @@ type MyStruct = resource struct {
 }
 
 TEST(HandleTests, GoodNoHandleRightsTest) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -56,6 +57,7 @@ type MyStruct = resource struct {
     h zx.handle:VMO;
 };
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_COMPILED(library);
 
@@ -74,7 +76,7 @@ type MyStruct = resource struct {
 }
 
 TEST(HandleTests, BadInvalidHandleRightsTest) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -83,6 +85,7 @@ protocol P {
     Method(struct { h zx.handle:<VMO, 1>; });  // rights must be zx.rights-typed.
 };
 )FIDL");
+  library.UseLibraryZx();
 
   // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
   // possible interpretations.
@@ -91,7 +94,7 @@ protocol P {
 }
 
 TEST(HandleTests, GoodPlainHandleTest) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -100,6 +103,7 @@ type MyStruct = resource struct {
     h zx.handle;
 };
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
@@ -116,7 +120,7 @@ type MyStruct = resource struct {
 }
 
 TEST(HandleTests, GoodHandleFidlDefinedTest) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -127,6 +131,7 @@ type MyStruct = resource struct {
   c zx.handle:<VMO, zx.rights.TRANSFER>;
 };
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_COMPILED(library);
   const auto& a = library.LookupStruct("MyStruct")->members[0].type_ctor;
@@ -158,7 +163,7 @@ type MyStruct = resource struct {
 }
 
 TEST(HandleTests, BadInvalidFidlDefinedHandleSubtype) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -167,12 +172,13 @@ type MyStruct = struct {
   a zx.handle:ZIPPY;
 };
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(HandleTests, BadDisallowOldHandles) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -181,6 +187,7 @@ type MyStruct = struct {
     h handle<vmo>;
 };
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrNameNotFound, fidl::ErrNameNotFound);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "cannot find 'handle'");

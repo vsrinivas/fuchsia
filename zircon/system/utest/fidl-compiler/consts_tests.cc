@@ -460,21 +460,20 @@ const FOO uint32 = MAX;
 
 TEST(ConstsTests, BadMaxBoundTestLibraryQualified) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("dependency.fidl", R"FIDL(library dependency;
+  TestLibrary dependency(&shared, "dependency.fidl", R"FIDL(
+library dependency;
 
 type Example = struct {};
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
 library example;
 
 using dependency;
 
 type Example = struct { s string:dependency.MAX; };
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
@@ -521,15 +520,16 @@ const FOO uint8 = 1;
 }
 
 TEST(ConstsTests, GoodMultiFileConstReference) {
-  TestLibrary library("first.fidl", R"FIDL(
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
 library example;
 
 type Protein = struct {
     amino_acids vector<uint64>:SMALL_SIZE;
 };
 )FIDL");
-
-  library.AddSource("second.fidl", R"FIDL(library example;
+  library.AddSource("second.fidl", R"FIDL(
+library example;
 
 const SMALL_SIZE uint32 = 4;
 )FIDL");
@@ -619,7 +619,7 @@ library example;
 const HI string = "hi";
 const THERE string = "there";
 const result string = HI | THERE;
-  )FIDL");
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
                                       fidl::ErrCannotResolveConstantValue);
 }

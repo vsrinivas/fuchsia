@@ -132,7 +132,7 @@ type Vectors = struct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodVectorEncodeMightMutate) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -180,6 +180,7 @@ type Value = resource struct {
   maybe10 vector<Union>;
 };
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
   auto str = library.LookupStruct("Value");
   ASSERT_NOT_NULL(str);
@@ -1022,7 +1023,7 @@ type OuterStruct = struct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfOptionals) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 using zx;
 
@@ -1044,6 +1045,7 @@ type OuterStruct = resource struct {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();

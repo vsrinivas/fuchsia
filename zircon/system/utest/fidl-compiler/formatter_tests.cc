@@ -10,14 +10,12 @@
 
 namespace {
 std::string Format(const std::string& source, bool reformat_and_compare = true) {
-  fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-  auto lib = TestLibrary(source, flags);
+  auto lib = TestLibrary(source);
 
   // We use a column width of 40, rather than the "real world" 100, to make tests easier to read
   // and write.
   auto formatter = fidl::fmt::NewFormatter(40, lib.reporter());
-  auto result = formatter.Format(lib.source_file(), flags);
+  auto result = formatter.Format(lib.source_file(), fidl::ExperimentalFlags());
 
   // If we're still going to reformat, then this is the first pass.  Otherwise, we're on the second
   // pass.

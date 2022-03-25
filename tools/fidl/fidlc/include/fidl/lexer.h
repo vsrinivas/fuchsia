@@ -5,9 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LEXER_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LEXER_H_
 
-#include <assert.h>
-#include <stdint.h>
-
+#include <cassert>
+#include <cstdint>
 #include <map>
 #include <string_view>
 

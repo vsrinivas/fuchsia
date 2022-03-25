@@ -357,15 +357,16 @@ alias alias_of_vector_nullable = vector<string>:optional;
 }
 
 TEST(AliasTests, GoodMultiFileAliasReference) {
-  TestLibrary library("first.fidl", R"FIDL(
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
 library example;
 
 type Protein = struct {
   amino_acids AminoAcids;
 };
 )FIDL");
-
-  library.AddSource("second.fidl", R"FIDL(library example;
+  library.AddSource("second.fidl", R"FIDL(
+library example;
 
 alias AminoAcids = vector<uint64>:32;
 )FIDL");
@@ -374,15 +375,16 @@ alias AminoAcids = vector<uint64>:32;
 }
 
 TEST(AliasTests, GoodMultiFileNullableAliasReference) {
-  TestLibrary library("first.fidl", R"FIDL(
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
 library example;
 
 type Protein = struct {
     amino_acids AminoAcids:optional;
 };
 )FIDL");
-
-  library.AddSource("second.fidl", R"FIDL(library example;
+  library.AddSource("second.fidl", R"FIDL(
+library example;
 
 alias AminoAcids = vector<uint64>:32;
 )FIDL");
@@ -391,7 +393,7 @@ alias AminoAcids = vector<uint64>:32;
 }
 
 TEST(AliasTests, BadRecursiveAlias) {
-  TestLibrary library("first.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 alias TheAlias = TheStruct;
@@ -410,7 +412,7 @@ type TheStruct = struct {
 }
 
 TEST(AliasTests, BadCompoundIdentifier) {
-  TestLibrary library("test.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 alias foo.bar.baz = uint8;
@@ -421,24 +423,23 @@ alias foo.bar.baz = uint8;
 
 TEST(AliasTests, GoodUsingLibrary) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(library dependent;
+  TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(
+library dependent;
 
 type Bar = struct {
     s int8;
 };
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
 library example;
 
 using dependent;
 
 alias Bar2 = dependent.Bar;
 
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 

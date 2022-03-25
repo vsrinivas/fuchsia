@@ -94,26 +94,28 @@ TEST(LintTests, BadLibraryNamesBannedName) {
 }
 
 TEST(LintTests, BadUsingNames) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 using zx as bad_USING;
 
 alias unused = bad_USING.handle;
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "bad_USING");
 }
 
 TEST(LintTests, GoodUsingNames) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 using zx as good_using;
 
 alias unused = good_using.handle;
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
   ASSERT_TRUE(library.Lint());
   ASSERT_WARNINGS(0, library, "");

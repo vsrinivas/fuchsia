@@ -391,14 +391,14 @@ type #Bar# = struct {};
 TEST(DeclarationOrderTest, GoodAllLibrariesOrderMultiple) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     SharedAmongstLibraries shared;
-    TestLibrary dependency("dependency.fidl", R"FIDL(library dependency;
+    TestLibrary dependency(&shared, "dependency.fidl", R"FIDL(
+library dependency;
 
 type ExampleDecl1 = struct {};
-)FIDL",
-                           &shared);
+)FIDL");
     ASSERT_COMPILED(dependency);
 
-    TestLibrary library("example.fidl", R"FIDL(
+    TestLibrary library(&shared, "example.fidl", R"FIDL(
 library example;
 
 using dependency;
@@ -410,8 +410,7 @@ protocol ExampleDecl1 {
   Method(struct { arg dependency.ExampleDecl1; });
 };
 
-)FIDL",
-                        &shared);
+)FIDL");
     ASSERT_COMPILED(library);
 
     auto dependency_decl_order = dependency.declaration_order();
@@ -425,7 +424,7 @@ protocol ExampleDecl1 {
     ASSERT_DECL_FQ_NAME(library_decl_order[2], "example/ExampleDecl1");
     ASSERT_DECL_FQ_NAME(library_decl_order[3], "example/ExampleDecl0");
 
-    auto all_decl_order = shared.all_libraries.DeclarationOrder();
+    auto all_decl_order = shared.all_libraries()->DeclarationOrder();
     ASSERT_EQ(5, all_decl_order.size());
     ASSERT_DECL_FQ_NAME(all_decl_order[0], "dependency/ExampleDecl1");
     ASSERT_DECL_FQ_NAME(all_decl_order[1], "example/ExampleDecl2");

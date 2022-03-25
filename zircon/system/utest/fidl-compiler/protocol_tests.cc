@@ -17,13 +17,11 @@
 namespace {
 
 TEST(ProtocolTests, GoodValidEmptyProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol Empty {};
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("Empty");
@@ -35,13 +33,11 @@ protocol Empty {};
 }
 
 TEST(ProtocolTests, GoodValidEmptyOpenProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 open protocol Empty {};
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("Empty");
@@ -53,13 +49,11 @@ open protocol Empty {};
 }
 
 TEST(ProtocolTests, GoodValidEmptyAjarProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 ajar protocol Empty {};
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("Empty");
@@ -71,13 +65,11 @@ ajar protocol Empty {};
 }
 
 TEST(ProtocolTests, GoodValidEmptyClosedProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 closed protocol Empty {};
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("Empty");
@@ -142,67 +134,57 @@ closed protocol Empty {};
 }
 
 TEST(ProtocolTests, BadEmptyStrictProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 strict protocol Empty {};
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ProtocolTests, BadEmptyFlexibleProtocol) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 flexible protocol Empty {};
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ProtocolTests, BadOpenMissingProtocolToken) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 open Empty {};
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
 TEST(ProtocolTests, BadAjarMissingProtocolToken) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 ajar Empty {};
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
 TEST(ProtocolTests, BadClosedMissingProtocolToken) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 closed Empty {};
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
@@ -265,8 +247,6 @@ protocol D {
 }
 
 TEST(ProtocolTests, GoodValidOpenClosedProtocolComposition) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -289,8 +269,8 @@ open protocol ComposeInOpen {
   compose Open;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_COMPILED(library);
 
   auto compose_in_closed = library.LookupProtocol("ComposeInClosed");
@@ -307,8 +287,6 @@ open protocol ComposeInOpen {
 }
 
 TEST(ProtocolTests, BadInvalidComposeOpenInClosed) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -318,14 +296,12 @@ closed protocol Composing {
   compose Composed;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
 
 TEST(ProtocolTests, BadInvalidComposeAjarInClosed) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -335,14 +311,12 @@ closed protocol Composing {
   compose Composed;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
 
 TEST(ProtocolTests, BadInvalidComposeOpenInAjar) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -352,8 +326,8 @@ ajar protocol Composing {
   compose Composed;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
 
@@ -418,8 +392,6 @@ protocol Example {
 }
 
 TEST(ProtocolTests, BadModifierStrictOnCompose) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -429,14 +401,12 @@ protocol B {
   strict compose A;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierFlexibleOnCompose) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -446,14 +416,12 @@ protocol B {
   flexible compose A;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierStrictOnInvalidMember) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -461,14 +429,12 @@ protocol Example {
   strict;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierFlexibleOnInvalidMember) {
-  auto experiment_flags =
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -476,8 +442,8 @@ protocol Example {
   flexible;
 };
 
-)FIDL",
-                      experiment_flags);
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 

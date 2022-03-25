@@ -84,7 +84,7 @@ type TimeZone = struct {
     name string;
     region vector<string>;
 };
-  )FIDL");
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 6);
@@ -106,7 +106,7 @@ type NameCollision = struct {};
 type NameCollision = struct {};       // This name collision error will not be
                                       // reported, because if parsing fails
                                       // compilation is skipped
-  )FIDL");
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
@@ -172,7 +172,7 @@ protocol P {
 }
 
 TEST(ParsingTests, BadRecoverableParamListParsing) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {

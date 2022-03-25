@@ -317,8 +317,8 @@ class LintTest {
     if (!library_) {
       assert(!source_template_.str().empty() &&
              "source_template() must be set before library() is called");
-      library_ =
-          std::make_unique<TestLibrary>(filename_, source_template_.Substitute(substitutions_));
+      library_ = std::make_unique<TestLibrary>();
+      library_->AddSource(filename_, source_template_.Substitute(substitutions_));
     }
     return *library_;
   }
@@ -1069,7 +1069,7 @@ library fidl.a;
 )FIDL");
   ASSERT_NO_FINDINGS(test);
 
-  test.that("the the date doesn't have to match").source_template(copyright_2020 + R"FIDL(
+  test.that("the date doesn't have to match").source_template(copyright_2020 + R"FIDL(
 
 library fidl.a;
 )FIDL");

@@ -33,7 +33,7 @@ protocol Special {
 }
 
 TEST(OrdinalsTests, BadClashingOrdinalValues) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library methodhasher;
 
 using zx;
@@ -44,6 +44,7 @@ protocol Special {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
@@ -54,7 +55,7 @@ protocol Special {
 }
 
 TEST(OrdinalsTests, BadClashingOrdinalValuesWithAttribute) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library methodhasher;
 
 using zx;
@@ -67,6 +68,7 @@ protocol Special {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
@@ -77,7 +79,7 @@ protocol Special {
 }
 
 TEST(OrdinalsTests, GoodAttributeResolvesClashes) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library methodhasher;
 
 using zx;
@@ -89,6 +91,7 @@ protocol Special {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
 }
 

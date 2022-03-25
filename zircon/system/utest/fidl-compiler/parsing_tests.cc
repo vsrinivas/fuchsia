@@ -451,7 +451,7 @@ class LocaleSwapper {
 
 TEST(ParsingTests, BadInvalidCharacterTest) {
   LocaleSwapper swapper("de_DE.iso88591");
-  TestLibrary library("invalid.character.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.maxbytes;
 
 // This is all alphanumeric in the appropriate locale, but not a valid
@@ -466,7 +466,7 @@ type ß = struct {
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
-  TestLibrary library("empty_struct.fidl", R"FIDL(library fidl.test.emptystruct;
+  TestLibrary library(R"FIDL(library fidl.test.emptystruct;
 
 type Empty = struct {};
 )FIDL");
@@ -475,14 +475,13 @@ type Empty = struct {};
 
 TEST(ParsingTests, BadErrorOnTypeAliasBeforeImports) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("dependent.fidl", R"FIDL(library dependent;
+  TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(library dependent;
 
 type Something = struct {};
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
 library example;
 
 alias foo = int16;
@@ -491,13 +490,12 @@ using dependent;
 type UseDependent = struct {
     field dependent.Something;
 };
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
 TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
   library example;
 
   @foo("Bar")
@@ -519,7 +517,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
   library example;
 
   /// A
@@ -545,7 +543,7 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
 }
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 /// start
@@ -561,7 +559,7 @@ type Empty = struct {};
 }
 
 TEST(NewSyntaxTests, WarnCommentInsideDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 /// start
@@ -577,7 +575,7 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, WarnDocCommentWithCommentBlankLineTest) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 /// start
@@ -595,7 +593,7 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 protocol Example {
@@ -608,7 +606,7 @@ protocol Example {
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(library example;
+  TestLibrary library(R"FIDL(library example;
 
 // some comments above,
 // maybe about the doc comment
@@ -624,7 +622,7 @@ type Empty = struct{};
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(library example;
+  TestLibrary library(R"FIDL(library example;
 
 /// doc comment
 type Empty = struct {};
@@ -635,7 +633,7 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentWithCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(library example;
+  TestLibrary library(R"FIDL(library example;
 
 /// doc comment
 
@@ -650,7 +648,7 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, WarnTrailingDocCommentTest) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 type Empty = struct {};
@@ -664,7 +662,7 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, BadTrailingDocCommentInDeclTest) {
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 type Empty = struct {

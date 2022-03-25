@@ -360,7 +360,7 @@ int main(int argc, char* argv[]) {
       library_name = args->Claim();
     } else if (behavior_argument == "--experimental") {
       std::string flag = args->Claim();
-      if (!experimental_flags.SetFlagByName(flag)) {
+      if (!experimental_flags.EnableFlagByName(flag)) {
         FailWithUsage("Unknown experimental flag %s\n", flag.data());
       }
     } else if (behavior_argument == "--depfile") {

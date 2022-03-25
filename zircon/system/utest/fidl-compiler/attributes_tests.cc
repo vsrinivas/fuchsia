@@ -19,15 +19,15 @@ namespace {
 
 TEST(AttributesTests, GoodPlacementOfAttributes) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("exampleusing.fidl", R"FIDL(library exampleusing;
+  TestLibrary dependency(&shared, "exampleusing.fidl", R"FIDL(
+library exampleusing;
 
 @on_dep_struct
 type Empty = struct {};
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
 @on_library
 library example;
 
@@ -91,8 +91,7 @@ type ExampleUnion = union {
     2: reserved;
 };
 
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_COMPILED(library);
 
   EXPECT_TRUE(library.attributes()->Get("on_library"));
@@ -155,7 +154,7 @@ type ExampleUnion = union {
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
-  TestLibrary library("example.fidl", R"FIDL(@no_doc
+  TestLibrary library(R"FIDL(@no_doc
 library example;
 
 /// For EXAMPLE_CONSTANT
@@ -321,7 +320,7 @@ using we.should.not.care;
 
 // Test that a duplicate attribute is caught, and nicely reported.
 TEST(AttributesTests, BadNoTwoSameAttribute) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.dupattributes;
 
 @dup("first")
@@ -337,7 +336,7 @@ protocol A {
 
 // Test that attributes with the same canonical form are considered duplicates.
 TEST(AttributesTests, BadNoTwoSameAttributeCanonical) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.dupattributes;
 
 @TheSame("first")
@@ -353,7 +352,7 @@ protocol A {
 
 // Test that doc comments and doc attributes clash are properly checked.
 TEST(AttributesTests, BadNoTwoSameDocAttribute) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.dupattributes;
 
 /// first
@@ -368,14 +367,15 @@ protocol A {
 }
 
 TEST(AttributesTests, BadNoTwoSameAttributeOnLibrary) {
-  TestLibrary library("dup_attributes.fidl", R"FIDL(
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
 @dup("first")
 library fidl.test.dupattributes;
 
 )FIDL");
-  library.AddSource("dup_attributes_second.fidl", R"FIDL(
+  library.AddSource("second.fidl", R"FIDL(
 @dup("second")
- library fidl.test.dupattributes;
+library fidl.test.dupattributes;
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
@@ -421,7 +421,7 @@ protocol A {
 }
 
 TEST(AttributesTests, BadEmptyTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.transportattributes;
 
 @transport
@@ -434,7 +434,7 @@ protocol A {
 }
 
 TEST(AttributesTests, BadBogusTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.transportattributes;
 
 @transport("Bogus")
@@ -447,7 +447,7 @@ protocol A {
 }
 
 TEST(AttributesTests, GoodChannelTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
+  TestLibrary library(R"FIDL(library fidl.test.transportattributes;
 
 @transport("Channel")
 protocol A {
@@ -460,7 +460,7 @@ protocol A {
 }
 
 TEST(AttributesTests, GoodSyscallTransport) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
+  TestLibrary library(R"FIDL(library fidl.test.transportattributes;
 
 @transport("Syscall")
 protocol A {
@@ -473,7 +473,7 @@ protocol A {
 }
 
 TEST(AttributesTests, GoodMultipleTransports) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(library fidl.test.transportattributes;
+  TestLibrary library(R"FIDL(library fidl.test.transportattributes;
 
 @transport("Channel, Syscall")
 protocol A {
@@ -486,7 +486,7 @@ protocol A {
 }
 
 TEST(AttributesTests, BadMultipleTransportsWithBogus) {
-  TestLibrary library("transport_attributes.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test.transportattributes;
 
 @transport("Channel, Bogus, Syscall")
@@ -506,7 +506,7 @@ library fidl.test;
 protocol MyProtocol {
   MyMethod();
 };
-  )FIDL");
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "transitional");
@@ -520,7 +520,7 @@ library fidl.test;
 type U = flexible union {
   1: a int32;
 };
-  )FIDL");
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
@@ -533,7 +533,7 @@ library fidl.test;
 type U = flexible union {
   @unknown 1: a int32;
 };
-  )FIDL");
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
@@ -546,7 +546,7 @@ library fidl.test;
 type B = flexible bits : uint32 {
   @unknown A = 0x1;
 };
-  )FIDL");
+)FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
@@ -559,7 +559,7 @@ library fidl.test;
 type E = strict enum : uint32 {
   @unknown A = 1;
 };
-  )FIDL");
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnStrictEnumMember);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
@@ -750,7 +750,7 @@ type MyTable = table {
 }
 
 TEST(AttributesTests, BadMaxHandles) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 using zx;
@@ -763,6 +763,7 @@ type MyUnion = resource union {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyHandles);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");  // 2 allowed
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "6");  // 6 found
@@ -852,30 +853,24 @@ protocol MyProtocol {
 }
 
 TEST(AttributesTests, BadNoArgumentsEmptyParens) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
 @for_deprecated_c_bindings()
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeWithEmptyParens);
 }
 
 TEST(AttributesTests, GoodMultipleArguments) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo(bar="abc", baz="def")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -890,87 +885,69 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadMultipleArgumentsWithNoNames) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo("abc", "def")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
 }
 
 TEST(AttributesTests, BadMultipleArgumentsDuplicateNames) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo(bar="abc", bar="def")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArg);
 }
 
 TEST(AttributesTests, BadMultipleArgumentsDuplicateCanonicalNames) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo(Bar_baz="abc", bar__baz="def")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArgCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'bar_baz'");
 }
 
 TEST(AttributesTests, GoodSingleArgumentIsNotNamed) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo("bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 }
 
 TEST(AttributesTests, GoodSingleArgumentIsNamedWithoutSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo(a="bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 }
 
 TEST(AttributesTests, GoodSingleSchemaArgument) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo("bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "value",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
@@ -979,16 +956,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, GoodSingleSchemaArgumentWithInferredName) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo("bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "inferrable",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
@@ -1004,8 +978,6 @@ type MyStruct = struct {};
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
 // a single optional argument is allowed, respect both the inclusion and omission of that argument.
 TEST(AttributesTests, GoodSingleSchemaArgumentRespectOptionality) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1015,8 +987,7 @@ type MyStruct = struct {};
 @foo
 type MyOtherStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "value",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
@@ -1027,16 +998,13 @@ type MyOtherStruct = struct {};
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
 // a single argument is allowed, naming that argument is an error.
 TEST(AttributesTests, BadSingleSchemaArgumentIsNamed) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo(value="bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "value",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
@@ -1047,16 +1015,13 @@ type MyStruct = struct {};
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that
 // multiple arguments are allowed, a single unnamed argument is an error.
 TEST(AttributesTests, BadSingleSchemaArgumentIsNotNamed) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @foo("bar")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("foo")
       .AddArg("value", fidl::flat::AttributeArgSchema(
                            fidl::flat::ConstantValue::Kind::kString,
@@ -1068,8 +1033,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredOnly) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1080,8 +1043,7 @@ type MyStruct = struct {};
 @multiple_args(second="bar", first="foo")
 type MyOtherStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("multiple_args")
       .AddArg("first", fidl::flat::AttributeArgSchema(
                            fidl::flat::ConstantValue::Kind::kString,
@@ -1093,8 +1055,6 @@ type MyOtherStruct = struct {};
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsOptionalOnly) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1115,8 +1075,7 @@ type MyStruct4 = struct {};
 @multiple_args
 type MyStruct5 = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("multiple_args")
       .AddArg("first", fidl::flat::AttributeArgSchema(
                            fidl::flat::ConstantValue::Kind::kString,
@@ -1128,8 +1087,6 @@ type MyStruct5 = struct {};
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredAndOptional) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1144,8 +1101,7 @@ type MyStruct2 = struct {};
 @multiple_args(first="foo")
 type MyStruct3 = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("multiple_args")
       .AddArg("first", fidl::flat::AttributeArgSchema(
                            fidl::flat::ConstantValue::Kind::kString,
@@ -1157,16 +1113,13 @@ type MyStruct3 = struct {};
 }
 
 TEST(AttributesTests, BadMultipleSchemaArgumentsRequiredMissing) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
 @multiple_args(optional="foo")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("multiple_args")
       .AddArg("required", fidl::flat::AttributeArgSchema(
                               fidl::flat::ConstantValue::Kind::kString,
@@ -1179,16 +1132,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, GoodLiteralTypesWithoutSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr(foo="abc", bar=true, baz=false)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1215,23 +1165,18 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadLiteralNumericTypesWithoutSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr(foo=1, bar=2.3)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCanOnlyUseStringOrBool,
                                       fidl::ErrCanOnlyUseStringOrBool);
 }
 
 TEST(AttributesTests, GoodReferencedTypesWithoutSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1242,8 +1187,7 @@ const baz bool = false;
 @attr(foo=foo, bar=bar, baz=baz)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1283,8 +1227,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadReferencedNumericTypesWithoutSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1294,15 +1236,12 @@ const bar float32 = -2.3;
 @attr(foo=foo, bar=bar)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCanOnlyUseStringOrBool,
                                       fidl::ErrCanOnlyUseStringOrBool);
 }
 
 TEST(AttributesTests, GoodLiteralTypesWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1321,8 +1260,7 @@ library fidl.test;
         float64=-3.4)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr")
       .AddArg("string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString))
       .AddArg("bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
@@ -1484,16 +1422,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidLiteralStringTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr(true)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
@@ -1501,16 +1436,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidLiteralBoolTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr("foo")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
@@ -1518,16 +1450,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidLiteralNumericTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr(-1)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
@@ -1535,8 +1464,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, GoodReferencedTypesWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -1572,8 +1499,7 @@ const float64 fidl.float64 = -3.4;
         float64=float64)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr")
       .AddArg("string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString))
       .AddArg("bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
@@ -1735,8 +1661,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidReferencedStringTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1745,8 +1669,7 @@ const foo bool = true;
 @attr(foo)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
@@ -1754,8 +1677,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidReferencedBoolTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1764,8 +1685,7 @@ const foo string:3 = "foo";
 @attr(foo)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
@@ -1773,8 +1693,6 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadInvalidReferencedNumericTypeWithSchema) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1783,8 +1701,7 @@ const foo uint16 = 259;
 @attr(foo)
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   library.AddAttributeSchema("attr").AddArg(
       "int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8));
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
@@ -1822,16 +1739,13 @@ const BAD uint8 = 1;
 }
 
 TEST(AttributesTests, GoodAnonymousArgumentGetsNamedValue) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr("abc")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1842,16 +1756,13 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, GoodSingleNamedArgumentKeepsName) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
 @attr(foo="abc")
 type MyStruct = struct {};
 
-)FIDL",
-                      experimental_flags);
+)FIDL");
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");

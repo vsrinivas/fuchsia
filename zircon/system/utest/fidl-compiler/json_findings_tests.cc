@@ -508,7 +508,7 @@ struct TestStruct {
 }
 
 TEST(JsonFindingsTests, FidlJsonEndToEnd) {
-  auto library = std::make_unique<TestLibrary>("example.fidl", R"FIDL(
+  TestLibrary library(R"FIDL(
 library fidl.a;
 
 protocol TestProtocol {
@@ -517,7 +517,7 @@ protocol TestProtocol {
 )FIDL");
 
   Findings findings;
-  ASSERT_FALSE(library->Lint(&findings));
+  ASSERT_FALSE(library.Lint(&findings));
 
   ASSERT_NO_FATAL_FAILURE(FindingsEmitThisJson(findings, R"JSON([
   {

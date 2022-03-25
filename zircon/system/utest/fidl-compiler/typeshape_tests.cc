@@ -605,7 +605,7 @@ type OneReserved = table {
 }
 
 TEST(TypeshapeTests, GoodSimpleTablesWithHandles) {
-  auto test_library = WithLibraryZx(R"FIDL(
+  TestLibrary test_library(R"FIDL(
 library example;
 using zx;
 
@@ -613,7 +613,8 @@ type TableWithOneHandle = resource table {
   1: h zx.handle;
 };
 
-    )FIDL");
+)FIDL");
+  test_library.UseLibraryZx();
   ASSERT_COMPILED(test_library);
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
@@ -1110,7 +1111,7 @@ type TableWithOptionalUnion = table {
 }
 
 TEST(TypeshapeTests, GoodUnionsWithHandles) {
-  auto test_library = WithLibraryZx(R"FIDL(
+  TestLibrary test_library(R"FIDL(
 library example;
 using zx;
 
@@ -1126,7 +1127,8 @@ type ManyHandleUnion = strict resource union {
   3: handle_vector vector<zx.handle>:8;
 };
 
-    )FIDL");
+)FIDL");
+  test_library.UseLibraryZx();
   ASSERT_COMPILED(test_library);
 
   auto one_handle_union = test_library.LookupUnion("OneHandleUnion");
@@ -1349,7 +1351,7 @@ type TableWithUnboundedVectors = table {
 }
 
 TEST(TypeshapeTests, GoodVectorsWithHandles) {
-  auto test_library = WithLibraryZx(R"FIDL(
+  TestLibrary test_library(R"FIDL(
 library example;
 using zx;
 
@@ -1393,7 +1395,8 @@ type TableWithHandleStructVector = resource table {
   1: sv vector<OneHandle>:8;
 };
 
-    )FIDL");
+)FIDL");
+  test_library.UseLibraryZx();
   ASSERT_COMPILED(test_library);
 
   auto handle_vector = test_library.LookupStruct("HandleVector");
@@ -1683,7 +1686,7 @@ type TableWithAnInt32ArrayNoPadding = table {
 }
 
 TEST(TypeshapeTests, GoodArraysWithHandles) {
-  auto test_library = WithLibraryZx(R"FIDL(
+  TestLibrary test_library(R"FIDL(
 library example;
 using zx;
 
@@ -1703,7 +1706,8 @@ type TableWithNullableHandleArray = resource table {
   1: ha array<zx.handle:optional, 8>;
 };
 
-    )FIDL");
+)FIDL");
+  test_library.UseLibraryZx();
   ASSERT_COMPILED(test_library);
 
   auto handle_array = test_library.LookupStruct("HandleArray");
@@ -2222,7 +2226,9 @@ type UsingOptRequestSomeProtocol = resource struct {
 }
 
 TEST(TypeshapeTests, GoodExternalDefinitions) {
-  auto test_library = WithLibraryZx(R"FIDL(
+  TestLibrary test_library;
+  test_library.UseLibraryZx();
+  test_library.AddSource("example.fidl", R"FIDL(
 library example;
 
 using zx;
@@ -2239,8 +2245,9 @@ type ExternalVectorSizeStruct = resource struct {
     a vector<zx.handle>:EXTERNAL_SIZE_DEF;
 };
 
-    )FIDL");
-  test_library.AddSource("extern_defs.fidl", R"FIDL(library example;
+)FIDL");
+  test_library.AddSource("extern_defs.fidl", R"FIDL(
+library example;
 
 const EXTERNAL_SIZE_DEF uint32 = ANOTHER_INDIRECTION;
 const ANOTHER_INDIRECTION uint32 = 32;
@@ -2751,7 +2758,7 @@ type B = struct {
 }
 
 TEST(TypeshapeTests, GoodCoRecursiveStructWithHandles) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 using zx;
 
@@ -2765,6 +2772,7 @@ type B = resource struct {
     bar box<A>;
 };
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");
@@ -2891,16 +2899,15 @@ type Priority = enum {
 
 TEST(TypeshapeTests, GoodProtocolChildAndParent) {
   SharedAmongstLibraries shared;
-  TestLibrary parent_library("parent.fidl", R"FIDL(library parent;
+  TestLibrary parent_library(&shared, "parent.fidl", R"FIDL(library parent;
 
 protocol Parent {
     Sync() -> ();
 };
-)FIDL",
-                             &shared);
+)FIDL");
   ASSERT_COMPILED(parent_library);
 
-  TestLibrary child_library("child.fidl", R"FIDL(
+  TestLibrary child_library(&shared, "child.fidl", R"FIDL(
 library child;
 
 using parent;
@@ -2908,8 +2915,7 @@ using parent;
 protocol Child {
   compose parent.Parent;
 };
-)FIDL",
-                            &shared);
+)FIDL");
   ASSERT_COMPILED(child_library);
 
   auto child = child_library.LookupProtocol("Child");
@@ -3191,7 +3197,7 @@ type Sandwich = struct {
 }
 
 TEST(TypeshapeTests, GoodZeroSizeVector) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 using zx;
 
@@ -3200,6 +3206,7 @@ type A = resource struct {
 };
 
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");

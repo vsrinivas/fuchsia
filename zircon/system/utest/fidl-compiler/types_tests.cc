@@ -480,7 +480,7 @@ type TypeDecl= struct {
 }
 
 TEST(NewSyntaxTests, GoodConstraintsOnHandles) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 using zx;
 
@@ -493,6 +493,7 @@ type TypeDecl = resource struct {
   h5 zx.handle:<VMO,zx.rights.TRANSFER,optional>;
 };
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
@@ -600,7 +601,7 @@ type Foo = struct {
 }
 
 TEST(NewSyntaxTests, BadConstrainTwice) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -612,6 +613,7 @@ type Foo = struct {
 };
 
 )FIDL");
+  library.UseLibraryZx();
 
   // TODO(fxbug.dev/74193): We plan to disallow constraints on aliases, so this
   // error message should change to that. For now, to test this we have to use
@@ -620,7 +622,7 @@ type Foo = struct {
 }
 
 TEST(NewSyntaxTests, GoodNoOverlappingConstraints) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 using zx;
@@ -632,6 +634,7 @@ type Foo = resource struct {
 };
 
 )FIDL");
+  library.UseLibraryZx();
 
   ASSERT_COMPILED(library);
 }

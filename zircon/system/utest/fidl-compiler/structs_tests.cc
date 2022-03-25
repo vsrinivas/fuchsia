@@ -352,7 +352,8 @@ TEST(StructsTests, BadTypeCannotBeBoxed) {
            "type Foo = struct { resource_member box<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeBoxed);
   }
 }

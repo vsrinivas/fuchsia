@@ -64,8 +64,6 @@ type NonDenseTable = table {
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributePlacement) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -87,8 +85,6 @@ type Struct = struct {
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInAttributeCompile) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
   TestLibrary library(R"FIDL(
 library example;
 
@@ -99,8 +95,7 @@ type Enum = enum {
     FOO                      // Error: cannot resolve enum member
         = "not a number";    // Error: cannot be interpreted as uint32
 };
-)FIDL",
-                      experimental_flags);
+)FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 6);

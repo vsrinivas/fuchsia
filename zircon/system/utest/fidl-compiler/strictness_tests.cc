@@ -21,7 +21,7 @@ library example;
 type One = strict union { 1: b bool; };
 type Two = strict strict union { 1: b bool; };          // line 5
 type Three = strict strict strict union { 1: b bool; }; // line 6
-  )FIDL");
+)FIDL");
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -43,7 +43,7 @@ library example;
 
 type SF = strict flexible union { 1: b bool; }; // line 4
 type FS = flexible strict union { 1: b bool; }; // line 5
-  )FIDL");
+)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
                                       fidl::ErrConflictingModifier);
   EXPECT_EQ(library.errors()[0]->span.position().line, 4);
@@ -130,7 +130,7 @@ type Foo = strict struct {
 }
 
 TEST(StrictnessTests, BadStrictnessTable) {
-  TestLibrary library("table", R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 type StrictFoo = strict table {};

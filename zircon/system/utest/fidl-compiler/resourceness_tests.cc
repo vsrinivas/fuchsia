@@ -80,7 +80,7 @@ library example;
 type One = resource struct {};
 type Two = resource resource struct {};            // line 5
 type Three = resource resource resource struct {}; // line 6
-  )FIDL");
+)FIDL");
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -105,7 +105,8 @@ TEST(ResourcenessTests, GoodResourceStruct) {
            "using zx;\ntype Foo = resource struct{ v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupStruct("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
@@ -121,7 +122,8 @@ TEST(ResourcenessTests, GoodResourceTable) {
            "using zx;\ntype Foo = resource table { 1: v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupTable("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
@@ -136,7 +138,8 @@ TEST(ResourcenessTests, GoodResourceUnion) {
            "using zx;\ntype Foo = resource union { 1: v vector<zx.handle>; };",
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ;
     ASSERT_COMPILED(library);
     EXPECT_EQ(library.LookupUnion("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
@@ -153,7 +156,8 @@ TEST(ResourcenessTests, BadHandlesInValueStruct) {
            "type Foo = struct { bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -168,7 +172,8 @@ TEST(ResourcenessTests, BadHandlesInValueTable) {
            "type Foo = table { 1: bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -183,7 +188,8 @@ TEST(ResourcenessTests, BadHandlesInValueUnion) {
            "type Foo = union { 1: bad_member vector<zx.handle>:0; };",
        }) {
     std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -205,7 +211,8 @@ using zx;
 protocol Protocol {};
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -228,7 +235,8 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -260,7 +268,8 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -289,7 +298,8 @@ type ResourceTable = resource table {};
 type ResourceUnion = resource union { 1: b bool; };
 
 )FIDL" + definition + "\n";
-    auto library = WithLibraryZx(fidl_library);
+    TestLibrary library(fidl_library);
+    library.UseLibraryZx();
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo", "%s", fidl_library.c_str());
     ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member", "%s", fidl_library.c_str());
@@ -298,7 +308,7 @@ type ResourceUnion = resource union { 1: b bool; };
 }
 
 TEST(ResourcenessTests, BadMultipleResourceTypesInValueType) {
-  auto library = WithLibraryZx(R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 using zx;
 
@@ -310,6 +320,7 @@ type Foo = struct {
 
 type ResourceStruct = resource struct {};
 )FIDL");
+  library.UseLibraryZx();
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();

@@ -22,40 +22,37 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
            "array<uint32, dep2.Constant>",
        }) {
     SharedAmongstLibraries shared;
-    TestLibrary dep2("dep2.fidl", R"FIDL(
-  library dep2;
+    TestLibrary dep2(&shared, "dep2.fidl", R"FIDL(
+library dep2;
 
-  const Constant uint32 = 50;
-  type Type = struct {};
-  protocol Protocol {};
-  )FIDL",
-                     &shared);
+const Constant uint32 = 50;
+type Type = struct {};
+protocol Protocol {};
+)FIDL");
     ASSERT_COMPILED(dep2);
 
-    TestLibrary dep1("dep1.fidl",
+    TestLibrary dep1(&shared, "dep1.fidl",
                      R"FIDL(
-  library dep1;
+library dep1;
 
-  using dep2;
+using dep2;
 
-  protocol Foo {
-    UsesDepType(resource struct { data )FIDL" +
+protocol Foo {
+  UsesDepType(resource struct { data )FIDL" +
                          type_usage + R"FIDL(; });
-  };
-  )FIDL",
-                     &shared);
+};
+)FIDL");
     ASSERT_COMPILED(dep1);
 
-    TestLibrary lib("example.fidl", R"FIDL(
-  library example;
+    TestLibrary lib(&shared, "example.fidl", R"FIDL(
+library example;
 
-  using dep1;
+using dep1;
 
-  protocol CapturesDependencyThroughCompose {
-    compose dep1.Foo;
-  };
-  )FIDL",
-                    &shared);
+protocol CapturesDependencyThroughCompose {
+  compose dep1.Foo;
+};
+)FIDL");
     ASSERT_COMPILED(lib);
 
     auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());
@@ -68,15 +65,14 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
 
 TEST(DirectDependenciesTests, GoodDoesNotCaptureTransitiveDeps) {
   SharedAmongstLibraries shared;
-  TestLibrary dep2("dep2.fidl", R"FIDL(
+  TestLibrary dep2(&shared, "dep2.fidl", R"FIDL(
 library dep2;
 
 type Foo = struct {};
-)FIDL",
-                   &shared);
+)FIDL");
   ASSERT_COMPILED(dep2);
 
-  TestLibrary dep1("dep1.fidl", R"FIDL(
+  TestLibrary dep1(&shared, "dep1.fidl", R"FIDL(
 library dep1;
 
 using dep2;
@@ -86,11 +82,10 @@ alias Bar = dep2.Foo;
 protocol Baz {
   UsesDepConst(struct { foo vector<Bar>; });
 };
-)FIDL",
-                   &shared);
+)FIDL");
   ASSERT_COMPILED(dep1);
 
-  TestLibrary lib("example.fidl", R"FIDL(
+  TestLibrary lib(&shared, "example.fidl", R"FIDL(
 library example;
 
 using dep1;
@@ -98,8 +93,7 @@ using dep1;
 protocol CapturesDependencyThroughCompose {
   compose dep1.Baz;
 };
-)FIDL",
-                  &shared);
+)FIDL");
   ASSERT_COMPILED(lib);
 
   auto deps = lib.all_libraries()->DirectAndComposedDependencies(lib.library());

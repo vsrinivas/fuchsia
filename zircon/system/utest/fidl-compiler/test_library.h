@@ -19,27 +19,56 @@
 
 #include "fidl/experimental_flags.h"
 
-static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filename,
-                                                        const std::string& raw_source_code) {
-  std::string source_code(raw_source_code);
-  // NUL terminate the string.
-  source_code.resize(source_code.size() + 1);
-  return std::make_unique<fidl::SourceFile>(filename, source_code);
-}
-
-class SharedAmongstLibraries {
+// Behavior that applies to SharedAmongstLibraries, but that is also provided on
+// TestLibrary for convenience in single-library tests.
+class SharedInterface {
  public:
-  SharedAmongstLibraries() : all_libraries(&reporter) {}
+  virtual fidl::Reporter* reporter() = 0;
+  virtual fidl::flat::Libraries* all_libraries() = 0;
+  virtual fidl::ExperimentalFlags& experimental_flags() = 0;
 
-  fidl::Reporter reporter;
-  fidl::flat::Libraries all_libraries;
-  std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries;
+  const std::vector<std::unique_ptr<fidl::Diagnostic>>& errors() { return reporter()->errors(); }
+  const std::vector<std::unique_ptr<fidl::Diagnostic>>& warnings() {
+    return reporter()->warnings();
+  }
+  std::vector<fidl::Diagnostic*> Diagnostics() { return reporter()->Diagnostics(); }
+  void set_warnings_as_errors(bool value) { reporter()->set_warnings_as_errors(value); }
+  void PrintReports() { reporter()->PrintReports(/*enable_color=*/false); }
+  void EnableFlag(fidl::ExperimentalFlags::Flag flag) { experimental_flags().EnableFlag(flag); }
 };
 
-namespace {
+// Stores data structures that are shared amongst all libraries being compiled
+// together (i.e. the dependencies and the final library).
+class SharedAmongstLibraries final : public SharedInterface {
+ public:
+  SharedAmongstLibraries() : all_libraries_(&reporter_) {}
+  // Unsafe to copy/move because all_libraries_ stores a pointer to reporter_.
+  SharedAmongstLibraries(const SharedAmongstLibraries&) = delete;
+  SharedAmongstLibraries(SharedAmongstLibraries&&) = delete;
+
+  // Adds and compiles a library similar to //zircon/vsdo/zx, defining "handle",
+  // "obj_type", and "rights".
+  void AddLibraryZx();
+
+  fidl::Reporter* reporter() override { return &reporter_; }
+  fidl::flat::Libraries* all_libraries() override { return &all_libraries_; }
+  fidl::ExperimentalFlags& experimental_flags() override { return experimental_flags_; }
+
+  std::vector<std::unique_ptr<fidl::SourceFile>>& all_sources_of_all_libraries() {
+    return all_sources_of_all_libraries_;
+  }
+
+ private:
+  fidl::Reporter reporter_;
+  fidl::flat::Libraries all_libraries_;
+  std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries_;
+  fidl::ExperimentalFlags experimental_flags_;
+};
+
+namespace internal {
 
 // See ordinals_test.cc
-fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
+inline fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
     const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
     const std::string_view& selector_name, const fidl::raw::SourceElement& source_element) {
   static std::map<std::string, uint64_t> special_selectors = {
@@ -57,54 +86,65 @@ fidl::raw::Ordinal64 GetGeneratedOrdinal64ForTesting(
   return fidl::ordinals::GetGeneratedOrdinal64(library_name, protocol_name, selector_name,
                                                source_element);
 }
-}  // namespace
 
-class TestLibrary final {
+}  // namespace internal
+
+// Test harness for a single library. To compile multiple libraries together,
+// first default construct a SharedAmongstLibraries and then pass it to each
+// TestLibrary, and compile them one at a time in dependency order.
+class TestLibrary final : public SharedInterface {
  public:
-  explicit TestLibrary() : TestLibrary(&owned_shared_) {}
+  // Constructor for a single-library, single-file test.
+  explicit TestLibrary(const std::string& raw_source_code) : TestLibrary() {
+    AddSource("example.fidl", raw_source_code);
+  }
 
-  explicit TestLibrary(SharedAmongstLibraries* shared,
-                       fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
-      : reporter_(&shared->reporter),
-        experimental_flags_(experimental_flags),
-        all_libraries_(&shared->all_libraries),
-        all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
-        library_(nullptr) {}
+  // Constructor for a single-library, multi-file test (call AddSource after).
+  explicit TestLibrary() {
+    owned_shared_.emplace();
+    shared_ = &owned_shared_.value();
+  }
 
-  explicit TestLibrary(const std::string& raw_source_code,
-                       fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
-      : TestLibrary("example.fidl", raw_source_code, experimental_flags) {}
-
-  TestLibrary(const std::string& filename, const std::string& raw_source_code,
-              fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
-      : TestLibrary(filename, raw_source_code, &owned_shared_, experimental_flags) {}
-
-  TestLibrary(const std::string& filename, const std::string& raw_source_code,
-              SharedAmongstLibraries* shared,
-              fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
-      : TestLibrary(shared, experimental_flags) {
+  // Constructor for a multi-library, single-file test.
+  explicit TestLibrary(SharedAmongstLibraries* shared, const std::string& filename,
+                       const std::string& raw_source_code)
+      : TestLibrary(shared) {
     AddSource(filename, raw_source_code);
   }
 
-  void AddSource(const std::string& filename, const std::string& raw_source_code) {
-    AddSource(MakeSourceFile(filename, raw_source_code));
+  // Constructor for a multi-library, multi-file test (call AddSource after).
+  explicit TestLibrary(SharedAmongstLibraries* shared) : shared_(shared) {}
+
+  // Helper for making a single test library depend on library zx, without
+  // requiring an explicit SharedAmongstLibraries.
+  void UseLibraryZx() {
+    assert(!library_ && "must call before compiling");
+    owned_shared_.value().AddLibraryZx();
   }
 
-  void AddSource(std::unique_ptr<fidl::SourceFile> source_file) {
-    all_sources_.push_back(source_file.get());
-    all_sources_of_all_libraries_->push_back(std::move(source_file));
+  fidl::Reporter* reporter() override { return shared_->reporter(); }
+  fidl::flat::Libraries* all_libraries() override { return shared_->all_libraries(); }
+  fidl::ExperimentalFlags& experimental_flags() override { return shared_->experimental_flags(); }
+
+  void AddSource(const std::string& filename, const std::string& raw_source_code) {
+    std::string source_code(raw_source_code);
+    // NUL terminate the string.
+    source_code.resize(source_code.size() + 1);
+    auto file = std::make_unique<fidl::SourceFile>(filename, source_code);
+    all_sources_.push_back(file.get());
+    shared_->all_sources_of_all_libraries().push_back(std::move(file));
   }
 
   fidl::flat::AttributeSchema& AddAttributeSchema(std::string name) {
-    return all_libraries_->AddAttributeSchema(std::move(name));
+    return all_libraries()->AddAttributeSchema(std::move(name));
   }
 
   // TODO(pascallouis): remove, this does not use a library.
   bool Parse(std::unique_ptr<fidl::raw::File>* out_ast_ptr) {
     assert(all_sources_.size() == 1 && "parse can only be used with one source");
     auto source_file = all_sources_.at(0);
-    fidl::Lexer lexer(*source_file, reporter_);
-    fidl::Parser parser(&lexer, reporter_, experimental_flags_);
+    fidl::Lexer lexer(*source_file, reporter());
+    fidl::Parser parser(&lexer, reporter(), experimental_flags());
     out_ast_ptr->reset(parser.Parse().release());
     return parser.Success();
   }
@@ -112,11 +152,11 @@ class TestLibrary final {
   // Compiles the library. Must have compiled all dependencies first, using the
   // same SharedAmongstLibraries object for all of them.
   bool Compile() {
-    fidl::flat::Compiler compiler(all_libraries_, GetGeneratedOrdinal64ForTesting,
-                                  experimental_flags_);
+    fidl::flat::Compiler compiler(all_libraries(), internal::GetGeneratedOrdinal64ForTesting,
+                                  experimental_flags());
     for (auto source_file : all_sources_) {
-      fidl::Lexer lexer(*source_file, reporter_);
-      fidl::Parser parser(&lexer, reporter_, experimental_flags_);
+      fidl::Lexer lexer(*source_file, reporter());
+      fidl::Parser parser(&lexer, reporter(), experimental_flags());
       auto ast = parser.Parse();
       if (!parser.Success())
         return false;
@@ -127,7 +167,7 @@ class TestLibrary final {
     if (!library)
       return false;
     library_ = library.get();
-    return all_libraries_->Insert(std::move(library));
+    return all_libraries()->Insert(std::move(library));
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -136,13 +176,13 @@ class TestLibrary final {
             std::set<std::string>* excluded_checks_not_found = nullptr) {
     assert(all_sources_.size() == 1 && "lint can only be used with one source");
     auto source_file = all_sources_.at(0);
-    fidl::Lexer lexer(*source_file, reporter_);
-    fidl::Parser parser(&lexer, reporter_, experimental_flags_);
+    fidl::Lexer lexer(*source_file, reporter());
+    fidl::Parser parser(&lexer, reporter(), experimental_flags());
     auto ast = parser.Parse();
     if (!parser.Success()) {
       std::string_view beginning(source_file->data().data(), 0);
       fidl::SourceSpan span(beginning, *source_file);
-      const auto& error = reporter_->errors().at(0);
+      const auto& error = errors().at(0);
       auto error_msg = fidl::Reporter::Format("error", error->span, error->msg, /*color=*/false);
       findings->emplace_back(span, "parser-error", error_msg + "\n");
       return false;
@@ -166,13 +206,13 @@ class TestLibrary final {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(all_libraries_, experimental_flags_);
+    auto json_generator = fidl::JSONGenerator(all_libraries(), experimental_flags());
     auto out = json_generator.Produce();
     return out.str();
   }
 
   std::string GenerateTables() {
-    auto tables_generator = fidl::TablesGenerator(all_libraries_);
+    auto tables_generator = fidl::TablesGenerator(all_libraries());
     auto out = tables_generator.Produce();
     return out.str();
   }
@@ -267,14 +307,10 @@ class TestLibrary final {
     return nullptr;
   }
 
-  void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
-
   fidl::flat::Library* library() const {
     assert(library_ && "must compile successfully before accessing library");
     return library_;
   }
-  const fidl::flat::Libraries* all_libraries() const { return all_libraries_; }
-  fidl::Reporter* reporter() { return reporter_; }
   const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
 
   const fidl::SourceFile& source_file() const {
@@ -290,47 +326,18 @@ class TestLibrary final {
     return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
-  std::vector<fidl::Diagnostic*> Diagnostics() const { return reporter_->Diagnostics(); }
-
-  const std::vector<std::unique_ptr<fidl::Diagnostic>>& errors() const {
-    return reporter_->errors();
-  }
-
-  const std::vector<std::unique_ptr<fidl::Diagnostic>>& warnings() const {
-    return reporter_->warnings();
-  }
-
   const std::vector<std::string>& lints() const { return lints_; }
 
   std::vector<const fidl::flat::Decl*> declaration_order() const {
     return library_->declaration_order;
   }
 
-  SharedAmongstLibraries* OwnedShared() {
-    // Assume that the only good reason to obtain the owned shared is if it is
-    // actually being used by the TestLibrary
-    assert(all_libraries_ == &owned_shared_.all_libraries &&
-           "all_libraries don't match - are you sure this TestLibrary is using owned_shared_?");
-    return &owned_shared_;
-  }
-
-  void PrintReports() { reporter_->PrintReports(/* enable_color = */ false); }
-
- protected:
-  SharedAmongstLibraries owned_shared_;
-  fidl::Reporter* reporter_;
+ private:
+  std::optional<SharedAmongstLibraries> owned_shared_;
+  SharedAmongstLibraries* shared_;
   std::vector<std::string> lints_;
-  fidl::ExperimentalFlags experimental_flags_;
-  fidl::flat::Libraries* all_libraries_;
-  std::vector<std::unique_ptr<fidl::SourceFile>>* all_sources_of_all_libraries_;
   std::vector<fidl::SourceFile*> all_sources_;
-  fidl::flat::Library* library_;
+  fidl::flat::Library* library_ = nullptr;
 };
-
-TestLibrary WithLibraryZx(const std::string& source_code);
-TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags);
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code);
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code,
-                          fidl::ExperimentalFlags flags);
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

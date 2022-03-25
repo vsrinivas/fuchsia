@@ -46,7 +46,7 @@ type Foo = table {
 }
 
 TEST(TableTests, GoodManyReservedFields) {
-  TestLibrary library("test.fidl", R"FIDL(library fidl.test.tables;
+  TestLibrary library(R"FIDL(library fidl.test.tables;
 
 type Foo = table {
     1: reserved;
@@ -115,7 +115,7 @@ type Foo = table {
 }
 
 TEST(TableTests, GoodAttributesOnFields) {
-  TestLibrary library("test.fidl", R"FIDL(library fidl.test.tables;
+  TestLibrary library(R"FIDL(library fidl.test.tables;
 
 type Foo = table {
     @foo_attr("bar")

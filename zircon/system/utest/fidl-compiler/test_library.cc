@@ -4,23 +4,8 @@
 
 #include "test_library.h"
 
-TestLibrary WithLibraryZx(const std::string& source_code) {
-  return WithLibraryZx(source_code, fidl::ExperimentalFlags());
-}
-
-TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags) {
-  return WithLibraryZx("example.fidl", source_code, flags);
-}
-
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code) {
-  return WithLibraryZx(filename, source_code, fidl::ExperimentalFlags());
-}
-
-TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code,
-                          fidl::ExperimentalFlags flags) {
-  TestLibrary main_lib(filename, source_code, flags);
-
-  std::string zx = R"FIDL(
+void SharedAmongstLibraries::AddLibraryZx() {
+  TestLibrary zx_lib(this, "zx.fidl", R"FIDL(
 library zx;
 
 type obj_type = enum : uint32 {
@@ -44,10 +29,7 @@ resource_definition handle : uint32 {
         rights rights;
     };
 };
-)FIDL";
-
-  TestLibrary zx_lib("zx.fidl", zx, main_lib.OwnedShared(), flags);
-  zx_lib.Compile();
-
-  return main_lib;
+)FIDL");
+  [[maybe_unused]] bool success = zx_lib.Compile();
+  assert(success && "failed to compile library zx");
 }

@@ -21,8 +21,8 @@ class ExperimentalFlags {
   ExperimentalFlags() : flags_(0) {}
   ExperimentalFlags(Flag flag) : flags_(static_cast<FlagSet>(flag)) {}
 
-  bool SetFlagByName(const std::string_view flag);
-  void SetFlag(Flag flag);
+  bool EnableFlagByName(const std::string_view flag);
+  void EnableFlag(Flag flag);
 
   bool IsFlagEnabled(Flag flag) const;
 

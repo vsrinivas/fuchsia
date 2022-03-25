@@ -6,16 +6,16 @@
 
 namespace fidl {
 
-bool ExperimentalFlags::SetFlagByName(const std::string_view flag) {
+bool ExperimentalFlags::EnableFlagByName(const std::string_view flag) {
   auto it = FLAG_STRINGS.find(flag);
   if (it == FLAG_STRINGS.end()) {
     return false;
   }
-  SetFlag(it->second);
+  EnableFlag(it->second);
   return true;
 }
 
-void ExperimentalFlags::SetFlag(Flag flag) { flags_ |= static_cast<FlagSet>(flag); }
+void ExperimentalFlags::EnableFlag(Flag flag) { flags_ |= static_cast<FlagSet>(flag); }
 
 bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
   return (flags_ & static_cast<FlagSet>(flag)) != 0;

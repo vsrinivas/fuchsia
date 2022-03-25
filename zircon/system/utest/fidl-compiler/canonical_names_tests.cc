@@ -204,14 +204,13 @@ type example = struct {};
 
 TEST(CanonicalNamesTests, GoodDependentLibrary) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("foobar.fidl", R"FIDL(library foobar;
+  TestLibrary dependency(&shared, "foobar.fidl", R"FIDL(library foobar;
 
 type Something = struct {};
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("example.fidl", R"FIDL(
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
 library example;
 
 using foobar;
@@ -226,8 +225,7 @@ type FoObAr = enum { A = 1; };
 type FooBaR = bits { A = 1; };
 protocol FoObaR {};
 service FOoBAR {};
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_COMPILED(library);
 }
 
@@ -467,21 +465,19 @@ type HttpServer = struct {};
 
 TEST(CanonicalNamesTests, BadDependentLibrary) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency("foobar.fidl", R"FIDL(library foobar;
+  TestLibrary dependency(&shared, "foobar.fidl", R"FIDL(library foobar;
 
 type Something = struct {};
-)FIDL",
-                         &shared);
+)FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library("lib.fidl", R"FIDL(
+  TestLibrary library(&shared, "lib.fidl", R"FIDL(
 library example;
 
 using foobar;
 
 alias FOOBAR = foobar.Something;
-)FIDL",
-                      &shared);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FOOBAR");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foobar");
