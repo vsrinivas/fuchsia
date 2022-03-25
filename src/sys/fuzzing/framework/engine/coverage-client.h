@@ -7,17 +7,10 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 
-#include <atomic>
-#include <memory>
-
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/framework/engine/corpus.h"
 
 namespace fuzzing {
 
@@ -29,29 +22,23 @@ using fuchsia::fuzzer::CoverageProviderPtr;
 // This class encapsulates a client of |fuchsia.fuzzer.CoverageProvider|.
 class CoverageProviderClient final {
  public:
-  CoverageProviderClient();
-  ~CoverageProviderClient();
+  explicit CoverageProviderClient(ExecutorPtr executor);
+  ~CoverageProviderClient() = default;
 
-  // Takes ownership of the FIDL request for this client.
-  fidl::InterfaceRequest<CoverageProvider> TakeRequest();
+  using RequestHandler = fidl::InterfaceRequestHandler<CoverageProvider>;
+  void set_handler(RequestHandler handler) { handler_ = std::move(handler); }
 
-  // Sets options. Invokes |fuchsia.fuzzer.CoverageProvider.SetOptions|.
-  void Configure(const OptionsPtr& options);
-
-  // Sets the |on_event| callback to be invoked on each event. This can only be called once.
-  void OnEvent(fit::function<void(CoverageEvent)> on_event);
-
-  // Disconnects the client.
-  void Close();
+  // FIDL methods.
+  void SetOptions(const OptionsPtr& options);
+  Promise<CoverageEvent> WatchCoverageEvent();
 
  private:
-  std::shared_ptr<Dispatcher> dispatcher_;
-  fidl::InterfaceRequest<CoverageProvider> request_;
-  CoverageProviderPtr provider_;
-  SyncWait sync_;
-  std::atomic<bool> closing_ = false;
+  // Uses the request handler to connect the client. No-op if already connected.
+  void Connect();
 
-  std::thread loop_;
+  ExecutorPtr executor_;
+  RequestHandler handler_;
+  CoverageProviderPtr provider_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(CoverageProviderClient);
 };

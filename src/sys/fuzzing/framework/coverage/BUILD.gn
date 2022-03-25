@@ -8,8 +8,6 @@ source_set("coverage-lib") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
-    "event-queue.cc",
-    "event-queue.h",
     "forwarder.cc",
     "forwarder.h",
     "instrumentation.cc",
@@ -50,7 +48,6 @@ source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
-    "event-queue-unittest.cc",
     "forwarder-unittest.cc",
     "instrumentation-unittest.cc",
     "provider-unittest.cc",

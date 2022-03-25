@@ -6,19 +6,27 @@
 
 namespace fuzzing {
 
-InstrumentationImpl::InstrumentationImpl(uint64_t target_id,
-                                         std::shared_ptr<CoverageEventQueue> events)
-    : target_id_(target_id), events_(events) {}
+using fuchsia::fuzzer::Payload;
+
+InstrumentationImpl::InstrumentationImpl(uint64_t target_id, OptionsPtr options,
+                                         AsyncDequePtr<CoverageEvent> events)
+    : target_id_(target_id), options_(std::move(options)), events_(std::move(events)) {}
 
 // FIDL methods.
 void InstrumentationImpl::Initialize(InstrumentedProcess instrumented,
                                      InitializeCallback callback) {
-  events_->AddProcess(target_id_, std::move(instrumented));
-  callback(events_->GetOptions());
+  CoverageEvent event;
+  event.target_id = target_id_;
+  event.payload = Payload::WithProcessStarted(std::move(instrumented));
+  events_->Send(std::move(event));
+  callback(CopyOptions(*options_));
 }
 
 void InstrumentationImpl::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) {
-  events_->AddLlvmModule(target_id_, std::move(llvm_module));
+  CoverageEvent event;
+  event.target_id = target_id_;
+  event.payload = Payload::WithLlvmModuleAdded(std::move(llvm_module));
+  events_->Send(std::move(event));
   callback();
 }
 

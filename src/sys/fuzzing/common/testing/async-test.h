@@ -20,6 +20,7 @@ class AsyncTest : public ::testing::Test {
  protected:
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
   const ExecutorPtr& executor() const { return executor_; }
+  size_t active() const { return active_; }
 
   void SetUp() override { executor_ = MakeExecutor(dispatcher()); }
 
@@ -34,7 +35,6 @@ class AsyncTest : public ::testing::Test {
 //
 #define FUZZING_EXPECT_OK(...) Schedule(ExpectOk(__FILE__, __LINE__, __VA_ARGS__))
 #define FUZZING_EXPECT_ERROR(...) Schedule(ExpectError(__FILE__, __LINE__, __VA_ARGS__))
-#define FUZZING_EXPECT_CANCEL(...) Schedule(ExpectCancel(__FILE__, __LINE__, __VA_ARGS__))
 
   // Runs a promise using this object's test loop.
   template <typename Handler>
@@ -128,22 +128,6 @@ class AsyncTest : public ::testing::Test {
         .discard_result();
   }
 
-  // Fails if a promise completes. Useful for tests that are expected to timeout or otherwise cancel
-  // promises in prgoress. |handler| can be anything that can be passed to |fpromise::make_promise|
-  // to make a promise.
-  //
-  // Callers should use |EXPECT_CANCEL| instead of calling this directly.
-  //
-  template <typename Handler>
-  Promise<> ExpectCancel(const char* file, int line, Handler&& handler) {
-    auto promise = fpromise::make_promise(std::move(handler));
-    return promise
-        .inspect([file, line](typename decltype(promise)::result_type& result) {
-          FAIL() << "Promise completed unexpectedly at " << file << ":" << line;
-        })
-        .discard_result();
-  }
-
   // Runs the test async loop.
   void RunUntilIdle() {
     // TODO(fxbug.dev/92490): This is a transitional implementation to be used while the code has
@@ -152,6 +136,7 @@ class AsyncTest : public ::testing::Test {
     // distinct from an existing dispatcher running on a dedicated thread. When the migration to a
     // purely async approach is complete, and the dedicated threads removed, this can become simply
     // |loop_.RunUntilIdle()|, and |RunOnce| can be removed.
+    RunOnce();
     while (active_) {
       zx::nanosleep(zx::deadline_after(zx::msec(10)));
       RunOnce();

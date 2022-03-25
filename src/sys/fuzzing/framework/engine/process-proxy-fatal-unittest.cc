@@ -17,12 +17,12 @@ using ProcessProxyFatalTest = ProcessProxyTest;
 TEST_F(ProcessProxyFatalTest, Crash) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
-  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  TestTarget target;
+  TestTarget target(executor());
   auto process = target.Launch();
   process_proxy->Connect(IgnoreSentSignals(std::move(process)));
-  target.Crash();
-  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::CRASH);
+  FUZZING_EXPECT_OK(target.Crash());
+  FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::CRASH);
+  RunUntilIdle();
 }
 
 }  // namespace

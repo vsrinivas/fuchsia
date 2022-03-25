@@ -48,29 +48,34 @@ class FakeRunner final : public Runner {
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
-  using Runner::UpdateMonitors;
+  ZxPromise<> Configure(const OptionsPtr& options) override;
+  ZxPromise<FuzzResult> Execute(Input input) override;
+  ZxPromise<Input> Minimize(Input input) override;
+  ZxPromise<Input> Cleanse(Input input) override;
+  ZxPromise<Artifact> Fuzz() override;
+  ZxPromise<> Merge() override;
 
-  void ConfigureImpl(const OptionsPtr& options) override;
-  zx_status_t SyncExecute(const Input& input) override { return Run(); }
-  zx_status_t SyncMinimize(const Input& input) override { return Run(); }
-  zx_status_t SyncCleanse(const Input& input) override { return Run(); }
-  zx_status_t SyncFuzz() override { return Run(); }
-  zx_status_t SyncMerge() override { return Run(); }
-  void Interrupt() override {}
+  ZxPromise<> Stop() override;
+
+  Promise<> AwaitStop();
 
   Status CollectStatus() override;
+  using Runner::UpdateMonitors;
 
  private:
   explicit FakeRunner(ExecutorPtr executor);
-  zx_status_t Run();
+  ZxPromise<Artifact> Run();
 
   zx_status_t error_ = ZX_OK;
-  FuzzResult result_;
+  FuzzResult result_ = FuzzResult::NO_ERRORS;
   Input result_input_;
   Status status_;
   std::vector<Input> seed_corpus_;
   std::vector<Input> live_corpus_;
   Input dictionary_;
+  Completer<> completer_;
+  Consumer<> consumer_;
+  Workflow workflow_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeRunner);
 };

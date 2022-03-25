@@ -25,29 +25,65 @@ void AsyncEventPair::Pair(zx::eventpair&& eventpair) {
   eventpair_ = std::move(eventpair);
 }
 
-void AsyncEventPair::SignalSelf(zx_signals_t to_clear, zx_signals_t to_set) const {
-  auto status = eventpair_.signal(to_clear, to_set);
-  FX_DCHECK(status == ZX_OK || status == ZX_ERR_BAD_HANDLE || status == ZX_ERR_PEER_CLOSED)
-      << zx_status_get_string(status);
+bool AsyncEventPair::IsConnected() {
+  return eventpair_.is_valid() && GetSignals(ZX_EVENTPAIR_PEER_CLOSED) == 0;
 }
 
-void AsyncEventPair::SignalPeer(zx_signals_t to_clear, zx_signals_t to_set) const {
-  auto status = eventpair_.signal_peer(to_clear, to_set);
-  FX_DCHECK(status == ZX_OK || status == ZX_ERR_BAD_HANDLE || status == ZX_ERR_PEER_CLOSED)
-      << zx_status_get_string(status);
+zx_status_t AsyncEventPair::SignalSelf(zx_signals_t to_clear, zx_signals_t to_set) {
+  // Only modify user signals.
+  to_clear &= ZX_USER_SIGNAL_ALL;
+  to_set &= ZX_USER_SIGNAL_ALL;
+  if (eventpair_.signal(to_clear, to_set) != ZX_OK) {
+    eventpair_.reset();
+    return ZX_ERR_PEER_CLOSED;
+  }
+  return ZX_OK;
 }
 
-zx_signals_t AsyncEventPair::GetSignals(zx_signals_t signals) const {
-  FX_DCHECK(eventpair_.is_valid());
+zx_status_t AsyncEventPair::SignalPeer(zx_signals_t to_clear, zx_signals_t to_set) {
+  // Only modify user signals.
+  to_clear &= ZX_USER_SIGNAL_ALL;
+  to_set &= ZX_USER_SIGNAL_ALL;
+  if (eventpair_.signal_peer(to_clear, to_set) != ZX_OK) {
+    eventpair_.reset();
+    return ZX_ERR_PEER_CLOSED;
+  }
+  return ZX_OK;
+}
+
+zx_signals_t AsyncEventPair::GetSignals(zx_signals_t signals) {
+  if (!eventpair_.is_valid()) {
+    return 0;
+  }
   zx_signals_t observed = 0;
-  eventpair_.wait_one(signals, zx::time::infinite_past(), &observed);
-  return observed & signals;
+  auto status = eventpair_.wait_one(signals, zx::time::infinite_past(), &observed);
+  switch (status) {
+    case ZX_OK:
+      return observed & signals;
+    case ZX_ERR_TIMED_OUT:
+      return 0;
+    default:
+      eventpair_.reset();
+      return 0;
+  }
 }
 
 ZxPromise<zx_signals_t> AsyncEventPair::WaitFor(zx_signals_t signals) {
-  return executor_
-      ->MakePromiseWaitHandle(zx::unowned_handle(eventpair_.get()),
-                              signals | ZX_EVENTPAIR_PEER_CLOSED)
+  return fpromise::make_promise([this, signals, wait = ZxFuture<zx_packet_signal_t>()](
+                                    Context& context) mutable -> ZxResult<zx_packet_signal_t> {
+           if (!eventpair_) {
+             return fpromise::error(ZX_ERR_PEER_CLOSED);
+           }
+           if (!wait) {
+             wait = executor_->MakePromiseWaitHandle(zx::unowned_handle(eventpair_.get()),
+                                                     signals | ZX_EVENTPAIR_PEER_CLOSED);
+           }
+           if (!wait(context)) {
+             suspended_ = context.suspend_task();
+             return fpromise::pending();
+           }
+           return wait.take_result();
+         })
       .and_then([signals](const zx_packet_signal_t& packet) -> ZxResult<zx_signals_t> {
         if (packet.observed & ZX_EVENTPAIR_PEER_CLOSED) {
           return fpromise::error(ZX_ERR_PEER_CLOSED);
@@ -55,13 +91,15 @@ ZxPromise<zx_signals_t> AsyncEventPair::WaitFor(zx_signals_t signals) {
         return fpromise::ok(packet.observed & signals);
       })
       .or_else([this](zx_status_t& status) {
-        FX_DCHECK(status == ZX_ERR_CANCELED || status == ZX_ERR_BAD_HANDLE ||
-                  status == ZX_ERR_PEER_CLOSED)
-            << zx_status_get_string(status);
         eventpair_.reset();
-        return fpromise::error(status);
+        return fpromise::error(ZX_ERR_PEER_CLOSED);
       })
       .wrap_with(scope_);
+}
+
+void AsyncEventPair::Reset() {
+  eventpair_.reset();
+  suspended_.resume_task();
 }
 
 }  // namespace fuzzing

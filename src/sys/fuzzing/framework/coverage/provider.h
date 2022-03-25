@@ -6,47 +6,35 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_COVERAGE_PROVIDER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include <atomic>
-#include <memory>
-#include <thread>
-
-#include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/async-deque.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::CoverageEvent;
 using ::fuchsia::fuzzer::CoverageProvider;
 
 class CoverageProviderImpl : public CoverageProvider {
  public:
-  CoverageProviderImpl(std::shared_ptr<CoverageEventQueue> events);
-  ~CoverageProviderImpl() override;
+  CoverageProviderImpl(ExecutorPtr executor, OptionsPtr options,
+                       AsyncDequePtr<CoverageEvent> events);
+  ~CoverageProviderImpl() override = default;
 
   // FIDL methods.
   fidl::InterfaceRequestHandler<CoverageProvider> GetHandler();
   void SetOptions(Options options) override;
-  void WatchCoverageEvent(WatchCoverageEventCallback callback) override FXL_LOCKS_EXCLUDED(mutex_);
-
-  // Blocks until the engine connects to this provider.
-  void AwaitConnect();
-
-  // Blocks until the engine closes the underlying channel.
-  void AwaitClose();
+  void WatchCoverageEvent(WatchCoverageEventCallback callback) override;
 
  private:
-  Binding<CoverageProvider> binding_;
-  std::shared_ptr<CoverageEventQueue> events_;
-  SyncWait connect_;
-  SyncWait request_;
-  std::thread loop_;
-  std::mutex mutex_;
-  WatchCoverageEventCallback callback_ FXL_GUARDED_BY(mutex_);
-  std::atomic<bool> closing_ = false;
+  fidl::Binding<CoverageProvider> binding_;
+  ExecutorPtr executor_;
+  OptionsPtr options_;
+  AsyncDequePtr<CoverageEvent> events_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(CoverageProviderImpl);
 };

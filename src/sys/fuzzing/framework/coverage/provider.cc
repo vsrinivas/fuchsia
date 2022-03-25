@@ -6,60 +6,39 @@
 
 namespace fuzzing {
 
-CoverageProviderImpl::CoverageProviderImpl(std::shared_ptr<CoverageEventQueue> events)
-    : binding_(this), events_(events) {
-  loop_ = std::thread([this]() FXL_LOCKS_EXCLUDED(mutex_) {
-    while (true) {
-      request_.WaitFor("coverage request");
-      WatchCoverageEventCallback callback;
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        callback = std::move(callback_);
-        callback_ = nullptr;
-        request_.Reset();
-      }
-      if (closing_) {
-        break;
-      }
-      auto event = events_->GetEvent();
-      if (!event) {
-        break;
-      }
-      binding_.PostTask([callback = std::move(callback), event = std::move(*event)]() mutable {
-        callback(std::move(event));
-      });
-    }
-    binding_.Unbind();
-  });
-}
-
-CoverageProviderImpl::~CoverageProviderImpl() {
-  closing_ = true;
-  connect_.Signal();
-  request_.Signal();
-  events_->Stop();
-  if (loop_.joinable()) {
-    loop_.join();
-  }
-}
+CoverageProviderImpl::CoverageProviderImpl(ExecutorPtr executor, OptionsPtr options,
+                                           AsyncDequePtr<CoverageEvent> events)
+    : binding_(this),
+      executor_(std::move(executor)),
+      options_(std::move(options)),
+      events_(std::move(events)) {}
 
 fidl::InterfaceRequestHandler<CoverageProvider> CoverageProviderImpl::GetHandler() {
   return [this](fidl::InterfaceRequest<CoverageProvider> request) {
-    binding_.Bind(std::move(request));
-    connect_.Signal();
+    binding_.Bind(std::move(request), executor_->dispatcher());
   };
 }
 
-void CoverageProviderImpl::SetOptions(Options options) { events_->SetOptions(std::move(options)); }
+void CoverageProviderImpl::SetOptions(Options options) { *options_ = std::move(options); }
 
 void CoverageProviderImpl::WatchCoverageEvent(WatchCoverageEventCallback callback) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  callback_ = std::move(callback);
-  request_.Signal();
+  auto task = fpromise::make_promise([this, event = Future<CoverageEvent>(),
+                                      callback = std::move(callback)](
+                                         Context& context) mutable -> Result<> {
+                if (!event) {
+                  event = events_->Receive();
+                }
+                if (!event(context)) {
+                  return fpromise::pending();
+                }
+                if (event.is_ok()) {
+                  callback(event.take_value());
+                } else {
+                  binding_.Unbind();
+                }
+                return fpromise::ok();
+              }).wrap_with(scope_);
+  executor_->schedule_task(std::move(task));
 }
-
-void CoverageProviderImpl::AwaitConnect() { connect_.WaitFor("connection"); }
-
-void CoverageProviderImpl::AwaitClose() { binding_.AwaitClose(); }
 
 }  // namespace fuzzing

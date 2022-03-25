@@ -4,20 +4,18 @@
 
 #include "src/sys/fuzzing/common/controller.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
+
+#include <memory>
 
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/async-socket.h"
-#include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/status.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/corpus-reader.h"
 #include "src/sys/fuzzing/common/testing/monitor.h"
 #include "src/sys/fuzzing/common/testing/runner.h"
-#include "src/sys/fuzzing/common/testing/transceiver.h"
 
 namespace fuzzing {
 namespace {
@@ -34,21 +32,16 @@ class ControllerTest : public AsyncTest {
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
   void Bind(fidl::InterfaceRequest<Controller> request) {
     runner_ = FakeRunner::MakePtr(executor());
-    controller_.SetRunner(runner_);
-    controller_.Bind(std::move(request));
+    controller_ = std::make_unique<ControllerImpl>(executor());
+    controller_->SetRunner(runner_);
+    controller_->Bind(std::move(request));
   }
 
   auto runner() const { return std::static_pointer_cast<FakeRunner>(runner_); }
 
-  FidlInput Transmit(const Input& input) { return transceiver_.Transmit(input.Duplicate()); }
-
-  // Synchronously receives and returns an |Input| from a provided |FidlInput|.
-  Input Receive(FidlInput fidl_input) { return transceiver_.Receive(std::move(fidl_input)); }
-
  private:
-  ControllerImpl controller_;
+  std::unique_ptr<ControllerImpl> controller_;
   RunnerPtr runner_;
-  FakeTransceiver transceiver_;
 };
 
 // Unit tests.
@@ -397,39 +390,45 @@ TEST_F(ControllerTest, Cleanse) {
 }
 
 TEST_F(ControllerTest, Fuzz) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  ::fuchsia::fuzzer::Controller_Fuzz_Result result;
-  Input fuzzed({0xde, 0xad, 0xbe, 0xef});
+  Artifact artifact(FuzzResult::CRASH, {0xde, 0xad, 0xbe, 0xef});
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
-  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
+  ZxBridge<FidlArtifact> bridge1;
+  controller->Fuzz(ZxBind<FidlArtifact>(std::move(bridge1.completer)));
+  FUZZING_EXPECT_ERROR(bridge1.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)),
+                       ZX_ERR_WRONG_TYPE);
+  RunUntilIdle();
 
   runner()->set_error(ZX_OK);
-  runner()->set_result(FuzzResult::CRASH);
-  runner()->set_result_input(fuzzed);
-  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
-  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  auto& response = result.response();
-  EXPECT_EQ(response.result, FuzzResult::CRASH);
-  auto received = Receive(std::move(response.error_input));
-  EXPECT_EQ(received.ToHex(), fuzzed.ToHex());
+  runner()->set_result(artifact.fuzz_result());
+  runner()->set_result_input(artifact.input());
+  ZxBridge<FidlArtifact> bridge2;
+  controller->Fuzz(ZxBind<FidlArtifact>(std::move(bridge2.completer)));
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED))
+                        .and_then([&](FidlArtifact& fidl_artifact) {
+                          return AsyncSocketRead(executor(), std::move(fidl_artifact));
+                        }),
+                    std::move(artifact));
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, Merge) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
-  zx_status_t result;
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
-  EXPECT_EQ(controller->Merge(&result), ZX_OK);
-  EXPECT_EQ(result, ZX_ERR_WRONG_TYPE);
+  Bridge<zx_status_t> bridge1;
+  controller->Merge(bridge1.completer.bind());
+  FUZZING_EXPECT_OK(bridge1.consumer.promise_or(fpromise::error()), ZX_ERR_WRONG_TYPE);
+  RunUntilIdle();
 
   runner()->set_error(ZX_OK);
-  EXPECT_EQ(controller->Merge(&result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
+  Bridge<zx_status_t> bridge2;
+  controller->Merge(bridge2.completer.bind());
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error()), ZX_OK);
+  RunUntilIdle();
 }
 
 }  // namespace

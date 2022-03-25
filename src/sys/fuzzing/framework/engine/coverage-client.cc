@@ -7,15 +7,14 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 
-#include <atomic>
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
 
 namespace fuzzing {
 
@@ -23,49 +22,28 @@ using fuchsia::fuzzer::CoverageEventPtr;
 using fuchsia::fuzzer::CoverageProvider;
 using fuchsia::fuzzer::CoverageProviderPtr;
 
-CoverageProviderClient::CoverageProviderClient() : dispatcher_(std::make_shared<Dispatcher>()) {
-  request_ = provider_.NewRequest(dispatcher_->get());
-}
+CoverageProviderClient::CoverageProviderClient(ExecutorPtr executor)
+    : executor_(std::move(executor)) {}
 
-CoverageProviderClient::~CoverageProviderClient() { Close(); }
-
-void CoverageProviderClient::Configure(const OptionsPtr& options) {
+void CoverageProviderClient::SetOptions(const OptionsPtr& options) {
+  Connect();
   provider_->SetOptions(CopyOptions(*options));
 }
 
-fidl::InterfaceRequest<CoverageProvider> CoverageProviderClient::TakeRequest() {
-  FX_CHECK(request_);
-  return std::move(request_);
+Promise<CoverageEvent> CoverageProviderClient::WatchCoverageEvent() {
+  Connect();
+  Bridge<CoverageEvent> bridge;
+  provider_->WatchCoverageEvent(bridge.completer.bind());
+  return bridge.consumer.promise_or(fpromise::error());
 }
 
-void CoverageProviderClient::OnEvent(fit::function<void(CoverageEvent)> on_event) {
-  FX_CHECK(!loop_.joinable());
-  loop_ = std::thread([this, on_event = std::move(on_event)]() {
-    while (true) {
-      CoverageEvent event;
-      provider_->WatchCoverageEvent([this, &event](CoverageEvent response) {
-        event = std::move(response);
-        sync_.Signal();
-      });
-      sync_.WaitFor("the next coverage event");
-      sync_.Reset();
-      if (closing_) {
-        break;
-      }
-      on_event(std::move(event));
-    }
-    provider_.Unbind();
-  });
-}
-
-void CoverageProviderClient::Close() {
-  if (closing_.exchange(true)) {
+void CoverageProviderClient::Connect() {
+  if (provider_) {
     return;
   }
-  sync_.Signal();
-  if (loop_.joinable()) {
-    loop_.join();
-  }
+  FX_DCHECK(handler_);
+  handler_(provider_.NewRequest(executor_->dispatcher()));
+  provider_.set_error_handler([this](zx_status_t status) { provider_ = nullptr; });
 }
 
 }  // namespace fuzzing

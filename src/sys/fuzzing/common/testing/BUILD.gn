@@ -17,10 +17,6 @@ source_set("testing") {
     "registrar.h",
     "runner.cc",
     "runner.h",
-    "signal-coordinator.cc",
-    "signal-coordinator.h",
-    "transceiver.cc",
-    "transceiver.h",
   ]
 
   deps = [

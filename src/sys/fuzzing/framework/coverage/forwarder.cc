@@ -7,23 +7,22 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/coverage/instrumentation.h"
 
 namespace fuzzing {
 
-CoverageForwarder::CoverageForwarder() : events_(std::make_shared<CoverageEventQueue>()) {
-  provider_ = std::make_unique<CoverageProviderImpl>(events_);
+CoverageForwarder::CoverageForwarder(ExecutorPtr executor) : executor_(std::move(executor)) {
+  options_ = MakeOptions();
+  events_ = AsyncDeque<CoverageEvent>::MakePtr();
+  provider_ = std::make_unique<CoverageProviderImpl>(executor_, options_, events_);
 }
 
 fidl::InterfaceRequestHandler<Instrumentation> CoverageForwarder::GetInstrumentationHandler() {
   return [this](fidl::InterfaceRequest<Instrumentation> request) {
-    if (closing_) {
-      return;
-    }
     auto target_id = ++last_target_id_;
-    auto instrumentation = std::make_unique<InstrumentationImpl>(target_id, events_);
-    instrumentations_.AddBinding(std::move(instrumentation), std::move(request), dispatcher_.get());
+    auto instrumentation = std::make_unique<InstrumentationImpl>(target_id, options_, events_);
+    auto* dispatcher = executor_->dispatcher();
+    instrumentations_.AddBinding(std::move(instrumentation), std::move(request), dispatcher);
   };
 }
 
@@ -32,18 +31,6 @@ fidl::InterfaceRequestHandler<CoverageProvider> CoverageForwarder::GetCoveragePr
     auto handler = provider_->GetHandler();
     handler(std::move(request));
   };
-}
-
-void CoverageForwarder::Run() {
-  provider_->AwaitConnect();
-  provider_->AwaitClose();
-  closing_ = true;
-  SyncWait sync;
-  dispatcher_.PostTask([this, &sync]() {
-    instrumentations_.CloseAll();
-    sync.Signal();
-  });
-  sync.WaitFor("instrumentation clients to disconnect");
 }
 
 }  // namespace fuzzing

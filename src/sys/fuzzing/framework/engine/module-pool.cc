@@ -7,7 +7,6 @@
 namespace fuzzing {
 
 ModuleProxy* ModulePool::Get(const Identifier& id, size_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
   Key key = {id, size};
   auto iter = modules_.find(key);
   if (iter == modules_.end()) {
@@ -17,7 +16,6 @@ ModuleProxy* ModulePool::Get(const Identifier& id, size_t size) {
 }
 
 void ModulePool::ForEachModule(fit::function<void(ModuleProxy&)> func) {
-  std::lock_guard<std::mutex> lock(mutex_);
   for (auto& kv : modules_) {
     func(*kv.second);
   }

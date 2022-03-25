@@ -9,13 +9,14 @@
 
 namespace fuzzing {
 
-FakeRegistrar::FakeRegistrar() : binding_(this) {}
+FakeRegistrar::FakeRegistrar(ExecutorPtr executor)
+    : binding_(this), executor_(std::move(executor)) {}
 
 zx::channel FakeRegistrar::Bind() {
   zx::channel client, server;
   auto status = zx::channel::create(0, &client, &server);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  binding_.Bind(std::move(server));
+  binding_.Bind(std::move(server), executor_->dispatcher());
   return client;
 }
 

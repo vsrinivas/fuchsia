@@ -11,9 +11,8 @@ namespace fuzzing {
 namespace {
 
 TEST_F(RunnerImplTest, AddDefaults) {
-  auto runner = RunnerImpl::MakePtr(executor());
   Options options;
-  runner->AddDefaults(&options);
+  runner()->AddDefaults(&options);
   EXPECT_EQ(options.runs(), kDefaultRuns);
   EXPECT_EQ(options.max_total_time(), kDefaultMaxTotalTime);
   EXPECT_EQ(options.seed(), kDefaultSeed);
@@ -31,17 +30,16 @@ TEST_F(RunnerImplTest, AddDefaults) {
 }
 
 TEST_F(RunnerImplTest, LoadCorpus) {
-  auto runner = RunnerImpl::MakePtr(executor());
   // In a real fuzzer, the parameters would be supplied by the 'program.args' from the adapter's
   // component manifest.
   //
   // See also:
   //   //src/sys/fuzzing/framework/testing/data/BUILD.gn
   SetAdapterParameters(std::vector<std::string>({"data/corpus", "--ignored"}));
-  Configure(runner, RunnerTest::DefaultOptions(runner));
+  Configure(RunnerTest::DefaultOptions());
   // Results are sorted.
-  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::SEED, 1), Input("bar"));
-  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::SEED, 2), Input("foo"));
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 1), Input("bar"));
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 2), Input("foo"));
 }
 
 #define RUNNER_TYPE RunnerImpl
@@ -50,15 +48,9 @@ TEST_F(RunnerImplTest, LoadCorpus) {
 #undef RUNNER_TYPE
 #undef RUNNER_TEST
 
-TEST_F(RunnerImplTest, MergeSeedError) {
-  auto runner = RunnerImpl::MakePtr(executor());
-  MergeSeedError(runner, /* expected */ ZX_ERR_INVALID_ARGS);
-}
+TEST_F(RunnerImplTest, MergeSeedError) { MergeSeedError(/* expected */ ZX_ERR_INVALID_ARGS); }
 
-TEST_F(RunnerImplTest, Merge) {
-  auto runner = RunnerImpl::MakePtr(executor());
-  Merge(runner, /* keep_errors= */ true);
-}
+TEST_F(RunnerImplTest, Merge) { Merge(/* keep_errors= */ true); }
 
 }  // namespace
 }  // namespace fuzzing

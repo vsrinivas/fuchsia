@@ -13,12 +13,10 @@
 #include <zircon/status.h>
 
 #include <memory>
-#include <thread>
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/testing/runner.h"
 
 namespace fuzzing {
@@ -28,16 +26,19 @@ using fuchsia::fuzzer::ControllerPtr;
 using fuchsia::fuzzer::Options;
 using fuchsia::fuzzer::Registrar;
 using fuchsia::fuzzer::Registry;
-using fuchsia::fuzzer::RegistrySyncPtr;
+using fuchsia::fuzzer::RegistryPtr;
 
 // Test fixtures.
 
 const char* kFuzzerUrl = "an arbitrary string";
 
 // This class maintains the component context and connection to the fuzz-registry.
-class RegistryIntegrationTest : public ::testing::Test {
+class RegistryIntegrationTest : public AsyncTest {
  protected:
-  void SetUp() override { context_ = sys::ComponentContext::Create(); }
+  void SetUp() override {
+    AsyncTest::SetUp();
+    context_ = sys::ComponentContext::Create();
+  }
 
   // Launch a fuzzer and give it a channel to register itself with the fuzz-registry.
   void Register() {
@@ -66,44 +67,59 @@ class RegistryIntegrationTest : public ::testing::Test {
     ASSERT_EQ(status, ZX_OK) << err_msg;
   }
 
-  // Block until a fuzzer is registered and a controller connected to it.
-  zx_status_t Connect(ControllerPtr* controller, zx::time deadline, zx_status_t* out) {
+  // Promises to connect the |controller| once a fuzzer is registered.
+  ZxPromise<> Connect(ControllerPtr* controller, zx::duration timeout) {
     auto status = context_->svc()->Connect(registry_.NewRequest());
     if (status != ZX_OK) {
-      return status;
+      return fpromise::make_promise([status]() -> ZxResult<> { return fpromise::error(status); });
     }
-    auto timeout = deadline - zx::clock::get_monotonic();
-    return registry_->Connect(kFuzzerUrl, controller->NewRequest(dispatcher_.get()), timeout.get(),
-                              out);
+    Bridge<zx_status_t> bridge;
+    registry_->Connect(kFuzzerUrl, controller->NewRequest(), timeout.get(),
+                       bridge.completer.bind());
+    return bridge.consumer.promise().then(
+        [](Result<zx_status_t>& result) { return AsZxResult(result); });
   }
 
-  // Stop a fuzzer if running.
-  void Disconnect() {
-    zx_status_t inner;
-    auto outer = registry_->Disconnect(kFuzzerUrl, &inner);
-    ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-    EXPECT_EQ(inner, ZX_OK) << zx_status_get_string(inner);
-    Waiter waiter = [this](zx::time deadline) {
-      return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
-    };
-    outer = WaitFor("process to terminate", &waiter);
-    EXPECT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-    zx_info_process_t info;
-    outer = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-    EXPECT_EQ(info.return_code, 0);
-    ShutdownDispatcher();
+  // Promises to stop a fuzzer if running.
+  ZxPromise<> Disconnect() {
+    Bridge<zx_status_t> bridge;
+    registry_->Disconnect(kFuzzerUrl, bridge.completer.bind());
+    return bridge.consumer.promise()
+        .then([](Result<zx_status_t>& result) { return AsZxResult(result); })
+        .and_then([&, terminated =
+                          ZxFuture<zx_packet_signal_t>()](Context& context) mutable -> ZxResult<> {
+          if (!process_) {
+            return fpromise::ok();
+          }
+          if (!terminated) {
+            terminated = executor()->MakePromiseWaitHandle(zx::unowned_handle(process_.get()),
+                                                           ZX_PROCESS_TERMINATED);
+          }
+          if (!terminated(context)) {
+            return fpromise::pending();
+          }
+          if (terminated.is_error()) {
+            return fpromise::error(terminated.error());
+          }
+          zx_info_process_t info;
+          auto status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+          if (status != ZX_OK) {
+            return fpromise::error(status);
+          }
+          EXPECT_EQ(info.return_code, 0);
+          return fpromise::ok();
+        });
   }
 
-  void ShutdownDispatcher() { dispatcher_.Shutdown(); }
-
-  void TearDown() override { process_.kill(); }
+  void TearDown() override {
+    process_.kill();
+    AsyncTest::TearDown();
+  }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
   zx::process process_;
-  RegistrySyncPtr registry_;
-  Dispatcher dispatcher_;
+  RegistryPtr registry_;
 };
 
 }  // namespace
@@ -112,57 +128,40 @@ class RegistryIntegrationTest : public ::testing::Test {
 
 TEST_F(RegistryIntegrationTest, RegisterThenConnect) {
   ASSERT_NO_FATAL_FAILURE(Register());
-
   ControllerPtr controller;
-  zx_status_t inner;
-  Waiter waiter = [&](zx::time deadline) { return Connect(&controller, deadline, &inner); };
-  auto outer = WaitFor("connection after registering", &waiter);
-  ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-  EXPECT_EQ(inner, ZX_OK) << zx_status_get_string(inner);
+  FUZZING_EXPECT_OK(Connect(&controller, zx::sec(1)));
+  RunUntilIdle();
 
   // Verify connected.
-  SyncWait sync;
-  controller->GetOptions([&](Options options) {
-    EXPECT_NE(options.seed(), 0U);
-    sync.Signal();
-  });
-  sync.WaitFor("controller to return options");
-
-  Disconnect();
+  Bridge<Options> bridge;
+  controller->GetOptions(bridge.completer.bind());
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()));
+  RunUntilIdle();
+  FUZZING_EXPECT_OK(Disconnect());
+  RunUntilIdle();
 }
 
 TEST_F(RegistryIntegrationTest, ConnectThenRegister) {
   ControllerPtr controller;
-  zx_status_t inner, outer;
-  std::thread t([&]() {
-    Waiter waiter = [&](zx::time deadline) { return Connect(&controller, deadline, &inner); };
-    outer = WaitFor("connection before registering", &waiter);
-  });
+  FUZZING_EXPECT_OK(Connect(&controller, zx::sec(1)));
+
   ASSERT_NO_FATAL_FAILURE(Register());
-  t.join();
-  ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-  EXPECT_EQ(inner, ZX_OK) << zx_status_get_string(inner);
+  RunUntilIdle();
 
   // Verify connected.
-  SyncWait sync;
-  controller->GetOptions([&](Options options) {
-    EXPECT_NE(options.seed(), 0U);
-    sync.Signal();
-  });
-  sync.WaitFor("controller to return options");
+  Bridge<Options> bridge;
+  controller->GetOptions(bridge.completer.bind());
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()));
+  RunUntilIdle();
 
-  Disconnect();
+  FUZZING_EXPECT_OK(Disconnect());
+  RunUntilIdle();
 }
 
 TEST_F(RegistryIntegrationTest, ConnectThenTimeout) {
   ControllerPtr controller;
-  zx_status_t inner;
-  auto deadline = zx::deadline_after(zx::msec(1));
-  auto outer = Connect(&controller, deadline, &inner);
-  ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
-  EXPECT_EQ(inner, ZX_ERR_TIMED_OUT) << zx_status_get_string(inner);
-
-  ShutdownDispatcher();
+  FUZZING_EXPECT_ERROR(Connect(&controller, zx::msec(1)), ZX_ERR_TIMED_OUT);
+  RunUntilIdle();
 }
 
 }  // namespace fuzzing

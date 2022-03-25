@@ -12,10 +12,13 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/framework/engine/module-proxy.h"
 
 namespace fuzzing {
+
+// An alias to simplify passing around the shared module pool.
+class ModulePool;
+using ModulePoolPtr = std::shared_ptr<ModulePool>;
 
 // This class represents a collection of |ModuleProxy| instances.
 class ModulePool final {
@@ -23,15 +26,17 @@ class ModulePool final {
   ModulePool() = default;
   ~ModulePool() = default;
 
+  static ModulePoolPtr MakePtr() { return std::make_shared<ModulePool>(); }
+
   // Returns a pointer to the |ModuleProxy| for a given |id| and |size|, creating it first if
   // necessary.
-  ModuleProxy* Get(const Identifier& id, size_t size) FXL_LOCKS_EXCLUDED(mutex_);
+  ModuleProxy* Get(const Identifier& id, size_t size);
 
   // These correspond to |ModuleProxy| methods, but are applied to all modules.
-  size_t Measure() FXL_LOCKS_EXCLUDED(mutex_);
-  size_t Accumulate() FXL_LOCKS_EXCLUDED(mutex_);
-  size_t GetCoverage(size_t* out_num_features) FXL_LOCKS_EXCLUDED(mutex_);
-  void Clear() FXL_LOCKS_EXCLUDED(mutex_);
+  size_t Measure();
+  size_t Accumulate();
+  size_t GetCoverage(size_t* out_num_features);
+  void Clear();
 
  private:
   // These structures enable convenient mapping below.
@@ -45,10 +50,9 @@ class ModulePool final {
   };
 
   // Apply a function to all modules.
-  void ForEachModule(fit::function<void(ModuleProxy&)> func) FXL_LOCKS_EXCLUDED(mutex_);
+  void ForEachModule(fit::function<void(ModuleProxy&)> func);
 
-  std::mutex mutex_;
-  std::unordered_map<Key, std::unique_ptr<ModuleProxy>, Hasher> modules_ FXL_GUARDED_BY(mutex_);
+  std::unordered_map<Key, std::unique_ptr<ModuleProxy>, Hasher> modules_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ModulePool);
 };

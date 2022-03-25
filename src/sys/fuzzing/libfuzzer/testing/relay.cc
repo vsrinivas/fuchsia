@@ -11,29 +11,43 @@
 
 namespace fuzzing {
 
-fidl::InterfaceRequestHandler<Relay> RelayImpl::GetHandler(async_dispatcher_t* dispatcher) {
-  return [this, dispatcher](fidl::InterfaceRequest<Relay> request) {
-    bindings_.AddBinding(this, std::move(request), dispatcher);
+RelayImpl::RelayImpl() : executor_(MakeExecutor(loop_.dispatcher())) {}
+
+fidl::InterfaceRequestHandler<Relay> RelayImpl::GetHandler() {
+  return [this](fidl::InterfaceRequest<Relay> request) {
+    bindings_.AddBinding(this, std::move(request), executor_->dispatcher());
   };
 }
 
-void RelayImpl::SetTestData(SignaledBuffer data) {
-  data_ = SignaledBuffer::New();
-  *data_ = std::move(data);
-  MaybeCallback();
+zx_status_t RelayImpl::Run() { return loop_.Run(); }
+
+void RelayImpl::SetTestData(SignaledBuffer test_data, SetTestDataCallback callback) {
+  auto completer = std::move(completer_);
+  if (!completer) {
+    Bridge<SignaledBuffer> test_data_bridge;
+    completer = std::move(test_data_bridge.completer);
+    consumer_ = std::move(test_data_bridge.consumer);
+  }
+  Bridge<> finish_bridge;
+  finish_ = std::move(finish_bridge.completer);
+  executor_->schedule_task(
+      finish_bridge.consumer.promise().and_then([callback = std::move(callback)] { callback(); }));
+  completer.complete_ok(std::move(test_data));
 }
 
 void RelayImpl::WatchTestData(WatchTestDataCallback callback) {
-  callback_ = std::move(callback);
-  MaybeCallback();
+  auto consumer = std::move(consumer_);
+  if (!consumer) {
+    Bridge<SignaledBuffer> test_data_bridge;
+    completer_ = std::move(test_data_bridge.completer);
+    consumer = std::move(test_data_bridge.consumer);
+  }
+  executor_->schedule_task(
+      consumer.promise().and_then([callback = std::move(callback)](SignaledBuffer& test_data) {
+        callback(std::move(test_data));
+      }));
 }
 
-void RelayImpl::MaybeCallback() {
-  if (data_ && callback_) {
-    callback_(std::move(*data_));
-    data_ = nullptr;
-    callback_ = nullptr;
-  }
-}
+void RelayImpl::Finish() { finish_.complete_ok(); }
 
 }  // namespace fuzzing

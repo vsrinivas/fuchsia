@@ -42,6 +42,11 @@ class Input final {
   inline bool operator<=(const Input& other) const { return Compare(other) <= 0; }
   inline bool operator>=(const Input& other) const { return Compare(other) >= 0; }
 
+  // This method allows easier printing by gTest.
+  friend std::ostream& operator<<(std::ostream& os, const Input& input) {
+    return os << input.ToHex(/* truncate */ false);
+  }
+
   const uint8_t* data() const { return data_.get(); }
   uint8_t* data() { return data_.get(); }
   size_t size() const { return size_; }
@@ -50,8 +55,9 @@ class Input final {
 
   void set_num_features(size_t num_features) { num_features_ = num_features; }
 
-  // Returns a hex string representation. Mostly used for testing/debugging.
-  std::string ToHex() const;
+  // Returns a hex string representation. If the input is more than 6 bytes and |truncate|d, the
+  // returned string will be the first few bytes, followed by "...".
+  std::string ToHex(bool truncate = true) const;
 
   // Exchanges the internal state of this input with another.
   void Swap(Input& other);

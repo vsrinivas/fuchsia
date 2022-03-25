@@ -7,17 +7,18 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/async-eventpair.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -28,11 +29,8 @@ using ::fuchsia::mem::Buffer;
 // grained control over the signals and test inputs exchanged with the runner.
 class FakeTargetAdapter final : public TargetAdapter {
  public:
-  FakeTargetAdapter();
+  explicit FakeTargetAdapter(ExecutorPtr executor);
   ~FakeTargetAdapter() override = default;
-
-  // Returns the contents of the last test input provided by the engine.
-  Input test_input() { return Input(test_input_); }
 
   // Provides a request handler for the engine to connect to the target adapter.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler();
@@ -44,28 +42,26 @@ class FakeTargetAdapter final : public TargetAdapter {
   void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
 
-  // Waits for a signal from the engine.
-  zx_signals_t AwaitSignal();
+  // Returns a promise to |AwaitStart| and then |Finish|.
+  ZxPromise<Input> TestOneInput();
 
-  // Like |AwaitSignal|, but returns ZX_OK and the observed signals via |out| if they are received
-  // before |deadline| passes; otherwise returns ZX_ERR_TIMED_OUT.
-  zx_status_t AwaitSignal(zx::time deadline, zx_signals_t* out);
+  // Returns a promise that waits for a start signal and returns the provided test input.
+  ZxPromise<Input> AwaitStart();
 
-  // Sends a signal to the engine.
-  void SignalPeer(Signal signal);
+  // Sends a signal to the engine that indicates the target adapter is finished with a run.
+  zx_status_t Finish();
+
+  // Returns a promise that waits for the client to disconnect.
+  ZxPromise<> AwaitDisconnect();
 
  private:
-  Binding<TargetAdapter> binding_;
+  fidl::Binding<TargetAdapter> binding_;
+  ExecutorPtr executor_;
   std::vector<std::string> parameters_;
-  SignalCoordinator coordinator_;
+  AsyncEventPair eventpair_;
   SharedMemory test_input_;
-
-  // When the adapter receives a signal, it blocks on |wsync_|, stores it in |observed_|, and
-  // signals |rsync_|. When |AwaitSignals| is called, it blocks on |rsync_|, reads |obeserved_|, and
-  // signals |wsync_|. In this way, each received signal is paired with a call to |AwaitSignal|.
-  zx_signals_t observed_;
-  SyncWait rsync_;
-  SyncWait wsync_;
+  fpromise::suspended_task suspended_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeTargetAdapter);
 };

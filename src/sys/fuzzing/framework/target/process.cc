@@ -31,13 +31,9 @@ constexpr size_t kMaxUniqueContexts = 8;
 // accessed from the main thread. More precisely, do not load multiple shared libraries concurrently
 // from different threads.
 struct {
-  struct {
-    uint8_t* counters;
-    size_t counters_len;
-    const uintptr_t* pcs;
-    size_t pcs_len;
-  } modules[kMaxModules];
+  CountersInfo counters[kMaxModules];
   size_t num_counters = 0;
+  PCsInfo pcs[kMaxModules];
   size_t num_pcs = 0;
   Process* process = nullptr;
 } gContext;
@@ -58,25 +54,40 @@ extern "C" {
 
 // NOLINTNEXTLINE(readability-non-const-parameter)
 void __sanitizer_cov_8bit_counters_init(uint8_t* start, uint8_t* stop) {
-  if (start < stop && fuzzing::gContext.num_counters < fuzzing::kMaxModules) {
-    auto& info = fuzzing::gContext.modules[fuzzing::gContext.num_counters++];
-    info.counters = start;
-    info.counters_len = stop - start;
+  if (start >= stop) {
+    return;
   }
-  if (fuzzing::gContext.process) {
-    fuzzing::gContext.process->AddModules();
+  fuzzing::CountersInfo counters;
+  counters.data = start;
+  counters.len = stop - start;
+  // Safe: |gProcess.process| is only modified while the process is single-threaded.
+  using fuzzing::gContext;
+  if (gContext.process) {
+    gContext.process->AddCounters(std::move(counters));
+    return;
+  }
+  // Safe: no threads are created before |gProcess| is constructed.
+  if (gContext.num_counters < fuzzing::kMaxModules) {
+    gContext.counters[gContext.num_counters++] = std::move(counters);
   }
 }
 
 void __sanitizer_cov_pcs_init(const uintptr_t* start, const uintptr_t* stop) {
-  using fuzzing::gContext;
-  if (start < stop && gContext.num_pcs < fuzzing::kMaxModules) {
-    auto& info = gContext.modules[gContext.num_pcs++];
-    info.pcs = start;
-    info.pcs_len = stop - start;
+  if (start >= stop) {
+    return;
   }
+  fuzzing::PCsInfo pcs;
+  pcs.data = start;
+  pcs.len = stop - start;
+  // Safe: |gProcess.process| is only modified while the process is single-threaded.
+  using fuzzing::gContext;
   if (gContext.process) {
-    gContext.process->AddModules();
+    gContext.process->AddPCs(std::move(pcs));
+    return;
+  }
+  // Safe: no threads are created before |gProcess| is constructed.
+  if (gContext.num_pcs < fuzzing::kMaxModules) {
+    gContext.pcs[gContext.num_pcs++] = std::move(pcs);
   }
 }
 
@@ -99,16 +110,20 @@ void __sanitizer_cov_trace_gep(uintptr_t Idx) {}
 
 namespace fuzzing {
 
-Process::Process() : next_purge_(zx::time::infinite()) {
+Process::Process(ExecutorPtr executor)
+    : executor_(executor), eventpair_(executor), next_purge_(zx::time::infinite()) {
   FX_CHECK(!gContext.process);
   gContext.process = this;
+  for (size_t i = 0; i < gContext.num_counters; ++i) {
+    counters_.Send(std::move(gContext.counters[i]));
+  }
+  for (size_t i = 0; i < gContext.num_pcs; ++i) {
+    pcs_.Send(std::move(gContext.pcs[i]));
+  }
   AddDefaults(&options_);
 }
 
-Process::~Process() {
-  memset(&gContext, 0, sizeof(gContext));
-  sync_.Signal();
-}
+Process::~Process() { memset(&gContext, 0, sizeof(gContext)); }
 
 void Process::AddDefaults(Options* options) {
   if (!options->has_detect_leaks()) {
@@ -137,6 +152,44 @@ void Process::AddDefaults(Options* options) {
   }
 }
 
+void Process::AddCounters(CountersInfo counters) {
+  // Ensure the AsyncDeque is only accessed from the dispatcher thread.
+  auto task = fpromise::make_promise([this, counters = std::move(counters)]() mutable {
+    counters_.Send(std::move(counters));
+    return fpromise::ok();
+  });
+  executor_->schedule_task(std::move(task));
+}
+
+void Process::AddPCs(PCsInfo pcs) {
+  // Ensure the AsyncDeque is only accessed from the dispatcher thread.
+  auto task = fpromise::make_promise([this, pcs = std::move(pcs)]() mutable {
+    pcs_.Send(std::move(pcs));
+    return fpromise::ok();
+  });
+  executor_->schedule_task(std::move(task));
+}
+
+void Process::OnMalloc(const volatile void* ptr, size_t size) {
+  ++num_mallocs_;
+  if (size > malloc_limit_ && AcquireCrashState()) {
+    backtrace_request();
+    _Exit(options_.malloc_exitcode());
+  }
+}
+
+void Process::OnFree(const volatile void* ptr) { ++num_frees_; }
+
+void Process::OnDeath() { _Exit(options_.death_exitcode()); }
+
+void Process::OnExit() {
+  // Exits may not be fatal, e.g. if detect_exits=false. May sure the process publishes all its
+  // coverage before it ends as the framework will keep fuzzing.
+  for (auto& module : modules_) {
+    module.Update();
+  }
+}
+
 void Process::InstallHooks() {
   // This method can only be called once.
   static bool first = true;
@@ -161,15 +214,15 @@ void Process::InstallHooks() {
   std::atexit([]() { ExitHook(); });
 }
 
-void Process::Connect(InstrumentationSyncPtr&& instrumentation) {
-  // This method can only be called once.
-  FX_CHECK(!instrumentation_);
-  instrumentation_ = std::move(instrumentation);
+Promise<> Process::Connect() {
+  FX_DCHECK(handler_);
+  if (!instrumentation_) {
+    handler_(instrumentation_.NewRequest(executor_->dispatcher()));
+  }
 
   // Create the eventpair.
-  auto ep = coordinator_.Create([this](zx_signals_t observed) { return OnSignal(observed); });
   InstrumentedProcess instrumented;
-  instrumented.set_eventpair(std::move(ep));
+  instrumented.set_eventpair(eventpair_.Create());
 
   // Duplicate a handle to ourselves.
   zx::process process;
@@ -178,10 +231,20 @@ void Process::Connect(InstrumentationSyncPtr&& instrumentation) {
   instrumented.set_process(std::move(process));
 
   // Connect to the engine and wait for it to acknowledge it has added a proxy for this object.
-  sync_.Reset();
-  instrumentation_->Initialize(std::move(instrumented), &options_);
-  AddDefaults(&options_);
-  sync_.WaitFor("engine to add process proxy");
+  Bridge<Options> bridge;
+  instrumentation_->Initialize(std::move(instrumented), bridge.completer.bind());
+  return bridge.consumer.promise_or(fpromise::error())
+      .and_then([this](Options& options) -> Result<> {
+        Configure(std::move(options));
+        return fpromise::ok();
+      })
+      .and_then(AwaitSync())
+      .wrap_with(scope_);
+}
+
+void Process::Configure(Options options) {
+  AddDefaults(&options);
+  options_ = std::move(options);
 
   // Configure allocator purging.
   // TODO(fxbug.dev/85284): Add integration tests that produce these and following logs.
@@ -220,101 +283,144 @@ void Process::Connect(InstrumentationSyncPtr&& instrumentation) {
     FX_LOGS(WARNING) << "Large allocation detection disabled.";
   }
   malloc_limit_ = malloc_limit ? malloc_limit : std::numeric_limits<size_t>::max();
+}
 
-  // Send the early modules to the engine.
-  AddModules();
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (modules_.empty()) {
-      FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
+Promise<> Process::AwaitSync() {
+  return eventpair_.WaitFor(kSync).then([](const ZxResult<zx_signals_t>& result) -> Result<> {
+    if (result.is_error()) {
+      return fpromise::error();
     }
-  }
+    return fpromise::ok();
+  });
 }
 
-void Process::OnMalloc(const volatile void* ptr, size_t size) {
-  ++num_mallocs_;
-  if (size > malloc_limit_ && AcquireCrashState()) {
-    backtrace_request();
-    _Exit(options_.malloc_exitcode());
+Promise<> Process::AddModules() {
+  if (counters_.is_empty() || pcs_.is_empty()) {
+    FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
   }
+  return fpromise::make_promise(
+      [this, add_module = Future<>()](Context& context) mutable -> Result<> {
+        while (true) {
+          if (!add_module) {
+            add_module = AddModule();
+          }
+          if (!add_module(context)) {
+            return fpromise::pending();
+          }
+          if (add_module.is_error()) {
+            return fpromise::error();
+          }
+          add_module = nullptr;
+        }
+      });
 }
 
-void Process::OnFree(const volatile void* ptr) { ++num_frees_; }
-
-void Process::OnDeath() { _Exit(options_.death_exitcode()); }
-
-void Process::OnExit() {
-  // Exits may not be fatal, e.g. if detect_exits=false. May sure the process publishes all its
-  // coverage before it ends as the framework will keep fuzzing.
-  UpdateModules();
+Promise<> Process::AddModule() {
+  return fpromise::make_promise(
+             [this, recv_counters = Future<CountersInfo>(),
+              recv_pcs = Future<PCsInfo>()](Context& context) mutable -> Result<Module> {
+               while (true) {
+                 // Get the next |CountersInfo|.
+                 if (!recv_counters) {
+                   recv_counters = counters_.Receive();
+                 }
+                 if (!recv_counters(context)) {
+                   return fpromise::pending();
+                 }
+                 if (recv_counters.is_error()) {
+                   return fpromise::error();
+                 }
+                 // Get the next |PCsInfo|.
+                 if (!recv_pcs) {
+                   recv_pcs = pcs_.Receive();
+                 }
+                 if (!recv_pcs(context)) {
+                   return fpromise::pending();
+                 }
+                 if (recv_pcs.is_error()) {
+                   return fpromise::error();
+                 }
+                 // Combine into a |Module|.
+                 auto counters = recv_counters.take_value();
+                 auto pcs = recv_pcs.take_value();
+                 if (counters.len != pcs.len * sizeof(uintptr_t) / sizeof(ModulePC)) {
+                   FX_LOGS(WARNING) << "Length mismatch: counters=" << counters.len
+                                    << ", pcs=" << pcs.len << "; module will be skipped.";
+                   continue;
+                 }
+                 Module module(counters.data, pcs.data, counters.len);
+                 module.Clear();
+                 return fpromise::ok(std::move(module));
+               }
+             })
+      .and_then(
+          [this, add_module = Future<>()](Context& context, Module& module) mutable -> Result<> {
+            // Send the module to the coverage component.
+            if (!add_module) {
+              Bridge<> bridge;
+              instrumentation_->AddLlvmModule(module.GetLlvmModule(), bridge.completer.bind());
+              modules_.push_back(std::move(module));
+              add_module = bridge.consumer.promise_or(fpromise::error()).and_then(AwaitSync());
+            }
+            if (!add_module(context)) {
+              return fpromise::pending();
+            }
+            return fpromise::ok();
+          });
 }
 
-bool Process::OnSignal(zx_signals_t observed) {
-  if (observed & ZX_EVENTPAIR_PEER_CLOSED) {
-    sync_.Signal();
-    return false;
-  }
-  switch (observed) {
-    case kSync:
-      detecting_leaks_ = false;
-      sync_.Signal();
-      return true;
-    case kStart:
-      ClearModules();
-      return coordinator_.SignalPeer(kStart);
-    case kStartLeakCheck:
-      ClearModules();
-      ConfigureLeakDetection();
-      return coordinator_.SignalPeer(kStart);
-    case kFinish:
-      UpdateModules();
-      return coordinator_.SignalPeer(DetectLeak() ? kFinishWithLeaks : kFinish);
-    default:
-      FX_LOGS(FATAL) << "unexpected signal: 0x" << std::hex << observed << std::dec;
-      return false;
-  }
-}
-
-void Process::AddModules() {
-  FX_DCHECK(instrumentation_.is_bound());
-  size_t offset;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    offset = modules_.size();
-  }
-  while (offset < gContext.num_counters && offset < gContext.num_pcs) {
-    auto& info = gContext.modules[offset++];
-    FX_DCHECK(info.counters);
-    FX_DCHECK(info.counters_len);
-    FX_DCHECK(info.pcs);
-    FX_DCHECK(info.pcs_len);
-    if (info.counters_len != info.pcs_len * sizeof(uintptr_t) / sizeof(ModulePC)) {
-      FX_LOGS(WARNING) << "Length mismatch: counters=" << info.counters_len
-                       << ", pcs=" << info.pcs_len << "; module will be skipped.";
-      continue;
-    }
-    Module module(info.counters, info.pcs, info.counters_len);
-    module.Clear();
-    sync_.Reset();
-    instrumentation_->AddLlvmModule(module.GetLlvmModule());
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      modules_.push_back(std::move(module));
-    }
-    // Wait for the engine to acknowledge the receipt of this module.
-    sync_.WaitFor("engine to add module proxy");
-  }
-}
-
-void Process::ClearModules() {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (auto& module : modules_) {
-      module.Clear();
-    }
-  }
-  num_mallocs_ = 0;
-  num_frees_ = 0;
+Promise<> Process::Run() {
+  // Processes typically connect during a fuzzing run, but may connect between runs as well. As a
+  // result, the first wait is for any run-related signal.
+  auto expected = kStart | kStartLeakCheck | kFinish;
+  return fpromise::make_promise(
+      [this, expected, wait = ZxFuture<zx_signals_t>()](Context& context) mutable -> Result<> {
+        while (true) {
+          if (!wait) {
+            wait = eventpair_.WaitFor(expected);
+          }
+          if (!wait(context)) {
+            return fpromise::pending();
+          }
+          if (wait.is_error()) {
+            return fpromise::ok();
+          }
+          auto observed = wait.take_value();
+          if (eventpair_.SignalSelf(observed, 0) != ZX_OK) {
+            return fpromise::error();
+          }
+          zx_signals_t reply = 0;
+          switch (observed) {
+            case kStartLeakCheck:
+              ConfigureLeakDetection();
+              [[fallthrough]];
+            case kStart:
+              // Reset coverage data and leak detection.
+              for (auto& module : modules_) {
+                module.Clear();
+              }
+              num_mallocs_ = 0;
+              num_frees_ = 0;
+              reply = kStart;
+              expected = kFinish;
+              break;
+            case kFinish:
+              // Forward coverage data to engine, and respond with leak status.
+              for (auto& module : modules_) {
+                module.Update();
+              }
+              reply = DetectLeak() ? kFinishWithLeaks : kFinish;
+              expected = kStart | kStartLeakCheck;
+              break;
+            default:
+              FX_NOTREACHED();
+              break;
+          }
+          if (eventpair_.SignalPeer(0, reply) != ZX_OK) {
+            return fpromise::error();
+          }
+        }
+      });
 }
 
 void Process::ConfigureLeakDetection() {
@@ -354,13 +460,6 @@ bool Process::DetectLeak() {
     next_purge_ = zx::deadline_after(zx::duration(options_.purge_interval()));
   }
   return has_leak;
-}
-
-void Process::UpdateModules() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  for (auto& module : modules_) {
-    module.Update();
-  }
 }
 
 bool Process::AcquireCrashState() {

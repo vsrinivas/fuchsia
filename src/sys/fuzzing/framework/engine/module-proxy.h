@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 
 namespace fuzzing {
@@ -38,34 +37,33 @@ class ModuleProxy final {
 
   // De/registers the shared memory as a source of counter values. This object does not take
   // ownership of the memory; it must remain valid between calls to |Add| and |Remove|.
-  void Add(void* counters, size_t counters_len) FXL_LOCKS_EXCLUDED(mutex_);
-  void Remove(void* counters) FXL_LOCKS_EXCLUDED(mutex_);
+  void Add(void* counters, size_t counters_len);
+  void Remove(void* counters);
 
   // Collects counters for linked instances of the associated module, converts them to opaque
   // features and returns the number of new features. This method does not record the features, and
   // so is useful for evaluating a set of inputs as compared to a base set of features, e.g. from a
   // seed corpus. For info on "features", see: http://lcamtuf.coredump.cx/afl/technical_details.txt.
-  size_t Measure() FXL_LOCKS_EXCLUDED(mutex_);
+  size_t Measure();
 
   // Like |Measure|, but additionally records the new features, making the method useful for
   // incrementally growing a corpus.
-  size_t Accumulate() FXL_LOCKS_EXCLUDED(mutex_);
+  size_t Accumulate();
 
   // Returns how many PCs have accumulated at least one feature. If |out_num_features| is not null,
   // sets it to how many features have been accumulated in total.
-  size_t GetCoverage(size_t* out_num_features) FXL_LOCKS_EXCLUDED(mutex_);
+  size_t GetCoverage(size_t* out_num_features);
 
   // Resets the recorded features.
   void Clear();
 
  private:
-  size_t MeasureImpl(bool accumulate) FXL_LOCKS_EXCLUDED(mutex_);
+  size_t MeasureImpl(bool accumulate);
 
   const Identifier id_;
   const size_t num_u64s_;
 
-  std::mutex mutex_;
-  std::vector<uint64_t*> counters_ FXL_GUARDED_BY(mutex_);
+  std::vector<uint64_t*> counters_;
 
   // TODO(fxbug.dev/84363): Smaller inputs that cover previously observed features are currently
   // discarded. To help minimize the corpus, this object could also track the smallest input size

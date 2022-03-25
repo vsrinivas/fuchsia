@@ -8,20 +8,20 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <stdint.h>
 
-#include <memory>
-
-#include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
+#include "src/sys/fuzzing/common/async-deque.h"
+#include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/options.h"
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::CoverageEvent;
 using ::fuchsia::fuzzer::Instrumentation;
 using ::fuchsia::fuzzer::InstrumentedProcess;
 using ::fuchsia::fuzzer::LlvmModule;
 
 class InstrumentationImpl : public Instrumentation {
  public:
-  explicit InstrumentationImpl(uint64_t target_id, std::shared_ptr<CoverageEventQueue> events);
+  InstrumentationImpl(uint64_t target_id, OptionsPtr options, AsyncDequePtr<CoverageEvent> events);
   ~InstrumentationImpl() override = default;
 
   // FIDL methods.
@@ -30,7 +30,8 @@ class InstrumentationImpl : public Instrumentation {
 
  private:
   uint64_t target_id_;
-  std::shared_ptr<CoverageEventQueue> events_;
+  OptionsPtr options_;
+  AsyncDequePtr<CoverageEvent> events_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(InstrumentationImpl);
 };

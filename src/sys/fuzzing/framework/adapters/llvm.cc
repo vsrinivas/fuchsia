@@ -13,13 +13,13 @@
 
 namespace fuzzing {
 
-LLVMTargetAdapter::LLVMTargetAdapter() : binding_(this) {}
-
-LLVMTargetAdapter::~LLVMTargetAdapter() { connected_.Signal(); }
+LLVMTargetAdapter::LLVMTargetAdapter(ExecutorPtr executor)
+    : binding_(this), executor_(executor), eventpair_(executor) {}
 
 fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler() {
-  return
-      [this](fidl::InterfaceRequest<TargetAdapter> request) { binding_.Bind(std::move(request)); };
+  return [this](fidl::InterfaceRequest<TargetAdapter> request) {
+    binding_.Bind(std::move(request), executor_->dispatcher());
+  };
 }
 
 void LLVMTargetAdapter::SetParameters(const std::vector<std::string>& parameters) {
@@ -34,30 +34,47 @@ void LLVMTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
                                 ConnectCallback callback) {
   test_input_.LinkReserved(std::move(test_input));
   test_input_.SetPoisoning(true);
-  coordinator_.Pair(std::move(eventpair),
-                    [this](zx_signals_t observed) { return OnSignal(observed); });
+  eventpair_.Pair(std::move(eventpair));
+  suspended_.resume_task();
   callback();
-  connected_.Signal();
 }
 
-bool LLVMTargetAdapter::OnSignal(zx_signals_t observed) {
-  if (observed & ZX_EVENTPAIR_PEER_CLOSED) {
-    return false;
-  }
-  if (observed != kStart) {
-    FX_LOGS(ERROR) << "Unexpected signal: " << observed;
-    return false;
-  }
-  auto result = LLVMFuzzerTestOneInput(test_input_.data(), test_input_.size());
-  if (result) {
-    FX_LOGS(FATAL) << "Fuzz target function returned non-zero result: " << result;
-  }
-  return coordinator_.SignalPeer(kFinish);
-}
-
-zx_status_t LLVMTargetAdapter::Run() {
-  connected_.WaitFor("engine to connect");
-  return binding_.AwaitClose();
+Promise<> LLVMTargetAdapter::Run() {
+  return fpromise::make_promise([this](Context& context) -> Result<> {
+           if (!eventpair_.IsConnected()) {
+             suspended_ = context.suspend_task();
+             return fpromise::pending();
+           }
+           return fpromise::ok();
+         })
+      .and_then([this, start = ZxFuture<zx_signals_t>()](Context& context) mutable -> Result<> {
+        while (true) {
+          if (!start) {
+            start = eventpair_.WaitFor(kStart);
+          }
+          if (!start(context)) {
+            return fpromise::pending();
+          }
+          if (start.is_error()) {
+            return fpromise::ok();
+          }
+          auto status = eventpair_.SignalSelf(start.take_value(), 0);
+          if (status != ZX_OK) {
+            FX_LOGS(WARNING) << "Engine disconnected unexpectedly.";
+            return fpromise::error();
+          }
+          auto result = LLVMFuzzerTestOneInput(test_input_.data(), test_input_.size());
+          if (result) {
+            FX_LOGS(FATAL) << "Fuzz target function returned non-zero result: " << result;
+          }
+          status = eventpair_.SignalPeer(0, kFinish);
+          if (status != ZX_OK) {
+            FX_LOGS(WARNING) << "Engine disconnected unexpectedly.";
+            return fpromise::error();
+          }
+        }
+      })
+      .wrap_with(scope_);
 }
 
 }  // namespace fuzzing

@@ -10,19 +10,12 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include <atomic>
 #include <memory>
-#include <mutex>
-#include <thread>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/async-types.h"
-#include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/response.h"
-#include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/runner.h"
-#include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
 
@@ -32,12 +25,10 @@ using ::fuchsia::fuzzer::Monitor;
 using ::fuchsia::fuzzer::TargetAdapter;
 
 using CorpusType = ::fuchsia::fuzzer::Corpus;
-using FidlInput = ::fuchsia::fuzzer::Input;
 
 class ControllerImpl : public Controller {
  public:
-  ControllerImpl();
-  ~ControllerImpl() override;
+  explicit ControllerImpl(ExecutorPtr executor);
 
   const RunnerPtr& runner() const { return runner_; }
 
@@ -65,49 +56,17 @@ class ControllerImpl : public Controller {
   void Fuzz(FuzzCallback callback) override;
   void Merge(MergeCallback callback) override;
 
-  // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
-  void Close() { close_.Run(); }
-  void Interrupt() { interrupt_.Run(); }
-  void Join() { join_.Run(); }
+  // Cancels any workflow being executed by this object's runner.
+  void Stop();
 
  private:
   // Adds defaults for unset options.
   void AddDefaults();
 
-  // Factory method for making FIDL responses.
-  template <typename Callback>
-  Response NewResponse(Callback callback) {
-    Response response;
-    response.set_dispatcher(dispatcher_);
-    response.set_transceiver(transceiver_);
-    response.set_callback(std::move(callback));
-    return response;
-  }
-
-  // Asynchronously receives a |fidl_input| via the transceiver before invoking the |callback| and
-  // using it to send the |response|.
-  void ReceiveAndThen(FidlInput fidl_input, Response response,
-                      fit::function<void(Input, Response)> callback);
-
-  // Stop-related methods.
-  void CloseImpl();
-  void InterruptImpl();
-  void JoinImpl();
-
-  Binding<Controller> binding_;
-  RunnerPtr runner_;
-
-  // Async execution control.
+  fidl::Binding<Controller> binding_;
   ExecutorPtr executor_;
-
-  // These pointers are instantiated by the controller and shared with other objects.
-  std::shared_ptr<Dispatcher> dispatcher_;
+  RunnerPtr runner_;
   OptionsPtr options_;
-  std::shared_ptr<Transceiver> transceiver_;
-
-  RunOnce close_;
-  RunOnce interrupt_;
-  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerImpl);
 };

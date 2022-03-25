@@ -4,55 +4,62 @@
 
 #include "src/sys/fuzzing/framework/coverage/instrumentation.h"
 
-#include <lib/zx/eventpair.h>
 #include <stdint.h>
-
-#include <memory>
 
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
 #include "src/sys/fuzzing/framework/testing/process.h"
 
 namespace fuzzing {
 
-TEST(InstrumentationTest, AddProcess) {
-  auto events = std::make_shared<CoverageEventQueue>();
+// Test fixtures.
 
-  Options options;
-  const uint64_t kMallocLimit = 64ULL << 20;
-  options.set_malloc_limit(kMallocLimit);
-  events->SetOptions(std::move(options));
+class InstrumentationTest : public AsyncTest {};
 
+// Unit tests.
+
+TEST_F(InstrumentationTest, Initialize) {
   auto target_id = 0ULL;
-  InstrumentationImpl impl(target_id, events);
+  auto options = MakeOptions();
+  auto events = AsyncDeque<CoverageEvent>::MakePtr();
+  InstrumentationImpl instrumentation(target_id, options, events);
 
-  FakeProcess process;
+  const uint64_t kMallocLimit = 64ULL << 20;
+  options->set_malloc_limit(kMallocLimit);
+
+  Bridge<Options> bridge;
+  instrumentation.Initialize(InstrumentedProcess(), bridge.completer.bind());
+
   Options received;
-  impl.Initialize(process.IgnoreAll(), [&](Options response) { received = std::move(response); });
-  EXPECT_EQ(received.malloc_limit(), kMallocLimit);
+  CoverageEvent event;
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()), &received);
+  FUZZING_EXPECT_OK(events->Receive(), &event);
+  RunUntilIdle();
 
-  auto event = events->GetEvent();
-  EXPECT_EQ(event->target_id, target_id);
-  EXPECT_TRUE(event->payload.is_process_started());
+  EXPECT_EQ(received.malloc_limit(), kMallocLimit);
+  EXPECT_EQ(event.target_id, target_id);
+  EXPECT_TRUE(event.payload.is_process_started());
 }
 
-TEST(InstrumentationTest, AddLlvmModule) {
-  auto events = std::make_shared<CoverageEventQueue>();
-
+TEST_F(InstrumentationTest, AddLlvmModule) {
   auto target_id = 1ULL;
-  InstrumentationImpl impl(target_id, events);
+  auto options = MakeOptions();
+  auto events = AsyncDeque<CoverageEvent>::MakePtr();
+  InstrumentationImpl instrumentation(target_id, options, events);
 
-  FakeFrameworkModule module;
-  bool added = false;
-  impl.AddLlvmModule(module.GetLlvmModule(), [&]() { added = true; });
-  EXPECT_TRUE(added);
+  Bridge<> bridge;
+  instrumentation.AddLlvmModule(LlvmModule(), bridge.completer.bind());
 
-  auto event = events->GetEvent();
-  EXPECT_EQ(event->target_id, target_id);
-  EXPECT_TRUE(event->payload.is_llvm_module_added());
+  CoverageEvent event;
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(events->Receive(), &event);
+  RunUntilIdle();
+
+  EXPECT_EQ(event.target_id, target_id);
+  EXPECT_TRUE(event.payload.is_llvm_module_added());
 }
 
 }  // namespace fuzzing

@@ -6,14 +6,11 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_TESTING_TARGET_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/exception.h>
 #include <lib/zx/process.h>
 #include <stdint.h>
-#include <zircon/syscalls/exception.h>
-
-#include <thread>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-types.h"
 
 namespace fuzzing {
 
@@ -21,28 +18,29 @@ namespace fuzzing {
 // exit.
 class TestTarget final {
  public:
-  TestTarget() = default;
+  explicit TestTarget(ExecutorPtr executor);
   ~TestTarget();
 
   // Spawns the process, and returns a copy of the spawned process handle.
   zx::process Launch();
 
-  // Asks the spawned process to crash.
-  void Crash();
+  // Returns a promise that asks the spawned process to crash and completes when it terminates.
+  ZxPromise<> Crash();
 
-  // Asks the spawned process to exit with the given |exitcode|.
-  void Exit(int32_t exitcode);
-
-  // Waits for the spawned process to completely terminate.
-  void Join();
+  // Returns a promise that asks the spawned process to exit with the given |exitcode| and completes
+  // when it terminates.
+  ZxPromise<> Exit(int32_t exitcode);
 
  private:
+  // Waits for the spawned process to completely terminate.
+  ZxPromise<> AwaitTermination();
+
   void Reset();
 
+  ExecutorPtr executor_;
   zx::process process_;
   zx::channel local_;
-  zx::channel exception_channel_;
-  std::thread exception_thread_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TestTarget);
 };

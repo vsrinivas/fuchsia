@@ -71,12 +71,17 @@ executable("relay") {
     ":test.fuzzer",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/testing/fidl:test_support",
     "//src/lib/fxl",
+    "//src/sys/fuzzing/common",
     "//zircon/system/ulib/sync",
   ]
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ "//sdk/lib/sys/cpp" ]
+}
+
+executable("echo") {
+  output_name = "libfuzzer_test_echo"
+  visibility = [ "//src/sys/fuzzing/*" ]
+  testonly = true
+  sources = [ "echo.cc" ]
 }

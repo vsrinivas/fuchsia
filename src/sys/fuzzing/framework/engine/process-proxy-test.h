@@ -12,8 +12,8 @@
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/process.h"
@@ -26,13 +26,13 @@ namespace fuzzing {
 //
 // The |Ignore...| methods and functions are useful for creating objects needed to make FIDL calls
 // but that are otherwise irrelevant to a particular tests.
-class ProcessProxyTest : public ::testing::Test {
+class ProcessProxyTest : public AsyncTest {
  protected:
   void SetUp() override;
 
-  std::shared_ptr<ModulePool> pool() const { return pool_; }
+  ModulePoolPtr pool() const { return pool_; }
 
-  std::unique_ptr<ProcessProxyImpl> MakeProcessProxy();
+  std::unique_ptr<ProcessProxy> MakeProcessProxy();
 
   static OptionsPtr DefaultOptions();
 
@@ -40,12 +40,9 @@ class ProcessProxyTest : public ::testing::Test {
   InstrumentedProcess IgnoreTarget(zx::eventpair&& eventpair);
   InstrumentedProcess IgnoreAll();
 
-  void TearDown() override;
-
  private:
-  std::shared_ptr<Dispatcher> dispatcher_;
-  std::shared_ptr<ModulePool> pool_;
-  FakeProcess process_;
+  ModulePoolPtr pool_;
+  std::unique_ptr<FakeProcess> process_;
 };
 
 void IgnoreReceivedSignals();

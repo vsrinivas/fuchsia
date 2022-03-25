@@ -12,16 +12,12 @@ namespace fuzzing {
 
 using ::fuchsia::fuzzer::RegistrySyncPtr;
 
-ControllerProviderImpl::ControllerProviderImpl()
-    : binding_(this),
-      close_([this]() { CloseImpl(); }),
-      interrupt_([this]() { InterruptImpl(); }),
-      join_([this]() { JoinImpl(); }) {}
-
-ControllerProviderImpl::~ControllerProviderImpl() {
-  close_.Run();
-  interrupt_.Run();
-  join_.Run();
+ControllerProviderImpl::ControllerProviderImpl(ExecutorPtr executor)
+    : binding_(this), controller_(std::move(executor)) {
+  binding_.set_error_handler([](zx_status_t status) {
+    // The registry signals the provider should exit by closing its channel.
+    exit(0);
+  });
 }
 
 ///////////////////////////////////////////////////////////////
@@ -33,17 +29,15 @@ void ControllerProviderImpl::Connect(fidl::InterfaceRequest<Controller> request,
   callback();
 }
 
-void ControllerProviderImpl::Stop() { binding_.Unbind(); }
+void ControllerProviderImpl::Stop() { controller_.Stop(); }
 
 ///////////////////////////////////////////////////////////////
 // Run-related methods
 
-zx_status_t ControllerProviderImpl::Run(RunnerPtr runner) {
+Promise<> ControllerProviderImpl::Run(RunnerPtr runner) {
   SetRunner(std::move(runner));
   zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
-  Serve(std::move(channel));
-  binding_.AwaitClose();
-  return ZX_OK;
+  return Serve(std::move(channel));
 }
 
 void ControllerProviderImpl::SetRunner(RunnerPtr runner) {
@@ -51,23 +45,13 @@ void ControllerProviderImpl::SetRunner(RunnerPtr runner) {
   controller_.SetRunner(std::move(runner));
 }
 
-void ControllerProviderImpl::Serve(zx::channel channel) {
+Promise<> ControllerProviderImpl::Serve(zx::channel channel) {
   FX_CHECK(channel);
   registrar_.Bind(std::move(channel));
   auto provider = binding_.NewBinding();
-  registrar_->Register(std::move(provider));
+  Bridge<> bridge;
+  registrar_->Register(std::move(provider), bridge.completer.bind());
+  return bridge.consumer.promise_or(fpromise::error());
 }
-
-///////////////////////////////////////////////////////////////
-// Stop-related methods
-
-void ControllerProviderImpl::CloseImpl() {
-  binding_.Unbind();
-  controller_.Close();
-}
-
-void ControllerProviderImpl::InterruptImpl() { controller_.Interrupt(); }
-
-void ControllerProviderImpl::JoinImpl() { controller_.Join(); }
 
 }  // namespace fuzzing

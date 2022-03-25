@@ -96,6 +96,21 @@ inline fit::function<void(ZxResult<V>)> ZxBind(typename ZxBridge<V>::completer_t
   };
 }
 
+// Converts a status code result to a |ZxResult|.
+inline ZxResult<> AsZxResult(zx_status_t status) {
+  if (status != ZX_OK) {
+    return fpromise::error(status);
+  }
+  return fpromise::ok();
+}
+
+inline ZxResult<> AsZxResult(const Result<zx_status_t>& result) {
+  if (result.is_error()) {
+    return fpromise::error(ZX_ERR_INTERNAL);
+  }
+  return AsZxResult(result.value());
+}
+
 // Additional supporting types from fpromise.
 
 using Barrier = fpromise::barrier;

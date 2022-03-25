@@ -7,6 +7,7 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
@@ -16,16 +17,18 @@
 
 #include <test/fuzzer/cpp/fidl.h>
 
+#include "src/sys/fuzzing/common/async-eventpair.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/testing/module.h"
-#include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 #include "src/sys/fuzzing/libfuzzer/testing/feedback.h"
+#include "testing/fidl/async_loop_for_test.h"
 
 namespace fuzzing {
 
 class TestFuzzer {
  public:
-  TestFuzzer() = default;
+  TestFuzzer();
   ~TestFuzzer() = default;
 
   using MallocHook = void (*)(const volatile void*, size_t);
@@ -54,13 +57,15 @@ class TestFuzzer {
   void OOM();
   void Timeout();
 
+  fidl::test::AsyncLoopForTest loop_;
+  ExecutorPtr executor_;
   FakeModule module_;
   MallocHook malloc_hook_ = nullptr;
   DeathCallback death_callback_ = nullptr;
   bool has_leak_ = false;
   std::atomic<bool> crash_state_acquired_ = false;
 
-  FakeSignalCoordinator coordinator_;
+  AsyncEventPair eventpair_;
   SharedMemory test_input_buffer_;
   SharedMemory feedback_buffer_;
 };

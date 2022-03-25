@@ -13,9 +13,12 @@
 #include <memory>
 #include <string_view>
 
+#include <re2/re2.h>
+
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/runner.h"
+#include "src/sys/fuzzing/libfuzzer/process.h"
 
 namespace fuzzing {
 
@@ -24,7 +27,7 @@ using ::fuchsia::fuzzer::Status;
 // The concrete implementation of |Runner| for the libfuzzer engine.
 class LibFuzzerRunner : public Runner {
  public:
-  ~LibFuzzerRunner() override;
+  ~LibFuzzerRunner() override = default;
 
   // Factory method.
   static RunnerPtr MakePtr(ExecutorPtr executor);
@@ -38,26 +41,22 @@ class LibFuzzerRunner : public Runner {
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
+
+  ZxPromise<> Configure(const OptionsPtr& options) override;
+  ZxPromise<FuzzResult> Execute(Input input) override;
+  ZxPromise<Input> Minimize(Input input) override;
+  ZxPromise<Input> Cleanse(Input input) override;
+  ZxPromise<Artifact> Fuzz() override;
+  ZxPromise<> Merge() override;
+
+  ZxPromise<> Stop() override;
+
   Status CollectStatus() override;
 
-  // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
-  void Close() override { close_.Run(); }
-  void Interrupt() override { interrupt_.Run(); }
-  void Join() override { join_.Run(); }
-
  protected:
-  void ConfigureImpl(const OptionsPtr& options) override;
-  zx_status_t SyncExecute(const Input& input) override;
-  zx_status_t SyncMinimize(const Input& input) override;
-  zx_status_t SyncCleanse(const Input& input) override;
-  zx_status_t SyncFuzz() override;
-  zx_status_t SyncMerge() override;
-
-  void ClearErrors() override;
-
-  // Creates the list of actions to perform when spawning libFuzzer. Can be overloaded when testing
-  // to provide additional functionality (e.g. startup handles).
-  virtual std::vector<fdio_spawn_action_t> MakeSpawnActions();
+  // Creates the list of actions to perform when spawning libFuzzer. Returns pipes to |stdin| and
+  // from |stderr|.
+  std::vector<fdio_spawn_action_t> MakeSpawnActions(int* stdin_fd, int* stderr_fd);
 
  private:
   explicit LibFuzzerRunner(ExecutorPtr executor);
@@ -65,26 +64,28 @@ class LibFuzzerRunner : public Runner {
   // Construct a set of libFuzzer command-line arguments for the current options.
   std::vector<std::string> MakeArgs();
 
-  // Spawn a libFuzzer process and wait for it to complete.
-  zx_status_t Spawn(const std::vector<std::string>& args);
+  // Returns a promise that runs a libFuzzer process asynchronously and returns the fuzzing result
+  // and the input that caused it.
+  ZxPromise<Artifact> RunAsync(std::vector<std::string> args);
 
-  // Interprets the standard error of libFuzzer.
-  void ParseStderr();
+  // Returns a promise that reads the output of the process run by |RunAsync|. The promise will
+  // update the fuzzer status accordingly, and return the fuzzing result when idenitifed.
+  ZxPromise<FuzzResult> ParseOutput();
+
+  // Attempts to interpret the line as containing information from libFuzzer.
+  // Returns the fuzzing result or error detected in libFuzzer's output, or |fpromise:ok(NO_ERRORS)|
+  // if neither is found.
+  ZxResult<FuzzResult> ParseLine(const std::string& line);
 
   // Attempts to interpret the line as containing status information from libFuzzer.
   // Returns true if |line| is status, false otherwise.
-  bool ParseStatus(const std::string_view& line);
+  void ParseStatus(re2::StringPiece* input);
 
-  // Attempts to interpret the line as containing other information from libFuzzer.
-  void ParseMessage(const std::string_view& line);
+  // Attempts to interpret the line as containing error information from libFuzzer.
+  ZxResult<FuzzResult> ParseError(re2::StringPiece* input);
 
   // Update the list of input files in the live corpus.
   void ReloadLiveCorpus();
-
-  // Stop-related methods.
-  void CloseImpl();
-  void InterruptImpl();
-  void JoinImpl();
 
   std::vector<std::string> cmdline_;
   OptionsPtr options_;
@@ -98,25 +99,17 @@ class LibFuzzerRunner : public Runner {
   bool has_dictionary_ = false;
   zx::time start_;
 
-  std::mutex mutex_;
-  bool stopping_ FXL_GUARDED_BY(mutex_) = false;
-
-  // The spawned subprocess and its (initially invalid) stdio file descriptors.
-  zx::process subprocess_ FXL_GUARDED_BY(mutex_);
-  int piped_stdin_ = -1;
-  int piped_stderr_ = -1;
-
   // If true, eachoes the piped stderr to this process's stderr.
   bool verbose_ = true;
 
   Status status_;
-  zx_status_t error_ = ZX_OK;
   std::string result_input_pathname_;
   bool minimized_ = false;
 
-  RunOnce close_;
-  RunOnce interrupt_;
-  RunOnce join_;
+  // Asynchronous process used to run libFuzzer instances.
+  Process process_;
+  Barrier barrier_;
+  Workflow workflow_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(LibFuzzerRunner);
 };

@@ -7,20 +7,20 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/function.h>
 #include <lib/zx/eventpair.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
 
-#include <memory>
 #include <string>
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/async-eventpair.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
 
 // Fuzz target function provided by the user.
 __EXPORT extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
@@ -32,10 +32,8 @@ using ::fuchsia::mem::Buffer;
 
 class LLVMTargetAdapter final : public TargetAdapter {
  public:
-  LLVMTargetAdapter();
-  ~LLVMTargetAdapter() override;
-
-  async_dispatcher_t* dispatcher() const { return binding_.dispatcher()->get(); }
+  explicit LLVMTargetAdapter(ExecutorPtr executor);
+  ~LLVMTargetAdapter() override = default;
 
   // Returns an interface request handler.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler();
@@ -47,17 +45,19 @@ class LLVMTargetAdapter final : public TargetAdapter {
   void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
 
-  // Blocks until a client connects, then blocks until the channel closes.
-  zx_status_t Run();
+  // Returns a promise to perform fuzzing runs in a loop. The promise completes when the engine
+  // disconnects. If the engine is not connected when this method is called, it will not complete
+  // until after |Connect| is called.
+  Promise<> Run();
 
  private:
-  bool OnSignal(zx_signals_t observed);
-
-  Binding<TargetAdapter> binding_;
-  SyncWait connected_;
+  fidl::Binding<TargetAdapter> binding_;
+  ExecutorPtr executor_;
   std::vector<std::string> parameters_;
-  SignalCoordinator coordinator_;
+  AsyncEventPair eventpair_;
   SharedMemory test_input_;
+  fpromise::suspended_task suspended_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(LLVMTargetAdapter);
 };

@@ -7,15 +7,15 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 
-#include <atomic>
-#include <memory>
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-eventpair.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 
 namespace fuzzing {
@@ -26,10 +26,8 @@ using fuchsia::fuzzer::TargetAdapterSyncPtr;
 // This class encapsulates a client of |fuchsia.fuzzer.TargetAdapter|.
 class TargetAdapterClient final {
  public:
-  explicit TargetAdapterClient(fidl::InterfaceRequestHandler<TargetAdapter> handler);
-  ~TargetAdapterClient();
-
-  bool is_connected() const { return coordinator_.is_valid(); }
+  explicit TargetAdapterClient(ExecutorPtr executor);
+  ~TargetAdapterClient() = default;
 
   // Adds default values to unspecified options that are needed by objects of this class.
   static void AddDefaults(Options* options);
@@ -37,37 +35,36 @@ class TargetAdapterClient final {
   // Sets options. The max input size may be increased by |LoadSeedCorpus|.
   void Configure(const OptionsPtr& options);
 
+  // FIDL binding methods.
+  // TODO(fxbug.dev/92490): This handler will become asynchronous and return a promise. The alias
+  // will be modified in the same change as the test fixtures.
+  using RequestHandler = fidl::InterfaceRequestHandler<TargetAdapter>;
+  void set_handler(RequestHandler handler) { handler_ = std::move(handler); }
+
   // Gets the command-line parameters from the target adapter.
-  std::vector<std::string> GetParameters();
+  Promise<std::vector<std::string>> GetParameters();
+
+  // Filters everything but the seed corpus directories from a list of |parameters|.
+  std::vector<std::string> GetSeedCorpusDirectories(const std::vector<std::string>& parameters);
 
   // Signals the target adapter to start a fuzzing iteration using the given |test_input|.
-  // Automatically calls |fuchsia.fuzzer.TargetAdapter.Connect| if needed. Does nothing if
-  // |SetError| has been called without |ClearError|.
-  void Start(Input* test_input);
-
-  // Blocks until the target adapter signals a fuzzing iteration is finished, or until |SetError| or
-  // |Close| is called.
-  void AwaitFinish();
-
-  // Sets and clears the error state of this object, respectively. When in an error state, |Start|
-  // will have no effect and |AwaitFinish| will return immediately.
-  void SetError();
-  void ClearError();
+  // Returns a promise that completes when the target adapter indicates the fuzzing run is complete.
+  Promise<> TestOneInput(const Input& test_input);
 
   // Disconnects the adapter.
-  void Close();
+  void Disconnect();
 
  private:
-  // Connects to the target adapter if needed. Does nothing if already connected.
-  void Connect();
+  // Connects to the target adapter if needed and returns a promise that completes when connected.
+  Promise<> Connect();
 
-  OptionsPtr options_;
-  fidl::InterfaceRequestHandler<TargetAdapter> handler_;
-  TargetAdapterSyncPtr adapter_;
-  SignalCoordinator coordinator_;
+  fidl::InterfacePtr<TargetAdapter> ptr_;
+  ExecutorPtr executor_;
+  Scope scope_;
+
+  RequestHandler handler_;
+  AsyncEventPair eventpair_;
   SharedMemory test_input_;
-  SyncWait sync_;
-  std::atomic<bool> error_ = false;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TargetAdapterClient);
 };

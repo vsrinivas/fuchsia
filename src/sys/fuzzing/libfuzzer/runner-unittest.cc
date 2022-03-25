@@ -12,15 +12,13 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/async-eventpair.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 #include "src/sys/fuzzing/libfuzzer/testing/feedback.h"
 
 namespace fuzzing {
 
-using ::test::fuzzer::RelaySyncPtr;
+using ::test::fuzzer::RelayPtr;
 using ::test::fuzzer::SignaledBuffer;
 
 // Test fixtures.
@@ -46,8 +44,12 @@ class LibFuzzerRunnerTest : public RunnerTest {
   // memory or more.
   static const uint64_t kOomLimit = 1ULL << 26;  // 64 MB
 
+  const RunnerPtr& runner() const override { return runner_; }
+
   void SetUp() override {
     RunnerTest::SetUp();
+    runner_ = LibFuzzerRunner::MakePtr(executor());
+    eventpair_ = std::make_unique<AsyncEventPair>(executor());
     test_input_buffer_.Reserve(kDefaultMaxInputSize);
     feedback_buffer_.Mirror(&feedback_, sizeof(feedback_));
     // Convince libFuzzer that the code is instrumented.
@@ -55,9 +57,9 @@ class LibFuzzerRunnerTest : public RunnerTest {
     SetCoverage(Input("\n"), {{255, 255}});
   }
 
-  void Configure(const RunnerPtr& runner, const OptionsPtr& options) override {
-    RunnerTest::Configure(runner, options);
-    auto libfuzzer_runner = std::static_pointer_cast<LibFuzzerRunner>(runner);
+  void Configure(const OptionsPtr& options) override {
+    RunnerTest::Configure(options);
+    auto libfuzzer_runner = std::static_pointer_cast<LibFuzzerRunner>(runner_);
     std::vector<std::string> cmdline{"/pkg/bin/libfuzzer_test_fuzzer"};
 
 // See notes on LIBFUZZER_SHOW_OUTPUT above.
@@ -79,45 +81,84 @@ class LibFuzzerRunnerTest : public RunnerTest {
     libfuzzer_runner->set_cmdline(std::move(cmdline));
   }
 
-  bool HasTestInput(zx::time deadline) override {
-    if (has_test_input_) {
-      return true;
-    }
-    if (!coordinator_.is_valid()) {
-      RelaySyncPtr relay;
-      auto context = sys::ComponentContext::Create();
-      auto status = context->svc()->Connect(relay.NewRequest());
-      FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-      SignaledBuffer data;
-      data.eventpair = coordinator_.Create();
-      data.test_input = test_input_buffer_.Share();
-      data.feedback = feedback_buffer_.Share();
-      status = relay->SetTestData(std::move(data));
-      FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-    }
-    zx_signals_t observed;
-    has_test_input_ =
-        coordinator_.AwaitSignal(deadline, &observed) == ZX_OK && (observed & kStart) != 0;
-    return has_test_input_;
+  ZxPromise<Input> GetTestInput() override {
+    // Some workflows, notably |Cleanse|, may run multiple successful instances of the libFuzzer
+    // process without error. This poses a challenge to this method, as it will be unclear whether
+    // it is connecting to a running fuzzer or one that is in the process of exiting without error.
+    // The easiest way to detect this is to simply wait for a fuzzing run to start without checking
+    // if the fuzzer is connected. If it is not, or if it is exiting, then the wait will fail and
+    // the test can connect to a new fuzzer instance via the relay. If it is, it is inexpensive to
+    // simply wait again on the already active signal.
+    return eventpair_->WaitFor(kStart)
+        .and_then([](const zx_signals_t& observed) -> ZxResult<> { return fpromise::ok(); })
+        .or_else([this, relay = RelayPtr(), connect = Future<>()](
+                     Context& context, const zx_status_t& status) mutable -> ZxResult<> {
+          // Connect to the fuzzer via the relay.
+          if (!relay) {
+            auto context = sys::ComponentContext::Create();
+            auto status = context->svc()->Connect(relay.NewRequest(executor()->dispatcher()));
+            if (status != ZX_OK) {
+              FX_LOGS(ERROR) << "Failed to connect to relay: " << zx_status_get_string(status);
+              return fpromise::error(status);
+            }
+          }
+          if (!connect) {
+            // Exchange shared objects with the fuzzer via the relay.
+            SignaledBuffer data;
+            data.eventpair = eventpair_->Create();
+            data.test_input = test_input_buffer_.Share();
+            data.feedback = feedback_buffer_.Share();
+            Bridge<> bridge;
+            relay->SetTestData(std::move(data), bridge.completer.bind());
+            connect = bridge.consumer.promise_or(fpromise::error());
+          }
+          if (!connect(context)) {
+            return fpromise::pending();
+          }
+          if (connect.is_error()) {
+            return fpromise::error(ZX_ERR_PEER_CLOSED);
+          }
+          // At this point, the test should be connected to the fuzzer. Wait for a run to start.
+          return fpromise::ok();
+        })
+        .and_then(eventpair_->WaitFor(kStart))
+        .and_then([this](const zx_signals_t& observed) -> ZxResult<Input> {
+          eventpair_->SignalSelf(kStart, 0);
+          auto input = Input(test_input_buffer_);
+          return fpromise::ok(std::move(input));
+        })
+        .wrap_with(scope_);
   }
 
-  Input GetTestInput() override {
-    has_test_input_ = false;
-    return Input(test_input_buffer_);
-  }
-
-  void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) override {
-    feedback_.result = result;
-    feedback_.leak_suspected = leak;
-    feedback_.num_counters = coverage.size();
-    size_t i = 0;
-    for (const auto& offset_value : coverage) {
-      feedback_.counters[i].offset = static_cast<uint16_t>(offset_value.first);
-      feedback_.counters[i].value = static_cast<uint8_t>(offset_value.second);
-      ++i;
-    }
-    feedback_buffer_.Update();
-    has_test_input_ = coordinator_.SignalPeer(kStart) && (coordinator_.AwaitSignal() & kStart) != 0;
+  ZxPromise<> SetFeedback(Coverage coverage, FuzzResult fuzz_result, bool leak) override {
+    return fpromise::make_promise([this, coverage = std::move(coverage), fuzz_result, leak]() {
+             feedback_.result = fuzz_result;
+             feedback_.leak_suspected = leak;
+             feedback_.num_counters = coverage.size();
+             FX_DCHECK(feedback_.num_counters <= kMaxNumFeedbackCounters) << feedback_.num_counters;
+             size_t i = 0;
+             for (const auto& [offset, value] : coverage) {
+               feedback_.counters[i].offset = static_cast<uint16_t>(offset);
+               feedback_.counters[i].value = static_cast<uint8_t>(value);
+               ++i;
+             }
+             feedback_buffer_.Update();
+             eventpair_->SignalPeer(0, kStart);
+             return eventpair_->WaitFor(kFinish);
+           })
+        .and_then([this](const zx_signals_t& observed) -> ZxResult<> {
+          eventpair_->SignalSelf(kFinish, 0);
+          return fpromise::ok();
+        })
+        .or_else([](const zx_status_t& status) -> ZxResult<> {
+          if (status == ZX_ERR_PEER_CLOSED) {
+            // LibFuzzer oftens runs multiple fuzzers in child processes; don't treat exits as
+            // failures.
+            return fpromise::ok();
+          }
+          return fpromise::error(status);
+        })
+        .wrap_with(scope_);
   }
 
   void TearDown() override {
@@ -132,11 +173,12 @@ class LibFuzzerRunnerTest : public RunnerTest {
   }
 
  private:
-  FakeSignalCoordinator coordinator_;
-  bool has_test_input_ = false;
+  RunnerPtr runner_;
+  std::unique_ptr<AsyncEventPair> eventpair_;
   SharedMemory test_input_buffer_;
   SharedMemory feedback_buffer_;
   RelayedFeedback feedback_;
+  Scope scope_;
 };
 
 #undef LIBFUZZER_SHOW_OUTPUT
@@ -149,14 +191,8 @@ class LibFuzzerRunnerTest : public RunnerTest {
 #undef RUNNER_TYPE
 #undef RUNNER_TEST
 
-TEST_F(LibFuzzerRunnerTest, MergeSeedError) {
-  auto runner = LibFuzzerRunner::MakePtr(executor());
-  MergeSeedError(runner, /* expected */ ZX_OK, kOomLimit);
-}
+TEST_F(LibFuzzerRunnerTest, MergeSeedError) { MergeSeedError(/* expected */ ZX_OK, kOomLimit); }
 
-TEST_F(LibFuzzerRunnerTest, Merge) {
-  auto runner = LibFuzzerRunner::MakePtr(executor());
-  Merge(runner, /* keep_errors= */ false, kOomLimit);
-}
+TEST_F(LibFuzzerRunnerTest, Merge) { Merge(/* keep_errors= */ false, kOomLimit); }
 
 }  // namespace fuzzing

@@ -15,21 +15,9 @@
 
 namespace fuzzing {
 
-ControllerImpl::ControllerImpl()
-    : binding_(this),
-      close_([this]() { CloseImpl(); }),
-      interrupt_([this]() { InterruptImpl(); }),
-      join_([this]() { JoinImpl(); }) {
-  dispatcher_ = binding_.dispatcher();
-  executor_ = MakeExecutor(dispatcher_->get());
+ControllerImpl::ControllerImpl(ExecutorPtr executor)
+    : binding_(this), executor_(std::move(executor)) {
   options_ = MakeOptions();
-  transceiver_ = std::make_shared<Transceiver>();
-}
-
-ControllerImpl::~ControllerImpl() {
-  Close();
-  Interrupt();
-  Join();
 }
 
 void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
@@ -50,26 +38,17 @@ void ControllerImpl::AddDefaults() {
   runner_->AddDefaults(options_.get());
 }
 
-void ControllerImpl::ReceiveAndThen(FidlInput fidl_input, Response response,
-                                    fit::function<void(Input, Response)> callback) {
-  transceiver_->Receive(std::move(fidl_input),
-                        [response = std::move(response), callback = std::move(callback)](
-                            zx_status_t status, Input received) mutable {
-                          if (status != ZX_OK) {
-                            response.Send(status);
-                          } else {
-                            callback(std::move(received), std::move(response));
-                          }
-                        });
-}
-
 ///////////////////////////////////////////////////////////////
 // FIDL methods.
 
 void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
   *options_ = std::move(options);
   AddDefaults();
-  callback(runner_->Configure(options_));
+  auto task =
+      runner_->Configure(options_).then([callback = std::move(callback)](const ZxResult<>& result) {
+        callback(result.is_ok() ? ZX_OK : result.error());
+      });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::GetOptions(GetOptionsCallback callback) { callback(CopyOptions(*options_)); }
@@ -125,11 +104,7 @@ void ControllerImpl::WriteDictionary(FidlInput dictionary, WriteDictionaryCallba
         return AsyncSocketRead(executor, std::move(dictionary));
       })
           .and_then([runner = runner_](Input& received) -> ZxResult<> {
-            auto status = runner->ParseDictionary(std::move(received));
-            if (status != ZX_OK) {
-              return fpromise::error(status);
-            }
-            return fpromise::ok();
+            return AsZxResult(runner->ParseDictionary(std::move(received)));
           })
           .then([callback = std::move(callback)](const ZxResult<>& result) {
             callback(result.is_ok() ? ZX_OK : result.error());
@@ -194,36 +169,27 @@ void ControllerImpl::Cleanse(FidlInput fidl_input, CleanseCallback callback) {
 }
 
 void ControllerImpl::Fuzz(FuzzCallback callback) {
-  runner_->Fuzz([this, response = NewResponse(std::move(callback))](zx_status_t status) mutable {
-    response.Send(status, runner_->result(), runner_->result_input());
-  });
+  auto task = runner_->Fuzz()
+                  .and_then([executor = executor_](Artifact& artifact) {
+                    return fpromise::ok(AsyncSocketWrite(executor, std::move(artifact)));
+                  })
+                  .then([callback = std::move(callback)](ZxResult<FidlArtifact>& result) {
+                    callback(std::move(result));
+                  });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::Merge(MergeCallback callback) {
-  runner_->Merge([response = NewResponse(std::move(callback))](zx_status_t status) mutable {
-    response.Send(status);
+  auto task = runner_->Merge().then([callback = std::move(callback)](ZxResult<>& result) {
+    callback(result.is_ok() ? ZX_OK : result.error());
   });
+  executor_->schedule_task(std::move(task));
 }
 
-void ControllerImpl::CloseImpl() {
-  binding_.Unbind();
+void ControllerImpl::Stop() {
   if (runner_) {
-    runner_->Close();
+    executor_->schedule_task(runner_->Stop());
   }
-  transceiver_->Close();
-}
-
-void ControllerImpl::InterruptImpl() {
-  if (runner_) {
-    runner_->Interrupt();
-  }
-}
-
-void ControllerImpl::JoinImpl() {
-  if (runner_) {
-    runner_->Join();
-  }
-  transceiver_->Join();
 }
 
 }  // namespace fuzzing

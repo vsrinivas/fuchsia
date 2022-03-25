@@ -6,55 +6,45 @@
 #define SRC_SYS_FUZZING_COMMON_CONTROLLER_PROVIDER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-
-#include <memory>
-#include <string>
+#include <lib/zx/channel.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/controller.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/common/run-once.h"
+#include "src/sys/fuzzing/common/runner.h"
 
 namespace fuzzing {
 
 using ::fuchsia::fuzzer::Controller;
 using ::fuchsia::fuzzer::ControllerProvider;
-using ::fuchsia::fuzzer::RegistrarSyncPtr;
+using ::fuchsia::fuzzer::RegistrarPtr;
 
 class ControllerProviderImpl final : public ControllerProvider {
  public:
-  ControllerProviderImpl();
-  ~ControllerProviderImpl();
+  explicit ControllerProviderImpl(ExecutorPtr executor);
+  ~ControllerProviderImpl() override = default;
 
   // FIDL methods.
   void Connect(fidl::InterfaceRequest<Controller> request, ConnectCallback callback) override;
   void Stop() override;
 
+  // Sets the given |runner|, then takes the startup channel provided by the fuzz_test_runner and
+  // returns a promise to |Serve| the |fuchsia.fuzzer.ControllerProvider| protocol on it.
+  Promise<> Run(RunnerPtr runner);
+
+  // Sets the runner. Except for unit tests, callers should prefer |Run|.
   void SetRunner(RunnerPtr runner);
 
-  // Fulfills requests received on the |channel| to connect to the |Controller|.
-  void Serve(zx::channel channel);
-
-  // Takes the startup channel provided by the fuzz_test_runner and serves
-  // |fuchsia.fuzzer.ControllerProvider| on it. Blocks until the registry calls |Stop| and/or closes
-  // the channel.
-  zx_status_t Run(RunnerPtr runner);
+  // Promises to register with the fuzz-registrar as being able to fulfill requests to connect to
+  // this object's |Controller|. Except for unit tests, callers should prefer |Run|.
+  Promise<> Serve(zx::channel channel);
 
  private:
-  // Stop-related methods.
-  void CloseImpl();
-  void InterruptImpl();
-  void JoinImpl();
-
-  Binding<ControllerProvider> binding_;
+  fidl::Binding<ControllerProvider> binding_;
   ControllerImpl controller_;
-  RegistrarSyncPtr registrar_;
-
-  RunOnce close_;
-  RunOnce interrupt_;
-  RunOnce join_;
+  RegistrarPtr registrar_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerProviderImpl);
 };

@@ -4,7 +4,6 @@
 
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 
-#include <thread>
 #include <unordered_set>
 
 #include <gtest/gtest.h>

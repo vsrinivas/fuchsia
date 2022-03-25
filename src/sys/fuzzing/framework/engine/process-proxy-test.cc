@@ -9,34 +9,33 @@
 namespace fuzzing {
 
 void ProcessProxyTest::SetUp() {
-  dispatcher_ = std::make_shared<Dispatcher>();
+  AsyncTest::SetUp();
   pool_ = std::make_shared<ModulePool>();
+  process_ = std::make_unique<FakeProcess>(executor());
 }
 
-std::unique_ptr<ProcessProxyImpl> ProcessProxyTest::MakeProcessProxy() {
-  return std::make_unique<ProcessProxyImpl>(kInvalidTargetId + 1, pool_);
+std::unique_ptr<ProcessProxy> ProcessProxyTest::MakeProcessProxy() {
+  return std::make_unique<ProcessProxy>(executor(), kInvalidTargetId + 1, pool_);
 }
 
 OptionsPtr ProcessProxyTest::DefaultOptions() {
   auto options = MakeOptions();
-  ProcessProxyImpl::AddDefaults(options.get());
+  ProcessProxy::AddDefaults(options.get());
   return options;
 }
 
 InstrumentedProcess ProcessProxyTest::IgnoreSentSignals(zx::process&& process) {
-  return process_.IgnoreSentSignals(std::move(process));
+  return process_->IgnoreSentSignals(std::move(process));
 }
 
 InstrumentedProcess ProcessProxyTest::IgnoreTarget(zx::eventpair&& eventpair) {
-  return process_.IgnoreTarget(std::move(eventpair));
+  return process_->IgnoreTarget(std::move(eventpair));
 }
 
-InstrumentedProcess ProcessProxyTest::IgnoreAll() { return process_.IgnoreAll(); }
+InstrumentedProcess ProcessProxyTest::IgnoreAll() { return process_->IgnoreAll(); }
 
 void IgnoreReceivedSignals() {}
 
 void IgnoreErrors(uint64_t ignored) {}
-
-void ProcessProxyTest::TearDown() { dispatcher_->Shutdown(); }
 
 }  // namespace fuzzing

@@ -8,12 +8,12 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-#include <atomic>
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
+#include "src/sys/fuzzing/common/async-deque.h"
+#include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/framework/coverage/instrumentation.h"
 #include "src/sys/fuzzing/framework/coverage/provider.h"
 #include "src/sys/fuzzing/framework/target/process.h"
 
@@ -24,25 +24,20 @@ using ::fuchsia::fuzzer::Instrumentation;
 
 class CoverageForwarder final {
  public:
-  CoverageForwarder();
+  explicit CoverageForwarder(ExecutorPtr executor);
   ~CoverageForwarder() = default;
-
-  async_dispatcher_t* dispatcher() const { return dispatcher_.get(); }
 
   // FIDL protocol handlers.
   fidl::InterfaceRequestHandler<Instrumentation> GetInstrumentationHandler();
   fidl::InterfaceRequestHandler<CoverageProvider> GetCoverageProviderHandler();
 
-  // Blocks until a |CoverageProvider| client connects, then blocks until it disconnects.
-  void Run();
-
  private:
   uint64_t last_target_id_ = kInvalidTargetId;
-  Dispatcher dispatcher_;
-  fidl::BindingSet<Instrumentation, std::unique_ptr<Instrumentation>> instrumentations_;
+  ExecutorPtr executor_;
+  OptionsPtr options_;
+  AsyncDequePtr<CoverageEvent> events_;
+  fidl::BindingSet<Instrumentation, std::unique_ptr<InstrumentationImpl>> instrumentations_;
   std::unique_ptr<CoverageProviderImpl> provider_;
-  std::shared_ptr<CoverageEventQueue> events_;
-  std::atomic<bool> closing_ = false;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(CoverageForwarder);
 };

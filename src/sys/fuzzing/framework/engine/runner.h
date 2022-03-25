@@ -7,28 +7,17 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/defer.h>
-#include <lib/fit/function.h>
-#include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
 #include <stddef.h>
 
-#include <atomic>
 #include <memory>
-#include <mutex>
-#include <thread>
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/async-deque.h"
 #include "src/sys/fuzzing/common/async-types.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
-#include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/runner.h"
-#include "src/sys/fuzzing/common/shared-memory.h"
-#include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/engine/adapter-client.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 #include "src/sys/fuzzing/framework/engine/coverage-client.h"
@@ -41,13 +30,17 @@ namespace fuzzing {
 // The concrete implementation of |Runner|.
 class RunnerImpl final : public Runner {
  public:
-  ~RunnerImpl() override;
+  ~RunnerImpl() override = default;
 
   // Factory method.
   static RunnerPtr MakePtr(ExecutorPtr executor);
 
-  void SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_adapter);
-  void SetCoverageProvider(std::unique_ptr<CoverageProviderClient> coverage_provider);
+  void set_target_adapter_handler(TargetAdapterClient::RequestHandler handler) {
+    target_adapter_.set_handler(std::move(handler));
+  }
+  void set_coverage_provider_handler(CoverageProviderClient::RequestHandler handler) {
+    coverage_provider_.set_handler(std::move(handler));
+  }
 
   // |Runner| method implementations.
   void AddDefaults(Options* options) override;
@@ -55,153 +48,183 @@ class RunnerImpl final : public Runner {
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
-  Status CollectStatus() override FXL_LOCKS_EXCLUDED(mutex_);
 
-  // Callback for signals received from the target adapter and process proxies that are used to
-  // notify the runner that they have started or finished.
-  bool OnSignal();
+  ZxPromise<> Configure(const OptionsPtr& options) override;
+  ZxPromise<FuzzResult> Execute(Input input) override;
+  ZxPromise<Input> Minimize(Input input) override;
+  ZxPromise<Input> Cleanse(Input input) override;
+  ZxPromise<Artifact> Fuzz() override;
+  ZxPromise<> Merge() override;
 
-  // Callback for signals received from the target adapter and process proxies that are used to
-  // notify the runner that they have encountered an error. Error values are interpreted as:
-  //   * 0: -          no error.
-  //   * UINTPTR_MAX:  timeout
-  //   * other:        target_id of process proxy with error.
-  void OnError(uint64_t error);
+  ZxPromise<> Stop() override;
 
-  // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
-  void Close() override { close_.Run(); }
-  void Interrupt() override { interrupt_.Run(); }
-  void Join() override { join_.Run(); }
+  Status CollectStatus() override;
 
  protected:
-  // Fuzzing workflow implementations.
-  void ConfigureImpl(const OptionsPtr& options) override;
-  zx_status_t SyncExecute(const Input& input) override;
-  zx_status_t SyncMinimize(const Input& input) override;
-  zx_status_t SyncCleanse(const Input& input) override;
-  zx_status_t SyncFuzz() override;
-  zx_status_t SyncMerge() override;
+  // |Reset|s input queues, records start times, and notifies monitors that the workflow is
+  // starting. This method is called automatically by |Workflow::Start|.
+  void StartWorkflow(Scope& scope) override;
 
-  void ClearErrors() override;
+  // Drops remaining inputs from queues, |Disconnect|s, and notifies monitors that the workflow is
+  // done. This method is called automatically by |Workflow::Finish|.
+  void FinishWorkflow() override;
 
  private:
+  // Indicates how the engine should handle inputs that don't trigger an error.
+  enum PostProcessing {
+    // No-op.
+    kNoPostProcessing,
+
+    // Add the input's coverage to the overall coverage.
+    kAccumulateCoverage,
+
+    // Determine if any of the input's coverage is new. If so, record the coverage in the input and
+    // add it to the live corpus.
+    kMeasureCoverageAndKeepInputs,
+
+    // Determine if any of the input's coverage is new. If so, add it to the overall coverage and
+    // add the input to the live corpus.
+    kAccumulateCoverageAndKeepInputs,
+  };
+
   explicit RunnerImpl(ExecutorPtr executor);
 
-  // Creates and returns a scope object for a synchronous workflow. This will reset errors,
-  // deadlines, and run counts, and update monitors with an INIT update. When the object falls out
-  // of scope, it will ensure the fuzzer is stopped, disable timers, and send a DONE update. Each
-  // fuzzing workflow should begin with a call to this function.
-  fit::deferred_action<fit::closure> SyncScope() FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns a promise to generate |num_inputs| inputs for testing by taking them from the
+  // |processed| queue, mutating corpus elements, and sending them to the |generated| queue. If
+  // |num_inputs| is 0, this will continuously generate new inputs until the |processed| queue is
+  // closed and empty.
+  // If a workflow does not depend on the coverage produced by each input, a |backlog| of inputs can
+  // be generated, e.g. while waiting for target processes to respond. A |backlog| of 0 makes the
+  // generation of each input depend on the processing of the previous one.
+  ZxPromise<> GenerateInputs(size_t num_inputs, size_t backlog = 0);
 
-  // Resets the timer thread's alarm, setting a new run deadline and delaying how long until the
-  // TIMEOUT error is triggered.
-  void ResetTimer() FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns a promise to generate inputs from "cleaning" the provided |input|. To clean the input,
+  // it replaces each byte with either a space or 0xFF. It keeps the change if the modified input
+  // triggers an error, as determined by examining the test outputs that are sent to the |recycler|.
+  Promise<> GenerateCleanInputs(const Input& input, std::shared_ptr<AsyncDeque<Artifact>> recycler);
 
-  // The timer thread body.
-  void Timer() FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns a promise to |GenerateInputs| and |TestInputs|. This will first iterate through the
+  // seed and live corpora before mutating new inputs.  See |GenerateInputs| for details on
+  // |backlog|.
+  ZxPromise<Artifact> FuzzInputs(size_t backlog = 0);
 
-  // Sends the test input to the target adapter.
-  void TestOne(const Input& input);
-
-  // Sends each test input in the given |corpus| to the target adapter in turn.
-  void TestCorpus(const std::shared_ptr<Corpus>& corpus);
-
-  // The core loop, implemented two ways. In both, the loop will repeatedly generate the
-  // |next_input|, send it to the target adapter, and perform additional actions using |finish_run|.
-  // The "strict" version will always analyze the feedback from the Nth input before generating the
-  // N+1th input. The "relaxed" version will generate the N+1th input *before* analyzing the
-  // feedback of the Nth input. If the next input doesn't directly depend on the previous input's
-  // feedback, this can improve performance by allowing the engine to generate inputs while waiting
-  // for a run to progress.
+  // Returns a promise to test a single |input|. The promise returns an artifact if found or an
+  // error; in particular it returns |ZX_ERR_STOP| if it completed without finding an artifact.
   //
-  // Parameters:
-  //   next_input:    function that takes a boolean indicating if this is the first run, and returns
-  //                  the next input to send to target adapter, or null if fuzzing should stop.
-  //   finish_run:    function that takes the input that was just exercised by the target adapter.
-  //   ignore_errors: bool that may be set to true if a workflow expects to encounter errors and
-  //                  then continue, e.g. Cleanse and Merge.
+  // Inputs that do not trigger errors are analyzed according to the given |mode|.
+  ZxPromise<Artifact> TestOneAsync(Input input, PostProcessing mode);
+
+  // Returns a promise to test each non-empty input of a |corpus| in turn. The promise returns an
+  // artifact if found or an error; in particular it returns |ZX_ERR_STOP| if it completed without
+  // finding an artifact.
   //
-  void FuzzLoopStrict(fit::function<Input*(bool /* first*/)> next_input,
-                      fit::function<void(Input* /* last_input */)> finish_run,
-                      bool ignore_errors = false);
-  void FuzzLoopRelaxed(fit::function<Input*(bool /* first*/)> next_input,
-                       fit::function<void(Input* /* last_input */)> finish_run,
-                       bool ignore_errors = false);
-
-  // A loop that handles signalling the target adapter and proxies. This is started on a dedicated
-  // thread by one of |FuzzLoop*|s above, allowing it to generate inputs and analyze feedback while
-  // waiting for other processes to respond.
-  void RunLoop(bool ignore_errors) FXL_LOCKS_EXCLUDED(mutex_);
-
-  // Wraps |FuzzLoopStrict| to perform "normal" fuzzing, i.e. mutates an input from the live corpus,
-  // accumulates feedback from each input, and exits on error, max runs, or max time.
+  // Inputs that do not trigger errors are analyzed according to the given |mode|.
   //
-  // TODO(fxbug.dev/84364): |FuzzLoopRelaxed| is preferred here, but using that causes some test
-  // flake. Switch to that version once the source of it is resolved.
-  void FuzzLoop();
+  // Callers may specify they wish to |collect_errors| rather than stopping on the first artifact
+  // found. See |TestInputs| for additional details.
+  using InputsPtr = std::shared_ptr<std::vector<Input>>;
+  ZxPromise<Artifact> TestCorpusAsync(CorpusPtr corpus, PostProcessing mode,
+                                      InputsPtr collect_errors = nullptr);
 
-  // Uses the target adapter request handler to connect to the target adapter.
-  void ConnectTargetAdapter();
+  // Returns a promise that will read successive |Input|s from the |generated| queue, test them, and
+  // release them to the |processed| queue.  The promise returns an artifact if found or an error;
+  // in particular it returns |ZX_ERR_STOP| if it completed without finding an artifact to return.
+  //
+  // Inputs that do not trigger errors are analyzed according to the given |mode|.
+  //
+  // Callers may specify they wish to |collect_errors| rather than return artifacts. In this case,
+  // errors will be cleared after the associated input has been saved, and testing will continue
+  // until it exhausts inputs and returns |ZX_ERR_STOP|.
+  ZxPromise<Artifact> TestInputs(PostProcessing mode, InputsPtr collect_errors = nullptr);
 
-  // Resets |sync|, but only if there is no pending error, allowing |RunLoop| to avoid blocking
-  // in the error case.
-  void ResetSyncIfNoPendingError(SyncWait* sync);
+  // Returns a promise that checks a |previous| error returned from a |Test...| method. The promise
+  // will complete successfully if the error was |ZX_ERR_STOP|, indicating the previous test did not
+  // find an artifact. Otherwise, the error will be forwarded.
+  ZxPromise<> CheckPrevious(zx_status_t previous);
 
-  // Returns false if no error is pending. Otherwise, if the error is recoverable (e.g. a process
-  // exit when not detecting exits), it recovers and returns false. Otherwise, it records the
-  // |last_input|, determines its result, and returns true.
-  bool HasError(const Input* last_input) FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns a promise that updates the |Monitor|s with status periodically. To end updates, exit
+  // the given |workflow| scope.
+  Promise<> MakePulsePromise(int64_t pulse_interval, Scope& workflow);
 
-  // Stop-related methods.
-  void CloseImpl();
-  void InterruptImpl();
-  void JoinImpl();
+  // Returns a promise to coordinate the target processes to start a new run and get the next
+  // |Input| to be tested from the |generated_| queue. The promise will return any unexpected errors
+  // from target processes, or |ZX_ERR_STOP| if there are no more |Input|s. to be tested.
+  ZxPromise<Input> Prepare(bool detect_leaks);
+
+  // Sends the |input| to the |target_adapter_|, and returns a promise to wait for and return the
+  // results of the run. On completion, the promise will either return the error encountered when
+  // testing the |input| or whether a memory leak is suspected, i.e. the |input| caused more
+  // |malloc|s than |free|s.
+  Promise<bool, FuzzResult> RunOne(const Input& input);
+
+  // Adds a new process or module for coverage collection as represented by the given |event|. New
+  // processes are typically started as a result of the target adapter processing some input, and
+  // there in turn add their modules.
+  void AddCoverage(CoverageEvent event);
+
+  // Returns a promise to determine the cause of an error in the target process identified by the
+  // given |target_id|. In the case of multiple errors, only the first error is reported. However,
+  // determining the error cause typically involves waiting for the process to terminate.
+  // To accurately record which error is first, only the |target_id| is recorded initially, and the
+  // other details are collected asynchronously using this method.
+  Promise<bool, FuzzResult> GetFuzzResult(uint64_t target_id);
+
+  // Examines the effects of a previous call to |RunOne| with the given |input|. This may collect
+  // coverage and/or record new features for the input, according to the given |mode|.
+  void Analyze(Input& input, PostProcessing mode);
+
+  // Takes an |Input| and determines whether it should be retried to check for leaks or released for
+  // reuse by a workflow to generate new |Input|s. Returns whether the next run will retry the input
+  // to detect leaks, i.e. if the previous run was not |detecting| leaks, a leak was |suspected|,
+  // and there are leak detection |attempts_left|.
+  bool Recycle(Input&& input, size_t& attempts_left, bool suspected, bool detecting);
+
+  // Disconnects from the target adapter and all target processes.
+  void Disconnect();
+
+  // Clears errors and any inputs in queues and returns the runner to a "clean slate". This is
+  // useful when resuming after arrors, e.g. in a workflow that finds multiple errors.
+  void Reset();
 
   // General configuration.
   OptionsPtr options_;
   uint32_t run_ = 0;
+
+  // Time at which a workflow starts.
   zx::time start_ = zx::time::infinite_past();
-  zx::time next_pulse_ = zx::time::infinite();
 
-  // Variables to synchronize between the worker and run-loop.
-  std::atomic<bool> stopped_ = true;
-  std::atomic<bool> stopping_ = false;
-  Input* next_input_ = nullptr;
-  Input* last_input_ = nullptr;
-  SyncWait next_input_ready_;
-  SyncWait next_input_taken_;
-  SyncWait last_input_ready_;
-  SyncWait last_input_taken_;
-  SyncWait run_finished_;
+  // Time at after which "pulse" status updates may be sent to monitors.
+  zx::time pulse_start_;
 
-  // Timer variables
-  std::thread timer_;
-  SyncWait timer_sync_;
-  zx::time run_deadline_ FXL_GUARDED_BY(mutex_) = zx::time::infinite();
+  // Flag to indicate no more inputs should be produced.
+  bool stopped_ = true;
 
   // Input generation and management variables.
-  std::shared_ptr<Corpus> seed_corpus_;
-  std::shared_ptr<Corpus> live_corpus_;
+  CorpusPtr seed_corpus_;
+  CorpusPtr live_corpus_;
   Mutagen mutagen_;
 
+  // Queue of generated inputs for a workflow that are consumed by |TestInputs|.
+  AsyncDeque<Input> generated_;
+
   // Interfaces to other components.
-  std::unique_ptr<TargetAdapterClient> target_adapter_;
-  std::unique_ptr<CoverageProviderClient> coverage_provider_;
+  TargetAdapterClient target_adapter_;
+  CoverageProviderClient coverage_provider_;
 
   // Feedback collection and analysis variables.
-  std::shared_ptr<ModulePool> pool_;
-  std::mutex mutex_;
-  std::unordered_map<uint64_t, std::unique_ptr<ProcessProxyImpl>> process_proxies_
-      FXL_GUARDED_BY(mutex_);
-  std::atomic<size_t> pending_signals_ = 0;
-  SyncWait process_sync_;
+  ModulePoolPtr pool_;
+  std::unordered_map<uint64_t, std::unique_ptr<ProcessProxy>> process_proxies_;
 
-  // The target ID of the process that caused an error, or a value reserved for timeouts.
-  std::atomic<uint64_t> error_ = kInvalidTargetId;
+  // A list of futures that include running the target adapter and awaiting errors or completion
+  // status from process proxies. This is primarily used within |RunOne|, but needs to be visible
+  // outside that method so completion futures for newly added processes can be added to it.
+  std::vector<Future<bool, uint64_t>> futures_;
+  fpromise::suspended_task suspended_;
 
-  RunOnce close_;
-  RunOnce interrupt_;
-  RunOnce join_;
+  // Queue of tested input for a workflow that are ready to be processed and/or recycled.
+  AsyncDeque<Input> processed_;
+
+  Workflow workflow_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(RunnerImpl);
 };

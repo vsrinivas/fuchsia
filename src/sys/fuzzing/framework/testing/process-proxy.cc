@@ -11,8 +11,8 @@
 
 namespace fuzzing {
 
-FakeProcessProxy::FakeProcessProxy(const std::shared_ptr<ModulePool>& pool)
-    : binding_(this), pool_(std::move(pool)) {}
+FakeProcessProxy::FakeProcessProxy(ExecutorPtr executor, ModulePoolPtr pool)
+    : binding_(this), eventpair_(std::move(executor)), pool_(std::move(pool)) {}
 
 bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
   auto id = module->id();
@@ -20,32 +20,31 @@ bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
   return iter != ids_.end() && iter->second == id[1];
 }
 
-void FakeProcessProxy::Configure(const OptionsPtr& options) { options_ = options; }
+void FakeProcessProxy::Configure(OptionsPtr options) { options_ = std::move(options); }
 
-InstrumentationSyncPtr FakeProcessProxy::Bind(bool disable_warnings) {
-  if (disable_warnings) {
-    options_->set_purge_interval(0);
-    options_->set_malloc_limit(0);
-  }
-  InstrumentationSyncPtr instrumentation;
-  auto request = instrumentation.NewRequest();
-  binding_.Bind(std::move(request));
-  return instrumentation;
+fidl::InterfaceRequestHandler<Instrumentation> FakeProcessProxy::GetHandler() {
+  return [this](fidl::InterfaceRequest<Instrumentation> request) {
+    binding_.Bind(std::move(request));
+  };
 }
 
-void FakeProcessProxy::Initialize(InstrumentedProcess instrumented, InitializeCallback callback) {
+void FakeProcessProxy::FakeProcessProxy::Initialize(InstrumentedProcess instrumented,
+                                                    InitializeCallback callback) {
+  // The coverage component invokes the callback, but the process waits for the engine's signal.
+  callback(CopyOptions(*options_));
   auto* eventpair = instrumented.mutable_eventpair();
-  coordinator_.Pair(std::move(*eventpair));
+  eventpair_.Pair(std::move(*eventpair));
   zx_info_handle_basic_t info;
   auto status =
       instrumented.process().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   process_koid_ = info.koid;
-  callback(CopyOptions(*options_));
-  coordinator_.SignalPeer(kSync);
+  SignalPeer(kSync);
 }
 
 void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) {
+  // The coverage component invokes the callback, but the process waits for the engine's signal.
+  callback();
   SharedMemory counters;
   auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
   counters.LinkMirrored(std::move(*inline_8bit_counters));
@@ -54,8 +53,36 @@ void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallba
   auto* module = pool_->Get(id, counters.size());
   module->Add(counters.data(), counters.size());
   counters_.push_back(std::move(counters));
-  callback();
-  coordinator_.SignalPeer(kSync);
+  SignalPeer(kSync);
+}
+
+zx_status_t FakeProcessProxy::SignalPeer(Signal signal) {
+  auto status = eventpair_.SignalPeer(0, signal);
+  if (completer_) {
+    completer_.complete_ok(signal);
+  }
+  return status;
+}
+
+Promise<> FakeProcessProxy::AwaitReceived(Signal signal) {
+  return eventpair_.WaitFor(signal)
+      .and_then([this](const zx_signals_t& observed) {
+        return AsZxResult(eventpair_.SignalSelf(observed, 0));
+      })
+      .or_else([](const zx_status_t& status) { return fpromise::error(); })
+      .wrap_with(scope_);
+}
+
+Promise<> FakeProcessProxy::AwaitSent(Signal signal) {
+  Bridge<zx_signals_t> bridge;
+  completer_ = std::move(bridge.completer);
+  return bridge.consumer.promise_or(fpromise::error())
+      .and_then([signal](const zx_signals_t& observed) -> Result<> {
+        if (signal != observed) {
+          return fpromise::error();
+        }
+        return fpromise::ok();
+      });
 }
 
 }  // namespace fuzzing

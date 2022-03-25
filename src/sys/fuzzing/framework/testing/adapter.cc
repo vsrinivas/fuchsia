@@ -5,20 +5,17 @@
 #include "src/sys/fuzzing/framework/testing/adapter.h"
 
 #include <lib/syslog/cpp/macros.h>
-
-#include <string>
-#include <vector>
-
-#include "src/sys/fuzzing/common/dispatcher.h"
+#include <zircon/status.h>
 
 namespace fuzzing {
 
-FakeTargetAdapter::FakeTargetAdapter() : binding_(this) { wsync_.Signal(); }
+FakeTargetAdapter::FakeTargetAdapter(ExecutorPtr executor)
+    : binding_(this), executor_(executor), eventpair_(executor) {}
 
 fidl::InterfaceRequestHandler<TargetAdapter> FakeTargetAdapter::GetHandler() {
-  return [&](fidl::InterfaceRequest<TargetAdapter> request) {
-    coordinator_.Reset();
-    binding_.Bind(std::move(request));
+  return [this](fidl::InterfaceRequest<TargetAdapter> request) {
+    eventpair_.Reset();
+    binding_.Bind(std::move(request), executor_->dispatcher());
   };
 }
 
@@ -32,38 +29,56 @@ void FakeTargetAdapter::GetParameters(GetParametersCallback callback) {
 
 void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
                                 ConnectCallback callback) {
+  eventpair_.Pair(std::move(eventpair));
   test_input_.LinkReserved(std::move(test_input));
-  coordinator_.Pair(std::move(eventpair), [this](zx_signals_t observed) {
-    wsync_.WaitFor("signal to be received");
-    wsync_.Reset();
-    observed_ = observed;
-    rsync_.Signal();
-    return observed == kStart;
-  });
+  suspended_.resume_task();
   callback();
 }
 
-zx_signals_t FakeTargetAdapter::AwaitSignal() {
-  rsync_.WaitFor("signal to be sent");
-  rsync_.Reset();
-  auto observed = observed_;
-  wsync_.Signal();
-  return observed;
+ZxPromise<Input> FakeTargetAdapter::TestOneInput() {
+  return AwaitStart()
+      .and_then([this](Input& input) -> ZxResult<Input> {
+        auto status = Finish();
+        if (status != ZX_OK) {
+          return fpromise::error(status);
+        }
+        return fpromise::ok(std::move(input));
+      })
+      .wrap_with(scope_);
 }
 
-zx_status_t FakeTargetAdapter::AwaitSignal(zx::time deadline, zx_signals_t* out) {
-  auto status = rsync_.WaitUntil(deadline);
-  if (status != ZX_OK) {
-    return status;
-  }
-  rsync_.Reset();
-  if (out) {
-    *out = observed_;
-  }
-  wsync_.Signal();
-  return ZX_OK;
+ZxPromise<Input> FakeTargetAdapter::AwaitStart() {
+  return fpromise::make_promise([this](Context& context) -> ZxResult<> {
+           if (eventpair_.IsConnected()) {
+             return fpromise::ok();
+           }
+           suspended_ = context.suspend_task();
+           return fpromise::pending();
+         })
+      .and_then(eventpair_.WaitFor(kStart))
+      .and_then([this](const zx_signals_t& observed) -> ZxResult<Input> {
+        auto input = Input(test_input_);
+        auto status = eventpair_.SignalSelf(kStart, 0);
+        if (status != ZX_OK) {
+          return fpromise::error(status);
+        }
+        return fpromise::ok(std::move(input));
+      })
+      .wrap_with(scope_);
 }
 
-void FakeTargetAdapter::SignalPeer(Signal signal) { coordinator_.SignalPeer(signal); }
+zx_status_t FakeTargetAdapter::Finish() { return eventpair_.SignalPeer(0, kFinish); }
+
+ZxPromise<> FakeTargetAdapter::AwaitDisconnect() {
+  return eventpair_.WaitFor(ZX_EVENTPAIR_PEER_CLOSED)
+      .then([](const ZxResult<zx_signals_t>& result) -> ZxResult<> {
+        FX_DCHECK(result.is_error());
+        auto status = result.error();
+        if (status != ZX_ERR_PEER_CLOSED) {
+          return fpromise::error(status);
+        }
+        return fpromise::ok();
+      });
+}
 
 }  // namespace fuzzing

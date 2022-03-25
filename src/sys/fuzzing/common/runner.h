@@ -9,19 +9,15 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
 
-#include <atomic>
 #include <memory>
-#include <thread>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/monitor-clients.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/result.h"
-#include "src/sys/fuzzing/common/run-once.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -45,9 +41,10 @@ class Runner {
   // Note that the destructor cannot call |Close|, |Interrupt| or |Join|, as they are virtual.
   // Instead, both this class and any derived class should have corresponding non-virtual "Impl"
   // methods and call those on destruction.
-  virtual ~Runner();
+  virtual ~Runner() = default;
 
   // Accessors.
+  const ExecutorPtr& executor() const { return executor_; }
   FuzzResult result() const { return result_; }
   Input result_input() const { return result_input_.Duplicate(); }
 
@@ -71,43 +68,67 @@ class Runner {
   virtual Input GetDictionaryAsInput() const = 0;
 
   // Fuzzing workflows.
-  zx_status_t Configure(const OptionsPtr& options);
-  ZxPromise<FuzzResult> Execute(Input input) FXL_LOCKS_EXCLUDED(mutex_);
-  ZxPromise<Input> Minimize(Input input) FXL_LOCKS_EXCLUDED(mutex_);
-  ZxPromise<Input> Cleanse(Input input) FXL_LOCKS_EXCLUDED(mutex_);
-  void Fuzz(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
-  void Merge(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
+  virtual ZxPromise<> Configure(const OptionsPtr& options) = 0;
+  virtual ZxPromise<FuzzResult> Execute(Input input) = 0;
+  virtual ZxPromise<Input> Minimize(Input input) = 0;
+  virtual ZxPromise<Input> Cleanse(Input input) = 0;
+  virtual ZxPromise<Artifact> Fuzz() = 0;
+  virtual ZxPromise<> Merge() = 0;
+
+  // Cancels the current workflow.
+  virtual ZxPromise<> Stop() = 0;
 
   // Adds a subscriber for status updates.
-  void AddMonitor(fidl::InterfaceHandle<Monitor> monitor) FXL_LOCKS_EXCLUDED(mutex_);
+  void AddMonitor(fidl::InterfaceHandle<Monitor> monitor);
 
   // Creates a |Status| object representing all attached processes.
   virtual Status CollectStatus() = 0;
 
-  // Close any sources of new tasks. Derived classes should call their base class's method BEFORE
-  // performing actions specific to the derived class.
-  virtual void Close() { close_.Run(); }
-
-  // Interrupt the current task. Calling order should not matter.
-  virtual void Interrupt() { interrupt_.Run(); }
-
-  // Join any separate threads or other asynchronous workflows. Derived classes should call their
-  // base class's method AFTER performing actions specific to the derived class.
-  virtual void Join() { join_.Run(); }
-
  protected:
+  // Represents a single fuzzing workflow, e.g. |Execute|, |Minimize|, etc. It holds a pointer to
+  // the object that created it, but this is safe: it cannot outlive the object it is a part of.
+  // It should be used in the normal way, e.g. using |wrap_with|.
+  class Workflow final {
+   public:
+    explicit Workflow(Runner* runner) : runner_(runner) {}
+    ~Workflow() = default;
+
+    // Use |wrap_with(workflow_)| on promises that implement a workflow's behavior to create scoped
+    // actions on set up and tear down.
+    template <typename Promise>
+    decltype(auto) wrap(Promise promise) {
+      static_assert(std::is_same<typename Promise::error_type, zx_status_t>::value,
+                    "Workflows must use an error type of zx_status_t.");
+      return Start()
+          .and_then(std::move(promise))
+          .inspect([this](const typename Promise::result_type& result) { Finish(); })
+          .wrap_with(scope_);
+    }
+
+    // Returns a promise to stop the current workflow. The promise completes after |Finish| is
+    // called.
+    ZxPromise<> Stop();
+
+   private:
+    ZxPromise<> Start();
+    void Finish();
+
+    Runner* runner_ = nullptr;
+    ZxCompleter<> completer_;
+    ZxConsumer<> consumer_;
+    Scope scope_;
+  };
+
   explicit Runner(ExecutorPtr executor);
 
   virtual void set_result(FuzzResult result) { result_ = result; }
   virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
-  // Fuzzing workflow implementations.
-  virtual void ConfigureImpl(const OptionsPtr& options) = 0;
-  virtual zx_status_t SyncExecute(const Input& input) = 0;
-  virtual zx_status_t SyncMinimize(const Input& input) = 0;
-  virtual zx_status_t SyncCleanse(const Input& input) = 0;
-  virtual zx_status_t SyncFuzz() = 0;
-  virtual zx_status_t SyncMerge() = 0;
+  // These methods allow specific runners to implement actions that should be performed at the start
+  // or end of a workflow. They are called automatically by |Workflow|. The runners may also create
+  // additional tasks constrained to the workflow's |scope|.
+  virtual void StartWorkflow(Scope& scope) {}
+  virtual void FinishWorkflow() {}
 
   // Resets the error state for subsequent actions.
   virtual void ClearErrors();
@@ -117,47 +138,17 @@ class Runner {
   void UpdateMonitors(UpdateReason reason);
 
  private:
-  // Schedule a workflow to be performed by the worker thread.
-  void Pend(uint8_t action, Input input, fit::function<void(zx_status_t)> callback)
-      FXL_LOCKS_EXCLUDED(mutex_);
-
-  // Wraps |Pend| in a promise.
-  ZxPromise<> PendAsync(uint8_t action, Input&& input) FXL_LOCKS_EXCLUDED(mutex_);
-
-  // The worker thread body.
-  void Worker() FXL_LOCKS_EXCLUDED(mutex_);
-
   // Like |UpdateMonitors|, but uses UpdateReason::DONE as the reason and disconnects monitors after
   // they acknowledge receipt.
   void FinishMonitoring();
 
-  // Stop-related methods.
-  void CloseImpl();
-  void InterruptImpl();
-  void JoinImpl();
-
   ExecutorPtr executor_;
-
-  std::mutex mutex_;
-
-  // Worker variables.
-  std::thread worker_;
-  SyncWait worker_sync_;
-  bool idle_ FXL_GUARDED_BY(mutex_) = true;
-  std::atomic<bool> stopped_ = false;
-
-  uint8_t action_ FXL_GUARDED_BY(mutex_);
-  Input input_ FXL_GUARDED_BY(mutex_);
-  fit::function<void(zx_status_t)> callback_ FXL_GUARDED_BY(mutex_);
+  Scope scope_;
 
   // Result variables.
   FuzzResult result_ = FuzzResult::NO_ERRORS;
   Input result_input_;
   MonitorClients monitors_;
-
-  RunOnce close_;
-  RunOnce interrupt_;
-  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
 };

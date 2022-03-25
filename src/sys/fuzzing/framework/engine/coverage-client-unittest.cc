@@ -7,13 +7,12 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 
 #include <memory>
-#include <thread>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/async-deque.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/framework/coverage/provider.h"
 #include "src/sys/fuzzing/framework/testing/process.h"
 
@@ -21,83 +20,47 @@ namespace fuzzing {
 
 // Test fixtures.
 
-class CoverageProviderClientTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    events_ = std::make_shared<CoverageEventQueue>();
-    provider_ = std::make_unique<CoverageProviderImpl>(events_);
-  }
+using fuchsia::fuzzer::Payload;
 
-  void Connect(CoverageProviderClient& client) {
-    auto handler = provider_->GetHandler();
-    handler(client.TakeRequest());
-  }
-
-  Options StartProcess(uint64_t target_id, FakeProcess& process) {
-    events_->AddProcess(target_id, process.IgnoreAll());
-    return events_->GetOptions();
-  }
-
-  void ResetProvider() { provider_.reset(); }
-
- private:
-  std::shared_ptr<CoverageEventQueue> events_;
-  std::unique_ptr<CoverageProviderImpl> provider_;
-};
+class CoverageProviderClientTest : public AsyncTest {};
 
 // Unit tests.
 
-TEST_F(CoverageProviderClientTest, Configure) {
-  // Configure before connecting...
-  auto options = MakeOptions();
-  options->set_seed(1U);
+TEST_F(CoverageProviderClientTest, SetOptions) {
+  auto options1 = MakeOptions();
+  options1->set_seed(111U);
 
-  CoverageProviderClient client;
-  client.Configure(options);
-  Connect(client);
+  auto options2 = MakeOptions();
+  CoverageProviderImpl provider(executor(), options2, AsyncDeque<CoverageEvent>::MakePtr());
 
-  FakeProcess process1;
-  auto received1 = StartProcess(1, process1);
-  EXPECT_EQ(received1.seed(), 1U);
+  CoverageProviderClient client(executor());
+  client.set_handler(provider.GetHandler());
 
-  // ...and after.
-  options->set_seed(2U);
-  client.Configure(options);
-
-  FakeProcess process2;
-  auto received2 = StartProcess(2, process2);
-  EXPECT_EQ(received2.seed(), 2U);
+  client.SetOptions(options1);
+  RunUntilIdle();
+  ASSERT_TRUE(options2->has_seed());
+  EXPECT_EQ(options2->seed(), 111U);
 }
 
-TEST_F(CoverageProviderClientTest, OnEvent) {
-  CoverageProviderClient client;
-  Connect(client);
+TEST_F(CoverageProviderClientTest, WatchCoverageEvent) {
+  auto events = AsyncDeque<CoverageEvent>::MakePtr();
+  CoverageProviderImpl provider(executor(), MakeOptions(), events);
 
-  uint64_t target_id = 0;
-  SyncWait sync;
-  client.OnEvent([&](CoverageEvent event) {
-    target_id = event.target_id;
-    sync.Signal();
-  });
+  CoverageProviderClient client(executor());
+  client.set_handler(provider.GetHandler());
 
-  FakeProcess process;
-  StartProcess(1, process);
-  sync.WaitFor("coverage event");
-  EXPECT_EQ(target_id, 1U);
-}
+  FUZZING_EXPECT_OK(client.WatchCoverageEvent().and_then(
+                        [&](const CoverageEvent& event) { return fpromise::ok(event.target_id); }),
+                    2222U);
+  CoverageEvent event;
+  event.target_id = 2222U;
+  event.payload = Payload::WithProcessStarted(InstrumentedProcess());
+  events->Send(std::move(event));
+  RunUntilIdle();
 
-TEST_F(CoverageProviderClientTest, OnEventWithClose) {
-  CoverageProviderClient client;
-  Connect(client);
-  client.OnEvent([&](CoverageEvent event) { FAIL(); });
-  client.Close();
-}
-
-TEST_F(CoverageProviderClientTest, OnEventWithPeerClose) {
-  CoverageProviderClient client;
-  Connect(client);
-  client.OnEvent([&](CoverageEvent event) { FAIL(); });
-  ResetProvider();
+  FUZZING_EXPECT_ERROR(client.WatchCoverageEvent());
+  events->Close();
+  RunUntilIdle();
 }
 
 }  // namespace fuzzing

@@ -42,7 +42,7 @@ using ::fuchsia::mem::Buffer;
 // VMO. This size can be updated using |write| or |Clear| and retrieved with |size|, allowing
 // callers to send or receive variable-length data. Reading and writing this size is not guaranteed
 // to be atomic, so callers should use some other method to coordinate when the size changes, e.g.
-// with a SignalCoordinator.
+// with an |AsyncEventPair|.
 //
 class SharedMemory final {
  public:

@@ -5,6 +5,14 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":default-tests",
+    ":fatal-tests",
+  ]
+}
+
 test("unittests_bin") {
   output_name = "component_fuzzing_framework_unittests"
   visibility = [ ":*" ]
@@ -42,7 +50,7 @@ fuchsia_component("fatal-unittests") {
   deps = [ ":fatal_unittests_bin" ]
 }
 
-fuchsia_test_package("tests") {
+fuchsia_test_package("default-tests") {
   package_name = "component-fuzzing-framework-tests"
   test_components = [ ":unittests" ]
   deps = [ "testing/data:corpus" ]

@@ -14,29 +14,35 @@
 #include <test/fuzzer/cpp/fidl.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-types.h"
+#include "testing/fidl/async_loop_for_test.h"
 
 namespace fuzzing {
 
 using ::test::fuzzer::Relay;
 using ::test::fuzzer::SignaledBuffer;
-using ::test::fuzzer::SignaledBufferPtr;
 
 class RelayImpl : public Relay {
  public:
-  RelayImpl() = default;
+  RelayImpl();
   ~RelayImpl() override = default;
 
   // FIDL methods.
-  fidl::InterfaceRequestHandler<Relay> GetHandler(async_dispatcher_t* dispatcher);
-  void SetTestData(SignaledBuffer data) override;
+  fidl::InterfaceRequestHandler<Relay> GetHandler();
+  void SetTestData(SignaledBuffer data, SetTestDataCallback callback) override;
   void WatchTestData(WatchTestDataCallback callback) override;
+  void Finish() override;
+
+  // Run the relay. This method does not return until the loop quits.
+  zx_status_t Run();
 
  private:
-  void MaybeCallback();
-
+  fidl::test::AsyncLoopForTest loop_;
   fidl::BindingSet<Relay> bindings_;
-  WatchTestDataCallback callback_;
-  SignaledBufferPtr data_;
+  ExecutorPtr executor_;
+  Completer<SignaledBuffer> completer_;
+  Consumer<SignaledBuffer> consumer_;
+  Completer<> finish_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(RelayImpl);
 };

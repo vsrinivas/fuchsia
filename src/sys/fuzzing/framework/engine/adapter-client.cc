@@ -7,15 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <string>
-#include <vector>
-
 namespace fuzzing {
 
-TargetAdapterClient::TargetAdapterClient(fidl::InterfaceRequestHandler<TargetAdapter> handler)
-    : handler_(std::move(handler)) {}
-
-TargetAdapterClient::~TargetAdapterClient() { Close(); }
+TargetAdapterClient::TargetAdapterClient(ExecutorPtr executor)
+    : executor_(executor), eventpair_(executor) {}
 
 void TargetAdapterClient::AddDefaults(Options* options) {
   if (!options->has_max_input_size()) {
@@ -25,64 +20,86 @@ void TargetAdapterClient::AddDefaults(Options* options) {
 
 void TargetAdapterClient::Configure(const OptionsPtr& options) {
   FX_CHECK(options);
-  options_ = options;
-  test_input_.Reserve(options_->max_input_size());
+  test_input_.Reserve(options->max_input_size());
 }
 
-void TargetAdapterClient::Connect() {
-  if (is_connected()) {
-    return;
-  }
-  FX_CHECK(options_);
-  handler_(adapter_.NewRequest());
-  auto eventpair = coordinator_.Create([this](zx_signals_t observed) {
-    sync_.Signal();
-    // The only signal we expected to receive from the target adapter is |kFinish| after each run.
-    return observed == kFinish;
-  });
-  auto status = adapter_->Connect(std::move(eventpair), test_input_.Share());
-  FX_CHECK(status == ZX_OK) << "fuchsia.fuzzer.TargetAdapter.Connect: "
-                            << zx_status_get_string(status);
+Promise<> TargetAdapterClient::Connect() {
+  return fpromise::make_promise([this, handling = Future<>(),
+                                 connect = Future<>()](Context& context) mutable -> Result<> {
+           // Check if the channel is valid and its peer is connected.
+           if (ptr_.is_bound() &&
+               ptr_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(),
+                                       nullptr) == ZX_ERR_TIMED_OUT) {
+             return fpromise::ok();
+           }
+           if (!handling) {
+             handling = fpromise::make_promise([this]() -> Result<> {
+               handler_(ptr_.NewRequest(executor_->dispatcher()));
+               return fpromise::ok();
+             });
+           }
+           if (!handling(context)) {
+             return fpromise::pending();
+           }
+           FX_CHECK(handling.is_ok());
+           if (!connect) {
+             connect = fpromise::make_promise([this] {
+               Bridge<> bridge;
+               ptr_->Connect(eventpair_.Create(), test_input_.Share(), bridge.completer.bind());
+               return bridge.consumer.promise_or(fpromise::error());
+             });
+           }
+           if (!connect(context)) {
+             return fpromise::pending();
+           }
+           return connect.result();
+         })
+      .wrap_with(scope_);
 }
 
-std::vector<std::string> TargetAdapterClient::GetParameters() {
-  std::vector<std::string> parameters;
-  Connect();
-  auto status = adapter_->GetParameters(&parameters);
-  FX_CHECK(status == ZX_OK) << "TargetAdapter.GetParameters: " << zx_status_get_string(status);
-  return parameters;
+Promise<std::vector<std::string>> TargetAdapterClient::GetParameters() {
+  return Connect()
+      .and_then([this] {
+        Bridge<std::vector<std::string>> bridge;
+        ptr_->GetParameters(bridge.completer.bind());
+        return bridge.consumer.promise_or(fpromise::error());
+      })
+      .wrap_with(scope_);
 }
 
-void TargetAdapterClient::Start(Input* test_input) {
-  Connect();
-  // Write the test input.
+std::vector<std::string> TargetAdapterClient::GetSeedCorpusDirectories(
+    const std::vector<std::string>& parameters) {
+  std::vector<std::string> seed_corpus_dirs;
+  bool ignored = false;
+  std::copy_if(parameters.begin(), parameters.end(), std::back_inserter(seed_corpus_dirs),
+               [&ignored](const std::string& parameter) {
+                 ignored |= parameter == "--";
+                 return !ignored && !parameter.empty() && parameter[0] != '-';
+               });
+  return seed_corpus_dirs;
+}
+
+Promise<> TargetAdapterClient::TestOneInput(const Input& test_input) {
   test_input_.Clear();
-  test_input_.Write(test_input->data(), test_input->size());
-  // Signal the target adapter to start, unless this object is already an error state. The more
-  // "natural" phrasing of "if not error, then reset and signal peer" has an inherent race where an
-  // error may occur between the reset. The race is avoided by resetting first then "unresetting",
-  // i.e. signalling, if there's a pending error.
-  sync_.Reset();
-  if (error_.load()) {
-    sync_.Signal();
-  } else {
-    coordinator_.SignalPeer(kStart);
-  }
+  test_input_.Write(test_input.data(), test_input.size());
+  return Connect()
+      .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
+      .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalSelf(kFinish, 0)); })
+      .and_then([this]() -> ZxResult<> { return AsZxResult(eventpair_.SignalPeer(0, kStart)); })
+      .and_then(eventpair_.WaitFor(kFinish))
+      .and_then([](const zx_signals_t& observed) -> ZxResult<> { return fpromise::ok(); })
+      .or_else([](const zx_status_t& status) {
+        if (status != ZX_ERR_PEER_CLOSED) {
+          FX_LOGS(ERROR) << "Target adapter returned error: " << zx_status_get_string(status);
+        }
+        return fpromise::error();
+      })
+      .wrap_with(scope_);
 }
 
-void TargetAdapterClient::AwaitFinish() { sync_.WaitFor("target adapter to finish"); }
-
-void TargetAdapterClient::SetError() {
-  if (!error_.exchange(true)) {
-    sync_.Signal();
-  }
-}
-
-void TargetAdapterClient::ClearError() { error_ = false; }
-
-void TargetAdapterClient::Close() {
-  sync_.Signal();
-  coordinator_.Reset();
+void TargetAdapterClient::Disconnect() {
+  eventpair_.Reset();
+  ptr_.Unbind();
 }
 
 }  // namespace fuzzing

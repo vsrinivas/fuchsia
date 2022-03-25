@@ -14,6 +14,7 @@
 #include <random>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
@@ -41,20 +42,21 @@ class SimpleFixedRunner final : public Runner {
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
- protected:
-  void ConfigureImpl(const OptionsPtr& options) override;
-  zx_status_t SyncExecute(const Input& input) override;
-  zx_status_t SyncMinimize(const Input& input) override;
-  zx_status_t SyncCleanse(const Input& input) override;
-  zx_status_t SyncFuzz() override;
-  zx_status_t SyncMerge() override;
-  void Interrupt() override {}
+  ZxPromise<> Configure(const OptionsPtr& options) override;
+  ZxPromise<FuzzResult> Execute(Input input) override;
+  ZxPromise<Input> Minimize(Input input) override;
+  ZxPromise<Input> Cleanse(Input input) override;
+  ZxPromise<Artifact> Fuzz() override;
+  ZxPromise<> Merge() override;
+
+  ZxPromise<> Stop() override;
+
   Status CollectStatus() override;
 
  private:
   explicit SimpleFixedRunner(ExecutorPtr executor);
 
-  FuzzResult TestOne(const Input& input);
+  Artifact TestOne(Input input);
   size_t Measure(const Input& input, bool accumulate);
 
   OptionsPtr options_;
@@ -67,6 +69,7 @@ class SimpleFixedRunner final : public Runner {
   zx::time start_;
   zx::time pulse_at_;
   Status status_;
+  Workflow workflow_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(SimpleFixedRunner);
 };

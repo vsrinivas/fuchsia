@@ -50,7 +50,6 @@ ModuleProxy::ModuleProxy(Identifier id, size_t size) : id_(id), num_u64s_(size /
 }
 
 void ModuleProxy::Add(void* counters, size_t counters_len) {
-  std::lock_guard<std::mutex> lock(mutex_);
   FX_CHECK(counters_len == size());
   // This method expects 64-bit alignment to simplify iteration.
   FX_CHECK(reinterpret_cast<uintptr_t>(counters) % sizeof(uint64_t) == 0);
@@ -58,7 +57,6 @@ void ModuleProxy::Add(void* counters, size_t counters_len) {
 }
 
 void ModuleProxy::Remove(void* counters) {
-  std::lock_guard<std::mutex> lock(mutex_);
   counters_.erase(
       std::remove(counters_.begin(), counters_.end(), reinterpret_cast<uint64_t*>(counters)),
       counters_.end());
@@ -69,7 +67,6 @@ size_t ModuleProxy::Measure() { return MeasureImpl(/* accumulate */ false); }
 size_t ModuleProxy::Accumulate() { return MeasureImpl(/* accumulate */ true); }
 
 size_t ModuleProxy::MeasureImpl(bool accumulate) {
-  std::lock_guard<std::mutex> lock(mutex_);
   size_t num_new_features = 0;
   memset(features_.get(), 0, size());
   // First, sum all counters into the features array.
@@ -101,7 +98,6 @@ size_t ModuleProxy::MeasureImpl(bool accumulate) {
 }
 
 size_t ModuleProxy::GetCoverage(size_t* out_num_features) {
-  std::lock_guard<std::mutex> lock(mutex_);
   size_t num_pcs = 0;
   size_t num_features = 0;
   for (size_t i = 0; i < num_u64s_; ++i) {

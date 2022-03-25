@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_TESTING_REGISTRAR_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <stdint.h>
@@ -13,9 +14,7 @@
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
+#include "src/sys/fuzzing/common/async-types.h"
 
 namespace fuzzing {
 
@@ -25,7 +24,7 @@ using ::fuchsia::fuzzer::Registrar;
 
 class FakeRegistrar final : public Registrar {
  public:
-  FakeRegistrar();
+  explicit FakeRegistrar(ExecutorPtr executor);
   ~FakeRegistrar() override = default;
 
   // Returns a channel to this object's implementation of |fuchsia.fuzzer.Registrar|.
@@ -38,7 +37,8 @@ class FakeRegistrar final : public Registrar {
   fidl::InterfaceHandle<ControllerProvider> TakeProvider();
 
  private:
-  Binding<Registrar> binding_;
+  fidl::Binding<Registrar> binding_;
+  ExecutorPtr executor_;
   fidl::InterfaceHandle<ControllerProvider> provider_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeRegistrar);

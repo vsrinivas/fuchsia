@@ -24,24 +24,10 @@ Corpus& Corpus::operator=(Corpus&& other) noexcept {
   options_ = other.options_;
   other.options_ = nullptr;
   prng_ = other.prng_;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    std::lock_guard<std::mutex> other_lock(other.mutex_);
-    inputs_ = std::move(other.inputs_);
-    total_size_ = other.total_size_;
-    other.total_size_ = 0;
-  }
+  inputs_ = std::move(other.inputs_);
+  total_size_ = other.total_size_;
+  other.total_size_ = 0;
   return *this;
-}
-
-size_t Corpus::num_inputs() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return inputs_.size();
-}
-
-size_t Corpus::total_size() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return total_size_;
 }
 
 void Corpus::AddDefaults(Options* options) {
@@ -104,7 +90,6 @@ zx_status_t Corpus::ReadFile(const std::string& filename) {
 }
 
 zx_status_t Corpus::Add(Input input) {
-  std::lock_guard<std::mutex> lock(mutex_);
   FX_DCHECK(options_);
   if (input.size() > options_->max_input_size()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -120,7 +105,6 @@ zx_status_t Corpus::Add(Input input) {
 
 bool Corpus::At(size_t offset, Input* out) {
   out->Clear();
-  std::lock_guard<std::mutex> lock(mutex_);
   if (offset >= inputs_.size()) {
     return false;
   }
@@ -129,7 +113,6 @@ bool Corpus::At(size_t offset, Input* out) {
 }
 
 void Corpus::Pick(Input* out) {
-  std::lock_guard<std::mutex> lock(mutex_);
   // Use rejection sampling to get uniform distribution.
   // NOLINTNEXTLINE(google-runtime-int)
   static_assert(sizeof(unsigned long long) * 8 == 64);

@@ -4,8 +4,6 @@
 
 #include "src/sys/fuzzing/common/input.h"
 
-#include <thread>
-
 #include <gtest/gtest.h>
 
 namespace fuzzing {

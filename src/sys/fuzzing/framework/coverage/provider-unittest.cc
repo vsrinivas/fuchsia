@@ -7,82 +7,72 @@
 #include <lib/zx/eventpair.h>
 #include <stdint.h>
 
-#include <atomic>
 #include <memory>
-#include <thread>
 
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::CoverageProviderSyncPtr;
+// Test fixtures.
 
-TEST(CoverageProviderTest, WatchCoverageEvent) {
-  auto events = std::make_shared<CoverageEventQueue>();
-  CoverageProviderImpl provider(events);
+using fuchsia::fuzzer::InstrumentedProcess;
+using fuchsia::fuzzer::LlvmModule;
+using fuchsia::fuzzer::Payload;
 
-  uint64_t target_id = 16ULL;
-  SyncWait sync;
+class CoverageProviderTest : public AsyncTest {};
 
-  // Callback is invoked asynchronously.
-  provider.WatchCoverageEvent([&](CoverageEvent event) {
-    EXPECT_EQ(event.target_id, target_id);
-    EXPECT_TRUE(event.payload.is_process_started());
-    sync.Signal();
-  });
+// Unit tests.
 
-  zx::eventpair ep_a, ep_b;
-  EXPECT_EQ(zx::eventpair::create(0, &ep_a, &ep_b), ZX_OK);
-  InstrumentedProcess instrumented;
-  instrumented.set_eventpair(std::move(ep_a));
-  events->AddProcess(target_id, std::move(instrumented));
-  sync.WaitFor("coverage event");
+TEST_F(CoverageProviderTest, SetOptions) {
+  auto options1 = MakeOptions();
+  CoverageProviderImpl provider(executor(), options1, AsyncDeque<CoverageEvent>::MakePtr());
+
+  const int kMallocExitcode = 3333;
+  Options options2;
+  options2.set_malloc_exitcode(kMallocExitcode);
+  provider.SetOptions(std::move(options2));
+
+  EXPECT_EQ(options1->malloc_exitcode(), kMallocExitcode);
 }
 
-TEST(CoverageProviderTest, AwaitClose) {
-  auto events = std::make_shared<CoverageEventQueue>();
-  CoverageProviderImpl provider(events);
+TEST_F(CoverageProviderTest, WatchCoverageEvent) {
+  auto events = AsyncDeque<CoverageEvent>::MakePtr();
+  CoverageProviderImpl provider(executor(), MakeOptions(), events);
 
-  std::atomic<bool> connected = false;
-  std::atomic<bool> closed = false;
-  std::atomic<bool> invoked = false;
+  Bridge<CoverageEvent> bridge1, bridge2, bridge3;
+  provider.WatchCoverageEvent(bridge1.completer.bind());
+  provider.WatchCoverageEvent(bridge2.completer.bind());
+  provider.WatchCoverageEvent(bridge3.completer.bind());
 
-  std::thread t1([&]() {
-    provider.AwaitConnect();
-    connected = true;
-  });
+  FUZZING_EXPECT_OK(
+      bridge1.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_EQ(event.target_id, 101ULL);
+        EXPECT_TRUE(event.payload.is_process_started());
+      }));
 
-  EXPECT_FALSE(connected);
-  EXPECT_FALSE(closed);
-  EXPECT_FALSE(invoked);
+  FUZZING_EXPECT_OK(
+      bridge2.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_EQ(event.target_id, 202ULL);
+        EXPECT_TRUE(event.payload.is_llvm_module_added());
+      }));
 
-  // Connect
-  CoverageProviderSyncPtr ptr;
-  auto handler = provider.GetHandler();
-  handler(ptr.NewRequest());
-  t1.join();
+  FUZZING_EXPECT_ERROR(bridge3.consumer.promise_or(fpromise::error()));
 
-  std::thread t2([&]() {
-    provider.AwaitClose();
-    closed = true;
-  });
+  CoverageEvent event;
+  event.target_id = 101ULL;
+  event.payload = Payload::WithProcessStarted(InstrumentedProcess());
+  events->Send(std::move(event));
 
-  EXPECT_TRUE(connected);
-  EXPECT_FALSE(closed);
-  EXPECT_FALSE(invoked);
+  event.target_id = 202ULL;
+  event.payload = Payload::WithLlvmModuleAdded(LlvmModule());
+  events->Send(std::move(event));
 
-  provider.WatchCoverageEvent([&](CoverageEvent ignored) { invoked = true; });
-  ptr.Unbind();
-  t2.join();
+  events->Close();
 
-  // Callback should never have been invoked.
-  EXPECT_TRUE(connected);
-  EXPECT_TRUE(closed);
-  EXPECT_FALSE(invoked);
+  RunUntilIdle();
 }
 
 }  // namespace fuzzing

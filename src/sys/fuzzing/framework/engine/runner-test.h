@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/common/testing/module.h"
@@ -25,20 +26,23 @@ namespace fuzzing {
 // Specializes the generic |RunnerTest| for |RunnerImpl|.
 class RunnerImplTest : public RunnerTest {
  protected:
-  // RunnerTest methods.
-  void Configure(const RunnerPtr& runner, const OptionsPtr& options) override;
-  bool HasTestInput(zx::time deadline) override;
-  Input GetTestInput() override;
-  void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) override;
+  void SetUp() override;
+
+  const RunnerPtr& runner() const override { return runner_; }
 
   // FakeTargetAdapter methods.
   void SetAdapterParameters(const std::vector<std::string>& parameters);
 
+  // RunnerTest methods.
+  ZxPromise<Input> GetTestInput() override;
+  ZxPromise<> SetFeedback(Coverage coverage, FuzzResult fuzz_result, bool leak) override;
+
  private:
-  FakeTargetAdapter target_adapter_;
-  FakeProcess process_;
-  CoverageForwarder coverage_forwarder_;
-  bool stopped_ = true;
+  RunnerPtr runner_;
+  std::unique_ptr<FakeTargetAdapter> target_adapter_;
+  std::unique_ptr<FakeProcess> process_;
+  std::unique_ptr<CoverageForwarder> coverage_forwarder_;
+  Scope scope_;
 };
 
 }  // namespace fuzzing

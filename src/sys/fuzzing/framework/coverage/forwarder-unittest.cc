@@ -4,33 +4,31 @@
 
 #include "src/sys/fuzzing/framework/coverage/forwarder.h"
 
-#include <lib/zx/eventpair.h>
 #include <stdint.h>
-
-#include <atomic>
-#include <thread>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/framework/coverage/event-queue.h"
-#include "src/sys/fuzzing/framework/testing/module.h"
-#include "src/sys/fuzzing/framework/testing/process.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::CoverageProviderSyncPtr;
-using ::fuchsia::fuzzer::InstrumentationSyncPtr;
+// Test fixtures.
+
+using ::fuchsia::fuzzer::CoverageProviderPtr;
+using ::fuchsia::fuzzer::InstrumentationPtr;
+
+class CoverageForwarderTest : public AsyncTest {};
 
 // Unit tests.
 
-TEST(CoverageForwarderTest, TwoInstrumentedProcesses) {
-  CoverageForwarder forwarder;
-  std::thread t([&]() { forwarder.Run(); });
+TEST_F(CoverageForwarderTest, TwoInstrumentedProcesses) {
+  CoverageForwarder forwarder(executor());
 
-  CoverageProviderSyncPtr provider;
+  CoverageProviderPtr provider;
   auto provider_handler = forwarder.GetCoverageProviderHandler();
-  provider_handler(provider.NewRequest());
+  provider_handler(provider.NewRequest(executor()->dispatcher()));
 
   Options options;
   const uint64_t kMallocLimit = 64ULL << 20;
@@ -38,58 +36,71 @@ TEST(CoverageForwarderTest, TwoInstrumentedProcesses) {
   provider->SetOptions(std::move(options));
 
   auto instrumentation_handler = forwarder.GetInstrumentationHandler();
+  InstrumentationPtr instrumentation1, instrumentation2;
+  instrumentation_handler(instrumentation1.NewRequest(executor()->dispatcher()));
+  instrumentation_handler(instrumentation2.NewRequest(executor()->dispatcher()));
 
-  InstrumentationSyncPtr instrumentation1;
-  instrumentation_handler(instrumentation1.NewRequest());
+  // Watch for coverage events.
+  Bridge<CoverageEvent> bridge1, bridge2;
+  provider->WatchCoverageEvent(bridge1.completer.bind());
+  provider->WatchCoverageEvent(bridge2.completer.bind());
 
-  InstrumentationSyncPtr instrumentation2;
-  instrumentation_handler(instrumentation2.NewRequest());
+  // Initialize both processes.
+  Bridge<Options> bridge3, bridge4;
+  instrumentation1->Initialize(InstrumentedProcess(), bridge3.completer.bind());
+  instrumentation2->Initialize(InstrumentedProcess(), bridge4.completer.bind());
 
-  // Initialize
+  uint64_t target_id1, target_id2;
+  FUZZING_EXPECT_OK(
+      bridge1.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_TRUE(event.payload.is_process_started());
+        return fpromise::ok(event.target_id);
+      }),
+      &target_id1);
+  FUZZING_EXPECT_OK(
+      bridge2.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_TRUE(event.payload.is_process_started());
+        return fpromise::ok(event.target_id);
+      }),
+      &target_id2);
 
-  FakeProcess process1;
-  zx::eventpair ep1a, ep1b;
-  EXPECT_EQ(zx::eventpair::create(0, &ep1a, &ep1b), ZX_OK);
-  auto instrumented1 = process1.IgnoreTarget(std::move(ep1a));
-  Options options1;
-  ASSERT_EQ(instrumentation1->Initialize(std::move(instrumented1), &options1), ZX_OK);
-  EXPECT_EQ(options1.malloc_limit(), kMallocLimit);
+  FUZZING_EXPECT_OK(
+      bridge3.consumer.promise_or(fpromise::error()).and_then([&](const Options& options) {
+        return fpromise::ok(options.malloc_limit());
+      }),
+      kMallocLimit);
+  FUZZING_EXPECT_OK(
+      bridge4.consumer.promise_or(fpromise::error()).and_then([&](const Options& options) {
+        return fpromise::ok(options.malloc_limit());
+      }),
+      kMallocLimit);
+  RunUntilIdle();
 
-  FakeProcess process2;
-  zx::eventpair ep2a, ep2b;
-  EXPECT_EQ(zx::eventpair::create(0, &ep2a, &ep2b), ZX_OK);
-  auto instrumented2 = process2.IgnoreTarget(std::move(ep2a));
-  Options options2;
-  ASSERT_EQ(instrumentation2->Initialize(std::move(instrumented2), &options2), ZX_OK);
-  EXPECT_EQ(options2.malloc_limit(), kMallocLimit);
+  // Add modules in a different order.
+  Bridge<CoverageEvent> bridge5, bridge6;
+  provider->WatchCoverageEvent(bridge5.completer.bind());
+  provider->WatchCoverageEvent(bridge6.completer.bind());
 
-  CoverageEvent event;
-  provider->WatchCoverageEvent(&event);
-  EXPECT_TRUE(event.payload.is_process_started());
-  auto target_id1 = event.target_id;
+  Bridge<> bridge7, bridge8;
+  instrumentation2->AddLlvmModule(LlvmModule(), bridge7.completer.bind());
+  instrumentation1->AddLlvmModule(LlvmModule(), bridge8.completer.bind());
 
-  provider->WatchCoverageEvent(&event);
-  EXPECT_TRUE(event.payload.is_process_started());
-  auto target_id2 = event.target_id;
+  FUZZING_EXPECT_OK(
+      bridge5.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_TRUE(event.payload.is_llvm_module_added());
+        return fpromise::ok(event.target_id);
+      }),
+      target_id2);
+  FUZZING_EXPECT_OK(
+      bridge6.consumer.promise_or(fpromise::error()).and_then([&](const CoverageEvent& event) {
+        EXPECT_TRUE(event.payload.is_llvm_module_added());
+        return fpromise::ok(event.target_id);
+      }),
+      target_id1);
 
-  // AddLlvmModule
-
-  FakeFrameworkModule module1(/* seed */ 1U);
-  EXPECT_EQ(instrumentation1->AddLlvmModule(module1.GetLlvmModule()), ZX_OK);
-
-  FakeFrameworkModule module2(/* seed */ 2U);
-  EXPECT_EQ(instrumentation2->AddLlvmModule(module2.GetLlvmModule()), ZX_OK);
-
-  provider->WatchCoverageEvent(&event);
-  EXPECT_TRUE(event.payload.is_llvm_module_added());
-  EXPECT_EQ(target_id1, event.target_id);
-
-  provider->WatchCoverageEvent(&event);
-  EXPECT_TRUE(event.payload.is_llvm_module_added());
-  EXPECT_EQ(target_id2, event.target_id);
-
-  provider.Unbind();
-  t.join();
+  FUZZING_EXPECT_OK(bridge7.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(bridge8.consumer.promise_or(fpromise::error()));
+  RunUntilIdle();
 }
 
 }  // namespace fuzzing

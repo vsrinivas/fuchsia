@@ -68,12 +68,16 @@ int Input::Compare(const Input& other) const {
   return memcmp(data_.get(), other.data_.get(), size_);
 }
 
-std::string Input::ToHex() const {
+std::string Input::ToHex(bool truncate) const {
   std::stringstream oss;
   oss << std::hex;
   auto* data = data_.get();
-  for (size_t i = 0; i < size_; ++i) {
+  auto len = truncate ? std::min(size_, size_t(6)) : size_;
+  for (size_t i = 0; i < len; ++i) {
     oss << std::setw(2) << std::setfill('0') << size_t(data[i]);
+  }
+  if (len != size_) {
+    oss << "...";
   }
   return oss.str();
 }

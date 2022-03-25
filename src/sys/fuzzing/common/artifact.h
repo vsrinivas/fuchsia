@@ -9,7 +9,6 @@
 
 #include <tuple>
 
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/result.h"
 
@@ -30,6 +29,7 @@ class Artifact final {
 
   FuzzResult fuzz_result() const { return fuzz_result_; }
   const Input& input() const { return input_; }
+  Input& input() { return input_; }
 
   Artifact Duplicate() const;
   Input take_input() { return std::move(input_); }

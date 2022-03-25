@@ -15,7 +15,7 @@ RunnerPtr FakeRunner::MakePtr(ExecutorPtr executor) {
   return RunnerPtr(new FakeRunner(std::move(executor)));
 }
 
-FakeRunner::FakeRunner(ExecutorPtr executor) : Runner(executor) {
+FakeRunner::FakeRunner(ExecutorPtr executor) : Runner(executor), workflow_(this) {
   seed_corpus_.push_back(Input());
   live_corpus_.push_back(Input());
 }
@@ -53,14 +53,68 @@ zx_status_t FakeRunner::ParseDictionary(const Input& input) {
 
 Input FakeRunner::GetDictionaryAsInput() const { return dictionary_.Duplicate(); }
 
-void FakeRunner::ConfigureImpl(const OptionsPtr& options) {}
+ZxPromise<> FakeRunner::Configure(const OptionsPtr& options) {
+  return fpromise::make_promise([]() -> ZxResult<> { return fpromise::ok(); }).wrap_with(workflow_);
+}
 
-zx_status_t FakeRunner::Run() {
-  Runner::set_result(result_);
-  Runner::set_result_input(result_input_);
-  return error_;
+ZxPromise<FuzzResult> FakeRunner::Execute(Input input) {
+  return Run()
+      .and_then([](const Artifact& artifact) { return fpromise::ok(artifact.fuzz_result()); })
+      .wrap_with(workflow_);
+}
+
+ZxPromise<Input> FakeRunner::Minimize(Input input) {
+  return Run()
+      .and_then([](Artifact& artifact) { return fpromise::ok(artifact.take_input()); })
+      .wrap_with(workflow_);
+}
+
+ZxPromise<Input> FakeRunner::Cleanse(Input input) {
+  return Run()
+      .and_then([](Artifact& artifact) { return fpromise::ok(artifact.take_input()); })
+      .wrap_with(workflow_);
+}
+
+ZxPromise<Artifact> FakeRunner::Fuzz() { return Run().wrap_with(workflow_); }
+
+ZxPromise<> FakeRunner::Merge() {
+  return Run()
+      .and_then([](const Artifact& artifact) { return fpromise::ok(); })
+      .wrap_with(workflow_);
+}
+
+ZxPromise<> FakeRunner::Stop() {
+  if (!completer_) {
+    Bridge<> bridge;
+    completer_ = std::move(bridge.completer);
+    consumer_ = std::move(bridge.consumer);
+  }
+  return workflow_.Stop().inspect(
+      [completer = std::move(completer_)](const ZxResult<>& result) mutable {
+        completer.complete_ok();
+      });
+}
+
+Promise<> FakeRunner::AwaitStop() {
+  if (!consumer_) {
+    Bridge<> bridge;
+    completer_ = std::move(bridge.completer);
+    consumer_ = std::move(bridge.consumer);
+  }
+  return consumer_.promise_or(fpromise::error());
 }
 
 Status FakeRunner::CollectStatus() { return CopyStatus(status_); }
+
+ZxPromise<Artifact> FakeRunner::Run() {
+  return fpromise::make_promise([this]() -> ZxResult<Artifact> {
+    Runner::set_result(result_);
+    Runner::set_result_input(result_input_);
+    if (error_ != ZX_OK) {
+      return fpromise::error(error_);
+    }
+    return fpromise::ok(Artifact(result_, result_input_.Duplicate()));
+  });
+}
 
 }  // namespace fuzzing
