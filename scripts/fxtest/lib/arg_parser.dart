@@ -89,7 +89,7 @@ when executing device tests''')
       abbr: 'f',
       defaultsTo: false,
       negatable: false,
-      help: 'halt test suite execution on the first failed test')
+      help: 'halt test suite execution after the first failed test suite')
   ..addFlag('log',
       defaultsTo: false,
       negatable: true,
