@@ -75,7 +75,9 @@ zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpa
     return status;
   }
   auto boot_time = guest_ptr.as<pv_clock_boot_time>();
-  ZX_DEBUG_ASSERT(boot_time != nullptr);
+  if (boot_time == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   memset(boot_time, 0, sizeof(*boot_time));
   return ZX_OK;
 }
@@ -90,7 +92,9 @@ zx_status_t pv_clock_reset_clock(PvClockState* pv_clock,
     return status;
   }
   pv_clock->system_time = pv_clock->guest_ptr.as<pv_clock_system_time>();
-  ZX_DEBUG_ASSERT(pv_clock->system_time != nullptr);
+  if (pv_clock->system_time == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   memset(pv_clock->system_time, 0, sizeof(*pv_clock->system_time));
   return ZX_OK;
 }
@@ -134,7 +138,9 @@ zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas
     return status;
   }
   auto offset = guest_ptr.as<PvClockOffset>();
-  ZX_DEBUG_ASSERT(offset != nullptr);
+  if (offset == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   memset(offset, 0, sizeof(*offset));
   // Zircon does not maintain a UTC or local time. We populate offset using the
   // only time available - time since the device was powered on.
