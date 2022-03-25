@@ -151,7 +151,8 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/hub-v2");
     } else if (feature == "deprecated-global-data") {
       FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+      if (pkg_url.Parse(ns_id) &&
+          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
         PushDirectoryFromPath("/data");
       } else {
         FX_LOGS(WARNING) << "Component " << ns_id
@@ -160,7 +161,8 @@ zx_status_t NamespaceBuilder::AddSandbox(
       }
     } else if (feature == "deprecated-global-tmp") {
       FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+      if (pkg_url.Parse(ns_id) &&
+          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
         PushDirectoryFromPath("/tmp");
       } else {
         FX_LOGS(WARNING) << "Component " << ns_id
@@ -169,7 +171,8 @@ zx_status_t NamespaceBuilder::AddSandbox(
       }
     } else if (feature == "deprecated-global-hub") {
       FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) && pkg_url.resource_path() == "meta/sl4f.cmx") {
+      if (pkg_url.Parse(ns_id) &&
+          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
         PushDirectoryFromPath("/hub-v2");
       } else {
         FX_LOGS(WARNING) << "Component " << ns_id
