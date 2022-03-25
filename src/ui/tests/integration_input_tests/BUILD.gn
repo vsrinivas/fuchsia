@@ -72,9 +72,6 @@ fuchsia_component("scenic-test-realm") {
   manifest = "meta/scenic-test-realm.cml"
   deps = [
     ":scenic-for-test",
-
-    # TODO(96232): Remove placeholder dependency.
-    "//examples/fidl/rust/server:echo-server",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
   ]
@@ -91,9 +88,6 @@ fuchsia_component("workstation-test-realm") {
     ":scenic-test-realm",
     ":wrapped-root-presenter",
     ":wrapped-text-manager",
-
-    # TODO(96232): Remove placeholder dependency.
-    "//examples/fidl/rust/server:echo-server",
     "//src/lib/ui/input-synthesis:input-synthesis-component",
     "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/bin/text:text_manager_comp",
@@ -109,8 +103,5 @@ fuchsia_component("input-pipeline-test-realm") {
     ":scenic-test-realm",
     ":wrapped-input-pipeline",
     ":wrapped-root-presenter",
-
-    # TODO(96232): Remove placeholder dependency.
-    "//examples/fidl/rust/server:echo-server",
   ]
 }
