@@ -78,13 +78,21 @@ test("netstack_rawsocket_c_api_test") {
   ]
 }
 
-tests = [
-  "name_provider_service_not_present",
-  "netstack_bsdsocket_c_api",
-  "netstack_fuchsia_c_api",
-  "netstack_packetsocket_c_api",
-  "netstack_rawsocket_c_api",
+netstack_tests_with_fast_udp = [
+  "bsdsocket_c_api",
+  "fuchsia_c_api",
 ]
+
+netstack_tests = netstack_tests_with_fast_udp + [
+                   "packetsocket_c_api",
+                   "rawsocket_c_api",
+                 ]
+
+tests = [ "name_provider_service_not_present" ]
+
+foreach(test, netstack_tests) {
+  tests += [ "netstack_${test}" ]
+}
 
 foreach(test, tests) {
   name = "${test}_test"
@@ -95,9 +103,22 @@ foreach(test, tests) {
   }
 }
 
+tests_with_fast_udp = []
+
+foreach(test, netstack_tests_with_fast_udp) {
+  name = "netstack_with_fast_udp_${test}"
+  tests_with_fast_udp += [ name ]
+  component_name = "${name}_test"
+  fuchsia_unittest_component("${component_name}_component") {
+    component_name = component_name
+    deps = [ ":netstack_${test}_test" ]
+    manifest = "meta/${component_name}.cml"
+  }
+}
+
 fuchsia_test_package("netstack-c-api-tests") {
   test_components = []
-  foreach(test, tests) {
+  foreach(test, tests + tests_with_fast_udp) {
     test_components += [ ":${test}_test_component" ]
   }
 
@@ -107,6 +128,7 @@ fuchsia_test_package("netstack-c-api-tests") {
 
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-with-fast-udp-debug",
 
     # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
     "//third_party/sbase:cat_bin",

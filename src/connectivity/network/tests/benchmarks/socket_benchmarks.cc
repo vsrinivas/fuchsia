@@ -360,6 +360,12 @@ PERFTEST_CTOR(RegisterTests)
 }  // namespace
 
 int main(int argc, char** argv) {
-  constexpr char kTestSuiteName[] = "fuchsia.network.socket.loopback";
-  return perftest::PerfTestMain(argc, argv, kTestSuiteName);
+  constexpr char kTestSuitePrefix[] = "fuchsia.network.socket.loopback";
+  constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+  constexpr char kFastUdpSuiteSuffix[] = ".fastudp";
+  if (std::getenv(kFastUdpEnvVar)) {
+    return perftest::PerfTestMain(argc, argv,
+                                  std::string(kTestSuitePrefix).append(kFastUdpSuiteSuffix).data());
+  }
+  return perftest::PerfTestMain(argc, argv, kTestSuitePrefix);
 }

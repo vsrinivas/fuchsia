@@ -16,12 +16,13 @@ use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     ping,
-    realms::{Netstack, Netstack2, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, Netstack2WithFastUdp, TestSandboxExt as _},
     Result,
 };
 use netstack_testing_macros::variants_test;
 use packet::Serializer as _;
 use packet_formats::{self, ipv4::Ipv4Header as _};
+use test_case::test_case;
 
 async fn run_udp_socket_test(
     server: &netemul::TestRealm<'_>,
@@ -67,14 +68,28 @@ const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 const CLIENT_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:02");
 const SERVER_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:01");
 
+enum UdpProtocol {
+    Synchronous,
+    Fast,
+}
+
 #[variants_test]
-async fn test_udp_socket<E: netemul::Endpoint>(name: &str) {
+#[test_case(
+    UdpProtocol::Synchronous; "synchronous_protocol")]
+#[test_case(
+    UdpProtocol::Fast; "fast_protocol")]
+async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
 
-    let client = sandbox
-        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .expect("failed to create client realm");
+    let client = match protocol {
+        UdpProtocol::Synchronous => sandbox
+            .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+            .expect("failed to create client realm"),
+        UdpProtocol::Fast => sandbox
+            .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_client", name))
+            .expect("failed to create client realm"),
+    };
 
     let client_ep = client
         .join_network_with(
@@ -85,9 +100,14 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) {
         )
         .await
         .expect("client failed to join network");
-    let server = sandbox
-        .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
-        .expect("failed to create server realm");
+    let server = match protocol {
+        UdpProtocol::Synchronous => sandbox
+            .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
+            .expect("failed to create server realm"),
+        UdpProtocol::Fast => sandbox
+            .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_server", name))
+            .expect("failed to create server realm"),
+    };
     let server_ep = server
         .join_network_with(
             &net,

@@ -19,4 +19,12 @@ void main() {
         componentName: 'socket-benchmarks.cmx',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
+
+  test('socket_benchmarks_with_fast_udp', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponent(
+        packageName: 'socket-benchmarks-with-fast-udp',
+        componentName: 'socket-benchmarks-with-fast-udp.cmx',
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+  }, timeout: Timeout.none);
 }

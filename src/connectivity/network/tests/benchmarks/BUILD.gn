@@ -7,7 +7,10 @@ import("//build/test.gni")
 
 group("benchmarks") {
   testonly = true
-  deps = [ ":socket-benchmarks-package" ]
+  deps = [
+    ":socket-benchmarks-package",
+    ":socket-benchmarks-with-fast-udp-package",
+  ]
 }
 
 test("socket_benchmarks") {
@@ -30,9 +33,21 @@ fuchsia_unittest_package("socket-benchmarks-package") {
   manifest = "meta/socket-benchmarks.cmx"
 }
 
+fuchsia_unittest_package("socket-benchmarks-with-fast-udp-package") {
+  package_name = "socket-benchmarks-with-fast-udp"
+  deps = [
+    ":socket_benchmarks",
+    "//src/connectivity/network/netstack:component-with-fast-udp-legacy",
+  ]
+  manifest = "meta/socket-benchmarks-with-fast-udp.cmx"
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":socket-benchmarks-package" ]
+  deps = [
+    ":socket-benchmarks-package",
+    ":socket-benchmarks-with-fast-udp-package",
+  ]
   if (host_os == "linux") {
     deps += [ ":socket_benchmarks($host_toolchain)" ]
   }

@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/socket-benchmarks#meta/netstack.cmx"
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/socket-benchmarks-with-fast-udp#meta/netstack-with-fast-udp.cmx"
             }
         }
     },
@@ -10,6 +10,9 @@
         "//src/connectivity/network/tests/benchmarks/meta/socket-benchmarks.shard.cmx"
     ],
     "program": {
+        "env_vars": [
+            "FAST_UDP=true"
+        ],
         "binary": "test/socket_benchmarks"
     }
 }

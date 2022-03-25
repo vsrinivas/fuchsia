@@ -3,6 +3,9 @@
         "//src/connectivity/network/netstack/meta/netstack.shard.cmx"
     ],
     "program": {
+        "args": [
+            "--fast-udp"
+        ],
         "binary": "bin/netstack"
     }
 }

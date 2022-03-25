@@ -669,6 +669,9 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
             assert_eq!(loopback_id, new_loopback_id);
         }
         NetstackVersion::ProdNetstack2 => panic!("unexpectedly got ProdNetstack2 variant"),
+        NetstackVersion::Netstack2WithFastUdp => {
+            panic!("unexpectedly got Netstack2WithFastUdp variant")
+        }
     }
 }
 

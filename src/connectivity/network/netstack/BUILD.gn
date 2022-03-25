@@ -27,6 +27,13 @@ fuchsia_component("component-legacy") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-with-fast-udp-legacy") {
+  testonly = true
+  component_name = "netstack-with-fast-udp"
+  manifest = "meta/netstack_with_fast_udp.cmx"
+  deps = [ ":bin" ]
+}
+
 go_binary("bin_with_deadlock_detection") {
   gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
   output_name = string_replace(target_name, "bin", "netstack")
@@ -39,6 +46,13 @@ fuchsia_component("component-debug") {
   testonly = true
   component_name = "netstack-debug"
   manifest = "meta/netstack_debug.cml"
+  deps = [ ":bin_with_deadlock_detection" ]
+}
+
+fuchsia_component("component-with-fast-udp-debug") {
+  testonly = true
+  component_name = "netstack-with-fast-udp-debug"
+  manifest = "meta/netstack_with_fast_udp_debug.cml"
   deps = [ ":bin_with_deadlock_detection" ]
 }
 

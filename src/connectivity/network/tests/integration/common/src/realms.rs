@@ -40,6 +40,7 @@ pub enum NetstackVersion {
     Netstack2,
     Netstack3,
     ProdNetstack2,
+    Netstack2WithFastUdp,
 }
 
 impl NetstackVersion {
@@ -49,13 +50,16 @@ impl NetstackVersion {
             NetstackVersion::Netstack2 => "#meta/netstack-debug.cm",
             NetstackVersion::Netstack3 => "#meta/netstack3.cm",
             NetstackVersion::ProdNetstack2 => "#meta/netstack.cm",
+            NetstackVersion::Netstack2WithFastUdp => "#meta/netstack-with-fast-udp-debug.cm",
         }
     }
 
     /// Gets the services exposed by this Netstack component.
     pub fn get_services(&self) -> &[&'static str] {
         match self {
-            NetstackVersion::Netstack2 | NetstackVersion::ProdNetstack2 => &[
+            NetstackVersion::Netstack2
+            | NetstackVersion::ProdNetstack2
+            | NetstackVersion::Netstack2WithFastUdp => &[
                 fnet_filter::FilterMarker::PROTOCOL_NAME,
                 fnet_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
@@ -230,7 +234,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                             // Note also that netstack-debug does not have a use
                             // declaration for this protocol for the same
                             // reason.
-                            NetstackVersion::Netstack2 | NetstackVersion::Netstack3 => {
+                            NetstackVersion::Netstack2
+                            | NetstackVersion::Netstack3
+                            | NetstackVersion::Netstack2WithFastUdp => {
                                 itertools::Either::Left(std::iter::empty())
                             }
                             NetstackVersion::ProdNetstack2 => {
@@ -528,6 +534,15 @@ pub enum Netstack2 {}
 
 impl Netstack for Netstack2 {
     const VERSION: NetstackVersion = NetstackVersion::Netstack2;
+}
+
+/// Uninstantiable type that represents Netstack2's implementation of a
+/// network stack with the Fast UDP feature enabled.
+#[derive(Copy, Clone)]
+pub enum Netstack2WithFastUdp {}
+
+impl Netstack for Netstack2WithFastUdp {
+    const VERSION: NetstackVersion = NetstackVersion::Netstack2WithFastUdp;
 }
 
 /// Uninstantiable type that represents Netstack3's implementation of a

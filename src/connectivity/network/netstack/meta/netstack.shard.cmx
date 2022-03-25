@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.stash.SecureStore"
+        ]
+    }
+}

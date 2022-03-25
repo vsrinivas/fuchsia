@@ -182,6 +182,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 let () = address_state_provider.detach().expect("detach address lifetime");
             }
             NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
+            NetstackVersion::Netstack2WithFastUdp => panic!("unexpected netstack version"),
             NetstackVersion::Netstack3 => {
                 // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
                 let () = stack
@@ -297,6 +298,7 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
         ))
         .collect(),
         NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
+        NetstackVersion::Netstack2WithFastUdp => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
 }

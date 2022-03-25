@@ -70,6 +70,7 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
         ))
         .collect(),
         NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
+        NetstackVersion::Netstack2WithFastUdp => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
 }

@@ -197,6 +197,10 @@ func Main() {
 	noOpaqueIID := false
 	flags.BoolVar(&noOpaqueIID, "no-opaque-iids", false, "disable opaque IIDs")
 
+	// TODO(https://fxbug.dev/80502): Enable fast UDP based on this flag.
+	fastUDP := false
+	flags.BoolVar(&fastUDP, "fast-udp", false, "enable Fast UDP")
+
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
