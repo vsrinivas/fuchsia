@@ -42,6 +42,28 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector() {
       std::make_unique<cobalt_client::InMemoryLogger>());
 }
 
+// Test that the manager Shutdown fails if ReadyForShutdown is not called.
+TEST(FsManagerTestCase, ShutdownBeforeReadyFails) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  zx::channel dir_request, lifecycle_request;
+  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  auto config = EmptyConfig();
+  BlockWatcher watcher(manager, &config);
+  ASSERT_EQ(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
+      ZX_OK);
+
+  sync_completion_t callback_called;
+  manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
+    sync_completion_signal(callback_called);
+  });
+  EXPECT_FALSE(sync_completion_signaled(&callback_called));
+  manager.ReadyForShutdown();
+  sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
+}
+
 // Test that the manager performs the shutdown procedure correctly with respect to externally
 // observable behaviors.
 TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
@@ -56,6 +78,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
       ZX_OK);
 
+  manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for the shutdown.
   EXPECT_FALSE(manager.IsShutdown());
 
@@ -94,6 +117,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
       ZX_OK);
 
+  manager.ReadyForShutdown();
   // The manager should not have exited yet: No one has asked for an unmount.
   EXPECT_FALSE(manager.IsShutdown());
 
@@ -149,6 +173,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
       ZX_OK);
 
+  manager.ReadyForShutdown();
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
@@ -203,6 +228,8 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
                            root->client.TakeChannel())
                 .status_value(),
             ZX_OK);
+
+  manager.ReadyForShutdown();
 
   zx_status_t shutdown_status = ZX_OK;
   manager.Shutdown([&shutdown_status](zx_status_t status) { shutdown_status = status; });

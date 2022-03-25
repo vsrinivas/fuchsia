@@ -299,6 +299,8 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   std::thread shutdown_thread([this, callback = std::move(callback),
                                filesystems_to_shutdown =
                                    std::move(filesystems_to_shut_down)]() mutable {
+    // Ensure that we are ready for shutdown.
+    sync_completion_wait(&ready_for_shutdown_, ZX_TIME_INFINITE);
     auto merge_status = [first_status = ZX_OK](zx_status_t status) mutable {
       if (first_status == ZX_OK)
         first_status = status;
@@ -351,6 +353,8 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
 bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
 
 void FsManager::WaitForShutdown() { sync_completion_wait(&shutdown_, ZX_TIME_INFINITE); }
+
+void FsManager::ReadyForShutdown() { sync_completion_signal(&ready_for_shutdown_); }
 
 const char* FsManager::MountPointPath(FsManager::MountPoint point) {
   switch (point) {

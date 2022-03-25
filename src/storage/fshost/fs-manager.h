@@ -84,7 +84,8 @@ class FsManager {
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
 
   // Asynchronously shut down all the filesystems managed by fshost and then signal the main thread
-  // to exit. Calls |callback| when complete.
+  // to exit. Calls |callback| when complete. The Shutdown process would block until
+  // ReadyForShutdown is called.
   void Shutdown(fit::function<void(zx_status_t)> callback);
 
   // Returns a pointer to the |FsHostMetrics| instance.
@@ -99,6 +100,7 @@ class FsManager {
 
   bool IsShutdown();
   void WaitForShutdown();
+  void ReadyForShutdown();
 
   // Creates a new subdirectory in the fshost diagnostics directory by the name of
   // |diagnostics_dir_name|, which forwards the diagnostics dir exposed in the export root directory
@@ -218,6 +220,7 @@ class FsManager {
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
+  sync_completion_t ready_for_shutdown_;
 
   bool file_crash_report_ = true;
 

@@ -95,6 +95,7 @@ class BlockDeviceTest : public testing::Test {
     int pkg_fd = open("/pkg", O_DIRECTORY | O_RDONLY);
     ASSERT_GE(pkg_fd, 0);
     ASSERT_EQ(fdio_ns_bind_fd(ns, "/boot", pkg_fd), ZX_OK);
+    manager_.ReadyForShutdown();
   }
 
   void TearDown() override {

@@ -47,6 +47,7 @@ class FilesystemMounterHarness : public testing::Test {
       zx::channel dir_request, lifecycle_request;
       EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
                                     *watcher_));
+      manager_.ReadyForShutdown();
     }
     return manager_;
   }

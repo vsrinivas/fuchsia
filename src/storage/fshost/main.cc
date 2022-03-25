@@ -267,6 +267,7 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
     FX_LOGS(ERROR) << "cannot bind namespace";
     return EXIT_FAILURE;
   }
+  fs_manager.ReadyForShutdown();
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
