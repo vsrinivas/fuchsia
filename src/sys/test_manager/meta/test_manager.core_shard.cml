@@ -51,7 +51,7 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.sys2.ComponentResolver" ],
+            protocol: [ "fuchsia.component.resolution.Resolver" ],
             from: "#full-resolver",
             to: "#test_manager",
         },

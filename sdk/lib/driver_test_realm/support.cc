@@ -5,6 +5,7 @@
 // To get drivermanager to run in a test environment, we need to fake boot-arguments & root-job.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.component.resolution/cpp/wire.h>
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.diagnostics/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
@@ -12,7 +13,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
-#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -235,7 +235,7 @@ class FakeRootJob final : public fidl::WireServer<fuchsia_kernel::RootJob> {
   }
 };
 
-class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentResolver> {
+class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolution::Resolver> {
  public:
   void SetPkgDir(fbl::RefPtr<fs::RemoteDir> pkg_dir) { pkg_dir_ = std::move(pkg_dir); }
 
@@ -244,55 +244,55 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
     std::string_view kPrefix = "fuchsia-boot:///";
     std::string_view relative_path = request->component_url.get();
     if (!cpp20::starts_with(relative_path, kPrefix)) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInvalidArgs);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInvalidArgs);
       return;
     }
     relative_path.remove_prefix(kPrefix.size() + 1);
 
     auto file = fidl::CreateEndpoints<fuchsia_io::File>();
     if (file.is_error()) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInternal);
       return;
     }
     zx_status_t status =
         fdio_open_at(pkg_dir_->GetRemote().channel()->get(), std::string(relative_path).data(),
                      fuchsia_io::wire::kOpenRightReadable, file->server.channel().release());
     if (status != ZX_OK) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInternal);
       return;
     }
     fidl::WireResult result =
         fidl::WireCall(file->client)->GetBackingMemory(fuchsia_io::wire::VmoFlags::kRead);
     if (!result.ok()) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;
     }
     auto& response = result.value();
     if (response.result.is_err()) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;
     }
     zx::vmo& vmo = response.result.response().vmo;
     uint64_t size;
     status = vmo.get_prop_content_size(&size);
     if (status != ZX_OK) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
     }
 
     fidl::ClientEnd<fuchsia_io::Directory> directory(
         zx::channel(fdio_service_clone(pkg_dir_->GetRemote().channel()->get())));
     if (!directory.is_valid()) {
-      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInternal);
       return;
     }
 
     fidl::Arena arena;
-    fuchsia_sys2::wire::Package package(arena);
-    package.set_package_url(arena, fidl::StringView::FromExternal(kPrefix));
-    package.set_package_dir(std::move(directory));
+    fuchsia_component_resolution::wire::Package package(arena);
+    package.set_url(arena, fidl::StringView::FromExternal(kPrefix));
+    package.set_directory(std::move(directory));
 
-    fuchsia_sys2::wire::Component component(arena);
-    component.set_resolved_url(arena, request->component_url);
+    fuchsia_component_resolution::wire::Component component(arena);
+    component.set_url(arena, request->component_url);
     component.set_decl(arena, fuchsia_mem::wire::Data::WithBuffer(arena, fuchsia_mem::wire::Buffer{
                                                                              .vmo = std::move(vmo),
                                                                              .size = size,
@@ -409,7 +409,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       return ZX_ERR_INTERNAL;
     }
 
-    status = AddProtocolWithWait<fuchsia_sys2::ComponentResolver>(&boot_resolver_);
+    status = AddProtocolWithWait<fuchsia_component_resolution::Resolver>(&boot_resolver_);
     if (status != ZX_OK) {
       return ZX_ERR_INTERNAL;
     }

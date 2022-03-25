@@ -101,7 +101,7 @@ type Runner = table {
 };
 
 /// Declares a resolver which is responsible for resolving component URLs to actual components.
-/// See `fuchsia.sys2.ComponentResolver` for the protocol resolvers are expected to implement.
+/// See `fuchsia.component.resolution.Resolver` for the protocol resolvers are expected to implement.
 type Resolver = table {
     /// The name of this resolver.
     /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`.

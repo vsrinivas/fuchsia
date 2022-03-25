@@ -1866,7 +1866,7 @@ pub struct Capability {
     /// the protocol `fuchsia.component.runner.ComponentRunner`.
     ///
     /// For `resolver`, the target of the path MUST be a channel and MUST speak
-    /// the protocol `fuchsia.sys2.ComponentResolver`.
+    /// the protocol `fuchsia.component.resolution.Resolver`.
     pub path: Option<Path>,
 
     /// (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set

@@ -391,7 +391,7 @@
                 // expect only parts of component framework to be able to access it.
                 source_moniker: "/bootstrap/base-resolver",
                 source: "component",
-                source_name: "fuchsia.sys2.ComponentResolver",
+                source_name: "fuchsia.component.resolution.Resolver",
                 capability: "protocol",
                 target_monikers: [
                     "/core/full-resolver",
@@ -403,7 +403,7 @@
             {
                 source_moniker: "/core/full-resolver",
                 source: "component",
-                source_name: "fuchsia.sys2.ComponentResolver",
+                source_name: "fuchsia.component.resolution.Resolver",
                 capability: "protocol",
                 target_monikers: [
                     "/core/test_manager",

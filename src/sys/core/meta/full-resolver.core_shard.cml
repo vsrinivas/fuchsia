@@ -10,7 +10,7 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.sys2.ComponentResolver",
+            protocol: "fuchsia.component.resolution.Resolver",
             from: "parent",
             to: "#full-resolver",
         },

@@ -582,7 +582,7 @@ fuchsia.kernel.Stats
 fuchsia.kernel.VmexResource
 fuchsia.net.http.Loader
 fuchsia.scheduler.ProfileProvider
-fuchsia.sys2.ComponentResolver
+fuchsia.component.resolution.Resolver
 fuchsia.sysmem.Allocator
 fuchsia.tracing.provider.Registry
 fuchsia.vulkan.loader.Loader

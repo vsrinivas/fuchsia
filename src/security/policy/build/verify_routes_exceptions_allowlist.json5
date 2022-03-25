@@ -199,7 +199,7 @@
                 {
                     // TODO(fxbug.dev/86464): remove.
                     using_node: "/core/full-resolver",
-                    capability: "fuchsia.sys2.ComponentResolver",
+                    capability: "fuchsia.component.resolution.Resolver",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -219,12 +219,12 @@
                                                 },
                                             ],
                                         },
-                                        capability_id: "fuchsia.sys2.ComponentResolver",
+                                        capability_id: "fuchsia.component.resolution.Resolver",
                                     },
                                 },
                             },
                         },
-                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.sys2.ComponentResolver`, but no matching `offer` declaration was found in the parent",
+                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.component.resolution.Resolver`, but no matching `offer` declaration was found in the parent",
                     },
                 },
                 {

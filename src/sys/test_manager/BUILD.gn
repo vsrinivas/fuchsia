@@ -49,6 +49,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
@@ -119,7 +120,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
     "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",

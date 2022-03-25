@@ -12,9 +12,9 @@ use {
     cm_fidl_validator,
     cm_rust::FidlIntoNative,
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::LoaderProxy,
-    fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
     std::path::Path,
     std::sync::Arc,
@@ -24,7 +24,7 @@ use {
 pub static SCHEME: &str = "fuchsia-pkg";
 
 /// Resolves component URLs with the "fuchsia-pkg" scheme by proxying to an existing
-/// fuchsia.sys.Loader service (which is the CFv1 equivalent of fuchsia.sys2.ComponentResolver).
+/// fuchsia.sys.Loader service (which is the CFv1 equivalent of fuchsia.component.resolution.Resolver).
 ///
 /// This resolver implementation is used to bridge the v1 and v2 component runtime worlds in
 /// situations where the v2 runtime runs under the v1 runtime.
@@ -107,10 +107,10 @@ impl FuchsiaPkgResolver {
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
-        let package = fsys::Package {
-            package_url: Some(package_url),
-            package_dir: Some(package_dir),
-            ..fsys::Package::EMPTY
+        let package = fresolution::Package {
+            url: Some(package_url),
+            directory: Some(package_dir),
+            ..fresolution::Package::EMPTY
         };
         Ok(ResolvedComponent {
             resolved_url: component_url.to_string(),
@@ -344,7 +344,6 @@ mod tests {
         // no need to check full decl as we just want to make
         // sure that we were able to resolve.
         assert_eq!(decl.program, expected_program);
-
         let ResolvedPackage { url: package_url, directory: package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
 

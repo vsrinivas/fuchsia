@@ -242,7 +242,7 @@ component's manifest is shipped as a blob in this package, usually in `meta/`.
 [GCL]: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/43438.pdf
 [package]: /docs/concepts/packages/package.md
 [package-url]: /docs/concepts/packages/package_url.md
-[resolver]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#ComponentResolver
+[resolver]: https://fuchsia.dev/reference/fidl/fuchsia.component.resolution#Resolver
 [rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [sdk]: https://fuchsia.dev/reference/tools/sdk/README.md
 [Starlark]: https://github.com/bazelbuild/starlark

@@ -20,7 +20,7 @@ use {
     async_trait::async_trait,
     cm_runner::Runner,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
     fuchsia_component::client as fclient,
     futures::TryStreamExt,
     std::sync::Arc,
@@ -30,7 +30,7 @@ pub static SCHEME: &str = "realm-builder";
 pub static RUNNER_NAME: &str = "realm_builder";
 
 /// Resolves component URLs with the "realm-builder" scheme, which supports loading components from
-/// the fuchsia.sys2.ComponentResolver protocol in component_manager's namespace.
+/// the fuchsia.component.resolution.Resolver protocol in component_manager's namespace.
 ///
 /// Also runs components with the "realm-builder" runner, which supports launching components
 /// through the fuchsia.component.runner.ComponentRunner protocol in component manager's namespace.
@@ -38,7 +38,7 @@ pub static RUNNER_NAME: &str = "realm_builder";
 /// Both of these protocols are typically implemented by the realm builder library, for use when
 /// integration testing a nested component manager.
 pub struct RealmBuilderResolver {
-    resolver_proxy: fsys::ComponentResolverProxy,
+    resolver_proxy: fresolution::ResolverProxy,
 }
 
 impl RealmBuilderResolver {
@@ -46,7 +46,7 @@ impl RealmBuilderResolver {
     /// in the namespace.
     pub fn new() -> Result<RealmBuilderResolver, Error> {
         Ok(RealmBuilderResolver {
-            resolver_proxy: fclient::connect_to_protocol_at_path::<fsys::ComponentResolverMarker>(
+            resolver_proxy: fclient::connect_to_protocol_at_path::<fresolution::ResolverMarker>(
                 "/svc/fuchsia.component.resolver.RealmBuilder",
             )?,
         })
@@ -55,7 +55,7 @@ impl RealmBuilderResolver {
     async fn resolve_async(
         &self,
         component_url: &str,
-    ) -> Result<fsys::Component, fsys::ResolverError> {
+    ) -> Result<fresolution::Component, fresolution::ResolverError> {
         let res = self
             .resolver_proxy
             .resolve(component_url)
@@ -72,9 +72,9 @@ impl Resolver for RealmBuilderResolver {
         component_url: &str,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let fsys::Component { resolved_url, decl, package, config_values, .. } =
+        let fresolution::Component { url, decl, package, config_values, .. } =
             self.resolve_async(component_url).await?;
-        let resolved_url = resolved_url.unwrap();
+        let resolved_url = url.unwrap();
         let decl = resolver::read_and_validate_manifest(&decl.unwrap()).await?;
         let config_values = if let Some(data) = config_values {
             Some(resolver::read_and_validate_config_values(&data)?)
@@ -93,13 +93,13 @@ impl Resolver for RealmBuilderResolver {
 #[async_trait]
 impl BuiltinCapability for RealmBuilderResolver {
     const NAME: &'static str = "realm_builder_resolver";
-    type Marker = fsys::ComponentResolverMarker;
+    type Marker = fresolution::ResolverMarker;
 
     async fn serve(
         self: Arc<Self>,
-        mut stream: fsys::ComponentResolverRequestStream,
+        mut stream: fresolution::ResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+        while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
             stream.try_next().await?
         {
             responder.send(&mut self.resolve_async(&component_url).await)?;

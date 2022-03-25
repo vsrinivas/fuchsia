@@ -1,11 +1,10 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     anyhow::{Context, Error},
     fidl_fidl_test_components::{TriggerRequest, TriggerRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
     tracing::*,
@@ -18,7 +17,7 @@ enum IncomingRequest {
     TriggerProtocol(TriggerRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingRequest::TriggerProtocol);
