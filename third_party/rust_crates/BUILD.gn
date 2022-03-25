@@ -336,6 +336,10 @@ group("hex") {
   public_deps = [ ":hex-v0_3_2" ]
 }
 
+group("hmac") {
+  public_deps = [ ":hmac-v0_11_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("home") {
     public_deps = [ ":home-v0_5_3" ]

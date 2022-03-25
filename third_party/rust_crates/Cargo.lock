@@ -1334,6 +1334,7 @@ dependencies = [
  "handlebars",
  "heck",
  "hex",
+ "hmac",
  "home",
  "http",
  "humansize",
