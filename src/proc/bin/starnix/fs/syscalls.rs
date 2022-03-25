@@ -812,11 +812,10 @@ pub fn sys_ioctl(
     current_task: &CurrentTask,
     fd: FdNumber,
     request: u32,
-    in_addr: UserAddress,
-    out_addr: UserAddress,
+    user_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let file = current_task.files.get(fd)?;
-    file.ioctl(&current_task, request, in_addr, out_addr)
+    file.ioctl(&current_task, request, user_addr)
 }
 
 pub fn sys_symlinkat(

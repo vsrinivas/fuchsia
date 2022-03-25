@@ -249,16 +249,15 @@ impl FileOps for DmaBufFile {
         _file: &FileObject,
         current_task: &CurrentTask,
         _request: u32,
-        in_addr: UserAddress,
-        _out_addr: UserAddress,
+        user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         // TODO: Don't assume that this is a NEW_DMA_BUF request.
         // There are some macros for parsing request in the wayland demo that will need to be
         // matched here.
         let mut allocation_args = DmaBufAllocationArgs::default();
-        current_task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
+        current_task.mm.read_object(UserRef::new(user_addr), &mut allocation_args)?;
         let mut result = self.allocate_dma_buffer(current_task, &allocation_args)?;
-        current_task.mm.write_object(UserRef::new(in_addr), &mut result)?;
+        current_task.mm.write_object(UserRef::new(user_addr), &mut result)?;
 
         Ok(SUCCESS)
     }

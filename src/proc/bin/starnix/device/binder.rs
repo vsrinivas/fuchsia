@@ -73,10 +73,9 @@ impl FileOps for BinderDev {
         _file: &FileObject,
         current_task: &CurrentTask,
         request: u32,
-        in_addr: UserAddress,
-        _out_addr: UserAddress,
+        user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        self.0.ioctl(current_task, request, in_addr)
+        self.0.ioctl(current_task, request, user_addr)
     }
 
     fn get_vmo(

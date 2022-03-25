@@ -50,8 +50,7 @@ impl FileOps for SyslogFile {
         _file: &FileObject,
         _current_task: &CurrentTask,
         request: u32,
-        _in_addr: UserAddress,
-        _out_addr: UserAddress,
+        _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         match request {
             TCGETS => error!(ENOTTY),

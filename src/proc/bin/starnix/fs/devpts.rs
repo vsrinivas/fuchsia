@@ -178,8 +178,7 @@ impl FileOps for DevPtmxFile {
         _file: &FileObject,
         _current_task: &CurrentTask,
         _request: u32,
-        _in_addr: UserAddress,
-        _out_addr: UserAddress,
+        _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         error!(EOPNOTSUPP)
     }
@@ -277,8 +276,7 @@ impl FileOps for DevPtsFile {
         _file: &FileObject,
         _current_task: &CurrentTask,
         _request: u32,
-        _in_addr: UserAddress,
-        _out_addr: UserAddress,
+        _user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         error!(EOPNOTSUPP)
     }
