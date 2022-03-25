@@ -43,35 +43,35 @@ zx_status_t vmxoff() {
   return err ? ZX_ERR_INTERNAL : ZX_OK;
 }
 
-zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
+zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
   auto pages = static_cast<fbl::Array<VmxPage>*>(context);
   VmxPage& page = (*pages)[cpu_num];
 
   // Check that we have instruction information when we VM exit on IO.
   VmxInfo vmx_info;
   if (!vmx_info.io_exit_info) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that full VMX controls are supported.
   if (!vmx_info.vmx_controls) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that a page-walk length of 4 is supported.
   EptInfo ept_info;
   if (!ept_info.page_walk_4) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check use write-back memory for EPT is supported.
   if (!ept_info.write_back) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that the INVEPT instruction is supported.
   if (!ept_info.invept) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Enable VMXON, if required.
@@ -80,7 +80,7 @@ zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
       !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
     if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) &&
         !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
-      return ZX_ERR_NOT_SUPPORTED;
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
     feature_control |= X86_MSR_IA32_FEATURE_CONTROL_LOCK;
     feature_control |= X86_MSR_IA32_FEATURE_CONTROL_VMXON;
@@ -90,11 +90,11 @@ zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
   // Check control registers are in a VMX-friendly state.
   uint64_t cr0 = x86_get_cr0();
   if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
   uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
   if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   // Enable VMX using the VMXE bit.
@@ -108,7 +108,7 @@ zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
   zx_status_t status = vmxon(page.PhysicalAddress());
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to turn on VMX on CPU %u\n", cpu_num);
-    return status;
+    return zx::error(status);
   }
 
   // From Volume 3, Section 28.3.3.4: Software can use the INVEPT instruction
@@ -119,10 +119,10 @@ zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
   status = invept(InvEpt::ALL_CONTEXT, 0);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", cpu_num);
-    return status;
+    return zx::error(status);
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 void vmxoff_task(void* arg) {

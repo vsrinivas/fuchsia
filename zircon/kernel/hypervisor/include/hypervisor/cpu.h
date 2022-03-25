@@ -7,12 +7,13 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
 
+#include <lib/zx/status.h>
+
 #include <kernel/cpu.h>
-#include <kernel/thread.h>
 
 namespace hypervisor {
 
-typedef zx_status_t (*percpu_task_t)(void* context, cpu_num_t cpu_num);
+using percpu_task_t = zx::status<> (*)(void* context, cpu_num_t cpu_num);
 
 // Executes a task on each online CPU, and returns a CPU mask containing each
 // CPU the task was successfully run on.

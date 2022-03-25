@@ -116,18 +116,18 @@ zx_status_t El2Stack::Alloc() { return page_.Alloc(0).status_value(); }
 
 zx_paddr_t El2Stack::Top() const { return page_.PhysicalAddress() + PAGE_SIZE; }
 
-zx_status_t El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
+zx::status<> El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
   auto cpu_state = static_cast<El2CpuState*>(context);
   El2TranslationTable& table = cpu_state->table_;
   El2Stack& stack = cpu_state->stacks_[cpu_num];
   zx_status_t status = arm64_el2_on(table.Base(), stack.Top());
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to turn EL2 on for CPU %u\n", cpu_num);
-    return status;
+    return zx::error(status);
   }
   unmask_interrupt(kMaintenanceVector);
   unmask_interrupt(kTimerVector);
-  return ZX_OK;
+  return zx::ok();
 }
 
 static void el2_off_task(void* arg) {

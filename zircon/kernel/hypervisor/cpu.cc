@@ -6,9 +6,7 @@
 
 #include <arch/ops.h>
 #include <hypervisor/cpu.h>
-#include <kernel/cpu.h>
 #include <kernel/mp.h>
-#include <kernel/thread.h>
 #include <ktl/atomic.h>
 
 namespace {
@@ -18,8 +16,7 @@ struct percpu_state {
   hypervisor::percpu_task_t task;
   void* context;
 
-  percpu_state(hypervisor::percpu_task_t _task, void* _context)
-      : cpu_mask(0), task(_task), context(_context) {}
+  percpu_state(hypervisor::percpu_task_t pt, void* cx) : cpu_mask(0), task(pt), context(cx) {}
 };
 
 }  // namespace
@@ -29,9 +26,9 @@ namespace hypervisor {
 static void percpu_task(void* arg) {
   auto state = static_cast<percpu_state*>(arg);
   cpu_num_t cpu_num = arch_curr_cpu_num();
-  zx_status_t status = state->task(state->context, cpu_num);
-  if (status == ZX_OK)
+  if (auto result = state->task(state->context, cpu_num); result.is_ok()) {
     state->cpu_mask.fetch_or(cpu_num_to_mask(cpu_num));
+  }
 }
 
 cpu_mask_t percpu_exec(percpu_task_t task, void* context) {

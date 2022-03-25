@@ -58,7 +58,7 @@ class El2CpuState {
 
   El2CpuState() = default;
 
-  static zx_status_t OnTask(void* context, cpu_num_t cpu_num);
+  static zx::status<> OnTask(void* context, cpu_num_t cpu_num);
 };
 
 // Allocate and free virtual machine IDs.
