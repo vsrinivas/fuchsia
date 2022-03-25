@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <soc/aml-common/aml-g12-saradc.h>

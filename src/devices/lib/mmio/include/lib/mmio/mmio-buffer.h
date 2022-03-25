@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_BUFFER_H_
 #define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_BUFFER_H_
 
-#include <lib/ddk/debug.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio-ptr/mmio-ptr.h>
 #include <lib/mmio/mmio-internal.h>
@@ -70,11 +69,6 @@ class MmioBuffer {
   void reset() {
     mmio_buffer_release(&mmio_);
     memset(&mmio_, 0, sizeof(mmio_));
-  }
-
-  void Info() const {
-    zxlogf(INFO, "vaddr = %p", get());
-    zxlogf(INFO, "size = %lu", get_size());
   }
 
   MMIO_PTR void* get() const { return mmio_.vaddr; }
