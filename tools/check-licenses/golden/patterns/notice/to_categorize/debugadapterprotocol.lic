@@ -1,0 +1,13 @@
+debugAdapterProtocol\.json is an unmodified copy of the DAP Specification,
+downloaded from:
+
+  https:\/\/raw\.githubusercontent\.com\/microsoft\/debug-adapter-protocol\/gh-pages\/debugAdapterProtocol\.json
+
+The licence for this file is included below\. This accompanying file is the
+version of the specification that was used to generate a portion of the Dart
+code used to support the protocol\.
+
+To regenerate the generated code, run the script in "tool/dap/generate_all\.dart"
+with no arguments\. To download the latest version of the specification before
+regenerating the code, run the same script with the "--download" argument\.
+

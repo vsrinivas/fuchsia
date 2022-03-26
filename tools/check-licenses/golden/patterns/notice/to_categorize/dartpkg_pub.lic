@@ -1,0 +1,6 @@
+The 'importer' directory is under the BSD license, a copy of which may be found
+in importer\/LICENSE
+
+The 'pub' directory contains code under various licenses \(MIT, BSD, or Apache\)
+with the specific license terms for each in the LICENSE file of each
+subdirectory\.

@@ -1,5 +1,5 @@
 (?P<text>SGI FREE SOFTWARE LICENSE B \(Version 2\.0, Sept\. [\d]{2}, [\d]{4}\)
-(?P<copyright>Copyright \((?:c|C)\) [\d]{4}(-[\d]{4})? Silicon Graphics, Inc\. All Rights Reserved\.)
+(?P<copyright>Copyright \((?:c|C)\) ([\d]{4}(-[\d]{4})?|\[dates of first publication\]) Silicon Graphics, Inc\. All Rights Reserved\.)
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files \(the "Software"\),
