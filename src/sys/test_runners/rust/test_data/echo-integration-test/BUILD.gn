@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "echo_integration_testing"
+  edition = "2018"
+
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("echo-integration-test") {
+  testonly = true
+  component_name = "echo_integration_testing"
+  manifest = "meta/echo_integration_test.cml"
+  deps = [ ":bin" ]
+}

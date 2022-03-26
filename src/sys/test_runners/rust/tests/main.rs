@@ -14,7 +14,7 @@ use {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url =
-        "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo_integration_test.cm";
+        "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo_integration_testing.cm";
     let (events, _logs) = run_test(test_url, false, Some(10), vec![])
         .await
         .expect(&format!("failed to run test {}", test_url));

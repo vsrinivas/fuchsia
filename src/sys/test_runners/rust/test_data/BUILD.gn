@@ -28,7 +28,7 @@ fuchsia_package("rust-test-runner-example") {
 group("echo-example") {
   testonly = true
   public_deps = [
-    "//examples/components/routing/integration_tests:echo_integration_test_component",
+    "echo-integration-test",
     "//src/sys/component_manager/testing/echo_server",
   ]
 }
