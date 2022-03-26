@@ -3,6 +3,5 @@
         runner: "starnix",
         binary: "/system/bin/sh",
         args: [ "-i" ],
-        features: [ "binder" ],
     },
 }
