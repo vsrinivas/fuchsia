@@ -43,7 +43,7 @@
         },
         {
             resolver: "boot-resolver",
-            path: "/svc/fuchsia.component.resolution.Resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
         },
     ],
     expose: [

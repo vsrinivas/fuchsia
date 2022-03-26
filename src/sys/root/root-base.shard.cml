@@ -226,7 +226,7 @@
             to: "#bootstrap",
         },
         {
-            protocol: [ "fuchsia.component.resolution.Resolver" ],
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
             from: "#bootstrap",
             to: "#core",
         },

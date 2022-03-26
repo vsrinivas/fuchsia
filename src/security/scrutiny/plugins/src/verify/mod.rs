@@ -592,9 +592,9 @@ mod tests {
                     "capabilities": [
                         {
                             "resolver": "my-resolver",
-                            "path": "/svc/fuchsia.component.resolution.Resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
                         },
-                        { "protocol": "fuchsia.component.resolution.Resolver" },
+                        { "protocol": "fuchsia.sys2.ComponentResolver" },
                     ],
                     "use": [
                         {
@@ -609,7 +609,7 @@ mod tests {
                             "from": "self",
                         },
                         {
-                            "protocol": "fuchsia.component.resolution.Resolver",
+                            "protocol": "fuchsia.sys2.ComponentResolver",
                             "from": "self",
                         },
                     ],
@@ -646,7 +646,7 @@ mod tests {
                         },
                         {
                             "resolver": "my-resolver",
-                            "path": "/svc/fuchsia.component.resolution.Resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
                         },
                     ],
                     "use": [
@@ -718,7 +718,7 @@ mod tests {
                         },
                         {
                             "resolver": "my-resolver",
-                            "path": "/svc/fuchsia.component.resolution.Resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
                         },
                     ],
                     "offer": [
@@ -816,7 +816,7 @@ mod tests {
                     "offer": [
                         {
                             "protocol": [
-                                "fuchsia.component.resolution.Resolver",
+                                "fuchsia.sys2.ComponentResolver",
                             ],
                             "from" : "#bootstrap",
                             "to": "#core"
@@ -849,7 +849,7 @@ mod tests {
                     ],
                     "expose": [
                         {
-                            "protocol": "fuchsia.component.resolution.Resolver",
+                            "protocol": "fuchsia.sys2.ComponentResolver",
                             "from": "#base_resolver",
                         },
                         {
@@ -880,7 +880,7 @@ mod tests {
                     ],
                     "expose": [
                         {
-                            "protocol": "fuchsia.component.resolution.Resolver",
+                            "protocol": "fuchsia.sys2.ComponentResolver",
                             "from": "#base_resolver",
                         },
                         {
@@ -949,9 +949,9 @@ mod tests {
                     "capabilities": [
                         {
                             "resolver": "custom-resolver",
-                            "path": "/svc/fuchsia.component.resolution.Resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
                         },
-                        { "protocol": "fuchsia.component.resolution.Resolver" },
+                        { "protocol": "fuchsia.sys2.ComponentResolver" },
                     ],
                     "use": [
                         {
@@ -966,7 +966,7 @@ mod tests {
                             "from": "self",
                         },
                         {
-                            "protocol": "fuchsia.component.resolution.Resolver",
+                            "protocol": "fuchsia.sys2.ComponentResolver",
                             "from": "self",
                         },
                     ],

@@ -10,7 +10,7 @@
     },
     offer: [
         {
-            protocol: [ "fuchsia.component.resolution.Resolver" ],
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
             from: "parent",
             to: [ "#realm_builder" ],
         },

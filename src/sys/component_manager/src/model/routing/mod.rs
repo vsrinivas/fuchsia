@@ -107,7 +107,8 @@ pub(super) async fn route_and_open_capability_for_resolver(
                             }
                         }
                     }
-                    CapabilitySourceInterface::Builtin { .. } => ResolverCapability::SDK,
+                    // Return Internal here until all built-in resolvers are migrated atomically to SDK.
+                    CapabilitySourceInterface::Builtin { .. } => ResolverCapability::Internal,
                     _ => {
                         return Err(ModelError::internal(anyhow!(
                             "Encountered resolver route source from non-component entity: {:?}",

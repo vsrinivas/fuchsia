@@ -805,9 +805,7 @@ mod tests {
                     )
                     .resolver(ResolverDecl {
                         name: "base".into(),
-                        source_path: Some(
-                            "/svc/fuchsia.component.resolution.Resolver".parse().unwrap(),
-                        ),
+                        source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                     })
                     .build(),
             ),
@@ -856,9 +854,7 @@ mod tests {
                     )
                     .resolver(ResolverDecl {
                         name: "base".into(),
-                        source_path: Some(
-                            "/svc/fuchsia.component.resolution.Resolver".parse().unwrap(),
-                        ),
+                        source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                     })
                     .build(),
             ),
@@ -1547,7 +1543,7 @@ mod tests {
         });
         let resolver_decl = ResolverDecl {
             name: "base".into(),
-            source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+            source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
 
         let components = vec![
@@ -1627,7 +1623,7 @@ mod tests {
         };
         let resolver_decl = ResolverDecl {
             name: "base".into(),
-            source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+            source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
         let components = vec![
             (
@@ -1746,7 +1742,7 @@ mod tests {
         };
         let resolver_decl = ResolverDecl {
             name: "test".into(),
-            source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+            source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
         let components = vec![
             (
@@ -1867,7 +1863,7 @@ mod tests {
         };
         let resolver_decl = ResolverDecl {
             name: "base_resolver".into(),
-            source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+            source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
         let runner_decl = RunnerDecl {
             name: "hobbit".into(),

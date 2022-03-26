@@ -8,8 +8,8 @@ use {
     cm_rust::{FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fcdecl,
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
-    fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     futures::{
         lock::{Mutex, MutexGuard},
         TryStreamExt,
@@ -72,7 +72,7 @@ impl Registry {
         Ok(url)
     }
 
-    pub fn run_resolver_service(self: &Arc<Self>, stream: fresolution::ResolverRequestStream) {
+    pub fn run_resolver_service(self: &Arc<Self>, stream: fsys::ComponentResolverRequestStream) {
         let self_ref = self.clone();
         fasync::Task::local(async move {
             if let Err(e) = self_ref.handle_resolver_request_stream(stream).await {
@@ -139,15 +139,15 @@ impl Registry {
 
     async fn handle_resolver_request_stream(
         self: &Arc<Self>,
-        mut stream: fresolution::ResolverRequestStream,
+        mut stream: fsys::ComponentResolverRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
-                fresolution::ResolverRequest::Resolve { component_url, responder } => {
+                fsys::ComponentResolverRequest::Resolve { component_url, responder } => {
                     let parsed_url = match Url::parse(&component_url) {
                         Ok(url) => url,
                         Err(_) => {
-                            responder.send(&mut Err(fresolution::ResolverError::InvalidArgs))?;
+                            responder.send(&mut Err(fsys::ResolverError::InvalidArgs))?;
                             continue;
                         }
                     };
@@ -165,10 +165,10 @@ impl Registry {
                                 fio::CLONE_FLAG_SAME_RIGHTS,
                                 ServerEnd::new(server_end.into_channel()),
                             )?;
-                            Some(fresolution::Package {
-                                url: Some(component_url.clone()),
-                                directory: Some(client_end),
-                                ..fresolution::Package::EMPTY
+                            Some(fsys::Package {
+                                package_url: Some(component_url.clone()),
+                                package_dir: Some(client_end),
+                                ..fsys::Package::EMPTY
                             })
                         } else {
                             None
@@ -178,12 +178,12 @@ impl Registry {
                             Self::get_config_data(&decl, &package_dir, &config_value_replacements)
                                 .await?;
 
-                        responder.send(&mut Ok(fresolution::Component {
-                            url: Some(component_url),
+                        responder.send(&mut Ok(fsys::Component {
+                            resolved_url: Some(component_url),
                             decl: Some(encode(decl)?),
                             package,
                             config_values,
-                            ..fresolution::Component::EMPTY
+                            ..fsys::Component::EMPTY
                         }))?;
                     } else {
                         let mut res =
@@ -207,49 +207,48 @@ impl Registry {
     async fn load_relative_url<'a>(
         mut parsed_url: Url,
         component_decls_guard: MutexGuard<'a, HashMap<Url, ResolveableComponent>>,
-    ) -> Result<fresolution::Component, fresolution::ResolverError> {
+    ) -> Result<fsys::Component, fsys::ResolverError> {
         let component_url = parsed_url.as_str().to_string();
         let fragment = match parsed_url.fragment() {
             Some(fragment) => fragment.to_string(),
-            None => return Err(fresolution::ResolverError::ManifestNotFound),
+            None => return Err(fsys::ResolverError::ManifestNotFound),
         };
 
         parsed_url.set_fragment(None);
-        let component = component_decls_guard
-            .get(&parsed_url)
-            .ok_or(fresolution::ResolverError::ManifestNotFound)?;
+        let component =
+            component_decls_guard.get(&parsed_url).ok_or(fsys::ResolverError::ManifestNotFound)?;
         let package_dir = component.package_dir.clone();
-        let package_dir = package_dir.ok_or(fresolution::ResolverError::PackageNotFound)?;
+        let package_dir = package_dir.ok_or(fsys::ResolverError::PackageNotFound)?;
         let manifest_file =
             io_util::open_file(&package_dir, Path::new(&fragment), fio::OPEN_RIGHT_READABLE)
-                .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
+                .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
         let component_decl: fcdecl::Component = io_util::read_file_fidl(&manifest_file)
             .await
-            .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
+            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
         cm_fidl_validator::validate(&component_decl)
-            .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
+            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
         let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()
-            .map_err(|_| fresolution::ResolverError::Internal)?;
+            .map_err(|_| fsys::ResolverError::Internal)?;
         package_dir
             .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
-            .map_err(|_| fresolution::ResolverError::Io)?;
+            .map_err(|_| fsys::ResolverError::Io)?;
         let config_values = Self::get_config_data(
             &component_decl,
             &Some(package_dir),
             &component.config_value_replacements,
         )
         .await
-        .map_err(|_| fresolution::ResolverError::ConfigValuesNotFound)?;
-        Ok(fresolution::Component {
-            url: Some(component_url.clone()),
-            decl: Some(encode(component_decl).map_err(|_| fresolution::ResolverError::Internal)?),
-            package: Some(fresolution::Package {
-                url: Some(component_url),
-                directory: Some(client_end),
-                ..fresolution::Package::EMPTY
+        .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?;
+        Ok(fsys::Component {
+            resolved_url: Some(component_url.clone()),
+            decl: Some(encode(component_decl).map_err(|_| fsys::ResolverError::Internal)?),
+            package: Some(fsys::Package {
+                package_url: Some(component_url),
+                package_dir: Some(client_end),
+                ..fsys::Package::EMPTY
             }),
             config_values,
-            ..fresolution::Component::EMPTY
+            ..fsys::Component::EMPTY
         })
     }
 }

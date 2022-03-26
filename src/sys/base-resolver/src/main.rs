@@ -5,11 +5,8 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_resolution::{
-        self as fresolution, ResolverRequest, ResolverRequestStream,
-    },
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
+    fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_component::server::ServiceFs,
     fuchsia_url::{
         errors::{ParseError as PkgUrlParseError, ResourcePathError},
@@ -55,17 +52,17 @@ async fn main() -> anyhow::Result<()> {
 }
 
 enum Services {
-    BaseResolver(ResolverRequestStream),
-    PkgCacheResolver(ResolverRequestStream),
+    BaseResolver(ComponentResolverRequestStream),
+    PkgCacheResolver(ComponentResolverRequestStream),
 }
 
-async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
+async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
     let packages_dir = io_util::open_directory_in_namespace(
         "/pkgfs/packages",
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .context("failed to open /pkgfs")?;
-    while let Some(ResolverRequest::Resolve { component_url, responder }) =
+    while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
         match resolve_component(&component_url, &packages_dir).await {
@@ -88,7 +85,7 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
 async fn resolve_component(
     component_url: &str,
     packages_dir: &fio::DirectoryProxy,
-) -> Result<fresolution::Component, ResolverError> {
+) -> Result<fsys::Component, ResolverError> {
     let package_url = PkgUrl::parse(component_url)?;
     let cm_path = package_url.resource().ok_or_else(|| {
         ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath(
@@ -124,16 +121,16 @@ async fn resolve_component(
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
-    Ok(fresolution::Component {
-        url: Some(component_url.into()),
+    Ok(fsys::Component {
+        resolved_url: Some(component_url.into()),
         decl: Some(data),
-        package: Some(fresolution::Package {
-            url: Some(package_url.root_url().to_string()),
-            directory: Some(package_dir),
-            ..fresolution::Package::EMPTY
+        package: Some(fsys::Package {
+            package_url: Some(package_url.root_url().to_string()),
+            package_dir: Some(package_dir),
+            ..fsys::Package::EMPTY
         }),
         config_values,
-        ..fresolution::Component::EMPTY
+        ..fsys::Component::EMPTY
     })
 }
 
@@ -188,20 +185,20 @@ enum ResolverError {
     ServePackageDirectory(#[source] package_directory::Error),
 }
 
-impl From<&ResolverError> for fresolution::ResolverError {
-    fn from(err: &ResolverError) -> fresolution::ResolverError {
+impl From<&ResolverError> for fsys::ResolverError {
+    fn from(err: &ResolverError) -> fsys::ResolverError {
         use ResolverError::*;
         match err {
-            InvalidUrl(_) | PackageHashNotSupported => fresolution::ResolverError::InvalidArgs,
-            UnsupportedRepo => fresolution::ResolverError::NotSupported,
-            ComponentNotFound(_) => fresolution::ResolverError::ManifestNotFound,
-            PackageNotFound(_) => fresolution::ResolverError::PackageNotFound,
-            ConfigValuesNotFound(_) => fresolution::ResolverError::ConfigValuesNotFound,
+            InvalidUrl(_) | PackageHashNotSupported => fsys::ResolverError::InvalidArgs,
+            UnsupportedRepo => fsys::ResolverError::NotSupported,
+            ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
+            PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
+            ConfigValuesNotFound(_) => fsys::ResolverError::ConfigValuesNotFound,
             ParsingManifest(_) | UnsupportedConfigSource(_) | InvalidConfigSource => {
-                fresolution::ResolverError::InvalidManifest
+                fsys::ResolverError::InvalidManifest
             }
             ReadManifest(_) | CreateEndpoints(_) | ServePackageDirectory(_) => {
-                fresolution::ResolverError::Io
+                fsys::ResolverError::Io
             }
         }
     }
@@ -348,7 +345,7 @@ mod tests {
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &pkgfs_dir)
                 .await,
-            Ok(fresolution::Component { decl: Some(fmem::Data::Buffer(_)), .. })
+            Ok(fsys::Component { decl: Some(fmem::Data::Buffer(_)), .. })
         );
     }
 
@@ -358,7 +355,7 @@ mod tests {
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)
                 .await,
-            Ok(fresolution::Component {
+            Ok(fsys::Component {
                 decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
                 ..
             })
@@ -374,10 +371,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_matches!(
-            component,
-            fresolution::Component { decl: Some(..), config_values: Some(..), .. }
-        );
+        assert_matches!(component, fsys::Component { decl: Some(..), config_values: Some(..), .. });
     }
 
     #[fuchsia::test]

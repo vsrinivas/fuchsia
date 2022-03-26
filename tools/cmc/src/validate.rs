@@ -3208,7 +3208,7 @@ mod tests {
                     },
                     {
                         "resolver": "foo_resolver",
-                        "path": "/svc/fuchsia.component.resolution.Resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
             }),
@@ -4049,7 +4049,7 @@ mod tests {
             json!({
                 "capabilities": [
                     {
-                        "path": "/svc/fuchsia.component.resolution.Resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
             }),
@@ -4070,7 +4070,7 @@ mod tests {
                 "capabilities": [
                     {
                         "resolver": "pkg_resolver",
-                        "path": "/svc/fuchsia.component.resolution.Resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
                         "from": "self",
                     },
                 ]
@@ -4082,7 +4082,7 @@ mod tests {
                 "capabilities": [
                     {
                         "runner": "pkg_resolver",
-                        "path": "/svc/fuchsia.component.resolution.Resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                     {
                         "resolver": "pkg_resolver",

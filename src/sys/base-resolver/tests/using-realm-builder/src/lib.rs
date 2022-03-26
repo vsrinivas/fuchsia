@@ -6,11 +6,9 @@ use {
     assert_matches::assert_matches,
     async_trait::async_trait,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_component_resolution::{self as fresolution, ResolverMarker, ResolverProxy},
     fidl_fuchsia_io as fio,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
-    },
+    fidl_fuchsia_sys2::*,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon as zx,
     futures::{
         channel::oneshot,
@@ -138,7 +136,7 @@ impl TestEnvBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name(
-                        "fuchsia.component.resolution.Resolver-ForPkgCache",
+                        "fuchsia.sys2.ComponentResolver-ForPkgCache",
                     ))
                     .from(&base_resolver)
                     .to(Ref::parent()),
@@ -155,11 +153,11 @@ struct TestEnv {
 }
 
 impl TestEnv {
-    fn pkg_cache_resolver(&self) -> ResolverProxy {
+    fn pkg_cache_resolver(&self) -> ComponentResolverProxy {
         self.realm_instance
             .root
-            .connect_to_named_protocol_at_exposed_dir::<ResolverMarker>(
-                "fuchsia.component.resolution.Resolver-ForPkgCache",
+            .connect_to_named_protocol_at_exposed_dir::<ComponentResolverMarker>(
+                "fuchsia.sys2.ComponentResolver-ForPkgCache",
             )
             .unwrap()
     }
@@ -405,5 +403,5 @@ async fn pkg_cache_resolver_waits_for_minfs() {
     };
 
     let () = minfs_sync_point.signal_can_continue().await;
-    assert_matches!(resolve.await.unwrap(), Ok(fresolution::Component { .. }));
+    assert_matches!(resolve.await.unwrap(), Ok(Component { .. }));
 }

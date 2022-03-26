@@ -10,18 +10,18 @@
     capabilities: [
         {
             resolver: "full-resolver",
-            path: "/svc/fuchsia.component.resolution.Resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
         },
         {
-            protocol: "fuchsia.component.resolution.Resolver",
-            path: "/svc/fuchsia.component.resolution.Resolver",
+            protocol: "fuchsia.sys2.ComponentResolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
         },
     ],
     use: [
         {
             protocol: [
-                "fuchsia.component.resolution.Resolver",
                 "fuchsia.pkg.PackageResolver",
+                "fuchsia.sys2.ComponentResolver",
             ],
         },
     ],
@@ -33,7 +33,7 @@
 
         // Needed so the test component can call the protocol
         {
-            protocol: "fuchsia.component.resolution.Resolver",
+            protocol: "fuchsia.sys2.ComponentResolver",
             from: "self",
         },
     ],

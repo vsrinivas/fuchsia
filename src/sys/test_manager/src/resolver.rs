@@ -4,8 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_sys as fv1sys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::pkg_url::PkgUrl,
@@ -18,11 +17,10 @@ use {
 async fn hermetic_resolve(
     component_url: &str,
     allowed_package_names: &HashSet<String>,
-    universe_resolver: Arc<fresolution::ResolverProxy>,
+    universe_resolver: Arc<fsys::ComponentResolverProxy>,
     enforce: bool,
-) -> Result<fresolution::Component, fresolution::ResolverError> {
-    let package_url =
-        PkgUrl::parse(component_url).map_err(|_| fresolution::ResolverError::InvalidArgs)?;
+) -> Result<fsys::Component, fsys::ResolverError> {
+    let package_url = PkgUrl::parse(component_url).map_err(|_| fsys::ResolverError::InvalidArgs)?;
     let package_name = package_url.name();
     if !allowed_package_names.contains(package_name.as_ref()) {
         if enforce {
@@ -32,7 +30,7 @@ async fn hermetic_resolve(
                 for more information.",
                 &component_url, package_name, allowed_package_names
             );
-            return Err(fresolution::ResolverError::PackageNotFound);
+            return Err(fsys::ResolverError::PackageNotFound);
         } else {
             warn!(
                 "package {} used by component {} is not in the set of allowed packages: {:?}\n \
@@ -42,24 +40,24 @@ async fn hermetic_resolve(
     }
     universe_resolver.resolve(component_url).await.map_err(|err| {
         error!("failed to resolve component {}: {:?}", &component_url, err);
-        fresolution::ResolverError::Internal
+        fsys::ResolverError::Internal
     })?
 }
 
 pub async fn serve_hermetic_resolver(
     handles: LocalComponentHandles,
     allowed_package_names: Arc<HashSet<String>>,
-    universe_resolver: Arc<fresolution::ResolverProxy>,
+    universe_resolver: Arc<fsys::ComponentResolverProxy>,
     enforce: bool,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let mut tasks = vec![];
 
-    fs.dir("svc").add_fidl_service(move |mut stream: fresolution::ResolverRequestStream| {
+    fs.dir("svc").add_fidl_service(move |mut stream: fsys::ComponentResolverRequestStream| {
         let universe_resolver = universe_resolver.clone();
         let allowed_package_names = allowed_package_names.clone();
         tasks.push(fasync::Task::local(async move {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
                 stream.try_next().await.expect("failed to serve component resolver")
             {
                 match hermetic_resolve(
@@ -140,22 +138,22 @@ mod tests {
         },
     };
 
-    async fn respond_to_resolve_requests(stream: &mut fresolution::ResolverRequestStream) {
+    async fn respond_to_resolve_requests(stream: &mut fsys::ComponentResolverRequestStream) {
         let request = stream
             .next()
             .await
             .expect("did not get next request")
             .expect("error getting next request");
         match request {
-            fresolution::ResolverRequest::Resolve { component_url, responder } => {
+            fsys::ComponentResolverRequest::Resolve { component_url, responder } => {
                 match component_url.as_str() {
                     "fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm" => {
-                        responder.send(&mut Ok(fresolution::Component::EMPTY))
+                        responder.send(&mut Ok(fsys::Component::EMPTY))
                     }
                     "fuchsia-pkg://fuchsia.com/package-two#meta/comp.cm" => {
-                        responder.send(&mut Err(fresolution::ResolverError::ResourceUnavailable))
+                        responder.send(&mut Err(fsys::ResolverError::ResourceUnavailable))
                     }
-                    _ => responder.send(&mut Err(fresolution::ResolverError::Internal)),
+                    _ => responder.send(&mut Err(fsys::ResolverError::Internal)),
                 }
                 .expect("failed sending response");
             }
@@ -190,7 +188,7 @@ mod tests {
     // route to our hermetic resolver.
     async fn construct_test_realm(
         allowed_package_names: Arc<HashSet<String>>,
-        mock_universe_resolver: Arc<fresolution::ResolverProxy>,
+        mock_universe_resolver: Arc<fsys::ComponentResolverProxy>,
     ) -> Result<RealmInstance, RealmBuilderError> {
         // Set up a realm to test the hermetic resolver.
         let builder = RealmBuilder::new().await?;
@@ -212,7 +210,7 @@ mod tests {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol::<fresolution::ResolverMarker>())
+                    .capability(Capability::protocol::<fsys::ComponentResolverMarker>())
                     .from(&hermetic_resolver)
                     .to(Ref::parent()),
             )
@@ -227,7 +225,7 @@ mod tests {
         allowed.insert("package-one".to_string());
 
         let (resolver_proxy, mut resolver_request_stream) =
-            create_proxy_and_stream::<fresolution::ResolverMarker>()
+            create_proxy_and_stream::<fsys::ComponentResolverMarker>()
                 .expect("failed to create mock universe resolver proxy");
         let universe_resolver_task = fasync::Task::spawn(async move {
             respond_to_resolve_requests(&mut resolver_request_stream).await;
@@ -237,43 +235,47 @@ mod tests {
         let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
-        let hermetic_resolver_proxy =
-            realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
+        let hermetic_resolver_proxy = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<fsys::ComponentResolverMarker>()
+            .unwrap();
 
         assert_eq!(
             hermetic_resolver_proxy
                 .resolve("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm")
                 .await
                 .unwrap(),
-            Ok(fresolution::Component::EMPTY)
+            Ok(fsys::Component::EMPTY)
         );
         universe_resolver_task.await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_package_not_allowed() {
-        let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
+        let (resolver_proxy, _) = create_proxy_and_stream::<fsys::ComponentResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
 
         let realm = construct_test_realm(HashSet::new().into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
-        let hermetic_resolver_proxy =
-            realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
+        let hermetic_resolver_proxy = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<fsys::ComponentResolverMarker>()
+            .unwrap();
 
         assert_eq!(
             hermetic_resolver_proxy
                 .resolve("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm")
                 .await
                 .unwrap(),
-            Err(fresolution::ResolverError::PackageNotFound)
+            Err(fsys::ResolverError::PackageNotFound)
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_failed_resolve() {
         let (resolver_proxy, mut resolver_request_stream) =
-            create_proxy_and_stream::<fresolution::ResolverMarker>()
+            create_proxy_and_stream::<fsys::ComponentResolverMarker>()
                 .expect("failed to create mock universe resolver proxy");
         let universe_resolver_task = fasync::Task::spawn(async move {
             respond_to_resolve_requests(&mut resolver_request_stream).await;
@@ -286,22 +288,24 @@ mod tests {
         let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
-        let hermetic_resolver_proxy =
-            realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
+        let hermetic_resolver_proxy = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<fsys::ComponentResolverMarker>()
+            .unwrap();
 
         assert_eq!(
             hermetic_resolver_proxy
                 .resolve("fuchsia-pkg://fuchsia.com/package-two#meta/comp.cm")
                 .await
                 .unwrap(),
-            Err(fresolution::ResolverError::ResourceUnavailable)
+            Err(fsys::ResolverError::ResourceUnavailable)
         );
         universe_resolver_task.await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_url() {
-        let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
+        let (resolver_proxy, _) = create_proxy_and_stream::<fsys::ComponentResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
 
         let mut allowed = HashSet::new();
@@ -310,12 +314,14 @@ mod tests {
         let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
-        let hermetic_resolver_proxy =
-            realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
+        let hermetic_resolver_proxy = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<fsys::ComponentResolverMarker>()
+            .unwrap();
 
         assert_eq!(
             hermetic_resolver_proxy.resolve("invalid_url").await.unwrap(),
-            Err(fresolution::ResolverError::InvalidArgs)
+            Err(fsys::ResolverError::InvalidArgs)
         );
     }
 

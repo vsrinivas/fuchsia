@@ -8,8 +8,7 @@ use {
         HERMETIC_TESTS_COLLECTION, TEST_TYPE_REALM_MAP,
     },
     anyhow::format_err,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
-    fidl_fuchsia_data as fdata,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
 };
 
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
@@ -21,7 +20,7 @@ pub(crate) struct SuiteFacets {
 
 pub(crate) async fn get_suite_facets(
     test_url: &str,
-    resolver: &fresolution::ResolverProxy,
+    resolver: &fsys::ComponentResolverProxy,
 ) -> Result<SuiteFacets, LaunchTestError> {
     let component = resolver
         .resolve(test_url)

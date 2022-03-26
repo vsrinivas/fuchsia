@@ -936,7 +936,7 @@
             from: "#vboot-fwparam",
         },
         {
-            protocol: "fuchsia.component.resolution.Resolver",
+            protocol: "fuchsia.sys2.ComponentResolver",
             from: "#base_resolver",
         },
         {

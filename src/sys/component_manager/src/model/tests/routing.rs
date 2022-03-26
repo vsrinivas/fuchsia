@@ -44,8 +44,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -1994,9 +1994,7 @@ async fn use_resolver_from_parent_environment() {
                 }))
                 .resolver(ResolverDecl {
                     name: "base".into(),
-                    source_path: Some(
-                        "/svc/fuchsia.component.resolution.Resolver".parse().unwrap(),
-                    ),
+                    source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                 })
                 .build(),
         ),
@@ -2004,12 +2002,12 @@ async fn use_resolver_from_parent_environment() {
 
     // Set up the system.
     let (resolver_service, mut receiver) =
-        create_service_directory_entry::<fresolution::ResolverMarker>();
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "c" exposes a resolver service.
         .add_outgoing_path(
             "c",
-            CapabilityPath::try_from("/svc/fuchsia.component.resolution.Resolver").unwrap(),
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
             resolver_service,
         )
         .build()
@@ -2022,13 +2020,13 @@ async fn use_resolver_from_parent_environment() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
                 receiver.next().await
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
                             fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
@@ -2036,7 +2034,7 @@ async fn use_resolver_from_parent_environment() {
                             .unwrap(),
                         )),
                         package: None,
-                        ..fresolution::Component::EMPTY
+                        ..fsys::Component::EMPTY
                     }))
                     .expect("failed to send resolve response");
             }
@@ -2072,9 +2070,7 @@ async fn use_resolver_from_grandparent_environment() {
                 )
                 .resolver(ResolverDecl {
                     name: "base".into(),
-                    source_path: Some(
-                        "/svc/fuchsia.component.resolution.Resolver".parse().unwrap(),
-                    ),
+                    source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
                 })
                 .build(),
         ),
@@ -2088,12 +2084,12 @@ async fn use_resolver_from_grandparent_environment() {
 
     // Set up the system.
     let (resolver_service, mut receiver) =
-        create_service_directory_entry::<fresolution::ResolverMarker>();
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "c" exposes a resolver service.
         .add_outgoing_path(
             "a",
-            CapabilityPath::try_from("/svc/fuchsia.component.resolution.Resolver").unwrap(),
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
             resolver_service,
         )
         .build()
@@ -2109,13 +2105,13 @@ async fn use_resolver_from_grandparent_environment() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
                 receiver.next().await
             {
                 assert_eq!(component_url, "base://c");
                 responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://c".into()),
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://c".into()),
                         decl: Some(fmem::Data::Bytes(
                             fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
@@ -2123,7 +2119,7 @@ async fn use_resolver_from_grandparent_environment() {
                             .unwrap(),
                         )),
                         package: None,
-                        ..fresolution::Component::EMPTY
+                        ..fsys::Component::EMPTY
                     }))
                     .expect("failed to send resolve response");
             }
@@ -2157,19 +2153,19 @@ async fn resolver_is_not_available() {
             )
             .resolver(ResolverDecl {
                 name: "base".into(),
-                source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+                source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
             })
             .build(),
     )];
 
     // Set up the system.
     let (resolver_service, mut receiver) =
-        create_service_directory_entry::<fresolution::ResolverMarker>();
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "c" exposes a resolver service.
         .add_outgoing_path(
             "a",
-            CapabilityPath::try_from("/svc/fuchsia.component.resolution.Resolver").unwrap(),
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
             resolver_service,
         )
         .build()
@@ -2194,13 +2190,13 @@ async fn resolver_is_not_available() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
                 receiver.next().await
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
                             fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
@@ -2208,7 +2204,7 @@ async fn resolver_is_not_available() {
                             .unwrap(),
                         )),
                         package: None,
-                        ..fresolution::Component::EMPTY
+                        ..fsys::Component::EMPTY
                     }))
                     .expect("failed to send resolve response");
             }
@@ -2240,19 +2236,19 @@ async fn resolver_component_decl_is_validated() {
             )
             .resolver(ResolverDecl {
                 name: "base".into(),
-                source_path: Some("/svc/fuchsia.component.resolution.Resolver".parse().unwrap()),
+                source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
             })
             .build(),
     )];
 
     // Set up the system.
     let (resolver_service, mut receiver) =
-        create_service_directory_entry::<fresolution::ResolverMarker>();
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "a" exposes a resolver service.
         .add_outgoing_path(
             "a",
-            CapabilityPath::try_from("/svc/fuchsia.component.resolution.Resolver").unwrap(),
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
             resolver_service,
         )
         .build()
@@ -2276,13 +2272,13 @@ async fn resolver_component_decl_is_validated() {
         },
         // Wait for a request, and resolve it.
         async {
-            while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
                 receiver.next().await
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(&mut Ok(fresolution::Component {
-                        url: Some("test://b".into()),
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes({
                             let mut fidl = fdecl::Component {
                                 exposes: Some(vec![fdecl::Expose::Protocol(
@@ -2302,7 +2298,7 @@ async fn resolver_component_decl_is_validated() {
                             .unwrap()
                         })),
                         package: None,
-                        ..fresolution::Component::EMPTY
+                        ..fsys::Component::EMPTY
                     }))
                     .expect("failed to send resolve response");
             }

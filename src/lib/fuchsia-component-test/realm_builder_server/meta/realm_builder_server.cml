@@ -7,7 +7,7 @@
     capabilities: [
         {
             resolver: "realm_builder_resolver",
-            path: "/svc/fuchsia.component.resolution.Resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
         },
         {
             runner: "realm_builder",
@@ -15,10 +15,10 @@
         },
         {
             protocol: [
-                "fuchsia.component.resolution.Resolver",
                 "fuchsia.component.runner.ComponentRunner",
                 "fuchsia.component.test.RealmBuilder",
                 "fuchsia.component.test.RealmBuilderFactory",
+                "fuchsia.sys2.ComponentResolver",
             ],
         },
     ],
@@ -41,10 +41,10 @@
         },
         {
             protocol: [
-                "fuchsia.component.resolution.Resolver",
                 "fuchsia.component.runner.ComponentRunner",
                 "fuchsia.component.test.RealmBuilder",
                 "fuchsia.component.test.RealmBuilderFactory",
+                "fuchsia.sys2.ComponentResolver",
             ],
             from: "self",
         },

@@ -5,12 +5,9 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_resolution::{
-        self as fresolution, ResolverRequest, ResolverRequestStream,
-    },
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
+    fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_url::{
         errors::{ParseError as PkgUrlParseError, ResourcePathError},
@@ -25,7 +22,7 @@ use {
 async fn main() -> anyhow::Result<()> {
     info!("started");
     let mut service_fs = ServiceFs::new_local();
-    service_fs.dir("svc").add_fidl_service(|stream: ResolverRequestStream| stream);
+    service_fs.dir("svc").add_fidl_service(|stream: ComponentResolverRequestStream| stream);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
     service_fs
         .for_each_concurrent(None, |stream| async move {
@@ -39,10 +36,10 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
+async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
     let package_resolver = connect_to_protocol::<PackageResolverMarker>()
         .context("failed to connect to PackageResolver service")?;
-    while let Some(ResolverRequest::Resolve { component_url, responder }) =
+    while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
         match resolve_component(&component_url, &package_resolver).await {
@@ -60,7 +57,7 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
 async fn resolve_component(
     component_url: &str,
     package_resolver: &PackageResolverProxy,
-) -> Result<fresolution::Component, ResolverError> {
+) -> Result<fsys::Component, ResolverError> {
     let package_url = PkgUrl::parse(component_url)?;
     let cm_path = package_url.resource().ok_or_else(|| {
         ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath(
@@ -97,16 +94,16 @@ async fn resolve_component(
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
-    Ok(fresolution::Component {
-        url: Some(component_url.into()),
+    Ok(fsys::Component {
+        resolved_url: Some(component_url.into()),
         decl: Some(data),
-        package: Some(fresolution::Package {
-            url: Some(package_url.root_url().to_string()),
-            directory: Some(package_dir),
-            ..fresolution::Package::EMPTY
+        package: Some(fsys::Package {
+            package_url: Some(package_url.root_url().to_string()),
+            package_dir: Some(package_dir),
+            ..fsys::Package::EMPTY
         }),
         config_values,
-        ..fresolution::Component::EMPTY
+        ..fsys::Component::EMPTY
     })
 }
 
@@ -160,26 +157,22 @@ enum ResolverError {
     UnsupportedConfigStrategy(fdecl::ConfigValueSource),
 }
 
-impl From<ResolverError> for fresolution::ResolverError {
-    fn from(err: ResolverError) -> fresolution::ResolverError {
+impl From<ResolverError> for fsys::ResolverError {
+    fn from(err: ResolverError) -> fsys::ResolverError {
         match err {
-            ResolverError::Internal => fresolution::ResolverError::Internal,
-            ResolverError::InvalidUrl(_) => fresolution::ResolverError::InvalidArgs,
-            ResolverError::ManifestNotFound { .. } => fresolution::ResolverError::ManifestNotFound,
-            ResolverError::ConfigValuesNotFound { .. } => {
-                fresolution::ResolverError::ConfigValuesNotFound
-            }
-            ResolverError::PackageNotFound => fresolution::ResolverError::PackageNotFound,
+            ResolverError::Internal => fsys::ResolverError::Internal,
+            ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
+            ResolverError::ManifestNotFound { .. } => fsys::ResolverError::ManifestNotFound,
+            ResolverError::ConfigValuesNotFound { .. } => fsys::ResolverError::ConfigValuesNotFound,
+            ResolverError::PackageNotFound => fsys::ResolverError::PackageNotFound,
             ResolverError::ReadingManifest(_) | ResolverError::IoError(_) => {
-                fresolution::ResolverError::Io
+                fsys::ResolverError::Io
             }
-            ResolverError::NoSpace => fresolution::ResolverError::NoSpace,
-            ResolverError::Unavailable => fresolution::ResolverError::ResourceUnavailable,
+            ResolverError::NoSpace => fsys::ResolverError::NoSpace,
+            ResolverError::Unavailable => fsys::ResolverError::ResourceUnavailable,
             ResolverError::ParsingManifest(..)
             | ResolverError::MissingConfigSource
-            | ResolverError::UnsupportedConfigStrategy(..) => {
-                fresolution::ResolverError::InvalidManifest
-            }
+            | ResolverError::UnsupportedConfigStrategy(..) => fsys::ResolverError::InvalidManifest,
         }
     }
 }
@@ -192,9 +185,9 @@ mod tests {
         assert_matches::assert_matches,
         fidl::{encoding::encode_persistent_with_context, endpoints::ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_component_resolution::ResolverMarker,
         fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
         fidl_fuchsia_pkg::{PackageResolverRequest, PackageResolverRequestStream},
+        fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
         fuchsia_component_test::{
@@ -253,7 +246,7 @@ mod tests {
         url: String,
         handles: LocalComponentHandles,
     ) -> Result<(), Error> {
-        let resolver_proxy = handles.connect_to_protocol::<ResolverMarker>()?;
+        let resolver_proxy = handles.connect_to_protocol::<ComponentResolverMarker>()?;
         let _ = resolver_proxy.resolve(&url).await?;
         fasync::Task::local(async move {
             let mut lock = trigger.lock().await;
@@ -319,9 +312,7 @@ mod tests {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name(
-                        "fuchsia.component.resolution.Resolver",
-                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.sys2.ComponentResolver"))
                     .from(&universe_resolver)
                     .to(&requesting_component),
             )
@@ -431,7 +422,7 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Ok(fresolution::Component {
+                Ok(fsys::Component {
                     decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
                     ..
                 })
@@ -516,7 +507,7 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Ok(fresolution::Component { decl: Some(fmem::Data::Buffer(_)), .. })
+                Ok(fsys::Component { decl: Some(fmem::Data::Buffer(_)), .. })
             );
         };
         join!(server, client);
@@ -647,7 +638,7 @@ mod tests {
             resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
                 .await
                 .unwrap(),
-            fresolution::Component {
+            fsys::Component {
                 decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
                 config_values: Some(fidl_fuchsia_mem::Data::Buffer(
                     fidl_fuchsia_mem::Buffer { .. }

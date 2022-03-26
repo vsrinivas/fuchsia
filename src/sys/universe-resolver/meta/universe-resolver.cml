@@ -10,15 +10,15 @@
     capabilities: [
         {
             resolver: "full-resolver",
-            path: "/svc/fuchsia.component.resolution.Resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
         },
-        { protocol: "fuchsia.component.resolution.Resolver" },
+        { protocol: "fuchsia.sys2.ComponentResolver" },
     ],
     use: [
         {
             protocol: [
-                "fuchsia.component.resolution.Resolver",
                 "fuchsia.pkg.PackageResolver",
+                "fuchsia.sys2.ComponentResolver",
             ],
         },
     ],
@@ -28,7 +28,7 @@
             from: "self",
         },
         {
-            protocol: "fuchsia.component.resolution.Resolver",
+            protocol: "fuchsia.sys2.ComponentResolver",
             from: "self",
         },
     ],

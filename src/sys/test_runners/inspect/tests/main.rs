@@ -73,7 +73,7 @@ async fn run_test(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
-                .capability(Capability::protocol_by_name("fuchsia.component.resolution.Resolver"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.ComponentResolver"))
                 .from(Ref::parent())
                 .to(&test_manager),
         )

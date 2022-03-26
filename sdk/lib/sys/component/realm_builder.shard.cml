@@ -19,7 +19,7 @@
             to: [ "#realm_builder" ],
         },
         {
-            protocol: "fuchsia.component.resolution.Resolver",
+            protocol: "fuchsia.sys2.ComponentResolver",
             from: "#realm_builder_server",
             as: "fuchsia.component.resolver.RealmBuilder",
             to: [ "#realm_builder" ],

@@ -796,7 +796,7 @@ async fn enumerate_huge_test() {
 }
 
 // TODO(76568): Write tests for hermetic collection once we remove system capabilities from its
-// namespace. This test is able to test that "system-tests" collection has the Resolver
+// namespace. This test is able to test that "system-tests" collection has the ComponentResolver
 // service, which is not available to the hermetic collection.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_non_hermetic_test() {
