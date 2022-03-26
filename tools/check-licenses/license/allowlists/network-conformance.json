@@ -1,0 +1,15 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "third_party\/network-conformance\/.*"
+                ],
+                "patterns": [
+                    "network-conformance.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}

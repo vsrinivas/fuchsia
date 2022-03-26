@@ -1,0 +1,15 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "third_party\/libpng\/.*"
+                ],
+                "patterns": [
+                    "libpng2.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}

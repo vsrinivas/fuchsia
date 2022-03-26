@@ -1,0 +1,15 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "third_party\/openthread\/.*"
+                ],
+                "patterns": [
+                    "openthread.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}

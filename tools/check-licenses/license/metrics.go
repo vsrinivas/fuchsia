@@ -11,6 +11,7 @@ type LicenseMetrics struct {
 
 const (
 	NumPatterns          = "Number of Unique License Patterns"
+	NumUnusedPatterns    = "Number of Unused Patterns"
 	UnrecognizedLicenses = "Number of Unrecognized License Texts"
 	DuplicateLicenseText = "Number of Duplicate license texts"
 

@@ -1,0 +1,15 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "third_party\/rust_crates\/.*"
+                ],
+                "patterns": [
+                    "unlicense.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}

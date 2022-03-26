@@ -15,7 +15,7 @@ import (
 
 type SearchResult struct {
 	LicenseData *file.FileData
-	Patterns    []*Pattern
+	Pattern     *Pattern
 }
 
 // Search each data slice in the given file for license texts.
@@ -42,12 +42,6 @@ func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 	// Run the license patterns on the parsed license texts.
 	// Save the match results to a result object.
 	for _, d := range f.Data {
-
-		result := &SearchResult{
-			LicenseData: d,
-			Patterns:    make([]*Pattern, 0),
-		}
-
 		matches := make([]bool, len(patterns))
 		for i, p := range patterns {
 			// https://golang.org/doc/faq#closures_and_goroutines
@@ -76,17 +70,38 @@ func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 
 		matchFound := false
 		for i := range matches {
+			p := patterns[i]
 			if matches[i] {
-				result.Patterns = append(result.Patterns, patterns[i])
+				result := &SearchResult{
+					LicenseData: d,
+					Pattern:     p,
+				}
+				AllSearchResults = append(AllSearchResults, result)
+				searchResults = append(searchResults, result)
 				matchFound = true
+
+				// The "unrecognized" license pattern is put at the end of the list.
+				// If it is the only license that matched the text, that's bad.
+				// Record these instances in the metrics, so we can investigate later.
+				if patterns[i].Name == Unrecognized.Name {
+					plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.Path, d.LibraryName))
+				}
 			}
 		}
-		searchResults = append(searchResults, result)
 		if !matchFound {
 			plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.Path, d.LibraryName))
 		}
 	}
-
 	return searchResults, nil
+}
 
+// If a license pattern goes unused, it means that license pattern is no longer needed.
+// We should try to consolidate the license patterns down to the smallest necessary set.
+// Record these patterns here, so we can improve the tool.
+func RecordUnusedPatterns() {
+	for _, p := range AllPatterns {
+		if len(p.Matches) == 0 {
+			plusVal(NumUnusedPatterns, p.Name)
+		}
+	}
 }
