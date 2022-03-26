@@ -16,6 +16,7 @@ source_set("common") {
     "async-eventpair.h",
     "async-socket.cc",
     "async-socket.h",
+    "component-context.h",
     "controller-provider.cc",
     "controller-provider.h",
     "controller.cc",
@@ -42,16 +43,15 @@ source_set("common") {
   public_deps = [
     "../fidl:fuchsia.fuzzer",
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
-  ]
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
