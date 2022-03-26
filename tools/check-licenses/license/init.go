@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 )
@@ -15,18 +16,29 @@ import (
 var (
 	AllPatterns          []*Pattern
 	AllCopyrightPatterns []*Pattern
-	AllSearchResults     map[string]*SearchResult
+	AllSearchResults     []*SearchResult
+	AllowListPatternMap  map[string][]string
 
-	unrecognized *Pattern
+	Unrecognized *Pattern
+	Empty        *Pattern
 )
 
 func init() {
 	AllPatterns = make([]*Pattern, 0)
 	AllCopyrightPatterns = make([]*Pattern, 0)
-	AllSearchResults = make(map[string]*SearchResult, 0)
+	AllSearchResults = make([]*SearchResult, 0)
+	AllowListPatternMap = make(map[string][]string, 0)
 }
 
 func Initialize(c *LicenseConfig) error {
+	Config = c
+
+	for _, al := range Config.AllowLists {
+		for _, p := range al.Patterns {
+			AllowListPatternMap[p] = append(AllowListPatternMap[p], al.Projects...)
+		}
+	}
+
 	// Initialize all license patterns.
 	for _, pr := range c.PatternRoots {
 		for _, root := range pr.Paths {
@@ -36,26 +48,41 @@ func Initialize(c *LicenseConfig) error {
 		}
 	}
 
-	Config = c
+	// If the license file is 0 bytes, add it to the Empty pattern.
+	re, err := regexp.Compile(`(\A\z)`)
+	if err != nil {
+		return err
+	}
+	Empty = &Pattern{
+		Name:               "_empty",
+		Matches:            make([]*file.FileData, 0),
+		AllowList:          []string{".*"},
+		previousMatches:    make(map[string]bool),
+		previousMismatches: make(map[string]bool),
+		Re:                 re,
+	}
+	AllPatterns = append(AllPatterns, Empty)
 
 	// Unrecognized license texts won't be added to the resulting NOTICE file.
 	// This is good behavior, all texts should be recognized. But until we can add
 	// all the necessary license patterns, add all unrecognized texts to a catch-all
 	// pattern.
-	re, err := regexp.Compile("(?P<text>.*)")
+	re, err = regexp.Compile("(?P<text>.*)")
 	if err != nil {
 		return err
 	}
-	unrecognized = &Pattern{
+	Unrecognized = &Pattern{
 		Name:               "_unrecognized",
 		Matches:            make([]*file.FileData, 0),
+		AllowList:          []string{".*"},
 		previousMatches:    make(map[string]bool),
 		previousMismatches: make(map[string]bool),
-		re:                 re,
+		Re:                 re,
 	}
+
 	// TODO(jcecil): Remove this pattern from AllPatterns if/when
 	// we re-enable searching with all available patterns.
-	AllPatterns = append(AllPatterns, unrecognized)
+	AllPatterns = append(AllPatterns, Unrecognized)
 	return nil
 }
 
@@ -63,6 +90,11 @@ func patternsWalker(path string, info os.FileInfo, err error) error {
 	if info.IsDir() {
 		return nil
 	}
+
+	if !strings.HasSuffix(info.Name(), ".lic") {
+		return nil
+	}
+
 	pattern, err := NewPattern(path)
 	if err != nil {
 		return err

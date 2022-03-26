@@ -1,0 +1,16 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "third_party\/spirv-cross\/.*"
+                ],
+                "patterns": [
+                    "cca4.lic",
+                    "angle.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}

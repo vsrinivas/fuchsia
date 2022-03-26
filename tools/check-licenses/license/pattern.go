@@ -17,9 +17,31 @@ import (
 // Pattern contains a searchable regex pattern for finding license text
 // in source files and LICENSE files across the repository.
 type Pattern struct {
-	Name    string
+	// Name is the name of the license pattern file.
+	Name string
+
+	// Type is the type of license that this pattern matches.
+	// e.g. BSD, MIT, etc..
+	// This is set using the name of the parent folder where the pattern file lives.
+	Type string
+
+	// Category is the category that this license belongs to.
+	// Approved, Restricted, Allowlist_Only
+	// This is set using the name of the grandparent folder where the pattern file lives.
+	Category string
+
+	// AllowList is a string of regex patterns that match with project paths.
+	// This license pattern is only allowed to match with projects listed here.
+	AllowList []string
+
+	// Matches maintains a slice of pointers to the data fragments that it matched against.
+	// This is used in some templates in the result package, for grouping license texts
+	// by pattern type in the resulting NOTICE file.
 	Matches []*file.FileData
-	re      *regexp.Regexp
+
+	// The regex pattern.
+	// This is exported so the result package can save the pattern to disk at the end.
+	Re *regexp.Regexp
 
 	// Maps that keep track of previous successful and failed
 	// searches, keyed using filedata hash.
@@ -43,29 +65,63 @@ func NewPattern(path string) (*Pattern, error) {
 	}
 	regex := string(bytes)
 
+	// Remove any duplicate whitespace characters
+	regex = strings.Join(strings.Fields(regex), " ")
+
 	// Update regex to ignore multiple white spaces, newlines, comments.
-	// But first, trim whitespace away so we don't include unnecessary
-	// comment syntax.
-	regex = strings.Trim(regex, "\n ")
-	regex = strings.ReplaceAll(regex, "\n", `([\s\\#\*\/]|\^L)*`)
-	regex = strings.ReplaceAll(regex, " ", `([\s\\#\*\/]|\^L)*`)
+	regex = strings.ReplaceAll(regex, ` `, `([\s\\#\*\/]|\^L)*`)
+
+	// Surround the entire regex above in a capturing group.
+	//regex = fmt.Sprintf("(.*%s)", regex)
+
+	// Convert date strings to a regex that supports any date
+	dates := regexp.MustCompile(`(\D)[\d]{4}(\D)`)
+	regex = dates.ReplaceAllString(regex, "$1[\\d]{4}$2")
 
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
+	name := filepath.Base(path)
+
+	// Retrieve the license type (e.g. MIT, BSD) from the filepath.
+	licType := filepath.Base(filepath.Dir(path))
+
+	// Retrieve the license category (e.g. Approved, Restricted) from the filepath.
+	licCategory := filepath.Base(filepath.Dir(filepath.Dir(path)))
+
+	allowlist := make([]string, 0)
+	if licCategory == "approved" || licCategory == "notice" {
+		allowlist = append(allowlist, ".*")
+	} else if licCategory == "restricted" {
+		// No projects are allowed
+	} else {
+		// allowlist_only
+		if regexes, ok := AllowListPatternMap[name]; ok {
+			allowlist = append(allowlist, regexes...)
+		}
+	}
+
 	return &Pattern{
-		Name:               filepath.Base(path),
+		Name:               name,
+		Type:               licType,
+		Category:           licCategory,
+		AllowList:          allowlist,
 		Matches:            make([]*file.FileData, 0),
 		previousMatches:    make(map[string]bool),
 		previousMismatches: make(map[string]bool),
-		re:                 re,
+		Re:                 re,
 	}, nil
 }
 
 // Search the given data slice for text that matches this Pattern regex.
 func (p *Pattern) Search(d *file.FileData) bool {
+	// If the data is empty, and this pattern is "_empty", return true.
+	if len(d.Data) == 0 && p.Name == "_empty" {
+		return true
+	}
+
 	// If we've seen this data segment before, return the previous result.
 	// This should be faster than running the regex search.
 	if _, ok := p.previousMatches[d.Hash()]; ok {
@@ -75,9 +131,10 @@ func (p *Pattern) Search(d *file.FileData) bool {
 		return false
 	}
 
-	if m := p.re.FindSubmatch(d.Data); m != nil {
+	if m := p.Re.Find(d.Data); m != nil {
 		p.Matches = append(p.Matches, d)
 		p.previousMatches[d.Hash()] = true
+
 		return true
 	}
 	p.previousMismatches[d.Hash()] = true

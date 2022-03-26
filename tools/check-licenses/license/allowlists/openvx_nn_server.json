@@ -1,0 +1,15 @@
+{
+    "license": {
+        "allowlists": [
+            {
+                "paths": [
+                    "prebuilt\/openvx_nn_server\/.*"
+                ],
+                "patterns": [
+                    "google_authored.lic"
+                ],
+                "notes": []
+            }
+        ]
+    }
+}
