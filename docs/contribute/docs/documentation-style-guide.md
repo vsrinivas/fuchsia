@@ -66,6 +66,41 @@ Welcome to the [Fuchsia home page](www.fuchsia.dev).
 You can read more about reference style links in the external
 [Markdown Guide][markdown-reference-links].
 
+### Use correct links to different Fuchsia content
+
+In the Fuchsia documentation you can link to three types of contents:
+
+* `/docs/` - Link to documents that are in the `/docs/` directory of the Fuchsia
+  source tree. These links must link to a file with an `.md` extension. For
+  example, `/docs/concepts/README.md`.
+* Source code - Link to source code files that exist within the Fuchsia source
+  tree. These links can link to any file extension, but these files must exist
+  in the source tree. For example, `/src/sys/sysmgr/main.cc`.
+* Reference documentation - Links to auto-generated Fuchsia reference
+  documentation. 
+  * Most of the Fuchsia reference documentation doesn't exist in
+    the source tree, but is published on [fuchsia.dev][fuchsia-dev]. These links
+    must be used as fully qualified URLs. For example,
+    `https://fuchsia.dev/reference/fidl/fuchsia.io`.
+  * However, some Fuchsia reference documentation exists in the source
+    tree. These documents exist in `/docs/reference/` and are published in the
+    `https://fuchsia.dev/fuchsia-src/reference/` section. These links must link
+    to a file with an `.md` extension. For example,
+    `/docs/reference/syscalls/bti_create.md`.
+
+### Test your links before submitting a change
+
+Once you have created a valid markdown document, you should run `doc-checker`
+to ensure that your document uses valid links. When you try to submit a change
+that includes a `.md` file, Gerrit runs `doc-checker` and blocks submission if
+you have broken links.
+
+To run `doc-checker` locally, use the `fx format-code` tool:
+
+```posix-terminal
+fx format code
+```
+
 ## Headers
 
 ### Use sentence case for page and section titles
@@ -179,3 +214,4 @@ Update the [state header][sh]
 [google-dev-doc-style-guide]: https://developers.google.com/style
 [markdown-reference-links]: /docs/contribute/docs/markdown.md
 [external-link-example]: http://example.com
+[fuchsia-dev]: https://fuchsia.dev
