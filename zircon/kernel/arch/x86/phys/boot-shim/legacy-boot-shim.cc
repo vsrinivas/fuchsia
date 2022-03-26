@@ -22,7 +22,7 @@
 #include "stdout.h"
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
-  ConfigureStdout();
+  InitStdout();
 
   ApplyRelocations();
 

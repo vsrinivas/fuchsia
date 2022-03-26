@@ -50,7 +50,7 @@ class EntropyHandoff {
  private:
   crypto::EntropyPool pool_;
 
-  FILE* log_ = NullStdout();
+  FILE* log_ = PhysConsole::Get().null();
   bool has_valid_item_ = false;
 };
 

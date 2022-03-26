@@ -186,6 +186,7 @@ if (toolchain_environment == "kernel.phys32") {
     deps = [
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys:stdio",
+      "//zircon/kernel/phys:uart",
     ]
   }
 

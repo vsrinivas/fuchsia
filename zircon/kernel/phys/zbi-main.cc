@@ -15,13 +15,14 @@
 #include <ktl/span.h>
 #include <phys/main.h>
 #include <phys/stdio.h>
+#include <phys/uart.h>
 
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
-  // Initially set up stdout to write to the null uart driver.
-  ConfigureStdout();
+  // Initially set up stdout to write to nowhere.
+  InitStdout();
 
   // Scan through the ZBI looking for items that configure the serial console.
   // Note that as each item is encountered, it resets uart to the appropriate
@@ -59,7 +60,7 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Note we don't do this after parsing ZBI items and before parsing command
   // line options, because if kernel.serial overrode what the ZBI items said,
   // we shouldn't be sending output to the wrong UART in between.
-  ConfigureStdout(boot_opts.serial);
+  SetUartConsole(boot_opts.serial);
 
   // The global is a pointer just for uniformity between the code in phys and
   // in the kernel proper.

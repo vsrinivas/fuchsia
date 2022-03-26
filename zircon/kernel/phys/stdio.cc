@@ -10,24 +10,22 @@
 
 #include <phys/stdio.h>
 
-FILE gNullStdout([](void*, ktl::string_view s) -> int { return static_cast<int>(s.length()); },
-                 nullptr);
-
 FILE FILE::stdout_;
 
-UartDriver& GetUartDriver() {
-  static UartDriver uart;
-  return uart;
+PhysConsole::PhysConsole()
+    : null_{[](void*, ktl::string_view s) -> int { return static_cast<int>(s.length()); }, nullptr},
+      mux_files_{} {}
+
+PhysConsole& PhysConsole::Get() {
+  static PhysConsole gConsole;
+  return gConsole;
 }
 
-void ConfigureStdout(const uart::all::Driver& uart) {
-  GetUartDriver() = uart;
-  GetUartDriver().Visit([](auto&& driver) {
-    driver.Init();
+void InitStdout() { FILE::stdout_ = PhysConsole::Get().mux_; }
 
-    // Update stdout global to write to the configured driver.
-    FILE::stdout_ = FILE{&driver};
-  });
+void PhysConsole::SetMux(size_t idx, const FILE& f) {
+  mux_files_[idx] = f;
+  mux_.files()[idx] = &mux_files_[idx];
 }
 
 void debugf(const char* fmt, ...) {

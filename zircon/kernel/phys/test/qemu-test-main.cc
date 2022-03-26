@@ -10,6 +10,7 @@
 
 #include <phys/main.h>
 #include <phys/stdio.h>
+#include <phys/uart.h>
 
 #include "test-main.h"
 
@@ -17,8 +18,10 @@ void PhysMain(void* bootloader_data, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();
 
+  InitStdout();
+
   static uart::qemu::KernelDriver<> uart;
-  ConfigureStdout(uart.uart());
+  SetUartConsole(uart.uart());
 
   // Early boot may have filled the screen with logs. Add a newline to
   // terminate any previous line, and another newline to leave a blank.

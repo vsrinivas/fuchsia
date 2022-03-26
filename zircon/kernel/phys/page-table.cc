@@ -15,6 +15,7 @@
 #include <ktl/type_traits.h>
 #include <phys/page-table.h>
 #include <phys/stdio.h>
+#include <phys/uart.h>
 
 void MapUart(page_table::AddressSpaceBuilderInterface& builder, memalloc::Pool& pool) {
   // Meets the signature expected of uart::BasicIoProvider's constructor.

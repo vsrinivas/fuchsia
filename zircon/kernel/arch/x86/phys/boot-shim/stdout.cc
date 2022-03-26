@@ -9,14 +9,14 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/word-view.h>
 
-#include <phys/stdio.h>
+#include <phys/uart.h>
 
 // Pure Multiboot loaders like QEMU provide no means of information about the
 // serial port, just the command line.  So parse it just for kernel.serial.
 void StdoutFromCmdline(ktl::string_view cmdline) {
   BootOptions boot_opts;
   boot_opts.SetMany(cmdline);
-  ConfigureStdout(boot_opts.serial);
+  SetUartConsole(boot_opts.serial);
 
   // We only use boot-options parsing for kernel.serial and ignore the rest.
   // But it destructively scrubs the RedactedHex input so we have to undo that.

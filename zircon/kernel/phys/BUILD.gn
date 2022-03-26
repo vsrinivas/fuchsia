@@ -161,6 +161,7 @@ if (toolchain_environment == "kernel.phys" ||
     deps = [
       ":main",
       ":stdio",
+      ":uart",
       ":zbi-memory",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
@@ -229,7 +230,8 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/kernel/phys/lib/page-table",
     ]
     deps = [
-      "//zircon/kernel/phys:stdio",
+      ":stdio",
+      ":uart",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/system/ulib/uart",
     ]
@@ -240,12 +242,31 @@ if (toolchain_environment == "kernel.phys" ||
 
     public_configs = [ ":includes" ]
 
-    sources = [ "stdio.cc" ]
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
 
-    public_deps = [ "//zircon/system/ulib/uart" ]
+    deps = [ "//zircon/kernel/lib/boot-options" ]
+
+    sources = [ "stdio.cc" ]
+  }
+
+  source_set("uart") {
+    public = [ "include/phys/uart.h" ]
+
+    public_configs = [ ":includes" ]
+
+    sources = [ "uart.cc" ]
+
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/uart",
+    ]
 
     deps = [
-      "//zircon/kernel/lib/boot-options",
+      ":stdio",
       "//zircon/system/ulib/uart",
     ]
   }
@@ -429,6 +450,7 @@ zbi_executable("physboot") {
     ":main",
     ":stdio",
     ":symbolize",
+    ":uart",
     "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
