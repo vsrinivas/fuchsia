@@ -105,9 +105,13 @@ zx::status<zx_paddr_t> GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_padd
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  // Lookup the physical address of this page in the VMO.
-  zx_gpaddr_t offset = guest_paddr - mapping->base();
   zx_paddr_t host_paddr;
+  zx_gpaddr_t offset;
+  {
+    Guard<Mutex> guard(mapping->lock());
+    offset = guest_paddr - mapping->base() + mapping->object_offset_locked();
+  }
+
   zx_status_t status =
       mapping->vmo()->GetPageBlocking(offset, kPfFlags, nullptr, nullptr, &host_paddr);
   if (status != ZX_OK) {
@@ -162,8 +166,13 @@ zx::status<uint> GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr) 
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  zx_gpaddr_t offset = guest_paddr - mapping->base();
   uint mmu_flags;
+  zx_gpaddr_t offset;
+  {
+    Guard<Mutex> guard(mapping->lock());
+    offset = guest_paddr - mapping->base() + mapping->object_offset_locked();
+  }
+
   zx_status_t status = mapping->aspace()->arch_aspace().Query(offset, nullptr, &mmu_flags);
   if (status != ZX_OK) {
     return zx::error(status);

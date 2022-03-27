@@ -227,6 +227,56 @@ static bool guest_physical_address_space_unmap_range_sub_region() {
   END_TEST;
 }
 
+static bool guest_phyiscal_address_single_vmo_multiple_mappings() {
+  BEGIN_TEST;
+
+  if (!hypervisor_supported()) {
+    return true;
+  }
+
+  AutoVmScannerDisable scanner_disable;
+
+  // Setup.
+  auto gpas = create_gpas();
+  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = create_vmo(PAGE_SIZE * 4, &vmo);
+  EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
+
+  // Map a single page of this four page VMO at offset 0x1000 and offset 0x3000.
+  fbl::RefPtr<VmMapping> mapping;
+  status = gpas->RootVmar()->CreateVmMapping(PAGE_SIZE, PAGE_SIZE, 0 /* align_pow2 */,
+                                             VMAR_FLAG_SPECIFIC, vmo, PAGE_SIZE, kMmuFlags, "vmo",
+                                             &mapping);
+  EXPECT_EQ(ZX_OK, status, "Failed to create first mapping\n");
+  status = gpas->RootVmar()->CreateVmMapping(PAGE_SIZE * 3, PAGE_SIZE, 0 /* align_pow2 */,
+                                             VMAR_FLAG_SPECIFIC, vmo, PAGE_SIZE * 3, kMmuFlags,
+                                             "vmo", &mapping);
+  EXPECT_EQ(ZX_OK, status, "Failed to create second mapping\n");
+
+  status = commit_vmo(vmo);
+  EXPECT_EQ(ZX_OK, status, "Failed to commit VMO\n");
+
+  // No mapping at 0x0 or 0x2000.
+  auto gpas_paddr = gpas->GetPage(0);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
+            "GetPage returning unexpected value for unmapped address\n");
+  gpas_paddr = gpas->GetPage(PAGE_SIZE * 2);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, gpas_paddr.status_value(),
+            "GetPage returning unexpected value for unmapped address\n");
+
+  // There is a mapping at 0x1000 and 0x3000.
+  gpas_paddr = gpas->GetPage(PAGE_SIZE);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
+  gpas_paddr = gpas->GetPage(PAGE_SIZE * 3);
+  EXPECT_EQ(ZX_OK, gpas_paddr.status_value(),
+            "Failed to read page from GuestPhysicalAddressSpace\n");
+
+  END_TEST;
+}
+
 static bool guest_physical_address_space_get_page() {
   BEGIN_TEST;
 
@@ -635,6 +685,7 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_outside_of_mapping)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_multiple_mappings)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_sub_region)
+HYPERVISOR_UNITTEST(guest_phyiscal_address_single_vmo_multiple_mappings)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_complex)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_not_present)
