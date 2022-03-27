@@ -207,6 +207,20 @@
       },
       "required": ["nominal_config", "state_transitions"]
     },
+    "thermal_state_format": {
+      "type": "object",
+      "properties": {
+        "state_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "effect_configs": {
+          "type": "object"
+        }
+      },
+      "required": [ "state_number", "effect_configs" ],
+      "additionalProperties": false
+    },
     "input_device_profile" : {
       "type": "object",
       "properties" : {
@@ -269,6 +283,10 @@
           {"$ref" : "#/definitions/thermal_policy_nominal_entry_format"}
         ]
       }
+    },
+    "thermal_states": {
+      "type" : "array",
+      "items": {"$ref" : "#/definitions/thermal_state_format" }
     }
   },
   "required": ["volume_curve"],
