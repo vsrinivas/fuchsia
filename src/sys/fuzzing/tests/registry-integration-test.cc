@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -17,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/testing/async-test.h"
+#include "src/sys/fuzzing/common/testing/integration-test-base.h"
 #include "src/sys/fuzzing/testing/runner.h"
 
 namespace fuzzing {
@@ -33,10 +31,10 @@ using fuchsia::fuzzer::RegistryPtr;
 const char* kFuzzerUrl = "an arbitrary string";
 
 // This class maintains the component context and connection to the fuzz-registry.
-class RegistryIntegrationTest : public AsyncTest {
+class RegistryIntegrationTest : public IntegrationTestBase {
  protected:
   void SetUp() override {
-    AsyncTest::SetUp();
+    IntegrationTestBase::SetUp();
     context_ = sys::ComponentContext::Create();
   }
 
@@ -46,25 +44,8 @@ class RegistryIntegrationTest : public AsyncTest {
     fidl::InterfaceHandle<Registrar> handle;
     auto status = context_->svc()->Connect(handle.NewRequest());
     ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    auto channel = handle.TakeChannel();
-
-    // Spawn the new process with the startup channel.
-    const char* argv[2] = {"/pkg/bin/component_fuzzing_test_fuzzer", nullptr};
-    fdio_spawn_action_t actions[] = {
-        {
-            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h =
-                {
-                    .id = PA_HND(PA_USER0, 0),
-                    .handle = channel.release(),
-                },
-        },
-    };
-    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr,
-                            sizeof(actions) / sizeof(actions[0]), actions,
-                            process_.reset_and_get_address(), err_msg);
-    ASSERT_EQ(status, ZX_OK) << err_msg;
+    auto result = Start("/pkg/bin/component_fuzzing_test_fuzzer", handle.TakeChannel());
+    ASSERT_TRUE(result.is_ok());
   }
 
   // Promises to connect the |controller| once a fuzzer is registered.
@@ -86,39 +67,11 @@ class RegistryIntegrationTest : public AsyncTest {
     registry_->Disconnect(kFuzzerUrl, bridge.completer.bind());
     return bridge.consumer.promise()
         .then([](Result<zx_status_t>& result) { return AsZxResult(result); })
-        .and_then([&, terminated =
-                          ZxFuture<zx_packet_signal_t>()](Context& context) mutable -> ZxResult<> {
-          if (!process_) {
-            return fpromise::ok();
-          }
-          if (!terminated) {
-            terminated = executor()->MakePromiseWaitHandle(zx::unowned_handle(process_.get()),
-                                                           ZX_PROCESS_TERMINATED);
-          }
-          if (!terminated(context)) {
-            return fpromise::pending();
-          }
-          if (terminated.is_error()) {
-            return fpromise::error(terminated.error());
-          }
-          zx_info_process_t info;
-          auto status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-          if (status != ZX_OK) {
-            return fpromise::error(status);
-          }
-          EXPECT_EQ(info.return_code, 0);
-          return fpromise::ok();
-        });
-  }
-
-  void TearDown() override {
-    process_.kill();
-    AsyncTest::TearDown();
+        .and_then(AwaitTermination());
   }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
-  zx::process process_;
   RegistryPtr registry_;
 };
 

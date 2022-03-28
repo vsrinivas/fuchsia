@@ -9,6 +9,8 @@ source_set("testing") {
     "async-test.h",
     "corpus-reader.cc",
     "corpus-reader.h",
+    "integration-test-base.cc",
+    "integration-test-base.h",
     "module.cc",
     "module.h",
     "monitor.cc",
@@ -26,6 +28,7 @@ source_set("testing") {
   public_deps = [
     "..:common",
     "//sdk/testing/fidl:test_support",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/sync",
   ]
 }
