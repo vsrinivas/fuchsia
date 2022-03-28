@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // In order to use config-data, we need to mark the test non-hermetic
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/factory_store_providers_test",
+    },
+    children: [
+        {
+            name: "factory_items",
+            url: "#meta/fake_factory_items.cm",
+        },
+        {
+            name: "factory_store_providers",
+            url: "#meta/factory_store_providers.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.boot.FactoryItems" ],
+            from: "#factory_items",
+        },
+        {
+            protocol: [ "fuchsia.factory.AlphaFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.factory.CastCredentialsFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.factory.PlayReadyFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.factory.WidevineFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#factory_items",
+                "#factory_store_providers",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.boot.FactoryItems" ],
+            from: "#factory_items",
+            to: [ "#factory_store_providers" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#factory_store_providers" ],
+            subdir: "factory_store_providers_tests",
+        },
+    ],
+}

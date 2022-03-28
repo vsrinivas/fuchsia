@@ -1,0 +1,60 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // TODO(fxbug.dev/91509): Make the test hermetic (offer config-data through resource)
+        // In order to use config-data, we need to mark the test non-hermetic
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/factory_store_providers_test",
+    },
+    children: [
+        {
+            name: "ext4_readonly",
+            url: "#meta/ext4_readonly.cm",
+        },
+        {
+            name: "factory_store_providers",
+            url: "#meta/factory_store_providers.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
+            ],
+            from: "#factory_store_providers",
+        },
+        {
+            protocol: [ "fuchsia.storage.ext4.Server" ],
+            from: "#ext4_readonly",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#factory_store_providers" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#factory_store_providers" ],
+            subdir: "factory_store_providers_ext4_tests",
+        },
+        {
+            protocol: [ "fuchsia.storage.ext4.Server" ],
+            from: "#ext4_readonly",
+            to: [ "#factory_store_providers" ],
+        },
+    ],
+}

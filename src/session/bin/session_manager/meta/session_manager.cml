@@ -58,8 +58,6 @@
                 "fuchsia.cobalt.SystemDataUpdater",
                 "fuchsia.device.NameProvider",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.feedback.DataProvider",
@@ -133,6 +131,19 @@
                 "google.deviceproperty.Reader",
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
+            ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via factory_store_providers.core_shard.cml.
+            protocol: [
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
             ],
             from: "parent",
             to: "#session",

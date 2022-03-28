@@ -41,7 +41,6 @@
         },
         {
             protocol: [
-                "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
@@ -49,6 +48,11 @@
             from: "self",
             to: [ "#weavestack" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+            to: [ "#weavestack" ],
         },
         {
             protocol: [
