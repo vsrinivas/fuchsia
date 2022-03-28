@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use argh::FromArgs;
 use cm_rust::FidlIntoNative;
-use config_client::cpp_elf::{create_cpp_elf_wrapper, CppSource};
+use config_client::cpp::{create_cpp_wrapper, CppSource, Flavor};
 use fidl::encoding::decode_persistent;
 use fidl_fuchsia_component_decl as fdecl;
 use std::{
@@ -16,10 +16,10 @@ use std::{
 };
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Generates a C++ ELF client library from a given manifest.
+/// Generates a C++ client library from a given manifest.
 /// This also requires a FIDL client library to be generated for the given manifest.
-#[argh(subcommand, name = "cpp_elf")]
-pub struct GenerateCppElfSource {
+#[argh(subcommand, name = "cpp")]
+pub struct GenerateCppSource {
     /// compiled manifest containing the config declaration
     #[argh(option)]
     cm: PathBuf,
@@ -39,9 +39,13 @@ pub struct GenerateCppElfSource {
     /// path to clang-format binary
     #[argh(option)]
     clang_format: PathBuf,
+
+    /// runner flavor to use ('elf' or 'driver')
+    #[argh(option)]
+    flavor: Flavor,
 }
 
-impl GenerateCppElfSource {
+impl GenerateCppSource {
     pub fn generate(self) -> Result<(), Error> {
         // load & parse the manifest
         let cm_raw = fs::read(self.cm).context("reading component manifest")?;
@@ -54,7 +58,7 @@ impl GenerateCppElfSource {
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
         let CppSource { h_source, cc_source } =
-            create_cpp_elf_wrapper(config_decl, self.namespace, self.fidl_library_name)
+            create_cpp_wrapper(config_decl, self.namespace, self.fidl_library_name, self.flavor)
                 .context("creating cpp elf wrapper")?;
 
         let formatted_cc_source = format_source(&self.clang_format, cc_source)?;

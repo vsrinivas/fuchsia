@@ -8,14 +8,18 @@ if (is_host) {
   rustc_library("config_client") {
     with_unit_tests = true
     sources = [
-      "src/cpp_elf.rs",
+      "src/cpp.rs",
       "src/fidl.rs",
       "src/lib.rs",
       "src/rust.rs",
     ]
     inputs = [
-      "templates/cpp_elf.cc.hbs",
       "templates/cpp_elf.h.hbs",
+      "templates/cpp_elf.cc.hbs",
+      "templates/cpp_driver.cc.hbs",
+      "templates/cpp_driver.h.hbs",
+      "templates/vmo_parse.cc.hbs",
+      "templates/helpers.cc.hbs",
     ]
     deps = [
       "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",

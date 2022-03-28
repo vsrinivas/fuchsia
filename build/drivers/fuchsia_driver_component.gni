@@ -24,9 +24,13 @@ import("//tools/cmc/build/cmc.gni")
 # Parameters
 #
 #   manifest (optional)
-#     The component manifest. If this is not present then this target will
+#     The component manifest. If this and `cm_target` are not present then this target will
 #     generate a component manifest for the driver.
 #     Type: path
+#   cm_target (optional)
+#     A `fuchsia_component_manifest` target. If this and `manifest` are not present then this
+#     target will generate a component manifest for the driver.
+#     Type: GN target
 #   is_v1_driver (optional)
 #     If this is true then the driver is a v1 driver and it will be placed in a
 #     compatibility shim when running in a DFv2 environment.
@@ -63,9 +67,11 @@ import("//tools/cmc/build/cmc.gni")
 template("fuchsia_driver_component") {
   if (current_toolchain == default_toolchain) {
     generate_manifest = true
-    if (defined(invoker.manifest)) {
+    if (defined(invoker.manifest) || defined(invoker.cm_target)) {
       generate_manifest = false
     }
+    assert(!(defined(invoker.manifest) && defined(invoker.cm_target)),
+           "`manifest` and `cm_target` cannot be defined simultaneously")
     is_v1_driver = true
     if (defined(invoker.is_v1_driver)) {
       is_v1_driver = invoker.is_v1_driver
@@ -187,9 +193,12 @@ template("fuchsia_driver_component") {
 
     fuchsia_component(target_name) {
       # TODO(fxbug.dev/80980): Remove check_includes = false.
-      check_includes = false
+      if (!defined(invoker.cm_target)) {
+        check_includes = false
+      }
       forward_variables_from(invoker,
                              [
+                               "cm_target",
                                "component_name",
                                "deps",
                                "manifest",

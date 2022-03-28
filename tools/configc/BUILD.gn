@@ -26,7 +26,7 @@ if (is_host) {
     ]
 
     sources = [
-      "src/client_cpp_elf.rs",
+      "src/client_cpp.rs",
       "src/client_fidl.rs",
       "src/client_rust.rs",
       "src/cvf.rs",
@@ -65,11 +65,21 @@ rust_config_client_lib_source("rust_config_lib") {
   testonly = true
 }
 
-cpp_elf_config_client_lib_source("cpp_elf_config_lib") {
+cpp_config_client_lib_source("cpp_elf_config_lib") {
   manifest_outputs = get_target_outputs(":config_manifest")
   compiled_manifest = manifest_outputs[0]
   fidl_library_name = "my.config.lib"
   deps = [ ":config_manifest" ]
+  flavor = "elf"
+  testonly = true
+}
+
+cpp_config_client_lib_source("cpp_driver_config_lib") {
+  manifest_outputs = get_target_outputs(":config_manifest")
+  compiled_manifest = manifest_outputs[0]
+  fidl_library_name = "my.config.lib"
+  deps = [ ":config_manifest" ]
+  flavor = "driver"
   testonly = true
 }
 
@@ -90,7 +100,7 @@ golden_file("rust_config_lib_golden_test") {
 }
 
 golden_file("cpp_elf_config_lib_cc_golden_test") {
-  golden = "goldens/config.cc.golden"
+  golden = "goldens/config.cc.elf.golden"
   lib_outputs = get_target_outputs(":cpp_elf_config_lib")
   current = lib_outputs[0]
   deps = [ ":cpp_elf_config_lib" ]
@@ -98,16 +108,34 @@ golden_file("cpp_elf_config_lib_cc_golden_test") {
 }
 
 golden_file("cpp_elf_config_lib_h_golden_test") {
-  golden = "goldens/config.h.golden"
+  golden = "goldens/config.h.elf.golden"
   lib_outputs = get_target_outputs(":cpp_elf_config_lib")
   current = lib_outputs[1]
   deps = [ ":cpp_elf_config_lib" ]
   testonly = true
 }
 
+golden_file("cpp_driver_config_lib_cc_golden_test") {
+  golden = "goldens/config.cc.driver.golden"
+  lib_outputs = get_target_outputs(":cpp_driver_config_lib")
+  current = lib_outputs[0]
+  deps = [ ":cpp_driver_config_lib" ]
+  testonly = true
+}
+
+golden_file("cpp_driver_config_lib_h_golden_test") {
+  golden = "goldens/config.h.driver.golden"
+  lib_outputs = get_target_outputs(":cpp_driver_config_lib")
+  current = lib_outputs[1]
+  deps = [ ":cpp_driver_config_lib" ]
+  testonly = true
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":cpp_driver_config_lib_cc_golden_test",
+    ":cpp_driver_config_lib_h_golden_test",
     ":cpp_elf_config_lib_cc_golden_test",
     ":cpp_elf_config_lib_h_golden_test",
     ":fidl_config_lib_golden_test",

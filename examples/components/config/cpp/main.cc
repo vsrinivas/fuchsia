@@ -20,7 +20,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ComponentInspector inspector(context.get());
-  c.record_to_inspect(&inspector);
+  c.record_to_inspect(inspector.inspector());
 
   loop.Run();
   return 0;

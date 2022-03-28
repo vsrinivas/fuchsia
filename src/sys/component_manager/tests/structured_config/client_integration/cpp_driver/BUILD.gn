@@ -23,6 +23,7 @@ fuchsia_driver("receiver_driver") {
   sources = [ "receiver.cc" ]
   deps = [
     ":receiver_bind",
+    ":receiver_config",
     ":test.structuredconfig.receiver.shim_llcpp",
     "//sdk/lib/sys/component/llcpp",
     "//sdk/lib/sys/cpp",
@@ -34,16 +35,26 @@ fuchsia_driver("receiver_driver") {
   ]
 }
 
-fuchsia_driver_component("receiver_component") {
+fuchsia_component_manifest("receiver_manifest") {
   testonly = true
   component_name = "cpp_driver_receiver"
   manifest = "meta/receiver.cml"
-  deps = [ ":receiver_driver" ]
-  info = "receiver-info.json"
   restricted_features = [
     "structured_config",
     "services",
   ]
+}
+
+fuchsia_driver_component("receiver_component") {
+  testonly = true
+  cm_target = ":receiver_manifest"
+  deps = [ ":receiver_driver" ]
+  info = "receiver-info.json"
+}
+
+fuchsia_structured_config_cpp_driver_lib("receiver_config") {
+  testonly = true
+  cm_target = ":receiver_manifest"
 }
 
 fuchsia_structured_config_values("values") {

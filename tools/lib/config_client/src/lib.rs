@@ -5,7 +5,7 @@
 //! Library for generating structured configuration accessors. Each generated
 //! language-specific library depends on the output of [`create_fidl_source`].
 
-pub mod cpp_elf;
+pub mod cpp;
 pub mod fidl;
 pub mod rust;
 

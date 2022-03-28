@@ -6,20 +6,59 @@ use crate::{normalize_field_key, SourceGenError};
 use cm_rust::{ConfigChecksum, ConfigDecl, ConfigField, ConfigNestedValueType, ConfigValueType};
 use handlebars::{handlebars_helper, Handlebars};
 use serde::Serialize;
+use std::str::FromStr;
 
-static CC_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.cc.hbs");
-static H_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.h.hbs");
+static CC_ELF_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.cc.hbs");
+static H_ELF_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.h.hbs");
+
+static CC_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.cc.hbs");
+static H_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.h.hbs");
+
+static HELPERS_SOURCE_TEMPLATE: &str = include_str!("../templates/helpers.cc.hbs");
+static VMO_PARSE_SOURCE_TEMPLATE: &str = include_str!("../templates/vmo_parse.cc.hbs");
 
 pub struct CppSource {
     pub cc_source: String,
     pub h_source: String,
 }
 
-pub fn create_cpp_elf_wrapper(
+#[derive(PartialEq, Debug)]
+pub enum Flavor {
+    ElfProcess,
+    Driver,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum FlavorParseError {
+    #[error("Unknown flavor '{_0}', expected 'elf' or 'driver'")]
+    UnknownFlavor(String),
+}
+
+impl FromStr for Flavor {
+    type Err = FlavorParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let string = s.to_ascii_lowercase();
+
+        match string.as_str() {
+            "elf" => Ok(Flavor::ElfProcess),
+            "driver" => Ok(Flavor::Driver),
+            _ => Err(FlavorParseError::UnknownFlavor(string)),
+        }
+    }
+}
+
+pub fn create_cpp_wrapper(
     config_decl: &ConfigDecl,
     cpp_namespace: String,
     fidl_library_name: String,
+    flavor: Flavor,
 ) -> Result<CppSource, SourceGenError> {
+    let (cc_source_template, h_source_template) = match flavor {
+        Flavor::ElfProcess => (CC_ELF_SOURCE_TEMPLATE, H_ELF_SOURCE_TEMPLATE),
+        Flavor::Driver => (CC_DRIVER_SOURCE_TEMPLATE, H_DRIVER_SOURCE_TEMPLATE),
+    };
+
     let vars = TemplateVars::from_decl(config_decl, cpp_namespace, fidl_library_name);
 
     let mut hbars = Handlebars::new();
@@ -31,8 +70,10 @@ pub fn create_cpp_elf_wrapper(
     hbars.register_helper("is_string", Box::new(is_string));
     hbars.register_helper("cpp_type", Box::new(cpp_type));
     hbars.register_helper("inspect_type", Box::new(inspect_type));
-    hbars.register_template_string("cc_source", CC_SOURCE_TEMPLATE).pretty_unwrap();
-    hbars.register_template_string("h_source", H_SOURCE_TEMPLATE).pretty_unwrap();
+    hbars.register_template_string("cc_source", cc_source_template).pretty_unwrap();
+    hbars.register_template_string("h_source", h_source_template).pretty_unwrap();
+    hbars.register_template_string("helpers", HELPERS_SOURCE_TEMPLATE).pretty_unwrap();
+    hbars.register_template_string("vmo_parse", VMO_PARSE_SOURCE_TEMPLATE).pretty_unwrap();
     let cc_source = hbars.render("cc_source", &vars).pretty_unwrap();
     let h_source = hbars.render("h_source", &vars).pretty_unwrap();
     Ok(CppSource { cc_source, h_source })

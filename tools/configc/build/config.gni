@@ -213,7 +213,7 @@ template("rust_config_client_lib_source") {
   }
 }
 
-# Generate the C++ ELF client library source files for a configuration declaration.
+# Generate the C++ client library source files for a configuration declaration.
 #
 # Parameters
 #
@@ -223,6 +223,10 @@ template("rust_config_client_lib_source") {
 #
 #   fidl_library_name (required)
 #     Name for the internal FIDL library.
+#     Type: string
+#
+#   flavor (required)
+#     Runner flavor for client library
 #     Type: string
 #
 #   namespace (optional)
@@ -235,11 +239,13 @@ template("rust_config_client_lib_source") {
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
-template("cpp_elf_config_client_lib_source") {
+template("cpp_config_client_lib_source") {
   assert(defined(invoker.compiled_manifest),
          "the path to a compiled component manifest must be specified")
   assert(defined(invoker.fidl_library_name),
          "the name of the internal FIDL library must be specified")
+  assert(defined(invoker.flavor),
+         "the flavor of the FIDL library must be specified ('elf' or 'driver')")
   if (defined(invoker.namespace)) {
     namespace = invoker.namespace
   } else {
@@ -269,7 +275,7 @@ template("cpp_elf_config_client_lib_source") {
     h_source_file_path = "${output_path}/config.h"
 
     args = [
-      "cpp_elf",
+      "cpp",
       "--cm",
       rebase_path(compiled_manifest, root_build_dir),
       "--output-path",
@@ -280,6 +286,8 @@ template("cpp_elf_config_client_lib_source") {
       invoker.fidl_library_name,
       "--clang-format",
       "${rebased_clang_prefix}/clang-format",
+      "--flavor",
+      invoker.flavor,
     ]
 
     outputs = [

@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   sys::ComponentInspector inspector(context.get());
-  c.record_to_inspect(&inspector);
+  c.record_to_inspect(inspector.inspector());
 
   PuppetImpl impl(c);
   fidl::Binding<test::structuredconfig::receiver::ConfigReceiverPuppet> binding(&impl);

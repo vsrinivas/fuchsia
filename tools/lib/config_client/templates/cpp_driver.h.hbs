@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/inspect/cpp/inspect.h>
 
 namespace {{cpp_namespace}} {
@@ -13,7 +14,7 @@ struct Config {
     {{(cpp_type type_)}} {{ident}};
   {{/each}}
 
-  static Config from_args() noexcept;
+  static Config from_args(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
 
   void record_to_inspect(inspect::Inspector * inspector);
 };
