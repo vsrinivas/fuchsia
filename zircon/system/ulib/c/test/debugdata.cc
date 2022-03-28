@@ -142,45 +142,6 @@ TEST(DebugDataTests, PublishDataWithoutSvc) {
   ASSERT_NO_FATAL_FAILURE(RunHelperWithoutSvc("publish_data", 0));
 }
 
-TEST(DebugDataTests, LoadConfig) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  fidl::ClientEnd<fuchsia_io::Directory> client_end;
-  DebugData svc;
-  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client_end));
-  ASSERT_OK(loop.StartThread("debugdata"));
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
-  ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
-
-  svc.configs.emplace(kTestName, std::move(vmo));
-
-  ASSERT_NO_FATAL_FAILURE(RunHelperWithSvc("load_config", std::move(client_end), 0));
-
-  loop.Shutdown();
-  vfs.reset();
-}
-
-TEST(DebugDataTests, LoadConfigNotFound) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  std::unique_ptr<fs::SynchronousVfs> vfs;
-  fidl::ClientEnd<fuchsia_io::Directory> client_end;
-  DebugData svc;
-  ASSERT_NO_FATAL_FAILURE(svc.Serve(loop.dispatcher(), &vfs, &client_end));
-  ASSERT_OK(loop.StartThread("debugdata"));
-
-  ASSERT_NO_FATAL_FAILURE(
-      RunHelperWithSvc("load_config", std::move(client_end), ZX_ERR_PEER_CLOSED));
-
-  loop.Shutdown();
-  vfs.reset();
-}
-
-TEST(DebugDataTests, LoadConfigWithoutSvc) {
-  ASSERT_NO_FATAL_FAILURE(RunHelperWithoutSvc("load_config", ZX_ERR_BAD_HANDLE));
-}
-
 // debugdata.cc cannot use LLCPP (because it allocates with new/delete) so
 // instead defines a local set of a few constants and structure definition in
 // fuchsia-io-constants.h to call fuchsia.io.Directory/Open(). Confirm that the

@@ -20,15 +20,6 @@ int main(int argc, char* argv[]) {
     ZX_ASSERT(vmo.write(kTestData, 0, sizeof(kTestData)) == ZX_OK);
     ZX_ASSERT(vmo.set_property(ZX_PROP_NAME, kTestName, sizeof(kTestName)) == ZX_OK);
     __sanitizer_publish_data(kTestName, vmo.release());
-  } else if (!strcmp(argv[1], "load_config")) {
-    zx::vmo vmo;
-    zx_status_t status = __sanitizer_get_configuration(kTestName, vmo.reset_and_get_address());
-    if (status != ZX_OK) {
-      return status;
-    }
-    uint8_t config[sizeof(kTestData)];
-    ZX_ASSERT(vmo.read(config, 0, sizeof(config)) == ZX_OK);
-    ZX_ASSERT(!memcmp(config, kTestData, sizeof(config)));
   } else {
     return 1;
   }

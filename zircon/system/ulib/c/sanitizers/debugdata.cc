@@ -84,48 +84,6 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* 
       handles, std::size(handles));
 }
 
-#if __has_feature(address_sanitizer)
-[[clang::no_sanitize("address")]]
-#endif
-zx_status_t
-_fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_name_data,
-                                       size_t config_name_size, zx_handle_t* out_config) {
-  if (config_name_size > fuchsia_debugdata_MAX_NAME) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigRequestMessage) +
-                               fuchsia_debugdata_MAX_NAME] = {};
-  fuchsia_debugdata_DebugDataLoadConfigRequestMessage* request =
-      (fuchsia_debugdata_DebugDataLoadConfigRequestMessage*)wr_bytes;
-  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
-  memset(&request->hdr, 0, sizeof(request->hdr));
-  request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.ordinal = fuchsia_debugdata_DebugDataLoadConfigOrdinal;
-  request->config_name.data = (char*)FIDL_ALLOC_PRESENT;
-  request->config_name.size = config_name_size;
-  memcpy(&wr_bytes[sizeof(*request)], config_name_data, config_name_size);
-  FIDL_ALIGNDECL char rd_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigResponseMessage)];
-  zx_channel_call_args_t args = {
-      .wr_bytes = wr_bytes,
-      .wr_handles = nullptr,
-      .rd_bytes = rd_bytes,
-      .rd_handles = out_config,
-      .wr_num_bytes =
-          static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataLoadConfigRequestMessage) +
-                                FIDL_ALIGN(config_name_size)),
-      .wr_num_handles = 0,
-      .rd_num_bytes = sizeof(fuchsia_debugdata_DebugDataLoadConfigResponseMessage),
-      .rd_num_handles = 1,
-  };
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  zx_status_t status =
-      _zx_channel_call(channel, 0u, ZX_TIME_INFINITE, &args, &actual_bytes, &actual_handles);
-  if (!actual_handles)
-    *out_config = ZX_HANDLE_INVALID;
-  return status;
-}
-
 zx_handle_t sanitizer_debugdata_connect() {
   zx_handle_t h0, h1;
   zx_status_t status;
@@ -182,18 +140,5 @@ zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
 
 __EXPORT
 zx_status_t __sanitizer_get_configuration(const char* name, zx_handle_t* out_vmo) {
-  if (__zircon_namespace_svc == ZX_HANDLE_INVALID) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-
-  zx_handle_t h = sanitizer_debugdata_connect();
-
-  zx_status_t status = _fuchsia_debugdata_DebugDataLoadConfig(h, name, strlen(name), out_vmo);
-  _zx_handle_close(h);
-  if (status != ZX_OK) {
-    constexpr const char kErrorLoadConfig[] = "Failed to get configuration file";
-    __sanitizer_log_write(kErrorLoadConfig, sizeof(kErrorLoadConfig) - 1);
-  }
-
-  return status;
+  return ZX_ERR_NOT_SUPPORTED;
 }
