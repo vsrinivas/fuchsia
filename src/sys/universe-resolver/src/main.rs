@@ -389,7 +389,7 @@ mod tests {
         let server = async move {
             let cm_bytes = encode_persistent_with_context(
                 &fidl::encoding::Context {
-                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
                 },
                 &mut fdecl::Component::EMPTY.clone(),
             )
@@ -438,7 +438,7 @@ mod tests {
         let server = async move {
             let cm_bytes = encode_persistent_with_context(
                 &fidl::encoding::Context {
-                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
                 },
                 &mut fdecl::Component::EMPTY.clone(),
             )
@@ -479,7 +479,7 @@ mod tests {
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
                     "test.cm" => vfs::file::vmo::read_only(|| async move {
-                        let cm_bytes = encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component::EMPTY.clone())
+                        let cm_bytes = encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V2},&mut fdecl::Component::EMPTY.clone())
                             .expect("failed to encode ComponentDecl FIDL");
                         let capacity = cm_bytes.len() as u64;
                         let vmo = Vmo::create(capacity)?;
@@ -610,7 +610,7 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fdecl::Component {
                 config: Some(fdecl::ConfigSchema {
                     value_source: Some(fdecl::ConfigValueSource::PackagePath(
@@ -623,7 +623,7 @@ mod tests {
         )
         .expect("failed to encode ComponentDecl FIDL");
         let cvf_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY },
         )
         .expect("failed to encode ValuesData FIDL");
@@ -653,7 +653,7 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fdecl::Component {
                 config: Some(fdecl::ConfigSchema {
                     value_source: Some(fdecl::ConfigValueSource::PackagePath(
@@ -684,7 +684,7 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fdecl::Component {
                 config: Some(fdecl::ConfigSchema { ..fdecl::ConfigSchema::EMPTY }),
                 ..fdecl::Component::EMPTY
@@ -692,7 +692,7 @@ mod tests {
         )
         .expect("failed to encode ComponentDecl FIDL");
         let cvf_bytes = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY },
         )
         .expect("failed to encode ValuesData FIDL");
