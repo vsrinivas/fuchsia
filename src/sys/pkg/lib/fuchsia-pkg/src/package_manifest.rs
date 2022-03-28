@@ -184,8 +184,11 @@ pub mod host {
     impl PackageManifest {
         pub fn try_load_from(path: impl AsRef<Path>) -> anyhow::Result<Self> {
             let manifest_path = path.as_ref();
-            let file = File::open(manifest_path)?;
-            let manifest: Self = serde_json::from_reader(BufReader::new(file))?;
+            let manifest_str = manifest_path.path_to_string()?;
+            let file = File::open(manifest_path)
+                .context(format!("Opening package manifest: {}", &manifest_str))?;
+            let manifest: Self = serde_json::from_reader(BufReader::new(file))
+                .context(format!("Reading package manifest: {}", &manifest_str))?;
             match manifest.0 {
                 VersionedPackageManifest::Version1(manifest) => {
                     Ok(manifest.resolve_blob_source_paths(manifest_path)?.into())
@@ -266,8 +269,9 @@ pub mod host {
         blob: BlobInfo,
         manifest_path: impl AsRef<Path>,
     ) -> anyhow::Result<BlobInfo> {
-        let source_path =
-            resolve_path_from_file(&blob.source_path, manifest_path)?.path_to_string()?;
+        let source_path = resolve_path_from_file(&blob.source_path, manifest_path)?
+            .path_to_string()
+            .context(format!("Resolving blob path: {}", &blob.source_path))?;
         Ok(BlobInfo { source_path, ..blob })
     }
 }

@@ -29,7 +29,7 @@ pub fn construct_base_package(
 ) -> Result<BasePackage> {
     let outdir = outdir.as_ref().join("base");
     if !outdir.exists() {
-        std::fs::create_dir(&outdir)?;
+        std::fs::create_dir_all(&outdir)?;
     }
 
     let mut base_pkg_builder = BasePackageBuilder::default();
