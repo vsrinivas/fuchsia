@@ -209,7 +209,8 @@ bool test_addresses_outside_user_range(bool capture_faults) {
 
     // End right before 2^55
     {(UINT64_C(1) << 55) - sizeof(test_buffer), ZX_ERR_INVALID_ARGS, true},
-    // Way beyond 2^55 (bit 55 is not set)
+    // Way beyond 2^55 (bit 55 is not set). Note that this is effectively a null
+    // pointer with a tag of 1.
     {(UINT64_C(1) << 56), ZX_ERR_INVALID_ARGS, true},
 
 #elif defined(__x86_64__)
@@ -234,6 +235,14 @@ bool test_addresses_outside_user_range(bool capture_faults) {
 
   for (const TestCase& test_case : kTestCases) {
     vaddr_t test_addr = test_case.test_addr;
+#if defined(__aarch64__)
+    // TODO(fxbug.dev/93593): We strip the tag here because tags are not relayed to user_copy
+    // page fault information. The only user of this page fault info is the deferred kernel
+    // exception handler (via VmAspace::SoftFault), but that does not operate on tags. We
+    // would like to rethink how user_copy exception info is handled, but that's outside the
+    // scope of TBI.
+    test_addr = arch_detag_ptr(test_addr);
+#endif
     printf("test_addr: 0x%lx\n", test_addr);
 
     {

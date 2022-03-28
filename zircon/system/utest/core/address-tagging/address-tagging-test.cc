@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/arch/arm64/system.h>
 #include <lib/elf-psabi/sp.h>
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/default_stack_size.h>
@@ -56,11 +57,13 @@ TEST(TopByteIgnoreTests, AddressTaggingGetSystemFeaturesAArch64) {
   ASSERT_EQ(val, 1);
 }
 
+using crash_function_t = void (*)(uintptr_t arg1, uintptr_t arg2);
+
 // To test the crashing cases, we'll spawn a raw Zircon thread with no C
 // library assistance so there are no hidden data structures to clean up after
 // the thread is killed.
-void CatchCrash(void (*crash_function)(uintptr_t, uintptr_t), uintptr_t arg1,
-                fit::function<void(zx::thread&)> before_start, uint64_t& far) {
+void CatchCrash(crash_function_t crash_function, uintptr_t arg1,
+                fit::function<void(zx::thread&)> before_start, zx_exception_report_t* report) {
   zx::thread crash_thread;
   constexpr std::string_view kThreadName = "Address tagging test thread";
   ASSERT_OK(zx::thread::create(*zx::process::self(), kThreadName.data(), kThreadName.size(), 0,
@@ -107,10 +110,8 @@ void CatchCrash(void (*crash_function)(uintptr_t, uintptr_t), uintptr_t arg1,
   tu_channel_wait_readable(exception_channel.get());
 
   // Get the FAR from the exception report.
-  zx_exception_report_t report = {};
-  ASSERT_OK(crash_thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
+  ASSERT_OK(crash_thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, report, sizeof(*report), nullptr,
                                   nullptr));
-  far = report.context.arch.u.arm_64.far;
 
   // Read the exception message.
   zx::exception exc;
@@ -125,7 +126,7 @@ void CatchCrash(void (*crash_function)(uintptr_t, uintptr_t), uintptr_t arg1,
   // sure it's the same as what's in the exception report.
   zx_thread_state_debug_regs_t regs = {};
   ASSERT_OK(crash_thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)));
-  ASSERT_EQ(report.context.arch.u.arm_64.far, regs.far);
+  ASSERT_EQ(report->context.arch.u.arm_64.far, regs.far);
 
   // When the exception handle is closed (by the zx::exception destructor at
   // the end of the function), the thread will resume from the exception.  Set
@@ -146,12 +147,12 @@ DerefTaggedPtrCrash(uintptr_t arg1, uintptr_t /*arg2*/) {
 }
 
 TEST(TopByteIgnoreTests, TaggedFARSegfault) {
-  uintptr_t far;
-
   // This is effectively a nullptr dereference.
   uintptr_t tagged_ptr = AddTag(0, kTestTag);
-  ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, /*before_start=*/nullptr, far));
-  ASSERT_EQ(far, tagged_ptr);
+  zx_exception_report_t report = {};
+  ASSERT_NO_FATAL_FAILURE(
+      CatchCrash(DerefTaggedPtrCrash, tagged_ptr, /*before_start=*/nullptr, &report));
+  ASSERT_EQ(report.context.arch.u.arm_64.far, tagged_ptr);
 }
 
 int gVariableToChange = 0;
@@ -183,12 +184,12 @@ void SetupWatchpoint(zx::thread& crash_thread) {
 }
 
 TEST(TopByteIgnoreTests, TaggedFARWatchpoint) {
-  uintptr_t far;
   uint64_t watched_addr = reinterpret_cast<uint64_t>(&gVariableToChange);
 
   uintptr_t tagged_ptr = AddTag(watched_addr, kTestTag);
-  ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, far));
-  ASSERT_EQ(far, tagged_ptr);
+  zx_exception_report_t report = {};
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, &report));
+  ASSERT_EQ(report.context.arch.u.arm_64.far, tagged_ptr);
 }
 
 static zx_koid_t get_object_koid(zx_handle_t handle) {
@@ -259,6 +260,71 @@ TEST(TopByteIgnoreTests, FutexWaitWake) {
   TestFutexWaitWake(kTestTag, kTestTag, kTestTag);  // Wait and wake same futex on the same tag.
   TestFutexWaitWake(kTestTag, kTestTag + 1,
                     kTestTag + 2);  // Wait and wake same futex on different tags.
+}
+
+#ifdef __clang__
+[[clang::no_sanitize("all")]]
+#endif
+uint8_t
+UnsanitizedLoad(volatile uint8_t* ptr) {
+  return *ptr;
+}
+
+TEST(TopByteIgnoreTests, VmmPageFaultHandlerDataAbort) {
+  zx_handle_t root_vmar = zx_vmar_root_self();
+
+  // Create a new vmar to manage that we will eventually decommit.
+  zx_handle_t decommit_vmar;
+  uintptr_t addr;
+  ASSERT_OK(zx_vmar_allocate(root_vmar,
+                             ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                             zx_system_get_page_size() * 8, &decommit_vmar, &addr));
+
+  // Create a vmo we can write to.
+  zx_handle_t vmo;
+  ASSERT_OK(zx_vmo_create(zx_system_get_page_size(), 0, &vmo));
+
+  uint64_t mapping_addr;
+  ASSERT_OK(zx_vmar_map(decommit_vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                        zx_system_get_page_size(), vmo, 0, zx_system_get_page_size(),
+                        &mapping_addr));
+
+  // We should be able to write normally.
+  *reinterpret_cast<volatile uint8_t*>(mapping_addr) = 42;
+
+  // After decommitting, the page is zero-filled. It will still be accessible, but not mapped to
+  // anything. This will result in a permission fault that will be handled successfully by the
+  // kernel's page fault handler. What we want to test for is that even if this pointer is tagged,
+  // then the kernel will still be able to handle this page fault successfully.
+  EXPECT_OK(zx_vmar_op_range(decommit_vmar, ZX_VMAR_OP_DECOMMIT, mapping_addr,
+                             zx_system_get_page_size(), nullptr, 0));
+  mapping_addr = AddTag(mapping_addr, kTestTag);
+
+  // Do not do a regular dereference because ASan will right-shift the tag into the address bits
+  // then complain that this address doesn't have a corresponding shadow.
+  EXPECT_EQ(UnsanitizedLoad(reinterpret_cast<volatile uint8_t*>(mapping_addr)), 0);
+}
+
+arch::ArmExceptionSyndromeRegister::ExceptionClass GetEC(uint64_t esr) {
+  return arch::ArmExceptionSyndromeRegister::Get().FromValue(esr).ec();
+}
+
+// Making it global static ensures this is in rodata.
+static constexpr uint32_t kUdf0 = 0;
+
+TEST(TopByteIgnoreTests, InstructionAbortNoTag) {
+  // Unlike a data abort, instruction aborts on AArch64 will not include the tag in the FAR, so a
+  // tag will never reach the VM layer via an instruction abort. This test verifies the FAR does not
+  // include the tag in this case.
+  uintptr_t pc = AddTag(reinterpret_cast<uintptr_t>(&kUdf0), kTestTag);
+  zx_exception_report_t report = {};
+
+  ASSERT_NO_FATAL_FAILURE(CatchCrash(reinterpret_cast<crash_function_t>(pc), /*arg1=*/0,
+                                     /*before_start=*/nullptr, &report));
+  EXPECT_EQ(report.header.type, ZX_EXCP_FATAL_PAGE_FAULT);
+  ASSERT_EQ(GetEC(report.context.arch.u.arm_64.esr),
+            arch::ArmExceptionSyndromeRegister::ExceptionClass::kInstructionAbortLowerEl);
+  EXPECT_EQ(report.context.arch.u.arm_64.far, reinterpret_cast<uintptr_t>(&kUdf0));
 }
 
 #elif defined(__x86_64__)

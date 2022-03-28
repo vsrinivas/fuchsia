@@ -278,6 +278,8 @@ static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_fla
 
   arch_enable_ints();
   zx_status_t err;
+  DEBUG_ASSERT(far == arch_detag_ptr(far) &&
+               "Expected the FAR to be untagged for an instruction abort");
   // Check for accessed fault separately and use the dedicated handler.
   if ((iss & 0b111100) == 0b001000) {
     exceptions_access.Add(1);
@@ -354,7 +356,12 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
     // address) and fill it in.
     DEBUG_ASSERT(BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT - 1));
     iframe->elr = dfr | (1ull << ARM64_DFR_RUN_FAULT_HANDLER_BIT);
-    iframe->r[1] = far;
+    // TODO(fxbug.dev/93593): x1 is relayed back to user_copy where it will be stored in page fault
+    // info. Currently, the only users of this page fault info is VmAspace::SoftFault, but the
+    // kernel page fault handler shouldn't accept/work with tags. To avoid architecture-specific
+    // tags reaching the VM layer at all, we can strip it here so it never reaches user_copy page
+    // fault results.
+    iframe->r[1] = arch_detag_ptr(far);
     iframe->r[2] = pf_flags;
     return;
   }
@@ -367,7 +374,7 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
   if (likely((dfsc & 0b001100) != 0 && (dfsc & 0b110000) == 0)) {
     arch_enable_ints();
     kcounter_add(exceptions_page, 1);
-    err = vmm_page_fault_handler(far, pf_flags);
+    err = vmm_page_fault_handler(arch_detag_ptr(far), pf_flags);
     arch_disable_ints();
     if (err >= 0) {
       return;
