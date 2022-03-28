@@ -5,6 +5,7 @@
 #ifndef LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 #define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 
+#include <fuchsia/component/config/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
@@ -180,6 +181,57 @@ class DirectoryContents {
   fuchsia::component::test::DirectoryContents TakeAsFidl();
 
   fuchsia::component::test::DirectoryContents contents_;
+};
+
+// Defines a structured configuration value. Used to replace configuration values of existing
+// fields of a component.
+//
+// # Example
+//
+// ```
+// realm_builder.ReplaceConfigValue(echo_server, "echo_string", ConfigValue::String("Hi!"));
+// ```
+class ConfigValue {
+ public:
+  ConfigValue() = delete;
+
+  // Implicit type conversion is allowed here to transparently wrap unambiguous types.
+  // NOLINTBEGIN(google-explicit-constructor)
+  ConfigValue(const char* value);
+  ConfigValue(std::string value);
+  ConfigValue(std::vector<bool> value);
+  ConfigValue(std::vector<uint8_t> value);
+  ConfigValue(std::vector<uint16_t> value);
+  ConfigValue(std::vector<uint32_t> value);
+  ConfigValue(std::vector<uint64_t> value);
+  ConfigValue(std::vector<int8_t> value);
+  ConfigValue(std::vector<int16_t> value);
+  ConfigValue(std::vector<int32_t> value);
+  ConfigValue(std::vector<int64_t> value);
+  ConfigValue(std::vector<std::string> value);
+  // NOLINTEND(google-explicit-constructor)
+
+  ConfigValue(ConfigValue&&) noexcept;
+  ConfigValue& operator=(ConfigValue&&) noexcept;
+  ConfigValue(const ConfigValue&) = delete;
+  ConfigValue& operator=(const ConfigValue&) = delete;
+  static ConfigValue Bool(bool value);
+  static ConfigValue Uint8(uint8_t value);
+  static ConfigValue Uint16(uint16_t value);
+  static ConfigValue Uint32(uint32_t value);
+  static ConfigValue Uint64(uint64_t value);
+  static ConfigValue Int8(int8_t value);
+  static ConfigValue Int16(int16_t value);
+  static ConfigValue Int32(int32_t value);
+  static ConfigValue Int64(int64_t value);
+
+ private:
+  // Friend class needed in order to invoke |TakeAsFidl|.
+  friend class Realm;
+
+  fuchsia::component::config::ValueSpec TakeAsFidl();
+  explicit ConfigValue(fuchsia::component::config::ValueSpec spec);
+  fuchsia::component::config::ValueSpec spec;
 };
 
 }  // namespace component_testing

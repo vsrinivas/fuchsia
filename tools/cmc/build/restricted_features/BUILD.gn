@@ -34,6 +34,7 @@ group("structured_config") {
     # components
     "//examples/components/config/cpp:*",
     "//examples/components/config/rust:*",
+    "//sdk/lib/sys/component/cpp/tests:*",
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
     "//src/session/bin/session_manager:*",

@@ -43,6 +43,23 @@ executable("echo_server_bin") {
   ]
 }
 
+executable("echo_server_sc_bin") {
+  testonly = true
+
+  sources = [ "echo_server_sc.cc" ]
+
+  deps = [
+    ":echo_server_config_lib",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/testing/fidl:placeholders",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 executable("echo_service_server_bin") {
   testonly = true
 
@@ -104,6 +121,81 @@ fuchsia_component("echo_server") {
   testonly = true
 }
 
+fuchsia_component_manifest("echo_server_sc_manifest") {
+  testonly = true
+  component_name = "echo_server_sc"
+  manifest = "meta/echo_server_sc.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("echo_server_sc") {
+  testonly = true
+  cm_target = ":echo_server_sc_manifest"
+  deps = [ ":echo_server_sc_bin" ]
+}
+
+fuchsia_structured_config_cpp_elf_lib("echo_server_config_lib") {
+  testonly = true
+  cm_target = ":echo_server_sc_manifest"
+}
+
+fuchsia_structured_config_values("echo_server_default_config") {
+  testonly = true
+  cm_target = ":echo_server_sc_manifest"
+  values = {
+    my_flag = true
+    my_uint8 = 255
+    my_uint16 = 65535
+    my_uint32 = 4000000000
+    my_uint64 = 8000000000
+    my_int8 = -127
+    my_int16 = -32766
+    my_int32 = -2000000000
+    my_int64 = -4000000000
+    my_string = "hello"
+    my_vector_of_flag = [
+      true,
+      false,
+    ]
+    my_vector_of_uint8 = [
+      1,
+      2,
+    ]
+    my_vector_of_uint16 = [
+      2,
+      3,
+    ]
+    my_vector_of_uint32 = [
+      3,
+      4,
+    ]
+    my_vector_of_uint64 = [
+      4,
+      5,
+    ]
+    my_vector_of_int8 = [
+      -1,
+      -2,
+    ]
+    my_vector_of_int16 = [
+      -2,
+      -3,
+    ]
+    my_vector_of_int32 = [
+      -3,
+      -4,
+    ]
+    my_vector_of_int64 = [
+      -4,
+      -5,
+    ]
+    my_vector_of_string = [
+      "foo",
+      "bar",
+    ]
+  }
+}
+
 fuchsia_component("echo_service_server") {
   testonly = true
   deps = [ ":echo_service_server_bin" ]
@@ -140,7 +232,9 @@ fuchsia_test_package("component_cpp_tests") {
   ]
   deps = [
     ":echo_server",
+    ":echo_server_default_config",
     ":echo_server_legacy",
+    ":echo_server_sc",
     ":echo_service_server",
     ":pre_populated_realm",
   ]

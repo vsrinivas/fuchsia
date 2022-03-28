@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/config/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -23,6 +24,26 @@ namespace component_testing {
 namespace {
 
 constexpr char kSvcDirectoryPath[] = "/svc";
+
+#define ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(MethodName, Type, FidlType) \
+  ConfigValue ConfigValue::MethodName(Type value) {                                  \
+    fuchsia::component::config::ValueSpec spec;                                      \
+    spec.set_value(fuchsia::component::config::Value::WithSingle(                    \
+        fuchsia::component::config::SingleValue::FidlType(std::move(value))));       \
+    return ConfigValue(std::move(spec));                                             \
+  }
+
+#define ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_CTOR_DEF(Type, FidlType)  \
+  ConfigValue::ConfigValue(Type value) {                                       \
+    spec.set_value(fuchsia::component::config::Value::WithSingle(              \
+        fuchsia::component::config::SingleValue::FidlType(std::move(value)))); \
+  }
+
+#define ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(Type, FidlType)  \
+  ConfigValue::ConfigValue(Type value) {                                       \
+    spec.set_value(fuchsia::component::config::Value::WithVector(              \
+        fuchsia::component::config::VectorValue::FidlType(std::move(value)))); \
+  }
 
 // Checks that path doesn't contain leading nor trailing slashes.
 bool IsValidPath(std::string_view path) {
@@ -95,5 +116,35 @@ DirectoryContents& DirectoryContents::AddFile(std::string_view path, std::string
 fuchsia::component::test::DirectoryContents DirectoryContents::TakeAsFidl() {
   return std::move(contents_);
 }
+
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_CTOR_DEF(std::string, WithString)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_CTOR_DEF(const char*, WithString)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Bool, bool, WithBool_)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Uint8, uint8_t, WithUint8)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Uint16, uint16_t, WithUint16)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Uint32, uint32_t, WithUint32)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Uint64, uint64_t, WithUint64)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Int8, int8_t, WithInt8)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Int16, int16_t, WithInt16)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Int32, int32_t, WithInt32)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_SINGLE_VALUE_DEF(Int64, int64_t, WithInt64)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<bool>, WithBoolVector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<uint8_t>, WithUint8Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<uint16_t>, WithUint16Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<uint32_t>, WithUint32Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<uint64_t>, WithUint64Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<int8_t>, WithInt8Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<int16_t>, WithInt16Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<int32_t>, WithInt32Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<int64_t>, WithInt64Vector)
+ZX_SYS_COMPONENT_REPLACE_CONFIG_VECTOR_VALUE_CTOR_DEF(std::vector<std::string>, WithStringVector)
+
+ConfigValue::ConfigValue(fuchsia::component::config::ValueSpec spec) : spec(std::move(spec)) {}
+ConfigValue& ConfigValue::operator=(ConfigValue&& other) noexcept {
+  spec = std::move(other.spec);
+  return *this;
+}
+ConfigValue::ConfigValue(ConfigValue&& other) noexcept : spec(std::move(other.spec)) {}
+fuchsia::component::config::ValueSpec ConfigValue::TakeAsFidl() { return std::move(spec); }
 
 }  // namespace component_testing

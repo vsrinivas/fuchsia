@@ -5,6 +5,7 @@
 #ifndef LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_
 #define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_
 
+#include <fuchsia/component/config/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/runner/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
@@ -148,6 +149,9 @@ class Realm final {
   Realm& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                 DirectoryContents directory);
 
+  /// Replaces the value of a given configuration field
+  Realm& ReplaceConfigValue(const std::string& name, const std::string& key, ConfigValue value);
+
   friend class RealmBuilder;
 
  private:
@@ -213,6 +217,10 @@ class RealmBuilder final {
   // See |Realm.RouteReadOnlyDirectory| for more details.
   RealmBuilder& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                        DirectoryContents directory);
+
+  /// Replaces the value of a given configuration field
+  RealmBuilder& ReplaceConfigValue(const std::string& name, const std::string& key,
+                                   ConfigValue value);
 
   // Build the realm root prepared by the associated builder methods, e.g. |AddComponent|.
   // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be

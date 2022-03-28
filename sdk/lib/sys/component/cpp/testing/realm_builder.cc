@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/config/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/component/runner/cpp/fidl.h>
@@ -33,9 +34,7 @@
 #include <vector>
 
 namespace component_testing {
-
 namespace {
-
 constexpr char kCollectionName[] = "realm_builder";
 constexpr char kFrameworkIntermediaryChildName[] = "realm_builder_server";
 constexpr char kChildPathSeparator[] = "/";
@@ -125,6 +124,15 @@ Realm& Realm::RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> t
       realm_proxy_->ReadOnlyDirectory(name, std::move(to_fidl), std::move(directory_fidl), &result),
       result);
 
+  return *this;
+}
+
+Realm& Realm::ReplaceConfigValue(const std::string& name, const std::string& key,
+                                 ConfigValue value) {
+  fuchsia::component::test::Realm_ReplaceConfigValue_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/ReplaceConfigValue",
+      realm_proxy_->ReplaceConfigValue(name, key, value.TakeAsFidl(), &result), result);
   return *this;
 }
 
@@ -247,6 +255,12 @@ RealmBuilder& RealmBuilder::AddRoute(Route route) {
 RealmBuilder& RealmBuilder::RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                                    DirectoryContents directory) {
   root_.RouteReadOnlyDirectory(name, std::move(to), std::move(directory));
+  return *this;
+}
+
+RealmBuilder& RealmBuilder::ReplaceConfigValue(const std::string& name, const std::string& key,
+                                               ConfigValue value) {
+  root_.ReplaceConfigValue(name, key, std::move(value));
   return *this;
 }
 
