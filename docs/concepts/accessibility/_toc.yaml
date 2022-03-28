@@ -10,3 +10,5 @@ toc:
   path: /docs/concepts/accessibility/accessibility_framework.md
 - title: "Semantics"
   path: /docs/concepts/accessibility/semantics.md
+- title: "Accessibility Focus"
+  path: /docs/concepts/accessibility/accessibility-focus.md
