@@ -5,8 +5,10 @@
 """Tests for rustc_remote_wrapper."""
 
 import rustc_remote_wrapper
+import parameterized
 import unittest
 
+from parameterized import parameterized
 from unittest import mock
 
 
@@ -14,6 +16,7 @@ class MainArgParseTests(unittest.TestCase):
 
     def testDefaults(self):
         args, forward = rustc_remote_wrapper.parse_main_args([])
+        self.assertIsNone(args.help)
         self.assertFalse(args.dry_run)
         self.assertFalse(args.local)
         self.assertFalse(args.verbose)
@@ -21,12 +24,26 @@ class MainArgParseTests(unittest.TestCase):
         self.assertEqual(args.command, [])
         self.assertEqual(forward, [])
 
+    @parameterized.expand(
+        [
+            (['-h'],),
+            (['--help'],),
+            (['--help', '--local'],),
+            (['--local', '--help'],),
+            (['--local', '--help', '--', 'echo', 'ekko'],),
+        ])
+    def testHelp(self, flags):
+        args, forward = rustc_remote_wrapper.parse_main_args(flags)
+        self.assertIsNotNone(args.help)
+        # don't care about other fields
+
     def testDefaultOpposites(self):
         args, forward = rustc_remote_wrapper.parse_main_args(
             [
                 '--dry-run', '--local', '--verbose', '--fsatrace', '--',
                 'rustc', 'src/lib.rs'
             ])
+        self.assertIsNone(args.help)
         self.assertTrue(args.dry_run)
         self.assertTrue(args.local)
         self.assertTrue(args.verbose)
@@ -40,6 +57,7 @@ class MainArgParseTests(unittest.TestCase):
                 '--local', '--forward-me', 'arg1', '--forward-me=too',
                 '--verbose', '--', 'rustc', 'src/lib.rs'
             ])
+        self.assertIsNone(args.help)
         self.assertTrue(args.local)
         self.assertTrue(args.verbose)
         self.assertEqual(forward, ['--forward-me', 'arg1', '--forward-me=too'])
@@ -122,8 +140,8 @@ class CommandArgParseTests(unittest.TestCase):
 
 class RemoteCommandPseudoFlagsTests(unittest.TestCase):
 
-    def testCommandFiltering(self):
-        test_cases = [
+    @parameterized.expand(
+        [
             # (input, expected)
             (
                 [],
@@ -149,32 +167,32 @@ class RemoteCommandPseudoFlagsTests(unittest.TestCase):
                 ['foo', '--remote-flag=--bar', 'baz'],
                 ['foo', 'baz'],
             ),
-        ]
-        for test_case in test_cases:
-            self.assertEqual(
-                list(
-                    rustc_remote_wrapper.remove_command_pseudo_flags(
-                        test_case[0])), test_case[1])
+        ])
+    def testCommandFiltering(self, input_command, expected_filtered_command):
+        self.assertEqual(
+            list(
+                rustc_remote_wrapper.remove_command_pseudo_flags(
+                    input_command)), expected_filtered_command)
 
 
 class ApplyRemoteFlagsFromPseudoFlagsTests(unittest.TestCase):
 
-    def testDefault(self):
-        test_cases = [
+    @parameterized.expand(
+        [
             # (full command, expected value of .local)
             ([], False),
             (['--'], False),
             (['--local', '--'], True),
             (['--', '--remote-disable'], True),
-        ]
-        for i, test_case in enumerate(test_cases):
-            main_config, rewrapper_opts = rustc_remote_wrapper.parse_main_args(
-                test_case[0])
-            command_params, filtered_command = rustc_remote_wrapper.parse_compile_command(
-                main_config.command)
-            rustc_remote_wrapper.apply_remote_flags_from_pseudo_flags(
-                main_config, command_params)
-            self.assertEqual(main_config.local, test_case[1])
+        ])
+    def testDefault(self, input_command, expected_local):
+        main_config, rewrapper_opts = rustc_remote_wrapper.parse_main_args(
+            input_command)
+        command_params, filtered_command = rustc_remote_wrapper.parse_compile_command(
+            main_config.command)
+        rustc_remote_wrapper.apply_remote_flags_from_pseudo_flags(
+            main_config, command_params)
+        self.assertEqual(main_config.local, expected_local)
 
 
 if __name__ == '__main__':

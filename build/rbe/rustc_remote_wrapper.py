@@ -2,7 +2,7 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Wraps a Rust compile command for remote execution (reclient, RBE).
+_MAIN_HELP = """Wraps a Rust compile command for remote execution (reclient, RBE).
 
 Given a Rust compile command, this script
 1) identifies all inputs needed to execute the command hermetically (remotely).
@@ -12,6 +12,28 @@ Given a Rust compile command, this script
 4) forwards stdout/stderr back to the local environment
 
 This script was ported over from bin/rbe/rustc-remote-wrapper.sh.
+
+Usage:
+  rustc_remote_wrapper.py [options] -- RUST-COMPILE-COMMAND
+
+Options:
+  --help | -h : print help and exit
+  --local : run the command locally
+  --dry-run : print diagnostics and exit without running
+  --verbose : print additional diagnostics
+  --fsatrace : trace file access (works locally and remotely)
+
+  All unknown options are forwarded to rewrapper.
+
+The RUST-COMPILE-COMMAND supports the following pseudo-flags, which are
+filtered out prior to execution, and forwarded to rewrapper:
+
+  --remote-disable : same as --local
+  --remote-inputs FILE,... : forwarded as --inputs to rewrapper
+  --remote-outputs FILE,... : forwarded as --output_files to rewrapper
+  --remote-flag OPT : forwarded as OPT (can be flag) to rewrapper
+
+This allows rustflags in GN to influence remote execution parameters.
 """
 
 import argparse
@@ -110,6 +132,7 @@ def parse_main_args(
       A namespace struct with parameters, and a sequence of unhandled tokens.
     """
     params = argparse.Namespace(
+        help=None,
         local=False,
         dry_run=False,
         verbose=False,
@@ -128,7 +151,9 @@ def parse_main_args(
 
         opt, sep, arg = token.partition('=')
 
-        # TODO(fangism): add --help
+        if token in {'--help', '-h'}:
+            params.help = _MAIN_HELP
+            break
         if token == '--local':
             params.local = True
         elif token == '--dry-run':
@@ -208,6 +233,11 @@ def main(argv: Sequence[str]):
     # Parse flags, and forward all unhandled flags to rewrapper.
     main_config, forwarded_rewrapper_args = parse_main_args(
         argv[1:])  # drop argv[0], which is this script
+
+    # Exit on --help.
+    if main_config.help is not None:
+        print(main_config.help)
+        return 0
 
     # The command to run remotely is in main_config.command.
     command_params = parse_compile_command(main_config.command)

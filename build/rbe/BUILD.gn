@@ -14,5 +14,6 @@ if (is_host) {
   python_host_test("rustc_remote_wrapper_test") {
     main_source = "rustc_remote_wrapper_test.py"
     sources = [ "rustc_remote_wrapper.py" ]
+    libraries = [ "//third_party/parameterized" ]
   }
 }
