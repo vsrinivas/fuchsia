@@ -338,7 +338,7 @@ pub struct ComponentInstance {
     // These locks must be taken in the order declared if held simultaneously.
     /// The component's mutable state.
     state: Mutex<InstanceState>,
-    /// The componet's execution state.
+    /// The component's execution state.
     execution: Mutex<ExecutionState>,
     /// Actions on the instance that must eventually be completed.
     actions: Mutex<ActionSet>,
@@ -1207,21 +1207,28 @@ pub enum InstanceState {
 
 impl InstanceState {
     /// Changes the state, checking invariants.
+    /// The allowed transitions:
+    /// • New -> Discovered <-> Resolved -> Purged
+    /// • {New, Discovered, Resolved} -> Purged
     pub fn set(&mut self, next: Self) {
-        let invalid = match (&self, &next) {
-            (Self::New, Self::Resolved(_))
+        match (&self, &next) {
+            (Self::New, Self::New)
+            | (Self::New, Self::Resolved(_))
+            | (Self::Discovered, Self::Discovered)
             | (Self::Discovered, Self::New)
-            | (Self::Resolved(_), Self::Discovered)
+            | (Self::Resolved(_), Self::Resolved(_))
             | (Self::Resolved(_), Self::New)
+            | (Self::Resolved(_), Self::Discovered)
+            | (Self::Purged, Self::Purged)
             | (Self::Purged, Self::New)
             | (Self::Purged, Self::Discovered)
-            | (Self::Purged, Self::Resolved(_)) => true,
-            _ => false,
-        };
-        if invalid {
-            panic!("Invalid instance state transition from {:?} to {:?}", self, next);
+            | (Self::Purged, Self::Resolved(_)) => {
+                panic!("Invalid instance state transition from {:?} to {:?}", self, next);
+            }
+            _ => {
+                *self = next;
+            }
         }
-        *self = next;
     }
 }
 
@@ -2990,4 +2997,98 @@ pub mod tests {
             )
         }
     }
+
+    async fn new_component() -> Arc<ComponentInstance> {
+        ComponentInstance::new(
+            Arc::new(Environment::empty()),
+            InstancedAbsoluteMoniker::root(),
+            "foo".to_string(),
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
+            WeakModelContext::new(Weak::new()),
+            WeakExtendedInstanceInterface::AboveRoot(Weak::new()),
+            Arc::new(Hooks::new(None)),
+            None,
+        )
+    }
+
+    async fn new_resolved() -> InstanceState {
+        let comp = new_component().await;
+        let decl = ComponentDeclBuilder::new().build();
+        let ris = ResolvedInstanceState::new(&comp, decl).await.unwrap();
+        InstanceState::Resolved(ris)
+    }
+
+    #[fuchsia::test]
+    async fn instance_state_transitions_test() {
+        // New --> Discovered.
+        let mut is = InstanceState::New;
+        is.set(InstanceState::Discovered);
+        assert_matches!(is, InstanceState::Discovered);
+
+        // New --> Purged.
+        let mut is = InstanceState::New;
+        is.set(InstanceState::Purged);
+        assert_matches!(is, InstanceState::Purged);
+
+        // Discovered --> Resolved.
+        let mut is = InstanceState::Discovered;
+        is.set(new_resolved().await);
+        assert_matches!(is, InstanceState::Resolved(_));
+
+        // Discovered --> Purged.
+        let mut is = InstanceState::Discovered;
+        is.set(InstanceState::Purged);
+        assert_matches!(is, InstanceState::Purged);
+
+        // Resolved --> Purged.
+        let mut is = new_resolved().await;
+        is.set(InstanceState::Purged);
+        assert_matches!(is, InstanceState::Purged);
+    }
+
+    // Macro to make the panicking tests more readable.
+    macro_rules! panic_test {
+        (   [$(
+                $test_name:ident( // Test case name.
+                    $($args:expr),+$(,)? // Arguments for test case.
+                )
+            ),+$(,)?]
+        ) => {
+            $(paste::paste!{
+                #[allow(non_snake_case)]
+                #[fuchsia_async::run_until_stalled(test)]
+                #[should_panic]
+                async fn [< confirm_invalid_transition___ $test_name>]() {
+                    confirm_invalid_transition($($args,)+).await;
+                }
+            })+
+        }
+    }
+
+    async fn confirm_invalid_transition(cur: InstanceState, next: InstanceState) {
+        let mut is = cur;
+        is.set(next);
+    }
+
+    // Use the panic_test! macro to enumerate the invalid InstanceState transitions that are invalid
+    // and should panic. As a result of the macro, the test names will be generated like
+    // `confirm_invalid_transition___p2r`.
+    panic_test!([
+        // Purged !-> {Purged, Resolved, Discovered, New}..
+        p2p(InstanceState::Purged, InstanceState::Purged),
+        p2r(InstanceState::Purged, new_resolved().await),
+        p2d(InstanceState::Purged, InstanceState::Discovered),
+        p2n(InstanceState::Purged, InstanceState::New),
+        // Resolved !-> {Resolved, Discovered, New}.
+        r2r(new_resolved().await, new_resolved().await),
+        r2d(new_resolved().await, InstanceState::Discovered),
+        r2n(new_resolved().await, InstanceState::New),
+        // Discovered !-> {Discovered, New}.
+        d2d(InstanceState::Discovered, InstanceState::Discovered),
+        d2n(InstanceState::Discovered, InstanceState::New),
+        // New !-> {Resolved, New}.
+        n2r(InstanceState::New, new_resolved().await),
+        n2n(InstanceState::New, InstanceState::New),
+    ]);
 }

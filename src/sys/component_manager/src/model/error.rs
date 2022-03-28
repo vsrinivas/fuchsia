@@ -65,6 +65,11 @@ pub enum ModelError {
         #[source]
         err: cm_rust::Error,
     },
+    #[error("invalid state transition: {}", err)]
+    InvalidComponentStateTransition {
+        #[source]
+        err: ClonableError,
+    },
     #[error("The model is not available")]
     ModelNotAvailable,
     #[error("Namespace creation failed: {}", err)]
@@ -239,6 +244,10 @@ impl ModelError {
 
     pub fn reboot_failed(err: impl Into<Error>) -> ModelError {
         ModelError::RebootFailed { err: err.into().into() }
+    }
+
+    pub fn invalid_component_state_transition(err: impl Into<Error>) -> ModelError {
+        ModelError::InvalidComponentStateTransition { err: err.into().into() }
     }
 
     pub fn component_decl_invalid(url: impl Into<String>, err: cm_rust::Error) -> ModelError {

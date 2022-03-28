@@ -40,6 +40,13 @@ impl Action for PurgeAction {
 }
 
 async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
+    // Do nothing if already purged.
+    {
+        if let InstanceState::Purged = *component.lock_state().await {
+            return Ok(());
+        }
+    }
+
     // It is always expected that the component shut down first.
     {
         let execution = component.lock_execution().await;
