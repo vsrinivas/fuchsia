@@ -112,15 +112,28 @@ struct Indexer {
     // Contains the device groups. This is wrapped in a RefCell since the
     // device groups are added after the driver index server has started.
     device_groups: RefCell<HashMap<String, DeviceGroup>>,
+
+    // Whether /system is required. Used to determine if the indexer should
+    // return fallback drivers that match.
+    require_system: bool,
 }
 
 impl Indexer {
-    fn new(boot_repo: Vec<ResolvedDriver>, base_repo: BaseRepo) -> Indexer {
+    fn new(boot_repo: Vec<ResolvedDriver>, base_repo: BaseRepo, require_system: bool) -> Indexer {
         Indexer {
-            boot_repo: boot_repo,
+            boot_repo,
             base_repo: RefCell::new(base_repo),
             device_groups: RefCell::new(HashMap::new()),
+            require_system,
         }
+    }
+
+    fn include_fallback_drivers(&self) -> bool {
+        !self.require_system
+            || match *self.base_repo.borrow() {
+                BaseRepo::Resolved(_) => true,
+                _ => false,
+            }
     }
 
     fn load_base_repo(&self, base_repo: BaseRepo) {
@@ -147,6 +160,13 @@ impl Indexer {
             BaseRepo::Resolved(drivers) => drivers.iter(),
             BaseRepo::NotResolved(_) => [].iter(),
         };
+        let (boot_drivers, base_drivers) = if self.include_fallback_drivers() {
+            (self.boot_repo.iter(), base_repo_iter.clone())
+        } else {
+            ([].iter(), [].iter())
+        };
+        let fallback_boot_drivers = boot_drivers.filter(|&driver| driver.fallback);
+        let fallback_base_drivers = base_drivers.filter(|&driver| driver.fallback);
 
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
@@ -158,9 +178,9 @@ impl Indexer {
             .boot_repo
             .iter()
             .filter(|&driver| !driver.fallback)
-            .chain(base_repo_iter.clone().filter(|&driver| !driver.fallback))
-            .chain(self.boot_repo.iter().filter(|&driver| driver.fallback))
-            .chain(base_repo_iter.filter(|&driver| driver.fallback))
+            .chain(base_repo_iter.filter(|&driver| !driver.fallback))
+            .chain(fallback_boot_drivers)
+            .chain(fallback_base_drivers)
             .filter_map(|driver| {
                 if let Ok(Some(matched)) = driver.matches(&properties) {
                     Some((driver.fallback, matched))
@@ -200,6 +220,13 @@ impl Indexer {
             BaseRepo::Resolved(drivers) => drivers.iter(),
             BaseRepo::NotResolved(_) => [].iter(),
         };
+        let (boot_drivers, base_drivers) = if self.include_fallback_drivers() {
+            (self.boot_repo.iter(), base_repo_iter.clone())
+        } else {
+            ([].iter(), [].iter())
+        };
+        let fallback_boot_drivers = boot_drivers.filter(|&driver| driver.fallback);
+        let fallback_base_drivers = base_drivers.filter(|&driver| driver.fallback);
 
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
@@ -208,9 +235,9 @@ impl Indexer {
             .boot_repo
             .iter()
             .filter(|&driver| !driver.fallback)
-            .chain(base_repo_iter.clone().filter(|&driver| !driver.fallback))
-            .chain(self.boot_repo.iter().filter(|&driver| driver.fallback))
-            .chain(base_repo_iter.filter(|&driver| driver.fallback))
+            .chain(base_repo_iter.filter(|&driver| !driver.fallback))
+            .chain(fallback_boot_drivers)
+            .chain(fallback_base_drivers)
             .filter_map(|driver| driver.matches(&properties).ok())
             .filter_map(|d| d)
             .chain(
@@ -448,6 +475,10 @@ async fn main() -> Result<(), anyhow::Error> {
         .filter(|url| !url.is_empty())
         .filter_map(|url| url::Url::parse(url).ok())
         .collect();
+    let require_system: bool = boot_args
+        .get_bool("devmgr.require-system", false)
+        .await
+        .context("Failed to get value of `devmgr.require-system` from boot arguments")?;
     for driver in disabled_drivers.iter() {
         log::info!("Disabling driver {}", driver);
     }
@@ -471,7 +502,7 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     }
 
-    let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![])));
+    let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![]), require_system));
     let (res1, res2, _) = futures::future::join3(
         async {
             package_resolver::serve(resolver_stream)
@@ -574,6 +605,36 @@ mod tests {
         Ok(())
     }
 
+    async fn execute_driver_index_test(
+        index: Indexer,
+        stream: fdf::DriverIndexRequestStream,
+        test: impl Future<Output = ()>,
+    ) {
+        let index = Rc::new(index);
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test = test.fuse();
+
+        futures::pin_mut!(index_task, test);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test => {},
+        }
+    }
+
+    fn create_always_match_bind_rules() -> DecodedRules {
+        let bind_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(bind_rules).unwrap(),
+        )
+        .unwrap()
+    }
+
     // This test depends on '/pkg/config/drivers_for_test.json' existing in the test package.
     // The test reads that json file to determine which bind rules to read and index.
     #[fasync::run_singlethreaded(test)]
@@ -586,7 +647,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![]), false));
 
         let eager_drivers = HashSet::new();
         let disabled_drivers = HashSet::new();
@@ -707,7 +768,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -772,7 +833,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -845,7 +906,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -927,7 +988,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![])));
+        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -994,7 +1055,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![])));
+        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1083,7 +1144,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(boot_repo, base_repo));
+        let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1161,7 +1222,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![])));
+        let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1253,7 +1314,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(boot_repo, base_repo));
+        let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1353,7 +1414,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![]), false));
 
         let eager_drivers = HashSet::from([eager_driver_component_url.clone()]);
         let disabled_drivers = HashSet::new();
@@ -1420,7 +1481,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![]), false));
 
         let eager_drivers = HashSet::new();
         let disabled_drivers = HashSet::from([disabled_driver_component_url.clone()]);
@@ -1453,6 +1514,138 @@ mod tests {
         }
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_driver_when_require_system_true_and_base_repo_not_resolved() {
+        let always_match = create_always_match_bind_rules();
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-boot:///#driver/fallback-boot.cm").unwrap(),
+            v1_driver_path: Some("meta/fallback-boot.so".to_owned()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: true,
+        }];
+        let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        execute_driver_index_test(index, stream, async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_driver(args).await.unwrap();
+
+            assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+        })
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_driver_when_require_system_false_and_base_repo_not_resolved() {
+        const FALLBACK_BOOT_DRIVER_COMPONENT_URL: &str = "fuchsia-boot:///#driver/fallback-boot.cm";
+        const FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH: &str = "meta/fallback-boot.so";
+
+        let always_match = create_always_match_bind_rules();
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse(FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
+            v1_driver_path: Some(FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH.to_owned()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: true,
+        }];
+        let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        execute_driver_index_test(index, stream, async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_driver(args).await.unwrap().unwrap();
+
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
+                format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
+                false,
+            ));
+            assert_eq!(result, expected_result);
+        })
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_drivers_v1_when_require_system_true_and_base_repo_not_resolved() {
+        let always_match = create_always_match_bind_rules();
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-boot:///#driver/fallback-boot.cm").unwrap(),
+            v1_driver_path: Some("meta/fallback-boot.so".to_owned()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: true,
+        }];
+        let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        execute_driver_index_test(index, stream, async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_drivers_v1(args).await.unwrap();
+
+            assert_eq!(result, Ok(vec![]));
+        })
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_drivers_v1_when_require_system_false_and_base_repo_not_resolved() {
+        const FALLBACK_BOOT_DRIVER_COMPONENT_URL: &str = "fuchsia-boot:///#driver/fallback-boot.cm";
+        const FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH: &str = "meta/fallback-boot.so";
+
+        let always_match = create_always_match_bind_rules();
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse(FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
+            v1_driver_path: Some(FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH.to_owned()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: true,
+        }];
+        let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        execute_driver_index_test(index, stream, async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+
+            let expected_result = vec![fdf::MatchedDriver::Driver(create_matched_driver_info(
+                FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
+                format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
+                false,
+            ))];
+            assert_eq!(result, expected_result);
+        })
+        .await;
+    }
+
     // This test relies on two drivers existing in the /pkg/ directory of the
     // test package.
     #[fasync::run_singlethreaded(test)]
@@ -1464,7 +1657,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(vec![])));
+        let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(vec![]), false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1585,7 +1778,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -1666,7 +1859,7 @@ mod tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
         let test_task = async move {
@@ -1773,7 +1966,7 @@ mod tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
         let test_task = async move {
@@ -1898,7 +2091,7 @@ mod tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
         let test_task = async move {
@@ -1971,7 +2164,7 @@ mod tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
-        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
         let test_task = async move {
