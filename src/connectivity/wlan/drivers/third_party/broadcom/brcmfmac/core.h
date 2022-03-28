@@ -219,6 +219,8 @@ enum brcmf_netif_stop_reason {
  * @ies: ies of the current bss.
  * @pend_8021x_cnt: tracks outstanding number of 802.1x frames.
  * @pend_8021x_wait: used for signalling change in count.
+ * @disconnect_done: used for signalling disconnect done for connect to proceed
+ * (used only in client interface).
  */
 struct brcmf_if {
   struct brcmf_pub* drvr;
@@ -236,6 +238,7 @@ struct brcmf_if {
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;
   sync_completion_t pend_8021x_wait;
+  sync_completion_t disconnect_done;
 };
 
 void brcmf_write_net_device_name(struct net_device* dev, const char* name);

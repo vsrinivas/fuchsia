@@ -525,6 +525,9 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   ifp->bsscfgidx = bsscfgidx;
 
   ifp->pend_8021x_wait = {};
+  ifp->disconnect_done = {};
+  // Initialize to signalled for first connect to proceed.
+  sync_completion_signal(&ifp->disconnect_done);
   // spin_lock_init(&ifp->netif_stop_lock);
 
   if (mac_addr != nullptr) {

@@ -75,6 +75,10 @@
 #define BRCMF_SCAN_PASSIVE_TIME 120
 
 #define BRCMF_ND_INFO_TIMEOUT_MSEC 2000
+// Wait until disconnect is complete. This is somewhat arbitrary. The disconnect process
+// involves issuing a few iovars to FW in addition to notifying SME. But SME sometimes
+// attempts to reconnect right away and that might preempt the disconnect.
+#define BRCMF_WAIT_FOR_DISCONNECT_MSEC ZX_MSEC(500)
 // Rate returned by FW (in units of Mbps) is multiplied by 2 to avoid passing fractional value
 #define BRCMF_CONVERT_TO_REAL_RATE(fw_rate) (fw_rate / 2.0)
 
@@ -1809,6 +1813,12 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
   if (!check_vif_up(ifp->vif)) {
     return ZX_ERR_IO;
   }
+
+  // Wait until disconnect completes before proceeding with the connect.
+  if (sync_completion_wait(&ifp->disconnect_done, BRCMF_WAIT_FOR_DISCONNECT_MSEC) != ZX_OK) {
+    BRCMF_ERR("Timed out waiting for client disconnect");
+    goto fail;
+  }
   // Firmware is already processing a join request. Don't clear the CONNECTING bit because the
   // operation is still expected to complete.
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
@@ -1896,7 +1906,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
   // some counters might be active even when the client is not connected.
   brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
   brcmf_fil_iovar_data_set(ifp, "wme_clear_counters", nullptr, 0, &fw_err);
-  BRCMF_DBG(CONN, "Sending join request");
+  BRCMF_DBG(CONN, "Sending C_SET_SSID to FW");
   err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("join failed (%d)", err);
@@ -5641,6 +5651,8 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
     // Client is already disconnected.
     return status;
   }
+  // Start of disconnect process. Reset disconnect_done.
+  sync_completion_reset(&ifp->disconnect_done);
 
   // TODO(fxb/61311): Remove once this verbose logging is no longer needed in
   // brcmf_indicate_client_disconnect(). This log should be moved to CONN
@@ -5664,6 +5676,9 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
     sync_completion_signal(&cfg->vif_disabled);
   }
   brcmf_net_setcarrier(ifp, false);
+  // Signal completion of disconnect process.
+  BRCMF_DBG(CONN, "Indicate disconnect done");
+  sync_completion_signal(&ifp->disconnect_done);
   BRCMF_DBG(TRACE, "Exit\n");
   return status;
 }

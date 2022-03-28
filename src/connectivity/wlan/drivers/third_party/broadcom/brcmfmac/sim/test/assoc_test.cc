@@ -209,6 +209,10 @@ class AssocTest : public SimTest {
   bool start_deauth_ = false;
   // Indicates if deauth is from the AP or from self
   bool deauth_from_ap_ = false;
+  // Indicates reassoc needs to be schedule when disassoc_ind is received.
+  bool start_reassoc_ = false;
+  // Indicates reassoc needs to be issued right when disassoc_ind is received.
+  bool start_reassoc_instant_ = false;
 
  private:
   // StationIfc overrides
@@ -417,6 +421,11 @@ void AssocTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
     context_.ind_locally_initiated_count++;
   }
   client_ifc_.stats_.disassoc_indications.push_back(*ind);
+  if (start_reassoc_instant_) {
+    ReAssoc();
+  } else if (start_reassoc_) {
+    env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
+  }
 }
 
 void AssocTest::OnSignalReport(const wlan_fullmac_signal_report_indication* ind) {
@@ -1400,6 +1409,57 @@ TEST_F(AssocTest, simple_reassoc) {
   env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
+}
+
+// Reassoc should pass since the attempt is made after disassoc completes.
+TEST_F(AssocTest, reassoc_success) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  // Schedule reassoc when disassoc notification is received at SME.
+  start_reassoc_ = true;
+
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+
+  env_->Run(kTestDuration);
+
+  // Since reassoc occurs after disassoc is completed it succeeds.
+  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
+}
+
+// Reassoc should fail since the attempt is made soon after SME is notified but before disassoc
+// completes.
+TEST_F(AssocTest, reassoc_fails) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  // Issue reassoc soon after disassoc notification is received at SME.
+  start_reassoc_instant_ = true;
+
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+
+  env_->Run(kTestDuration);
+
+  // Although we attempted to reassoc, it fails because disconnect is in progress
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
