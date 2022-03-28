@@ -5,6 +5,8 @@
 """Tests for rustc_remote_wrapper."""
 
 import rustc_remote_wrapper
+
+import argparse
 import parameterized
 import unittest
 
@@ -64,115 +66,137 @@ class MainArgParseTests(unittest.TestCase):
         self.assertEqual(args.command, ['rustc', 'src/lib.rs'])
 
 
-class CommandArgParseTests(unittest.TestCase):
+class FilterCompileCommandTests(unittest.TestCase):
 
     def testDefaults(self):
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command([])
-        self.assertFalse(args.remote_disable)
-        self.assertEqual(args.remote_inputs, [])
-        self.assertEqual(args.remote_outputs, [])
-        self.assertEqual(args.remote_flags, [])
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
+            [])
+        self.assertFalse(remote_params.remote_disable)
+        self.assertEqual(remote_params.remote_inputs, [])
+        self.assertEqual(remote_params.remote_outputs, [])
+        self.assertEqual(remote_params.remote_flags, [])
         self.assertEqual(filtered_command, [])
 
     def testNormalCommand(self):
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['echo', 'hello'])
-        self.assertFalse(args.remote_disable)
-        self.assertEqual(args.remote_inputs, [])
-        self.assertEqual(args.remote_outputs, [])
-        self.assertEqual(args.remote_flags, [])
+        self.assertFalse(remote_params.remote_disable)
+        self.assertEqual(remote_params.remote_inputs, [])
+        self.assertEqual(remote_params.remote_outputs, [])
+        self.assertEqual(remote_params.remote_flags, [])
         self.assertEqual(filtered_command, ['echo', 'hello'])
 
     def testRemoteDisable(self):
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-disable'])
-        self.assertTrue(args.remote_disable)
+        self.assertTrue(remote_params.remote_disable)
         self.assertEqual(filtered_command, [])
 
     def testRemoteInputs(self):
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-inputs', 'aaa,bbb'])
-        self.assertEqual(args.remote_inputs, 'aaa,bbb')
+        self.assertEqual(remote_params.remote_inputs, 'aaa,bbb')
         self.assertEqual(filtered_command, [])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-inputs=aaa,bbb'])
-        self.assertEqual(args.remote_inputs, 'aaa,bbb')
+        self.assertEqual(remote_params.remote_inputs, 'aaa,bbb')
         self.assertEqual(filtered_command, [])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-inputs', 'aaa', '--remote-inputs', 'bbb'])
-        self.assertEqual(args.remote_inputs, 'bbb')
+        self.assertEqual(remote_params.remote_inputs, 'bbb')
         self.assertEqual(filtered_command, [])
 
     def testRemoteOutputs(self):
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-outputs', 'xxx,yyy'])
-        self.assertEqual(args.remote_outputs, 'xxx,yyy')
+        self.assertEqual(remote_params.remote_outputs, 'xxx,yyy')
         self.assertEqual(filtered_command, [])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-outputs=xxx,yyy'])
-        self.assertEqual(args.remote_outputs, 'xxx,yyy')
+        self.assertEqual(remote_params.remote_outputs, 'xxx,yyy')
         self.assertEqual(filtered_command, [])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-outputs', 'xxx', '--remote-outputs', 'yyy'])
-        self.assertEqual(args.remote_outputs, 'yyy')
+        self.assertEqual(remote_params.remote_outputs, 'yyy')
         self.assertEqual(filtered_command, [])
 
     def testRemoteFlag(self):
         # argparse does not handle this:
-        # args = rustc_remote_wrapper.parse_compile_command(['--remote-flag', '--some-rewrapper-flag=foobar'])
-        # self.assertEqual(args.remote_flags, ['--some-rewrapper-flag=foobar'])
+        # remote_params = rustc_remote_wrapper.filter_compile_command(['--remote-flag', '--some-rewrapper-flag=foobar'])
+        # self.assertEqual(remote_params.remote_flags, ['--some-rewrapper-flag=foobar'])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-flag=--some-rewrapper-flag=foobar'])
-        self.assertEqual(args.remote_flags, ['--some-rewrapper-flag=foobar'])
+        self.assertEqual(
+            remote_params.remote_flags, ['--some-rewrapper-flag=foobar'])
         self.assertEqual(filtered_command, [])
 
-        args, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             ['--remote-flag=--some-rewrapper-flag=foobar', '--remote-flag=baz'])
         self.assertEqual(
-            args.remote_flags, ['--some-rewrapper-flag=foobar', 'baz'])
+            remote_params.remote_flags, ['--some-rewrapper-flag=foobar', 'baz'])
         self.assertEqual(filtered_command, [])
-
-
-class RemoteCommandPseudoFlagsTests(unittest.TestCase):
 
     @parameterized.expand(
         [
-            # (input, expected)
+            # (input command, expected remote params, expected filtered command)
             (
                 [],
+                argparse.Namespace(
+                    remote_disable=False,
+                    remote_inputs=[],
+                    remote_outputs=[],
+                    remote_flags=[]),
                 [],
             ),
             (
-                ['foo', 'bar'],
-                ['foo', 'bar'],
+                ['make', 'it', 'so'],
+                argparse.Namespace(
+                    remote_disable=False,
+                    remote_inputs=[],
+                    remote_outputs=[],
+                    remote_flags=[]),
+                ['make', 'it', 'so'],
             ),
             (
-                ['--remote-disable', 'foo', 'bar'],
-                ['foo', 'bar'],
+                ['make', 'it', '--remote-disable', 'so'],
+                argparse.Namespace(
+                    remote_disable=True,
+                    remote_inputs=[],
+                    remote_outputs=[],
+                    remote_flags=[]),
+                ['make', 'it', 'so'],
             ),
             (
-                ['foo', '--remote-inputs=bar'],
-                ['foo'],
+                ['make', '--remote-flag=--rewrapper-flag', 'it', 'so'],
+                argparse.Namespace(
+                    remote_disable=False,
+                    remote_inputs=[],
+                    remote_outputs=[],
+                    remote_flags=['--rewrapper-flag']),
+                ['make', 'it', 'so'],
             ),
             (
-                ['--remote-outputs=foo', 'bar'],
-                ['bar'],
-            ),
-            (
-                ['foo', '--remote-flag=--bar', 'baz'],
-                ['foo', 'baz'],
+                ['make', '--remote-flag', '--rewrapper-flag', 'it', 'so'],
+                argparse.Namespace(
+                    remote_disable=False,
+                    remote_inputs=[],
+                    remote_outputs=[],
+                    remote_flags=['--rewrapper-flag']),
+                ['make', 'it', 'so'],
             ),
         ])
-    def testCommandFiltering(self, input_command, expected_filtered_command):
-        self.assertEqual(
-            list(
-                rustc_remote_wrapper.remove_command_pseudo_flags(
-                    input_command)), expected_filtered_command)
+    def testGeneralCases(
+            self, input_command, expected_remote_params,
+            expected_filtered_command):
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
+            input_command)
+        self.assertEqual(remote_params, expected_remote_params)
+        self.assertEqual(filtered_command, expected_filtered_command)
 
 
 class ApplyRemoteFlagsFromPseudoFlagsTests(unittest.TestCase):
@@ -188,11 +212,67 @@ class ApplyRemoteFlagsFromPseudoFlagsTests(unittest.TestCase):
     def testDefault(self, input_command, expected_local):
         main_config, rewrapper_opts = rustc_remote_wrapper.parse_main_args(
             input_command)
-        command_params, filtered_command = rustc_remote_wrapper.parse_compile_command(
+        remote_params, filtered_command = rustc_remote_wrapper.filter_compile_command(
             main_config.command)
         rustc_remote_wrapper.apply_remote_flags_from_pseudo_flags(
-            main_config, command_params)
+            main_config, remote_params)
         self.assertEqual(main_config.local, expected_local)
+
+
+_ENV = rustc_remote_wrapper._ENV
+
+
+class ParseRustCompileCommandTests(unittest.TestCase):
+
+    def testEmpty(self):
+        # Make sure degenerate case doesn't crash.
+        self.assertEqual(
+            rustc_remote_wrapper.parse_rust_compile_command([]),
+            argparse.Namespace(
+                depfile=None,
+                dep_only_command=[_ENV],
+            ))
+
+    @parameterized.expand(
+        [
+            (
+                ['rustc', '--blah', '--emit=dep-info=foo/bar.d', '--bar=baz'],
+                'foo/bar.d',
+                [
+                    _ENV, 'rustc', '--blah', '-Zbinary-dep-depinfo',
+                    '--emit=dep-info=foo/bar.d.nolink', '--bar=baz'
+                ],
+            ),
+            (  # with extra ./
+                ['rustc', '--blah', '--emit=dep-info=./foo/bar.d', '--bar=baz'],
+                'foo/bar.d',
+                [
+                    _ENV, 'rustc', '--blah', '-Zbinary-dep-depinfo',
+                    '--emit=dep-info=foo/bar.d.nolink', '--bar=baz'
+                ],
+            ),
+            (  # with link
+                ['rustc', '--blah', '--emit=dep-info=foo/bar.d,link', '--bar=baz'],
+                'foo/bar.d',
+                [
+                    _ENV, 'rustc', '--blah', '-Zbinary-dep-depinfo',
+                    '--emit=dep-info=foo/bar.d.nolink', '--bar=baz'
+                ],
+            ),
+            (  # with link
+                ['rustc', '--blah', '--emit=link,dep-info=foo/bar.d', '--bar=baz'],
+                'foo/bar.d',
+                [
+                    _ENV, 'rustc', '--blah', '-Zbinary-dep-depinfo',
+                    '--emit=dep-info=foo/bar.d.nolink', '--bar=baz'
+                ],
+            ),
+        ])
+    def testRustCommandsWithDepInfo(
+            self, command, expected_depfile, expected_dep_command):
+        params = rustc_remote_wrapper.parse_rust_compile_command(command)
+        self.assertEqual(params.depfile, expected_depfile)
+        self.assertEqual(params.dep_only_command, expected_dep_command)
 
 
 if __name__ == '__main__':

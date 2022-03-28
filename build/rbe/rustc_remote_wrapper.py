@@ -62,6 +62,9 @@ _PROJECT_ROOT_REL = os.path.relpath(_DEFAULT_PROJECT_ROOT, start=os.curdir)
 # This is a known path where remote execution occurs.
 _REMOTE_PROJECT_ROOT = '/b/f/w'
 
+# Use this env both locally and remotely.
+_ENV = '/usr/bin/env'
+
 _CHECK_DETERMINISM_COMMAND = [
     os.path.join(_DEFAULT_PROJECT_ROOT, 'build', 'tracer', 'output_cacher.py'),
     '--check-repeatability',
@@ -74,7 +77,8 @@ _FSATRACE_PATH = os.path.join(
 _DETAIL_DIFF = os.path.join(_SCRIPT_DIR, 'detail-diff.sh')
 
 
-def apply_remote_flags_from_pseudo_flags(main_config, command_params):
+def apply_remote_flags_from_pseudo_flags(
+        main_config: argparse.Namespace, command_params: argparse.Namespace):
     """Apply some flags from the command to the rewrapper configuration.
 
     Args:
@@ -83,39 +87,6 @@ def apply_remote_flags_from_pseudo_flags(main_config, command_params):
     """
     if command_params.remote_disable:
         main_config.local = True
-
-
-def remove_command_pseudo_flags(command: Iterable[str]) -> Iterable[str]:
-    """Remove pseudo flags from the command.
-
-    These pseudo flags exist to provide a means of influencing remote
-    execution in the position where normal tool flags appear to make
-    up for the inability to pass the same information to the wrapper
-    prefix in GN.
-
-    Semantic handling of these flags is handled in compile_command_parser().
-    """
-    ignore_next_token = False
-    for token in command:
-        if ignore_next_token:
-            ignore_next_token = False
-            continue
-        elif token == '--remote-disable':
-            pass
-        elif token == '--remote-inputs':
-            ignore_next_token = True
-        elif token.startswith('--remote-inputs='):
-            pass
-        elif token == '--remote-outputs':
-            ignore_next_token = True
-        elif token.startswith('--remote-outputs='):
-            pass
-        elif token == '--remote-flag':
-            ignore_next_token = True
-        elif token.startswith('--remote-flag='):
-            pass
-        else:
-            yield token
 
 
 def parse_main_args(
@@ -174,9 +145,9 @@ def parse_main_args(
     return params, forward_to_rewrapper
 
 
-def parse_compile_command(
+def filter_compile_command(
         command: Sequence[str]) -> Tuple[argparse.Namespace, Sequence[str]]:
-    """Scan a compile command for parameters.
+    """Scan a command for remote execution parameters, filter out pseudo-flags.
 
     Interface matches that of argparse.ArgumentParser.parse_known_args().
 
@@ -195,10 +166,6 @@ def parse_compile_command(
     )
     forward_as_compile_command = []
 
-    # Workaround inability to use assign statement inside lambda.
-    def set_params_attr(attr: str, value):
-        setattr(params, attr, value)
-
     opt_arg_func = None
     for token in command:
         # Handle detached --option argument
@@ -212,11 +179,11 @@ def parse_compile_command(
         if token == '--remote-disable':
             params.remote_disable = True
         elif token == '--remote-inputs':
-            opt_arg_func = lambda x: set_params_attr('remote_inputs', x)
+            opt_arg_func = lambda x: setattr(params, 'remote_inputs', x)
         elif opt == '--remote-inputs' and sep == '=':
             params.remote_inputs = arg
         elif token == '--remote-outputs':
-            opt_arg_func = lambda x: set_params_attr('remote_outputs', x)
+            opt_arg_func = lambda x: setattr(params, 'remote_outputs', x)
         elif opt == '--remote-outputs' and sep == '=':
             params.remote_outputs = arg
         elif token == '--remote-flag':
@@ -227,6 +194,64 @@ def parse_compile_command(
             forward_as_compile_command.append(token)
 
     return params, forward_as_compile_command
+
+
+# string.removeprefix() only appeared in python 3.9
+def remove_dot_slash_prefix(text: str) -> str:
+    if text.startswith('./'):
+        return text[2:]
+    return text
+
+
+def parse_rust_compile_command(
+        compile_command: Sequence[str]) -> argparse.Namespace:
+    """Scans a Rust compile command for remote execution parameters.
+
+    Args:
+      compile_command: the full (local) Rust compile command, which
+        may contain environment variable prefixes.
+
+    Returns:
+      A namespace of variables containing remote execution information.
+    """
+    params = argparse.Namespace(
+        depfile=None,
+        dep_only_command=[_ENV],  # a modified copy of compile_command
+    )
+    opt_arg_func = None
+    for token in compile_command:
+        if opt_arg_func is not None:
+            opt_arg_func(token)
+            opt_arg_func = None
+            continue
+
+        opt, sep, arg = token.partition('=')
+
+        # Create a modified copy of the compile command that will be
+        # used to only generate a depfile.
+        # Rewrite the --emit token to do exactly this, ignoring
+        # all other requested emit outputs.
+        if opt == '--emit' and sep == '=':
+            emit_args = arg.split(',')
+            for emit_arg in emit_args:
+                emit_key, emit_sep, emit_value = emit_arg.partition('=')
+                if emit_key == 'dep-info' and emit_sep == '=':
+                    params.depfile = remove_dot_slash_prefix(emit_value)
+
+            # Tell rustc to report all transitive *library* dependencies,
+            # not just the sources, because these all need to be uploaded.
+            # This includes (prebuilt) system libraries as well.
+            # TODO(https://fxbug.dev/78292): this -Z flag is not known to be stable yet.
+            params.dep_only_command += [
+                '-Zbinary-dep-depinfo',
+                f'--emit=dep-info={params.depfile}.nolink'
+            ]
+            continue
+
+        # By default, copy over most tokens for depfile generation.
+        params.dep_only_command.append(token)
+
+    return params
 
 
 def main(argv: Sequence[str]):
@@ -240,16 +265,19 @@ def main(argv: Sequence[str]):
         return 0
 
     # The command to run remotely is in main_config.command.
-    command_params = parse_compile_command(main_config.command)
-    forwarded_rewrapper_args.extend(command_params.remote_flags)
+    # Remove pseudo flags from the remote command.
+    remote_params, filtered_command = filter_compile_command(
+        main_config.command)
+    forwarded_rewrapper_args.extend(remote_params.remote_flags)
 
     # Import some remote parameters back to the main_config.
-    apply_remote_flags_from_pseudo_flags(main_config, command_params)
+    apply_remote_flags_from_pseudo_flags(main_config, remote_params)
 
-    # Remove pseudo flags from the remote command.
-    filtered_command = remove_command_pseudo_flags(main_config.command)
+    compile_params = parse_rust_compile_command(filtered_command)
 
     # TODO: infer inputs and outputs for remote execution
+    # Use the dep-scanning command from compile_params.dep_only_command
+
     # TODO: construct remote execution command and run it
     # TODO: post-execution diagnostics
 
