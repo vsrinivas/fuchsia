@@ -1465,7 +1465,8 @@ impl RunningSuite {
     /// complete. Returns an error only if destruction fails.
     async fn destroy(mut self) -> Result<(), Error> {
         // TODO(fxbug.dev/92769) Remove timeout once component manager hangs are removed.
-        const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
+        // This value is set to be slightly longer than the shutdown timeout for tests (30 sec).
+        const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(32);
 
         // before destroying the realm, wait for any clients to finish accessing storage.
         // TODO(fxbug.dev/84825): Separate realm destruction and destruction of custom
