@@ -44,9 +44,8 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status = alloc_vmx_state();
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = alloc_vmx_state(); result.is_error()) {
+    return result.status_value();
   }
   auto defer = fit::defer([] { free_vmx_state(); });
 
@@ -65,8 +64,7 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
 
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;
-  status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX);
-  if (status != ZX_OK) {
+  if (zx_status_t status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX); status != ZX_OK) {
     return status;
   }
 

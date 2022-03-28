@@ -194,21 +194,20 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
   return hypervisor::Page::Alloc(fill).status_value();
 }
 
-zx_status_t alloc_vmx_state() {
+zx::status<> alloc_vmx_state() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
     fbl::AllocChecker ac;
     size_t num_cpus = arch_max_num_cpus();
     VmxPage* pages_ptr = new (&ac) VmxPage[num_cpus];
     if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     fbl::Array<VmxPage> pages(pages_ptr, num_cpus);
     VmxInfo vmx_info;
     for (auto& page : pages) {
-      zx_status_t status = page.Alloc(vmx_info, 0);
-      if (status != ZX_OK) {
-        return status;
+      if (zx_status_t status = page.Alloc(vmx_info, 0); status != ZX_OK) {
+        return zx::error(status);
       }
     }
 
@@ -216,23 +215,22 @@ zx_status_t alloc_vmx_state() {
     cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &pages);
     if (cpu_mask != mp_get_online_mask()) {
       mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
-      return ZX_ERR_NOT_SUPPORTED;
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
 
     vmxon_pages = ktl::move(pages);
   }
   num_guests++;
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t free_vmx_state() {
+void free_vmx_state() {
   Guard<Mutex> guard(GuestMutex::Get());
   num_guests--;
   if (num_guests == 0) {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
     vmxon_pages.reset();
   }
-  return ZX_OK;
 }
 
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr) {

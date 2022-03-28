@@ -69,8 +69,8 @@ enum class InvEpt : uint64_t {
 };
 
 zx_status_t invept(InvEpt invalidation, uint64_t eptp);
-zx_status_t alloc_vmx_state();
-zx_status_t free_vmx_state();
+zx::status<> alloc_vmx_state();
+void free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMX_CPU_STATE_PRIV_H_
