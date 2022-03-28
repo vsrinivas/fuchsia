@@ -13,7 +13,7 @@ instructions for more details.
         --with //src/lib/ui/carnelian:carnelian-integration-test \
         --with //src/lib/ui/carnelian:carnelian-fb-integration-test \
         --with //src/lib/ui/carnelian:carnelian-tests \
-        --with //src/lib/ui/carnelian:carnelian-layout-tests
+        --with //src/lib/ui/carnelian:carnelian-layout-tests \
         --release \
         --auto-dir \
         --args=rust_cap_lints='"warn"' \
