@@ -198,9 +198,11 @@ mod tests {
     use {
         super::*,
         crate::model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
-        cm_rust_testing::ComponentDeclBuilder,
+        cm_rust_testing::{CollectionDeclBuilder, ComponentDeclBuilder},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_component_decl::{ChildRef, CollectionRef},
+        fuchsia_async as fasync,
         std::sync::Arc,
     };
 
@@ -275,7 +277,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn lifecycle_already_started_test() {
+    async fn lifecycle_stop_test() {
         let components = vec![("root", ComponentDeclBuilder::new().build())];
 
         let test_model_result =
@@ -297,6 +299,79 @@ mod tests {
         assert_eq!(
             lifecycle_proxy.start(".").await.unwrap(),
             Ok(fsys::StartResult::AlreadyStarted)
+        );
+
+        assert_eq!(lifecycle_proxy.stop(".", false).await.unwrap(), Ok(()));
+
+        assert_eq!(lifecycle_proxy.start(".").await.unwrap(), Ok(fsys::StartResult::Started));
+    }
+
+    #[fuchsia::test]
+    async fn lifecycle_create_and_destroy_test() {
+        let collection = CollectionDeclBuilder::new_transient_collection("coll").build();
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_collection(collection)
+                    .add_lazy_child("child")
+                    .build(),
+            ),
+            ("child", ComponentDeclBuilder::new().build()),
+        ];
+
+        let test_model_result =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let lifecycle_controller =
+            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+
+        let (lifecycle_proxy, lifecycle_request_stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+
+        let _lifecycle_server_task = fasync::Task::local(async move {
+            lifecycle_controller.serve(lifecycle_request_stream).await
+        });
+
+        assert_eq!(
+            lifecycle_proxy
+                .create_child(
+                    "./",
+                    &mut CollectionRef { name: "coll".to_string() },
+                    fdecl::Child {
+                        name: Some("child".to_string()),
+                        url: Some("test:///child".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fdecl::Child::EMPTY
+                    },
+                    fcomponent::CreateChildArgs::EMPTY,
+                )
+                .await
+                .unwrap(),
+            Ok(())
+        );
+
+        assert_eq!(lifecycle_proxy.resolve("./coll:child").await.unwrap(), Ok(()));
+
+        assert_eq!(
+            lifecycle_proxy
+                .destroy_child(
+                    "./",
+                    &mut ChildRef {
+                        name: "child".to_string(),
+                        collection: Some("coll".to_string()),
+                    }
+                )
+                .await
+                .unwrap(),
+            Ok(())
+        );
+
+        assert_eq!(
+            lifecycle_proxy.resolve("./coll:child").await.unwrap(),
+            Err(fcomponent::Error::InstanceNotFound)
         );
     }
 }

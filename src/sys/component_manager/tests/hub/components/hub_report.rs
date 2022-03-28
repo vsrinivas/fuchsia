@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_sys2 as fsys,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_sys2 as fsys,
     files_async::readdir,
     fuchsia_component::client::connect_to_protocol_at_path,
     io_util::{open_directory_in_namespace, open_file_in_namespace},
@@ -99,6 +100,44 @@ pub async fn stop_component(path: &str, relative_moniker: &str, expect_success: 
     let lifecycle_controller_proxy =
         connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
     let result = lifecycle_controller_proxy.stop(relative_moniker, false).await.unwrap();
+    if expect_success {
+        result.unwrap();
+    } else {
+        result.unwrap_err();
+    }
+}
+
+pub async fn create_component(
+    path: &str,
+    parent_moniker: &str,
+    collection: &mut fdecl::CollectionRef,
+    decl: fdecl::Child,
+    expect_success: bool,
+) {
+    info!("Attempting to create {} from {}", decl.name.as_ref().unwrap(), path);
+    let lifecycle_controller_proxy =
+        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
+    let result = lifecycle_controller_proxy
+        .create_child(parent_moniker, collection, decl, fcomponent::CreateChildArgs::EMPTY)
+        .await
+        .unwrap();
+    if expect_success {
+        result.unwrap();
+    } else {
+        result.unwrap_err();
+    }
+}
+
+pub async fn destroy_child(
+    path: &str,
+    parent_moniker: &str,
+    child: &mut fdecl::ChildRef,
+    expect_success: bool,
+) {
+    info!("Attempting to destroy {} from {}", child.name, path);
+    let lifecycle_controller_proxy =
+        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
+    let result = lifecycle_controller_proxy.destroy_child(parent_moniker, child).await.unwrap();
     if expect_success {
         result.unwrap();
     } else {

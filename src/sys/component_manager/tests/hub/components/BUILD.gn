@@ -101,6 +101,8 @@ rustc_library("hub_report_lib") {
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:tracing",
