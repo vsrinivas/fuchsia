@@ -83,8 +83,8 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
     });
   }
 
-  return fidl_decode_etc(type, bytes, num_bytes, handle_infos.data(), handle_infos.size(),
-                         error_msg_out);
+  return fidl_decode_etc(type, bytes, num_bytes, handle_infos.data(),
+                         static_cast<uint32_t>(handle_infos.size()), error_msg_out);
 }
 
 zx_status_t fidl_decode_transactional(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
