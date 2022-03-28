@@ -13,7 +13,7 @@ pub struct Context {
     pub use_persistent_header: bool,
 }
 
-pub const DEFAULT_CONTEXT: Context = Context { use_persistent_header: false };
+pub const DEFAULT_CONTEXT: Context = Context { use_persistent_header: true };
 
 /// Decode some bytes into a FIDL type
 pub fn decode_fidl_with_context<T: fidl::encoding::Persistable>(
