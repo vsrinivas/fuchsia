@@ -189,7 +189,7 @@ int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ip
 }
 
 int16_t ParseControlMessage(fsocket::wire::SocketSendControlData& fidl_socket,
-                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            fidl::AnyArena& allocator, int level, int type, const void* data,
                             socklen_t data_len) {
   switch (level) {
     case SOL_SOCKET:
@@ -200,7 +200,7 @@ int16_t ParseControlMessage(fsocket::wire::SocketSendControlData& fidl_socket,
 }
 
 int16_t ParseControlMessage(fsocket::wire::NetworkSocketSendControlData& fidl_net,
-                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            fidl::AnyArena& allocator, int level, int type, const void* data,
                             socklen_t data_len) {
   switch (level) {
     case SOL_SOCKET:
@@ -224,7 +224,7 @@ int16_t ParseControlMessage(fsocket::wire::NetworkSocketSendControlData& fidl_ne
 }
 
 int16_t ParseControlMessage(fsocket::wire::DatagramSocketSendControlData& fidl_dgram,
-                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            fidl::AnyArena& allocator, int level, int type, const void* data,
                             socklen_t data_len) {
   if (!fidl_dgram.has_network()) {
     fidl_dgram.set_network(allocator, fsocket::wire::NetworkSocketSendControlData(allocator));
@@ -233,7 +233,7 @@ int16_t ParseControlMessage(fsocket::wire::DatagramSocketSendControlData& fidl_d
 }
 
 int16_t ParseControlMessage(fpacketsocket::wire::SendControlData& fidl_packet,
-                            fidl::AnyArena& allocator, int type, int level, const void* data,
+                            fidl::AnyArena& allocator, int level, int type, const void* data,
                             socklen_t data_len) {
   if (!fidl_packet.has_socket()) {
     fidl_packet.set_socket(allocator, fsocket::wire::SocketSendControlData(allocator));
