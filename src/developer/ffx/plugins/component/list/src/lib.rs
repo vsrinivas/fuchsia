@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    ansi_term::Colour,
     anyhow::{Context, Result},
     component_hub::{
         io::Directory,
@@ -13,19 +14,18 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
     serde::{Deserialize, Serialize},
 };
 
 /// The number of times listing components from the hub should be retried before assuming failure.
 const NUM_COMPONENT_LIST_ATTEMPTS: u64 = 3;
 
-const SPACER: &str = "  ";
-const WIDTH_CS_TREE: usize = 19;
-
 #[derive(Deserialize, Serialize)]
 pub struct ListComponent {
-    // Name of the component. This is the full path in the component hierarchy.
-    pub name: String,
+    // Moniker of the component. This is the full path in the component hierarchy.
+    pub moniker: AbsoluteMoniker,
 
     // URL of the component.
     pub url: String,
@@ -40,9 +40,8 @@ pub struct ListComponent {
 }
 
 impl ListComponent {
-    fn new(leading: &str, own_name: &str, url: String, is_cmx: bool, is_running: bool) -> Self {
-        let name = join_names(leading, own_name);
-        Self { name, url, is_cmx, is_running }
+    fn new(moniker: AbsoluteMoniker, url: String, is_cmx: bool, is_running: bool) -> Self {
+        Self { moniker, url, is_cmx, is_running }
     }
 }
 
@@ -63,7 +62,7 @@ pub async fn list(
 pub async fn try_get_component_list(hub_dir: Directory, writer: &Writer) -> Result<Component> {
     let mut attempt_number = 1;
     loop {
-        match Component::parse("/".to_string(), hub_dir.clone()?).await {
+        match Component::parse("/".to_string(), AbsoluteMoniker::root(), hub_dir.clone()?).await {
             Ok(component) => return Ok(component),
             Err(e) => {
                 if attempt_number > NUM_COMPONENT_LIST_ATTEMPTS {
@@ -79,7 +78,7 @@ pub async fn try_get_component_list(hub_dir: Directory, writer: &Writer) -> Resu
 
 async fn list_impl(
     rcs_proxy: rc::RemoteControlProxy,
-    writer: Writer,
+    mut writer: Writer,
     list_filter: Option<ListFilter>,
     verbose: bool,
 ) -> Result<()> {
@@ -99,112 +98,109 @@ async fn list_impl(
     if writer.is_machine() {
         writer.machine(&expand_component(component, &list_filter))?;
         Ok(())
+    } else if verbose {
+        let mut table = Table::new();
+        table.set_format(*FORMAT_CLEAN);
+        table.set_titles(row!("Type", "State", "Moniker", "URL"));
+        add_component_rows_to_table(&component, &list_filter, &mut table)?;
+        table.print(&mut writer)?;
+        Ok(())
     } else {
-        print_component_tree(&component, &list_filter, verbose, 0, &writer)
+        print_component_monikers(&component, &list_filter, &writer)?;
+        Ok(())
     }
 }
 
 fn expand_component(component: Component, list_filter: &ListFilter) -> Vec<ListComponent> {
     let mut result = Vec::new();
-    expand_component_rec("", component, list_filter, &mut result);
+    expand_component_rec(component, list_filter, &mut result);
     result
 }
 
 fn expand_component_rec(
-    leading: &str,
     component: Component,
     list_filter: &ListFilter,
     result: &mut Vec<ListComponent>,
 ) {
     let should_include_this = component.should_include(list_filter);
-    let Component { name, is_cmx, is_running, children, url, .. } = component;
+    let Component { is_cmx, is_running, children, url, moniker, .. } = component;
 
     if should_include_this {
-        result.push(ListComponent::new(leading, &name, url, is_cmx, is_running));
+        result.push(ListComponent::new(moniker, url, is_cmx, is_running));
     }
 
-    let new_leading = join_names(leading, &name);
     for child in children {
-        expand_component_rec(&new_leading, child, list_filter, result);
+        expand_component_rec(child, list_filter, result);
     }
 }
 
-pub fn print_component_tree(
+/// Recursively print the component monikers
+///
+/// # Arguments
+///
+/// * `component` - The component to print.
+///                 Will recursively go through its children to print them too.
+/// * `list_filter` - Filter to apply to the components.
+/// * `writer` - The writer
+pub fn print_component_monikers(
     component: &Component,
     list_filter: &ListFilter,
-    verbose: bool,
-    indent: usize,
     writer: &Writer,
 ) -> Result<()> {
-    let space = SPACER.repeat(indent);
     if component.should_include(&list_filter) {
-        if verbose {
-            let component_type = if component.is_cmx { "CMX" } else { "CML" };
-
-            let state = if component.is_running { "Running" } else { "Stopped" };
-
-            writer.line(format!(
-                "{:<width_type$}{:<width_state$}{}{:<width_name$}{}",
-                component_type,
-                state,
-                space,
-                component.name,
-                component.url,
-                width_type = WIDTH_CS_TREE,
-                width_state = WIDTH_CS_TREE,
-                width_name = (WIDTH_CS_TREE - indent) * 2
-            ))?;
-        } else {
-            writer.line(format!("{}{}", space, component.name))?;
-        }
+        writer.line(component.moniker.to_string())?;
     }
 
     for child in &component.children {
-        print_component_tree(child, list_filter, verbose, indent + 1, writer)?;
+        print_component_monikers(child, list_filter, writer)?;
     }
 
     Ok(())
 }
 
-fn join_names(first: &str, second: &str) -> String {
-    if first.is_empty() {
-        return second.to_string();
+pub fn add_component_rows_to_table(
+    component: &Component,
+    list_filter: &ListFilter,
+    table: &mut Table,
+) -> Result<()> {
+    if component.should_include(&list_filter) {
+        let component_type = if component.is_cmx { "CMX" } else { "CML" };
+
+        let state = if component.is_running {
+            Colour::Green.paint("Running")
+        } else {
+            Colour::Red.paint("Stopped")
+        };
+        table.add_row(row!(component_type, state, component.moniker.to_string(), component.url));
+    }
+    for child in &component.children {
+        add_component_rows_to_table(child, list_filter, table)?;
     }
 
-    let mut result = String::from(first);
-
-    if !result.ends_with('/') {
-        result.push('/');
-    }
-
-    result.push_str(second);
-
-    result
+    Ok(())
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_component_name_construction() {
-        let leading = "/";
-        let name = "foo.cmx";
-
         let list_component = ListComponent::new(
-            leading,
-            name,
+            AbsoluteMoniker::parse_str("/leading/foo.cmx").unwrap(),
             "fuchsia-test://test.com/foo".to_string(),
             true,
             true,
         );
 
-        assert_eq!(list_component.name, "/foo.cmx");
+        assert_eq!(list_component.moniker.to_string(), "/leading/foo.cmx");
     }
 
     fn component_for_test() -> Component {
         Component {
             name: "/".to_owned(),
+            moniker: AbsoluteMoniker::root(),
             is_cmx: false,
             url: "".to_owned(),
             is_running: false,
@@ -212,6 +208,7 @@ mod test {
             children: vec![
                 Component {
                     name: "appmgr".to_owned(),
+                    moniker: AbsoluteMoniker::parse_str("/appmgr").unwrap(),
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: true,
@@ -219,6 +216,7 @@ mod test {
                     children: vec![
                         Component {
                             name: "foo.cmx".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/appmgr/foo.cmx").unwrap(),
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
@@ -227,6 +225,7 @@ mod test {
                         },
                         Component {
                             name: "bar.cmx".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/appmgr/bar.cmx").unwrap(),
                             is_cmx: true,
                             url: "".to_owned(),
                             is_running: true,
@@ -237,6 +236,7 @@ mod test {
                 },
                 Component {
                     name: "sys".to_owned(),
+                    moniker: AbsoluteMoniker::parse_str("/sys").unwrap(),
                     is_cmx: false,
                     url: "".to_owned(),
                     is_running: false,
@@ -244,6 +244,7 @@ mod test {
                     children: vec![
                         Component {
                             name: "baz".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/sys/baz").unwrap(),
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: true,
@@ -252,12 +253,14 @@ mod test {
                         },
                         Component {
                             name: "fuzz".to_owned(),
+                            moniker: AbsoluteMoniker::parse_str("/sys/fuzz").unwrap(),
                             is_cmx: false,
                             url: "".to_owned(),
                             is_running: false,
                             ancestors: vec!["/".to_owned(), "sys".to_owned()],
                             children: vec![Component {
                                 name: "hello".to_owned(),
+                                moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                                 is_cmx: false,
                                 url: "".to_owned(),
                                 is_running: false,
@@ -313,8 +316,8 @@ mod test {
         let result = expand_component(component, &filter);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].name, "/appmgr/foo.cmx");
-        assert_eq!(result[1].name, "/appmgr/bar.cmx");
+        assert_eq!(result[0].moniker.to_string(), "/appmgr/foo.cmx");
+        assert_eq!(result[1].moniker.to_string(), "/appmgr/bar.cmx");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -325,6 +328,6 @@ mod test {
         let result = expand_component(component, &filter);
 
         assert_eq!(result.len(), 6);
-        assert_eq!(result[5].name, "/sys/fuzz/hello");
+        assert_eq!(result[5].moniker.to_string(), "/sys/fuzz/hello");
     }
 }
