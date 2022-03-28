@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.input/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -147,6 +148,108 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   return ZX_ERR_STOP;
 }
 
+// Open the input directory, wait for the proper input device type to appear,
+// and parse out information about the input event itself.
+// Args:
+//   - event_out: should point to a zx::event that will be populated
+//   - info_out: should point to PowerButtonInfo object which will be populated
+// Errors:
+//   - ZX_ERR_INTERNAL: if the input directory can not be opened
+//   - other: errors returned by `fdio_watch_directory`, other than
+//            `ZX_ERR_STOP`
+zx_status_t get_button_report_event(zx::event* event_out, PowerButtonInfo* info_out) {
+  fbl::unique_fd dirfd;
+  {
+    int fd = open(INPUT_PATH, O_DIRECTORY);
+    if (fd < 0) {
+      printf("pwrbtn-monitor: Failed to open " INPUT_PATH ": %d\n", errno);
+      // TODO(jmatt) is this the right failure code?
+      return ZX_ERR_INTERNAL;
+    }
+    dirfd.reset(fd);
+  }
+
+  zx_status_t status =
+      fdio_watch_directory(dirfd.get(), InputDeviceAdded, ZX_TIME_INFINITE, info_out);
+  if (status != ZX_ERR_STOP) {
+    printf("pwrbtn-monitor: Failed to find power button device\n");
+    return status;
+  }
+  dirfd.reset();
+
+  auto& client = info_out->client;
+
+  // Get the report event.
+  auto result = client->GetReportsEvent();
+  if (result.status() != ZX_OK) {
+    printf("pwrbtn-monitor: failed to get report event: %d\n", result.status());
+    return result.status();
+  }
+  if (result->status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to get report event: %d\n", result->status);
+    return result->status;
+  }
+  *event_out = std::move(result->event);
+  return ZX_OK;
+}
+
+// Processes a power button event, dispatches events appropriately to
+// listeners, and quits the execution look if reading a report fails
+void process_power_event(
+    zx::event* report_event, pwrbtn::PowerButtonMonitor* monitor,
+    std::unordered_map<size_t, fidl::ServerBindingRef<fuchsia_power_button::Monitor>>* bindings,
+    PowerButtonInfo* info, bool* was_pressed, zx_status_t status, async::Loop* loop) {
+  if (status == ZX_ERR_CANCELED) {
+    return;
+  }
+  auto result = info->client->ReadReport();
+  if (result.status() != ZX_OK) {
+    printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
+    loop->Quit();
+    return;
+  }
+  if (result->status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
+    loop->Quit();
+    return;
+  }
+
+  // Ignore reports from different report IDs
+  const fidl::VectorView<uint8_t>& report = result->data;
+  if (info->has_report_id_byte && report[0] != info->report_id) {
+    printf("pwrbtn-monitor: input-watcher: wrong id\n");
+    return;
+  }
+
+  // Check if the power button is pressed, and request a poweroff if so.
+  const size_t byte_index = info->has_report_id_byte + info->bit_offset / 8;
+  if (report[byte_index] & (1u << (info->bit_offset % 8))) {
+    if (!*was_pressed) {
+      *was_pressed = true;
+      for (auto& binding : *bindings) {
+        monitor->SendButtonEvent(binding.second,
+                                 fuchsia_power_button::wire::PowerButtonEvent::kPress);
+      }
+    }
+
+    auto status = monitor->DoAction();
+    if (status != ZX_OK) {
+      printf("pwrbtn-monitor: input-watcher: failed to handle press.\n");
+      return;
+    }
+  } else {
+    // Check if the button has just been released, and send a message to clients if so.
+    if (*was_pressed) {
+      *was_pressed = false;
+
+      for (auto& binding : *bindings) {
+        monitor->SendButtonEvent(binding.second,
+                                 fuchsia_power_button::wire::PowerButtonEvent::kRelease);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -154,42 +257,45 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return 1;
   }
-  fbl::unique_fd dirfd;
-  {
-    int fd = open(INPUT_PATH, O_DIRECTORY);
-    if (fd < 0) {
-      printf("pwrbtn-monitor: Failed to open " INPUT_PATH ": %d\n", errno);
-      return 1;
-    }
-    dirfd.reset(fd);
-  }
 
-  PowerButtonInfo info;
-  status = fdio_watch_directory(dirfd.get(), InputDeviceAdded, ZX_TIME_INFINITE, &info);
-  if (status != ZX_ERR_STOP) {
-    printf("pwrbtn-monitor: Failed to find power button device\n");
-    return 1;
-  }
-  dirfd.reset();
-
-  auto& client = info.client;
-
-  // Get the report event.
-  zx::event report_event;
-  {
-    auto result = client->GetReportsEvent();
-    if (result.status() != ZX_OK) {
-      printf("pwrbtn-monitor: failed to get report event: %d\n", result.status());
-      return 1;
-    }
-    if (result->status != ZX_OK) {
-      printf("pwrbtn-monitor: failed to get report event: %d\n", result->status);
-      return 1;
-    }
-    report_event = std::move(result->event);
-  }
-
+  // Declare the looper
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  // Declare some structures needed for the duration of the program, some of
+  // these are shared between different tasks.
+  std::unordered_map<size_t, fidl::ServerBindingRef<fuchsia_power_button::Monitor>> bindings;
+  pwrbtn::PowerButtonMonitor monitor;
+  PowerButtonInfo info;
+
+  // Create a task which watches for the power button device to appear and then
+  // starts monitoring it for events.
+  zx::event report_event;
+  bool was_pressed = false;
+  async::Wait pwrbtn_waiter(ZX_HANDLE_INVALID, ZX_USER_SIGNAL_0, 0,
+                            [&pwrbtn_waiter, &loop, &monitor, &bindings, &info, &was_pressed,
+                             &report_event](async_dispatcher_t*, async::Wait*, zx_status_t status,
+                                            const zx_packet_signal_t*) mutable {
+                              process_power_event(&report_event, &monitor, &bindings, &info,
+                                                  &was_pressed, status, &loop);
+                              pwrbtn_waiter.Begin(loop.dispatcher());
+                            });
+
+  async::TaskClosure button_init([&report_event, &info, &pwrbtn_waiter, &loop]() mutable {
+    zx_status_t status = get_button_report_event(&report_event, &info);
+
+    if (status != ZX_OK) {
+      printf("pwrbtn-monitor: failure getting button report event, exiting\n");
+      exit(1);
+    }
+
+    pwrbtn_waiter.set_object(report_event.get());
+
+    // schedule the watcher task
+    pwrbtn_waiter.Begin(loop.dispatcher());
+  });
+
+  button_init.Post(loop.dispatcher());
+
   svc::Outgoing outgoing(loop.dispatcher());
   status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
@@ -197,9 +303,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  pwrbtn::PowerButtonMonitor monitor;
   async_dispatcher_t* dispatcher = loop.dispatcher();
-  std::unordered_map<size_t, fidl::ServerBindingRef<fuchsia_power_button::Monitor>> bindings;
   size_t n_bindings = 0;
   status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_power_button::Monitor>,
@@ -227,65 +331,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  bool was_pressed = false;
-  async::Wait pwrbtn_waiter(
-      report_event.get(), ZX_USER_SIGNAL_0, 0,
-      [&](async_dispatcher_t*, async::Wait*, zx_status_t status, const zx_packet_signal_t*) {
-        if (status == ZX_ERR_CANCELED) {
-          return;
-        }
-        auto result = client->ReadReport();
-        if (result.status() != ZX_OK) {
-          printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
-          loop.Quit();
-          return;
-        }
-        if (result->status != ZX_OK) {
-          printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
-          loop.Quit();
-          return;
-        }
-
-        // Ignore reports from different report IDs
-        const fidl::VectorView<uint8_t>& report = result->data;
-        if (info.has_report_id_byte && report[0] != info.report_id) {
-          printf("pwrbtn-monitor: input-watcher: wrong id\n");
-          return;
-        }
-
-        // Check if the power button is pressed, and request a poweroff if so.
-        const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
-        if (report[byte_index] & (1u << (info.bit_offset % 8))) {
-          if (!was_pressed) {
-            was_pressed = true;
-            for (auto& binding : bindings) {
-              monitor.SendButtonEvent(binding.second,
-                                      fuchsia_power_button::wire::PowerButtonEvent::kPress);
-            }
-          }
-
-          auto status = monitor.DoAction();
-          if (status != ZX_OK) {
-            printf("pwrbtn-monitor: input-watcher: failed to handle press.\n");
-            return;
-          }
-        } else {
-          // Check if the button has just been released, and send a message to clients if so.
-          if (was_pressed) {
-            was_pressed = false;
-
-            for (auto& binding : bindings) {
-              monitor.SendButtonEvent(binding.second,
-                                      fuchsia_power_button::wire::PowerButtonEvent::kRelease);
-            }
-          }
-        }
-
-        // Re-queue the task.
-        pwrbtn_waiter.Begin(loop.dispatcher());
-      });
-
-  pwrbtn_waiter.Begin(loop.dispatcher());
   loop.Run();
   return 1;
 }
