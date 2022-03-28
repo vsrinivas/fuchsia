@@ -7,7 +7,7 @@ briefly explains common hardware components to help you understand the often
 brief and uncommented datasheets available for driver development.
 
 The subset of hardware used to composite one output image is often called a
-[pipe](#pipe). A pipe is made up of input [planes][#plane], color correction,
+[pipe](#pipe). A pipe is made up of input [planes](#plane), color correction,
 and blending/compositing stages.
 
 Each plane has a source image with its own dimensions, position, [pixel
@@ -18,7 +18,7 @@ into a final display image.
 
 [Encoders](#encoder) consume final display images and combine the raw pixel data
 with [timing generators](#display-timing) for encoding into the right electrical
-signal for a [connector port][#port] (DisplayPort, HDMI, DVI, etc.)
+signal for a [connector port](#port) (DisplayPort, HDMI, DVI, etc.)
 
 ### Plane types {#plane}
 
@@ -116,7 +116,7 @@ e.g. DisplayPort's Multi-stream Transport (MST).
 
 ### Encoders {#encoder}
 
-Encoders transform the output images of a [pipes](#pipe) into signals to be
+Encoders transform the output images of a [pipe](#pipe) into signals to be
 transmitted by one or more [ports](#port). For example, [HDMI][hdmi]{:.external}
 connectors use [TMDS][tmds]{:.external} which is an 8b/10b encoding.
 
