@@ -33,7 +33,9 @@ const TUN_PORT_ID: u8 = 0;
 pub struct TunNetworkInterface {
     tun_dev: ftun::DeviceProxy,
     tun_port: ftun::PortProxy,
+    #[allow(unused)] // TODO (fxb/64704): use `control` after converting methods to async.
     control: fnetifext::admin::Control,
+    control_sync: Mutex<fnetifadmin::ControlSynchronousProxy>,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
     mcast_socket: UdpSocket,
     id: u64,
@@ -89,7 +91,7 @@ impl TunNetworkInterface {
 
         tun_dev.get_device(device_req).context("get device failed")?;
 
-        let control = {
+        let (control, control_sync) = {
             let installer = connect_to_protocol::<fnetifadmin::InstallerMarker>()?;
             let (device_control, server_end) = create_proxy::<fnetifadmin::DeviceControlMarker>()?;
             installer.install_device(device, server_end).context("install_device failed")?;
@@ -106,6 +108,17 @@ impl TunNetworkInterface {
                 .id
                 .ok_or_else(|| anyhow::anyhow!("port id missing from info"))?;
 
+            let (control_sync_client_channel, control_sync_server) = zx::Channel::create()?;
+            let control_sync =
+                fnetifadmin::ControlSynchronousProxy::new(control_sync_client_channel);
+            device_control
+                .create_interface(
+                    &mut port_id,
+                    control_sync_server.into(),
+                    fnetifadmin::Options { name: name.clone(), ..fnetifadmin::Options::EMPTY },
+                )
+                .context("create_interface failed")?;
+
             let (control, server_end) = fnetifext::admin::Control::create_endpoints()?;
             device_control
                 .create_interface(
@@ -114,13 +127,14 @@ impl TunNetworkInterface {
                     fnetifadmin::Options { name, ..fnetifadmin::Options::EMPTY },
                 )
                 .context("create_interface failed")?;
-            control
+
+            (control, Mutex::new(control_sync))
         };
 
-        let id = control.get_id().await.context("get_id failed")?;
-        let _was_disabled: bool = control
-            .enable()
-            .await
+        let id = control_sync.lock().get_id(zx::Time::INFINITE).context("get_id failed")?;
+        let _was_disabled: bool = control_sync
+            .lock()
+            .enable(zx::Time::INFINITE)
             .context("enable error")?
             .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
 
@@ -129,7 +143,15 @@ impl TunNetworkInterface {
         let stack_sync = Mutex::new(fnetstack::StackSynchronousProxy::new(client));
         let mcast_socket = UdpSocket::bind((Ipv6Addr::LOCALHOST, 0)).context("UdpSocket::bind")?;
 
-        Ok(TunNetworkInterface { tun_dev, tun_port, control, stack_sync, mcast_socket, id })
+        Ok(TunNetworkInterface {
+            tun_dev,
+            tun_port,
+            control,
+            control_sync,
+            stack_sync,
+            mcast_socket,
+            id,
+        })
     }
 }
 
@@ -180,9 +202,9 @@ impl NetworkInterface for TunNetworkInterface {
         if online {
             self.tun_port.set_online(true).await?;
             let _was_disabled: bool = self
-                .control
-                .enable()
-                .await
+                .control_sync
+                .lock()
+                .enable(zx::Time::INFINITE)
                 .context("enable error")?
                 .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
         } else {
@@ -196,16 +218,16 @@ impl NetworkInterface for TunNetworkInterface {
         fx_log_info!("TunNetworkInterface: Interface enabled: {:?}", enabled);
         if enabled {
             let _was_disabled: bool = self
-                .control
-                .enable()
-                .await
+                .control_sync
+                .lock()
+                .enable(zx::Time::INFINITE)
                 .context("enable error")?
                 .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
         } else {
             let _was_enabled: bool = self
-                .control
-                .disable()
-                .await
+                .control_sync
+                .lock()
+                .disable(zx::Time::INFINITE)
                 .context("disable error")?
                 .map_err(|e| anyhow::anyhow!("disable failed {:?}", e))?;
         }
@@ -214,32 +236,65 @@ impl NetworkInterface for TunNetworkInterface {
 
     fn add_address(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Adding Address: {:?}", addr);
-        let mut addr = fnet::Subnet {
-            addr: fnetext::IpAddress(addr.addr.into()).into(),
-            prefix_len: addr.prefix_len,
+        let mut device_addr: fnet::InterfaceAddress =
+            fnet::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                addr: addr.addr.octets(),
+            });
+        let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+            fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+        >()
+        .expect("create proxy");
+        address_state_provider.detach()?;
+
+        self.control_sync.lock().add_address(
+            &mut device_addr,
+            fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+            server_end,
+        )?;
+
+        let mut forwarding_entry = fnetstack::ForwardingEntry {
+            subnet: fnetext::apply_subnet_mask(fnet::Subnet {
+                addr: fnetext::IpAddress(addr.addr.into()).into(),
+                prefix_len: addr.prefix_len,
+            }),
+            device_id: self.id,
+            next_hop: None,
+            metric: 0,
         };
-        // TODO(https://fxbug.dev/92368): Replace this with Control.AddAddress. That API does not
-        // accept an IPv6 prefix and does not add a subnet route.
         self.stack_sync
             .lock()
-            .add_interface_address_deprecated(self.id, &mut addr, zx::Time::INFINITE)
-            .squash_result()?;
+            .add_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)?
+            .expect("add_forwarding_entry");
+
         fx_log_info!("TunNetworkInterface: Successfully added address {:?}", addr);
         Ok(())
     }
 
     fn remove_address(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Removing Address: {:?}", addr);
-        let mut addr = fnet::Subnet {
-            addr: fnetext::IpAddress(addr.addr.into()).into(),
-            prefix_len: addr.prefix_len,
+        let mut device_addr: fnet::InterfaceAddress =
+            fnet::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                addr: addr.addr.octets(),
+            });
+        let mut forwarding_entry = fnetstack::ForwardingEntry {
+            subnet: fnetext::apply_subnet_mask(fnet::Subnet {
+                addr: fnetext::IpAddress(addr.addr.into()).into(),
+                prefix_len: addr.prefix_len,
+            }),
+            device_id: self.id,
+            next_hop: None,
+            metric: 0,
         };
-        // TODO(https://fxbug.dev/92368): Replace this with Control.RemoveAddress. That API does not
-        // accept an IPv6 prefix and does not remove the subnet route if one exists.
+
         self.stack_sync
             .lock()
-            .del_interface_address_deprecated(self.id, &mut addr, zx::Time::INFINITE)
+            .del_forwarding_entry(&mut forwarding_entry, zx::Time::INFINITE)
             .squash_result()?;
+
+        self.control_sync
+            .lock()
+            .remove_address(&mut device_addr, zx::Time::INFINITE)?
+            .expect("control_sync.remove_address");
         fx_log_info!("TunNetworkInterface: Successfully removed address {:?}", addr);
         Ok(())
     }
@@ -383,15 +438,18 @@ impl NetworkInterface for TunNetworkInterface {
     async fn set_ipv6_forwarding_enabled(&self, enabled: bool) -> Result<(), Error> {
         // Ignore the configuration before our change was applied.
         let _: fnetifadmin::Configuration = self
-            .control
-            .set_configuration(fnetifadmin::Configuration {
-                ipv6: Some(fnetifadmin::Ipv6Configuration {
-                    forwarding: Some(enabled),
-                    ..fnetifadmin::Ipv6Configuration::EMPTY
-                }),
-                ..fnetifadmin::Configuration::EMPTY
-            })
-            .await
+            .control_sync
+            .lock()
+            .set_configuration(
+                fnetifadmin::Configuration {
+                    ipv6: Some(fnetifadmin::Ipv6Configuration {
+                        forwarding: Some(enabled),
+                        ..fnetifadmin::Ipv6Configuration::EMPTY
+                    }),
+                    ..fnetifadmin::Configuration::EMPTY
+                },
+                zx::Time::INFINITE,
+            )
             .map_err(anyhow::Error::new)
             .and_then(|res| {
                 res.map_err(|e: fnetifadmin::ControlSetConfigurationError| {
