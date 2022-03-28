@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/factory/factory_store_providers/driver_test_realm/meta/client.shard.cml",
+
         // TODO(fxbug.dev/91509): Make the test hermetic (offer config-data through resource)
         // In order to use config-data, we need to mark the test non-hermetic
         "//src/sys/test_manager/system-test.shard.cml",
@@ -20,6 +22,10 @@
         {
             name: "factory_store_providers",
             url: "#meta/factory_store_providers.cm",
+        },
+        {
+            name: "driver_test_realm",
+            url: "#meta/driver_test_realm.cm",
         },
     ],
     use: [
@@ -55,6 +61,14 @@
             protocol: [ "fuchsia.storage.ext4.Server" ],
             from: "#ext4_readonly",
             to: [ "#factory_store_providers" ],
+        },
+        {
+            directory: "dev",
+            from: "#factory_driver_test_realm",
+            as: "dev-class-block",
+            to: [ "#factory_store_providers" ],
+            rights: [ "r*" ],
+            subdir: "class/block",
         },
     ],
 }

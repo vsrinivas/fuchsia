@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-
 use {
     anyhow::Error,
     fidl_fuchsia_factory::{
@@ -11,7 +10,7 @@ use {
         MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
         WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_syslog as syslog, io_util,
     io_util::file::{AsyncFile, AsyncGetSizeExt},
     std::fs,
     std::path::{Path, PathBuf},
@@ -19,6 +18,8 @@ use {
 };
 
 static DATA_FILE_PATH: &'static str = "/pkg/data";
+const FACTORY_DEVICE_CONFIG: &'static str = "/pkg/data/factory_ext4.img";
+const RAMDISK_DEV_BLOCK_PATH: &'static str = "sys/platform/00:00:2d/ramctl/ramdisk-0/block";
 
 macro_rules! connect_to_factory_store_provider {
     ($t:ty) => {{
@@ -40,11 +41,21 @@ async fn read_file_from_proxy<'a>(
     io_util::read_file_bytes(&file).await
 }
 
+async fn wait_for_ramdisk() -> Result<(), Error> {
+    if !Path::new(FACTORY_DEVICE_CONFIG).exists() {
+        syslog::fx_log_info!("{} doesn't exist. Assuming none ext4 test", FACTORY_DEVICE_CONFIG);
+        return Ok(());
+    }
+    let dev = io_util::directory::open_in_namespace("/dev", fio::OPEN_RIGHT_READABLE)?;
+    device_watcher::recursive_wait_and_open_node(&dev, RAMDISK_DEV_BLOCK_PATH).await?;
+    Ok(())
+}
+
 #[test]
 fn test_set_up_properly() {
     // Only one set of these files should exist in the test package at a time.
     assert!(
-        Path::new("/pkg/data/factory_ext4.img").exists()
+        Path::new(FACTORY_DEVICE_CONFIG).exists()
             != (Path::new("/pkg/data/items.zbi").exists()
                 && Path::new("/pkg/data/fake_factory_items.json").exists())
     );
@@ -52,6 +63,7 @@ fn test_set_up_properly() {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_cast_credentials_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(CastCredentialsFactoryStoreProviderMarker);
 
     {
@@ -76,6 +88,7 @@ async fn read_factory_files_from_cast_credentials_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_cast_credentials_store_missing_fails() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(CastCredentialsFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "misc.bin").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "pr3.dat").await.unwrap_err();
@@ -86,6 +99,7 @@ async fn read_factory_files_from_cast_credentials_store_missing_fails() -> Resul
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_misc_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
 
     let path = format!("{}/{}", DATA_FILE_PATH, "misc");
@@ -99,6 +113,7 @@ async fn read_factory_files_from_misc_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_misc_store_passed_file_appears() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
 
     let path = format!("{}/{}", DATA_FILE_PATH, "passed_misc_file");
@@ -112,6 +127,7 @@ async fn read_factory_files_from_misc_store_passed_file_appears() -> Result<(), 
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_misc_store_ignored_file_missing() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "ignored").await.unwrap_err();
     Ok(())
@@ -119,6 +135,7 @@ async fn read_factory_files_from_misc_store_ignored_file_missing() -> Result<(),
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_misc_store_missing_fails() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "cast.blk").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "cast.dat").await.unwrap_err();
@@ -130,6 +147,7 @@ async fn read_factory_files_from_misc_store_missing_fails() -> Result<(), Error>
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_playready_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(PlayReadyFactoryStoreProviderMarker);
 
     let path = format!("{}/{}", DATA_FILE_PATH, "file1");
@@ -143,6 +161,7 @@ async fn read_factory_files_from_playready_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_playready_store_missing_fails() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(PlayReadyFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "cast.blk").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "cast.dat").await.unwrap_err();
@@ -154,6 +173,7 @@ async fn read_factory_files_from_playready_store_missing_fails() -> Result<(), E
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_widevine_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(WidevineFactoryStoreProviderMarker);
 
     let path = format!("{}/{}", DATA_FILE_PATH, "widevine_file");
@@ -167,6 +187,7 @@ async fn read_factory_files_from_widevine_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_widevine_store_missing_files_error() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(WidevineFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "cast.blk").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "cast.dat").await.unwrap_err();
@@ -178,6 +199,7 @@ async fn read_factory_files_from_widevine_store_missing_files_error() -> Result<
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_weave_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(WeaveFactoryStoreProviderMarker);
     let path = format!("{}/{}", DATA_FILE_PATH, "weave_file");
     let expected_contents =
@@ -189,6 +211,7 @@ async fn read_factory_files_from_weave_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_weave_store_missing_files_fail() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(WeaveFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "weave_bad").await.unwrap_err();
     Ok(())
@@ -196,6 +219,7 @@ async fn read_factory_files_from_weave_store_missing_files_fail() -> Result<(), 
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_alpha_store() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
     let path = format!("{}/{}", DATA_FILE_PATH, "alpha_file");
     let expected_contents =
@@ -207,6 +231,7 @@ async fn read_factory_files_from_alpha_store() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_alpha_store_missing_files_fail() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "alpha_bad").await.unwrap_err();
     Ok(())
@@ -214,6 +239,7 @@ async fn read_factory_files_from_alpha_store_missing_files_fail() -> Result<(), 
 
 #[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_alpha_store_reports_correct_size() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
     let path = format!("{}/{}", DATA_FILE_PATH, "alpha_file");
     let expected_contents =
@@ -243,6 +269,7 @@ async fn read_factory_files_from_alpha_store_reports_correct_size() -> Result<()
 ///    the same file will appear in multiple protocols.
 #[fasync::run_singlethreaded(test)]
 async fn multi_validated_file_is_processed_properly() -> Result<(), Error> {
+    wait_for_ramdisk().await?;
     let widevine_dir_proxy = connect_to_factory_store_provider!(WidevineFactoryStoreProviderMarker);
     read_file_from_proxy(&widevine_dir_proxy, "multi_validated_file").await.unwrap_err();
 

@@ -28,6 +28,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-class-block",
+            to: [ "#factory_store_providers" ],
+            subdir: "class/block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-nelson-emmc",
             to: [ "#factory_store_providers" ],
             subdir: "nelson-emmc",

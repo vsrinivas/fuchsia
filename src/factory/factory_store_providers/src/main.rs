@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,7 +32,9 @@ use {
     futures::{lock::Mutex, prelude::*, TryStreamExt},
     io_util,
     std::{
+        fs,
         io::{self, Read, Seek},
+        path::Path,
         path::PathBuf,
         sync::Arc,
     },
@@ -55,6 +57,22 @@ enum IncomingServices {
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
     WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
+}
+
+// find the toplogical path for a block device
+async fn find_block_device(input: &str) -> Result<String, Error> {
+    let block_dir = Path::new("/dev/class/block");
+    for entry in fs::read_dir(block_dir)? {
+        let entry = entry?.path();
+        let block_path = entry.to_str().unwrap();
+        let file = std::fs::File::open(block_path)?;
+        let result = fdio::device_get_topo_path(&file)?;
+        if result == input {
+            return Ok(block_path.to_string());
+        }
+    }
+
+    panic!("Did not find matching block device for {}", &input);
 }
 
 fn parse_bootfs<'a>(vmo: zx::Vmo) -> Arc<directory::immutable::Simple> {
@@ -237,7 +255,9 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
         }
         FactoryConfig::Ext4(path) => {
             syslog::fx_log_info!("Reading from EXT4-formatted source: {}", path);
-            let mut reader = io::BufReader::new(std::fs::File::open(path)?);
+            let block_path = find_block_device(&path).await?;
+            syslog::fx_log_info!("found the block path {}", block_path);
+            let mut reader = io::BufReader::new(std::fs::File::open(block_path)?);
             let size = reader.seek(io::SeekFrom::End(0))?;
             reader.seek(io::SeekFrom::Start(0))?;
 

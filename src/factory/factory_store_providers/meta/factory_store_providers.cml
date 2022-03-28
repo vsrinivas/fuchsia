@@ -30,6 +30,11 @@
             ],
         },
         {
+            directory: "dev-class-block",
+            rights: [ "r*" ],
+            path: "/dev/class/block",
+        },
+        {
             directory: "dev-nelson-emmc",
             rights: [ "r*" ],
             path: "/dev/nelson-emmc",
