@@ -303,7 +303,7 @@ mod test {
         assert!(oldest_directory.exists());
         // Add a file. The manager should still be able to clean up the directory.
         let mut file = File::create(oldest_directory.join("file.txt")).expect("create file");
-        file.write("hello".as_bytes()).expect("write to file");
+        file.write_all("hello".as_bytes()).expect("write to file");
         drop(file);
 
         let subsequent_directories =

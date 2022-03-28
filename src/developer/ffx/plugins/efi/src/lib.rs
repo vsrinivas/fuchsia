@@ -170,9 +170,8 @@ mod test {
                 zedboot: None,
             }),
         })
-        .await
-        .unwrap();
-        assert_eq!(result, ());
+        .await;
+        assert!(result.is_ok());
         Ok(())
     }
 
@@ -209,9 +208,8 @@ mod test {
                 zedboot: Some(zedboot),
             }),
         })
-        .await
-        .unwrap();
-        assert_eq!(result, ());
+        .await;
+        assert!(result.is_ok());
 
         check_file_content(&output, "EFI/BOOT/BOOTX64.EFI", &bootloader_content)?;
         check_file_content(&output, "cmdline", cmdline_content)?;
@@ -252,9 +250,8 @@ mod test {
                 zedboot: None,
             }),
         })
-        .await
-        .unwrap();
-        assert_eq!(result, ());
+        .await;
+        assert!(result.is_ok());
 
         check_file_content(&output, "EFI/BOOT/BOOTX64.EFI", &bootloader_content)?;
         let output_size = metadata(output)?.len();

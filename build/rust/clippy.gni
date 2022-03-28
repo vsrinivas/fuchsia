@@ -10,35 +10,23 @@ template("clippy") {
 
   # These generated files collect the rlibs of this targets direct and transitive dependencies
   generated_file("$target_name.depsfile") {
-    forward_variables_from(invoker, [ "deps" ])
-
     testonly = true
+    deps = invoker.deps
     outputs = [ "$_output.deps" ]
     data_keys = [ "rlib" ]
     walk_keys = [ "rust_barrier" ]
   }
   generated_file("$target_name.transdepsfile") {
-    forward_variables_from(invoker, [ "deps" ])
-
     testonly = true
+    deps = invoker.deps
     outputs = [ "$_output.transdeps" ]
     data_keys = [ "searchdir" ]
   }
 
   action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "crate_type",
-                             "source_root",
-                             "deps",
-                             "sources",
-                           ])
-
     testonly = true
-
-    if (!defined(deps)) {
-      deps = []
-    }
+    sources = invoker.sources
+    deps = invoker.deps
     deps += [
       ":${invoker.target_name}.depsfile",
       ":${invoker.target_name}.transdepsfile",
@@ -79,14 +67,14 @@ template("clippy") {
     args += [
       "--",
       "$rebased_rustc_prefix/clippy-driver",
-      rebase_path(source_root, root_build_dir),
+      rebase_path(invoker.crate_root, root_build_dir),
       "-${level}clippy::all",
       "-Dclippy::correctness",
       "--target=$rust_target",
       "--edition=$edition",
       "--cfg=rust_panic=\"${rust_panic}\"",
-      "--sysroot=$rebased_rustc_prefix/../",
-      "--crate-type=$crate_type",
+      "--sysroot=$rebased_rust_sysroot",
+      "--crate-type=${invoker.clippy_crate_type}",
       "-Ldependency=host_x64",  # Needed for proc macros
     ]
     args += invoker.rustflags

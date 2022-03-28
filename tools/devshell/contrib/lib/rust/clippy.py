@@ -75,7 +75,7 @@ def main():
                     continue
                 # filter out lints for files we didn't ask for
                 if args.files and lint["spans"][0]["file_name"] not in input_files:
-                    continue
+                    continue  # TODO: handle macro expansion spans
                 if lint["level"] == "error":
                     returncode = 1
                 lints[lint["rendered"]] = lint

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/clippy.gni")
 import("//build/toolchain/rbe.gni")
 
 # Common logic for implementing the other rustc_* templates in this directory.
@@ -57,15 +58,17 @@ import("//build/toolchain/rbe.gni")
 #
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global `enable_rbe`.
+
+#   disable_clippy (optional)
+#     Don't run clippy on this target.
+#     TODO(josephry): make this required once all crate types are enabled
+#
+#   clippy_crate_type (optional)
+#     Usually GN handles this internally for rust targets, but we have to set it explicitly
+#     for targets that generate a corresponding clippy target so that clippy has access to it.
+#     See https://doc.rust-lang.org/reference/linkage.html for possible values
 #
 template("rustc_artifact") {
-  # _invoker = invoker
-  # invoker = {
-  # }
-  # invoker = {
-  #   forward_variables_from(_invoker, "*")
-  # }
-
   # rustc does not support dashes in crate names
   _crate_name = string_replace(invoker.crate_name, "-", "_")
   _crate_root = invoker.crate_root
@@ -85,6 +88,22 @@ template("rustc_artifact") {
   }
   if (defined(invoker.rustflags)) {
     _rustflags += invoker.rustflags
+  }
+
+  _disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
+  if (!_disable_clippy) {
+    clippy("$target_name.clippy") {
+      forward_variables_from(invoker, [ "edition" ])
+      rustflags = _rustflags
+      sources = invoker.sources
+      deps = invoker.deps
+      crate_root = _crate_root
+      clippy_crate_type = invoker.clippy_crate_type
+    }
+  } else {
+    if (defined(invoker.clippy_crate_type)) {
+      not_needed(invoker, [ "clippy_crate_type" ])
+    }
   }
 
   _use_rbe = enable_rbe
@@ -139,13 +158,33 @@ template("rustc_artifact") {
       }
     }
 
+    if (!_disable_clippy) {
+      gen_deps = [ ":$target_name.clippy" ]
+    }
+
     # _pass_through and not_needed are to workaround https://crbug.com/gn/10
     _pass_through = invoker.pass_through
     assert(!defined(_pass_through.metadata))
     not_needed([ "_pass_through" ])
 
-    if (defined(invoker.metadata)) {
-      metadata = invoker.metadata
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      if (!_disable_clippy) {
+        _outputs = get_target_outputs(":$target_name.clippy")
+        rust_source_map = [
+          {
+            clippy =
+                get_label_info(":$target_name.clippy", "label_with_toolchain")
+            output = rebase_path(_outputs[0], root_build_dir)
+            src = []
+            foreach(s, sources) {
+              src += [ rebase_path(s, root_build_dir) ]
+            }
+          },
+        ]
+      }
     }
 
     # pass through these variables unmodified

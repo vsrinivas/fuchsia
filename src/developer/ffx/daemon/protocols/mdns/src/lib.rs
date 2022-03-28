@@ -428,9 +428,8 @@ mod tests {
                 5000,
             )
             .await;
-        while let Some(e) = proxy.get_next_event().await.unwrap() {
+        if let Some(e) = proxy.get_next_event().await.unwrap() {
             assert!(matches!(*e, bridge::MdnsEventType::TargetFound(_),));
-            break;
         }
         assert_eq!(
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),
@@ -445,9 +444,8 @@ mod tests {
                 5000,
             )
             .await;
-        while let Some(e) = proxy.get_next_event().await.unwrap() {
+        if let Some(e) = proxy.get_next_event().await.unwrap() {
             assert!(matches!(*e, bridge::MdnsEventType::TargetRediscovered(_),));
-            break;
         }
         assert_eq!(
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),

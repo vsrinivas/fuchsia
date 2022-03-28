@@ -133,6 +133,7 @@ template("rustc_wasm_library") {
   rustc_artifact(target_name) {
     target_type = "rust_library"
     crate_root = source_root
+    clippy_crate_type = "cdylib"
     crate_name = crate_name
     pass_through = {
       forward_variables_from(invoker,
@@ -143,7 +144,6 @@ template("rustc_wasm_library") {
                                "visibility",
                              ])
       output_name = crate_name
-      crate_type = "cdylib"
     }
 
     assert(
@@ -162,8 +162,10 @@ template("rustc_wasm_library") {
       deps += invoker.non_rust_deps
     }
 
+    disable_clippy = true  # TODO(josephry): remove this
     forward_variables_from(invoker,
                            [
+                             # "disable_clippy",
                              "edition",
                              "features",
                              "inputs",

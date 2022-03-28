@@ -42,8 +42,8 @@ mod test {
     async fn run_stop_test() {
         let proxy = setup_fake_daemon_server();
         let mut writer = Vec::new();
-        let result = stop_impl(proxy, StopCommand {}, &mut writer).await.unwrap();
-        assert_eq!(result, ());
+        let result = stop_impl(proxy, StopCommand {}, &mut writer).await;
+        assert!(result.is_ok());
         let output = String::from_utf8(writer).unwrap();
         assert_eq!(output, "Stopped daemon.\n");
     }

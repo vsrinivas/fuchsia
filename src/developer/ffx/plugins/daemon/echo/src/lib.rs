@@ -44,8 +44,8 @@ mod test {
     async fn run_echo_test(cmd: EchoCommand) -> String {
         let mut output = Vec::new();
         let proxy = setup_fake_service();
-        let result = echo_impl(proxy, cmd, &mut output).await.unwrap();
-        assert_eq!(result, ());
+        let result = echo_impl(proxy, cmd, &mut output).await;
+        assert!(result.is_ok());
         String::from_utf8(output).expect("Invalid UTF-8 bytes")
     }
 

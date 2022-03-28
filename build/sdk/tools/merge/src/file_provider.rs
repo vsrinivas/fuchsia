@@ -103,7 +103,7 @@ pub fn merge_files<F: TarballContent>(
                     &base_arch.get(arch).unwrap(),
                     &complement_arch.get(arch).unwrap(),
                 ) {
-                    return Err(Error::ArchFilesDiffer { arch: arch.clone().to_owned() })?;
+                    return Err(Error::ArchFilesDiffer { arch: (*arch).to_owned() })?;
                 }
             }
             copy_file_list(&base_arch.get(arch).unwrap(), base_tarball, output)?;

@@ -165,6 +165,7 @@ template("rustc_macro") {
                    "force_opt",
                  ])
       crate_root = source_root
+      clippy_crate_type = "proc_macro"
       pass_through = {
         forward_variables_from(invoker,
                                [
@@ -188,8 +189,10 @@ template("rustc_macro") {
 
       sources = _sources
 
+      disable_clippy = true  # TODO(josephry): remove this
       forward_variables_from(invoker,
                              [
+                               # "disable_clippy",
                                "edition",
                                "inputs",
                              ])
@@ -212,6 +215,7 @@ template("rustc_macro") {
 
         forward_variables_from(invoker, "*", [ "name" ])
         configs += [ "//build/config/rust:proc_macro_test" ]
+        disable_clippy = true  # TODO(josephry): remove this
       }
     } else {
       # For convenience, create a forwarding target that points to the on-host

@@ -50,15 +50,11 @@ declare_args() {
   # ignore warnings.
   rust_cap_lints = "deny"
 
-  # Enables generation of corresponding clippy targets for all `rustc_binary`,
-  # `rustc_library`, and `rustc_test` targets.
-  generate_clippy = true
-
-  # By default clippy is set to allow all lints, this flag will change it to
-  # warn on all. Note: setting lint levels in source takes precedence over this.
+  # Set the lint level for all clippy lints to "warn".
+  # Note: setting lint levels in source takes precedence over this.
   clippy_warn = false
 
-  # Makes clippy targets fail to build when any deny lints are found
+  # Makes clippy targets fail to build when any "deny" lints are found
   clippy_cause_failure = false
 }
 

@@ -88,7 +88,7 @@ mod tests {
         // Zero interval
         let result = start(
             setup_fake_temperature_logger(|_| {}),
-            args_mod::StartCommand { interval: 0 * ONE_SEC, duration: Some(ONE_SEC) },
+            args_mod::StartCommand { interval: Duration::ZERO, duration: Some(ONE_SEC) },
         )
         .await;
         assert!(result.is_err());
@@ -96,7 +96,7 @@ mod tests {
         // Zero duration
         let result = start(
             setup_fake_temperature_logger(|_| {}),
-            args_mod::StartCommand { interval: ONE_SEC, duration: Some(0 * ONE_SEC) },
+            args_mod::StartCommand { interval: ONE_SEC, duration: Some(Duration::ZERO) },
         )
         .await;
         assert!(result.is_err());

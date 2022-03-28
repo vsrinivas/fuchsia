@@ -23,6 +23,7 @@ if (is_host) {
   rustc_test("vfs_macro_test") {
     name = "vfs_macro_test"
     edition = "2018"
+    disable_clippy = true  # TODO(fxbug.dev/86506): handle proc macro tests
     deps = [
       "//third_party/rust_crates:indoc",
       "//third_party/rust_crates:proc-macro2",

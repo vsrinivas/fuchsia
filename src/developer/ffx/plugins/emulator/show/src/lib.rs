@@ -125,7 +125,7 @@ mod tests {
         // Generate an engine, put it in engine.json, then show it.
         let engine = TestEngineDoNotUseOutsideOfTests::default();
         let engine_text = serde_json::to_string(&engine)?;
-        file.write(engine_text.as_bytes())?;
+        file.write_all(engine_text.as_bytes())?;
         file.flush()?;
         show_internal(&ffx_config, "test_dir").await
     }

@@ -49,8 +49,8 @@ mod test {
     async fn test_off() -> Result<()> {
         let admin_proxy = setup_fake_admin_server();
 
-        let result = off(admin_proxy, OffCommand {}).await.unwrap();
-        assert_eq!(result, ());
+        let result = off(admin_proxy, OffCommand {}).await;
+        assert!(result.is_ok());
         Ok(())
     }
 }

@@ -530,7 +530,7 @@ mod test {
         // Write this to a temporary file
         let mut fidl_config_file = NamedTempFile::new().unwrap();
         fidl_config_file
-            .write(fidl_config_sample.to_string().as_bytes())
+            .write_all(fidl_config_sample.to_string().as_bytes())
             .expect("Unable to write to temporary file");
 
         // Read in file

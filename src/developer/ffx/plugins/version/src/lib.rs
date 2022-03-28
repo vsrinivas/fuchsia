@@ -128,6 +128,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
         fuchsia_async::Task::local(async move {
+            #[allow(clippy::never_loop)]
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::GetVersionInfo { responder } => {
@@ -153,6 +154,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
         fuchsia_async::Task::local(async move {
+            #[allow(clippy::never_loop)]
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::GetVersionInfo { responder: _ } => {
@@ -176,8 +178,8 @@ mod test {
         cmd: VersionCommand,
     ) -> String {
         let mut writer = Vec::new();
-        let result = version_cmd(&version_info, cmd, daemon_proxy, &mut writer, Utc).await.unwrap();
-        assert_eq!(result, ());
+        let result = version_cmd(&version_info, cmd, daemon_proxy, &mut writer, Utc).await;
+        assert!(result.is_ok());
         String::from_utf8(writer).unwrap()
     }
 

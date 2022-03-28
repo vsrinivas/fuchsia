@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/clippy.gni")
 import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
 
@@ -208,14 +207,6 @@ template("rustc_binary") {
     source_root = invoker.source_root
   }
 
-  # enable these features for the target
-  _features_rustflags = []
-  if (defined(invoker.features)) {
-    foreach(i, invoker.features) {
-      _features_rustflags += [ "--cfg=feature=\"${i}\"" ]
-    }
-  }
-
   _sources = []
   _deps = []
 
@@ -236,27 +227,10 @@ template("rustc_binary") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
-  disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
-  if (generate_clippy && !disable_clippy) {
-    clippy("$target_name.clippy") {
-      forward_variables_from(invoker,
-                             [
-                               "edition",
-                               "deps",
-                               "non_rust_deps",
-                               "sources",
-                             ])
-      crate_type = "bin"
-      rustflags = _features_rustflags
-    }
-  } else {
-    not_needed([ "_features_rustflags" ])
-  }
-
   rustc_artifact(target_name) {
     target_type = "executable"
     crate_root = source_root
-
+    clippy_crate_type = "bin"
     crate_name = _crate_name
     pass_through = {
       # pass through these variables unmodified
@@ -275,6 +249,7 @@ template("rustc_binary") {
     forward_variables_from(invoker,
                            [
                              "disable_rbe",
+                             "disable_clippy",
                              "edition",
                              "features",
                              "inputs",
@@ -296,23 +271,5 @@ template("rustc_binary") {
     }
 
     sources = _sources
-
-    if (generate_clippy && !disable_clippy) {
-      pass_through.gen_deps = [ ":$target_name.clippy" ]
-      _outputs = get_target_outputs(":$target_name.clippy")
-      metadata = {
-        rust_source_map = [
-          {
-            clippy =
-                get_label_info(":$target_name.clippy", "label_with_toolchain")
-            output = rebase_path(_outputs[0], root_build_dir)
-            src = []
-            foreach(s, _sources) {
-              src += [ rebase_path(s, root_build_dir) ]
-            }
-          },
-        ]
-      }
-    }
   }
 }

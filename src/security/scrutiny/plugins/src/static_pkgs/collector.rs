@@ -830,10 +830,10 @@ mod tests {
             .parent()
             .ok_or(anyhow!("Blob manifest path is not in a directory"))?;
         let static_pkgs_name = "static_packages";
-        let static_pkgs_path = blob_dir.clone().join(static_pkgs_name);
+        let static_pkgs_path = blob_dir.join(static_pkgs_name);
         let static_pkgs_merkle = create_static_pkgs_listing(&static_pkgs_path, hashmap! {})?;
         let system_image_name = "system_image.far";
-        let system_image_path = blob_dir.clone().join(system_image_name);
+        let system_image_path = blob_dir.join(system_image_name);
         // System image designates `VALID_MERKLE_HASH` as "where to find static
         // pkgs listing". This value maps to static pkgs in the blob manifest,
         // but is not the correct hash for the static pkgs blob.
@@ -880,10 +880,10 @@ mod tests {
             .parent()
             .ok_or(anyhow!("Blob manifest path is not in a directory"))?;
         let static_pkgs_name = "static_packages";
-        let static_pkgs_path = blob_dir.clone().join(static_pkgs_name);
+        let static_pkgs_path = blob_dir.join(static_pkgs_name);
         let static_pkgs_merkle = create_static_pkgs_listing(&static_pkgs_path, hashmap! {})?;
         let system_image_name = "system_image.far";
-        let system_image_path = blob_dir.clone().join(system_image_name);
+        let system_image_path = blob_dir.join(system_image_name);
         let system_image_merkle =
             create_system_image_far(&system_image_path, Some(static_pkgs_merkle.clone()))
                 .context("Failed to create system image far")?;
@@ -923,7 +923,7 @@ mod tests {
             .parent()
             .ok_or(anyhow!("Blob manifest path is not in a directory"))?;
         let static_pkgs_name = "static_packages";
-        let static_pkgs_path = blob_dir.clone().join(static_pkgs_name);
+        let static_pkgs_path = blob_dir.join(static_pkgs_name);
         let static_pkgs = hashmap! {
             "alpha/0".to_string() => VALID_MERKLE_HASH.to_string(),
             "beta/0".to_string() => VALID_MERKLE_HASH.to_string()
@@ -931,7 +931,7 @@ mod tests {
         let static_pkgs_merkle =
             create_static_pkgs_listing(&static_pkgs_path, static_pkgs.clone())?;
         let system_image_name = "system_image.far";
-        let system_image_path = blob_dir.clone().join(system_image_name);
+        let system_image_path = blob_dir.join(system_image_name);
         let system_image_merkle =
             create_system_image_far(&system_image_path, Some(static_pkgs_merkle.clone()))?;
         create_blob_manifest(

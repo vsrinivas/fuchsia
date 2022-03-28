@@ -361,6 +361,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95078)
     fn test_target_set() {
         let mut expected =
             vec![BuildTarget { arch: String::from("x64"), board: String::from("workstation") }];

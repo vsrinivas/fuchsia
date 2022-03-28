@@ -318,7 +318,7 @@ mod tests {
         let mut interface = Interface::open(&mut matcher)?;
 
         // Send a Query Parameter request.
-        interface.write(&[0x02, 0x00])?;
+        interface.write_all(&[0x02, 0x00])?;
 
         // Read response.
         let mut packet = [0x00; 64];

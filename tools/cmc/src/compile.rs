@@ -134,7 +134,7 @@ mod tests {
             &vec![includepath.clone()],
             &includepath.clone(),
             Some("test.cvf"),
-            features.clone(),
+            features,
             experimental_force_runner,
         )?;
         let mut buffer = Vec::new();

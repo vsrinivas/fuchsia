@@ -74,7 +74,7 @@ mod tests {
             });
 
             stop(StopCommand {}, repos).await.unwrap();
-            assert_eq!(receiver.await.unwrap(), ());
+            assert!(receiver.await.is_ok());
         })
     }
 
@@ -95,7 +95,7 @@ mod tests {
             });
 
             assert!(stop(StopCommand {}, repos).await.is_err());
-            assert_eq!(receiver.await.unwrap(), ());
+            assert!(receiver.await.is_ok());
 
             assert!(!pkg_config::get_repository_server_enabled().await.unwrap());
         })

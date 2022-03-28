@@ -311,8 +311,8 @@ mod test {
         let data_provider_proxy = setup_fake_data_provider_server(annotations);
 
         let mut writer = Vec::new();
-        let result = snapshot_impl(data_provider_proxy, cmd, &mut writer).await.unwrap();
-        assert_eq!(result, ());
+        let result = snapshot_impl(data_provider_proxy, cmd, &mut writer).await;
+        assert!(result.is_ok());
 
         let output = String::from_utf8(writer).unwrap();
         assert!(output.starts_with("Exported"));

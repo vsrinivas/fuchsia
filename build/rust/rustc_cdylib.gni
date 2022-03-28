@@ -87,6 +87,7 @@ template("rustc_cdylib") {
         output_name = invoker.output_name + "_cdylib_test"
       }
       forward_variables_from(invoker, "*", [ "output_name" ])
+      disable_clippy = true  # TODO(josephry): remove this
     }
   }
 
@@ -109,6 +110,7 @@ template("rustc_cdylib") {
   rustc_artifact(rustc_target) {
     target_type = "shared_library"
     crate_root = source_root
+    clippy_crate_type = "cdylib"
     crate_name = rustc_target
     pass_through = {
       forward_variables_from(invoker,
@@ -138,8 +140,10 @@ template("rustc_cdylib") {
     configs = []
     configs = invoker.configs
 
+    disable_clippy = true  # TODO(josephry): remove this
     forward_variables_from(invoker,
                            [
+                             # "disable_clippy",
                              "edition",
                              "inputs",
                            ])

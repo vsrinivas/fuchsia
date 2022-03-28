@@ -1373,6 +1373,7 @@ mod tests {
             match self.inner.read(packet.as_mut_slice()) {
                 Ok(num_bytes) => {
                     packet.truncate(num_bytes);
+                    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95036)
                     if num_bytes == 0 {
                         // This case corresponds to exhaustion of `inner`s report queue.
                         self.response_queue.push_back(UsbReadResponse::Packet(packet));

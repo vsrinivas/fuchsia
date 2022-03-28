@@ -461,7 +461,7 @@ pub mod tests {
         let mut buffer = &mut buffer[..MAX_PACKET_SIZE];
 
         buffer
-            .write(&[
+            .write_all(&[
                 PacketType::ReportFormat as u8,
                 format.index,
                 format.field_type as u8,
@@ -474,7 +474,7 @@ pub mod tests {
         // buffer.
         let name = &format.name;
         assert!(name.len() < buffer.len());
-        buffer.write(name.as_bytes()).unwrap();
+        buffer.write_all(name.as_bytes()).unwrap();
         for i in 0..buffer.len() {
             buffer[i] = 0;
         }

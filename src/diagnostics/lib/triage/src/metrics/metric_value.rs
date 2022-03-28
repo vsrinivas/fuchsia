@@ -324,6 +324,7 @@ pub(crate) mod test {
     }
 
     #[fuchsia::test]
+    #[allow(clippy::approx_constant)]
     fn metric_value_from_json() {
         /*
             JSON subtypes:
@@ -375,6 +376,7 @@ pub(crate) mod test {
     }
 
     #[fuchsia::test]
+    #[allow(clippy::approx_constant)]
     fn metric_value_from_diagnostic_property() {
         /*
             DiagnosticProperty subtypes:

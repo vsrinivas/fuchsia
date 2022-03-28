@@ -62,7 +62,7 @@ mod tests {
         });
 
         start(StartCommand {}, repos).await.unwrap();
-        assert_eq!(receiver.await.unwrap(), ());
+        assert_eq!(receiver.await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -78,6 +78,6 @@ mod tests {
         });
 
         assert!(start(StartCommand {}, repos).await.is_err());
-        assert_eq!(receiver.await.unwrap(), ());
+        assert_eq!(receiver.await, Ok(()));
     }
 }

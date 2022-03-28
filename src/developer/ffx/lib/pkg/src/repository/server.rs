@@ -582,7 +582,7 @@ mod tests {
 
     fn write_file(path: &Utf8Path, body: &[u8]) {
         let mut tmp = tempfile::NamedTempFile::new().unwrap();
-        tmp.write(body).unwrap();
+        tmp.write_all(body).unwrap();
         tmp.persist(path).unwrap();
     }
 
