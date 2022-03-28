@@ -330,15 +330,25 @@ template("flutter_dart_component") {
     ]
   }
 
+  _manifest_target = "${target_name}_manifest"
+  fuchsia_component_manifest(_manifest_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    component_name = _component_name
+    manifest = _manifest
+    deps = _manifest_deps
+  }
+
   fuchsia_component(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
-                             "component_name",
                            ])
+    cm_target = ":$_manifest_target"
     deps = _component_deps
-    manifest_deps = _manifest_deps
-    manifest = _manifest
   }
 }
