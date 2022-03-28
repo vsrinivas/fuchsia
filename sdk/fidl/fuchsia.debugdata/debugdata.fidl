@@ -9,9 +9,11 @@ using zx;
 /// TODO(mcgrathr): Align this with file name limits in some fs protocol.
 const MAX_NAME uint64 = 1024;
 
+/// NOTE: THIS PROTOCOL IS DEPRECATED. PLEASE USE `fuchsia.debugdata.Publisher`.
 /// DebugData defines the interface for instrumentation configuration and data
 /// publishing.
 @for_deprecated_c_bindings
+@deprecated
 @discoverable
 protocol DebugData {
     /// The program runtime sends a string naming a `data_sink` and transfers
