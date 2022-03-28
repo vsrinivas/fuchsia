@@ -443,7 +443,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
                         has_ever_connected: saved_config.has_ever_connected,
                         recent_failures: saved_config
                             .perf_stats
-                            .failure_list
+                            .connect_failures
                             .get_recent_for_network(fasync::Time::now() - RECENT_FAILURE_WINDOW),
                         past_connections: saved_config.perf_stats.past_connections.clone(),
                     },
@@ -991,7 +991,7 @@ mod tests {
             .get(0)
             .expect("failed to get config")
             .perf_stats
-            .failure_list
+            .connect_failures
             .get_recent_for_network(fasync::Time::now() - RECENT_FAILURE_WINDOW)
             .get(0)
             .expect("failed to get recent failure")

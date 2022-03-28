@@ -395,7 +395,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     }
                     (fidl_ieee80211::StatusCode::Canceled, _) => {}
                     (_, true) => {
-                        network.perf_stats.failure_list.add(
+                        network.perf_stats.connect_failures.add(
                             bssid,
                             ConnectFailure {
                                 time: fasync::Time::now(),
@@ -405,7 +405,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                         );
                     }
                     (_, _) => {
-                        network.perf_stats.failure_list.add(
+                        network.perf_stats.connect_failures.add(
                             bssid,
                             ConnectFailure {
                                 time: fasync::Time::now(),
@@ -1183,7 +1183,7 @@ mod tests {
             .pop()
             .expect("Failed to get saved network config");
         let connect_failures =
-            saved_config.perf_stats.failure_list.get_recent_for_network(before_recording);
+            saved_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         assert_variant!(connect_failures, failures => {
             // There are 2 failures. One is a general failure and one rejected credentials failure.
             assert_eq!(failures.len(), 2);
@@ -1251,7 +1251,7 @@ mod tests {
             .pop()
             .expect("Failed to get saved network config");
         let connect_failures =
-            saved_config.perf_stats.failure_list.get_recent_for_network(before_recording);
+            saved_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         assert_eq!(0, connect_failures.len());
     }
 

@@ -2057,7 +2057,7 @@ mod tests {
         let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(config_net_id));
         let network_config = configs.pop().expect("Failed to get saved network");
         let mut failures =
-            network_config.perf_stats.failure_list.get_recent_for_network(before_recording);
+            network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::GeneralFailure);
 
@@ -2204,7 +2204,7 @@ mod tests {
         let mut configs = exec.run_singlethreaded(saved_networks_manager.lookup(config_net_id));
         let network_config = configs.pop().expect("Failed to get saved network");
         let mut failures =
-            network_config.perf_stats.failure_list.get_recent_for_network(before_recording);
+            network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::CredentialRejected);
 

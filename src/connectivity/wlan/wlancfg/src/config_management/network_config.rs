@@ -57,14 +57,14 @@ impl HiddenProbabilityStats {
 /// and maintain connection with a network and if it is weakening. Used in choosing best network.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PerformanceStats {
-    pub failure_list: ConnectFailuresByBssid,
+    pub connect_failures: ConnectFailuresByBssid,
     pub past_connections: PastConnectionsByBssid,
 }
 
 impl PerformanceStats {
     pub fn new() -> Self {
         Self {
-            failure_list: ConnectFailuresByBssid::new(),
+            connect_failures: ConnectFailuresByBssid::new(),
             past_connections: PastConnectionsByBssid::new(),
         }
     }
@@ -677,7 +677,7 @@ mod tests {
                 perf_stats: PerformanceStats::new()
             }
         );
-        assert!(network_config.perf_stats.failure_list.0.is_empty());
+        assert!(network_config.perf_stats.connect_failures.0.is_empty());
     }
 
     #[fuchsia::test]
@@ -875,7 +875,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_connect_failures_by_bssid_add_and_get() {
-        let mut failure_list = ConnectFailuresByBssid::new();
+        let mut connect_failures = ConnectFailuresByBssid::new();
         let curr_time = fasync::Time::now();
 
         // Add two failures for BSSID_1
@@ -885,18 +885,18 @@ mod tests {
             bssid: bssid_1.clone(),
             reason: FailureReason::GeneralFailure,
         };
-        failure_list.add(bssid_1.clone(), failure_1_bssid_1.clone());
+        connect_failures.add(bssid_1.clone(), failure_1_bssid_1.clone());
 
         let failure_2_bssid_1 = ConnectFailure {
             time: curr_time - zx::Duration::from_seconds(5),
             bssid: bssid_1.clone(),
             reason: FailureReason::CredentialRejected,
         };
-        failure_list.add(bssid_1.clone(), failure_2_bssid_1.clone());
+        connect_failures.add(bssid_1.clone(), failure_2_bssid_1.clone());
 
         // Verify get_recent_for_network(curr_time - 10) retrieves both entries
         assert_eq!(
-            failure_list.get_recent_for_network(curr_time - zx::Duration::from_seconds(10)),
+            connect_failures.get_recent_for_network(curr_time - zx::Duration::from_seconds(10)),
             vec![failure_1_bssid_1, failure_2_bssid_1]
         );
 
@@ -907,64 +907,64 @@ mod tests {
             bssid: bssid_2.clone(),
             reason: FailureReason::GeneralFailure,
         };
-        failure_list.add(bssid_2.clone(), failure_1_bssid_2.clone());
+        connect_failures.add(bssid_2.clone(), failure_1_bssid_2.clone());
 
         // Verify get_recent_for_network(curr_time - 10) includes entries from both BSSIDs
         assert_eq!(
-            failure_list.get_recent_for_network(curr_time - zx::Duration::from_seconds(10)),
+            connect_failures.get_recent_for_network(curr_time - zx::Duration::from_seconds(10)),
             vec![failure_1_bssid_1, failure_2_bssid_1, failure_1_bssid_2]
         );
 
         // Verify get_recent_for_network(curr_time - 9) excludes older entries
         assert_eq!(
-            failure_list.get_recent_for_network(curr_time - zx::Duration::from_seconds(9)),
+            connect_failures.get_recent_for_network(curr_time - zx::Duration::from_seconds(9)),
             vec![failure_2_bssid_1, failure_1_bssid_2]
         );
 
         // Verify get_recent_for_network(curr_time) is empty
-        assert_eq!(failure_list.get_recent_for_network(curr_time), vec![]);
+        assert_eq!(connect_failures.get_recent_for_network(curr_time), vec![]);
 
         // Verify get_list_for_bss retrieves correct ConnectFailureLists
         assert_eq!(
-            failure_list.get_list_for_bss(&bssid_1),
+            connect_failures.get_list_for_bss(&bssid_1),
             ConnectFailureList { 0: VecDeque::from_iter([failure_1_bssid_1, failure_2_bssid_1]) }
         );
 
         assert_eq!(
-            failure_list.get_list_for_bss(&bssid_2),
+            connect_failures.get_list_for_bss(&bssid_2),
             ConnectFailureList { 0: VecDeque::from_iter([failure_1_bssid_2]) }
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn failure_list_add_and_get() {
-        let mut failure_list = ConnectFailureList::new();
+        let mut connect_failures = ConnectFailureList::new();
 
         // Get time before adding so we can get back everything we added.
         let curr_time = fasync::Time::now();
-        assert!(failure_list.get_recent(curr_time).is_empty());
+        assert!(connect_failures.get_recent(curr_time).is_empty());
         let bssid = client_types::Bssid([1; 6]);
         let failure =
             ConnectFailure { time: curr_time, bssid, reason: FailureReason::GeneralFailure };
-        failure_list.add(failure);
+        connect_failures.add(failure);
 
-        let result_list = failure_list.get_recent(curr_time);
+        let result_list = connect_failures.get_recent(curr_time);
         assert_eq!(1, result_list.len());
         assert_eq!(FailureReason::GeneralFailure, result_list[0].reason);
         assert_eq!(bssid, result_list[0].bssid);
         // Should not get any results if we request denials older than the specified time.
         let later_time = fasync::Time::now();
-        assert!(failure_list.get_recent(later_time).is_empty());
+        assert!(connect_failures.get_recent(later_time).is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_failure_list_add_when_full() {
-        let mut failure_list = ConnectFailureList::new();
+        let mut connect_failures = ConnectFailureList::new();
         let curr_time = fasync::Time::now();
 
         // Add to list, exceeding the capacity by one entry
-        for i in 0..failure_list.0.capacity() + 1 {
-            failure_list.add(ConnectFailure {
+        for i in 0..connect_failures.0.capacity() + 1 {
+            connect_failures.add(ConnectFailure {
                 time: curr_time + zx::Duration::from_seconds(i as i64),
                 reason: FailureReason::GeneralFailure,
                 bssid: client_types::Bssid([1; 6]),
@@ -972,7 +972,7 @@ mod tests {
         }
 
         // Validate entry with time = curr_time was evicted.
-        for (i, e) in failure_list.0.iter().enumerate() {
+        for (i, e) in connect_failures.0.iter().enumerate() {
             assert_eq!(e.time, curr_time + zx::Duration::from_seconds(i as i64 + 1));
         }
     }
