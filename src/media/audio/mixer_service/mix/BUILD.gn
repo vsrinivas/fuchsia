@@ -27,12 +27,16 @@ source_set("mix") {
     "thread.h",
   ]
 
-  public_deps = [ "//src/media/audio/mixer_service/common" ]
+  public_deps = [
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/timeline",
+    "//src/media/audio/mixer_service/common",
+  ]
 
   deps = [
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
-    "//src/media/audio/lib/format2",
+    "//zircon/system/ulib/zx",
   ]
 }
 
