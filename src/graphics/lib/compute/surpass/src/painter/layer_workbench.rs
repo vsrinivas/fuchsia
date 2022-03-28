@@ -116,12 +116,13 @@ pub struct Context<'c, P: LayerProps> {
     pub clear_color: Color,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct LayerWorkbench {
     ids: MaskedVec<u32>,
     segment_ranges: FxHashMap<u32, RangeInclusive<usize>>,
     queue_indices: FxHashMap<u32, usize>,
     skip_clipping: FxHashSet<u32>,
+    layers_were_removed: bool,
     queue: Vec<CoverCarry>,
     next_queue: Vec<CoverCarry>,
 }
@@ -145,6 +146,9 @@ impl LayerWorkbench {
         mem::swap(&mut self.queue, &mut self.next_queue);
 
         self.next_queue.clear();
+
+        // Start by assuming that layers might have been removed until proven otherwise.
+        self.layers_were_removed = true;
     }
 
     fn segments<'c, P: LayerProps>(
@@ -204,6 +208,8 @@ impl LayerWorkbench {
 
             let is_unchanged = if let Some(previous_layers) = previous_layers {
                 let old_layers = mem::replace(previous_layers, layers);
+                self.layers_were_removed = layers < old_layers;
+
                 old_layers == layers && self.ids.iter().all(|&id| context.props.is_unchanged(id))
             } else {
                 *previous_layers = Some(layers);
@@ -299,9 +305,15 @@ impl LayerWorkbench {
         }
 
         let mut first_interesting_cover = None;
-
+        // If layers were removed, we cannot assume anything because a visible layer
+        // might have been removed since last frame.
+        let mut visible_layers_are_unchanged = !self.layers_were_removed;
         for (i, &id) in self.ids.iter_masked().rev() {
             let props = context.props.get(id);
+
+            if !context.props.is_unchanged(id) {
+                visible_layers_are_unchanged = false;
+            }
 
             let is_clipped = || {
                 matches!(props.func, Func::Draw(Style { is_clipped: true, .. }))
@@ -334,7 +346,14 @@ impl LayerWorkbench {
 
         let (i, bottom_color) = match first_interesting_cover {
             // First opaque layer is skipped when blending.
-            Some(InterestingCover::Opaque(color)) => (1, color),
+            Some(InterestingCover::Opaque(color)) => {
+                // All visible layers are unchanged so we can skip drawing altogether.
+                if visible_layers_are_unchanged {
+                    return ControlFlow::Break(TileWriteOp::None);
+                }
+
+                (1, color)
+            }
             // The clear color is used as a virtual first opqaue layer.
             None => (0, context.clear_color),
             // Visible incomplete cover makes full optimization impossible.
@@ -449,6 +468,20 @@ impl LayerWorkbench {
     }
 }
 
+impl Default for LayerWorkbench {
+    fn default() -> Self {
+        Self {
+            ids: MaskedVec::default(),
+            segment_ranges: FxHashMap::default(),
+            queue_indices: FxHashMap::default(),
+            skip_clipping: FxHashSet::default(),
+            layers_were_removed: true,
+            queue: Vec::new(),
+            next_queue: Vec::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,6 +496,7 @@ mod tests {
 
     const WHITE: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
     const BLACK: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+    const RED: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
 
     impl<T: PartialEq, const N: usize> PartialEq<[T; N]> for MaskedVec<T> {
         fn eq(&self, other: &[T; N]) -> bool {
@@ -810,7 +844,7 @@ mod tests {
             }
 
             fn is_unchanged(&self, _layer_id: u32) -> bool {
-                unimplemented!()
+                false
             }
         }
 
@@ -860,7 +894,7 @@ mod tests {
             }
 
             fn is_unchanged(&self, _layer_id: u32) -> bool {
-                unimplemented!()
+                false
             }
         }
 
@@ -908,7 +942,7 @@ mod tests {
             }
 
             fn is_unchanged(&self, _layer_id: u32) -> bool {
-                unimplemented!()
+                false
             }
         }
 
@@ -959,7 +993,7 @@ mod tests {
             }
 
             fn is_unchanged(&self, _layer_id: u32) -> bool {
-                unimplemented!()
+                false
             }
         }
 
@@ -1003,7 +1037,7 @@ mod tests {
             }
 
             fn is_unchanged(&self, _layer_id: u32) -> bool {
-                unimplemented!()
+                false
             }
         }
 
@@ -1053,6 +1087,103 @@ mod tests {
         assert_eq!(
             workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
             TileWriteOp::Solid(Color { r: 0.75, g: 0.75, b: 0.75, a: 1.0 })
+        );
+    }
+
+    #[test]
+    fn skip_visible_is_unchanged() {
+        let mut workbench = LayerWorkbench::default();
+
+        struct TestProps;
+
+        impl LayerProps for TestProps {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+                if layer_id == 2 {
+                    return Cow::Owned(Props {
+                        func: Func::Draw(Style { fill: Fill::Solid(RED), ..Default::default() }),
+                        ..Default::default()
+                    });
+                }
+
+                Cow::Owned(Props::default())
+            }
+
+            fn is_unchanged(&self, layer_id: u32) -> bool {
+                layer_id != 0
+            }
+        }
+
+        workbench.init([
+            cover(0, CoverType::Partial),
+            cover(1, CoverType::Partial),
+            cover(2, CoverType::Full),
+        ]);
+
+        let mut layers = Some(3);
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            previous_clear_color: Some(BLACK),
+            previous_layers: Cell::new(Some(&mut layers)),
+            clear_color: BLACK,
+        };
+
+        workbench.populate_layers(&context);
+
+        // Tile has changed because layer 0 changed.
+        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        // However, we can still skip drawing because everything visible is unchanged.
+        assert_eq!(
+            workbench.skip_fully_covered_layers(&context),
+            ControlFlow::Break(TileWriteOp::None)
+        );
+
+        layers = Some(2);
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            previous_clear_color: Some(BLACK),
+            previous_layers: Cell::new(Some(&mut layers)),
+            clear_color: BLACK,
+        };
+
+        workbench.populate_layers(&context);
+
+        // Tile has changed because layer 0 changed and number of layers has changed.
+        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        // We can still skip the tile because any newly added layer is covered by an opaque layer.
+        assert_eq!(
+            workbench.skip_fully_covered_layers(&context),
+            ControlFlow::Break(TileWriteOp::None)
+        );
+
+        layers = Some(4);
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            previous_clear_color: Some(BLACK),
+            previous_layers: Cell::new(Some(&mut layers)),
+            clear_color: BLACK,
+        };
+
+        workbench.populate_layers(&context);
+
+        // Tile has changed because layer 0 changed and number of layers has changed.
+        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        // This time we cannot skip because there might have been a visible layer
+        // last frame that is now removed.
+        assert_eq!(
+            workbench.skip_fully_covered_layers(&context),
+            ControlFlow::Break(TileWriteOp::Solid(RED))
         );
     }
 }
