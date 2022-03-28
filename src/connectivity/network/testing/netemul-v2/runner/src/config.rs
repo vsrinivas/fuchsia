@@ -5,6 +5,7 @@
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netemul_network as fnetemul_network;
 use log::{debug, info};
@@ -337,6 +338,11 @@ pub(crate) enum Error {
     DuplicateEndpoint(String),
     #[error("endpoint `{0}` assigned to a netstack multiple times")]
     EndpointAssignedMultipleTimes(String),
+    #[error(
+        "endpoint name '{0}' exceeds maximum interface name length of {}",
+        fnet_interfaces::INTERFACE_NAME_LENGTH
+    )]
+    EndpointNameExceedsMaximumLength(String),
     #[error("unknown endpoint `{0}`, must be declared on a network")]
     UnknownEndpoint(String),
 }
@@ -356,6 +362,9 @@ impl UnvalidatedConfig {
             for Endpoint { name, .. } in endpoints {
                 if let Some(_) = installed_endpoints.insert(name, false) {
                     return Err(Error::DuplicateEndpoint(name.to_string()));
+                }
+                if name.len() > fnet_interfaces::INTERFACE_NAME_LENGTH.into() {
+                    return Err(Error::EndpointNameExceedsMaximumLength(name.to_string()));
                 }
             }
         }
@@ -678,7 +687,8 @@ mod tests {
     )]
     fn invalid_parse(s: &str) {
         let program = program_from_str(s);
-        assert_matches!(Config::load_from_program(program), Err(_));
+        let program = Dictionary::try_from(program).expect("program into dictionary");
+        assert_matches!(UnvalidatedConfig::try_from(program), Err(_));
     }
 
     #[test_case(
@@ -762,6 +772,27 @@ mod tests {
         },
         Error::DuplicateEndpoint("ep".to_string());
         "endpoint names must be unique"
+    )]
+    #[test_case(
+        UnvalidatedConfig {
+            netstacks: vec![],
+            networks: vec![
+                Network {
+                    name: "net".to_string(),
+                    endpoints: vec![
+                        Endpoint {
+                            name: "overly-long-ep-name".to_string(),
+                            mac: None,
+                            mtu: Endpoint::default_mtu(),
+                            up: Endpoint::default_link_up(),
+                            backing: Default::default(),
+                        },
+                    ],
+                },
+            ],
+        },
+        Error::EndpointNameExceedsMaximumLength("overly-long-ep-name".to_string());
+        "endpoint name must be <= maximum interface name length"
     )]
     #[test_case(
         UnvalidatedConfig {
