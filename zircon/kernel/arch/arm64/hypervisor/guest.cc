@@ -93,5 +93,5 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   if (auto result = gpas_.UnmapRange(addr, len); result.is_error()) {
     return result.status_value();
   }
-  return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
+  return traps_.InsertTrap(kind, addr, len, ktl::move(port), key).status_value();
 }

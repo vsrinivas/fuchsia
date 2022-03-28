@@ -371,9 +371,8 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
                                      hypervisor::GuestPhysicalAddressSpace* gpas,
                                      hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
   zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
-  hypervisor::Trap* trap;
-  zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
-  switch (status) {
+  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
+  switch (trap.status_value()) {
     case ZX_ERR_NOT_FOUND:
       if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
         dprintf(CRITICAL, "hypervisor: Unhandled guest data abort %#lx\n", guest_paddr);
@@ -383,7 +382,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     case ZX_OK:
       break;
     default:
-      return status;
+      return trap.status_value();
   }
   next_pc(guest_state);
 
@@ -392,23 +391,23 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
   LTRACEF("guest far_el2: %#lx\n", guest_state->far_el2);
 
   const DataAbort data_abort(iss);
-  switch (trap->kind()) {
+  switch ((*trap)->kind()) {
     case ZX_GUEST_TRAP_BELL:
       if (data_abort.read) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      packet->key = trap->key();
+      packet->key = (*trap)->key();
       packet->type = ZX_PKT_TYPE_GUEST_BELL;
       packet->guest_bell.addr = guest_paddr;
-      if (!trap->HasPort()) {
+      if (!(*trap)->HasPort()) {
         return ZX_ERR_BAD_STATE;
       }
-      return trap->Queue(*packet, nullptr);
+      return (*trap)->Queue(*packet, nullptr).status_value();
     case ZX_GUEST_TRAP_MEM:
       if (!data_abort.valid) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      packet->key = trap->key();
+      packet->key = (*trap)->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
       packet->guest_mem.addr = guest_paddr;
       packet->guest_mem.access_size = data_abort.access_size;

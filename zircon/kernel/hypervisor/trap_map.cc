@@ -41,8 +41,9 @@ namespace hypervisor {
 
 BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
-zx_status_t BlockingPortAllocator::Init() {
-  return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
+zx::status<> BlockingPortAllocator::Init() {
+  zx_status_t status = arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
+  return zx::make_status(status);
 }
 
 PortPacket* BlockingPortAllocator::AllocBlocking() {
@@ -75,18 +76,18 @@ Trap::~Trap() {
   port_->CancelQueued(&port_allocator_ /* handle */, key_);
 }
 
-zx_status_t Trap::Init() { return port_allocator_.Init(); }
+zx::status<> Trap::Init() { return port_allocator_.Init(); }
 
-zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator) {
+zx::status<> Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator) {
   if (invalidator != nullptr) {
     invalidator->Invalidate();
   }
   if (port_ == nullptr) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
   PortPacket* port_packet = port_allocator_.AllocBlocking();
   if (port_packet == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   port_packet->packet = packet;
   zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE);
@@ -97,47 +98,46 @@ zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invali
       status = ZX_ERR_BAD_STATE;
     }
   }
-  return status;
+  return zx::make_status(status);
 }
 
-zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
-                                fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+zx::status<> TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
+                                 fbl::RefPtr<PortDispatcher> port, uint64_t key) {
   if (!ValidRange(kind, addr, len)) {
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
   TrapTree* traps = TreeOf(kind);
   if (traps == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, ktl::move(port), key));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status = range->Init();
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = range->Init(); result.is_error()) {
+    return result.take_error();
   }
 
   Guard<SpinLock, IrqSave> guard{&lock_};
   auto iter = traps->upper_bound(addr);
   // If `upper_bound()` does not return `end()`, check if the range intersects.
   if (iter.IsValid() && Intersects(addr, len, iter->addr(), iter->len())) {
-    return ZX_ERR_ALREADY_EXISTS;
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
   // Decrement the iterator, and check if the next range intersects.
   if (--iter; iter.IsValid() && Intersects(addr, len, iter->addr(), iter->len())) {
-    return ZX_ERR_ALREADY_EXISTS;
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
   traps->insert(ktl::move(range));
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap) {
+zx::status<Trap*> TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr) {
   TrapTree* traps = TreeOf(kind);
   if (traps == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   Trap* found;
@@ -145,16 +145,14 @@ zx_status_t TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap) {
     Guard<SpinLock, IrqSave> guard{&lock_};
     auto iter = --traps->upper_bound(addr);
     if (!iter.IsValid()) {
-      return ZX_ERR_NOT_FOUND;
+      return zx::error(ZX_ERR_NOT_FOUND);
     }
     found = &*iter;
   }
   if (!found->Contains(addr)) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
-
-  *trap = found;
-  return ZX_OK;
+  return zx::ok(found);
 }
 
 TrapMap::TrapTree* TrapMap::TreeOf(uint32_t kind) {

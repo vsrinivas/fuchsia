@@ -512,17 +512,16 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  hypervisor::Trap* trap;
-  zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
-  if (status != ZX_OK) {
+  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port);
+  if (trap.is_error()) {
     dprintf(INFO, "hypervisor: Unhandled guest IO port %s %#x\n", io_info.input ? "read" : "write",
             io_info.port);
-    return status;
+    return trap.status_value();
   }
   next_rip(exit_info, vmcs);
 
   memset(packet, 0, sizeof(*packet));
-  packet->key = trap->key();
+  packet->key = (*trap)->key();
   packet->type = ZX_PKT_TYPE_GUEST_IO;
   packet->guest_io.port = io_info.port;
   packet->guest_io.access_size = io_info.access_size;
@@ -536,8 +535,8 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
     }
   } else {
     memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
-    if (trap->HasPort()) {
-      return trap->Queue(*packet, vmcs);
+    if ((*trap)->HasPort()) {
+      return (*trap)->Queue(*packet, vmcs).status_value();
     }
     // If there was no port for the range, then return to user-space.
   }
@@ -1020,27 +1019,26 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
     return ZX_ERR_INTERNAL;
   }
 
-  hypervisor::Trap* trap;
-  zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
-  if (status != ZX_OK) {
-    return status;
+  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
+  if (trap.is_error()) {
+    return trap.status_value();
   }
   next_rip(exit_info, vmcs);
 
-  switch (trap->kind()) {
+  switch ((*trap)->kind()) {
     case ZX_GUEST_TRAP_BELL:
       if (read) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      packet->key = trap->key();
+      packet->key = (*trap)->key();
       packet->type = ZX_PKT_TYPE_GUEST_BELL;
       packet->guest_bell.addr = guest_paddr;
-      if (!trap->HasPort()) {
+      if (!(*trap)->HasPort()) {
         return ZX_ERR_BAD_STATE;
       }
-      return trap->Queue(*packet, vmcs);
+      return (*trap)->Queue(*packet, vmcs).status_value();
     case ZX_GUEST_TRAP_MEM: {
-      packet->key = trap->key();
+      packet->key = (*trap)->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
       packet->guest_mem.addr = guest_paddr;
       packet->guest_mem.inst_len = exit_info.exit_instruction_length & UINT8_MAX;
@@ -1060,8 +1058,8 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
       zx_paddr_t pt_addr = vmcs->Read(VmcsFieldXX::GUEST_CR3);
       // Done with the vmcs, can now invalidate in case we block.
       vmcs->Invalidate();
-      status = fetch_data(gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
-                          packet->guest_mem.inst_len, pt_addr);
+      zx_status_t status = fetch_data(gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
+                                      packet->guest_mem.inst_len, pt_addr);
       return status == ZX_OK ? ZX_ERR_NEXT : status;
     }
     default:

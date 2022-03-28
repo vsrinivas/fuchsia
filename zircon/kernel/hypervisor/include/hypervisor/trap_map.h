@@ -21,7 +21,7 @@ class BlockingPortAllocator final : public PortAllocator {
  public:
   BlockingPortAllocator();
 
-  zx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
+  zx::status<> Init() TA_NO_THREAD_SAFETY_ANALYSIS;
   PortPacket* AllocBlocking();
   virtual void Free(PortPacket* port_packet) override;
 
@@ -38,8 +38,8 @@ class Trap : public fbl::WAVLTreeContainable<ktl::unique_ptr<Trap>> {
   Trap(uint32_t kind, zx_gpaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key);
   ~Trap();
 
-  zx_status_t Init();
-  zx_status_t Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator);
+  zx::status<> Init();
+  zx::status<> Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator);
 
   zx_gpaddr_t GetKey() const { return addr_; }
   bool Contains(zx_gpaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
@@ -62,9 +62,9 @@ class Trap : public fbl::WAVLTreeContainable<ktl::unique_ptr<Trap>> {
 // Contains all the traps within a guest.
 class TrapMap {
  public:
-  zx_status_t InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
-                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
-  zx_status_t FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap);
+  zx::status<> InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
+                          fbl::RefPtr<PortDispatcher> port, uint64_t key);
+  zx::status<Trap*> FindTrap(uint32_t kind, zx_gpaddr_t addr);
 
  private:
   using TrapTree = fbl::WAVLTree<zx_gpaddr_t, ktl::unique_ptr<Trap>>;
