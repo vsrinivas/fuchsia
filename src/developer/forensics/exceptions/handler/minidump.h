@@ -19,7 +19,8 @@ namespace handler {
 // Exception reasons that should be used to better form crash reports.
 enum class ExceptionReason {
   kChannelOverflow,
-  kPortOverflow,
+  kPortObserverOverflow,
+  kPortPacketOverflow,
   kPageFaultIo,
   kPageFaultIoDataIntegrity,
   kPageFaultBadState,

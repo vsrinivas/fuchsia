@@ -72,8 +72,10 @@ std::optional<ExceptionReason> DetectExceptionReason(
     switch (exception_report.context.synth_code) {
       case ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE:
         return ExceptionReason::kChannelOverflow;
+      case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_OBSERVERS:
+        return ExceptionReason::kPortObserverOverflow;
       case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS:
-        return ExceptionReason::kPortOverflow;
+        return ExceptionReason::kPortPacketOverflow;
       default:
         return std::nullopt;
     }

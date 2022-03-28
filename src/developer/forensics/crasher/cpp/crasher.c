@@ -208,7 +208,7 @@ int channel_overflow(volatile unsigned int* arg) {
   return 0;
 }
 
-int port_overflow(volatile unsigned int* arg) {
+int port_packet_overflow(volatile unsigned int* arg) {
   zx_handle_t port;
   zx_status_t status = zx_port_create(0u, &port);
   if (status != ZX_OK) {
@@ -235,6 +235,39 @@ int port_overflow(volatile unsigned int* arg) {
   return 0;
 }
 
+int port_observer_overflow(volatile unsigned int* arg) {
+  zx_handle_t port;
+  zx_status_t status = zx_port_create(0u, &port);
+  if (status != ZX_OK) {
+    printf("port creation failed. error: %d\n", status);
+    return 1;
+  }
+
+  zx_handle_t event;
+  status = zx_event_create(0, &event);
+  if (status != ZX_OK) {
+    printf("event creation failed. error: %d\n", status);
+    return 1;
+  }
+
+  int count = 0;
+  for (;;) {
+    status = zx_object_wait_async(event, port, /*key=*/0, ZX_USER_SIGNAL_0, /*options=*/0);
+    if (status != ZX_OK) {
+      printf("object_wait_async failed. error: %d\n", status);
+      break;
+    }
+    ++count;
+    if ((count % 100) == 0) {
+      write(1, ".", 1);
+    }
+  }
+
+  zx_handle_close(event);
+  zx_handle_close(port);
+  return 0;
+}
+
 int call_abort(volatile unsigned int* arg) {
   abort();
   return 0;
@@ -253,7 +286,8 @@ command_t commands[] = {
     {"mem", mem, "out of memory"},
     {"channelw", channel_overflow, "overflow a channel with messages"},
     {"cpp_channelw", cpp_channel_overflow, "overflow a channel with FIDL messages"},
-    {"portq", port_overflow, "overflow a port with packets"},
+    {"port_packets", port_packet_overflow, "overflow a port with packets"},
+    {"port_observers", port_observer_overflow, "overflow a port with observers"},
     {"use_after_free", use_after_free, "use memory after freeing it"},
     {"write0_mt", blind_write_multithreaded,
      "write to address 0x0 in one thread, sleeping in 5 others"},

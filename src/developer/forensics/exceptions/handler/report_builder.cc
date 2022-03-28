@@ -156,9 +156,13 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
         crash_report.set_crash_signature(fxl::StringPrintf(
             "fuchsia-%s-channel-overflow", Sanitize(process_name_.value()).c_str()));
         break;
-      case ExceptionReason::kPortOverflow:
-        crash_report.set_crash_signature(
-            fxl::StringPrintf("fuchsia-%s-port-overflow", Sanitize(process_name_.value()).c_str()));
+      case ExceptionReason::kPortObserverOverflow:
+        crash_report.set_crash_signature(fxl::StringPrintf(
+            "fuchsia-%s-port-observer-overflow", Sanitize(process_name_.value()).c_str()));
+        break;
+      case ExceptionReason::kPortPacketOverflow:
+        crash_report.set_crash_signature(fxl::StringPrintf(
+            "fuchsia-%s-port-packet-overflow", Sanitize(process_name_.value()).c_str()));
         break;
       case ExceptionReason::kPageFaultIo:
         crash_report.set_crash_signature("fuchsia-page_fault-io");

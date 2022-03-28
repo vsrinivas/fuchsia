@@ -49,16 +49,28 @@ TEST_F(CrashReportBuilderTest, ExceptionReason_ChannelOverflow) {
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-channel-overflow");
 }
 
-TEST_F(CrashReportBuilderTest, ExceptionReason_PortOverflow) {
+TEST_F(CrashReportBuilderTest, ExceptionReason_PortObserverOverflow) {
   fsl::SizedVmo minidump_vmo;
   ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
 
   builder_.SetMinidump(std::move(minidump_vmo.vmo()))
-      .SetExceptionReason(ExceptionReason::kPortOverflow);
+      .SetExceptionReason(ExceptionReason::kPortObserverOverflow);
 
   auto crash_report = builder_.Consume();
   ASSERT_TRUE(crash_report.has_crash_signature());
-  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-port-overflow");
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-port-observer-overflow");
+}
+
+TEST_F(CrashReportBuilderTest, ExceptionReason_PortPacketOverflow) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo()))
+      .SetExceptionReason(ExceptionReason::kPortPacketOverflow);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-port-packet-overflow");
 }
 
 TEST_F(CrashReportBuilderTest, ExceptionReason_PageFaultIo) {
