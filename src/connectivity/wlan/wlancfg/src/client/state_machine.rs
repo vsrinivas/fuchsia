@@ -978,9 +978,9 @@ mod tests {
             util::{
                 listener,
                 testing::{
-                    create_fake_connection_data, create_inspect_persistence_channel,
-                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    create_wlan_hasher, generate_disconnect_info, poll_sme_req,
+                    create_inspect_persistence_channel, create_mock_cobalt_sender,
+                    create_mock_cobalt_sender_and_receiver, create_wlan_hasher,
+                    generate_disconnect_info, poll_sme_req, random_connection_data,
                     validate_sme_scan_request_and_send_results, ConnectResultRecord,
                     ConnectionRecord, FakeSavedNetworksManager,
                 },
@@ -3933,8 +3933,9 @@ mod tests {
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone(), rssi_dbm: init_rssi, snr_db: init_snr);
         // Add a PastConnectionData for the connected network to be send in BSS quality data.
         let mut past_connections = PastConnectionList::new();
-        past_connections
-            .add(create_fake_connection_data(bss_description.bssid, fasync::Time::INFINITE));
+        let mut past_connection_data = random_connection_data();
+        past_connection_data.bssid = bss_description.bssid;
+        past_connections.add(past_connection_data);
         let mut saved_networks_manager = FakeSavedNetworksManager::new();
         saved_networks_manager.past_connections_response = past_connections.clone();
         test_values.common_options.saved_networks_manager = Arc::new(saved_networks_manager);

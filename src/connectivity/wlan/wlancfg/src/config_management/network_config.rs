@@ -626,7 +626,7 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::util::testing::create_fake_connection_data, std::iter::FromIterator,
+        super::*, crate::util::testing::random_connection_data, std::iter::FromIterator,
         wlan_common::assert_variant,
     };
 
@@ -983,14 +983,15 @@ mod tests {
         let curr_time = fasync::Time::now();
 
         // Add two past_connections for BSSID_1
-        let bssid_1 = client_types::Bssid([1; 6]);
-        let data_1_bssid_1 =
-            create_fake_connection_data(bssid_1, curr_time - zx::Duration::from_seconds(10));
+        let mut data_1_bssid_1 = random_connection_data();
+        let bssid_1 = data_1_bssid_1.bssid;
+        data_1_bssid_1.disconnect_time = curr_time - zx::Duration::from_seconds(10);
 
         past_connections_list.add(bssid_1.clone(), data_1_bssid_1.clone());
 
-        let data_2_bssid_1 =
-            create_fake_connection_data(bssid_1, curr_time - zx::Duration::from_seconds(5));
+        let mut data_2_bssid_1 = random_connection_data();
+        data_2_bssid_1.bssid = bssid_1;
+        data_2_bssid_1.disconnect_time = curr_time - zx::Duration::from_seconds(5);
         past_connections_list.add(bssid_1.clone(), data_2_bssid_1.clone());
 
         // Verify get_recent_for_network(curr_time - 10) retrieves both entries
@@ -1001,9 +1002,9 @@ mod tests {
         );
 
         // Add one past_connection for BSSID_2
-        let bssid_2 = client_types::Bssid([2; 6]);
-        let data_1_bssid_2 =
-            create_fake_connection_data(bssid_2, curr_time - zx::Duration::from_seconds(3));
+        let mut data_1_bssid_2 = random_connection_data();
+        let bssid_2 = data_1_bssid_2.bssid;
+        data_1_bssid_2.disconnect_time = curr_time - zx::Duration::from_seconds(3);
         past_connections_list.add(bssid_2.clone(), data_1_bssid_2.clone());
 
         // Verify get_recent_for_network(curr_time - 10) includes entries from both BSSIDs
@@ -1041,10 +1042,10 @@ mod tests {
 
         // Add to list, exceeding the capacity by one entry
         for i in 0..past_connections_list.0.capacity() + 1 {
-            past_connections_list.add(create_fake_connection_data(
-                client_types::Bssid([1; 6]),
-                curr_time + zx::Duration::from_seconds(i as i64),
-            ))
+            let mut data = random_connection_data();
+            data.bssid = client_types::Bssid([1; 6]);
+            data.disconnect_time = curr_time + zx::Duration::from_seconds(i as i64);
+            past_connections_list.add(data);
         }
 
         // Validate entry with time = curr_time was evicted.
@@ -1059,8 +1060,8 @@ mod tests {
         let curr_time = fasync::Time::now();
         assert!(past_connections_list.get_recent(curr_time).is_empty());
 
-        let bssid = client_types::Bssid([1; 6]);
-        let past_connection_data = create_fake_connection_data(bssid, curr_time);
+        let mut past_connection_data = random_connection_data();
+        past_connection_data.disconnect_time = curr_time;
         // Add a past connection
         past_connections_list.add(past_connection_data.clone());
 

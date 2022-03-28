@@ -277,23 +277,6 @@ pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Rece
     mpsc::channel(DEFAULT_BUFFER_SIZE)
 }
 
-pub fn create_fake_connection_data(
-    bssid: client_types::Bssid,
-    disconnect_time: fasync::Time,
-) -> PastConnectionData {
-    let mut rng = rand::thread_rng();
-    PastConnectionData::new(
-        bssid,
-        disconnect_time - zx::Duration::from_seconds(rng.gen::<u8>().into()),
-        zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into()),
-        disconnect_time,
-        zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000).into()),
-        client_types::DisconnectReason::NetworkUnsaved,
-        SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
-        rng.gen::<u8>().into(),
-    )
-}
-
 /// Create past connection data with all random values. Tests can set the values they care about.
 pub fn random_connection_data() -> PastConnectionData {
     let mut rng = rand::thread_rng();
@@ -310,7 +293,7 @@ pub fn random_connection_data() -> PastConnectionData {
         disconnect_time,
         uptime,
         client_types::DisconnectReason::DisconnectDetectedFromSme,
-        SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
+        SignalData::new(rng.gen_range(-90..-20), rng.gen_range(10..50), 10),
         rng.gen::<u8>().into(),
     )
 }

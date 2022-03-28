@@ -664,7 +664,7 @@ mod tests {
             },
             util::testing::{
                 cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
-                create_fake_connection_data,
+                random_connection_data,
             },
         },
         cobalt_client::traits::AsEventCode,
@@ -1262,9 +1262,7 @@ mod tests {
             .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![1; 32]);
-        let bssid = types::Bssid([1; 6]);
-        let disconnect_time = fasync::Time::now();
-        let data = create_fake_connection_data(bssid, disconnect_time);
+        let data = random_connection_data();
 
         saved_networks.record_disconnect(&id, &credential, data.clone()).await;
         // Verify that nothing happens if the network was not already saved.
@@ -1994,19 +1992,23 @@ mod tests {
             .await
             .expect("Failed to create SavedNetworksManager");
 
-        // Create a config with two past connections for BSS 1 and one past connection for BSS 2.
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"some_password".to_vec());
         let mut config = NetworkConfig::new(id.clone(), credential.clone(), true)
             .expect("failed to create config");
         let mut past_connections = PastConnectionsByBssid::new();
-        let bssid_1 = types::Bssid([1; 6]);
-        let data_1 = create_fake_connection_data(bssid_1, fasync::Time::now());
-        let data_2 = create_fake_connection_data(bssid_1, fasync::Time::now());
+
+        // Add two past connections with the same bssid
+        let data_1 = random_connection_data();
+        let bssid_1 = data_1.bssid;
+        let mut data_2 = random_connection_data();
+        data_2.bssid = bssid_1;
         past_connections.add(bssid_1, data_1.clone());
         past_connections.add(bssid_1, data_2.clone());
-        let bssid_2 = types::Bssid([2; 6]);
-        let data_3 = create_fake_connection_data(bssid_2, fasync::Time::now());
+
+        // Add a past connection with different bssid
+        let data_3 = random_connection_data();
+        let bssid_2 = data_3.bssid;
         past_connections.add(bssid_2, data_3.clone());
         config.perf_stats.past_connections = past_connections;
 
