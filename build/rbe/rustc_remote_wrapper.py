@@ -41,40 +41,58 @@ import os
 import sys
 from typing import Iterable, Sequence, Tuple
 
-# Global constants
+
+# This is provided as a function so that tests can fake it.
+def _dependent_globals(this_script, cwd=os.curdir):
+    """Compute set of related globals that depend on this script's path."""
+    script_dir = os.path.dirname(this_script)
+
+    # This script lives under 'build/rbe', so the path to the root is '../..'.
+    default_project_root = os.path.realpath(
+        os.path.join(script_dir, '..', '..'))
+
+    # This is the relative path to the project root dir from the build output dir.
+    project_root_rel = os.path.relpath(default_project_root, start=cwd)
+
+    # This is the relative path to the build output dir from the project root dir.
+    build_subdir = os.path.relpath(cwd, start=default_project_root)
+
+    return argparse.Namespace(
+        script_dir=script_dir,
+        default_project_root=default_project_root,
+        project_root_rel=project_root_rel,
+        build_subdir=build_subdir,
+
+        # This is the script that eventually calls 'rewrapper' (reclient).
+        generic_remote_action_wrapper=os.path.join(
+            script_dir, 'fuchsia-rbe-action.sh'),
+
+        # This command is used to check local determinism.
+        check_determinism_command=[
+            os.path.join(
+                default_project_root, 'build', 'tracer', 'output_cacher.py'),
+            '--check-repeatability',
+        ],
+
+        # The path to the prebuilt fsatrace in Fuchsia's project tree.
+        fsatrace_path=os.path.join(
+            project_root_rel, 'prebuilt', 'fsatrace', 'fsatrace'),
+        detail_diff=os.path.join(script_dir, 'detail-diff.sh'),
+    )
+
+
+# Global variables
 _ARGV = sys.argv
 _SCRIPT_PATH = _ARGV[0]
-_SCRIPT_DIR = os.path.dirname(_SCRIPT_PATH)
+_GLOBALS = _dependent_globals(_SCRIPT_PATH)
 
-# This is the script that eventually calls 'rewrapper' (reclient).
-_GENERIC_REMOTE_ACTION_WRAPPER = os.path.join(
-    _SCRIPT_DIR, 'fuchsia-rbe-action.sh')
-
-# This script lives under 'build/rbe', so the path to the root is '../..'.
-_DEFAULT_PROJECT_ROOT = os.path.realpath(os.path.join(_SCRIPT_DIR, '..', '..'))
-
-# This is the relative path to the build output dir from the project root dir.
-_BUILD_SUBDIR = os.path.relpath(os.curdir, start=_DEFAULT_PROJECT_ROOT)
-
-# This is the relative path to the project root dir from the build output dir.
-_PROJECT_ROOT_REL = os.path.relpath(_DEFAULT_PROJECT_ROOT, start=os.curdir)
+# Global constants
 
 # This is a known path where remote execution occurs.
 _REMOTE_PROJECT_ROOT = '/b/f/w'
 
 # Use this env both locally and remotely.
 _ENV = '/usr/bin/env'
-
-_CHECK_DETERMINISM_COMMAND = [
-    os.path.join(_DEFAULT_PROJECT_ROOT, 'build', 'tracer', 'output_cacher.py'),
-    '--check-repeatability',
-]
-
-# The path to the prebuilt fsatrace in Fuchsia's project tree.
-_FSATRACE_PATH = os.path.join(
-    _PROJECT_ROOT_REL, 'prebuilt', 'fsatrace', 'fsatrace')
-
-_DETAIL_DIFF = os.path.join(_SCRIPT_DIR, 'detail-diff.sh')
 
 
 def apply_remote_flags_from_pseudo_flags(
@@ -204,12 +222,15 @@ def remove_dot_slash_prefix(text: str) -> str:
 
 
 def parse_rust_compile_command(
-        compile_command: Sequence[str]) -> argparse.Namespace:
+    compile_command: Sequence[str],
+    globals: argparse.Namespace,
+) -> argparse.Namespace:
     """Scans a Rust compile command for remote execution parameters.
 
     Args:
       compile_command: the full (local) Rust compile command, which
         may contain environment variable prefixes.
+      globals: variables that depend on the current working directory.
 
     Returns:
       A namespace of variables containing remote execution information.
@@ -273,7 +294,7 @@ def main(argv: Sequence[str]):
     # Import some remote parameters back to the main_config.
     apply_remote_flags_from_pseudo_flags(main_config, remote_params)
 
-    compile_params = parse_rust_compile_command(filtered_command)
+    compile_params = parse_rust_compile_command(filtered_command, _GLOBALS)
 
     # TODO: infer inputs and outputs for remote execution
     # Use the dep-scanning command from compile_params.dep_only_command

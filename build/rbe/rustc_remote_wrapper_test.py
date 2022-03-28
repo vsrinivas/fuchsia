@@ -221,13 +221,16 @@ class ApplyRemoteFlagsFromPseudoFlagsTests(unittest.TestCase):
 
 _ENV = rustc_remote_wrapper._ENV
 
+_FAKE_GLOBALS = rustc_remote_wrapper._dependent_globals(
+    '../../script.py', 'out/not-default')
+
 
 class ParseRustCompileCommandTests(unittest.TestCase):
 
     def testEmpty(self):
         # Make sure degenerate case doesn't crash.
         self.assertEqual(
-            rustc_remote_wrapper.parse_rust_compile_command([]),
+            rustc_remote_wrapper.parse_rust_compile_command([], _FAKE_GLOBALS),
             argparse.Namespace(
                 depfile=None,
                 dep_only_command=[_ENV],
@@ -270,7 +273,8 @@ class ParseRustCompileCommandTests(unittest.TestCase):
         ])
     def testRustCommandsWithDepInfo(
             self, command, expected_depfile, expected_dep_command):
-        params = rustc_remote_wrapper.parse_rust_compile_command(command)
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            command, _FAKE_GLOBALS)
         self.assertEqual(params.depfile, expected_depfile)
         self.assertEqual(params.dep_only_command, expected_dep_command)
 
