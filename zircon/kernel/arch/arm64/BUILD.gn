@@ -67,6 +67,10 @@ if (toolchain_environment == "physmem" ||
       # Use the right thread-pointer ABI for the kernel.
       cflags += [ "-mtp=el1" ]
     }
+
+    # Don't use the outline atomics since we don't have the helper functions.
+    # TODO(mcgrathr): use code-patching to define the outcalls for the kernel
+    configs = [ "//build/config/arm64:no-outline-atomics" ]
   }
 
   # This is used pervasively throughout the kernel on arm64.
