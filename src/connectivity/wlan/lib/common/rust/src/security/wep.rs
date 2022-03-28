@@ -18,7 +18,7 @@ use hex;
 use std::convert::{TryFrom, TryInto};
 use thiserror::Error;
 
-use crate::security::SecurityError;
+use crate::security::{BareCredentials, SecurityError};
 
 pub const WEP40_KEY_BYTES: usize = 5;
 pub const WEP104_KEY_BYTES: usize = 13;
@@ -111,16 +111,23 @@ impl From<WepKey> for Vec<u8> {
 ///
 /// This conversion is not a parse and does **not** accept ASCII hexadecimal encoded keys; the
 /// bytes are copied as is. Use `Key::parse` for hexadecimal keys.
-impl<'a> TryFrom<&'a [u8]> for WepKey {
+impl TryFrom<&[u8]> for WepKey {
     type Error = WepError;
 
-    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         let n = bytes.len();
         match n {
             WEP40_KEY_BYTES => Ok(WepKey::Wep40(bytes.try_into().unwrap())),
             WEP104_KEY_BYTES => Ok(WepKey::Wep104(bytes.try_into().unwrap())),
             _ => Err(WepError::Size(n)),
         }
+    }
+}
+
+/// Conversion from a WEP key into bare credentials.
+impl From<WepKey> for BareCredentials {
+    fn from(key: WepKey) -> Self {
+        BareCredentials::WepKey(key)
     }
 }
 

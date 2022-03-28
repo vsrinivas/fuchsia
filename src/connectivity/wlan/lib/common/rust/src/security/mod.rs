@@ -48,10 +48,33 @@ pub mod wep;
 pub mod wpa;
 
 use fidl_fuchsia_wlan_common_security as fidl_security;
+use fidl_fuchsia_wlan_sme as fidl_sme;
 use std::convert::TryFrom;
 use thiserror::Error;
 
-use crate::security::wpa::credential::{PassphraseError, PskError};
+use crate::security::{
+    wep::WepKey,
+    wpa::credential::{Passphrase, PassphraseError, Psk, PskError},
+};
+
+// TODO(fxbug.dev/95873): This code is temporary. It is used to extract credentials from an
+//                        `Authentication` and convert those credentials into the `Credential` SME
+//                        FIDL message. The message will be removed in favor of `Authentication`.
+pub trait AuthenticationExt {
+    fn into_sme_credential(self) -> fidl_sme::Credential;
+}
+
+impl AuthenticationExt for fidl_security::Authentication {
+    /// Converts an `Authentication` into an SME `Credential`.
+    fn into_sme_credential(self) -> fidl_sme::Credential {
+        let fidl_security::Authentication { credentials, .. } = self;
+        credentials
+            .map(|credentials| {
+                BareCredentials::try_from(*credentials).expect("unknown credentials variant").into()
+            })
+            .unwrap_or_else(|| fidl_sme::Credential::None(fidl_sme::Empty))
+    }
+}
 
 /// Extension methods for the `Credentials` FIDL datagram.
 pub trait CredentialsExt {
@@ -84,8 +107,19 @@ pub enum SecurityError {
     Wep(#[from] wep::WepError),
     #[error(transparent)]
     Wpa(#[from] wpa::WpaError),
+    /// This error occurs when there is an incompatibility between security protocols, features,
+    /// and/or credentials.
+    ///
+    /// Note that this is distinct from `SecurityError::Unsupported`.
     #[error("incompatible protocol or features")]
     Incompatible,
+    /// This error occurs when a specified security protocol, features, and/or credentials are
+    /// **not** supported.
+    ///
+    /// Note that this is distinct from `SecurityError::Incompatible`. Unsupported features may be
+    /// compatible and specified in IEEE Std. 802.11-2016.
+    #[error("unsupported protocol or features")]
+    Unsupported,
 }
 
 impl From<PassphraseError> for SecurityError {
@@ -97,6 +131,97 @@ impl From<PassphraseError> for SecurityError {
 impl From<PskError> for SecurityError {
     fn from(error: PskError) -> Self {
         SecurityError::Wpa(error.into())
+    }
+}
+
+// TODO(fxbug.dev/96416): In a term longer than fxbug.dev/95873, this type should probably be
+//                        removed. In general, code should not deal in bare credentials and instead
+//                        should use authenticators (or descriptors).
+/// General credential data that is not explicitly coupled to a particular security protocol.
+///
+/// The variants of this enumeration are particular to general protocols (i.e., WEP and WPA), but
+/// don't provide any more details or validation. For WPA credential data, this means that the
+/// version of the WPA security protocol is entirely unknown.
+///
+/// This type is meant for code and APIs that accept such bare credentials and must incorporate
+/// additional information or apply heuristics to negotiate a specific protocol. For example, this
+/// occurs in code that communicates directly with SME without support from the Policy layer to
+/// derive this information.
+///
+/// The FIDL analogue of this type is `fuchsia.wlan.common.security.Credentials`, into and from
+/// which this type can be infallibly converted.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum BareCredentials {
+    /// WEP key.
+    WepKey(WepKey),
+    /// WPA passphrase.
+    ///
+    /// Passphrases can be used to authenticate with WPA1, WPA2, and WPA3.
+    WpaPassphrase(Passphrase),
+    /// WPA PSK.
+    ///
+    /// PSKs are distinct from passphrases and can be used to authenticate with WPA1 and WPA2. A
+    /// PSK cannot be used to authenticate with WPA3.
+    WpaPsk(Psk),
+}
+
+impl From<BareCredentials> for fidl_security::Credentials {
+    fn from(credentials: BareCredentials) -> Self {
+        match credentials {
+            BareCredentials::WepKey(key) => {
+                fidl_security::Credentials::Wep(fidl_security::WepCredentials { key: key.into() })
+            }
+            BareCredentials::WpaPassphrase(passphrase) => fidl_security::Credentials::Wpa(
+                fidl_security::WpaCredentials::Passphrase(passphrase.into()),
+            ),
+            BareCredentials::WpaPsk(psk) => {
+                fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Psk(psk.into()))
+            }
+        }
+    }
+}
+
+// TODO(fxbug.dev/95873): This code is temporary. It is used to extract credentials from an
+//                        `Authentication` or `SecurityAuthenticator` and convert those credentials
+//                        into the `Credential` SME FIDL message. The message will be removed in
+//                        favor of `Authentication`.
+impl From<BareCredentials> for fidl_sme::Credential {
+    fn from(credentials: BareCredentials) -> Self {
+        match credentials {
+            BareCredentials::WepKey(key) => fidl_sme::Credential::Password(key.into()),
+            BareCredentials::WpaPassphrase(passphrase) => {
+                fidl_sme::Credential::Password(passphrase.into())
+            }
+            BareCredentials::WpaPsk(psk) => fidl_sme::Credential::Psk(psk.into()),
+        }
+    }
+}
+
+impl TryFrom<fidl_security::Credentials> for BareCredentials {
+    type Error = SecurityError;
+
+    fn try_from(credentials: fidl_security::Credentials) -> Result<Self, Self::Error> {
+        match credentials {
+            fidl_security::Credentials::Wep(fidl_security::WepCredentials { key }) => {
+                WepKey::try_from(key.as_slice())
+                    .map(|key| BareCredentials::WepKey(key))
+                    .map_err(From::from)
+            }
+            fidl_security::Credentials::Wpa(credentials) => match credentials {
+                fidl_security::WpaCredentials::Passphrase(passphrase) => {
+                    Passphrase::try_from(passphrase)
+                        .map(|passphrase| BareCredentials::WpaPassphrase(passphrase))
+                        .map_err(From::from)
+                }
+                fidl_security::WpaCredentials::Psk(psk) => Psk::try_from(psk.as_slice())
+                    .map(|psk| BareCredentials::WpaPsk(psk))
+                    .map_err(From::from),
+                // Unknown variant.
+                _ => Err(SecurityError::Incompatible),
+            },
+            // Unknown variant.
+            _ => Err(SecurityError::Incompatible),
+        }
     }
 }
 
@@ -218,6 +343,20 @@ impl SecurityAuthenticator {
         match self {
             SecurityAuthenticator::Wpa(authenticator) => Some(authenticator),
             _ => None,
+        }
+    }
+
+    /// Converts the authenticator to bare credentials, if any.
+    ///
+    /// Returns `None` if the authenticator is `SecurityAuthenticator::None`, as there are no
+    /// corresponding credentials in this case.
+    pub fn to_credentials(&self) -> Option<BareCredentials> {
+        match self {
+            SecurityAuthenticator::Open => None,
+            SecurityAuthenticator::Wep(wep::WepAuthenticator { ref key }) => {
+                Some(key.clone().into())
+            }
+            SecurityAuthenticator::Wpa(ref wpa) => Some(wpa.to_credentials().into()),
         }
     }
 

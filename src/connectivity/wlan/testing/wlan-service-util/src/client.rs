@@ -6,6 +6,7 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_common::WlanMacRole;
+use fidl_fuchsia_wlan_common_security as fidl_security;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
@@ -14,13 +15,127 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 use ieee80211::Ssid;
+use std::convert::TryFrom;
+use wlan_common::{
+    bss::{BssDescription, Protection},
+    security::{
+        wep::WepKey,
+        wpa::credential::{Passphrase, Psk},
+        BareCredentials, SecurityError,
+    },
+};
 
 type WlanService = DeviceServiceProxy;
 
-// IEEE Std. 802.11-2016 - J.4.1 mandates a password to be <= 63 bytes to distinguish from a PSK
-// represented as a HEX string.
-const WLAN_PASSWORD_MAX_LEN: usize = 63;
-const WLAN_PSK_HEX_STRING_LEN: usize = 64;
+/// Context for negotiating an `Authentication` (security protocol and credentials).
+///
+/// This ephemeral type joins a BSS description with credential data to negotiate an
+/// `Authentication`. See the `TryFrom` implementation below.
+#[derive(Clone, Debug)]
+struct SecurityContext {
+    pub bss: BssDescription,
+    pub unparsed_credential_bytes: Vec<u8>,
+}
+
+/// Negotiates an `Authentication` from security information (given credentials and a BSS
+/// description). The security protocol is based on the protection information described by the BSS
+/// description. This is used to parse and validate the given credentials.
+///
+/// This is necessary, because the service utilities communicate directly with SME, which requires
+/// more detailed information than the Policy layer.
+impl TryFrom<SecurityContext> for fidl_security::Authentication {
+    type Error = SecurityError;
+
+    fn try_from(context: SecurityContext) -> Result<Self, SecurityError> {
+        let SecurityContext { bss, unparsed_credential_bytes } = context;
+        fn parse_wpa_credentials(
+            unparsed_credential_bytes: Vec<u8>,
+        ) -> Result<fidl_security::Credentials, SecurityError> {
+            // Interpret credentials as a PSK first. This format is more specific.
+            if let Ok(psk) = Psk::try_from(unparsed_credential_bytes.as_slice()) {
+                Ok(fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Psk(psk.into())))
+            } else {
+                let passphrase = Passphrase::try_from(unparsed_credential_bytes)?;
+                Ok(fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Passphrase(
+                    passphrase.into(),
+                )))
+            }
+        }
+
+        match bss.protection() {
+            // Unsupported.
+            // TODO(fxbug.dev/92693): Implement conversions for WPA Enterprise.
+            Protection::Unknown | Protection::Wpa2Enterprise | Protection::Wpa3Enterprise => {
+                Err(SecurityError::Unsupported)
+            }
+            Protection::Open => {
+                if unparsed_credential_bytes.len() == 0 {
+                    Ok(fidl_security::Authentication {
+                        protocol: fidl_security::Protocol::Open,
+                        credentials: None,
+                    })
+                } else {
+                    Err(SecurityError::Incompatible)
+                }
+            }
+            Protection::Wep => WepKey::try_from(unparsed_credential_bytes.as_slice())
+                .map(|key| fidl_security::Authentication {
+                    protocol: fidl_security::Protocol::Wep,
+                    credentials: Some(Box::new(fidl_security::Credentials::Wep(
+                        fidl_security::WepCredentials { key: key.into() },
+                    ))),
+                })
+                .map_err(From::from),
+            Protection::Wpa1 => {
+                parse_wpa_credentials(unparsed_credential_bytes).map(|credentials| {
+                    fidl_security::Authentication {
+                        protocol: fidl_security::Protocol::Wpa1,
+                        credentials: Some(Box::new(credentials)),
+                    }
+                })
+            }
+            Protection::Wpa1Wpa2PersonalTkipOnly
+            | Protection::Wpa1Wpa2Personal
+            | Protection::Wpa2PersonalTkipOnly
+            | Protection::Wpa2Personal => {
+                parse_wpa_credentials(unparsed_credential_bytes).map(|credentials| {
+                    fidl_security::Authentication {
+                        protocol: fidl_security::Protocol::Wpa2Personal,
+                        credentials: Some(Box::new(credentials)),
+                    }
+                })
+            }
+            Protection::Wpa2Wpa3Personal => {
+                // Use WPA2 for transitional networks when a PSK is supplied.
+                if let Ok(psk) = Psk::try_from(unparsed_credential_bytes.as_slice()) {
+                    Ok(fidl_security::Authentication {
+                        protocol: fidl_security::Protocol::Wpa2Personal,
+                        credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                            fidl_security::WpaCredentials::Psk(psk.into()),
+                        ))),
+                    })
+                } else {
+                    Passphrase::try_from(unparsed_credential_bytes)
+                        .map(|passphrase| fidl_security::Authentication {
+                            protocol: fidl_security::Protocol::Wpa3Personal,
+                            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                                fidl_security::WpaCredentials::Passphrase(passphrase.into()),
+                            ))),
+                        })
+                        .map_err(From::from)
+                }
+            }
+            Protection::Wpa3Personal => Passphrase::try_from(unparsed_credential_bytes)
+                .map(|passphrase| fidl_security::Authentication {
+                    protocol: fidl_security::Protocol::Wpa3Personal,
+                    credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                        fidl_security::WpaCredentials::Passphrase(passphrase.into()),
+                    ))),
+                })
+                .map_err(From::from),
+        }
+    }
+}
 
 pub async fn get_sme_proxy(
     wlan_svc: &WlanService,
@@ -53,8 +168,26 @@ pub async fn connect(
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
 
-    // create ConnectRequest holding network info
-    let credential = credential_from_bytes(target_pwd)?;
+    // Create a `ConnectRequest` using the given network information.
+    // Negotiate a security protocol based on the given credential and BSS metadata. Note that the
+    // resulting `Authentication` may be invalid.
+    let authentication = fidl_security::Authentication::try_from(SecurityContext {
+        bss: BssDescription::try_from(target_bss_desc.clone())?,
+        unparsed_credential_bytes: target_pwd,
+    })?;
+    // TODO(fxbug.dev/95873): This code is temporary. It converts the credentials of the negotiated
+    //                        `Authentication` into the `Credential` FIDL message used by SME. The
+    //                        `ConnectRequest::credential` field will be replaced by an
+    //                        `Authentication` field in the future, at which point the negotiated
+    //                        `Authentication` can be used directly to construct the
+    //                        `ConnectRequest`.
+    // Discard security protocol information and extract any credentials.
+    let credential = authentication
+        .credentials
+        .map(|credentials| {
+            BareCredentials::try_from(*credentials).expect("unknown credentials variant").into()
+        })
+        .unwrap_or_else(|| fidl_sme::Credential::None(fidl_sme::Empty));
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid.clone().into(),
         bss_description: target_bss_desc,
@@ -220,18 +353,6 @@ async fn get_scan_results(
     return Err(format_err!("ScanTransaction channel closed before scan finished"));
 }
 
-fn credential_from_bytes(pwd: Vec<u8>) -> Result<fidl_sme::Credential, Error> {
-    use hex::FromHex;
-    match pwd.len() {
-        0 => Ok(fidl_sme::Credential::None(fidl_sme::Empty)),
-        n if n <= WLAN_PASSWORD_MAX_LEN => Ok(fidl_sme::Credential::Password(pwd)),
-        WLAN_PSK_HEX_STRING_LEN => Ok(fidl_sme::Credential::Psk(
-            Vec::from_hex(pwd).context("PSK {:02X?} is not a HEX string")?,
-        )),
-        n => Err(format_err!("{} bytes is too many", n)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -253,22 +374,20 @@ mod tests {
         ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::Rng as _,
-        std::convert::{TryFrom as _, TryInto as _},
+        std::convert::{TryFrom, TryInto},
         wlan_common::{
             assert_variant,
             channel::{Cbw, Channel},
             fake_fidl_bss_description,
+            security::AuthenticationExt as _,
         },
     };
 
-    fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
+    fn generate_random_wpa2_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
         let mut rng = rand::thread_rng();
         fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            bss_type: fidl_fuchsia_wlan_internal::BssType::Personal,
             beacon_period: rng.gen::<u16>(),
-            capability_info: rng.gen::<u16>(),
-            ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
             rssi_dbm: rng.gen::<i8>(),
             channel: fidl_common::WlanChannel {
                 primary: rng.gen::<u8>(),
@@ -284,6 +403,7 @@ mod tests {
                 secondary80: rng.gen::<u8>(),
             },
             snr_db: rng.gen::<i8>(),
+            ..fake_fidl_bss_description!(Wpa2)
         }
     }
 
@@ -757,25 +877,33 @@ mod tests {
     #[test]
     fn connect_success_returns_true() {
         let connect_result =
-            test_connect("TestAp", "", "TestAp", fidl_ieee80211::StatusCode::Success);
+            test_wpa2_connect("TestAp", "password", "TestAp", fidl_ieee80211::StatusCode::Success);
         assert!(connect_result);
     }
 
     #[test]
     fn connect_failed_returns_false() {
-        let connect_result =
-            test_connect("TestAp", "", "", fidl_ieee80211::StatusCode::RefusedReasonUnspecified);
+        let connect_result = test_wpa2_connect(
+            "TestAp",
+            "password",
+            "",
+            fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+        );
         assert!(!connect_result);
     }
 
     #[test]
     fn connect_different_ssid_returns_false() {
-        let connect_result =
-            test_connect("TestAp1", "", "TestAp2", fidl_ieee80211::StatusCode::Success);
+        let connect_result = test_wpa2_connect(
+            "TestAp1",
+            "password",
+            "TestAp2",
+            fidl_ieee80211::StatusCode::Success,
+        );
         assert!(!connect_result);
     }
 
-    fn test_connect(
+    fn test_wpa2_connect(
         target_ssid: &str,
         password: &str,
         connected_to_ssid: &str,
@@ -789,10 +917,14 @@ mod tests {
         let mut next_client_sme_req = server.into_future();
 
         let target_password = password.as_bytes();
-        let target_bss_desc = generate_random_bss_description();
+        let target_bss_desc = generate_random_wpa2_bss_description();
 
-        let fut =
-            connect(&client_sme, target_ssid.clone(), target_password.to_vec(), target_bss_desc);
+        let fut = connect(
+            &client_sme,
+            target_ssid.clone(),
+            target_password.to_vec(),
+            target_bss_desc.clone(),
+        );
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -801,7 +933,17 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             &target_ssid,
-            credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
+            fidl_security::Authentication::try_from(SecurityContext {
+                bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
+                unparsed_credential_bytes: target_password.to_vec(),
+            })
+            .unwrap()
+            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
+            //                        `Authentication` into an SME `Credential`. The `credential`
+            //                        field of `ConnectRequest` will be replaced by an
+            //                        `Authentication`, at which time the conversion will be
+            //                        unnecessary.
+            .into_sme_credential(),
             result_code,
         );
 
@@ -839,7 +981,7 @@ mod tests {
 
         let target_ssid = Ssid::try_from("TestAp").unwrap();
         let target_password = "password".as_bytes();
-        let target_bss_desc = generate_random_bss_description();
+        let target_bss_desc = generate_random_wpa2_bss_description();
 
         let fut = connect(
             &client_sme,
@@ -855,7 +997,17 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             &target_ssid,
-            credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
+            fidl_security::Authentication::try_from(SecurityContext {
+                bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
+                unparsed_credential_bytes: target_password.to_vec(),
+            })
+            .unwrap()
+            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
+            //                        `Authentication` into an SME `Credential`. The `credential`
+            //                        field of `ConnectRequest` will be replaced by an
+            //                        `Authentication`, at which time the conversion will be
+            //                        unnecessary.
+            .into_sme_credential(),
             target_bss_desc,
         );
     }
@@ -868,7 +1020,7 @@ mod tests {
 
         let target_ssid = Ssid::try_from("TestAp").unwrap();
         let target_password = "".as_bytes();
-        let target_bss_desc = generate_random_bss_description();
+        let target_bss_desc = fake_fidl_bss_description!(Open);
 
         let fut = connect(
             &client_sme,
@@ -884,7 +1036,17 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             &target_ssid,
-            credential_from_bytes(vec![]).expect("password should be valid"),
+            fidl_security::Authentication::try_from(SecurityContext {
+                bss: BssDescription::try_from(target_bss_desc.clone()).unwrap(),
+                unparsed_credential_bytes: vec![],
+            })
+            .unwrap()
+            // TODO(fxbug.dev/95873): This conversion is temporary. It converts the negotiated
+            //                        `Authentication` into an SME `Credential`. The `credential`
+            //                        field of `ConnectRequest` will be replaced by an
+            //                        `Authentication`, at which time the conversion will be
+            //                        unnecessary.
+            .into_sme_credential(),
             target_bss_desc,
         );
     }
@@ -899,7 +1061,7 @@ mod tests {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid);
-                assert_eq_credentials(&req.credential, &expected_credential);
+                assert_eq!(req.credential, expected_credential);
                 assert_eq!(req.bss_description, expected_bss_desc);
             }
             _ => panic!("expected a Connect request"),
@@ -916,7 +1078,7 @@ mod tests {
         let responder = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
-                assert_eq_credentials(&req.credential, &expected_credential);
+                assert_eq!(req.credential, expected_credential);
                 txn.expect("expected a Connect transaction channel")
             }
             Poll::Pending => panic!("expected a request to be available"),
@@ -1236,25 +1398,6 @@ mod tests {
         }
     }
 
-    fn assert_eq_credentials(
-        actual_credential: &fidl_sme::Credential,
-        expected_credential: &fidl_sme::Credential,
-    ) {
-        match actual_credential {
-            fidl_sme::Credential::Password(password) => match expected_credential {
-                fidl_sme::Credential::Password(expected_password) => {
-                    assert_eq!(&expected_password[..], &password[..]);
-                }
-                expected => panic!("got password, expected: {:?}", expected),
-            },
-            fidl_sme::Credential::None(_) => match expected_credential {
-                fidl_sme::Credential::None(_) => (),
-                expected => panic!("got no password, expected: {:?}", expected),
-            },
-            unsupported => panic!("unsupported credential type: {:?}", unsupported),
-        }
-    }
-
     fn send_destroy_iface_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceMonitorRequestStream>,
@@ -1286,45 +1429,5 @@ mod tests {
             Poll::Ready(Ok(_)) => (),
             _ => panic!("Expected a status response"),
         };
-    }
-
-    #[test]
-    fn test_credential_empty() {
-        assert_variant!(
-            credential_from_bytes(vec![]),
-            Ok(fidl_sme::Credential::None(fidl_sme::Empty))
-        );
-    }
-
-    #[test]
-    fn test_credential_password() {
-        assert_variant!(
-            credential_from_bytes(vec![42; 63]),
-            Ok(fidl_sme::Credential::Password(pwd)) => assert_eq!(pwd, vec![42; 63])
-        );
-    }
-
-    #[test]
-    fn test_credential_psk() {
-        assert_variant!(
-            credential_from_bytes(vec![0x39; 64]), // ASCII 0x39 -> '9',
-            Ok(fidl_sme::Credential::Psk(psk)) => assert_eq!(psk, vec![0x99; 32])
-        );
-    }
-
-    #[test]
-    fn test_credential_psk_not_hex_string() {
-        assert_variant!(
-            credential_from_bytes(vec![0x48; 64]), // ASCII 0x48 -> 'h',
-            Err(e) => assert!(format!("{}", e).contains("not a HEX string"))
-        )
-    }
-
-    #[test]
-    fn test_credential_password_too_long() {
-        assert_variant!(
-            credential_from_bytes(vec![42; 65]),
-            Err(e) => assert!(format!("{}", e).contains("is too many"))
-        )
     }
 }

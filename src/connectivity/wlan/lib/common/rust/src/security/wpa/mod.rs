@@ -43,28 +43,10 @@ use crate::security::{
         credential::{Passphrase, PassphraseError, Psk, PskError},
         data::{CredentialData, EnterpriseData, PersonalData},
     },
-    SecurityError,
+    BareCredentials, SecurityError,
 };
 
 pub use crate::security::wpa::data::AuthenticatorData;
-
-pub const WPA1: WpaDescriptor = WpaDescriptor::Wpa1 { credentials: () };
-pub const WPA2_PERSONAL_TKIP: WpaDescriptor = WpaDescriptor::Wpa2 {
-    cipher: Some(Wpa2Cipher::TKIP),
-    authentication: Authentication::Personal(()),
-};
-pub const WPA2_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa2 {
-    cipher: Some(Wpa2Cipher::CCMP),
-    authentication: Authentication::Personal(()),
-};
-pub const WPA3_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
-    cipher: Some(Wpa3Cipher::CCMP),
-    authentication: Authentication::Personal(()),
-};
-pub const WPA3_PERSONAL_GCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
-    cipher: Some(Wpa3Cipher::GCMP),
-    authentication: Authentication::Personal(()),
-};
 
 #[derive(Clone, Copy, Debug, Error, Eq, PartialEq)]
 #[non_exhaustive]
@@ -197,6 +179,22 @@ where
             Authentication::Personal(personal) => personal.into(),
             // TODO(fxbug.dev/92693): Implement conversions for WPA Enterprise.
             Authentication::Enterprise(_) => panic!("WPA Enterprise is unsupported"),
+        }
+    }
+}
+
+/// Conversion of general WPA credentials into bare credentials.
+impl From<Credentials> for BareCredentials {
+    fn from(credentials: Credentials) -> Self {
+        match credentials {
+            Credentials::Personal(personal) => match personal {
+                PersonalCredentials::Passphrase(passphrase) => {
+                    BareCredentials::WpaPassphrase(passphrase)
+                }
+                PersonalCredentials::Psk(psk) => BareCredentials::WpaPsk(psk),
+            },
+            // TODO(fxbug.dev/92693): Implement conversions for WPA Enterprise.
+            Credentials::Enterprise(_) => panic!("WPA Enterprise is unsupported"),
         }
     }
 }
@@ -665,6 +663,26 @@ where
 ///
 /// Describes the configuration of the WPA security protocol.
 pub type WpaDescriptor = Wpa<()>;
+
+impl WpaDescriptor {
+    pub const WPA1: WpaDescriptor = WpaDescriptor::Wpa1 { credentials: () };
+    pub const WPA2_PERSONAL_TKIP: WpaDescriptor = WpaDescriptor::Wpa2 {
+        cipher: Some(Wpa2Cipher::TKIP),
+        authentication: Authentication::Personal(()),
+    };
+    pub const WPA2_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa2 {
+        cipher: Some(Wpa2Cipher::CCMP),
+        authentication: Authentication::Personal(()),
+    };
+    pub const WPA3_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
+        cipher: Some(Wpa3Cipher::CCMP),
+        authentication: Authentication::Personal(()),
+    };
+    pub const WPA3_PERSONAL_GCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
+        cipher: Some(Wpa3Cipher::GCMP),
+        authentication: Authentication::Personal(()),
+    };
+}
 
 /// WPA authenticator.
 ///
