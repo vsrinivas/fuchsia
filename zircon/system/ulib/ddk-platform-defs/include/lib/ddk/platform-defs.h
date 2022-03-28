@@ -349,6 +349,7 @@ __BEGIN_CDECLS
 // Nordic
 #define PDEV_VID_NORDIC             0x16
 #define PDEV_PID_NORDIC_NRF52840    0x01
+#define PDEV_PID_NORDIC_NRF52811    0x02
 #define PDEV_DID_NORDIC_THREAD      0x01
 
 // Marvell

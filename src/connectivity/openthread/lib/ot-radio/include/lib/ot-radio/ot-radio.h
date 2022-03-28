@@ -8,5 +8,6 @@
 #include <sys/types.h>
 
 constexpr uint8_t kOtDeviceNrf52840 = 0;
+constexpr uint8_t kOtDeviceNrf52811 = 1;
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_LIB_OT_RADIO_INCLUDE_LIB_OT_RADIO_OT_RADIO_H_

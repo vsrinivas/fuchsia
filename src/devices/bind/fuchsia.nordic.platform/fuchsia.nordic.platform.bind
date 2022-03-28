@@ -10,6 +10,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   NRF52840 = 0x01,
+  NRF52811 = 0x02,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
