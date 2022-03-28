@@ -652,6 +652,12 @@ impl<'a> TestNetwork<'a> {
         network
     }
 
+    /// Sets the configuration for this network to `config`.
+    pub async fn set_config(&self, config: fnetemul_network::NetworkConfig) -> Result<()> {
+        let status = self.network.set_config(config).await.context("call set_config")?;
+        zx::Status::ok(status).context("set config")
+    }
+
     /// Attaches `ep` to this network.
     pub async fn attach_endpoint(&self, ep: &TestEndpoint<'a>) -> Result<()> {
         let status =

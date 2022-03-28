@@ -1,285 +1,197 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Context as _;
-use fuchsia_zircon as zx;
-use futures::future::FutureExt as _;
-use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use futures::stream::{StreamExt as _, TryStreamExt as _};
+#![cfg(test)]
+
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_netemul_network as fnetemul_network;
+use fuchsia_async as fasync;
+use futures_util::{AsyncReadExt as _, AsyncWriteExt as _, FutureExt as _};
+use net_declare::{fidl_subnet, std_ip};
+use netemul::{RealmTcpListener as _, RealmTcpStream as _};
+use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
+use netstack_testing_macros::variants_test;
 use tcp_stream_ext::TcpStreamExt as _;
 
-#[derive(argh::FromArgs)]
-/// Adverse condition `connect` test.
-struct TopLevel {
-    #[argh(subcommand)]
-    sub_command: SubCommand,
-}
-
-#[derive(argh::FromArgs)]
-/// Connect to the remote address.
-#[argh(subcommand, name = "client")]
-struct Client {
-    #[argh(option)]
-    /// the remote address to connect to
-    remote: std::net::Ipv4Addr,
-}
-
-#[derive(argh::FromArgs)]
-/// Listen for incoming connections.
-#[argh(subcommand, name = "server")]
-struct Server {}
-
-#[derive(argh::FromArgs)]
-#[argh(subcommand)]
-enum SubCommand {
-    Client(Client),
-    Server(Server),
-}
-
-const NAME: &str = "connect_test";
-
-fn bus_subscribe(
-    sync_manager: &fidl_fuchsia_netemul_sync::SyncManagerProxy,
-    client_name: &str,
-) -> Result<fidl_fuchsia_netemul_sync::BusProxy, fidl::Error> {
-    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_sync::BusMarker>()?;
-    let () = sync_manager.bus_subscribe(NAME, client_name, server)?;
-    Ok(client)
-}
-
-async fn measure<T>(
-    fut: impl std::future::Future<Output = Result<(), T>>,
-) -> Result<std::time::Duration, T> {
+async fn measure(fut: impl std::future::Future<Output = ()>) -> std::time::Duration {
     let start = std::time::Instant::now();
-    let () = fut.await?;
-    Ok(start.elapsed())
+    let () = fut.await;
+    start.elapsed()
 }
 
-async fn verify_error(mut stream: fuchsia_async::net::TcpStream) -> Result<(), anyhow::Error> {
+async fn verify_error(mut stream: fasync::net::TcpStream) {
     let mut buf = [0xad; 1];
     {
-        let kind = std::io::ErrorKind::TimedOut;
-        let () = match stream.read(&mut buf).await {
-            Ok(n) => Err(anyhow::format_err!("read {} bytes, expected {:?}", n, kind)),
+        let expected = std::io::ErrorKind::TimedOut;
+        match stream.read(&mut buf).await {
+            Ok(n) => panic!("read {} bytes, expected {:?}", n, expected),
             Err(io_error) => {
-                if io_error.kind() != kind {
-                    Err(io_error).with_context(|| format!("expected {:?}", kind))
-                } else {
-                    Ok(())
+                if io_error.kind() != expected {
+                    panic!("unexpected IO error; expected {:?}, got {:?}", expected, io_error)
                 }
             }
-        }?;
+        };
     }
     // The first read consumes the error.
-    let n = stream.read(&mut buf).await.context("read after error")?;
+    let n = stream.read(&mut buf).await.expect("read after error");
     if n != 0 {
-        let () = Err(anyhow::format_err!("read {}/{} bytes", n, 0))?;
+        panic!("read {}/{} bytes", n, 0);
     }
     {
-        let kind = std::io::ErrorKind::BrokenPipe;
-        let () = match stream.write(&buf).await {
-            Ok(n) => Err(anyhow::format_err!("wrote {} bytes, expected {:?}", n, kind)),
+        let expected = std::io::ErrorKind::BrokenPipe;
+        match stream.write(&buf).await {
+            Ok(n) => panic!("wrote {} bytes, expected {:?}", n, expected),
             Err(io_error) => {
-                if io_error.kind() != kind {
-                    Err(io_error).with_context(|| format!("expected {:?}", kind))
-                } else {
-                    Ok(())
+                if io_error.kind() != expected {
+                    panic!("unexpected IO error; expected {:?}, got {:?}", expected, io_error)
                 }
             }
-        }?;
+        };
     }
-    Ok(())
 }
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), anyhow::Error> {
-    const CLIENT_NAME: &str = "client";
-    const SERVER_NAME: &str = "server";
-    const PORT: u16 = 80;
+const SERVER_IP: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
+const CLIENT_IP: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
+const REMOTE_IP: std::net::IpAddr = std_ip!("192.168.0.1");
+const PORT: u16 = 80;
 
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
+#[variants_test]
+async fn timeouts<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let network = sandbox.create_network("net").await.expect("create network");
+    let client = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+        .expect("create realm");
+    let server = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
+        .expect("create realm");
+    let _client_iface = client
+        .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::StaticIp(CLIENT_IP))
+        .await
+        .expect("install interface in client netstack");
+    let _server_iface = server
+        .join_network::<E, _>(&network, "server-ep", &netemul::InterfaceConfig::StaticIp(SERVER_IP))
+        .await
+        .expect("install interface in server netstack");
 
-    let sync_manager = fuchsia_component::client::connect_to_protocol::<
-        fidl_fuchsia_netemul_sync::SyncManagerMarker,
-    >()?;
+    let _server_sock = fasync::net::TcpListener::listen_in_realm(
+        &server,
+        std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, PORT)),
+    )
+    .await
+    .expect("failed to create server socket");
 
-    let TopLevel { sub_command } = argh::from_env();
+    let sockaddr = std::net::SocketAddr::from((REMOTE_IP, PORT));
 
-    match sub_command {
-        SubCommand::Client(Client { remote }) => {
-            println!("Running client.");
-            let bus = bus_subscribe(&sync_manager, CLIENT_NAME)?;
-            // Wait for the server to be attached to the event bus, meaning it's
-            // already bound and listening.
-            let (_all, _absent): (bool, Option<Vec<String>>) = bus
-                .wait_for_clients(
-                    &mut Some(SERVER_NAME).into_iter(),
-                    zx::Time::INFINITE.into_nanos(),
-                )
-                .await
-                .context("Failed to observe server joining the bus")?;
+    let keepalive_timeout = fasync::net::TcpStream::connect_in_realm(&client, sockaddr)
+        .await
+        .expect("create client socket");
+    let keepalive_usertimeout = fasync::net::TcpStream::connect_in_realm(&client, sockaddr)
+        .await
+        .expect("create client socket");
+    let mut retransmit_timeout = fasync::net::TcpStream::connect_in_realm(&client, sockaddr)
+        .await
+        .expect("create client socket");
+    let mut retransmit_usertimeout = fasync::net::TcpStream::connect_in_realm(&client, sockaddr)
+        .await
+        .expect("create client socket");
 
-            let sockaddr = std::net::SocketAddr::from((remote, PORT));
+    // Now that we have our connections, partition the network.
+    network
+        .set_config(fnetemul_network::NetworkConfig {
+            latency: None,
+            packet_loss: Some(fnetemul_network::LossConfig::RandomRate(100)),
+            reorder: None,
+            ..fnetemul_network::NetworkConfig::EMPTY
+        })
+        .await
+        .expect("call set config");
 
-            println!("Connecting sockets...");
-
-            let keepalive_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
-            println!("Connected keepalive.");
-            let keepalive_usertimeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
-            println!("Connected keepalive_user.");
-            let mut retransmit_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
-            println!("Connected retransmit.");
-            let mut retransmit_usertimeout =
-                fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
-            println!("Connected retransmit_user.");
-
-            println!("Connected all sockets.");
-
-            // Now that we have our connections, partition the network.
-            {
-                let network_context = fuchsia_component::client::connect_to_protocol::<
-                    fidl_fuchsia_netemul_network::NetworkContextMarker,
-                >()?;
-
-                let network_manager = {
-                    let (client, server) = fidl::endpoints::create_proxy::<
-                        fidl_fuchsia_netemul_network::NetworkManagerMarker,
-                    >()?;
-                    let () = network_context.get_network_manager(server)?;
-                    client
-                };
-
-                let network = network_manager
-                    .get_network("net")
-                    .await?
-                    .ok_or(anyhow::format_err!("failed to get network"))?
-                    .into_proxy()?;
-                let status = network
-                    .set_config(fidl_fuchsia_netemul_network::NetworkConfig {
-                        latency: None,
-                        packet_loss: Some(fidl_fuchsia_netemul_network::LossConfig::RandomRate(
-                            100,
-                        )),
-                        reorder: None,
-                        ..fidl_fuchsia_netemul_network::NetworkConfig::EMPTY
-                    })
-                    .await?;
-                let () = fuchsia_zircon::ok(status)?;
+    let connect_timeout = fasync::net::TcpStream::connect_in_realm(&client, sockaddr);
+    let connect_timeout = async {
+        match connect_timeout.await {
+            Ok(stream) => {
+                let _: fuchsia_async::net::TcpStream = stream;
+                panic!("unexpectedly connected")
             }
-            println!("Network partitioned.");
-
-            let connect_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?;
-            let connect_timeout = async {
-                match connect_timeout.await {
-                    Ok(stream) => {
-                        let _: fuchsia_async::net::TcpStream = stream;
-                        Err(anyhow::format_err!("unexpectedly connected"))
-                    }
-                    Err(io_error) => match io_error.raw_os_error() {
-                        Some(libc::ETIMEDOUT) | Some(libc::EHOSTUNREACH) => Ok(()),
-                        _ => Err(anyhow::format_err!("unexpected error {}", io_error)),
-                    },
-                }
-            };
-
-            let usertimeout = std::time::Duration::from_secs(1);
-            for socket in [&keepalive_timeout, &keepalive_usertimeout].iter() {
-                socket.std().set_user_timeout(usertimeout)?;
+            Err(e) => {
+                // Verify that we got `ETIMEDOUT` or `EHOSTUNREACH`.
+                let io_error =
+                    e.downcast::<std::io::Error>().expect("underlying error should be an IO error");
+                let raw_error = io_error.raw_os_error().expect("extract raw OS error");
+                assert!(
+                    raw_error == libc::ETIMEDOUT || raw_error == libc::EHOSTUNREACH,
+                    "unexpected IO error: {}",
+                    io_error
+                );
             }
-
-            // Start the keepalive machinery.
-            //
-            // [`socket::TcpKeepalive::with_time`] sets TCP_KEEPIDLE, which requires a minimum of 1 second.
-            let keepalive =
-                socket2::TcpKeepalive::new().with_time(std::time::Duration::from_secs(1));
-            let () = socket2::SockRef::from(keepalive_usertimeout.std())
-                .set_tcp_keepalive(&keepalive)?;
-            let keepalive =
-                keepalive.with_interval(std::time::Duration::from_secs(1)).with_retries(1);
-            let () =
-                socket2::SockRef::from(keepalive_timeout.std()).set_tcp_keepalive(&keepalive)?;
-
-            // Start the retransmit machinery.
-            for socket in [&mut retransmit_timeout, &mut retransmit_usertimeout].iter_mut() {
-                let () = socket.write_all(&[0xde]).await?;
-            }
-
-            let connect_timeout = measure(connect_timeout).fuse();
-            futures::pin_mut!(connect_timeout);
-            let keepalive_timeout = measure(verify_error(keepalive_timeout)).fuse();
-            futures::pin_mut!(keepalive_timeout);
-            let keepalive_usertimeout = measure(verify_error(keepalive_usertimeout)).fuse();
-            futures::pin_mut!(keepalive_usertimeout);
-            let retransmit_timeout = measure(verify_error(retransmit_timeout)).fuse();
-            futures::pin_mut!(retransmit_timeout);
-            let retransmit_usertimeout = measure(verify_error(retransmit_usertimeout)).fuse();
-            futures::pin_mut!(retransmit_usertimeout);
-
-            macro_rules! try_print_elapsed {
-                ($val:expr) => {
-                    let v = $val.context(stringify!($val))?;
-                    println!("{} timed out after {:?}", stringify!($val), v);
-                };
-            }
-
-            // TODO(https://fxbug.dev/52278): Enable retransmit timeout test,
-            // after we are able to tune the TCP stack to reduce
-            // this time. Currently it is too long for the test.
-            let _ = retransmit_timeout;
-            let _ = retransmit_usertimeout;
-
-            println!("Waiting for all timeouts...");
-            loop {
-                futures::select! {
-                  connect = connect_timeout => {
-                    try_print_elapsed!(connect);
-                  },
-                  keepalive = keepalive_timeout => {
-                    try_print_elapsed!(keepalive);
-                  },
-                  keepalive_user = keepalive_usertimeout => {
-                    try_print_elapsed!(keepalive_user);
-                  },
-                  // retransmit = retransmit_timeout => {
-                  //   try_print_elapsed!(retransmit);
-                  // },
-                  // retransmit_user = retransmit_usertimeout => {
-                  //   try_print_elapsed!(retransmit_user);
-                  // },
-                  complete => break,
-                }
-            }
-            println!("All timeouts complete.");
-
-            Ok(())
         }
-        SubCommand::Server(Server {}) => {
-            println!("Starting server...");
-            let _listener: std::net::TcpListener = std::net::TcpListener::bind(
-                &std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, PORT)),
-            )?;
-            println!("Server bound.");
-            let bus = bus_subscribe(&sync_manager, SERVER_NAME)?;
-            let stream = bus.take_event_stream().try_filter_map(|event| async move {
-                Ok(match event {
-                    fidl_fuchsia_netemul_sync::BusEvent::OnClientDetached { client } => {
-                        match client.as_str() {
-                            CLIENT_NAME => Some(()),
-                            _client => None,
-                        }
-                    }
-                    fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data: _ }
-                    | fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client: _ } => None,
-                })
-            });
-            println!("Waiting for client to detach.");
-            futures::pin_mut!(stream);
-            let () = stream
-                .next()
-                .await
-                .ok_or(anyhow::format_err!("stream ended before client detached"))??;
-            Ok(())
+    };
+
+    const USER_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
+    for socket in [&keepalive_usertimeout, &retransmit_usertimeout].iter() {
+        socket.std().set_user_timeout(USER_TIMEOUT).expect("set TCP user timeout option");
+    }
+
+    // Start the keepalive machinery.
+    //
+    // [`socket::TcpKeepalive::with_time`] sets TCP_KEEPIDLE, which requires a
+    // minimum of 1 second.
+    let keepalive = socket2::TcpKeepalive::new().with_time(std::time::Duration::from_secs(1));
+    socket2::SockRef::from(keepalive_usertimeout.std())
+        .set_tcp_keepalive(&keepalive)
+        .expect("set TCP keepalive option");
+    let keepalive = keepalive.with_interval(std::time::Duration::from_secs(1)).with_retries(1);
+    socket2::SockRef::from(keepalive_timeout.std())
+        .set_tcp_keepalive(&keepalive)
+        .expect("set TCP keepalive option");
+
+    // Start the retransmit machinery.
+    for socket in [&mut retransmit_timeout, &mut retransmit_usertimeout].iter_mut() {
+        socket.write_all(&[0xde]).await.expect("write to socket");
+    }
+
+    let connect_timeout = measure(connect_timeout).fuse();
+    let keepalive_timeout = measure(verify_error(keepalive_timeout)).fuse();
+    let keepalive_usertimeout = measure(verify_error(keepalive_usertimeout)).fuse();
+    let retransmit_timeout = measure(verify_error(retransmit_timeout)).fuse();
+    let retransmit_usertimeout = measure(verify_error(retransmit_usertimeout)).fuse();
+
+    futures_util::pin_mut!(
+        connect_timeout,
+        keepalive_timeout,
+        keepalive_usertimeout,
+        retransmit_timeout,
+        retransmit_usertimeout,
+    );
+
+    macro_rules! print_elapsed {
+        ($val:expr) => {
+            println!("{} timed out after {:?}", stringify!($val), $val);
+        };
+    }
+
+    // TODO(https://fxbug.dev/52278): Enable retransmit timeout test, after we are
+    // able to tune the TCP stack to reduce this time. Currently it is too long for
+    // the test.
+    let _ = retransmit_timeout;
+
+    loop {
+        futures_util::select! {
+          connect = connect_timeout => {
+            print_elapsed!(connect);
+          },
+          keepalive = keepalive_timeout => {
+            print_elapsed!(keepalive);
+          },
+          keepalive_user = keepalive_usertimeout => {
+            print_elapsed!(keepalive_user);
+          },
+          retransmit_user = retransmit_usertimeout => {
+            print_elapsed!(retransmit_user);
+          },
+          complete => break,
         }
     }
 }
