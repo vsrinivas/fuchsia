@@ -7,7 +7,7 @@ use {
     component_events::events::Event,
     component_events::{events::*, matcher::*},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_intl as fintl, fidl_fuchsia_sys as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
         Capability, ChildOptions, DirectoryContents, LocalComponentHandles, RealmBuilder, Ref,
@@ -46,6 +46,7 @@ async fn fuchsia_component_test_dart_tests() -> Result<(), Error> {
                 .capability(Capability::protocol::<fsys::EnvironmentMarker>())
                 .capability(Capability::protocol::<fsys::LauncherMarker>())
                 .capability(Capability::protocol::<fsys::LoaderMarker>())
+                .capability(Capability::protocol::<fsys2::EventSourceMarker>())
                 .capability(Capability::storage("data"))
                 .from(Ref::parent())
                 .to(&dart_component_to_test),

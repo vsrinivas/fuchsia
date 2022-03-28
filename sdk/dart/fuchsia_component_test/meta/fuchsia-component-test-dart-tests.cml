@@ -6,6 +6,13 @@
     program: {
         data: "data/fuchsia-component-test-dart-tests",
     },
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: "stopped",
+            from: "framework",
+        },
+    ],
     offer: [
         {
             storage: "data",

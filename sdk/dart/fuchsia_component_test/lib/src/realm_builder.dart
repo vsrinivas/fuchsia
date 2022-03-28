@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart' as fdecl;
 import 'package:fidl_fuchsia_component_test/fidl_async.dart' as ftest;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
+import 'package:fidl_fuchsia_sys2/fidl_async.dart' as fsys2;
 
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' as services;
@@ -51,7 +52,10 @@ class ChildOptions {
   /// `const` constructor.
   ftest.ChildOptions toFidlType() {
     return ftest.ChildOptions(
-        startup: _startup, environment: environment, onTerminate: _onTerminate);
+      startup: _startup,
+      environment: environment,
+      onTerminate: _onTerminate,
+    );
   }
 
   @override
@@ -86,19 +90,36 @@ class ScopedInstanceFactory {
     }
 
     final collectionRef = fdecl.CollectionRef(name: _collectionName);
-    final childDecl =
-        fdecl.Child(name: childName, url: url, startup: fdecl.StartupMode.lazy);
+    final childDecl = fdecl.Child(
+      name: childName,
+      url: url,
+      startup: fdecl.StartupMode.lazy,
+    );
     final childArgs = fcomponent.CreateChildArgs();
 
-    await realm.createChild(collectionRef, childDecl, childArgs);
+    await realm.createChild(
+      collectionRef,
+      childDecl,
+      childArgs,
+    );
 
-    final childRef =
-        fdecl.ChildRef(name: childName, collection: _collectionName);
+    final childRef = fdecl.ChildRef(
+      name: childName,
+      collection: _collectionName,
+    );
 
     final exposedDir = fio.DirectoryProxy();
-    await realm.openExposedDir(childRef, exposedDir.ctrl.request());
+    await realm.openExposedDir(
+      childRef,
+      exposedDir.ctrl.request(),
+    );
 
-    return ScopedInstance._(realm, childName, _collectionName, exposedDir);
+    return ScopedInstance._(
+      realm,
+      childName,
+      _collectionName,
+      exposedDir,
+    );
   }
 }
 
@@ -110,12 +131,17 @@ class ScopedInstance {
   final fio.DirectoryProxy _exposedDir;
 
   const ScopedInstance._(
-      this._realm, this._childName, this._collectionName, this._exposedDir);
+    this._realm,
+    this._childName,
+    this._collectionName,
+    this._exposedDir,
+  );
 
-  static Future<ScopedInstance> create(
-      {required String collectionName,
-      required String url,
-      String? childName}) {
+  static Future<ScopedInstance> create({
+    required String collectionName,
+    required String url,
+    String? childName,
+  }) {
     final factory = ScopedInstanceFactory(collectionName);
     if (childName == null) {
       return factory.newInstance(url);
@@ -148,9 +174,7 @@ class ScopedInstance {
   /// exposed directory, based on the type of the given proxy. The given
   /// proxy is returned.
   T connectToProtocolAtExposedDir<T extends fidl.AsyncProxy>(T proxy) {
-    services.Incoming.withDirectory(exposedDir)
-      ..connectToService(proxy)
-      ..close();
+    services.Incoming.withDirectory(exposedDir).connectToService(proxy);
     return proxy;
   }
 
@@ -159,8 +183,9 @@ class ScopedInstance {
   void connectRequestToProtocolAtExposedDir<P>(
       fidl.AsyncProxyController<P> serverEnd) {
     connectRequestToNamedProtocolAtExposedDir(
-        serverEnd.$serviceName ?? serverEnd.$interfaceName!,
-        serverEnd.request().passChannel()!);
+      serverEnd.$serviceName ?? serverEnd.$interfaceName!,
+      serverEnd.request().passChannel()!,
+    );
   }
 
   /// Connects to an instance of a FIDL protocol called [protocolName] hosted in
@@ -168,8 +193,7 @@ class ScopedInstance {
   void connectRequestToNamedProtocolAtExposedDir(
       String protocolName, Channel serverEnd) {
     services.Incoming.withDirectory(exposedDir)
-      ..connectToServiceByNameWithChannel(protocolName, serverEnd)
-      ..close();
+        .connectToServiceByNameWithChannel(protocolName, serverEnd);
   }
 
   /// Connects to an instance of a FIDL protocol called [protocolName] hosted at
@@ -178,19 +202,24 @@ class ScopedInstance {
       T proxy, String protocolPath) async {
     var serverEnd = proxy.ctrl.request().passChannel();
     await exposedDir.open(
-        fio.openRightReadable | fio.openRightWritable,
-        fio.modeTypeService,
-        protocolPath,
-        fidl.InterfaceRequest<fio.Node>(serverEnd));
+      fio.openRightReadable | fio.openRightWritable,
+      fio.modeTypeService,
+      protocolPath,
+      fidl.InterfaceRequest<fio.Node>(serverEnd),
+    );
     return proxy;
   }
 
   /// Connects to an instance of a FIDL protocol hosted at the protocol name,
   /// in the given directory.
   Future<T> connectToProtocolInDirPath<T extends fidl.AsyncProxy>(
-      T proxy, String dirPath) {
+    T proxy,
+    String dirPath,
+  ) {
     return connectToProtocolAtPath(
-        proxy, '$dirPath/${proxy.ctrl.$serviceName}');
+      proxy,
+      '$dirPath/${proxy.ctrl.$serviceName}',
+    );
   }
 
   /// Call [close()] before the [ScopedInstance] goes out of scope (since
@@ -199,8 +228,10 @@ class ScopedInstance {
   ///
   /// This will ensure that the message goes out to the realm.
   Future<void> close() async {
-    await _realm.destroyChild(
-        fdecl.ChildRef(name: childName, collection: collectionName));
+    await _realm.destroyChild(fdecl.ChildRef(
+      name: childName,
+      collection: collectionName,
+    ));
   }
 }
 
@@ -308,7 +339,10 @@ class ChildRef {
 
   void checkScope(List<String> realmScope) {
     if (scope != null && !ListEquality().equals(scope, realmScope)) {
-      throw RefUsedInWrongRealmException(Ref.child(this), realmScope.join('/'));
+      throw RefUsedInWrongRealmException(
+        Ref.child(this),
+        realmScope.join('/'),
+      );
     }
   }
 
@@ -366,9 +400,12 @@ class ProtocolCapability extends Capability {
   /// component manifest for.
   String? path;
 
-  ProtocolCapability(name,
-      {as, this.type = fdecl.DependencyType.strong, this.path})
-      : super(name, as);
+  ProtocolCapability(
+    name, {
+    as,
+    this.type = fdecl.DependencyType.strong,
+    this.path,
+  }) : super(name, as);
 
   ProtocolCapability.from(ProtocolCapability o)
       : type = o.type,
@@ -383,8 +420,12 @@ class ProtocolCapability extends Capability {
 
   @override
   ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withProtocol(
-        ftest.Protocol(name: name, as: as, type: type, path: path));
+    return ftest.Capability2.withProtocol(ftest.Protocol(
+      name: name,
+      as: as,
+      type: type,
+      path: path,
+    ));
   }
 
   @override
@@ -421,13 +462,14 @@ class DirectoryCapability extends Capability {
   /// if the route's source or target is a local component.
   String? path;
 
-  DirectoryCapability(name,
-      {as,
-      this.type = fdecl.DependencyType.strong,
-      this.rights,
-      this.subdir,
-      this.path})
-      : super(name, as);
+  DirectoryCapability(
+    name, {
+    as,
+    this.type = fdecl.DependencyType.strong,
+    this.rights,
+    this.subdir,
+    this.path,
+  }) : super(name, as);
 
   DirectoryCapability.from(DirectoryCapability o)
       : type = o.type,
@@ -443,12 +485,13 @@ class DirectoryCapability extends Capability {
   @override
   ftest.Capability2 toFidlType() {
     return ftest.Capability2.withDirectory(ftest.Directory(
-        name: name,
-        as: as,
-        type: type,
-        rights: rights,
-        subdir: subdir,
-        path: path));
+      name: name,
+      as: as,
+      type: type,
+      rights: rights,
+      subdir: subdir,
+      path: path,
+    ));
   }
 
   @override
@@ -521,7 +564,11 @@ class ServiceCapability extends Capability {
   /// component manifest for.
   String? path;
 
-  ServiceCapability(name, {as, this.path}) : super(name, as);
+  ServiceCapability(
+    name, {
+    as,
+    this.path,
+  }) : super(name, as);
 
   ServiceCapability.from(ServiceCapability o)
       : path = o.path,
@@ -529,8 +576,11 @@ class ServiceCapability extends Capability {
 
   @override
   ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withService(
-        ftest.Service(name: name, as: as, path: path));
+    return ftest.Capability2.withService(ftest.Service(
+      name: name,
+      as: as,
+      path: path,
+    ));
   }
 
   @override
@@ -543,6 +593,47 @@ class ServiceCapability extends Capability {
   @override
   String toString() {
     return _capabilityToString('path = $path');
+  }
+}
+
+/// Wraps an [onEvent()] closure in a [fuchsia.sys2.EventStream] implementation
+/// for binding.
+class OnEvent extends fsys2.EventStream {
+  final Future<void> Function(fsys2.Event event) _callback;
+
+  /// Constructs an EventStream listener with the given [onEvent()] callback.
+  OnEvent(this._callback);
+
+  /// Constructs an EventStream listener with an [onEvent()] callback that calls
+  /// the given closure only for [EventType.started]. If [moniker] is null, the
+  /// event is ignored.
+  OnEvent.started(void Function(String moniker) callback)
+      : this((fsys2.Event event) async {
+          if (event.header?.eventType == fsys2.EventType.started) {
+            String? moniker = event.header?.moniker;
+            if (moniker != null) {
+              callback(moniker);
+            }
+          }
+        });
+
+  /// Constructs an EventStream listener with an [onEvent()] callback that calls
+  /// the given closure only for [EventType.stopped]. If either [moniker] or
+  /// [stopped.status] are null, the event is ignored.
+  OnEvent.stopped(void Function(String moniker, int stoppedStatus) callback)
+      : this((fsys2.Event event) async {
+          if (event.header?.eventType == fsys2.EventType.stopped) {
+            String? moniker = event.header?.moniker;
+            int? status = event.eventResult?.payload?.stopped?.status;
+            if (moniker != null && status != null) {
+              callback(moniker, status);
+            }
+          }
+        });
+
+  @override
+  Future<void> onEvent(fsys2.Event event) async {
+    await _callback(event);
   }
 }
 
@@ -610,38 +701,59 @@ class SubRealmBuilder {
   ftest.RealmProxy realm;
   List<String> realmPath;
 
-  SubRealmBuilder({required this.realm, required this.realmPath});
+  SubRealmBuilder({
+    required this.realm,
+    required this.realmPath,
+  });
 
   /// Adds a child realm and returns a [SubRealmBuilder]. Capabilities can be
   /// routed between parent [RealmBuilder] and the sub-realm, and then routed
   /// to/from children of the sub-realm.
-  Future<SubRealmBuilder> addChildRealm(
-      String name, ChildOptions options) async {
+  Future<SubRealmBuilder> addChildRealm(String name,
+      [ChildOptions? options]) async {
     final childRealm = ftest.RealmProxy();
     await realm.addChildRealm(
-        name, options.toFidlType(), childRealm.ctrl.request());
+      name,
+      (options ?? ChildOptions()).toFidlType(),
+      childRealm.ctrl.request(),
+    );
     final childPath = realmPath.toList()..add(name);
-    return SubRealmBuilder(realm: childRealm, realmPath: childPath);
+    return SubRealmBuilder(
+      realm: childRealm,
+      realmPath: childPath,
+    );
   }
 
   /// Adds a new component to the realm by URL.
-  Future<ChildRef> addChild(
-      String name, String url, ChildOptions options) async {
-    await realm.addChild(name, url, options.toFidlType());
+  Future<ChildRef> addChild(String name, String url,
+      [ChildOptions? options]) async {
+    await realm.addChild(
+      name,
+      url,
+      (options ?? ChildOptions()).toFidlType(),
+    );
     return ChildRef(name, realmPath);
   }
 
   /// Adds a new legacy component to the realm.
-  Future<ChildRef> addLegacyChild(
-      String name, String legacyUrl, ChildOptions options) async {
-    await realm.addLegacyChild(name, legacyUrl, options.toFidlType());
+  Future<ChildRef> addLegacyChild(String name, String legacyUrl,
+      [ChildOptions? options]) async {
+    await realm.addLegacyChild(
+      name,
+      legacyUrl,
+      (options ?? ChildOptions()).toFidlType(),
+    );
     return ChildRef(name, realmPath);
   }
 
   /// Adds a new component to the realm with the given component declaration
-  Future<ChildRef> addChildFromDecl(
-      String name, fdecl.Component decl, ChildOptions options) async {
-    await realm.addChildFromDecl(name, decl, options.toFidlType());
+  Future<ChildRef> addChildFromDecl(String name, fdecl.Component decl,
+      [ChildOptions? options]) async {
+    await realm.addChildFromDecl(
+      name,
+      decl,
+      (options ?? ChildOptions()).toFidlType(),
+    );
     return ChildRef(name, realmPath);
   }
 
@@ -658,8 +770,11 @@ class SubRealmBuilder {
       target.checkScope(realmPath);
     }
     if (capabilities.isNotEmpty) {
-      await realm.addRoute(capabilities.map((c) => c.toFidlType()).toList(),
-          source.toFidlType(), to.map((Ref ref) => ref.toFidlType()).toList());
+      await realm.addRoute(
+        capabilities.map((c) => c.toFidlType()).toList(),
+        source.toFidlType(),
+        to.map((Ref ref) => ref.toFidlType()).toList(),
+      );
     }
   }
 }
@@ -690,17 +805,19 @@ class RealmBuilder {
   /// Creates a new RealmBuilder.
   /// [relativeUrl]: The path to a manifest to load into the realm.
   /// [collectionName]: The collection to add the realm to, when launched.
-  static Future<RealmBuilder> create(
-      {String? relativeUrl,
-      String collectionName = defaultCollectionName}) async {
+  static Future<RealmBuilder> create({
+    String? relativeUrl,
+    String collectionName = defaultCollectionName,
+  }) async {
     final componentRealm = fcomponent.RealmProxy();
     await (services.Incoming.fromSvcPath()..connectToService(componentRealm))
         .close();
 
     final exposedDir = fio.DirectoryProxy();
     await componentRealm.openExposedDir(
-        fdecl.ChildRef(name: realmBuilderServerChildName),
-        exposedDir.ctrl.request());
+      fdecl.ChildRef(name: realmBuilderServerChildName),
+      exposedDir.ctrl.request(),
+    );
 
     final realmBuilderFactory = ftest.RealmBuilderFactoryProxy();
     await (services.Incoming.withDirectory(exposedDir)
@@ -713,17 +830,28 @@ class RealmBuilder {
     final realm = ftest.RealmProxy();
     final builder = ftest.BuilderProxy();
     if (relativeUrl == null) {
-      await realmBuilderFactory.create(
-          pkgDirHandle, realm.ctrl.request(), builder.ctrl.request());
+      await realmBuilderFactory.createWithResult(
+        pkgDirHandle,
+        realm.ctrl.request(),
+        builder.ctrl.request(),
+      );
     } else {
       // load the manifest
-      await realmBuilderFactory.createFromRelativeUrl(pkgDirHandle, relativeUrl,
-          realm.ctrl.request(), builder.ctrl.request());
+      await realmBuilderFactory.createFromRelativeUrl(
+        pkgDirHandle,
+        relativeUrl,
+        realm.ctrl.request(),
+        builder.ctrl.request(),
+      );
     }
     return RealmBuilder._(realm, builder, collectionName);
   }
 
-  RealmBuilder._(ftest.RealmProxy realm, this._builder, this.collectionName) {
+  RealmBuilder._(
+    ftest.RealmProxy realm,
+    this._builder,
+    this.collectionName,
+  ) {
     _rootRealm = SubRealmBuilder(realm: realm, realmPath: []);
   }
 
@@ -735,24 +863,39 @@ class RealmBuilder {
   /// routed between parent [RealmBuilder] and the sub-realm, and then routed
   /// to/from children of the sub-realm.
   Future<SubRealmBuilder> addChildRealm(String name, [ChildOptions? options]) {
-    return rootRealm.addChildRealm(name, options ?? ChildOptions());
+    return rootRealm.addChildRealm(
+      name,
+      options ?? ChildOptions(),
+    );
   }
 
   /// Adds a new component to the realm by URL.
   Future<ChildRef> addChild(String name, String url, [ChildOptions? options]) {
-    return rootRealm.addChild(name, url, options ?? ChildOptions());
+    return rootRealm.addChild(
+      name,
+      url,
+      options ?? ChildOptions(),
+    );
   }
 
   /// Adds a new legacy component to the realm.
   Future<ChildRef> addLegacyChild(String name, String legacyUrl,
       [ChildOptions? options]) {
-    return rootRealm.addLegacyChild(name, legacyUrl, options ?? ChildOptions());
+    return rootRealm.addLegacyChild(
+      name,
+      legacyUrl,
+      options ?? ChildOptions(),
+    );
   }
 
   /// Adds a new component to the realm with the given component declaration
   Future<ChildRef> addChildFromDecl(String name, fdecl.Component decl,
       [ChildOptions? options]) {
-    return rootRealm.addChildFromDecl(name, decl, options ?? ChildOptions());
+    return rootRealm.addChildFromDecl(
+      name,
+      decl,
+      options ?? ChildOptions(),
+    );
   }
 
   /// Adds a route between components within the realm
@@ -765,7 +908,10 @@ class RealmBuilder {
   Future<RealmInstance> build() async {
     final rootUrl = await builder.build(_localComponentRunner.wrap());
     final root = await ScopedInstance.create(
-        collectionName: collectionName, url: rootUrl);
+      collectionName: collectionName,
+      url: rootUrl,
+    );
+    root.connectToBinder();
     return RealmInstance(root);
   }
 }

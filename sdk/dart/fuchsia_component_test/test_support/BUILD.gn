@@ -28,6 +28,7 @@ rustc_test("dart_realm_builder_test_realm_bin") {
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//src/lib/fidl/rust/fidl",

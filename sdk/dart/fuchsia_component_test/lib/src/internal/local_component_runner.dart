@@ -18,8 +18,10 @@ class LocalComponentRunner extends fcrunner.ComponentRunner {
   LocalComponentRunner();
 
   @override
-  Future<void> start(fcrunner.ComponentStartInfo startInfo,
-      fidl.InterfaceRequest<fcrunner.ComponentController> controller) async {
+  Future<void> start(
+    fcrunner.ComponentStartInfo startInfo,
+    fidl.InterfaceRequest<fcrunner.ComponentController> controller,
+  ) async {
     if (!(startInfo.numberedHandles?.isEmpty ?? true)) {
       throw Exception('realm builder runner does not support numbered handles');
     }
