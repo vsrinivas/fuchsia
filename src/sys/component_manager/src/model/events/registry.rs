@@ -218,7 +218,11 @@ impl EventRegistry {
             SubscriptionType::Component(target_moniker) => {
                 let route_result =
                     self.route_events(&target_moniker.to_absolute_moniker(), &event_names).await?;
-                if route_result.len() != event_names.len() {
+                // Each target name that we routed, will have an associated scope. The number of
+                // scopes must be equal to the number of target names.
+                let total_scopes: usize =
+                    route_result.mapping.values().map(|state| state.scopes.len()).sum();
+                if total_scopes != event_names.len() {
                     let names = event_names
                         .keys()
                         .into_iter()
@@ -441,8 +445,12 @@ mod tests {
         },
         assert_matches::assert_matches,
         cm_moniker::InstancedAbsoluteMoniker,
-        cm_rust::ProtocolDecl,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        cm_rust::{
+            ChildDecl, ComponentDecl, DependencyType, DictionaryValue, OfferDecl, OfferEventDecl,
+            OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseEventDecl, UseSource,
+        },
+        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
+        maplit::hashmap,
     };
 
     async fn dispatch_capability_requested_event(
@@ -684,6 +692,105 @@ mod tests {
                 event_error_payload: EventErrorPayload::CapabilityRequested { .. },
                 ..
             })
+        );
+    }
+
+    #[fuchsia::test]
+    async fn subscribe_to_same_event_different_scope() {
+        let TestModelResult { model, .. } = TestEnvironmentBuilder::new()
+            .set_components(vec![
+                (
+                    "root",
+                    ComponentDecl {
+                        children: vec![ChildDecl {
+                            name: "foo".to_string(),
+                            url: "test:///foo".to_string(),
+                            startup: fdecl::StartupMode::Lazy,
+                            on_terminate: None,
+                            environment: None,
+                        }],
+                        offers: vec![
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferSource::Framework,
+                                source_name: "capability_requested".into(),
+                                target: OfferTarget::static_child("foo".to_string()),
+                                target_name: "foo_requested".into(),
+                                filter: Some(hashmap! {
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.foo.Foo".to_string())
+                                }),
+                            }),
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferSource::Framework,
+                                source_name: "capability_requested".into(),
+                                target: OfferTarget::static_child("foo".to_string()),
+                                target_name: "bar_requested".into(),
+                                filter: Some(hashmap! {
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.bar.Bar".to_string())
+                                }),
+                            }),
+                        ],
+                        ..Default::default()
+                    },
+                ),
+                (
+                    "foo",
+                    ComponentDecl {
+                        uses: vec![
+                            UseDecl::Event(UseEventDecl {
+                                source: UseSource::Parent,
+                                source_name: "foo_requested".into(),
+                                target_name: "foo_requested".into(),
+                                filter: Some(hashmap! {
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.foo.Foo".to_string())
+                                }),
+                                dependency_type: DependencyType::Strong,
+                            }),
+                            UseDecl::Event(UseEventDecl {
+                                source: UseSource::Framework,
+                                source_name: "bar_requested".into(),
+                                target_name: "bar_requested".into(),
+                                filter: Some(hashmap! {
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.bar.Bar".to_string())
+                                }),
+                                dependency_type: DependencyType::Strong,
+                            }),
+                        ],
+                        ..Default::default()
+                    },
+                ),
+            ])
+            .build()
+            .await;
+        let event_registry = EventRegistry::new(Arc::downgrade(&model));
+
+        assert_eq!(
+            0,
+            event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
+        );
+
+        let options = SubscriptionOptions::new(
+            SubscriptionType::Component(InstancedAbsoluteMoniker::parse_str("/foo:0").unwrap()),
+            ExecutionMode::Production,
+        );
+
+        let _event_stream = event_registry
+            .subscribe(
+                &options,
+                vec![
+                    EventSubscription::new("bar_requested".into(), EventMode::Async),
+                    EventSubscription::new("foo_requested".into(), EventMode::Async),
+                ],
+            )
+            .await
+            .expect("can subscribe");
+
+        assert_eq!(
+            1,
+            event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
         );
     }
 }
