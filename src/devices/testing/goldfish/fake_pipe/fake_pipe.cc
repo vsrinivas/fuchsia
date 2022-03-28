@@ -16,8 +16,18 @@
 
 #include <ddktl/device.h>
 
+#include "fbl/auto_lock.h"
+
 namespace goldfish::sensor {
 namespace testing {
+
+namespace {
+
+constexpr zx_paddr_t kIoBufferPaddr = 0x10000000;
+constexpr zx_paddr_t kPinnedVmoPaddr = 0x20000000;
+const std::array<zx_paddr_t, 2> kFakeBtiPaddrs = {kIoBufferPaddr, kPinnedVmoPaddr};
+
+}  // namespace
 
 FakePipe::FakePipe() : proto_({&goldfish_pipe_protocol_ops_, this}) {}
 
@@ -58,42 +68,106 @@ void FakePipe::GoldfishPipeOpen(int32_t id) {
   pipe_opened_ = true;
 }
 
-void FakePipe::EnqueueBytesToRead(const std::vector<uint8_t>& bytes) { bytes_to_read_.push(bytes); }
+void FakePipe::EnqueueBytesToRead(const std::vector<uint8_t>& bytes) {
+  fbl::AutoLock lock(&lock_);
+  bytes_to_read_.push(bytes);
+}
 
 void FakePipe::GoldfishPipeExec(int32_t id) {
   auto mapping = MapCmdBuffer();
   pipe_cmd_buffer_t* cmd_buffer = reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start());
-  cmd_buffer->rw_params.consumed_size = cmd_buffer->rw_params.sizes[0];
+  cmd_buffer->rw_params.consumed_size = 0;
   cmd_buffer->status = 0;
 
-  if (cmd_buffer->cmd == PIPE_CMD_CODE_WRITE) {
+  if (cmd_buffer->cmd == PIPE_CMD_CODE_WRITE || cmd_buffer->cmd == PIPE_CMD_CODE_CALL) {
     // Store io buffer contents.
     auto io_buffer = MapIoBuffer();
-    auto size = std::min(size_t(cmd_buffer->rw_params.consumed_size), io_buffer_size_);
-    io_buffer_contents_.emplace_back(std::vector<uint8_t>(size, 0));
-    memcpy(io_buffer_contents_.back().data(), io_buffer.start(), size);
-    if (on_cmd_write_ != nullptr) {
-      on_cmd_write_(io_buffer_contents_.back());
+
+    const size_t write_buffer_begin = 0;
+    const size_t write_buffer_end = cmd_buffer->cmd == PIPE_CMD_CODE_CALL
+                                        ? cmd_buffer->rw_params.read_index
+                                        : cmd_buffer->rw_params.buffers_count;
+
+    for (size_t i = write_buffer_begin; i < write_buffer_end; i++) {
+      auto phy_addr = cmd_buffer->rw_params.ptrs[i];
+      if (phy_addr >= kIoBufferPaddr && phy_addr < kIoBufferPaddr + io_buffer_size_) {
+        auto offset = phy_addr - kIoBufferPaddr;
+        auto size = std::min(size_t(cmd_buffer->rw_params.sizes[i]), io_buffer_size_);
+        io_buffer_contents_.emplace_back(std::vector<uint8_t>(size, 0));
+        memcpy(io_buffer_contents_.back().data(),
+               reinterpret_cast<const uint8_t*>(io_buffer.start()) + offset, size);
+        if (on_cmd_write_ != nullptr) {
+          on_cmd_write_(io_buffer_contents_.back());
+        }
+        cmd_buffer->rw_params.consumed_size += size;
+      } else if (phy_addr >= kPinnedVmoPaddr) {
+        size_t num_vmos = 0u;
+        fake_bti_get_pinned_vmos(bti_->get(), nullptr, 0u, &num_vmos);
+        std::vector<fake_bti_pinned_vmo_info_t> pinned_vmos(num_vmos);
+        fake_bti_get_pinned_vmos(bti_->get(), pinned_vmos.data(), num_vmos, nullptr);
+
+        ZX_DEBUG_ASSERT(num_vmos >= 2 && phy_addr < kPinnedVmoPaddr + pinned_vmos[1].size);
+        size_t size = cmd_buffer->rw_params.sizes[i];
+        io_buffer_contents_.emplace_back(std::vector<uint8_t>(size, 0));
+        zx_vmo_read(pinned_vmos[1].vmo, io_buffer_contents_.back().data(), pinned_vmos[1].offset,
+                    size);
+        if (on_cmd_write_ != nullptr) {
+          on_cmd_write_(io_buffer_contents_.back());
+        }
+        cmd_buffer->rw_params.consumed_size += size;
+      }
     }
   }
 
-  if (cmd_buffer->cmd == PIPE_CMD_CODE_READ) {
+  if (cmd_buffer->cmd == PIPE_CMD_CODE_READ || cmd_buffer->cmd == PIPE_CMD_CODE_CALL) {
     auto io_buffer = MapIoBuffer();
+
+    const size_t read_buffer_begin =
+        cmd_buffer->cmd == PIPE_CMD_CODE_CALL ? cmd_buffer->rw_params.read_index : 0;
+    const size_t read_buffer_end = cmd_buffer->rw_params.buffers_count;
+
+    fbl::AutoLock lock(&lock_);
     if (bytes_to_read_.empty()) {
       cmd_buffer->status = PIPE_ERROR_AGAIN;
       cmd_buffer->rw_params.consumed_size = 0;
     } else {
       cmd_buffer->status = 0;
-      auto read_size = std::min(io_buffer.size(), bytes_to_read_.front().size());
-      cmd_buffer->rw_params.consumed_size = read_size;
-      memcpy(io_buffer.start(), bytes_to_read_.front().data(), read_size);
+      auto read_size = bytes_to_read_.front().size();
+      auto read_offset = 0u;
+      for (size_t i = read_buffer_begin; i < read_buffer_end; i++) {
+        auto phy_addr = cmd_buffer->rw_params.ptrs[i];
+        if (phy_addr >= kIoBufferPaddr && phy_addr < kIoBufferPaddr + io_buffer_size_) {
+          auto offset = phy_addr - kIoBufferPaddr;
+          auto size = std::min(size_t(cmd_buffer->rw_params.sizes[i]), read_size - read_offset);
+          memcpy(reinterpret_cast<uint8_t*>(io_buffer.start()) + offset,
+                 bytes_to_read_.front().data() + read_offset, size);
+          cmd_buffer->rw_params.consumed_size += size;
+          read_offset += size;
+        } else if (phy_addr >= kPinnedVmoPaddr) {
+          size_t num_vmos = 0u;
+          fake_bti_get_pinned_vmos(bti_->get(), nullptr, 0u, &num_vmos);
+          std::vector<fake_bti_pinned_vmo_info_t> pinned_vmos(num_vmos);
+          fake_bti_get_pinned_vmos(bti_->get(), pinned_vmos.data(), num_vmos, nullptr);
+
+          ZX_DEBUG_ASSERT(num_vmos >= 2 && phy_addr < kPinnedVmoPaddr + pinned_vmos[1].size);
+          size_t size = std::min(size_t(cmd_buffer->rw_params.sizes[i]), read_size - read_offset);
+          zx_vmo_write(pinned_vmos[1].vmo, bytes_to_read_.front().data() + read_offset,
+                       pinned_vmos[1].offset, size);
+          cmd_buffer->rw_params.consumed_size += size;
+          read_offset += size;
+        }
+        if (read_offset == read_size) {
+          break;
+        }
+      }
       bytes_to_read_.pop();
     }
   }
 }
 
 zx_status_t FakePipe::GoldfishPipeGetBti(zx::bti* out_bti) {
-  zx_status_t status = fake_bti_create(out_bti->reset_and_get_address());
+  zx_status_t status = fake_bti_create_with_paddrs(kFakeBtiPaddrs.data(), kFakeBtiPaddrs.size(),
+                                                   out_bti->reset_and_get_address());
   if (status == ZX_OK) {
     bti_ = out_bti->borrow();
   }

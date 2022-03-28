@@ -29,9 +29,9 @@ zx_status_t PipeAutoReader::AsyncReadWithHeader() {
   if (read_result.is_error()) {
     // All the other errors indicates that the pipe read / write process
     // is broken and we should not continue.
-    ZX_DEBUG_ASSERT(read_result.error() == ZX_ERR_SHOULD_WAIT);
-    if (read_result.error() != ZX_ERR_SHOULD_WAIT) {
-      zxlogf(ERROR, "%s: read error: %d", __func__, read_result.error());
+    ZX_DEBUG_ASSERT(read_result.error_value() == ZX_ERR_SHOULD_WAIT);
+    if (read_result.error_value() != ZX_ERR_SHOULD_WAIT) {
+      zxlogf(ERROR, "%s: read error: %d", __func__, read_result.error_value());
     }
 
     pipe_event().signal(/* clear_mask= */
@@ -51,7 +51,7 @@ zx_status_t PipeAutoReader::AsyncReadWithHeader() {
         zxlogf(ERROR, "AsyncReadWithHeader callback: wait event error: %d", status);
       }
     });
-    return read_result.error();
+    return read_result.error_value();
   }
 
   return ZX_ERR_WRONG_TYPE;

@@ -22,7 +22,7 @@ namespace goldfish {
 // pipe message received.
 class PipeAutoReader : public PipeIo {
  public:
-  using PipeMessageHandler = fit::function<void(PipeIo::ReadResult)>;
+  using PipeMessageHandler = fit::function<void(PipeIo::ReadResult<char>)>;
   PipeAutoReader(ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_name,
                  async_dispatcher_t* dispatcher, PipeMessageHandler handler = nullptr)
       : PipeIo(pipe, pipe_name), dispatcher_(dispatcher), handler_(std::move(handler)) {}

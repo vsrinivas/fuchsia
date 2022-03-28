@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include <ddktl/device.h>
+#include <fbl/mutex.h>
 
 namespace goldfish::sensor {
 namespace testing {
@@ -74,7 +76,9 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
   fit::function<void(const std::vector<uint8_t>&)> on_cmd_write_;
   std::vector<std::vector<uint8_t>> io_buffer_contents_;
-  std::queue<std::vector<uint8_t>> bytes_to_read_;
+  std::queue<std::vector<uint8_t>> bytes_to_read_ TA_GUARDED(lock_);
+
+  fbl::Mutex lock_;
 };
 
 }  // namespace testing

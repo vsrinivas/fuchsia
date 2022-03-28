@@ -120,9 +120,9 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
   return ZX_OK;
 }
 
-void RootDevice::OnReadSensor(PipeIo::ReadResult result) {
+void RootDevice::OnReadSensor(PipeIo::ReadResult<char> result) {
   if (result.is_error()) {
-    zxlogf(INFO, "Pipe error: %s", zx_status_get_string(result.error()));
+    zxlogf(INFO, "Pipe error: %s", zx_status_get_string(result.error_value()));
     return;
   }
 

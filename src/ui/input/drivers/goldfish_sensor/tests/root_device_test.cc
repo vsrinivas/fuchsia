@@ -217,8 +217,8 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
   auto fake2_report_id = fake2->report_id();
 
   const char* kFake1Report = "fake1:0.1:0.2";
-  PipeIo::ReadResult read_result =
-      fpromise::ok(std::vector<uint8_t>(kFake1Report, kFake1Report + strlen(kFake1Report)));
+  PipeIo::ReadResult<char> read_result =
+      zx::ok(std::string(kFake1Report, kFake1Report + strlen(kFake1Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);
@@ -228,8 +228,7 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
   EXPECT_EQ(fake1->report()[1], 0.2);
 
   const char* kFake2Report = "fake2:0:0.2:0.3";
-  read_result =
-      fpromise::ok(std::vector<uint8_t>(kFake2Report, kFake2Report + strlen(kFake2Report)));
+  read_result = zx::ok(std::string(kFake2Report, kFake2Report + strlen(kFake2Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);
@@ -240,8 +239,7 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
   EXPECT_EQ(fake2->report()[2], 0.3);
 
   const char* kFake3Report = "fake3:1:2:3:4";
-  read_result =
-      fpromise::ok(std::vector<uint8_t>(kFake3Report, kFake3Report + strlen(kFake3Report)));
+  read_result = zx::ok(std::string(kFake3Report, kFake3Report + strlen(kFake3Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);

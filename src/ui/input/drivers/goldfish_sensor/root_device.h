@@ -52,7 +52,7 @@ class RootDevice : public RootDeviceType {
 
  protected:
   // Set to protected to allow test devices to use this method.
-  void OnReadSensor(PipeIo::ReadResult result);
+  void OnReadSensor(PipeIo::ReadResult<char> result);
 
  private:
   ddk::GoldfishPipeProtocolClient pipe_;
