@@ -26,7 +26,7 @@ class Header extends StatelessWidget {
         // Description.
         Container(
           alignment: Alignment.center,
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(16),
           child: SizedBox(
             width: 600,
             child: Text(

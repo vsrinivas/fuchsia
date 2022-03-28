@@ -28,8 +28,8 @@ class Oobe extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header: Fuchsia logo and welcome.
-          SizedBox(
-            height: 200,
+          Padding(
+            padding: EdgeInsets.only(top: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
