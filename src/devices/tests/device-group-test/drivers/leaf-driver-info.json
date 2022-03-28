@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework device group test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

@@ -1,0 +1,89 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("drivers") {
+  testonly = true
+  deps = [
+    ":device-group",
+    ":leaf",
+    ":root",
+  ]
+}
+
+driver_bind_rules("root-driver-bind") {
+  rules = "root-driver.bind"
+  header_output = "root-driver-bind.h"
+  bind_output = "root-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("root-driver") {
+  output_name = "root-driver"
+  sources = [ "root-driver.cc" ]
+  deps = [
+    ":root-driver-bind",
+    "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  component_name = "root-driver"
+  deps = [ ":root-driver" ]
+  info = "root-driver-info.json"
+  colocate = true
+}
+
+driver_bind_rules("leaf-driver-bind") {
+  rules = "leaf-driver.bind"
+  header_output = "leaf-driver-bind.h"
+  bind_output = "leaf-driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("leaf-driver") {
+  output_name = "leaf-driver"
+  sources = [ "leaf-driver.cc" ]
+  deps = [
+    ":leaf-driver-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("leaf") {
+  component_name = "leaf-driver"
+  deps = [ ":leaf-driver" ]
+  info = "leaf-driver-info.json"
+  colocate = true
+}
+
+driver_bind_rules("device-group-bind") {
+  rules = "device-group-driver.bind"
+  header_output = "device-group-driver-bind.h"
+  bind_output = "device-group-driver.bindbc"
+}
+
+fuchsia_driver("device-group-driver") {
+  output_name = "device-group-driver"
+  sources = [ "device-group-driver.cc" ]
+  deps = [
+    ":device-group-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("device-group") {
+  component_name = "device-group-driver"
+  deps = [ ":device-group-driver" ]
+  info = "device-group-driver-info.json"
+  colocate = true
+}

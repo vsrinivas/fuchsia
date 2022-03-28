@@ -205,6 +205,9 @@
 //src/devices/tests/ddk-metadata-test:fuchsia_driver
 //src/devices/tests/ddk-power:ddk-power-test-child-driver
 //src/devices/tests/ddk-power:ddk-power-test-driver
+//src/devices/tests/device-group-test/drivers:device-group-driver
+//src/devices/tests/device-group-test/drivers:leaf-driver
+//src/devices/tests/device-group-test/drivers:root-driver
 //src/devices/tests/device-watcher:test-driver-driver
 //src/devices/tests/driver-inspect-test:fuchsia_driver
 //src/devices/tests/driver-runtime:child-driver
