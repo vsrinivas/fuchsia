@@ -193,6 +193,10 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 
   children_.push_back(std::move(device));
 
+  if (out) {
+    *out = device_ptr->ZxDevice();
+  }
+
   // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
   // init task after adding the device.
   if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
@@ -203,9 +207,6 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     device_ptr->InitReply(ZX_OK);
   }
 
-  if (out) {
-    *out = device_ptr->ZxDevice();
-  }
   return ZX_OK;
 }
 
@@ -430,6 +431,7 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void Device::InitReply(zx_status_t status) {
+  std::scoped_lock lock(init_lock_);
   init_is_finished_ = true;
   init_status_ = status;
   for (auto& waiter : init_waiters_) {
@@ -443,6 +445,7 @@ void Device::InitReply(zx_status_t status) {
 }
 
 fpromise::promise<void, zx_status_t> Device::WaitForInitToComplete() {
+  std::scoped_lock lock(init_lock_);
   if (init_is_finished_) {
     if (init_status_ == ZX_OK) {
       return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());

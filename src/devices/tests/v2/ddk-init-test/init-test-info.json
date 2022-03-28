@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver to test init",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

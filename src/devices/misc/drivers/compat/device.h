@@ -102,9 +102,10 @@ class Device : public std::enable_shared_from_this<Device> {
   // is garaunteed to outlive the Device.
   Driver* driver_ = nullptr;
 
-  bool init_is_finished_ = false;
-  zx_status_t init_status_ = ZX_OK;
-  std::vector<fpromise::completer<void, zx_status_t>> init_waiters_;
+  std::mutex init_lock_;
+  bool init_is_finished_ __TA_GUARDED(init_lock_) = false;
+  zx_status_t init_status_ __TA_GUARDED(init_lock_) = ZX_OK;
+  std::vector<fpromise::completer<void, zx_status_t>> init_waiters_ __TA_GUARDED(init_lock_);
 
   bool pending_rebind_ = false;
 
