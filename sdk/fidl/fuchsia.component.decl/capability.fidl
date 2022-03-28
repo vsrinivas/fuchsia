@@ -112,8 +112,9 @@ type Resolver = table {
 };
 
 /// Declares an event capability which component instances may subscribe to.
-/// This type cannot be used in `fuchsia.sys2.ComponentDecl`. It is only used for
-/// the framework's built-in capabilities declared in `internal.Config`.
+/// This type cannot be used in `fuchsia.component.decl.Component`. It is only
+/// used for the framework's built-in capabilities declared in
+/// `internal.Config`.
 type Event = table {
     /// The name of this event.
     /// Must be non-empty, unique among built-in capabilities.
