@@ -7,6 +7,15 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
+group("text") {
+  testonly = true
+  deps = [
+    ":ime_service",
+    ":tests",
+    ":text_manager",
+  ]
+}
+
 group("tests") {
   testonly = true
 

@@ -1,31 +1,43 @@
-# Text manager
+# text_manager
 
-The text manager is Fuchsia's provider of text-related FIDL services.
+The `text_manager` is a program that serves the text editing needs of Fuchsia
+clients.
 
-Check out the [docs/][docs] directory for the documentation of the text manager
-internals.
 
 ## Building
 
-Ensure that you have `--with=//src/u/bin/text` in your `fx set ...` command
-line.
+To build the text manager, make sure you have `--with=//src/ui/bin/text` in your
+`fx set` command.
 
-Then, `fx build` or `fx build src/ui/bin/text` will build all the production
-text manager code that you may need.
+Then, either `fx build`, or a more targeted:
 
+```
+fx build src/ui/bin/text
+```
+
+will build the needed components.
 
 ## Testing
 
-Ensure that you have `--with=//src/u/bin/text:tests` in your `fx set ...`
-command line.
+### Prerequisites
 
-Run the tests with:
+* You will need either an emulator or a physical Fuchsia device attached.
+* You need to have a `fx serve` running in a separate terminal, and need to
+  ensure it connects correctly to the device or emulator.
+
+### Running the tests
+
+To run the text manager tests, make sure you have
+`--with=//src/ui/bin/text:tests` in your `fx set` command.
+
+Then you can type:
 
 ```
 fx test //src/ui/bin/text
 ```
 
-This test invocation will compile the test dependencies and run any tests that
-are in this directory and its subdirs.
+to run all the tests below the named directory.
 
-[docs]: docs/README.md
+## Documentation
+
+For internals documentation refer to the [`docs/` folder](docs/).
