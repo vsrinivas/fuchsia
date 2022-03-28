@@ -66,15 +66,21 @@ alias HeSecret = bytes:HE_SECRET_MAX_SIZE;
 /// the updated root hash of the hash tree.
 alias AuxiliaryHashes = vector<Hash>:128;
 
-/// The allowed attempt count for a given credential and the amount of time
-/// to wait until an attempt resets.
+/// Defines a single entry in the table of failed authentication attempt number
+/// to authentication delay.
 type DelayScheduleEntry = struct {
+    /// The number of successive failed attempts at which this entry begins
+    /// to apply.
     attempt_count uint32;
+    /// The delay before another authentication attempt is allowed. May either
+    /// be a duration between 1 second and 49710 days to enforce a delay or
+    /// duration::INFINITE to prevent further authentication attempts.
     time_delay zx.duration;
 };
 
 /// Parameters to InsertLeaf method.
-/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as
+/// parameter arguments.
 type InsertLeafParams = table {
     /// `label` is the location of the leaf in the tree.
     1: label Label;
@@ -86,12 +92,14 @@ type InsertLeafParams = table {
     4: he_secret HeSecret;
     /// `reset_secret` is the reset secret to reset the leaf node.
     5: reset_secret HeSecret;
-    /// `delay_schedule` is the delay on authentication attempts.
+    /// `delay_schedule` defines the delay between authentication attempts
+    /// as a function of the number of successive failed attempts.
     6: delay_schedule vector<DelayScheduleEntry>:DELAY_SCHEDULE_MAX_COUNT;
 };
 
 /// Response from the InsertLeaf method.
-/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as
+/// parameter arguments.
 type InsertLeafResponse = table {
     /// `root_hash` is set to the updated root hash of the tree.
     1: root_hash Hash;
@@ -102,7 +110,8 @@ type InsertLeafResponse = table {
 };
 
 /// Parameters to RemoveLeaf method.
-/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as
+/// parameter arguments.
 type RemoveLeafParams = table {
     /// `label` is the location of the leaf in the tree.
     1: label Label;
@@ -113,7 +122,8 @@ type RemoveLeafParams = table {
 };
 
 /// Parameters to the TryAuth method.
-/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as
+/// parameter arguments.
 type TryAuthParams = table {
     /// `le_secret` is the low entropy secret limited by the delay_schedule.
     1: le_secret LeSecret;

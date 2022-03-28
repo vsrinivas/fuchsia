@@ -12,11 +12,15 @@ alias LeSecret = bytes:1024;
 /// A high entropy secret.
 alias HeSecret = bytes:1024;
 
-/// The delay schedule for a given credential. This is composed of two options
-/// the `attempt_count` which is the number of attempts that are allowed before
-/// the `time_delay` in seconds is activated before the next attempt can occur.
+/// Defines a single entry in the table of failed authentication attempt number
+/// to authentication delay for a given credential.
 type DelayScheduleEntry = struct {
+    /// The number of successive failed attempts at which this entry begins
+    /// to apply.
     attempt_count uint32;
+    /// The delay before another authentication attempt is allowed. May either
+    /// be a duration between 1 second and 49710 days to enforce a delay or
+    /// duration::INFINITE to prevent further authentication attempts.
     time_delay zx.duration;
 };
 
