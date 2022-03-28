@@ -19,6 +19,8 @@
 #include <phys/allocation.h>
 #include <phys/page-table.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using page_table::AddressSpaceBuilder;
@@ -159,7 +161,7 @@ void CreateBootstrapPageTable() {
     return range;
   };
 
-  std::optional<memalloc::Range> prev;
+  ktl::optional<memalloc::Range> prev;
   for (const memalloc::Range& raw_range : pool) {
     auto range = normalize_range(raw_range);
     if (!prev) {

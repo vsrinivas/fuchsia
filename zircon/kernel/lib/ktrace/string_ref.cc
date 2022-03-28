@@ -9,6 +9,8 @@
 
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 int StringRef::Register(StringRef* string_ref) {
   // Return the id if the string ref is already registered.
   int id = string_ref->id.load(ktl::memory_order_relaxed);

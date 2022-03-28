@@ -14,6 +14,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/type_traits.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 constexpr size_t MBufChain::MBuf::kHeaderSize;

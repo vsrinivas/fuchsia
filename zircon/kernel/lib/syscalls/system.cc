@@ -54,6 +54,8 @@
 #include "priv.h"
 #include "system_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // Allocate this many extra bytes at the end of the bootdata for the platform
@@ -141,7 +143,9 @@ zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t l
 
   // mark all of the pages we allocated as WIRED.
   vm_page_t* p;
-  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(vm_page_state::WIRED); }
+  list_for_every_entry (&list, p, vm_page_t, queue_node) {
+    p->set_state(vm_page_state::WIRED);
+  }
 
   // Make sure we don't free the pages we just allocated.
   pmm_cleanup.cancel();

@@ -24,8 +24,11 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/pv.h>
 #include <dev/interrupt.h>
+#include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <vm/vm_aspace.h>
+
+#include <ktl/enforce.h>
 
 // We currently only implement support for the xAPIC
 
@@ -266,7 +269,7 @@ static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
   // divisible by 2, so we can provide the low and high part of the CPU mask.
   static_assert(ktl::size(masks) % 2 == 0);
 
-  const cpu_num_t num_cpus = std::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
+  const cpu_num_t num_cpus = ktl::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
   for (cpu_num_t cpu_id = lowest_cpu_set(mask); cpu_id < num_cpus; cpu_id++) {
     if (BIT(mask, cpu_id)) {
       struct x86_percpu* percpu = cpu_id == 0 ? &bp_percpu : &ap_percpus[cpu_id - 1];
@@ -338,7 +341,7 @@ void apic_send_mask_ipi(uint8_t vector, cpu_mask_t mask, enum apic_interrupt_del
     return;
   }
 
-  const cpu_num_t num_cpus = std::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
+  const cpu_num_t num_cpus = ktl::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
   for (cpu_num_t cpu_id = lowest_cpu_set(mask); cpu_id < num_cpus; cpu_id++) {
     if (BIT(mask, cpu_id)) {
       struct x86_percpu* percpu = cpu_id == 0 ? &bp_percpu : &ap_percpus[cpu_id - 1];

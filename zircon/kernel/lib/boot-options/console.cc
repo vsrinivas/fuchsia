@@ -8,6 +8,8 @@
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Note that using this can introduce data races on the member variables.
@@ -32,7 +34,7 @@ int Show(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc > 1) {
     int result = 0;
     for (const auto& arg : ktl::span(argv, argc).subspan(1)) {
-      result |= gBootOptions->Show(std::string_view{arg.str});
+      result |= gBootOptions->Show(ktl::string_view{arg.str});
     }
     return result;
   }

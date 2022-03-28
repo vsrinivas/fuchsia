@@ -37,6 +37,8 @@
 #include <kernel/thread_lock.h>
 #include <ktl/type_traits.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace {

@@ -31,6 +31,8 @@
 #include <ktl/bit.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 #if defined(__aarch64__)
 #include <arch/arm64/dap.h>
 #endif

@@ -12,6 +12,8 @@
 #include <vm/page.h>
 #include <vm/stack_owned_loaned_pages_interval.h>
 
+#include <ktl/enforce.h>
+
 void StackOwnedLoanedPagesInterval::PrepareForWaiter() {
   canary_.Assert();
   // For now we don't need a CAS loop in here because thread_lock is held by callers of

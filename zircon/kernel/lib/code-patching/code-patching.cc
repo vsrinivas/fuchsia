@@ -9,13 +9,16 @@
 #include <lib/fitx/result.h>
 #include <lib/zbitl/error-stdio.h>
 
+#include <ktl/move.h>
 #include <ktl/string_view.h>
+
+#include <ktl/enforce.h>
 
 namespace code_patching {
 
 fitx::result<Patcher::Error> Patcher::Init(Bootfs bootfs, ktl::string_view directory) {
   ZX_ASSERT(!directory.empty());
-  bootfs_ = std::move(bootfs);
+  bootfs_ = ktl::move(bootfs);
   dir_ = directory;
 
   auto it = bootfs_.find({dir_, kPatchesBin});
@@ -48,7 +51,7 @@ fitx::result<Patcher::Error> Patcher::PatchWithAlternative(ktl::span<ktl::byte> 
     return result.take_error();
   }
 
-  Bytes bytes = std::move(result).value();
+  Bytes bytes = ktl::move(result).value();
   ZX_ASSERT_MSG(
       instructions.size() >= bytes.size(),
       "instruction range (%zu bytes) is too small for patch alternative \"%.*s\" (%zu bytes)",

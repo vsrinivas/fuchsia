@@ -13,6 +13,8 @@
 #include <ktl/move.h>
 #include <object/process_dispatcher.h>
 
+#include <ktl/enforce.h>
+
 KCOUNTER(dispatcher_exception_create_count, "dispatcher.exception.create")
 KCOUNTER(dispatcher_exception_destroy_count, "dispatcher.exception.destroy")
 

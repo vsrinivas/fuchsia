@@ -20,6 +20,8 @@
 
 #include "el2_cpu_state_priv.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 DECLARE_SINGLETON_MUTEX(GuestMutex);

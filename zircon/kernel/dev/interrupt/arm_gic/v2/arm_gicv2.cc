@@ -39,6 +39,8 @@
 
 #include "arm_gicv2m_pcie.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 #include <arch/arm64.h>

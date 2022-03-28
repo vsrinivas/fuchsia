@@ -45,6 +45,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 static void arm64_perfmon_reset_task(void* raw_context);

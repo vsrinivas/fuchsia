@@ -8,6 +8,7 @@
 #include <lib/unittest/unittest.h>
 
 #include <fbl/alloc_checker.h>
+#include <ktl/array.h>
 #include <ktl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
@@ -15,6 +16,8 @@
 #include <object/resource_dispatcher.h>
 
 #include "tests.h"
+
+#include <ktl/enforce.h>
 
 static bool unconfigured() {
   BEGIN_TEST;
@@ -162,7 +165,7 @@ static bool root_resource_filter() {
     size_t size;
     zx_rsrc_kind_t kind;
   };
-  std::array kTestVectors = {TestVector{0x0AFF000000003400, kRangeSize, ZX_RSRC_KIND_MMIO},
+  ktl::array kTestVectors = {TestVector{0x0AFF000000003400, kRangeSize, ZX_RSRC_KIND_MMIO},
                              TestVector{0x0AFF000000007abd, kRangeSize, ZX_RSRC_KIND_MMIO},
                              TestVector{0x0AFF000000004000, kRangeSize, ZX_RSRC_KIND_MMIO},
                              TestVector{0x0040, kRangeSize, ZX_RSRC_KIND_IOPORT},

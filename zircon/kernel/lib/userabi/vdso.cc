@@ -24,6 +24,8 @@
 
 #include "vdso-code.h"
 
+#include <ktl/enforce.h>
+
 // This is defined in assembly via RODSO_IMAGE (see rodso-asm.h);
 // vdso-code.h gives details about the image's size and layout.
 extern "C" const char vdso_image[];

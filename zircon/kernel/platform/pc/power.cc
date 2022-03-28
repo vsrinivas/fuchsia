@@ -21,6 +21,8 @@
 #include <ktl/atomic.h>
 #include <platform/keyboard.h>
 
+#include <ktl/enforce.h>
+
 // The I/O port to write to for QEMU debug exit.
 const uint16_t kQEMUDebugExitPort = 0xf4;
 

@@ -16,6 +16,8 @@
 
 #include "private.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr ktl::string_view kSymbolizerName = "data/phys/symbolizer.log";

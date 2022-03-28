@@ -14,6 +14,8 @@
 #include <ktl/optional.h>
 #include <platform/pc/acpi.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // System-wide ACPI parser.

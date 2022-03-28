@@ -35,6 +35,8 @@
 #include <vm/pmm_checker.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 crashlog_t g_crashlog = {};
 
 PanicBuffer panic_buffer;

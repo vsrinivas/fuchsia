@@ -33,6 +33,8 @@
 #include "../../lib/syscalls/system_priv.h"
 #include "amd.h"
 
+#include <ktl/enforce.h>
+
 extern char __x86_indirect_thunk_r11;
 extern char interrupt_non_nmi_maybe_mds_buff_overwrite;
 extern char interrupt_nmi_maybe_mds_buff_overwrite;

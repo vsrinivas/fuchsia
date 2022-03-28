@@ -22,6 +22,8 @@
 #include <ktl/unique_ptr.h>
 #include <platform/pc/acpi.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace {
@@ -294,7 +296,7 @@ zx_status_t GenerateTree(const arch::ApicIdDecoder& decoder,    //
                          const acpi_lite::AcpiParserInterface& parser,
                          fbl::Vector<ktl::unique_ptr<Package>>* packages) {
   PackageList pkg_list(decoder, primary_apic_id,
-                       cache_info.empty() ? std::nullopt : cache_info.back().share_id_shift);
+                       cache_info.empty() ? ktl::nullopt : cache_info.back().share_id_shift);
   zx_status_t status = acpi_lite::EnumerateProcessorLocalApics(
       parser,
       [&pkg_list](const acpi_lite::AcpiMadtLocalApicEntry& value) { return pkg_list.Add(value); });

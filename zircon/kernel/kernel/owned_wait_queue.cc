@@ -20,6 +20,8 @@
 #include <ktl/bit.h>
 #include <ktl/type_traits.h>
 
+#include <ktl/enforce.h>
+
 // Notes on the defined kernel counters.
 //
 // Adjustments (aka promotions and demotions)

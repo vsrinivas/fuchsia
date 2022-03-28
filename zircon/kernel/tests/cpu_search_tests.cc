@@ -11,8 +11,11 @@
 #include <kernel/cpu_distance_map.h>
 #include <kernel/cpu_search_set.h>
 #include <ktl/algorithm.h>
+#include <ktl/forward.h>
 #include <ktl/limits.h>
 #include <ktl/optional.h>
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -33,7 +36,7 @@ bool CpuSetCheck(cpu_mask_t mask, size_t count) {
 struct CpuDistanceMapTestAccess {
   template <typename Callable>
   static ktl::optional<CpuDistanceMap> Create(size_t cpu_count, Callable&& callable) {
-    return CpuDistanceMap::Create(cpu_count, std::forward<Callable>(callable));
+    return CpuDistanceMap::Create(cpu_count, ktl::forward<Callable>(callable));
   }
   static size_t EntryCountFromCpuCount(size_t cpu_count) {
     return CpuDistanceMap::EntryCountFromCpuCount(cpu_count);

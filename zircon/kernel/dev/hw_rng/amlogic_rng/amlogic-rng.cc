@@ -15,6 +15,8 @@
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
 
+#include <ktl/enforce.h>
+
 // Mask for the bit indicating RNG status.
 #define AML_RNG_READY 1
 

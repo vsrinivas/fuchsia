@@ -26,6 +26,8 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static Mutex bootstrap_lock;
 // The bootstrap address space is kept as a global variable in order to maintain ownership of low

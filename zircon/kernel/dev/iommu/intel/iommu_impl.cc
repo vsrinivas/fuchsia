@@ -31,6 +31,8 @@
 #include "device_context.h"
 #include "hw.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace intel_iommu {

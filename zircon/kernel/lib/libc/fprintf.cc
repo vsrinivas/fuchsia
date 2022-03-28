@@ -12,6 +12,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 #define LONGFLAG 0x00000001
 #define LONGLONGFLAG 0x00000002
 #define HALFFLAG 0x00000004

@@ -20,6 +20,8 @@
 #include <vm/physical_page_borrowing_config.h>
 #include <vm/pmm.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Singleton

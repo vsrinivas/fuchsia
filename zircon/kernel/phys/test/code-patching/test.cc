@@ -15,11 +15,14 @@
 
 #include <fbl/alloc_checker.h>
 #include <ktl/byte.h>
+#include <ktl/move.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/zbitl-allocation.h>
 
 #include "../test-main.h"
+
+#include <ktl/enforce.h>
 
 const char Symbolize::kProgramName_[] = "code-patching-test";
 
@@ -157,11 +160,11 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     zbitl::PrintBootfsError(result.error_value());
     return 1;
   } else {
-    bootfs = std::move(result.value());
+    bootfs = ktl::move(result.value());
   }
 
   code_patching::Patcher patcher;
-  if (auto result = patcher.Init(std::move(bootfs), kNamespace); result.is_error()) {
+  if (auto result = patcher.Init(ktl::move(bootfs), kNamespace); result.is_error()) {
     printf("FAILED: Could not initialize code_patching::Patcher: ");
     zbitl::PrintBootfsError(result.error_value());
     return 1;

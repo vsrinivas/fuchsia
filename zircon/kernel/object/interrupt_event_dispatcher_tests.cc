@@ -15,6 +15,8 @@
 #include <object/interrupt_event_dispatcher.h>
 #include <object/port_dispatcher.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Tests that if an irq handler fires at the same time as an interrupt dispatcher is destroyed

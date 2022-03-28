@@ -15,6 +15,8 @@
 
 #include "../persistent-debuglog-internal.h"
 
+#include <ktl/enforce.h>
+
 namespace tests {
 struct PersistentDebuglogTestingFriend {
   using LogHeader = PersistentDebugLog::LogHeader;

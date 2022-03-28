@@ -18,6 +18,8 @@
 #include <ktl/optional.h>
 #include <phys/allocation.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using page_table::Paddr;

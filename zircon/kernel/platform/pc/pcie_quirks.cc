@@ -21,6 +21,8 @@
 #include <fbl/ref_ptr.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // Top-of-lower-usable-DRAM quirk.

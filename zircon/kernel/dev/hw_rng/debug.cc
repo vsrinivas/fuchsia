@@ -15,6 +15,8 @@
 #include <ktl/algorithm.h>
 #include <pretty/hexdump.h>
 
+#include <ktl/enforce.h>
+
 static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
   uint32_t val;
   __UNUSED size_t fetched;

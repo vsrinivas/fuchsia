@@ -13,6 +13,8 @@
 #include <ktl/string_view.h>
 #include <phys/symbolize.h>
 
+#include <ktl/enforce.h>
+
 const char Symbolize::kProgramName_[] = "turducken-test";
 
 // These are embedded in the original image (with "flavor=turkey").

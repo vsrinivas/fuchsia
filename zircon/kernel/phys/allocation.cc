@@ -18,6 +18,8 @@
 #include <ktl/string_view.h>
 #include <phys/main.h>
 
+#include <ktl/enforce.h>
+
 // Global memory allocation book-keeping.
 memalloc::Pool& Allocation::GetPool() {
   // Use fbl::NoDestructor to avoid generation of static destructors,

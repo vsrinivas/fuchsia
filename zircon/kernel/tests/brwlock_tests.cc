@@ -14,6 +14,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 // Use a delay spinner to create fine grained delays between 0 and 1msec
 static void rand_delay() {
   int64_t end = current_time() + (rand() % ZX_MSEC(1));

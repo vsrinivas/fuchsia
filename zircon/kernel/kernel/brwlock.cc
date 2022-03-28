@@ -13,6 +13,8 @@
 #include <kernel/thread_lock.h>
 #include <ktl/limits.h>
 
+#include <ktl/enforce.h>
+
 namespace internal {
 
 template <BrwLockEnablePi PI>

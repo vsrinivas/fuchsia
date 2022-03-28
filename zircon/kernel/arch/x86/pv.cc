@@ -18,6 +18,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
+#include <ktl/enforce.h>
+
 // Paravirtual functions, to execute some functions in a Hypervisor-specific way.
 // The paravirtual optimizations in this file are implemented by kvm/qemu.
 

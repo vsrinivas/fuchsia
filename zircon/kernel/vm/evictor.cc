@@ -22,6 +22,8 @@
 
 #include "pmm_node.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 KCOUNTER(pager_backed_pages_evicted, "vm.reclamation.pages_evicted_pager_backed")

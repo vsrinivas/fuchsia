@@ -16,9 +16,12 @@
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <ktl/algorithm.h>
 #include <ktl/move.h>
 
 #include "kernel/wait_queue_internal.h"
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 
@@ -223,7 +226,7 @@ int WaitQueue::BlockedPriority() const {
   // the WaitQueueCollection's augmented binary tree.
   int ret = -1;
   for (const Thread& t : collection_.threads_) {
-    ret = std::max(ret, t.scheduler_state().effective_priority());
+    ret = ktl::max(ret, t.scheduler_state().effective_priority());
   }
   return ret;
 }

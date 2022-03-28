@@ -24,6 +24,8 @@
 #include <phys/symbolize.h>
 #include <pretty/sizes.h>
 
+#include <ktl/enforce.h>
+
 extern "C" {
 
 // TODO(fxbug.dev/79166): In the linuxboot case, the linking logic gives the

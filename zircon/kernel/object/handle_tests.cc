@@ -14,6 +14,8 @@
 
 #include "object/handle.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // A Dispatcher-like class that tracks the number of calls to on_zero_handles()

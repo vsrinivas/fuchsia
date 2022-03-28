@@ -23,6 +23,8 @@
 #include <pretty/cpp/sizes.h>
 #include <vm/fault.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using pretty::FormattedBytes;

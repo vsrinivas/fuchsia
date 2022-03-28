@@ -29,6 +29,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 // NOTE: The tests in this file are meant for interactive use only. Use a minimal
 // build and in the console type "k thread_tests".
 

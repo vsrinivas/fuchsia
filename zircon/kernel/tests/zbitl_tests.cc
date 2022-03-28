@@ -11,6 +11,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 // zbitl is primarily tested by its host/userland unit tests.
 // This serves to test some basic cases in the kernel and phys
 // environments specifically, mostly just to make sure it compiles.

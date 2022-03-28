@@ -13,6 +13,8 @@
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 
+#include <ktl/enforce.h>
+
 namespace system_topology {
 
 decltype(Graph::system_topology_) Graph::system_topology_;

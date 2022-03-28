@@ -20,6 +20,8 @@
 
 #include "test-main.h"
 
+#include <ktl/enforce.h>
+
 const char Symbolize::kProgramName_[] = "decompress-test";
 
 namespace {

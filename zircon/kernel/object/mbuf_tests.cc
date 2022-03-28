@@ -12,6 +12,8 @@
 
 #include "object/mbuf.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using testing::UserMemory;

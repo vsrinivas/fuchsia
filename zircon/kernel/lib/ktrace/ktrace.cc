@@ -25,6 +25,8 @@
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 // The global ktrace state.
 internal::KTraceState KTRACE_STATE;
 

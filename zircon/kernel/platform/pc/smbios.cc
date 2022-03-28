@@ -20,6 +20,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 smbios::EntryPointVersion kEpVersion = smbios::EntryPointVersion::Unknown;

@@ -19,6 +19,8 @@
 
 #include "priv.h"
 
+#include <ktl/enforce.h>
+
 // zx_status_t zx_timer_create
 zx_status_t sys_timer_create(uint32_t options, zx_clock_t clock_id, user_out_handle* out) {
   if (clock_id != ZX_CLOCK_MONOTONIC)

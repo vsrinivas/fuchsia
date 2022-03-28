@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <lib/gfx/console.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
@@ -31,7 +32,16 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object_physical.h>
 
+#ifdef WITH_KERNEL_PCIE
+#include <dev/address_provider/ecam_region.h>
+#include <dev/pcie_bus_driver.h>
+#include <dev/pcie_root.h>
+#include <object/pci_device_dispatcher.h>
+#endif
+
 #include "priv.h"
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 
@@ -40,15 +50,9 @@
 // of doing this.  Not all system have PCI, and (eventually) not all systems
 // will attempt to initialize PCI.  Someday, there should be a different way of
 // handing off from early/BSOD kernel mode graphics to user mode.
-#include <lib/gfx/console.h>
 static inline void shutdown_early_init_console() { gfx::ConsoleBindDisplay(nullptr, nullptr); }
 
 #ifdef WITH_KERNEL_PCIE
-#include <dev/address_provider/ecam_region.h>
-#include <dev/pcie_bus_driver.h>
-#include <dev/pcie_root.h>
-#include <object/pci_device_dispatcher.h>
-
 namespace {
 struct FreeDeleter {
   void operator()(void* ptr) const { ::free(ptr); }

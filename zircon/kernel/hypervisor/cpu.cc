@@ -9,6 +9,8 @@
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 struct percpu_state {

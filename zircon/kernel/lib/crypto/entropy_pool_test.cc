@@ -8,7 +8,10 @@
 #include <lib/unittest/unittest.h>
 
 #include <ktl/array.h>
+#include <ktl/move.h>
 #include <ktl/type_traits.h>
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -114,7 +117,7 @@ bool MoveCleansUpContents() {
 
   {
     EntropyPool* pool_ptr = new (&storage) EntropyPool();
-    EntropyPool new_pool(std::move(*pool_ptr));
+    EntropyPool new_pool(ktl::move(*pool_ptr));
   }
 
   EntropyPool pool;
@@ -125,7 +128,7 @@ bool MoveCleansUpContents() {
   {
     EntropyPool* pool_ptr = new (&storage) EntropyPool();
     EntropyPool new_pool;
-    new_pool = std::move(*pool_ptr);
+    new_pool = ktl::move(*pool_ptr);
   }
 
   ASSERT_TRUE(memcmp(shredded_contents.data(), &storage, shredded_contents.size()) == 0);

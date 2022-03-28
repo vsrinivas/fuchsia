@@ -17,6 +17,8 @@
 
 #include "address-space.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // On x86-64, we don't have any guarantee that all the memory in our address

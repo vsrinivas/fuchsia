@@ -12,6 +12,8 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 zx_status_t KernelMappedVmo::Init(fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
                                   const char* name) {
   ZX_ASSERT(offset % PAGE_SIZE == 0);

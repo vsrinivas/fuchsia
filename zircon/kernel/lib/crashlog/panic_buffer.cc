@@ -8,6 +8,8 @@
 
 #include <ktl/algorithm.h>
 
+#include <ktl/enforce.h>
+
 void PanicBuffer::Append(ktl::string_view s) {
   Guard<SpinLock, IrqSave> guard{&lock_};
   const size_t space_avail = sizeof(buffer_) - pos_ - 1;

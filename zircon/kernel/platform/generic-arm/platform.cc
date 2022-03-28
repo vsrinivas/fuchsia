@@ -59,6 +59,8 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif

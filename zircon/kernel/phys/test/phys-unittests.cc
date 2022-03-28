@@ -13,6 +13,8 @@
 #include "phys-unittest.h"
 #include "test-main.h"
 
+#include <ktl/enforce.h>
+
 // This isn't more straightforwardly table-driven because even as a
 // function-local variable the compiler will try to turn the table
 // into a const global with relocations.

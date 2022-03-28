@@ -14,6 +14,8 @@
 
 #include "handoff-prep.h"
 
+#include <ktl/enforce.h>
+
 void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
                                            ktl::span<const ktl::byte> payload) {
   ZX_DEBUG_ASSERT(handoff_);

@@ -12,6 +12,8 @@
 #include <ktl/string_view.h>
 #include <ktl/unique_ptr.h>
 
+#include <ktl/enforce.h>
+
 // We exercise basic boot option functionality here, with an aim toward
 // covering the (libc/ktl) behavior that would be sufficiently different in the
 // phys and kernel environments. More generic and involved tests are left to

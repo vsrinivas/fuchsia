@@ -28,6 +28,8 @@
 
 #include "turducken.h"
 
+#include <ktl/enforce.h>
+
 #define span_arg(s) static_cast<int>(s.size()), reinterpret_cast<const char*>(s.data())
 
 namespace {

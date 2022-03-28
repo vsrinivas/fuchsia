@@ -18,6 +18,8 @@
 #include <lk/init.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 // This is allocated with sufficient size to be filled in later.  The contents
 // have to be nonzero so they get allocated but don't otherwise matter.  See
 // kernel-image.inc for more details.

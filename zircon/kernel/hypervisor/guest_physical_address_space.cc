@@ -14,6 +14,8 @@
 #include <vm/page_source.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;

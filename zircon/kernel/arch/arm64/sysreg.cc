@@ -6,6 +6,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,8 +15,9 @@
 #include <fbl/algorithm.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 #if ARCH_ARM64
-#include <lib/console.h>
 
 #define SYSREG_READ_COMMAND(sysreg_string)                           \
   if (!strncasecmp(regname, sysreg_string, sizeof(sysreg_string))) { \

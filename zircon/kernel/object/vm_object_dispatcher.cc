@@ -16,9 +16,12 @@
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
+#include <ktl/optional.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 
@@ -133,7 +136,7 @@ zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {
   Guard<Mutex> guard{&content_size_lock_};
 
   // If this involves shrinking the VMO, then we need to acquire the shrink lock.
-  std::optional<ShrinkGuard> shrink_guard;
+  ktl::optional<ShrinkGuard> shrink_guard;
   if (size < content_size_) {
     // We can't acquire this lock whilst we're holding our lock.  It won't matter if this operation
     // turns into a grow (if another thread slips in first and changes the VMO's size).

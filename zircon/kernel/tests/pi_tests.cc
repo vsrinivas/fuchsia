@@ -29,6 +29,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr int TEST_LOWEST_PRIORITY = LOWEST_PRIORITY + 1;

@@ -11,6 +11,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/span.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr auto namelen = [](auto&& testcase) { return strlen(testcase.name); };

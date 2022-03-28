@@ -15,6 +15,8 @@
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 // Counts the number of times a dispatcher has been created and destroyed.
 KCOUNTER(dispatcher_create_count, "dispatcher.create")
 KCOUNTER(dispatcher_destroy_count, "dispatcher.destroy")

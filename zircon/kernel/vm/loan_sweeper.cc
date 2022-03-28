@@ -21,6 +21,8 @@
 
 #include "pmm_node.h"
 
+#include <ktl/enforce.h>
+
 KCOUNTER(sweep_count, "vm.reclamation.sweep_count")
 KCOUNTER(sweep_looped, "vm.reclamation.sweep_looped")
 KCOUNTER(sweep_pages_examined, "vm.reclamation.sweep_pages_examined")

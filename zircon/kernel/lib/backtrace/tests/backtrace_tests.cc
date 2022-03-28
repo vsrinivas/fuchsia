@@ -11,6 +11,8 @@
 #include <kernel/thread.h>
 #include <ktl/span.h>
 
+#include <ktl/enforce.h>
+
 static bool VectorOpsTest() {
   BEGIN_TEST;
 

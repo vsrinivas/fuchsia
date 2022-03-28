@@ -39,6 +39,8 @@
 
 #include "asid_allocator.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0
 

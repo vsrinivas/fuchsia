@@ -17,6 +17,8 @@
 #include <ktl/bit.h>
 #include <object/thread_dispatcher.h>
 
+#include <ktl/enforce.h>
+
 KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
 KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")
 

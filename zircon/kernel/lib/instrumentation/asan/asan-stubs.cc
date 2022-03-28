@@ -16,6 +16,8 @@
 
 #include "asan-internal.h"
 
+#include <ktl/enforce.h>
+
 // LLVM provides no documentation on the ABI between the compiler and
 // the runtime.  The set of function signatures here was culled from
 // the LLVM sources for the compiler instrumentation and the runtime

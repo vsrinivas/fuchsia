@@ -16,6 +16,8 @@
 #include <kernel/deadline.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 // It is critical that this array contain all "new object" policies because it's used to implement
 // ZX_NEW_ANY.

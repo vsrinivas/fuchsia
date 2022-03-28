@@ -11,11 +11,14 @@
 #include <zircon/boot/image.h>
 
 #include <ktl/array.h>
+#include <ktl/move.h>
 #include <ktl/span.h>
 
 #include "phys-unittest.h"
 #include "phys/symbolize.h"
 #include "test-main.h"
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -40,7 +43,7 @@ bool ValidZbiItem() {
 
   // Check non-zero
   ASSERT_TRUE(handoff.HasEnoughEntropy());
-  auto pool_or = std::move(handoff).Take(options);
+  auto pool_or = ktl::move(handoff).Take(options);
   ASSERT_TRUE(pool_or);
   ASSERT_TRUE(memcmp(pool_or->contents().data(), zero_pool.contents().data(),
                      pool_or->contents().size()) != 0);
@@ -61,7 +64,7 @@ bool SmallZbiItem() {
   handoff.AddEntropy(payload);
 
   ASSERT_FALSE(handoff.HasEnoughEntropy());
-  auto pool_or = std::move(handoff).Take(options);
+  auto pool_or = ktl::move(handoff).Take(options);
   ASSERT_FALSE(pool_or);
   END_TEST;
 }
@@ -84,7 +87,7 @@ bool ValidCmdlineItem() {
 
   // Check non-zero
   ASSERT_TRUE(handoff.HasEnoughEntropy());
-  auto pool_or = std::move(handoff).Take(options);
+  auto pool_or = ktl::move(handoff).Take(options);
   ASSERT_TRUE(pool_or);
   ASSERT_TRUE(memcmp(pool_or->contents().data(), zero_pool.contents().data(),
                      pool_or->contents().size()) != 0);
@@ -106,7 +109,7 @@ bool SmallCmdlineItem() {
     EXPECT_EQ(options.entropy_mixin.hex[i], 'x');
   }
   ASSERT_FALSE(handoff.HasEnoughEntropy());
-  auto pool_or = std::move(handoff).Take(options);
+  auto pool_or = ktl::move(handoff).Take(options);
   ASSERT_FALSE(pool_or);
   END_TEST;
 }

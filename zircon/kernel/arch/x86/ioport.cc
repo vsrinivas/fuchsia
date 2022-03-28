@@ -24,6 +24,8 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 void x86_reset_tss_io_bitmap(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   tss_t* tss = &x86_get_percpu()->default_tss;

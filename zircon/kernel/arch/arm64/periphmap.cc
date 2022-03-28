@@ -14,6 +14,8 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 #define PERIPH_RANGE_MAX 4
 
 typedef struct {
@@ -46,7 +48,7 @@ struct PeriphUtil {
   // Find the index (if any) of the peripheral range which contains the
   // (virt|phys) address <addr>
   static ktl::optional<uint32_t> LookupNdx(uint64_t addr) {
-    for (uint32_t i = 0; i < std::size(periph_ranges); ++i) {
+    for (uint32_t i = 0; i < ktl::size(periph_ranges); ++i) {
       const auto& range = periph_ranges[i];
       if (range.length == 0) {
         break;

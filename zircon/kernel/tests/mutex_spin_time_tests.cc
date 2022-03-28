@@ -19,6 +19,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 bool mutex_spin_time_test(void) {
   BEGIN_TEST;

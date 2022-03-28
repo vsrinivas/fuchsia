@@ -37,6 +37,8 @@
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 static constexpr uint64_t kLocalApicPhysBase =

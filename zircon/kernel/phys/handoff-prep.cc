@@ -21,6 +21,8 @@
 #include <phys/handoff.h>
 #include <phys/symbolize.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Carve out some physical pages requested for testing before handing off.

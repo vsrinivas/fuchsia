@@ -15,6 +15,8 @@
 
 #include "priv.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Split out the pager vmo creation flags between PageSource and VmObjectPaged flags.

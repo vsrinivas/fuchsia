@@ -19,6 +19,8 @@
 
 #include "legacy-boot.h"
 
+#include <ktl/enforce.h>
+
 LegacyBoot gLegacyBoot;
 
 // This populates the allocator and also collects other Multiboot information.

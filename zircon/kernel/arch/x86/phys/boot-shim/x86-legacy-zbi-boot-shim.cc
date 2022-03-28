@@ -21,6 +21,8 @@
 
 #include "legacy-mem-config.h"
 
+#include <ktl/enforce.h>
+
 // This a shim between a ZBI protocol boot loader using the old x86 protocol
 // and a bootable ZBI using the modern protocol.  It mostly just treats the
 // data ZBI as a whole bootable ZBI and boots it using the modern ZBI booting

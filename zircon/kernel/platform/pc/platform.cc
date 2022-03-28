@@ -25,6 +25,7 @@
 #include <phys/handoff.h>
 
 #include "platform_p.h"
+
 #if defined(WITH_KERNEL_PCIE)
 #include <dev/pcie_bus_driver.h>
 #endif
@@ -63,6 +64,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 

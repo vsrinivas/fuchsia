@@ -20,6 +20,8 @@
 #include "kernel-mapped-vmo.h"
 #include "private.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr ktl::string_view kVmoName = "data/zircon.elf.profraw";

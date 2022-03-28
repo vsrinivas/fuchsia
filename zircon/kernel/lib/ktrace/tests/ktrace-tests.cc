@@ -13,6 +13,8 @@
 #include <ktl/unique_ptr.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 namespace ktrace_tests {
 
 // A test version of KTraceState which overrides the ReportStaticNames and

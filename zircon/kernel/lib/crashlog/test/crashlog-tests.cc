@@ -11,6 +11,8 @@
 #include <ktl/string_view.h>
 #include <ktl/unique_ptr.h>
 
+#include <ktl/enforce.h>
+
 extern FILE gSerialFile;
 namespace {
 

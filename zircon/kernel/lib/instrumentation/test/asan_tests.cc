@@ -21,6 +21,8 @@
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 
+#include <ktl/enforce.h>
+
 #if __has_feature(address_sanitizer)
 
 #include "../asan/asan-internal.h"

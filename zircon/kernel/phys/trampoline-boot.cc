@@ -19,6 +19,8 @@
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
 
+#include <ktl/enforce.h>
+
 // This describes the "trampoline" area that is set up in some memory that's
 // safely out of the way: not part of this shim's own image, which might be
 // overwritten, and not part of the fixed-position kernel load image or reserve
@@ -88,7 +90,7 @@ class TrampolineBoot::Trampoline {
     // cleared, the D flag is cleared again and interrupts disabled for good
     // measure, before finally moving the ZBI pointer into place (%rsi) and
     // jumping to the entry point (%rbx).
-    const std::byte* code;
+    const ktl::byte* code;
     size_t size;
     __asm__(R"""(
 .code64

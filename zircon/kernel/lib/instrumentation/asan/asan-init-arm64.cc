@@ -28,6 +28,8 @@
 
 #include "asan-internal.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 KCOUNTER(asan_allocated_shadow_pages, "asan.allocated_shadow_pages")

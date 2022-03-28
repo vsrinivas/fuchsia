@@ -14,6 +14,8 @@
 
 #include "interrupt_manager.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 class FakeIoApic {

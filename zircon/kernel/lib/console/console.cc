@@ -24,6 +24,8 @@
 #include <ktl/unique_ptr.h>
 #include <lk/init.h>
 
+#include <ktl/enforce.h>
+
 #ifndef CONSOLE_ENABLE_HISTORY
 #define CONSOLE_ENABLE_HISTORY 1
 #endif

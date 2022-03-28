@@ -15,6 +15,8 @@
 #include <ram-crashlog/ram-crashlog.h>
 #include <vm/physmap.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 FILE NULL_FILE = FILE{[](void*, ktl::string_view str) -> int {
                         DEBUG_ASSERT(str.size() <= ktl::numeric_limits<int>::max());

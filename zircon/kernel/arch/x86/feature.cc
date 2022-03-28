@@ -31,6 +31,8 @@
 #include <ktl/iterator.h>
 #include <platform/pc/bootbyte.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
@@ -572,11 +574,10 @@ static const x86_microarch_config_t cannon_lake_config{
     .idle_prefer_hlt = false,
     .idle_states =
         {
-            .states = {
-                // TODO: Read exit_latency from IRTL registers
-                {.name = "C6", .mwait_hint = 0x20, .exit_latency = 120, .flushes_tlb = true },
-                X86_CSTATE_C1(0)
-            },
+            .states =
+                {// TODO: Read exit_latency from IRTL registers
+                 {.name = "C6", .mwait_hint = 0x20, .exit_latency = 120, .flushes_tlb = true},
+                 X86_CSTATE_C1(0)},
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };

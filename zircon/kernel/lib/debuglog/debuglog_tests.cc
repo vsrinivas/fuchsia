@@ -13,6 +13,8 @@
 
 #include "debuglog_internal.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 struct DLogOutputTest final : public DLog {
   AutounsignalEvent output;

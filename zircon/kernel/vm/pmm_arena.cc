@@ -24,6 +24,8 @@
 #include "pmm_node.h"
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // The maximum number of page runs examined while performing a contiguous allocation.

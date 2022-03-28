@@ -14,6 +14,8 @@
 #include <arch/x86/hwp.h>
 #include <ktl/optional.h>
 
+#include <ktl/enforce.h>
+
 namespace x86 {
 namespace {
 

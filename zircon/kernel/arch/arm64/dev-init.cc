@@ -23,6 +23,8 @@
 #include <ktl/variant.h>
 #include <phys/arch/arch-handoff.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Overloads to satisfy the degenerate 'no config present' case in

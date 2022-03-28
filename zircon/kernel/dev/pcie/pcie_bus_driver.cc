@@ -21,6 +21,8 @@
 #include <ktl/move.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 /* TODO(johngro) : figure this out someday.
  *
  * In theory, BARs which map PIO regions for devices are supposed to be able to

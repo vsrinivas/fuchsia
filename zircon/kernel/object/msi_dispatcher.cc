@@ -16,6 +16,8 @@
 #include <ktl/move.h>
 #include <object/msi_dispatcher.h>
 
+#include <ktl/enforce.h>
+
 KCOUNTER(msi_create_count, "msi.create")
 KCOUNTER(msi_destroy_count, "msi.destroy")
 

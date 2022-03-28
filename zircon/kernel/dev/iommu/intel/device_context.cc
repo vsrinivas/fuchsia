@@ -22,6 +22,8 @@
 #include "hw.h"
 #include "iommu_impl.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace intel_iommu {

@@ -16,6 +16,8 @@
 #include <phys/page-table.h>
 #include <phys/symbolize.h>
 
+#include <ktl/enforce.h>
+
 void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config,
                    ktl::optional<memalloc::Range> extra_special_range) {
   zbitl::ByteView zbi_storage = zbitl::StorageFromRawHeader(static_cast<zbi_header_t*>(zbi));

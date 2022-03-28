@@ -17,6 +17,8 @@
 #include <phys/stdio.h>
 #include <phys/uart.h>
 
+#include <ktl/enforce.h>
+
 void MapUart(page_table::AddressSpaceBuilderInterface& builder, memalloc::Pool& pool) {
   // Meets the signature expected of uart::BasicIoProvider's constructor.
   auto mapper = [&pool, &builder ](uint64_t uart_mmio_base) -> volatile void* {

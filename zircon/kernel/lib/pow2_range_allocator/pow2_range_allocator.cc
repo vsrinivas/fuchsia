@@ -17,6 +17,8 @@
 #include <kernel/lockdep.h>
 #include <ktl/move.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 ktl::unique_ptr<Pow2RangeAllocator::Block> Pow2RangeAllocator::GetUnusedBlock() {

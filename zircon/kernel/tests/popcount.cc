@@ -11,6 +11,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 bool popcount32_test() {

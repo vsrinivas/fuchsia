@@ -11,6 +11,8 @@
 
 #include "object/job_policy.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 static bool initial_state() {

@@ -18,6 +18,8 @@
 #include <platform/halt_helper.h>
 #include <platform/halt_token.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 DECLARE_SINGLETON_MUTEX(CriticalProcessNameLock);
@@ -77,7 +79,7 @@ RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* ro
 
 RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle,
                                  RootJobObserver::Callback callback)
-    : root_job_(ktl::move(root_job)), callback_(std::move(callback)) {
+    : root_job_(ktl::move(root_job)), callback_(ktl::move(callback)) {
   root_job_->AddObserver(this, root_job_handle, ZX_JOB_NO_CHILDREN);
 }
 

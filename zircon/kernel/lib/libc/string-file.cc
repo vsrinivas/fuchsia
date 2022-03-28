@@ -10,6 +10,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 int StringFile::Write(ktl::string_view str) {
   // Last element is reserved for '\0' character.
   if (!buffer_.empty()) {

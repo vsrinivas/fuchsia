@@ -24,6 +24,8 @@
 
 #include "priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 KCOUNTER(channel_msg_0_bytes, "channel.bytes.0")

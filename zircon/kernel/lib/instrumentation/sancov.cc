@@ -27,6 +27,8 @@ InstrumentationDataVmo SancovGetCountsVmo() { return {}; }
 
 #include "kernel-mapped-vmo.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // The sancov file format is trivial: magic number and array of PCs.

@@ -24,6 +24,8 @@
 
 #include "asan-internal.h"
 
+#include <ktl/enforce.h>
+
 KCOUNTER(asan_allocated_shadow_pages, "asan.allocated_shadow_pages")
 KCOUNTER(asan_allocated_shadow_page_tables, "asan.allocated_shadow_page_tables")
 

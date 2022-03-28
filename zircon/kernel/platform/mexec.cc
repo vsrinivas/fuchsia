@@ -26,6 +26,8 @@
 #include <phys/handoff.h>
 #include <vm/vm_object.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // TODO(fxbug.dev/84107): Later this will arrive in a whole page from the

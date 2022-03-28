@@ -32,6 +32,8 @@
 
 #include "debuglog_internal.h"
 
+#include <ktl/enforce.h>
+
 static_assert((DLOG_SIZE & DLOG_MASK) == 0u, "must be power of two");
 static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
 static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");

@@ -4,9 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <ktl/array.h>
 #include <lib/relaxed_atomic.h>
 #include <lib/unittest/unittest.h>
+
+#include <ktl/array.h>
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -68,8 +71,8 @@ bool UserTypeTest() {
 }  // namespace
 
 UNITTEST_START_TESTCASE(relaxed_atomic_tests)
-  UNITTEST("Primary type test", PrimaryTypeTest)
-  UNITTEST("Derived type test", DerivedTypeTest)
-  UNITTEST("User type test", UserTypeTest)
+UNITTEST("Primary type test", PrimaryTypeTest)
+UNITTEST("Derived type test", DerivedTypeTest)
+UNITTEST("User type test", UserTypeTest)
 UNITTEST_END_TESTCASE(relaxed_atomic_tests, "relaxed_atomic",
                       "Tests for the relaxed atomic wrapper.")

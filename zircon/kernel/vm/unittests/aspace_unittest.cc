@@ -7,10 +7,13 @@
 #include <lib/fit/defer.h>
 
 #include <ktl/initializer_list.h>
-#include <vm/vm_address_region_enumerator.h>
+#include <ktl/limits.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region_enumerator.h>
 
 #include "test_helper.h"
+
+#include <ktl/enforce.h>
 
 namespace vm_unittest {
 
@@ -1595,7 +1598,7 @@ static bool check_user_accessible_range_test(bool spectre_validation) {
 
   // Test very end of address space and zero length (this is invalid since the start has bit 55 set
   // despite zero length).
-  va = std::numeric_limits<uint64_t>::max();
+  va = ktl::numeric_limits<uint64_t>::max();
   len = 0;
   EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
@@ -1611,7 +1614,7 @@ static bool check_user_accessible_range_test(bool spectre_validation) {
 
   // Test overflow past 64 bits.
   va = USER_ASPACE_BASE;
-  len = std::numeric_limits<uint64_t>::max() - va + 1;
+  len = ktl::numeric_limits<uint64_t>::max() - va + 1;
   EXPECT_FALSE(check_user_accessible_range(va, len, spectre_validation));
 
 #if defined(__aarch64__)
@@ -1676,7 +1679,7 @@ static bool check_user_accessible_range_test(bool spectre_validation) {
   EXPECT_TRUE(check_user_accessible_range(va, len, spectre_validation));
 
   // Test the last valid user space address with a tag of 0.
-  va = std::numeric_limits<uint64_t>::max();
+  va = ktl::numeric_limits<uint64_t>::max();
   va &= ~(UINT64_C(0xFF) << 56);  // Set tag to zero.
   va &= ~kBadAddrMask;            // Ensure valid user address.
   len = 0;

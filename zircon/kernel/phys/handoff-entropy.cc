@@ -20,6 +20,8 @@
 #include <ktl/optional.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 void EntropyHandoff::AddEntropy(ktl::span<ktl::byte> payload) {
   if (payload.size() < crypto::kMinEntropyBytes) {
     fprintf(log_, "ZBI_TYPE_SECURE_ENTROPY too small: %zu < %zu\n", payload.size(),

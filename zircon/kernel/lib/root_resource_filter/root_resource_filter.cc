@@ -18,6 +18,8 @@
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 KCOUNTER(resource_ranges_denied, "resource.denied_ranges")

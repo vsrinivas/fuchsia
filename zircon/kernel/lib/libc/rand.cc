@@ -9,6 +9,8 @@
 
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 template <size_t = sizeof(uintptr_t)>

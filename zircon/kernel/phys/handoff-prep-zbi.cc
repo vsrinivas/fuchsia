@@ -25,6 +25,8 @@
 #include "handoff-entropy.h"
 #include "handoff-prep.h"
 
+#include <ktl/enforce.h>
+
 void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
   // TODO(fxbug.dev/84107): The data ZBI is still inspected by the kernel
   // proper until migrations are complete, so this communicates the physical
@@ -169,7 +171,7 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
 
   // Depending on certain boot options, failure to meet entropy requirements may cause
   // the program to abort after this point.
-  handoff_->entropy_pool = std::move(entropy).Take(*gBootOptions);
+  handoff_->entropy_pool = ktl::move(entropy).Take(*gBootOptions);
 
   // At this point we should have full confidence that the ZBI is properly
   // formatted.

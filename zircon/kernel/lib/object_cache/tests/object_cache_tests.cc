@@ -23,6 +23,8 @@
 #include <ktl/move.h>
 #include <ktl/optional.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using object_cache::DefaultAllocator;

@@ -9,6 +9,8 @@
 #include <kernel/mp.h>
 #include <ktl/type_traits.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 struct SeqLockWrapper {

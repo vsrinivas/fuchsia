@@ -12,6 +12,8 @@
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
 
+#include <ktl/enforce.h>
+
 KCOUNTER(dispatcher_stream_create_count, "dispatcher.stream.create")
 KCOUNTER(dispatcher_stream_destroy_count, "dispatcher.stream.destroy")
 

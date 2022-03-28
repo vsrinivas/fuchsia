@@ -43,6 +43,8 @@
 
 #include "memory.h"
 
+#include <ktl/enforce.h>
+
 // Hardware details of the system's debug port.
 struct DebugPort {
   enum class Type {

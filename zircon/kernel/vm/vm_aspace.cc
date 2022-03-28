@@ -39,6 +39,8 @@
 
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 #define GUEST_PHYSICAL_ASPACE_BASE 0UL

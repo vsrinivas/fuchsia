@@ -31,6 +31,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
+#include <ktl/enforce.h>
+
 #if defined(__x86_64__)
 #include <arch/x86/feature.h>
 #endif

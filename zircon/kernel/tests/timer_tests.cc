@@ -31,6 +31,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 static void timer_diag_cb(Timer* timer, zx_time_t now, void* arg) {
   Event* event = (Event*)arg;
   event->Signal();

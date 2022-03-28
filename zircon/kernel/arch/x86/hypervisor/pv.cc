@@ -17,6 +17,8 @@
 
 #include "pv_priv.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {

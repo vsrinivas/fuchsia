@@ -29,6 +29,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 const size_t BUFSIZE = (512 * 1024);  // must be smaller than max allowed heap allocation
 const size_t ITER =
     (1UL * 1024 * 1024 * 1024 / BUFSIZE);  // enough iterations to have to copy/set 1GB of memory

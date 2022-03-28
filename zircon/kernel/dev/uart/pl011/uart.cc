@@ -26,6 +26,8 @@
 #include <pdev/uart.h>
 #include <platform/debug.h>
 
+#include <ktl/enforce.h>
+
 // PL011 implementation
 
 // clang-format off

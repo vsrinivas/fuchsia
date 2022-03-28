@@ -17,6 +17,8 @@
 #include <phys/stdio.h>
 #include <phys/uart.h>
 
+#include <ktl/enforce.h>
+
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Apply any relocations required to ourself.
   ApplyRelocations();

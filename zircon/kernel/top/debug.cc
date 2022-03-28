@@ -25,6 +25,8 @@
 #include <ktl/algorithm.h>
 #include <platform/debug.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Start a system panic, and print a header message.

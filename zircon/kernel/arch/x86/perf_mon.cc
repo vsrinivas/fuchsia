@@ -66,6 +66,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 static void x86_perfmon_reset_task(void* raw_context);
@@ -1705,7 +1707,7 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
   auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(hdr);
   auto num_entries = perfmon_lbr_stack_size;
   static_assert(perfmon::LastBranchRecord::kMaxNumLastBranch ==
-                std::size(perfmon::LastBranchRecord{}.branches));
+                ktl::size(perfmon::LastBranchRecord{}.branches));
   DEBUG_ASSERT(num_entries > 0 && num_entries <= perfmon::LastBranchRecord::kMaxNumLastBranch);
   arch_perfmon_write_header(&rec->header, perfmon::kRecordTypeLastBranch, id);
   rec->num_branches = num_entries;

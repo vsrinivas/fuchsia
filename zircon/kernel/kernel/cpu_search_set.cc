@@ -17,6 +17,8 @@
 #include <ktl/span.h>
 #include <ktl/unique_ptr.h>
 
+#include <ktl/enforce.h>
+
 CpuSearchSet::ClusterSet CpuSearchSet::cluster_set_;
 
 namespace {

@@ -11,6 +11,8 @@
 #include <fbl/alloc_checker.h>
 #include <ktl/move.h>
 
+#include <ktl/enforce.h>
+
 // Yet another allocation interface.
 fitx::result<ktl::string_view, Allocation> ZbitlScratchAllocator(size_t size) {
   fbl::AllocChecker ac;

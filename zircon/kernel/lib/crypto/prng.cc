@@ -17,8 +17,11 @@
 #include <explicit-memory/bytes.h>
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
+#include <ktl/move.h>
 #include <openssl/chacha.h>
 #include <openssl/sha.h>
+
+#include <ktl/enforce.h>
 
 namespace crypto {
 namespace {
@@ -58,7 +61,7 @@ void Prng::AddEntropy(const void* data, size_t size) {
 
   {
     Guard<SpinLock, IrqSave> pool_guard(&pool_lock_);
-    pool_ = std::move(pool);
+    pool_ = ktl::move(pool);
   }
 
   // Increment how much entropy has been added, and signal if we have enough.

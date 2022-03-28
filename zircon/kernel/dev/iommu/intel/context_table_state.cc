@@ -15,6 +15,8 @@
 #include "hw.h"
 #include "iommu_impl.h"
 
+#include <ktl/enforce.h>
+
 namespace intel_iommu {
 
 ContextTableState::ContextTableState(uint8_t bus, bool extended, bool upper, IommuImpl* parent,

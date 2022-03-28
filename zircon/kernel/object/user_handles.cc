@@ -8,6 +8,8 @@
 
 #include <ktl/algorithm.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 // Basic checks for a |handle| to be able to be sent via |channel|.
 static zx_status_t handle_checks_locked(const Handle* handle, const Dispatcher* channel,

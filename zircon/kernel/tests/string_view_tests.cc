@@ -10,6 +10,8 @@
 #include <ktl/limits.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 bool CreateFromCArray() {

@@ -11,6 +11,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 static bool alloc_checker_ctor() {
   BEGIN_TEST;
 

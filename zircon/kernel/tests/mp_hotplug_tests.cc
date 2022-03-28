@@ -17,6 +17,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 static int resume_cpu_test_thread(void* arg) {
   *reinterpret_cast<cpu_num_t*>(arg) = arch_curr_cpu_num();
   return 0;

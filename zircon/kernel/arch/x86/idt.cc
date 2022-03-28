@@ -22,6 +22,8 @@
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 // The size of the `clac` instruction
 #define CLAC_SIZE 3
 

@@ -13,6 +13,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 #ifndef _KERNEL
 using ssize_t = ptrdiff_t;
 #endif

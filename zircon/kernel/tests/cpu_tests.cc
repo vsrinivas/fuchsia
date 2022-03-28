@@ -12,6 +12,8 @@
 #include <kernel/cpu.h>
 #include <ktl/bit.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 bool remove_cpu_from_mask_test() {

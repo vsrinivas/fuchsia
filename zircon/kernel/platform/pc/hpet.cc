@@ -23,6 +23,8 @@
 #include <platform/pc/hpet.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 struct hpet_timer_registers {
   volatile uint64_t conf_caps;
   volatile uint64_t comparator_value;

@@ -12,6 +12,8 @@
 #include <ktl/move.h>
 #include <vm/page_source.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 PageSource::PageSource(fbl::RefPtr<PageProvider>&& page_provider)

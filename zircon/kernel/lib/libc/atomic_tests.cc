@@ -8,6 +8,8 @@
 
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 // Verify that 16b atomics are unconditionally supported, regardless of compiler intrinsic support.
 // See atomic.cc for details on 'polyfills'.
 namespace {

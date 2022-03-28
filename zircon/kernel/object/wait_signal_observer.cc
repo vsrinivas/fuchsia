@@ -13,6 +13,8 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 
+#include <ktl/enforce.h>
+
 WaitSignalObserver::~WaitSignalObserver() { DEBUG_ASSERT(!dispatcher_); }
 
 zx_status_t WaitSignalObserver::Begin(Event* event, Handle* handle, zx_signals_t watched_signals) {

@@ -34,6 +34,8 @@
 
 #include "platform_p.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // These are used to track memory arenas found during boot so they can

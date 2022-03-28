@@ -23,6 +23,8 @@
 #include <object/process_dispatcher.h>
 #include <object/root_job_observer.h>
 
+#include <ktl/enforce.h>
+
 KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create")
 KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy")
 

@@ -21,6 +21,8 @@
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 /* address widths from mmu.c */
 extern uint8_t g_paddr_width;
 

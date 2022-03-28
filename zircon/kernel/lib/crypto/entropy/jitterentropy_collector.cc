@@ -11,6 +11,8 @@
 
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 #ifndef JITTERENTROPY_MEM_SIZE
 #define JITTERENTROPY_MEM_SIZE (64u * 1024u)
 #endif

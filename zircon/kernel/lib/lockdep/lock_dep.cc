@@ -22,6 +22,8 @@
 #include <lockdep/lockdep.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 #if WITH_LOCK_DEP
 
 namespace {

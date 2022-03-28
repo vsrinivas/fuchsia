@@ -28,6 +28,8 @@
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace {  // namespace.  Externals do not need to know about PcieDeviceImpl

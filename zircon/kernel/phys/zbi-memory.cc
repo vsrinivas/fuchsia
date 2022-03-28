@@ -13,6 +13,8 @@
 #include <ktl/span.h>
 #include <phys/main.h>
 
+#include <ktl/enforce.h>
+
 void InitMemory(void* zbi) {
   ktl::span<zbi_mem_range_t> zbi_ranges;
   ktl::optional<memalloc::Range> nvram_range;

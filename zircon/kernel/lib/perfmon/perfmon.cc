@@ -16,8 +16,11 @@
 // "event", but some events are not counters. Internally, we use the
 // term "counter" when we know the event is a counter.
 
-#include <ktl/atomic.h>
 #include <lib/perfmon.h>
+
+#include <ktl/atomic.h>
+
+#include <ktl/enforce.h>
 
 bool perfmon_supported = false;
 

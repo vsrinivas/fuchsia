@@ -13,8 +13,11 @@
 #include <ktl/bit.h>
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
+#include <ktl/type_traits.h>
 
 #include "persistent-debuglog-internal.h"
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -23,7 +26,7 @@ class PersistentDebuglogGlobals {
  public:
   void init_early() {
     auto foo = sizeof(storage_);
-    static_assert(std::is_same_v<decltype(foo), size_t>);
+    static_assert(ktl::is_same_v<decltype(foo), size_t>);
     static_assert(static_cast<size_t>(sizeof(storage_)) <= ktl::numeric_limits<uint32_t>::max());
     static_assert(sizeof(storage_) <= static_cast<size_t>(ktl::numeric_limits<uint32_t>::max()));
     static_assert(static_cast<size_t>(sizeof(storage_)) <=

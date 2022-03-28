@@ -22,6 +22,8 @@
 #include <lib/backtrace/global_cpu_context_exchange.h>
 #endif
 
+#include <ktl/enforce.h>
+
 namespace lockup_internal {
 
 #if defined(__aarch64__)

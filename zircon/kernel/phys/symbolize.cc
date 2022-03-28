@@ -18,6 +18,8 @@
 #include <phys/stack.h>
 #include <pretty/hexdump.h>
 
+#include <ktl/enforce.h>
+
 // The zx_*_t types used in the exception stuff aren't defined for 32-bit.
 // There is no exception handling implementation for 32-bit.
 #ifndef __i386__

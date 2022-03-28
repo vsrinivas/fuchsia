@@ -25,6 +25,8 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 #define memlim_logf(...)            \
   if (MemoryLimitDbg) {             \
     printf("memlim: " __VA_ARGS__); \

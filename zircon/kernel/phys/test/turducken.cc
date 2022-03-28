@@ -22,6 +22,8 @@
 #include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
 
+#include <ktl/enforce.h>
+
 #ifdef __x86_64__
 
 #include <phys/trampoline-boot.h>

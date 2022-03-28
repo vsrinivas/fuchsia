@@ -44,6 +44,8 @@
 
 #include "platform_p.h"
 
+#include <ktl/enforce.h>
+
 extern "C" {
 
 // Samples taken at the first instruction in the kernel.

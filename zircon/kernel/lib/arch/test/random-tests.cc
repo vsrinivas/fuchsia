@@ -9,6 +9,8 @@
 
 #include <ktl/type_traits.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 template <bool Reseeded>

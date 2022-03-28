@@ -16,6 +16,8 @@
 #include <ktl/type_traits.h>
 #include <ktl/variant.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 struct no_copy {

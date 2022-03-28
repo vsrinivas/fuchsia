@@ -27,6 +27,8 @@
 
 #include "arch/x86/mp.h"
 
+#include <ktl/enforce.h>
+
 void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus) {
   DEBUG_ASSERT(num_cpus <= UINT8_MAX);
   zx_status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);

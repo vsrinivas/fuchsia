@@ -20,6 +20,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 #if WITH_LOCK_DEP_TESTS
 
 // Defined in kernel/lib/lockdep.

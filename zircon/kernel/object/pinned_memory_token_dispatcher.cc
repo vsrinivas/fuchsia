@@ -23,6 +23,8 @@
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 KCOUNTER(dispatcher_pinned_memory_token_create_count, "dispatcher.pinned_memory_token.create")

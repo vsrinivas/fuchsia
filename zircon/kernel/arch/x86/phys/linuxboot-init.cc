@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <zircon/boot/image.h>
 
+#include <ktl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <phys/main.h>
@@ -15,6 +16,8 @@
 
 #include "legacy-boot.h"
 #include "linuxboot.h"
+
+#include <ktl/enforce.h>
 
 namespace {
 
@@ -55,7 +58,7 @@ void PopulateMemRages(const linuxboot::boot_params& bp) {
   }
   ktl::span e820{
       bp.e820_table,
-      std::min(static_cast<size_t>(bp.e820_entries), ktl::size(bp.e820_table)),
+      ktl::min(static_cast<size_t>(bp.e820_entries), ktl::size(bp.e820_table)),
   };
 
   // Translate the entries directly.

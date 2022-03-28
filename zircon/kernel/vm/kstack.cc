@@ -24,6 +24,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace {

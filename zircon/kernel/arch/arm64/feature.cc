@@ -15,6 +15,8 @@
 #include <kernel/cpu.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 // saved feature bitmap
 uint32_t arm64_isa_features;
 

@@ -23,6 +23,8 @@
 
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // add expensive code to do a full validation of the VMO at various points.
@@ -674,10 +676,10 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
     // to be added prior to creation.
 
     fbl::RefPtr<VmCowPages> left_child =
-        NewVmCowPages(std::move(left_child_placeholder), hierarchy_state_ptr_,
+        NewVmCowPages(ktl::move(left_child_placeholder), hierarchy_state_ptr_,
                       VmCowPagesOptions::kNone, pmm_alloc_flags_, size_, nullptr);
     fbl::RefPtr<VmCowPages> right_child =
-        NewVmCowPages(std::move(right_child_placeholder), hierarchy_state_ptr_,
+        NewVmCowPages(ktl::move(right_child_placeholder), hierarchy_state_ptr_,
                       VmCowPagesOptions::kNone, pmm_alloc_flags_, size, nullptr);
 
     AssertHeld(left_child->lock_ref());

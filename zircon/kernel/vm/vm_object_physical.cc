@@ -22,6 +22,8 @@
 
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<VmHierarchyState> state, paddr_t base, uint64_t size,

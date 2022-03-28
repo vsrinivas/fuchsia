@@ -19,6 +19,8 @@
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
 
+#include <ktl/enforce.h>
+
 class PreemptDisableTestAccess {
  public:
   struct State {

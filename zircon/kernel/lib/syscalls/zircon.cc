@@ -36,6 +36,8 @@
 
 #include "priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 KCOUNTER(syscalls_zx_ticks_get, "syscalls.zx_ticks_get")

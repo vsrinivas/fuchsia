@@ -33,6 +33,8 @@
 #include "interrupt_manager.h"
 #include "platform_p.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Values from ioapic to cache for calls to interrupt_get_base_vector / interrupt_get_max_vector

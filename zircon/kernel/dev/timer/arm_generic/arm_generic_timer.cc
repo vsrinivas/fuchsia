@@ -32,6 +32,8 @@
 #include <platform/boot_timestamps.h>
 #include <platform/timer.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // AArch64 timer control registers

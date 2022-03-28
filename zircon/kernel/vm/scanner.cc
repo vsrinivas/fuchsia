@@ -22,6 +22,8 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 constexpr uint32_t kScannerFlagPrint = 1u << 0;

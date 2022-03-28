@@ -38,6 +38,8 @@
 
 #include "arch/arm64.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // Counter-timer Kernel Control Register, EL1.

@@ -12,6 +12,8 @@
 
 #include "object/message_packet.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using testing::UserMemory;

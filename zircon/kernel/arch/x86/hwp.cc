@@ -24,6 +24,8 @@
 #include <ktl/optional.h>
 #include <ktl/string_view.h>
 
+#include <ktl/enforce.h>
+
 DECLARE_SINGLETON_MUTEX(hwp_lock);
 
 namespace x86 {
@@ -218,7 +220,7 @@ zx_status_t CmdSetPolicy(int argc, const cmd_args* argv, uint32_t flags) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::optional<IntelHwpPolicy> policy = IntelHwpParsePolicy(argv[0].str);
+  ktl::optional<IntelHwpPolicy> policy = IntelHwpParsePolicy(argv[0].str);
   if (!policy.has_value()) {
     printf("Unknown policy '%s'.\n", argv[0].str);
     return ZX_ERR_INVALID_ARGS;
@@ -227,7 +229,7 @@ zx_status_t CmdSetPolicy(int argc, const cmd_args* argv, uint32_t flags) {
   mp_sync_exec(
       MP_IPI_TARGET_ALL, 0,
       [](void* policy_ptr) {
-        auto policy = reinterpret_cast<std::optional<IntelHwpPolicy>*>(policy_ptr)->value();
+        auto policy = reinterpret_cast<ktl::optional<IntelHwpPolicy>*>(policy_ptr)->value();
         cpu_id::CpuId cpuid;
         MsrAccess msr;
         IntelHwpInit(&cpuid, &msr, policy);
@@ -280,7 +282,7 @@ zx_status_t CmdHwp(int argc, const cmd_args* argv, uint32_t flags) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::string_view subcommand(argv[1].str);
+  ktl::string_view subcommand(argv[1].str);
   if (subcommand == "set-policy"sv) {
     return CmdSetPolicy(argc - 2, argv + 2, flags);
   }

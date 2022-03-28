@@ -15,6 +15,8 @@
 #include <ktl/algorithm.h>
 #include <lk/init.h>
 
+#include <ktl/enforce.h>
+
 enum entropy_instr {
   ENTROPY_INSTR_RDSEED,
   ENTROPY_INSTR_RDRAND,

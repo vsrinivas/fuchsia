@@ -15,6 +15,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 template <typename JobCallbackType>

@@ -21,6 +21,8 @@
 
 #include "dev/pcie_irqs.h"
 
+#include <ktl/enforce.h>
+
 class PcieDebugConsole {
  public:
   static int CmdLsPci(int argc, const cmd_args* argv, uint32_t flags);

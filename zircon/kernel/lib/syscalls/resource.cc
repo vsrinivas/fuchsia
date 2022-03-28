@@ -18,6 +18,8 @@
 
 #include "priv.h"
 
+#include <ktl/enforce.h>
+
 // Create a new resource, child of the provided resource.
 // On success, a new resource is created and handle is returned
 // in |resource_out|.

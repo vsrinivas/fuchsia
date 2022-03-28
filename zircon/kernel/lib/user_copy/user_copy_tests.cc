@@ -20,6 +20,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using testing::UserMemory;
@@ -238,7 +240,7 @@ bool test_addresses_outside_user_range(bool capture_faults) {
       user_in_ptr<const uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
       if (capture_faults) {
-        auto ret = user.copy_array_from_user_capture_faults(test_buffer, std::size(test_buffer), 0);
+        auto ret = user.copy_array_from_user_capture_faults(test_buffer, ktl::size(test_buffer), 0);
         EXPECT_EQ(test_case.expected_status, ret.status);
         if (ret.status == ZX_OK) {
           EXPECT_FALSE(ret.fault_info.has_value());
@@ -248,7 +250,7 @@ bool test_addresses_outside_user_range(bool capture_faults) {
           EXPECT_EQ(ret.fault_info->pf_va, test_addr, "Page faulted on the user address");
         }
       } else {
-        auto ret = user.copy_array_from_user(test_buffer, std::size(test_buffer));
+        auto ret = user.copy_array_from_user(test_buffer, ktl::size(test_buffer));
         EXPECT_EQ(test_case.expected_status, ret);
       }
     }
@@ -257,7 +259,7 @@ bool test_addresses_outside_user_range(bool capture_faults) {
       user_out_ptr<uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
       if (capture_faults) {
-        auto ret = user.copy_array_to_user_capture_faults(test_buffer, std::size(test_buffer), 0);
+        auto ret = user.copy_array_to_user_capture_faults(test_buffer, ktl::size(test_buffer), 0);
         EXPECT_EQ(test_case.expected_status, ret.status);
         if (ret.status == ZX_OK) {
           EXPECT_FALSE(ret.fault_info.has_value());
@@ -267,7 +269,7 @@ bool test_addresses_outside_user_range(bool capture_faults) {
           EXPECT_EQ(ret.fault_info->pf_va, test_addr, "Page faulted on the user address");
         }
       } else {
-        auto ret = user.copy_array_to_user(test_buffer, std::size(test_buffer));
+        auto ret = user.copy_array_to_user(test_buffer, ktl::size(test_buffer));
         EXPECT_EQ(test_case.expected_status, ret);
       }
     }

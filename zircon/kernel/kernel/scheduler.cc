@@ -39,6 +39,8 @@
 #include <object/thread_dispatcher.h>
 #include <vm/vm.h>
 
+#include <ktl/enforce.h>
+
 using ffl::FromRatio;
 using ffl::Round;
 

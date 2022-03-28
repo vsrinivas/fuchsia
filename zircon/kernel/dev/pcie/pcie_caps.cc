@@ -18,6 +18,8 @@
 #include <fbl/alloc_checker.h>
 #include <ktl/iterator.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 /*

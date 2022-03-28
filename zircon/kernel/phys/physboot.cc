@@ -26,6 +26,8 @@
 
 #include "handoff-prep.h"
 
+#include <ktl/enforce.h>
+
 #ifdef __x86_64__
 #include <phys/trampoline-boot.h>
 

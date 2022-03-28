@@ -22,6 +22,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;

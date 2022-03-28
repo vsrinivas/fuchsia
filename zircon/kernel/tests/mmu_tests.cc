@@ -16,6 +16,8 @@
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 #ifdef __x86_64__
 #include <arch/x86/mmu.h>
 #define PGTABLE_L1_SHIFT PDP_SHIFT

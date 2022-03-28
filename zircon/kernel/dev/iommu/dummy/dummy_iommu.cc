@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <new>
 
@@ -13,8 +15,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <vm/vm.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
+
+#include <ktl/enforce.h>
 
 #define INVALID_PADDR UINT64_MAX
 

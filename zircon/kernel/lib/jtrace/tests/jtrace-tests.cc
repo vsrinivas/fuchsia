@@ -16,6 +16,8 @@
 
 #include "../jtrace_internal.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 using ::jtrace::IsPersistent;
@@ -236,7 +238,7 @@ using CfgPersistSmallEntries = jtrace::Config<1024, 0, IsPersistent::Yes, UseLar
 // similar to how the JTRACE macro does.  Used in the tests::entries test.
 static constexpr const char* EXPECTED_MAKE_ENTRY_FUNCTION = "make_entry_function()";
 #define MAKE_ENTRY(flavor, tag, ...)                                               \
-  [&]() -> auto {                                                                  \
+  [&]() -> auto{                                                                   \
     static constexpr ::jtrace::internal::FileFuncLineInfo ffl_info = {             \
         .file = __FILE__, .func = EXPECTED_MAKE_ENTRY_FUNCTION, .line = __LINE__}; \
     return ::jtrace::Entry<flavor>{tag, &ffl_info, ##__VA_ARGS__};                 \

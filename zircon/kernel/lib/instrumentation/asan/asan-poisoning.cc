@@ -17,6 +17,8 @@
 
 #include "asan-internal.h"
 
+#include <ktl/enforce.h>
+
 ktl::atomic<bool> g_asan_initialized;
 
 namespace {

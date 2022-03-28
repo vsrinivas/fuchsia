@@ -18,8 +18,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <new>
-
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
@@ -27,11 +25,14 @@
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
 #include <ktl/byte.h>
+#include <ktl/move.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <lk/init.h>
 #include <openssl/sha.h>
 #include <phys/handoff.h>
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 
@@ -98,7 +99,7 @@ void EarlyBootSeed(uint level) {
   ZX_ASSERT(!gBootOptions->cprng_seed_require_cmdline || gPhysHandoff->entropy_pool.has_value());
   if (gPhysHandoff->entropy_pool) {
     // |pool|'s destructor will wipe the stack.
-    auto pool = std::move(gPhysHandoff->entropy_pool.value());
+    auto pool = ktl::move(gPhysHandoff->entropy_pool.value());
     g_prng_instance->AddEntropy(pool.contents().data(), pool.contents().size());
     successful++;
   }

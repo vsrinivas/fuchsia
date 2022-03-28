@@ -31,6 +31,8 @@
 #include <ktl/bit.h>
 #include <ktl/unique_ptr.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // Wait for condition |cond| to become true, polling with slow exponential backoff

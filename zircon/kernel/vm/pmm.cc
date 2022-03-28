@@ -41,6 +41,8 @@
 #include "pmm_node.h"
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // Number of bytes available in the PMM after kernel init, but before userspace init.

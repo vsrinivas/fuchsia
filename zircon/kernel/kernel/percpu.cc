@@ -21,6 +21,8 @@
 #include <lk/init.h>
 #include <lockdep/lockdep.h>
 
+#include <ktl/enforce.h>
+
 decltype(percpu::boot_processor_) percpu::boot_processor_{};
 percpu* percpu::secondary_processors_{nullptr};
 

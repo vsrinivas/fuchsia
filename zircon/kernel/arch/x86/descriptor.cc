@@ -29,6 +29,8 @@
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 
+#include <ktl/enforce.h>
+
 #define TSS_DESC_BUSY_BIT (1ull << 41)
 
 /* Temporary GDT defined in assembly is used during AP/BP setup process */

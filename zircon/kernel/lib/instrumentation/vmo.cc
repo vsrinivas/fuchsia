@@ -17,6 +17,8 @@
 
 #include "private.h"
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // This object facilitates doing fprintf directly into the VMO representing

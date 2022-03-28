@@ -18,6 +18,8 @@
 #include <kernel/spinlock.h>
 #include <ktl/bit.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // This should only be called once to initialize the Cbuf, and so thread safety analysis is

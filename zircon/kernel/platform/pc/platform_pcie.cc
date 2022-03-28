@@ -23,6 +23,8 @@
 #include <lk/init.h>
 #include <phys/handoff.h>
 
+#include <ktl/enforce.h>
+
 class X86PciePlatformSupport : public PciePlatformInterface {
  public:
   X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) {}

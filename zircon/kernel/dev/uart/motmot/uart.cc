@@ -26,6 +26,8 @@
 #include <pdev/uart.h>
 #include <platform/debug.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 // Motmot implementation

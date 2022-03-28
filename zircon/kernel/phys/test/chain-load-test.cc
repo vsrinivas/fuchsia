@@ -9,6 +9,8 @@
 
 #include "turducken.h"
 
+#include <ktl/enforce.h>
+
 const char Symbolize::kProgramName_[] = "chain-load-test";
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {

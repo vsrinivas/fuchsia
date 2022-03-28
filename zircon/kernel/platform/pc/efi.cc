@@ -10,6 +10,8 @@
 #include <platform/pc/efi.h>
 #include <vm/vm_aspace.h>
 
+#include <ktl/enforce.h>
+
 namespace {
 
 // EFI system table physical address.

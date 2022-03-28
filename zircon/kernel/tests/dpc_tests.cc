@@ -19,6 +19,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 struct event_signal_from_dpc_context {
   Dpc dpc;
   Event event;

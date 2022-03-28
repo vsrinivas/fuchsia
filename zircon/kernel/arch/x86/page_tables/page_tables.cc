@@ -20,6 +20,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 namespace {

@@ -35,6 +35,8 @@
 
 #include "vm_priv.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // boot time allocated page full of zeros
@@ -105,7 +107,9 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
   // mark all of the pages we allocated as WIRED
   vm_page_t* p;
-  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(vm_page_state::WIRED); }
+  list_for_every_entry (&list, p, vm_page_t, queue_node) {
+    p->set_state(vm_page_state::WIRED);
+  }
 }
 
 }  // namespace
@@ -236,7 +240,9 @@ void vm_init_preheap() {
   status = pmm_alloc_pages(page_count, 0, &list);
   DEBUG_ASSERT(status == ZX_OK);
   vm_page_t* page;
-  list_for_every_entry (&list, page, vm_page, queue_node) { page->set_state(vm_page_state::WIRED); }
+  list_for_every_entry (&list, page, vm_page, queue_node) {
+    page->set_state(vm_page_state::WIRED);
+  }
   LTRACEF("physical mapping padding page count %#" PRIxPTR "\n", page_count);
 #endif
 

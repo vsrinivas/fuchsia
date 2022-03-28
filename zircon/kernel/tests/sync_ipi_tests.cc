@@ -22,6 +22,8 @@
 
 #include "tests.h"
 
+#include <ktl/enforce.h>
+
 #define LOCAL_TRACE 0
 
 #define TEST_RUNS 1000
