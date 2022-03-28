@@ -23,27 +23,27 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint8_t vmid;
-  zx_status_t status = alloc_vmid(&vmid);
-  if (status != ZX_OK) {
-    return status;
+  auto vmid = alloc_vmid();
+  if (vmid.is_error()) {
+    return vmid.status_value();
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
+  ktl::unique_ptr<Guest> guest(new (&ac) Guest(*vmid));
   if (!ac.check()) {
-    free_vmid(vmid);
+    auto result = free_vmid(*vmid);
+    ZX_ASSERT(result.is_ok());
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid);
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(*vmid);
   if (gpas.is_error()) {
     return gpas.status_value();
   }
   guest->gpas_ = ktl::move(*gpas);
 
   zx_paddr_t gicv_paddr;
-  status = gic_get_gicv(&gicv_paddr);
+  zx_status_t status = gic_get_gicv(&gicv_paddr);
 
   // If `status` is ZX_OK, we are running GICv2. We then need to map GICV.
   // If `status is ZX_ERR_NOT_FOUND, we are running GICv3.
@@ -61,9 +61,12 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   return ZX_OK;
 }
 
-Guest::Guest(uint8_t vmid) : vmid_(vmid) {}
+Guest::Guest(uint16_t vmid) : vmid_(vmid) {}
 
-Guest::~Guest() { free_vmid(vmid_); }
+Guest::~Guest() {
+  auto result = free_vmid(vmid_);
+  ZX_ASSERT(result.is_ok());
+}
 
 zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                            fbl::RefPtr<PortDispatcher> port, uint64_t key) {
@@ -91,14 +94,4 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
     return result.status_value();
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
-}
-
-zx_status_t Guest::AllocVpid(uint8_t* vpid) {
-  Guard<Mutex> lock{&vcpu_mutex_};
-  return vpid_allocator_.AllocId(vpid);
-}
-
-zx_status_t Guest::FreeVpid(uint8_t vpid) {
-  Guard<Mutex> lock{&vcpu_mutex_};
-  return vpid_allocator_.FreeId(vpid);
 }

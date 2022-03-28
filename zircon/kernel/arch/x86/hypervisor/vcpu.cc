@@ -742,12 +742,14 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint16_t vpid;
-  zx_status_t status = guest->AllocVpid(&vpid);
-  if (status != ZX_OK) {
-    return status;
+  auto vpid = guest->AllocVpid();
+  if (vpid.is_error()) {
+    return vpid.status_value();
   }
-  auto free_vpid = fit::defer([guest, vpid]() { guest->FreeVpid(vpid); });
+  auto free_vpid = fit::defer([guest, vpid]() {
+    auto result = guest->FreeVpid(*vpid);
+    DEBUG_ASSERT(result.is_ok());
+  });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
@@ -755,7 +757,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
+  ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, *vpid, thread));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -766,7 +768,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
                                         : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
   VmxInfo vmx_info;
-  status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
+  zx_status_t status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
   if (status != ZX_OK) {
     return status;
   }
@@ -805,7 +807,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   zx_paddr_t pml4_address = gpas->arch_table_phys();
   status =
-      vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
+      vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), *vpid, entry, guest->MsrBitmapsAddress(),
                 pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
   if (status != ZX_OK) {
     return status;
@@ -857,8 +859,8 @@ Vcpu::~Vcpu() {
         reinterpret_cast<void*>(paddr));
   }
 
-  __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
-  DEBUG_ASSERT(status == ZX_OK);
+  auto result = guest_->FreeVpid(vpid_);
+  DEBUG_ASSERT(result.is_ok());
 }
 
 void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {

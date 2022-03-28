@@ -47,11 +47,11 @@ class El2CpuState {
   ~El2CpuState();
 
   // Allocate/free a VMID.
-  zx_status_t AllocVmid(uint8_t* vmid);
-  zx_status_t FreeVmid(uint8_t vmid);
+  zx::status<uint16_t> AllocVmid();
+  zx::status<> FreeVmid(uint16_t vmid);
 
  private:
-  hypervisor::IdAllocator<uint8_t, 64> id_allocator_;
+  hypervisor::IdAllocator<uint16_t, 64> id_allocator_;
   cpu_mask_t cpu_mask_ = 0;
   El2TranslationTable table_;
   fbl::Array<El2Stack> stacks_;
@@ -62,7 +62,7 @@ class El2CpuState {
 };
 
 // Allocate and free virtual machine IDs.
-zx_status_t alloc_vmid(uint8_t* vmid);
-zx_status_t free_vmid(uint8_t vmid);
+zx::status<uint16_t> alloc_vmid();
+zx::status<> free_vmid(uint16_t vmid);
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_

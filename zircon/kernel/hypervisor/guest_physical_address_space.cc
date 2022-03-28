@@ -37,7 +37,7 @@ namespace hypervisor {
 
 zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create(
 #if ARCH_ARM64
-    uint8_t vmid
+    uint16_t vmid
 #endif
 ) {
   auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhys, "guest_aspace");

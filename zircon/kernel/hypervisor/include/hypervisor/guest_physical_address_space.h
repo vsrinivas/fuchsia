@@ -57,7 +57,7 @@ class GuestPhysicalAddressSpace {
  public:
   static zx::status<GuestPhysicalAddressSpace> Create(
 #ifdef ARCH_ARM64
-      uint8_t vmid
+      uint16_t vmid
 #endif
   );
   ~GuestPhysicalAddressSpace();

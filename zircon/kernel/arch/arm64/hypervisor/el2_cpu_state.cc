@@ -180,31 +180,29 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
-zx_status_t El2CpuState::AllocVmid(uint8_t* vmid) { return id_allocator_.AllocId(vmid); }
+zx::status<uint16_t> El2CpuState::AllocVmid() { return id_allocator_.Alloc(); }
 
-zx_status_t El2CpuState::FreeVmid(uint8_t vmid) { return id_allocator_.FreeId(vmid); }
+zx::status<> El2CpuState::FreeVmid(uint16_t vmid) { return id_allocator_.Free(vmid); }
 
-zx_status_t alloc_vmid(uint8_t* vmid) {
+zx::status<uint16_t> alloc_vmid() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
-    zx_status_t status = El2CpuState::Create(&el2_cpu_state);
-    if (status != ZX_OK) {
-      return status;
+    if (zx_status_t status = El2CpuState::Create(&el2_cpu_state); status != ZX_OK) {
+      return zx::error(status);
     }
   }
   num_guests++;
-  return el2_cpu_state->AllocVmid(vmid);
+  return el2_cpu_state->AllocVmid();
 }
 
-zx_status_t free_vmid(uint8_t vmid) {
+zx::status<> free_vmid(uint16_t vmid) {
   Guard<Mutex> guard(GuestMutex::Get());
-  zx_status_t status = el2_cpu_state->FreeVmid(vmid);
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = el2_cpu_state->FreeVmid(vmid); result.is_error()) {
+    return result.take_error();
   }
   num_guests--;
   if (num_guests == 0) {
     el2_cpu_state.reset();
   }
-  return ZX_OK;
+  return zx::ok();
 }

@@ -121,13 +121,3 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
 }
-
-zx_status_t Guest::AllocVpid(uint16_t* vpid) {
-  Guard<Mutex> lock{&vcpu_mutex_};
-  return vpid_allocator_.AllocId(vpid);
-}
-
-zx_status_t Guest::FreeVpid(uint16_t vpid) {
-  Guard<Mutex> lock{&vcpu_mutex_};
-  return vpid_allocator_.FreeId(vpid);
-}

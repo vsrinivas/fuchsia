@@ -16,10 +16,10 @@
 #include <arch/x86/interrupts.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
 #include <hypervisor/trap_map.h>
+#include <hypervisor/vpid_allocator.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
@@ -43,7 +43,11 @@ class Guest {
  public:
   static zx_status_t Create(ktl::unique_ptr<Guest>* out);
   ~Guest();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
+
+  Guest(Guest&&) = delete;
+  Guest& operator=(Guest&&) = delete;
+  Guest(const Guest&) = delete;
+  Guest& operator=(const Guest&) = delete;
 
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
@@ -52,16 +56,14 @@ class Guest {
   hypervisor::TrapMap* Traps() { return &traps_; }
   zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
-  zx_status_t AllocVpid(uint16_t* vpid);
-  zx_status_t FreeVpid(uint16_t vpid);
+  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.AllocVpid(); }
+  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.FreeVpid(vpid); }
 
  private:
   hypervisor::GuestPhysicalAddressSpace gpas_;
   hypervisor::TrapMap traps_;
+  hypervisor::VpidAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
   VmxPage msr_bitmaps_page_;
-
-  DECLARE_MUTEX(Guest) vcpu_mutex_;
-  hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> TA_GUARDED(vcpu_mutex_) vpid_allocator_;
 
   Guest() = default;
 };

@@ -171,11 +171,14 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint8_t vpid;
-  if (zx_status_t status = guest->AllocVpid(&vpid); status != ZX_OK) {
-    return status;
+  auto vpid = guest->AllocVpid();
+  if (vpid.is_error()) {
+    return vpid.status_value();
   }
-  auto free_vpid = fit::defer([guest, vpid]() { guest->FreeVpid(vpid); });
+  auto free_vpid = fit::defer([guest, vpid]() {
+    auto result = guest->FreeVpid(*vpid);
+    ZX_ASSERT(result.is_ok());
+  });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
@@ -183,7 +186,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
+  ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, *vpid, thread));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -196,7 +199,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
   vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
   const uint64_t mpidr = __arm_rsr64("mpidr_el1");
-  vcpu->el2_state_->guest_state.system_state.vmpidr_el2 = vmpidr_of(vpid, mpidr);
+  vcpu->el2_state_->guest_state.system_state.vmpidr_el2 = vmpidr_of(*vpid, mpidr);
   vcpu->el2_state_->host_state.system_state.vmpidr_el2 = mpidr;
   const uint8_t num_lrs = gic_get_num_lrs();
   vcpu->el2_state_->ich_state.num_aprs = num_aprs(gic_get_num_pres());
@@ -233,8 +236,8 @@ Vcpu::~Vcpu() {
     }
   }
 
-  __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
-  DEBUG_ASSERT(status == ZX_OK);
+  auto result = guest_->FreeVpid(vpid_);
+  ZX_ASSERT(result.is_ok());
 }
 
 void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
