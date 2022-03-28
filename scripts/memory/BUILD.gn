@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+if (is_host) {
+  python_host_test("mem_digest_test") {
+    main_source = "mem_digest_test.py"
+    sources = [
+      "digest.py",
+      "mem_digest.py",
+      "snapshot.py",
+    ]
+    extra_args = [
+      "--test_dir_path",
+      rebase_path("testdata", root_build_dir),
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":mem_digest_test($host_toolchain)" ]
+}

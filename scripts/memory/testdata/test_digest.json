@@ -1,0 +1,71 @@
+  [
+    {
+      "name": "Blobs",
+      "vmo": "blob-.*"
+    },
+    {
+      "name": "Bootfs",
+      "vmo": "uncompressed-bootfs"
+    },
+    {
+      "name": "Fshost",
+      "process": "fshost\\.cm"
+    },
+    {
+      "name": "Netstack",
+      "process": [
+        "dhcpd\\.cm",
+        "dhcpv6-client\\.cm",
+        "dns_resolver\\.cm",
+        "netcfg.*\\.cm",
+        "netstack\\.cm",
+        "netsvc\\.cm",
+        "network-tun\\.cmx",
+        "mdns\\.cmx"
+      ]
+    },
+    {
+      "name": "Pkgfs",
+      "process": "pkgfs"
+    },
+    {
+      "name": "Archivist",
+      "process": [
+        "archivist\\.cm",
+        "sampler\\.cm"
+      ]
+    },
+    {
+      "name": "ComponentManager",
+      "process": [
+        "bin/bootsvc",
+        "bin/component_manager",
+        "miscsvc\\.cm",
+        "svchost\\.cm",
+        "sysmgr\\.cmx"
+      ]
+    },
+    {
+      "name": "Resolvers",
+      "process": ".*-resolver\\.cm.*"
+    },
+    {
+      "name": "CompositeDrivers",
+      "process": "driver_host:composite-device"
+    },
+    {
+      "name": "OtherDrivers",
+      "process": [
+        "driver_host:.*",
+        "pwrbtn-monitor\\.cm"
+      ]
+    },
+    {
+      "name": "DriverFramework",
+      "process": [
+        "driver-index\\.cm",
+        "driver_manager\\.cm",
+        "sysinfo\\.cm"
+      ]
+    }
+  ]
