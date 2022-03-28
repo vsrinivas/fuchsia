@@ -3,12 +3,6 @@
 // found in the LICENSE file.
 library test.conformance;
 
-type EmptyStruct = struct {};
-
-type OptionalEmptyStructWrapper = struct {
-    s box<EmptyStruct>;
-};
-
 type EmptyStructSandwich = struct {
     before string;
     es EmptyStruct;

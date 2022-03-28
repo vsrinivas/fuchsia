@@ -1,0 +1,200 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("EmptyStruct") {
+    value = EmptyStruct{},
+    bytes = {
+        v1, v2 = [
+            0x00, padding:7,
+        ],
+    },
+}
+
+decode_failure("EmptyStructNonZeroBytes") {
+    type = EmptyStruct,
+    bytes = {
+        v1, v2 = [
+            0x01, padding:7,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+success("OneEmptyStructInStruct") {
+    value = OneEmptyStructInStruct{
+        v: EmptyStruct{},
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, padding:7,
+        ],
+    },
+}
+
+decode_failure("OneEmptyStructInStructNonZeroBytes") {
+    bindings_denylist = [llcpp, hlcpp, c],
+    type = OneEmptyStructInStruct,
+    bytes = {
+        v1, v2 = [
+            0x01, padding:7,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+success("TwoEmptyStructsInStruct") {
+    value = TwoEmptyStructsInStruct{
+        a: EmptyStruct{},
+        b: EmptyStruct{},
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, padding:6,
+        ],
+    },
+}
+
+decode_failure("TwoEmptyStructsInStructNonZeroBytes") {
+    bindings_denylist = [llcpp, hlcpp, c],
+    type = TwoEmptyStructsInStruct,
+    bytes = {
+        v1, v2 = [
+            0x00, 0x01, padding:6,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+success("EmptyStructsInArrayInStruct") {
+    value = EmptyStructsInArrayInStruct{
+        v: [
+            EmptyStruct{},
+            EmptyStruct{},
+            EmptyStruct{},
+            EmptyStruct{},
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+
+decode_failure("EmptyStructsInArrayInStructNonZeroBytes") {
+    bindings_denylist = [llcpp, hlcpp, c],
+    type = EmptyStructsInArrayInStruct,
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x01, padding:4,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+// Bindings that use iovec with vectors may have special handling.
+success("EmptyStructsInVectorInStruct") {
+    value = EmptyStructsInVectorInStruct{
+        v: [
+            EmptyStruct{},
+            EmptyStruct{},
+            EmptyStruct{},
+            EmptyStruct{},
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(4):8,
+            repeat(0xff):8,
+            0x00, 0x00, 0x00, 0x00, padding:4,
+        ],
+    },
+}
+
+// Bindings that use iovec with vectors may have special handling.
+decode_failure("EmptyStructsInVectorInStructNonZeroBytes") {
+    bindings_denylist = [llcpp, hlcpp, c],
+    type = EmptyStructsInVectorInStruct,
+    bytes = {
+        v1, v2 = [
+            num(4):8,
+            repeat(0xff):8,
+            0x00, 0x00, 0x00, 0x01, padding:4,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+// Bindings that use iovec with vectors may have special handling.
+success("TwoEmptyStructsInStructInVectorInStruct") {
+    value = TwoEmptyStructsInStructInVectorInStruct{
+        v: [
+            TwoEmptyStructsInStruct{
+                a: EmptyStruct{},
+                b: EmptyStruct{},
+            },
+            TwoEmptyStructsInStruct{
+                a: EmptyStruct{},
+                b: EmptyStruct{},
+            },
+            TwoEmptyStructsInStruct{
+                a: EmptyStruct{},
+                b: EmptyStruct{},
+            },
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(3):8,
+            repeat(0xff):8,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, padding:2,
+        ],
+    },
+}
+
+// Bindings that use iovec with vectors may have special handling.
+decode_failure("TwoEmptyStructsInStructInVectorInStructNonZeroBytes") {
+    bindings_denylist = [llcpp, hlcpp, c],
+    type = TwoEmptyStructsInStructInVectorInStruct,
+    bytes = {
+        v1, v2 = [
+            num(3):8,
+            repeat(0xff):8,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x01, padding:2,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
+success("OptionalEmptyStructPresent") {
+    value = OptionalEmptyStructWrapper{
+        s: EmptyStruct{},
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            0x00, padding:7,
+        ],
+    },
+}
+
+success("OptionalEmptyStructAbsent") {
+    value = OptionalEmptyStructWrapper{},
+    bytes = {
+        v1, v2 = [
+            repeat(0x00):8,
+        ],
+    },
+}
+
+decode_failure("OptionalEmptyStructInvalidPresenceIndicator") {
+    bindings_denylist = [dart],
+    bytes = {
+        v1, v2 = [
+            repeat(0xab):8,
+        ],
+    },
+    type = OptionalEmptyStructWrapper,
+    err = INVALID_PRESENCE_INDICATOR,
+}

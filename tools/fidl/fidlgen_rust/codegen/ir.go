@@ -1139,6 +1139,11 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 }
 
 func (c *compiler) computeUseFidlStructCopyForStruct(st fidlgen.Struct) bool {
+	if len(st.Members) == 0 {
+		// In Rust, structs containing empty structs do not match the C++ struct layout
+		// since empty structs have size 0 in Rust -- even in repr(C).
+		return false
+	}
 	for _, member := range st.Members {
 		if !c.computeUseFidlStructCopy(&member.Type) {
 			return false
@@ -1568,7 +1573,7 @@ typeSwitch:
 		for _, member := range st.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
-		if st.HasPadding {
+		if st.HasPadding || len(st.Members) == 0 {
 			derivesOut = derivesOut.remove(derivesAsBytes, derivesFromBytes)
 		}
 		st.Derives = derivesOut
