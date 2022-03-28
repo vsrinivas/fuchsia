@@ -9,6 +9,26 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
 
 pub fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEngine>> {
+    let value = read_from_disk_untyped(instance_directory)
+        .context("Failed to read engine configuration from disk.")?;
+
+    let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
+    if let Some(engine_type) = value.get("engine_type") {
+        match engine_type.as_str() {
+            Some("femu") => Ok(Box::new(<FemuEngine as Deserialize>::deserialize(value).context(
+                format!("Expected a FEMU engine in {:?}, but deserialization failed.", filepath),
+            )?) as Box<dyn EmulatorEngine>),
+            Some("qemu") => Ok(Box::new(<QemuEngine as Deserialize>::deserialize(value).context(
+                format!("Expected a QEMU engine in {:?}, but deserialization failed.", filepath),
+            )?) as Box<dyn EmulatorEngine>),
+            _ => Err(anyhow!("Not a valid engine type.")),
+        }
+    } else {
+        Err(anyhow!("Deserialized data doesn't contain an engine type value."))
+    }
+}
+
+pub fn read_from_disk_untyped(instance_directory: &PathBuf) -> Result<serde_json::Value> {
     // Get the engine's location, which is in the instance directory.
     let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
 
@@ -18,25 +38,7 @@ pub fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEn
             .expect(&format!("Unable to open file {:?} for deserialization", filepath));
         let value: serde_json::Value = serde_json::from_reader(file)
             .context(format!("Invalid JSON syntax in {:?}", filepath))?;
-        if let Some(engine_type) = value.get("engine_type") {
-            match engine_type.as_str() {
-                Some("femu") => Ok(Box::new(
-                    <FemuEngine as Deserialize>::deserialize(value).context(format!(
-                        "Expected a FEMU engine in {:?}, but deserialization failed.",
-                        filepath
-                    ))?,
-                ) as Box<dyn EmulatorEngine>),
-                Some("qemu") => Ok(Box::new(
-                    <QemuEngine as Deserialize>::deserialize(value).context(format!(
-                        "Expected a QEMU engine in {:?}, but deserialization failed.",
-                        filepath
-                    ))?,
-                ) as Box<dyn EmulatorEngine>),
-                _ => Err(anyhow!("Not a valid engine type.")),
-            }
-        } else {
-            Err(anyhow!("Deserialized data doesn't contain an engine type value."))
-        }
+        Ok(value)
     } else {
         Err(anyhow!("Engine file doesn't exist at {:?}", filepath))
     }
@@ -129,6 +131,87 @@ mod tests {
         write!(file, "{}", &unsupported)?;
         let box_engine = read_from_disk(&temp_path);
         assert!(box_engine.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_broken_reads() -> Result<()> {
+        // Create a test directory in TempFile::tempdir.
+        let name = "test_write_then_read";
+        let temp_path = PathBuf::from(tempdir().unwrap().path()).join(name);
+        let file_path = temp_path.join(SERIALIZE_FILE_NAME);
+        create_dir_all(&temp_path)?;
+
+        let bad_json = "This is not valid JSON";
+        let no_pid = r#"{ "engine_type":"femu" }"#;
+        let bad_pid = r#"{ "engine_type":"femu","pid":"string" }"#;
+        let has_pid = r#"{ "engine_type":"femu","pid":123456 }"#;
+
+        // Note: This string is a currently valid and complete instance of a FEMU config as it
+        // would be serialized to disk. The test on this string should fail if a change (to the
+        // EmulatorConfiguration data structure, for example) would break deserialization of
+        // existing emulation instances. If your change causes this test to fail, consider wrapping
+        // the fields you changed in Option<foo>, or providing a default value for the field to
+        // deserialize with. Do not simply update this text to match your change, or users will
+        // see [Broken] emulators on their next update. Wait until the field has had time to "bake"
+        // before updating this text for your changes.
+        let valid_femu = r#"{"emulator_configuration":{"device":{"audio":{"model":"hda"},"cpu":{
+            "architecture":"x64","count":0},"memory":{"quantity":8192,"units":"megabytes"},
+            "pointing_device":"mouse","screen":{"height":800,"width":1280,"units":"pixels"},
+            "storage":{"quantity":2,"units":"gigabytes"}},"flags":{"args":[],"envs":{},"features":[],
+            "kernel_args":[],"options":[]},"guest":{"fvm_image":"/path/to/fvm.blk","kernel_image":
+            "/path/to/multiboot.bin","zbi_image":"/path/to/fuchsia.zbi"},"host":{"acceleration":
+            "hyper","architecture":"x86_64","gpu":"auto","log":"/path/to/emulator.log","networking"
+            :"tap","os":"linux","port_map":{}},"runtime":{"console":"none","debugger":false,
+            "dry_run":false,"headless":true,"hidpi_scaling":false,"instance_directory":"/some/dir",
+            "log_level":"info","mac_address":"52:54:47:5e:82:ef","name":"fuchsia-emulator",
+            "startup_timeout":{"secs":60,"nanos":0},"template":"/path/to/config","upscript":null}},
+            "pid":657042,"engine_type":"femu"}"#;
+
+        let mut file = File::create(&file_path)?;
+        write!(file, "{}", &bad_json)?;
+        let box_engine = read_from_disk(&temp_path);
+        assert!(box_engine.is_err());
+        let value = read_from_disk_untyped(&temp_path);
+        assert!(value.is_err());
+
+        remove_file(&file_path).expect("Problem removing serialized file during test.");
+        let mut file = File::create(&file_path)?;
+        write!(file, "{}", &no_pid)?;
+        let box_engine = read_from_disk(&temp_path);
+        assert!(box_engine.is_err());
+        let value = read_from_disk_untyped(&temp_path);
+        assert!(value.is_ok(), "{:?}", value);
+        assert!(value.unwrap().get("pid").is_none());
+
+        remove_file(&file_path).expect("Problem removing serialized file during test.");
+        let mut file = File::create(&file_path)?;
+        write!(file, "{}", &bad_pid)?;
+        let box_engine = read_from_disk(&temp_path);
+        assert!(box_engine.is_err());
+        let value = read_from_disk_untyped(&temp_path);
+        assert!(value.is_ok(), "{:?}", value);
+        assert!(value.as_ref().unwrap().get("pid").is_some());
+        assert!(value.unwrap().get("pid").unwrap().as_i64().is_none());
+
+        remove_file(&file_path).expect("Problem removing serialized file during test.");
+        let mut file = File::create(&file_path)?;
+        write!(file, "{}", &has_pid)?;
+        let box_engine = read_from_disk(&temp_path);
+        assert!(box_engine.is_err());
+        let value = read_from_disk_untyped(&temp_path);
+        assert!(value.is_ok(), "{:?}", value);
+        assert!(value.as_ref().unwrap().get("pid").is_some());
+        assert!(value.as_ref().unwrap().get("pid").unwrap().as_i64().is_some());
+        assert_eq!(value.unwrap().get("pid").unwrap().as_i64().unwrap(), 123456);
+
+        remove_file(&file_path).expect("Problem removing serialized file during test.");
+        let mut file = File::create(&file_path)?;
+        write!(file, "{}", &valid_femu)?;
+        let box_engine = read_from_disk(&temp_path);
+        assert!(box_engine.is_ok(), "{:?}", box_engine.err());
+        assert_eq!(box_engine.unwrap().engine_type(), EngineType::Femu);
 
         Ok(())
     }

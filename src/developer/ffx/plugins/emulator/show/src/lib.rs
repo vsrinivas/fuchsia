@@ -25,7 +25,21 @@ async fn show_internal(ffx_config: &FfxConfigWrapper, name: &str) -> Result<()> 
                 engine.show();
                 Ok(())
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                // TODO(fxbug.dev/94232): Update this error message once shut down is more robust.
+                eprintln!(
+                    r#"
+The on-disk state for {} appears to be corrupted. This is an uncommon scenario, but usually happens
+if the Fuchsia source tree or SDK is updated while an emulator is already running. Communication
+with this emulator may still be possible if it's still running, but any further `ffx emu` commands
+will print an error similar to this one. Running `ffx emu stop` will not shut down a broken
+emulator (this should be fixed as part of fxbug.dev/94232), but it will clear that emulator's state
+from the system, so this error won't appear anymore.
+"#,
+                    name
+                );
+                Err(e)
+            }
         }
     }
 }
