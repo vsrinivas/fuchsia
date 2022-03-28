@@ -215,9 +215,17 @@ def filter_compile_command(
 
 
 # string.removeprefix() only appeared in python 3.9
+# This is needed in some places to workaround b/203540556 (reclient).
 def remove_dot_slash_prefix(text: str) -> str:
     if text.startswith('./'):
         return text[2:]
+    return text
+
+
+# string.removesuffix() only appeared in python 3.9
+def remove_suffix(text: str, suffix: str) -> str:
+    if text.endswith(suffix):
+        return text[:-len(suffix)]
     return text
 
 
@@ -238,6 +246,10 @@ def parse_rust_compile_command(
     params = argparse.Namespace(
         depfile=None,
         dep_only_command=[_ENV],  # a modified copy of compile_command
+        emit_llvm_ir = False,
+        emit_llvm_bc = False,
+        output=None,
+        extra_filename='',
     )
     opt_arg_func = None
     for token in compile_command:
@@ -248,16 +260,24 @@ def parse_rust_compile_command(
 
         opt, sep, arg = token.partition('=')
 
+        if token == '-o':
+            opt_arg_func = lambda x: setattr(
+                params, 'output', remove_dot_slash_prefix(x))
+
         # Create a modified copy of the compile command that will be
         # used to only generate a depfile.
         # Rewrite the --emit token to do exactly this, ignoring
         # all other requested emit outputs.
-        if opt == '--emit' and sep == '=':
+        elif opt == '--emit' and sep == '=':
             emit_args = arg.split(',')
             for emit_arg in emit_args:
                 emit_key, emit_sep, emit_value = emit_arg.partition('=')
                 if emit_key == 'dep-info' and emit_sep == '=':
                     params.depfile = remove_dot_slash_prefix(emit_value)
+                elif emit_arg == 'llvm-ir':
+                    params.emit_llvm_ir = True
+                elif emit_arg == 'llvm-bc':
+                    params.emit_llvm_bc = True
 
             # Tell rustc to report all transitive *library* dependencies,
             # not just the sources, because these all need to be uploaded.
@@ -268,6 +288,11 @@ def parse_rust_compile_command(
                 f'--emit=dep-info={params.depfile}.nolink'
             ]
             continue
+
+        elif token == '-Cextra-filename':
+            opt_arg_func = lambda x: setattr(params, 'extra_filename', x)
+        elif opt == '-Cextra-filename' and sep == '=':
+            params.extra_filename = arg
 
         # By default, copy over most tokens for depfile generation.
         params.dep_only_command.append(token)
@@ -297,6 +322,22 @@ def main(argv: Sequence[str]):
     compile_params = parse_rust_compile_command(filtered_command, _GLOBALS)
 
     # TODO: infer inputs and outputs for remote execution
+    remote_inputs = remote_params.remote_inputs
+    remote_outputs = remote_params.remote_outputs
+
+    if compile_params.output is None:
+        return 1
+
+    output_base = remove_suffix(compile_params.output, '.rlib')
+
+    if compile_params.emit_llvm_ir:
+        remote_outputs.append(
+            f'{output_base}{compile_params.extra_filename}.ll')
+
+    if compile_params.emit_llvm_bc:
+        remote_outputs.append(
+            f'{output_base}{compile_params.extra_filename}.bc')
+
     # Use the dep-scanning command from compile_params.dep_only_command
 
     # TODO: construct remote execution command and run it

@@ -234,6 +234,10 @@ class ParseRustCompileCommandTests(unittest.TestCase):
             argparse.Namespace(
                 depfile=None,
                 dep_only_command=[_ENV],
+                emit_llvm_ir=False,
+                emit_llvm_bc=False,
+                output=None,
+                extra_filename='',
             ))
 
     @parameterized.expand(
@@ -277,6 +281,52 @@ class ParseRustCompileCommandTests(unittest.TestCase):
             command, _FAKE_GLOBALS)
         self.assertEqual(params.depfile, expected_depfile)
         self.assertEqual(params.dep_only_command, expected_dep_command)
+
+    @parameterized.expand(
+        [
+            ('--emit=llvm-ir',),
+            ('--emit=llvm-ir,link',),
+            ('--emit=link,llvm-ir',),
+            ('--emit=llvm-ir,dep-info=blah.d',),
+            ('--emit=llvm-ir,llvm-bc',),
+        ])
+    def testEmitLLVMIR(self, flag):
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            ['rustc', 'ignored', flag, '--also-ignored'], _FAKE_GLOBALS)
+        self.assertTrue(params.emit_llvm_ir)
+
+    @parameterized.expand(
+        [
+            ('--emit=llvm-bc',),
+            ('--emit=llvm-bc,link',),
+            ('--emit=link,llvm-bc',),
+            ('--emit=llvm-bc,dep-info=blah.d',),
+            ('--emit=llvm-ir,llvm-bc',),
+        ])
+    def testEmitLLVMBC(self, flag):
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            ['rustc', 'ignored', flag, '--also-ignored'], _FAKE_GLOBALS)
+        self.assertTrue(params.emit_llvm_bc)
+
+    def testOutputFile(self):
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            ['rustc', '-o', 'path/to/output.rlib'], _FAKE_GLOBALS)
+        self.assertEqual(params.output, 'path/to/output.rlib')
+
+    def testOutputFileDotSlash(self):
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            ['rustc', '-o', './path/to/output.rlib'], _FAKE_GLOBALS)
+        self.assertEqual(params.output, 'path/to/output.rlib')
+
+    @parameterized.expand(
+        [
+            (['-Cextra-filename', 'feedface'], 'feedface'),
+            (['-Cextra-filename=f00dface'], 'f00dface'),
+        ])
+    def testEmitLLVMBC(self, flags, expected_name):
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            ['rustc', 'ignored'] + flags + ['--also-ignored'], _FAKE_GLOBALS)
+        self.assertEqual(params.extra_filename, expected_name)
 
 
 if __name__ == '__main__':
