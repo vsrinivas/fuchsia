@@ -11,6 +11,7 @@ use {
         search::SearchPlugin, static_pkgs::StaticPkgsPlugin, sys::SysRealmPlugin,
         toolkit::ToolkitPlugin, verify::VerifyPlugin,
     },
+    std::sync::Arc,
 };
 
 /// Launches scrutiny from a configuration file. This is intended to be used by binaries that
@@ -24,7 +25,7 @@ pub fn launch_from_config(config: Config) -> Result<String> {
     scrutiny.plugin(EnginePlugin::new(
         scrutiny.scheduler(),
         scrutiny.dispatcher(),
-        scrutiny.plugin_manager(),
+        Arc::downgrade(&scrutiny.plugin_manager()),
     ))?;
     scrutiny.plugin(ToolkitPlugin::new())?;
     scrutiny.plugin(VerifyPlugin::new())?;

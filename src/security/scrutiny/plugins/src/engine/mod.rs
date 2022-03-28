@@ -16,7 +16,7 @@ use {
         dispatcher::ControllerDispatcher, manager::PluginManager, scheduler::CollectorScheduler,
     },
     scrutiny::prelude::*,
-    std::sync::{Arc, Mutex, RwLock},
+    std::sync::{Arc, Mutex, RwLock, Weak},
 };
 
 /// The `EnginePlugin` allows introspection into the Scrutiny engine
@@ -34,7 +34,7 @@ impl EnginePlugin {
     pub fn new(
         scheduler: Arc<Mutex<CollectorScheduler>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
-        manager: Arc<Mutex<PluginManager>>,
+        manager: Weak<Mutex<PluginManager>>,
     ) -> Self {
         Self {
             desc: PluginDescriptor::new("EnginePlugin".to_string()),
@@ -118,7 +118,7 @@ mod tests {
         let model = data_model();
         let manager = plugin_manager(model.clone());
         manager.lock().unwrap().register(Box::new(FakePlugin::new())).unwrap();
-        let plugin_list = PluginListController::new(manager.clone());
+        let plugin_list = PluginListController::new(Arc::downgrade(&manager));
         let response = plugin_list.query(model.clone(), json!("")).unwrap();
         let list: Vec<PluginListEntry> = serde_json::from_value(response).unwrap();
         assert_eq!(list.len(), 1);

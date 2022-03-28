@@ -29,9 +29,6 @@ if (is_host) {
       "//third_party/rust_crates/compat/rustyline",
     ]
 
-    # TODO(fxbug.dev/91769): Fix the leaks and remove this.
-    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [

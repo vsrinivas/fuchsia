@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{format_err, Result},
     scrutiny::{
         engine::manager::{PluginManager, PluginState},
         model::controller::DataController,
@@ -12,11 +12,11 @@ use {
     scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, Mutex, Weak},
 };
 
 pub struct PluginListController {
-    manager: Arc<Mutex<PluginManager>>,
+    manager: Weak<Mutex<PluginManager>>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -26,14 +26,19 @@ pub struct PluginListEntry {
 }
 
 impl PluginListController {
-    pub fn new(manager: Arc<Mutex<PluginManager>>) -> Self {
+    pub fn new(manager: Weak<Mutex<PluginManager>>) -> Self {
         Self { manager }
     }
 }
 
 impl DataController for PluginListController {
     fn query(&self, _: Arc<DataModel>, _query: Value) -> Result<Value> {
-        let manager = self.manager.lock().unwrap();
+        let manager_arc = match self.manager.upgrade() {
+            Some(m) => m,
+            None => return Err(format_err!("manager inner value behind Weak reference dropped")),
+        };
+        let manager = manager_arc.lock().unwrap();
+
         let plugin_descriptors = manager.plugins();
         let mut plugins = vec![];
         for plugin_desc in plugin_descriptors.iter() {
