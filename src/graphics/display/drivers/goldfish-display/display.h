@@ -11,9 +11,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/io-buffer.h>
+#include <lib/fzl/pinned-vmo.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/pmt.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -24,6 +23,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+
+#include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 
 namespace goldfish {
 
@@ -94,19 +95,15 @@ class Display : public DisplayType,
 
  private:
   struct ColorBuffer {
-    ~ColorBuffer() {
-      if (pmt)
-        pmt.unpin();
-    }
+    ~ColorBuffer() = default;
 
     uint32_t id = 0;
-    zx_paddr_t paddr = 0;
     size_t size = 0;
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t format = 0;
     zx::vmo vmo;
-    zx::pmt pmt;
+    fzl::PinnedVmo pinned_vmo;
 
     zx::eventpair sync_event;
     std::unique_ptr<async::WaitOnce> async_wait;
@@ -138,50 +135,44 @@ class Display : public DisplayType,
     // DisplayConfig corresponds.
     config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
-  // TODO(fxbug.dev/81211): Remove these pipe IO functions and use
-  // //src/devices/lib/goldfish/pipe_io instead.
-  zx_status_t WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
-  zx_status_t ReadResultLocked(uint32_t* result, uint32_t count) TA_REQ(lock_);
-  zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
-  int32_t GetFbParamLocked(uint32_t param, int32_t default_value) TA_REQ(lock_);
-  zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
-                                      uint32_t* id) TA_REQ(lock_);
-  zx_status_t OpenColorBufferLocked(uint32_t id) TA_REQ(lock_);
-  zx_status_t CloseColorBufferLocked(uint32_t id) TA_REQ(lock_);
-  zx_status_t SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result)
-      TA_REQ(lock_);
-  zx_status_t UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint32_t width,
-                                      uint32_t height, uint32_t format, size_t size,
-                                      uint32_t* result) TA_REQ(lock_);
-  zx_status_t FbPostLocked(uint32_t id) TA_REQ(lock_);
-  zx_status_t CreateDisplayLocked(uint32_t* result) TA_REQ(lock_);
-  zx_status_t DestroyDisplayLocked(uint32_t display_id, uint32_t* result) TA_REQ(lock_);
-  zx_status_t SetDisplayColorBufferLocked(uint32_t display_id, uint32_t id, uint32_t* result)
-      TA_REQ(lock_);
-  zx_status_t SetDisplayPoseLocked(uint32_t display_id, int32_t x, int32_t y, uint32_t w,
-                                   uint32_t h, uint32_t* result) TA_REQ(lock_);
-  zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
-  zx_status_t PresentColorBuffer(uint32_t display_id, const DisplayConfig& display_config);
-  zx_status_t SetupDisplayLocked(uint64_t id) TA_REQ(lock_);
+  int32_t GetFbParam(uint32_t param, int32_t default_value);
+  using ColorBufferId = uint32_t;
+  zx::status<ColorBufferId> CreateColorBuffer(uint32_t width, uint32_t height, uint32_t format);
+  zx_status_t OpenColorBuffer(ColorBufferId id);
+  zx_status_t CloseColorBuffer(ColorBufferId id);
+
+  // Zero means success; non-zero value means the call failed.
+  using RcResult = int32_t;
+  zx::status<RcResult> SetColorBufferVulkanMode(ColorBufferId id, uint32_t mode);
+  zx::status<RcResult> UpdateColorBuffer(ColorBufferId id, const fzl::PinnedVmo& pinned_vmo,
+                                         uint32_t width, uint32_t height, uint32_t format,
+                                         size_t size);
+  zx_status_t FbPost(uint32_t id);
+  using DisplayId = uint32_t;
+  zx::status<DisplayId> CreateDisplay();
+  zx::status<RcResult> DestroyDisplay(DisplayId display_id);
+  zx::status<RcResult> SetDisplayColorBuffer(DisplayId display_id, uint32_t id);
+  zx::status<RcResult> SetDisplayPose(DisplayId display_id, int32_t x, int32_t y, uint32_t w,
+                                      uint32_t h);
+
+  zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+  zx_status_t PresentColorBuffer(DisplayId display_id, const DisplayConfig& display_config);
+  zx_status_t SetupDisplay(uint64_t id);
+
   void TeardownDisplay(uint64_t id);
   void FlushDisplay(async_dispatcher_t* dispatcher, uint64_t id);
 
   fbl::Mutex lock_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
   ddk::GoldfishPipeProtocolClient pipe_ TA_GUARDED(lock_);
-  int32_t id_ = 0;
-  zx::bti bti_;
-  ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
-  ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
+  std::unique_ptr<PipeIo> pipe_io_;
 
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
 
   std::map<uint64_t, DisplayConfig> pending_config_;
-
-  zx::event pipe_event_;
 
   async::Loop loop_;
 
