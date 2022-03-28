@@ -11,7 +11,10 @@ fuchsia_package_with_single_component("thermal-test-control") {
 
 executable("thermal_test_control_bin") {
   output_name = "thermal_test_control"
-  sources = [ "thermal_test_control.cc" ]
+  sources = [
+    "main.cc",
+    "thermal_test_control.cc",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.thermal",
     "//sdk/lib/fidl/cpp",
@@ -21,4 +24,32 @@ executable("thermal_test_control_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+executable("thermal-test-control-test-bin") {
+  testonly = true
+  output_name = "thermal_test_control_test_bin"
+  sources = [
+    "thermal_test_control.cc",
+    "thermal_test_control_unittest.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.thermal",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/power/fidl/testing:test.thermal",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("thermal-test-control-test") {
+  deps = [ ":thermal-test-control-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":thermal-test-control-test" ]
 }

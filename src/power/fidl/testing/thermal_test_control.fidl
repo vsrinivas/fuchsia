@@ -25,6 +25,8 @@ const MAX_SUBSCRIBER_COUNT uint32 = 256;
 /// thermal actors have subscribed, a test suite would retrieve the number of
 /// subscribed thermal actors and their supported thermal states, and would
 /// directly trigger state-change commands sent to subscribed actors.
+// TODO(fxbug.dev/96172): Delete this protocol after AudioCore migrates to the
+// new `ClientStateControl` protocol.
 @discoverable
 protocol Control {
     /// Retrieve the subscriber type and the number of thermal states supported by
@@ -39,5 +41,50 @@ protocol Control {
     SetThermalState(struct {
         subscriber uint32;
         state uint32;
+    }) -> ();
+};
+
+/// Enables tests to manipulate the thermal state of clients via a test service.
+///
+/// A service would implement both this protocol and
+/// `fuchsia.thermal.ClientStateConnector` /
+/// `fuchsia.thermal.ClientStateWatcher`. It would be injected into the
+/// environment of the component under test. Once a client has connected to the
+/// `ClientStateControl` service (using
+/// `fuchsia.thermal.ClientStateConnector/Connect`) and issued a
+/// `fuchsia.thermal.ClientStateWatcher/Watch` request, a test suite can
+/// directly trigger state-change commands to that client by calling
+/// `ClientStateControl/SetThermalState`.
+@discoverable
+protocol ClientStateControl {
+    /// Checks if a client of the specified type has an active
+    /// `fuchsia.thermal.ClientStateWatcher` connection.
+    ///
+    /// The request completes immediately (no hanging-get or waiting behavior).
+    ///
+    /// If a `ClientStateWatcher` was connected but then closes the channel,
+    /// this method would then return false for that client type until a later
+    /// time if/when that client type reconnects.
+    IsClientTypeConnected(struct {
+        client_type fuchsia.thermal.ClientType;
+    }) -> (struct {
+        connected bool;
+    });
+
+    /// Sets the thermal state of the specified client type.
+    ///
+    /// It is a fatal error to call this method before a client of the specified
+    /// type has first connected to the `ClientStateConnector` service.
+    ///
+    /// If a client of the specified type has a pending `Watch` request, then
+    /// the client will be updated with the new thermal state. The pending
+    /// `Watch` request will be completed before this method is completed.
+    ///
+    /// If a client of the specified type does not have a pending `Watch`
+    /// request, then the new thermal state will be cached and this method will
+    /// be completed immediately.
+    SetThermalState(struct {
+        client_type fuchsia.thermal.ClientType;
+        state uint64;
     }) -> ();
 };

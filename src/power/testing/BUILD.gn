@@ -5,5 +5,13 @@
 group("testing") {
   testonly = true
 
-  deps = [ "//src/power/testing/thermal-test-control" ]
+  deps = [
+    ":tests",
+    "thermal-test-control",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "thermal-test-control:tests" ]
 }
