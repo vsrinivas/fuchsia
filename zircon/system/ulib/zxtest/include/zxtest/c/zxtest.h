@@ -112,20 +112,20 @@ void zxtest_c_clean_buffer(char** buffer);
 
 __END_CDECLS
 
-#define LIB_ZXTEST_EQ(actual, expected) actual == expected
-#define LIB_ZXTEST_NE(actual, expected) actual != expected
-#define LIB_ZXTEST_BOOL(actual, expected) (bool)actual == expected
-#define LIB_ZXTEST_LT(actual, expected) actual < expected
-#define LIB_ZXTEST_LE(actual, expected) actual <= expected
-#define LIB_ZXTEST_GT(actual, expected) actual > expected
-#define LIB_ZXTEST_GE(actual, expected) actual >= expected
-#define LIB_ZXTEST_STREQ(actual, expected) \
+#define LIB_ZXTEST_EQ(expected, actual) actual == expected
+#define LIB_ZXTEST_NE(expected, actual) actual != expected
+#define LIB_ZXTEST_BOOL(expected, actual) (bool)(expected) == actual
+#define LIB_ZXTEST_LT(expected, actual) expected < actual
+#define LIB_ZXTEST_LE(expected, actual) expected <= actual
+#define LIB_ZXTEST_GT(expected, actual) expected > actual
+#define LIB_ZXTEST_GE(expected, actual) expected >= actual
+#define LIB_ZXTEST_STREQ(expected, actual) \
   ((actual == NULL && expected == NULL) || \
    ((!actual == !expected) && strcmp(actual, expected) == 0))
-#define LIB_ZXTEST_STRNE(actual, expected) !LIB_ZXTEST_STREQ(actual, expected)
+#define LIB_ZXTEST_STRNE(expected, actual) !LIB_ZXTEST_STREQ(expected, actual)
 #define LIB_ZXTEST_SUBSTR(str, substr) (strstr(str, substr) != NULL)
-#define LIB_ZXTEST_BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
-#define LIB_ZXTEST_BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
+#define LIB_ZXTEST_BYTEEQ(expected, actual, size) memcmp(actual, expected, size) == 0
+#define LIB_ZXTEST_BYTENE(expected, actual, size) memcmp(actual, expected, size) != 0
 
 #define LIB_ZXTEST_CONCAT_TOKEN(foo, bar) LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar)
 #define LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar) foo##bar
@@ -223,7 +223,7 @@ __END_CDECLS
 #define LIB_ZXTEST_IS_SKIPPED zxtest_runner_current_test_is_skipped()
 #define LIB_ZXTEST_TEST_HAS_ERRORS zxtest_runner_current_test_has_failures()
 #define LIB_ZXTEST_ABORT_IF_ERROR zxtest_runner_current_test_has_fatal_failures()
-#define LIB_ZXTEST_STRCMP(actual, expected) (strcmp(actual, expected) == 0)
+#define LIB_ZXTEST_STRCMP(expected, actual) (strcmp(actual, expected) == 0)
 
 #define LIB_ZXTEST_AUTO_VAR_TYPE(var) __typeof__(var)
 
