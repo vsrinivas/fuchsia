@@ -602,7 +602,7 @@
 
 - term: "Flatland"
   short_description:  "A <a href=\"/docs/glossary#fidl\">FIDL</a> protocol that allows sending 2D
-  graphical content to <a href=\"/docs/glossary#fidl\">Scenic</a>."
+  graphical content to <a href=\"/docs/glossary#scenic\">Scenic</a>."
   full_description: "The 2D composition API for Fuchsia graphics clients. Flatland clients can
   construct their scene graph and send to <a href=\"/docs/glossary#scenic\">Scenic</a> to compose
   into the shared scene graph that is submitted to the display."
