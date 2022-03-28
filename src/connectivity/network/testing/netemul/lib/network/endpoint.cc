@@ -19,6 +19,7 @@
 #include "ethernet_client.h"
 #include "ethertap_client.h"
 #include "network_context.h"
+#include "src/lib/fostr/hex_dump.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace netemul {
@@ -253,10 +254,17 @@ class NetworkDeviceImpl : public EndpointImpl,
     frame.set_port(Endpoint::kPortId);
     frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
     frame.set_data(std::vector<uint8_t>(p, p + len));
-    tun_device_->WriteFrame(std::move(frame), [](fpromise::result<void, zx_status_t> status) {
+    // Copy some of the data so we get decent errors if the packet is dropped.
+    // Pick only the first few bytes that will contain important headers to help
+    // debug packet drops.
+    constexpr size_t kMaxSaveBytes = 64;
+    std::vector<uint8_t> partial_data(p, p + std::min(len, kMaxSaveBytes));
+    tun_device_->WriteFrame(std::move(frame), [this, data = std::move(partial_data),
+                                               len](fpromise::result<void, zx_status_t> status) {
       if (status.is_error()) {
-        FX_LOGS(WARNING) << "Failed to send data to network device: "
-                         << zx_status_get_string(status.error());
+        FX_LOGS(WARNING) << "Failed to send " << len << "-byte frame to network device '"
+                         << device_name_ << "': " << zx_status_get_string(status.error()) << " "
+                         << fostr::HexDump(data.data(), data.size(), 0);
       }
     });
   }
