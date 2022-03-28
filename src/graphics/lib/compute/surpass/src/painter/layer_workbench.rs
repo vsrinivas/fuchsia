@@ -111,6 +111,7 @@ pub struct Context<'c, P: LayerProps> {
     pub tile_y: usize,
     pub segments: &'c [PixelSegment],
     pub props: &'c P,
+    pub previous_clear_color: Option<Color>,
     pub previous_layers: Cell<Option<&'c mut Option<u32>>>,
     pub clear_color: Color,
 }
@@ -193,6 +194,11 @@ impl LayerWorkbench {
         &mut self,
         context: &'c Context<'_, P>,
     ) -> ControlFlow<TileWriteOp> {
+        let clear_color_is_unchanged = context
+            .previous_clear_color
+            .map(|previous_clear_color| previous_clear_color == context.clear_color)
+            .unwrap_or_default();
+
         let tile_paint = context.previous_layers.take().and_then(|previous_layers| {
             let layers = self.ids.len() as u32;
 
@@ -204,7 +210,7 @@ impl LayerWorkbench {
                 false
             };
 
-            is_unchanged.then(|| TileWriteOp::None)
+            (clear_color_is_unchanged && is_unchanged).then(|| TileWriteOp::None)
         });
 
         match tile_paint {
@@ -554,6 +560,7 @@ mod tests {
                 segment(5),
             ],
             props: &UnimplementedProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -602,6 +609,7 @@ mod tests {
             tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::new(Some(&mut layers)),
             clear_color: BLACK,
         };
@@ -617,6 +625,7 @@ mod tests {
             tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::new(Some(&mut layers)),
             clear_color: BLACK,
         };
@@ -630,6 +639,7 @@ mod tests {
             tile_y: 0,
             segments: &[segment(1), segment(2), segment(3), segment(4), segment(5)],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::new(Some(&mut layers)),
             clear_color: BLACK,
         };
@@ -638,6 +648,23 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Optimization should fail because at least one layer changed.
+        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(layers, Some(5));
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
+            props: &TestProps,
+            previous_clear_color: Some(BLACK),
+            previous_layers: Cell::new(Some(&mut layers)),
+            clear_color: WHITE,
+        };
+
+        workbench.next_tile();
+        workbench.populate_layers(&context);
+
+        // Optimization should fail because the clear color changed.
         assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
         assert_eq!(layers, Some(5));
     }
@@ -676,6 +703,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -715,6 +743,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -757,6 +786,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -795,6 +825,7 @@ mod tests {
             tile_y: 0,
             segments: &[segment(3)],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -840,6 +871,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(BLACK),
             previous_layers: Cell::default(),
             clear_color: BLACK,
         };
@@ -887,6 +919,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(WHITE),
             previous_layers: Cell::default(),
             clear_color: WHITE,
         };
@@ -937,6 +970,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(WHITE),
             previous_layers: Cell::default(),
             clear_color: WHITE,
         };
@@ -1011,6 +1045,7 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
+            previous_clear_color: Some(WHITE),
             previous_layers: Cell::default(),
             clear_color: WHITE,
         };

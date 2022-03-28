@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{borrow::Cow, cell::RefCell, mem, rc::Rc};
+use std::{
+    borrow::Cow,
+    cell::{RefCell, RefMut},
+    mem,
+    rc::Rc,
+};
 
 use rustc_hash::FxHashMap;
 use surpass::{
@@ -149,7 +154,7 @@ impl Composition {
     pub fn create_buffer_layer_cache(&mut self) -> Option<BufferLayerCache> {
         self.buffers_with_caches.borrow_mut().first_empty_slot().map(|id| BufferLayerCache {
             id,
-            layers_per_tile: Default::default(),
+            cache: Default::default(),
             buffers_with_caches: Rc::downgrade(&self.buffers_with_caches),
         })
     }
@@ -158,14 +163,14 @@ impl Composition {
         &mut self,
         buffer: &mut Buffer<'_, '_, L>,
         mut channels: [Channel; 4],
-        background_color: Color,
+        clear_color: Color,
         crop: Option<Rect>,
     ) where
         L: Layout,
     {
-        // If background color has alpha = 1 we can upgrade the alpha channel to `Channel::One`
+        // If `clear_color` has alpha = 1 we can upgrade the alpha channel to `Channel::One`
         // in order to skip reading the alpha channel.
-        if background_color.a == 1.0 {
+        if clear_color.a == 1.0 {
             channels = channels.map(|c| match c {
                 Channel::Alpha => Channel::One,
                 c => c,
@@ -175,8 +180,8 @@ impl Composition {
         if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
             let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
 
-            if buffer_layer_cache.layers_per_tile.borrow().len() != tiles_len {
-                buffer_layer_cache.layers_per_tile.borrow_mut().resize(tiles_len, None);
+            if buffer_layer_cache.cache.borrow().1.len() != tiles_len {
+                buffer_layer_cache.cache.borrow_mut().1.resize(tiles_len, None);
                 buffer_layer_cache.clear();
             }
         }
@@ -258,10 +263,12 @@ impl Composition {
                 rasterizer.sort();
             }
 
-            let layers_per_tile = buffer
-                .layer_cache
-                .as_ref()
-                .map(|layer_cache| layer_cache.layers_per_tile.borrow_mut());
+            let previous_clear_color =
+                buffer.layer_cache.as_ref().and_then(|layer_cache| layer_cache.cache.borrow().0);
+
+            let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
+                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.1)
+            });
 
             {
                 duration!("gfx", "painter::for_each_row");
@@ -270,9 +277,10 @@ impl Composition {
                     buffer.buffer,
                     channels,
                     buffer.flusher.as_deref(),
+                    previous_clear_color,
                     layers_per_tile,
                     rasterizer.segments(),
-                    background_color,
+                    clear_color,
                     &crop,
                     &context,
                 );
@@ -282,6 +290,8 @@ impl Composition {
         });
 
         if let Some(buffer_layer_cache) = &buffer.layer_cache {
+            buffer_layer_cache.cache.borrow_mut().0 = Some(clear_color);
+
             for layer in self.layers.values_mut() {
                 layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
             }
@@ -360,6 +370,51 @@ mod tests {
         );
 
         assert_eq!(buffer, [RED_SRGB].concat());
+    }
+
+    #[test]
+    fn background_color_clear_when_changed() {
+        let mut buffer = [GREEN_SRGB].concat();
+        let mut layout = LinearLayout::new(1, 4, 1);
+
+        let mut composition = Composition::new();
+        let layer_cache = composition.create_buffer_layer_cache().unwrap();
+
+        composition.render(
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        assert_eq!(buffer, [RED_SRGB].concat());
+
+        buffer = [GREEN_SRGB].concat();
+
+        composition.render(
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        // Skip clearing if the color is the same.
+        assert_eq!(buffer, [GREEN_SRGB].concat());
+
+        composition.render(
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            BLACK,
+            None,
+        );
+
+        assert_eq!(buffer, [BLACK_SRGB].concat());
     }
 
     #[test]

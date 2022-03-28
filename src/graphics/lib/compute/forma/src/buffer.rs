@@ -8,6 +8,7 @@ use std::{
 };
 
 pub use surpass::layout;
+use surpass::painter::Color;
 
 use crate::layer::SmallBitSet;
 
@@ -53,7 +54,7 @@ impl<'b, 'l, L: Layout> BufferBuilder<'b, 'l, L> {
 #[derive(Clone, Debug)]
 pub struct BufferLayerCache {
     pub(crate) id: u8,
-    pub(crate) layers_per_tile: Rc<RefCell<Vec<Option<u32>>>>,
+    pub(crate) cache: Rc<RefCell<(Option<Color>, Vec<Option<u32>>)>>,
     pub(crate) buffers_with_caches: Weak<RefCell<SmallBitSet>>,
 }
 
@@ -61,7 +62,10 @@ impl BufferLayerCache {
     #[inline]
     pub fn clear(&self) {
         if Weak::upgrade(&self.buffers_with_caches).is_some() {
-            self.layers_per_tile.borrow_mut().fill(None);
+            let mut cache = self.cache.borrow_mut();
+
+            cache.0 = None;
+            cache.1.fill(None);
         }
     }
 }
@@ -71,7 +75,7 @@ impl Drop for BufferLayerCache {
         if let Some(buffers_with_caches) = Weak::upgrade(&self.buffers_with_caches) {
             // We don't want to remove the current ID if there are more than 1 copies of the
             // current object, so we cheat and use the available `Rc` to make sure that's the case.
-            if Rc::strong_count(&self.layers_per_tile) == 1 {
+            if Rc::strong_count(&self.cache) == 1 {
                 buffers_with_caches.borrow_mut().remove(self.id);
             }
         }
@@ -90,7 +94,7 @@ mod tests {
             .first_empty_slot()
             .map(|id| BufferLayerCache {
                 id,
-                layers_per_tile: Default::default(),
+                cache: Default::default(),
                 buffers_with_caches: Rc::downgrade(bit_set),
             })
             .unwrap()
