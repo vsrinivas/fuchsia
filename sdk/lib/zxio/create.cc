@@ -229,15 +229,15 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
   va_start(args, type);
   const fit::deferred_action va_cleanup = fit::defer([&args]() { va_end(args); });
   switch (type) {
-    case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET: {
+    case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET: {
       zx::eventpair event(va_arg(args, zx_handle_t));
       zx::channel client(va_arg(args, zx_handle_t));
       if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return zxio_datagram_socket_init(
+      return zxio_synchronous_datagram_socket_init(
           storage, std::move(event),
-          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(std::move(client)));
+          fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket>(std::move(client)));
     }
     case ZXIO_OBJECT_TYPE_DIR: {
       zx::handle control(va_arg(args, zx_handle_t));

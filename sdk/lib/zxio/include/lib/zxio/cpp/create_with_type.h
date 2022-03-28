@@ -18,11 +18,11 @@
 
 namespace zxio {
 
-inline zx_status_t CreateDatagramSocket(
+inline zx_status_t CreateSynchronousDatagramSocket(
     zxio_storage_t* storage, zx::eventpair event,
-    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, event.release(),
-                               client.TakeChannel().release());
+    fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client) {
+  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
+                               event.release(), client.TakeChannel().release());
 }
 
 inline zx_status_t CreateDirectory(zxio_storage_t* storage,

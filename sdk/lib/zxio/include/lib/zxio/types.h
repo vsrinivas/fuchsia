@@ -127,21 +127,21 @@ typedef struct zxio_storage {
 typedef uint32_t zxio_object_type_t;
 
 // clang-format off
-#define ZXIO_OBJECT_TYPE_NONE            ((zxio_object_type_t) 0)
-#define ZXIO_OBJECT_TYPE_NODE            ((zxio_object_type_t) 1)
-#define ZXIO_OBJECT_TYPE_DIR             ((zxio_object_type_t) 2)
-#define ZXIO_OBJECT_TYPE_SERVICE         ((zxio_object_type_t) 3)
-#define ZXIO_OBJECT_TYPE_FILE            ((zxio_object_type_t) 4)
-#define ZXIO_OBJECT_TYPE_DEVICE          ((zxio_object_type_t) 5)
-#define ZXIO_OBJECT_TYPE_TTY             ((zxio_object_type_t) 6)
-#define ZXIO_OBJECT_TYPE_VMOFILE         ((zxio_object_type_t) 7)
-#define ZXIO_OBJECT_TYPE_VMO             ((zxio_object_type_t) 8)
-#define ZXIO_OBJECT_TYPE_DEBUGLOG        ((zxio_object_type_t) 9)
-#define ZXIO_OBJECT_TYPE_PIPE            ((zxio_object_type_t)10)
-#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET ((zxio_object_type_t)11)
-#define ZXIO_OBJECT_TYPE_STREAM_SOCKET   ((zxio_object_type_t)12)
-#define ZXIO_OBJECT_TYPE_RAW_SOCKET      ((zxio_object_type_t)13)
-#define ZXIO_OBJECT_TYPE_PACKET_SOCKET   ((zxio_object_type_t)14)
+#define ZXIO_OBJECT_TYPE_NONE                         ((zxio_object_type_t) 0)
+#define ZXIO_OBJECT_TYPE_NODE                         ((zxio_object_type_t) 1)
+#define ZXIO_OBJECT_TYPE_DIR                          ((zxio_object_type_t) 2)
+#define ZXIO_OBJECT_TYPE_SERVICE                      ((zxio_object_type_t) 3)
+#define ZXIO_OBJECT_TYPE_FILE                         ((zxio_object_type_t) 4)
+#define ZXIO_OBJECT_TYPE_DEVICE                       ((zxio_object_type_t) 5)
+#define ZXIO_OBJECT_TYPE_TTY                          ((zxio_object_type_t) 6)
+#define ZXIO_OBJECT_TYPE_VMOFILE                      ((zxio_object_type_t) 7)
+#define ZXIO_OBJECT_TYPE_VMO                          ((zxio_object_type_t) 8)
+#define ZXIO_OBJECT_TYPE_DEBUGLOG                     ((zxio_object_type_t) 9)
+#define ZXIO_OBJECT_TYPE_PIPE                         ((zxio_object_type_t)10)
+#define ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET  ((zxio_object_type_t)11)
+#define ZXIO_OBJECT_TYPE_STREAM_SOCKET                ((zxio_object_type_t)12)
+#define ZXIO_OBJECT_TYPE_RAW_SOCKET                   ((zxio_object_type_t)13)
+#define ZXIO_OBJECT_TYPE_PACKET_SOCKET                ((zxio_object_type_t)14)
 // clang-format on
 
 // File and directory access ---------------------------------------------------
@@ -157,17 +157,17 @@ typedef uint64_t zxio_node_protocols_t;
 #define ZXIO_NODE_PROTOCOL_FILE ((zxio_node_protocols_t)1ul << 2)
 #define ZXIO_NODE_PROTOCOL_MEMORY ((zxio_node_protocols_t)1ul << 3)
 #define ZXIO_NODE_PROTOCOL_PIPE ((zxio_node_protocols_t)1ul << 4)
-#define ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET ((zxio_node_protocols_t)1ul << 5)
+#define ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET ((zxio_node_protocols_t)1ul << 5)
 #define ZXIO_NODE_PROTOCOL_STREAM_SOCKET ((zxio_node_protocols_t)1ul << 6)
 #define ZXIO_NODE_PROTOCOL_RAW_SOCKET ((zxio_node_protocols_t)1ul << 7)
 #define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
 #define ZXIO_NODE_PROTOCOL_TTY ((zxio_node_protocols_t)0x20000000ul)
 
-#define ZXIO_NODE_PROTOCOL_ALL                                                                    \
-  (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE |        \
-   ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_PIPE | ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET |     \
-   ZXIO_NODE_PROTOCOL_STREAM_SOCKET | ZXIO_NODE_PROTOCOL_RAW_SOCKET | ZXIO_NODE_PROTOCOL_DEVICE | \
-   ZXIO_NODE_PROTOCOL_TTY)
+#define ZXIO_NODE_PROTOCOL_ALL                                                             \
+  (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE | \
+   ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_PIPE |                                   \
+   ZXIO_NODE_PROTOCOL_SYNCHRONOUS_DATAGRAM_SOCKET | ZXIO_NODE_PROTOCOL_STREAM_SOCKET |     \
+   ZXIO_NODE_PROTOCOL_RAW_SOCKET | ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
 
 typedef uint64_t zxio_id_t;
 

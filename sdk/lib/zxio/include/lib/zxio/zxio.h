@@ -75,9 +75,10 @@ ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
 //
 // Expected parameters for supported types:
 //
-//  ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET:
+//  ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET:
 //     |zx_handle_t| eventpair associated with the socket
-//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.DatagramSocket protocol
+//     |zx_handle_t| channel for the client end of the
+//     fuchsia.posix.socket.SynchronousDatagramSocket protocol
 //
 //  ZXIO_OBJECT_TYPE_DIR:
 //     |zx_handle_t| channel for the client end of the fuchsia.io.Directory protocol

@@ -51,14 +51,14 @@ TEST(Create, NotSupported) {
 
 // Tests that calling zxio_create_with_type() with an invalid storage pointer
 // still closes all the handles known for the type.
-TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
+TEST(CreateWithTypeInvalidStorageClosesHandles, SynchronousDatagramSocket) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, event0.release(),
-                                  channel0.release()),
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
+                                  event0.release(), channel0.release()),
             ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;

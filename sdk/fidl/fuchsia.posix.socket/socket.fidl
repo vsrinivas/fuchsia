@@ -529,21 +529,89 @@ type SendMsgFlags = strict bits : uint16 {
     RESERVED = 0x8000;
 };
 
-/// A datagram socket.
+/// Base protocol shared by all datagram sockets.
 ///
-/// This type's [`fuchsia.io.Node/Describe`] method returns an eventpair which
+/// Complete implementations of a datagram socket should compose this protocol.
+protocol BaseDatagramSocket {
+    compose BaseNetworkSocket;
+
+    /// Retrieves creation information from the socket.
+    ///
+    /// - response `domain` the socket's associated domain.
+    /// - response `proto` the socket's associated protocol.
+    GetInfo() -> (struct {
+        domain Domain;
+        proto DatagramSocketProtocol;
+    }) error fuchsia.posix.Errno;
+
+    /// Retrieves creation information from the socket.
+    ///
+    /// - response `domain` the socket's associated domain.
+    /// - response `proto` the socket's associated protocol.
+    // TODO(https://fxbug.dev/96469): Remove this method once no more rely on it.
+    @deprecated("Use GetInfo instead")
+    @selector("fuchsia.posix.socket/DatagramSocket.GetInfo")
+    GetInfoDeprecated() -> (struct {
+        domain Domain;
+        proto DatagramSocketProtocol;
+    }) error fuchsia.posix.Errno;
+};
+
+type DatagramSocketSendControlData = table {
+    /// Network socket ancillary data.
+    1: network NetworkSocketSendControlData;
+};
+
+type DatagramSocketRecvControlData = table {
+    /// Network socket ancillary data.
+    1: network NetworkSocketRecvControlData;
+};
+
+/// A synchronous datagram socket.
+///
+/// This protocol defines synchronous methods for sending and receiving datagram
+/// payloads over a channel. All methods are nonblocking; their behavior roughly
+/// matches their Linux counterparts.
+///
+/// This protocol's [`fuchsia.io.Node/Describe`] method returns an eventpair which
 /// is used to signal additional information about the state of the socket such
 /// as readiness or shutdown-ness.
-///
-/// All methods on this type are nonblocking; their exact behaviors match their
-/// Linux counterparts.
 ///
 /// *Warning:* This protocol is not yet ready for direct use by clients.
 /// Instead, clients should use the BSD sockets API to interact with sockets.
 /// We plan to change this protocol substantially and clients that couple
 /// directly to this protocol will make those changes more difficult.
-protocol DatagramSocket {
-    compose BaseNetworkSocket;
+protocol SynchronousDatagramSocket {
+    compose BaseDatagramSocket;
+
+    /// Receives a message from the socket.
+    ///
+    /// + request `want_addr` request message's source address information to be
+    ///   returned.
+    /// + request `data_len` the maximum allowed length of the response data
+    ///   buffer.
+    /// + request `want_control` request ancillary data to be returned.
+    /// + request `flags` flags for the receive request.
+    /// - response `addr` the message's source address information, if requested.
+    /// - response `data` the message.
+    /// - response `control` control messages, if requested.
+    /// - response `truncated` indicates whether or not the returned message was
+    ///   truncated.
+    // TODO(https://fxbug.dev/96469): Remove this method once no more callers rely on it.
+    @deprecated("Use RecvMsg instead")
+    @selector("fuchsia.posix.socket/DatagramSocket.RecvMsg")
+    RecvMsgDeprecated(struct {
+        want_addr bool;
+        data_len uint32;
+        want_control bool;
+        flags RecvMsgFlags;
+    }) -> (struct {
+        addr fuchsia.net.SocketAddress:optional;
+        data bytes;
+        control DatagramSocketRecvControlData;
+        truncated uint32;
+    }) error fuchsia.posix.Errno;
+
 
     /// Receives a message from the socket.
     ///
@@ -567,10 +635,7 @@ protocol DatagramSocket {
     }) -> (struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes;
-        control @generated_name("DatagramSocketRecvControlData") table {
-            /// Network socket ancillary data.
-            1: network NetworkSocketRecvControlData;
-        };
+        control DatagramSocketRecvControlData;
         truncated uint32;
     }) error fuchsia.posix.Errno;
 
@@ -582,26 +647,33 @@ protocol DatagramSocket {
     /// + request `control` ancillary data.
     /// + request `flags` flags for the send request.
     /// - response `len` the number of bytes sent.
-    // TODO(https://fxbug.dev/82346): Drop `len`.
-    SendMsg(struct {
+    // TODO(https://fxbug.dev/96469): Remove this method once no more callers rely on it.
+    @deprecated("Use SendMsg instead")
+    @selector("fuchsia.posix.socket/DatagramSocket.SendMsg")
+    SendMsgDeprecated(struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes:MAX;
-        control @generated_name("DatagramSocketSendControlData") table {
-            /// Network socket ancillary data.
-            1: network NetworkSocketSendControlData;
-        };
+        control DatagramSocketSendControlData;
         flags SendMsgFlags;
     }) -> (struct {
         len int64;
     }) error fuchsia.posix.Errno;
 
-    /// Retrieves creation information from the socket.
+    /// Sends a message on the socket.
     ///
-    /// - response `domain` the socket's associated domain.
-    /// - response `proto` the socket's associated protocol.
-    GetInfo() -> (struct {
-        domain Domain;
-        proto DatagramSocketProtocol;
+    /// + request `addr` the address to send the message to. If unset, will send
+    ///   to the connected peer.
+    /// + request `data` the message.
+    /// + request `control` ancillary data.
+    /// + request `flags` flags for the send request.
+    /// - response `len` the number of bytes sent.
+    SendMsg(struct {
+        addr fuchsia.net.SocketAddress:optional;
+        data bytes:MAX;
+        control DatagramSocketSendControlData;
+        flags SendMsgFlags;
+    }) -> (struct {
+        len int64;
     }) error fuchsia.posix.Errno;
 };
 
@@ -868,7 +940,7 @@ type InterfaceAddresses = table {
     /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
     /// operation.
     ///
-    /// TODO(fxbug.dev/64758): remove this once all clients are transitioned to
+    /// TODO(https://fxbug.dev/64758): remove this once all clients are transitioned to
     /// use more strongly-typed `interface_flags`.
     3: flags uint32;
     /// All addresses currently assigned to the interface.
@@ -966,7 +1038,7 @@ protocol Provider {
         domain Domain;
         proto DatagramSocketProtocol;
     }) -> (resource struct {
-        s client_end:DatagramSocket;
+        s client_end:SynchronousDatagramSocket;
     }) error fuchsia.posix.Errno;
 
     /// Looks up an interface by its index and returns its name. Returns

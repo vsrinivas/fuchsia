@@ -74,8 +74,8 @@ zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
 
 fdio_ptr fdio_iodir(const char** path, int dirfd);
 
-zx::status<fdio_ptr> fdio_datagram_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
+zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
+    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
 
 zx::status<fdio_ptr> fdio_stream_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);

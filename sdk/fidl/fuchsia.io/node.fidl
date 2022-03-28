@@ -58,9 +58,9 @@ type NodeInfo = strict resource union {
 
     8: reserved;
 
-    /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
-    9: datagram_socket resource struct {
-        /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
+    /// The connection composes [`fuchsia.posix.socket/SynchronousDatagramSocket`].
+    9: synchronous_datagram_socket resource struct {
+        /// See [`fuchsia.posix.socket.SynchronousDatagramSocket`] for details.
         event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
     };
 

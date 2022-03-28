@@ -1752,40 +1752,40 @@ func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode)
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
 }
 
-type datagramSocket struct {
+type synchronousDatagramSocket struct {
 	*endpointWithEvent
 
 	cancel context.CancelFunc
 }
 
 type networkDatagramSocket struct {
-	datagramSocket
+	synchronousDatagramSocket
 }
 
-type datagramSocketImpl struct {
+type synchronousDatagramSocketImpl struct {
 	networkDatagramSocket
 }
 
-var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
+var _ socket.SynchronousDatagramSocketWithCtx = (*synchronousDatagramSocketImpl)(nil)
 
-func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *synchronousDatagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	event, err := s.describe()
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Event: event}), nil
+	return fidlio.NodeInfoWithSynchronousDatagramSocket(fidlio.SynchronousDatagramSocket{Event: event}), nil
 }
 
-func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+func (s *synchronousDatagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
 	var connectionInfo fidlio.ConnectionInfo
 	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
 		event, err := s.describe()
 		if err != nil {
 			return connectionInfo, err
 		}
-		var datagramSocket fidlio.DatagramSocketInfo
-		datagramSocket.SetEvent(event)
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithDatagramSocket(datagramSocket))
+		var synchronousDatagramSocket fidlio.SynchronousDatagramSocketInfo
+		synchronousDatagramSocket.SetEvent(event)
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithSynchronousDatagramSocket(synchronousDatagramSocket))
 	}
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
@@ -1799,7 +1799,7 @@ func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionIn
 	return connectionInfo, nil
 }
 
-func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.SocketRecvControlData {
+func (s *synchronousDatagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.SocketRecvControlData {
 	s.mu.RLock()
 	sockOptTimestamp := s.endpoint.mu.sockOptTimestamp
 	s.mu.RUnlock()
@@ -1820,7 +1820,7 @@ func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ReceivableContro
 	return controlData
 }
 
-func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.IpRecvControlData {
+func (s *synchronousDatagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.IpRecvControlData {
 	var controlData socket.IpRecvControlData
 	if cmsg.HasTOS {
 		controlData.SetTos(cmsg.TOS)
@@ -1831,7 +1831,7 @@ func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMes
 	return controlData
 }
 
-func (s *datagramSocket) ipv6ControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.Ipv6RecvControlData {
+func (s *synchronousDatagramSocket) ipv6ControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.Ipv6RecvControlData {
 	var controlData socket.Ipv6RecvControlData
 	if cmsg.HasTClass {
 		controlData.SetTclass(uint8(cmsg.TClass))
@@ -1842,7 +1842,7 @@ func (s *datagramSocket) ipv6ControlMessagesToFIDL(cmsg tcpip.ReceivableControlM
 	return controlData
 }
 
-func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.NetworkSocketRecvControlData {
+func (s *synchronousDatagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.NetworkSocketRecvControlData {
 	var controlData socket.NetworkSocketRecvControlData
 	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
 		controlData.SetSocket(socketControlData)
@@ -1856,7 +1856,7 @@ func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.Receivabl
 	return controlData
 }
 
-func (s *datagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.DatagramSocketRecvControlData {
+func (s *synchronousDatagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.DatagramSocketRecvControlData {
 	var controlData socket.DatagramSocketRecvControlData
 	if networkSocketControlData := s.networkSocketControlMessagesToFIDL(cmsg); networkSocketControlData != (socket.NetworkSocketRecvControlData{}) {
 		controlData.SetNetwork(networkSocketControlData)
@@ -1896,7 +1896,7 @@ func fidlDatagramControlDataToControlMessages(in socket.DatagramSocketSendContro
 	return 0
 }
 
-func (s *datagramSocket) close() {
+func (s *synchronousDatagramSocket) close() {
 	if s.endpoint.decRef() {
 		s.wq.EventUnregister(&s.entry)
 
@@ -1919,29 +1919,29 @@ func (s *datagramSocket) close() {
 	s.cancel()
 }
 
-func (s *datagramSocket) CloseDeprecated(fidl.Context) (int32, error) {
+func (s *synchronousDatagramSocket) CloseDeprecated(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocket) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+func (s *synchronousDatagramSocket) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
 	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
-func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *synchronousDatagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.datagramSocket.addConnection("fuchsia.posix.socket.DatagramSocket", object, &socket.DatagramSocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.SynchronousDatagramSocket", object, &socket.SynchronousDatagramSocketWithCtxStub{Impl: s})
 	}
 }
 
-func (s *datagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxInterfaceRequest, stub fidl.Stub) {
+func (s *synchronousDatagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxInterfaceRequest, stub fidl.Stub) {
 	s.ns.stats.SocketCount.Increment()
 	s.endpoint.incRef()
 	go func() {
@@ -1965,7 +1965,7 @@ func (s *datagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxI
 	}()
 }
 
-func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+func (s *synchronousDatagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
@@ -1973,7 +1973,7 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio
 	return nil
 }
 
-func (s *datagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+func (s *synchronousDatagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
@@ -1982,7 +1982,7 @@ func (s *datagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionO
 	return nil
 }
 
-func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte, tcpip.ReadResult, tcpip.Error) {
+func (s *synchronousDatagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte, tcpip.ReadResult, tcpip.Error) {
 	var b bytes.Buffer
 	dst := tcpip.LimitedWriter{
 		W: &b,
@@ -2000,7 +2000,7 @@ func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte
 }
 
 func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.ReceivableControlMessages, tcpip.Error) {
-	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
+	bytes, res, err := s.synchronousDatagramSocket.recvMsg(tcpip.ReadOptions{
 		Peek:           peek,
 		NeedRemoteAddr: wantAddr,
 	}, dataLen)
@@ -2016,10 +2016,10 @@ func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool
 	return addr, bytes, uint32(res.Total - res.Count), res.ControlMessages, nil
 }
 
-func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
+func (s *synchronousDatagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.SynchronousDatagramSocketRecvMsgResult, error) {
 	addr, data, truncated, cmsg, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
 	if err != nil {
-		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.SynchronousDatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var pAddr *fidlnet.SocketAddress
 	if wantAddr {
@@ -2031,7 +2031,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 		controlData = s.controlMessagesToFIDL(cmsg)
 	}
 
-	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
+	return socket.SynchronousDatagramSocketRecvMsgResultWithResponse(socket.SynchronousDatagramSocketRecvMsgResponse{
 		Addr:      pAddr,
 		Data:      data,
 		Control:   controlData,
@@ -2039,7 +2039,25 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	}), nil
 }
 
-func (s *datagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
+func (s *synchronousDatagramSocketImpl) RecvMsgDeprecated(ctx fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.SynchronousDatagramSocketRecvMsgDeprecatedResult, error) {
+	res, err := s.RecvMsg(ctx, wantAddr, dataLen, wantControl, flags)
+	switch res.Which() {
+	case socket.SynchronousDatagramSocketRecvMsgResultErr:
+		return socket.SynchronousDatagramSocketRecvMsgDeprecatedResultWithErr(res.Err), err
+	case socket.SynchronousDatagramSocketRecvMsgResultResponse:
+		response := res.Response
+		return socket.SynchronousDatagramSocketRecvMsgDeprecatedResultWithResponse(socket.SynchronousDatagramSocketRecvMsgDeprecatedResponse{
+			Addr:      response.Addr,
+			Data:      response.Data,
+			Control:   response.Control,
+			Truncated: response.Truncated,
+		}), err
+	default:
+		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
+	}
+}
+
+func (s *synchronousDatagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
 	var r bytes.Reader
 	r.Reset(data)
 	n, err := s.ep.Write(&r, tcpip.WriteOptions{
@@ -2070,25 +2088,40 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 		to = &fullAddr
 	}
 
-	return s.datagramSocket.sendMsg(to, data, cmsg)
+	return s.synchronousDatagramSocket.sendMsg(to, data, cmsg)
 }
 
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+func (s *synchronousDatagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.SynchronousDatagramSocketSendMsgResult, error) {
 	var cmsg tcpip.SendableControlMessages
 	if err := fidlDatagramControlDataToControlMessages(controlData, &cmsg); err != 0 {
-		return socket.DatagramSocketSendMsgResultWithErr(err), nil
+		return socket.SynchronousDatagramSocketSendMsgResultWithErr(err), nil
 	}
 	n, err := s.sendMsg(addr, data, cmsg)
 	if err != nil {
-		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.SynchronousDatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
+	return socket.SynchronousDatagramSocketSendMsgResultWithResponse(socket.SynchronousDatagramSocketSendMsgResponse{Len: n}), nil
 }
 
-func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.DatagramSocketGetInfoResult, error) {
+func (s *synchronousDatagramSocketImpl) SendMsgDeprecated(ctx fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.DatagramSocketSendControlData, flags socket.SendMsgFlags) (socket.SynchronousDatagramSocketSendMsgDeprecatedResult, error) {
+	res, err := s.SendMsg(ctx, addr, data, control, flags)
+	switch res.Which() {
+	case socket.SynchronousDatagramSocketSendMsgResultErr:
+		return socket.SynchronousDatagramSocketSendMsgDeprecatedResultWithErr(res.Err), err
+	case socket.SynchronousDatagramSocketSendMsgResultResponse:
+		response := res.Response
+		return socket.SynchronousDatagramSocketSendMsgDeprecatedResultWithResponse(socket.SynchronousDatagramSocketSendMsgDeprecatedResponse{
+			Len: response.Len,
+		}), err
+	default:
+		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
+	}
+}
+
+func (s *synchronousDatagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagramSocketGetInfoResult, error) {
 	domain, err := s.domain()
 	if err != nil {
-		return socket.DatagramSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+		return socket.BaseDatagramSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var proto socket.DatagramSocketProtocol
 	switch transProto := s.transProto; transProto {
@@ -2099,10 +2132,26 @@ func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.DatagramSocketGetInfo
 	default:
 		panic(fmt.Sprintf("unhandled transport protocol: %d", transProto))
 	}
-	return socket.DatagramSocketGetInfoResultWithResponse(socket.DatagramSocketGetInfoResponse{
+	return socket.BaseDatagramSocketGetInfoResultWithResponse(socket.BaseDatagramSocketGetInfoResponse{
 		Domain: domain,
 		Proto:  proto,
 	}), nil
+}
+
+func (s *synchronousDatagramSocketImpl) GetInfoDeprecated(ctx fidl.Context) (socket.BaseDatagramSocketGetInfoDeprecatedResult, error) {
+	res, err := s.GetInfo(ctx)
+	switch res.Which() {
+	case socket.BaseDatagramSocketGetInfoResultErr:
+		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithErr(res.Err), err
+	case socket.BaseDatagramSocketGetInfoResultResponse:
+		response := res.Response
+		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithResponse(socket.BaseDatagramSocketGetInfoDeprecatedResponse{
+			Domain: response.Domain,
+			Proto:  response.Proto,
+		}), err
+	default:
+		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
+	}
 }
 
 type streamSocketImpl struct {
@@ -2700,13 +2749,13 @@ func toNetProto(domain socket.Domain) (posix.Errno, tcpip.NetworkProtocolNumber)
 	}
 }
 
-func makeDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ns *Netstack) (datagramSocket, error) {
+func makeSynchronousDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ns *Netstack) (synchronousDatagramSocket, error) {
 	var localE, peerE zx.Handle
 	if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
-		return datagramSocket{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+		return synchronousDatagramSocket{}, &zx.Error{Status: status, Text: "zx.EventPair"}
 	}
 
-	s := datagramSocket{
+	s := synchronousDatagramSocket{
 		endpointWithEvent: &endpointWithEvent{
 			endpoint: endpoint{
 				ep:         ep,
@@ -2757,14 +2806,14 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		}
 	}
 
-	datagramSocket, err := makeDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, netProto, transProto, wq, sp.ns)
 	if err != nil {
 		return socket.ProviderDatagramSocketResult{}, err
 	}
 
-	s := datagramSocketImpl{
+	s := synchronousDatagramSocketImpl{
 		networkDatagramSocket: networkDatagramSocket{
-			datagramSocket: datagramSocket,
+			synchronousDatagramSocket: synchronousDatagramSocket,
 		},
 	}
 
@@ -2774,7 +2823,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	}
 
 	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	_ = syslog.DebugTf("NewDatagram", "%p", s.endpointWithEvent)
+	_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
 	sp.ns.onAddEndpoint(&s.endpoint)
 
 	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
@@ -2782,7 +2831,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	}
 
 	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponse{
-		S: socket.DatagramSocketWithCtxInterface{Channel: peerC},
+		S: socket.SynchronousDatagramSocketWithCtxInterface{Channel: peerC},
 	}), nil
 }
 
@@ -2876,14 +2925,14 @@ func (sp *rawProviderImpl) Socket(ctx fidl.Context, domain socket.Domain, proto 
 		}
 	}
 
-	datagramSocket, err := makeDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, netProto, transProto, wq, sp.ns)
 	if err != nil {
 		return rawsocket.ProviderSocketResult{}, err
 	}
 
 	s := rawSocketImpl{
 		networkDatagramSocket: networkDatagramSocket{
-			datagramSocket: datagramSocket,
+			synchronousDatagramSocket: synchronousDatagramSocket,
 		},
 		proto: proto,
 	}
@@ -2951,7 +3000,7 @@ func (s *rawSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxI
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.datagramSocket.addConnection("fuchsia.posix.socket.raw.Socket", object, &rawsocket.SocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.raw.Socket", object, &rawsocket.SocketWithCtxStub{Impl: s})
 	}
 }
 
@@ -3265,7 +3314,7 @@ func tcpipErrorToCode(err tcpip.Error) posix.Errno {
 var _ packetsocket.SocketWithCtx = (*packetSocketImpl)(nil)
 
 type packetSocketImpl struct {
-	datagramSocket
+	synchronousDatagramSocket
 
 	kind packetsocket.Kind
 }
@@ -3324,7 +3373,7 @@ func (s *packetSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.datagramSocket.addConnection("fuchsia.posix.socket.packet.Socket", object, &packetsocket.SocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.packet.Socket", object, &packetsocket.SocketWithCtxStub{Impl: s})
 	}
 }
 
@@ -3456,7 +3505,7 @@ func (s *packetSocketImpl) RecvMsg(_ fidl.Context, wantPacketInfo bool, dataLen 
 	// TODO(https://fxbug.dev/21106): do something with control messages.
 	_ = wantControl
 
-	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
+	bytes, res, err := s.synchronousDatagramSocket.recvMsg(tcpip.ReadOptions{
 		Peek:               flags&socket.RecvMsgFlagsPeek != 0,
 		NeedRemoteAddr:     wantPacketInfo,
 		NeedLinkPacketInfo: wantPacketInfo,
@@ -3507,7 +3556,7 @@ func (s *packetSocketImpl) SendMsg(_ fidl.Context, addr *packetsocket.PacketInfo
 		to = &fullAddr
 	}
 
-	n, err := s.datagramSocket.sendMsg(to, data, tcpip.SendableControlMessages{})
+	n, err := s.synchronousDatagramSocket.sendMsg(to, data, tcpip.SendableControlMessages{})
 	if err != nil {
 		return packetsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -3543,14 +3592,14 @@ func (sp *packetProviderImpl) Socket(ctx fidl.Context, kind packetsocket.Kind) (
 		}
 	}
 
-	datagramSocket, err := makeDatagramSocket(ep, 0 /* netProto */, 0 /* transProto */, wq, sp.ns)
+	synchronousDatagramSocket, err := makeSynchronousDatagramSocket(ep, 0 /* netProto */, 0 /* transProto */, wq, sp.ns)
 	if err != nil {
 		return packetsocket.ProviderSocketResult{}, err
 	}
 
 	s := packetSocketImpl{
-		datagramSocket: datagramSocket,
-		kind:           kind,
+		synchronousDatagramSocket: synchronousDatagramSocket,
+		kind:                      kind,
 	}
 
 	localC, peerC, err := zx.NewChannel(0)

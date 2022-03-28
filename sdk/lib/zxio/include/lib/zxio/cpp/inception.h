@@ -34,13 +34,13 @@ using zxio_pipe_t = struct zxio_pipe {
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
-// datagram socket (channel backed) --------------------------------------------
+// synchronous datagram socket (channel backed) --------------------------------------------
 
-// A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
-using zxio_datagram_socket_t = struct zxio_datagram_socket {
+// A |zxio_t| backend that uses a fuchsia.posix.socket.SynchronousDatagramSocket object.
+using zxio_synchronous_datagram_socket_t = struct zxio_synchronous_datagram_socket {
   zxio_t io;
   zx::eventpair event;
-  fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
+  fidl::WireSyncClient<fuchsia_posix_socket::SynchronousDatagramSocket> client;
 };
 
 // stream socket (channel backed) --------------------------------------------

@@ -130,10 +130,12 @@ type ConnectionInfo = resource table {
             1: event zx.handle:EVENTPAIR;
         };
 
-        /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
+        /// The connection composes [`fuchsia.posix.socket/SynchronousDatagramSocket`].
         ///
-        /// See [`NodeProtocols.DATAGRAM_SOCKET`].
-        8: datagram_socket @generated_name("DatagramSocketInfo") resource table {
+        /// See [`NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET`].
+        8: synchronous_datagram_socket
+                @generated_name("SynchronousDatagramSocketInfo")
+                resource table {
             1: event zx.handle:EVENTPAIR;
         };
 

@@ -125,8 +125,9 @@ static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfo& node_in
   return node_info.stream_socket().socket;
 }
 
-static const zx::eventpair& datagram_handle(const fuchsia_io::wire::NodeInfo& node_info) {
-  return node_info.datagram_socket().event;
+static const zx::eventpair& synchronous_datagram_handle(
+    const fuchsia_io::wire::NodeInfo& node_info) {
+  return node_info.synchronous_datagram_socket().event;
 }
 
 template <int Type, typename FidlProtocol, fuchsia_io::wire::NodeInfo::Tag Tag, typename HandleType,
@@ -177,9 +178,10 @@ using StreamSocketImpl = SocketImpl<SOCK_STREAM, fuchsia_posix_socket::StreamSoc
                                     fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
                                     stream_handle, ZX_SOCKET_PEER_CLOSED>;
 
-using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, fuchsia_posix_socket::DatagramSocket,
-                                      fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket,
-                                      zx::eventpair, datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+using SynchronousDatagramSocketImpl =
+    SocketImpl<SOCK_DGRAM, fuchsia_posix_socket::SynchronousDatagramSocket,
+               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
+               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 class SocketTestNames {
  public:
@@ -187,12 +189,12 @@ class SocketTestNames {
   static std::string GetName(int i) {
     if (std::is_same<T, StreamSocketImpl>())
       return "Stream" + testing::PrintToString(i);
-    if (std::is_same<T, DatagramSocketImpl>())
-      return "Datagram" + testing::PrintToString(i);
+    if (std::is_same<T, SynchronousDatagramSocketImpl>())
+      return "SynchronousDatagram" + testing::PrintToString(i);
   }
 };
 
-using SocketTypes = testing::Types<StreamSocketImpl, DatagramSocketImpl>;
+using SocketTypes = testing::Types<StreamSocketImpl, SynchronousDatagramSocketImpl>;
 TYPED_TEST_SUITE(SocketTest, SocketTypes, SocketTestNames);
 
 TYPED_TEST(SocketTest, CloseResourcesOnClose) {

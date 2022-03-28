@@ -131,7 +131,7 @@ enum class VnodeProtocol : uint32_t {
   kMemory,
   kDevice,
   kTty,
-  kDatagramSocket,
+  kSynchronousDatagramSocket,
   kStreamSocket,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
@@ -422,7 +422,7 @@ class VnodeRepresentation {
     zx::eventpair event = {};
   };
 
-  struct DatagramSocket {
+  struct SynchronousDatagramSocket {
     zx::eventpair event = {};
   };
 
@@ -476,9 +476,13 @@ class VnodeRepresentation {
 
   bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
 
-  DatagramSocket& datagram_socket() { return std::get<DatagramSocket>(variants_); }
+  SynchronousDatagramSocket& synchronous_datagram_socket() {
+    return std::get<SynchronousDatagramSocket>(variants_);
+  }
 
-  bool is_datagram_socket() const { return std::holds_alternative<DatagramSocket>(variants_); }
+  bool is_synchronous_datagram_socket() const {
+    return std::holds_alternative<SynchronousDatagramSocket>(variants_);
+  }
 
   StreamSocket& stream_socket() { return std::get<StreamSocket>(variants_); }
 
@@ -486,7 +490,7 @@ class VnodeRepresentation {
 
  private:
   using Variants = std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device,
-                                Tty, DatagramSocket, StreamSocket>;
+                                Tty, SynchronousDatagramSocket, StreamSocket>;
 
   Variants variants_ = {};
 };

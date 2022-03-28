@@ -68,16 +68,16 @@ void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_inf
   }
 }
 
-TEST(SocketCleanup, Datagram) {
+TEST(SocketCleanup, SynchronousDatagram) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
 
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
 
-  fuchsia_io::wire::DatagramSocket dgram_info{.event = std::move(client_event)};
+  fuchsia_io::wire::SynchronousDatagramSocket dgram_info{.event = std::move(client_event)};
   fuchsia_io::wire::NodeInfo node_info;
-  node_info.set_datagram_socket(std::move(dgram_info));
+  node_info.set_synchronous_datagram_socket(std::move(dgram_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));

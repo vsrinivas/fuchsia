@@ -848,7 +848,7 @@ pub(super) fn spawn_worker<C>(
     domain: fposix_socket::Domain,
     proto: fposix_socket::DatagramSocketProtocol,
     ctx: C,
-    events: fposix_socket::DatagramSocketRequestStream,
+    events: fposix_socket::SynchronousDatagramSocketRequestStream,
     properties: SocketWorkerProperties,
 ) -> Result<(), fposix::Errno>
 where
@@ -921,7 +921,7 @@ where
     fn spawn(
         ctx: C,
         properties: SocketWorkerProperties,
-        events: fposix_socket::DatagramSocketRequestStream,
+        events: fposix_socket::SynchronousDatagramSocketRequestStream,
     ) -> Result<(), fposix::Errno> {
         let (local_event, peer_event) =
             zx::EventPair::create().map_err(|_| fposix::Errno::Enobufs)?;
@@ -968,13 +968,14 @@ where
         Self { ctx: self.ctx.clone(), id: self.id, rights: self.rights, _marker: PhantomData }
     }
 
-    // Starts servicing a [Clone request](fposix_socket::DatagramSocketRequest::Clone).
+    // Starts servicing a [Clone request](fposix_socket::SynchronousDatagramSocketRequest::Clone).
     fn clone_spawn(&self, flags: u32, object: ServerEnd<fio::NodeMarker>, mut worker: Self) {
         fasync::Task::spawn(
             async move {
                 let channel = AsyncChannel::from_channel(object.into_channel())
                     .expect("failed to create async channel");
-                let events = fposix_socket::DatagramSocketRequestStream::from_channel(channel);
+                let events =
+                    fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
                 let control_handle = events.control_handle();
                 let send_on_open = |status: i32, info: Option<&mut fio::NodeInfo>| {
                     if let Err(e) = control_handle.send_on_open_(status, info) {
@@ -1022,10 +1023,10 @@ where
     ///
     /// Returns when getting the first `Close` request.
     ///
-    /// [a stream of POSIX socket requests]: fposix_socket::DatagramSocketRequestStream
+    /// [a stream of POSIX socket requests]: fposix_socket::SynchronousDatagramSocketRequestStream
     async fn handle_stream(
         self,
-        mut events: fposix_socket::DatagramSocketRequestStream,
+        mut events: fposix_socket::SynchronousDatagramSocketRequestStream,
     ) -> Result<(), fidl::Error> {
         // We need to early return here to avoid `Close` requests being received
         // on the same channel twice causing the incorrect decrease of refcount
@@ -1035,7 +1036,7 @@ where
             match event {
                 Ok(req) => {
                     match req {
-                        fposix_socket::DatagramSocketRequest::Describe { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Describe { responder } => {
                             // If the call to duplicate_handle fails, we have no
                             // choice but to drop the responder and close the
                             // channel, since Describe must be infallible.
@@ -1043,24 +1044,24 @@ where
                                 responder_send!(responder, &mut info);
                             }
                         }
-                        fposix_socket::DatagramSocketRequest::Describe2 { query, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Describe2 { query, responder } => {
                             let _ = responder;
                             todo!("https://fxbug.dev/77623: query={:?}", query);
                         }
-                        fposix_socket::DatagramSocketRequest::Connect { addr, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Connect { addr, responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.connect(addr)
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::Disconnect { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Disconnect { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eafnosupport));
                         }
-                        fposix_socket::DatagramSocketRequest::Clone { flags, object, .. } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Clone { flags, object, .. } => {
                             let cloned_worker = self.clone().await;
                             self.clone_spawn(flags, object, cloned_worker);
                         }
-                        fposix_socket::DatagramSocketRequest::Reopen {
+                        fposix_socket::SynchronousDatagramSocketRequest::Reopen {
                             options,
                             object_request,
                             control_handle: _,
@@ -1068,26 +1069,26 @@ where
                             let _ = object_request;
                             todo!("https://fxbug.dev/77623: options={:?}", options);
                         }
-                        fposix_socket::DatagramSocketRequest::CloseDeprecated { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::CloseDeprecated { responder } => {
                             let () = self.make_handler().await.close();
                             responder_send!(responder, zx::Status::OK.into_raw());
                             return Ok(());
                         }
-                        fposix_socket::DatagramSocketRequest::Close { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Close { responder } => {
                             let () = self.make_handler().await.close();
                             responder_send!(responder, &mut Ok(()));
                             return Ok(());
                         }
-                        fposix_socket::DatagramSocketRequest::SyncDeprecated { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::SyncDeprecated { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
-                        fposix_socket::DatagramSocketRequest::Sync { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Sync { responder } => {
                             responder_send!(
                                 responder,
                                 &mut Err(zx::Status::NOT_SUPPORTED.into_raw())
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::GetAttr { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetAttr { responder } => {
                             responder_send!(
                                 responder,
                                 zx::Status::NOT_SUPPORTED.into_raw(),
@@ -1102,52 +1103,52 @@ where
                                 }
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::SetAttr {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetAttr {
                             flags: _,
                             attributes: _,
                             responder,
                         } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
-                        fposix_socket::DatagramSocketRequest::GetAttributes {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetAttributes {
                             query,
                             responder,
                         } => {
                             let _ = responder;
                             todo!("https://fxbug.dev/77623: query={:?}", query);
                         }
-                        fposix_socket::DatagramSocketRequest::UpdateAttributes {
+                        fposix_socket::SynchronousDatagramSocketRequest::UpdateAttributes {
                             attributes,
                             responder,
                         } => {
                             let _ = responder;
                             todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
                         }
-                        fposix_socket::DatagramSocketRequest::Bind { addr, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Bind { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));
                         }
-                        fposix_socket::DatagramSocketRequest::QueryFilesystem { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::QueryFilesystem { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);
                         }
-                        fposix_socket::DatagramSocketRequest::GetSockName { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetSockName { responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.get_sock_name()
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::GetPeerName { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetPeerName { responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.get_peer_name()
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::Shutdown { mode, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Shutdown { mode, responder } => {
                             responder_send!(
                                 responder,
                                 &mut self.make_handler().await.shutdown(mode)
                             )
                         }
-                        fposix_socket::DatagramSocketRequest::RecvMsg {
+                        fposix_socket::SynchronousDatagramSocketRequest::RecvMsg {
                             want_addr,
                             data_len,
                             want_control: _,
@@ -1163,7 +1164,16 @@ where
                                     .recv_msg(want_addr, data_len as usize)
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::SendMsg {
+                        fposix_socket::SynchronousDatagramSocketRequest::RecvMsgDeprecated {
+                            want_addr: _,
+                            data_len: _,
+                            want_control: _,
+                            flags: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::SendMsg {
                             addr,
                             data,
                             control: _,
@@ -1179,310 +1189,322 @@ where
                                     .send_msg(addr.map(|addr| *addr), data)
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::GetFlags { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::SendMsgDeprecated {
+                            addr: _,
+                            data: _,
+                            control: _,
+                            flags: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::GetFlags { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
                         }
-                        fposix_socket::DatagramSocketRequest::SetFlags { flags: _, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetFlags { flags: _, responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
-                        fposix_socket::DatagramSocketRequest::GetInfo { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetInfo { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetTimestamp { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetInfoDeprecated { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetTimestamp2 { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetTimestamp { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetTimestamp {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetTimestamp2 { responder } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::SetTimestamp {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetTimestamp2 {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetTimestamp2 {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetError { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetError { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetSendBuffer {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetSendBuffer {
                             value_bytes: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetSendBuffer { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetSendBuffer { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetReceiveBuffer {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetReceiveBuffer {
                             value_bytes: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetReceiveBuffer { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetReceiveBuffer { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetReuseAddress {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetReuseAddress {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetReuseAddress { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetReuseAddress { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetReusePort {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetReusePort {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetReusePort { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetReusePort { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetAcceptConn { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetAcceptConn { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetBindToDevice {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetBindToDevice {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetBindToDevice { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetBindToDevice { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetBroadcast {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetBroadcast {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetBroadcast { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetBroadcast { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetKeepAlive {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetKeepAlive {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetKeepAlive { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetKeepAlive { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetLinger {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetLinger {
                             linger: _,
                             length_secs: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetLinger { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetLinger { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetOutOfBandInline {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetOutOfBandInline {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetOutOfBandInline { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetOutOfBandInline { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetNoCheck {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetNoCheck {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetNoCheck { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetNoCheck { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6Only {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6Only {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6Only { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6Only { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6TrafficClass {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6TrafficClass {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6TrafficClass { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6TrafficClass { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6MulticastInterface {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastInterface {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastInterface {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastInterface {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6UnicastHops {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6UnicastHops {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6UnicastHops { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6UnicastHops { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6MulticastHops {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastHops {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastHops {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastHops {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6MulticastLoopback {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastLoopback {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastLoopback {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastLoopback {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpTtl { value: _, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpTtl { value: _, responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpTtl { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpTtl { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpMulticastTtl {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastTtl {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpMulticastTtl { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpMulticastTtl { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpMulticastInterface {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastInterface {
                             iface: _,
                             address: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpMulticastInterface {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpMulticastInterface {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpMulticastLoopback {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastLoopback {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpMulticastLoopback {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpMulticastLoopback {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpTypeOfService {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpTypeOfService {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpTypeOfService { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpTypeOfService { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::AddIpMembership {
+                        fposix_socket::SynchronousDatagramSocketRequest::AddIpMembership {
                             membership: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::DropIpMembership {
+                        fposix_socket::SynchronousDatagramSocketRequest::DropIpMembership {
                             membership: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::AddIpv6Membership {
+                        fposix_socket::SynchronousDatagramSocketRequest::AddIpv6Membership {
                             membership: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::DropIpv6Membership {
+                        fposix_socket::SynchronousDatagramSocketRequest::DropIpv6Membership {
                             membership: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6ReceiveTrafficClass {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6ReceiveTrafficClass {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6ReceiveTrafficClass {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6ReceiveTrafficClass {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6ReceiveHopLimit {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6ReceiveHopLimit {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6ReceiveHopLimit {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6ReceiveHopLimit {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpReceiveTypeOfService {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpReceiveTypeOfService {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpReceiveTypeOfService {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpReceiveTypeOfService {
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpReceiveTtl {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpReceiveTtl {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpReceiveTtl { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpReceiveTtl { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpPacketInfo {
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpPacketInfo {
                             value: _,
                             responder,
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpPacketInfo { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpPacketInfo { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                     }
@@ -1575,7 +1597,11 @@ where
         self.get_state()
             .peer_event
             .duplicate_handle(zx::Rights::BASIC)
-            .map(|peer| fio::NodeInfo::DatagramSocket(fio::DatagramSocket { event: peer }))
+            .map(|peer| {
+                fio::NodeInfo::SynchronousDatagramSocket(fio::SynchronousDatagramSocket {
+                    event: peer,
+                })
+            })
             .ok()
     }
 
@@ -1611,7 +1637,7 @@ where
 {
     /// Handles a [POSIX socket connect request].
     ///
-    /// [POSIX socket connect request]: fposix_socket::DatagramSocketRequest::Connect
+    /// [POSIX socket connect request]: fposix_socket::SynchronousDatagramSocketRequest::Connect
     fn connect(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("connect sockaddr: {:?}", sockaddr);
@@ -1675,7 +1701,7 @@ where
 
     /// Handles a [POSIX socket bind request].
     ///
-    /// [POSIX socket bind request]: fposix_socket::DatagramSocketRequest::Bind
+    /// [POSIX socket bind request]: fposix_socket::SynchronousDatagramSocketRequest::Bind
     fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("bind sockaddr: {:?}", sockaddr);
@@ -1699,7 +1725,7 @@ where
 
     /// Handles a [POSIX socket get_sock_name request].
     ///
-    /// [POSIX socket get_sock_name request]: fposix_socket::DatagramSocketRequest::GetSockName
+    /// [POSIX socket get_sock_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetSockName
     fn get_sock_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
@@ -1724,7 +1750,7 @@ where
 
     /// Handles a [POSIX socket get_peer_name request].
     ///
-    /// [POSIX socket get_peer_name request]: fposix_socket::DatagramSocketRequest::GetPeerName
+    /// [POSIX socket get_peer_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetPeerName
     fn get_peer_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
@@ -2006,7 +2032,7 @@ mod tests {
 
     async fn prepare_test<A: TestSockAddr>(
         proto: fposix_socket::DatagramSocketProtocol,
-    ) -> (TestSetup, fposix_socket::DatagramSocketProxy) {
+    ) -> (TestSetup, fposix_socket::SynchronousDatagramSocketProxy) {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_stack(
@@ -2023,14 +2049,14 @@ mod tests {
     async fn get_socket<A: TestSockAddr>(
         test_stack: &mut TestStack,
         proto: fposix_socket::DatagramSocketProtocol,
-    ) -> fposix_socket::DatagramSocketProxy {
+    ) -> fposix_socket::SynchronousDatagramSocketProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket = socket_provider
             .datagram_socket(A::DOMAIN, proto)
             .await
             .unwrap()
             .expect("Socket succeeds");
-        fposix_socket::DatagramSocketProxy::new(
+        fposix_socket::SynchronousDatagramSocketProxy::new(
             fasync::Channel::from_channel(socket.into_channel()).unwrap(),
         )
     }
@@ -2038,11 +2064,11 @@ mod tests {
     async fn get_socket_and_event<A: TestSockAddr>(
         test_stack: &mut TestStack,
         proto: fposix_socket::DatagramSocketProtocol,
-    ) -> (fposix_socket::DatagramSocketProxy, zx::EventPair) {
+    ) -> (fposix_socket::SynchronousDatagramSocketProxy, zx::EventPair) {
         let ctlr = get_socket::<A>(test_stack, proto).await;
         let node_info = ctlr.describe().await.expect("Socked describe succeeds");
         let event = match node_info {
-            fio::NodeInfo::DatagramSocket(e) => e.event,
+            fio::NodeInfo::SynchronousDatagramSocket(e) => e.event,
             _ => panic!("Got wrong describe response for UDP socket"),
         };
         (ctlr, event)
@@ -2383,7 +2409,7 @@ mod tests {
             .unwrap();
         let info = socket.describe().await.expect("Describe call succeeds");
         match info {
-            fio::NodeInfo::DatagramSocket(_) => (),
+            fio::NodeInfo::SynchronousDatagramSocket(_) => (),
             info => panic!(
                 "Socket Describe call did not return Node of type Socket, got {:?} instead",
                 info
@@ -2422,13 +2448,13 @@ mod tests {
     }
 
     async fn socket_clone(
-        socket: &fposix_socket::DatagramSocketProxy,
+        socket: &fposix_socket::SynchronousDatagramSocketProxy,
         flags: u32,
-    ) -> Result<fposix_socket::DatagramSocketProxy, Error> {
+    ) -> Result<fposix_socket::SynchronousDatagramSocketProxy, Error> {
         let (server, client) = zx::Channel::create()?;
         socket.clone(flags, ServerEnd::from(server))?;
         let channel = AsyncChannel::from_channel(client)?;
-        Ok(fposix_socket::DatagramSocketProxy::new(channel))
+        Ok(fposix_socket::SynchronousDatagramSocketProxy::new(channel))
     }
 
     async fn clone<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
@@ -2461,20 +2487,20 @@ mod tests {
                 .expect("cannot clone socket");
         let mut events = alice_cloned.take_event_stream();
         match events.next().await.expect("stream closed").expect("failed to decode") {
-            fposix_socket::DatagramSocketEvent::OnOpen_ { s, info } => {
+            fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, info } => {
                 assert_eq!(s, zx::sys::ZX_OK);
                 let info = info.unwrap();
                 match *info {
-                    fio::NodeInfo::DatagramSocket(_) => (),
+                    fio::NodeInfo::SynchronousDatagramSocket(_) => (),
                     info => panic!(
                         "Socket Describe call did not return Node of type Socket, got {:?} instead",
                         info
                     ),
                 }
             }
-            fposix_socket::DatagramSocketEvent::OnConnectionInfo { info } => {
+            fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { info } => {
                 match info.representation.expect("missing representation") {
-                    fio::Representation::DatagramSocket(_) => (),
+                    fio::Representation::SynchronousDatagramSocket(_) => (),
                     representation => panic!(
                         "Socket Describe call did not return Node of type Socket, got {:?} instead",
                         representation
@@ -2485,7 +2511,7 @@ mod tests {
         // describe() explicitly.
         let info = alice_cloned.describe().await.expect("Describe call succeeds");
         match info {
-            fio::NodeInfo::DatagramSocket(_) => (),
+            fio::NodeInfo::SynchronousDatagramSocket(_) => (),
             info => panic!(
                 "Socket Describe call did not return Node of type Socket, got {:?} instead",
                 info
@@ -2604,7 +2630,7 @@ mod tests {
 
             let alice_readonly_info = alice_readonly.describe().await.expect("failed to describe");
             let alice_readonly_event = match alice_readonly_info {
-                fio::NodeInfo::DatagramSocket(e) => e.event,
+                fio::NodeInfo::SynchronousDatagramSocket(e) => e.event,
                 _ => panic!("Got wrong describe response for UDP socket"),
             };
             assert_eq!(
@@ -2807,16 +2833,19 @@ mod tests {
 
     declare_tests!(implicit_close);
 
-    async fn expect_clone_invalid_args(socket: &fposix_socket::DatagramSocketProxy, flags: u32) {
+    async fn expect_clone_invalid_args(
+        socket: &fposix_socket::SynchronousDatagramSocketProxy,
+        flags: u32,
+    ) {
         let cloned = socket_clone(&socket, flags).await.unwrap();
         {
             let mut events = cloned.take_event_stream();
             if let Some(result) = events.next().await {
                 match result.expect("failed to decode") {
-                    fposix_socket::DatagramSocketEvent::OnOpen_ { s, .. } => {
+                    fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, .. } => {
                         assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
                     }
-                    fposix_socket::DatagramSocketEvent::OnConnectionInfo { .. } => {
+                    fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { .. } => {
                         assert!(false);
                     }
                 }

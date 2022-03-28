@@ -19,10 +19,10 @@
 
 namespace {
 
-class DatagramSocketServer final
-    : public fidl::testing::WireTestBase<fuchsia_posix_socket::DatagramSocket> {
+class SynchronousDatagramSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::SynchronousDatagramSocket> {
  public:
-  DatagramSocketServer() = default;
+  SynchronousDatagramSocketServer() = default;
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
     ADD_FAILURE("unexpected message received: %s", name.c_str());
@@ -44,7 +44,7 @@ class DatagramSocketServer final
   }
 };
 
-class DatagramSocketTest : public zxtest::Test {
+class SynchronousDatagramSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event0_, &event1_));
@@ -57,7 +57,7 @@ class DatagramSocketTest : public zxtest::Test {
   }
 
   void Init() {
-    ASSERT_OK(zxio_datagram_socket_init(&storage_, TakeEvent(), TakeClientEnd()));
+    ASSERT_OK(zxio_synchronous_datagram_socket_init(&storage_, TakeEvent(), TakeClientEnd()));
     zxio_ = &storage_.io;
   }
 
@@ -69,7 +69,7 @@ class DatagramSocketTest : public zxtest::Test {
   }
 
   zx::eventpair TakeEvent() { return std::move(event0_); }
-  fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> TakeClientEnd() {
+  fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> TakeClientEnd() {
     return std::move(client_end_);
   }
   zxio_storage_t* storage() { return &storage_; }
@@ -79,16 +79,16 @@ class DatagramSocketTest : public zxtest::Test {
   zxio_storage_t storage_;
   zxio_t* zxio_{nullptr};
   zx::eventpair event0_, event1_;
-  fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client_end_;
-  DatagramSocketServer server_;
+  fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client_end_;
+  SynchronousDatagramSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
 }  // namespace
 
-TEST_F(DatagramSocketTest, Basic) { Init(); }
+TEST_F(SynchronousDatagramSocketTest, Basic) { Init(); }
 
-TEST_F(DatagramSocketTest, Release) {
+TEST_F(SynchronousDatagramSocketTest, Release) {
   Init();
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -98,7 +98,7 @@ TEST_F(DatagramSocketTest, Release) {
   EXPECT_OK(zx_handle_close(handle));
 }
 
-TEST_F(DatagramSocketTest, Borrow) {
+TEST_F(SynchronousDatagramSocketTest, Borrow) {
   Init();
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -106,14 +106,14 @@ TEST_F(DatagramSocketTest, Borrow) {
   EXPECT_NE(handle, ZX_HANDLE_INVALID);
 }
 
-TEST_F(DatagramSocketTest, CreateWithType) {
-  ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET,
+TEST_F(SynchronousDatagramSocketTest, CreateWithType) {
+  ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
                                   TakeEvent().release(), TakeClientEnd().TakeChannel().release()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
-TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateDatagramSocket(storage(), TakeEvent(), TakeClientEnd()));
+TEST_F(SynchronousDatagramSocketTest, CreateWithTypeWrapper) {
+  ASSERT_OK(zxio::CreateSynchronousDatagramSocket(storage(), TakeEvent(), TakeClientEnd()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 

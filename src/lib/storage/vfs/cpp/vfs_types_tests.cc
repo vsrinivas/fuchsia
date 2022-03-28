@@ -136,7 +136,7 @@ TEST(VnodeProtocolSet, Union) {
   EXPECT_TRUE((combined & file).any());
   EXPECT_TRUE((combined & directory).any());
   EXPECT_FALSE((combined & fs::VnodeProtocol::kConnector).any());
-  EXPECT_FALSE((combined & fs::VnodeProtocol::kDatagramSocket).any());
+  EXPECT_FALSE((combined & fs::VnodeProtocol::kSynchronousDatagramSocket).any());
   EXPECT_FALSE((combined & fs::VnodeProtocol::kDevice).any());
   EXPECT_FALSE((combined & fs::VnodeProtocol::kMemory).any());
   EXPECT_FALSE((combined & fs::VnodeProtocol::kPipe).any());
@@ -155,7 +155,7 @@ TEST(VnodeProtocolSet, Intersection) {
 
   EXPECT_TRUE((intersection & fs::VnodeProtocol::kDirectory).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kConnector).any());
-  EXPECT_FALSE((intersection & fs::VnodeProtocol::kDatagramSocket).any());
+  EXPECT_FALSE((intersection & fs::VnodeProtocol::kSynchronousDatagramSocket).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kDevice).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kFile).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kMemory).any());
@@ -192,7 +192,8 @@ TEST(VnodeProtocolSet, All) {
   ASSERT_TRUE(all.any());
 
   EXPECT_TRUE((all & fs::VnodeProtocol::kConnector) == fs::VnodeProtocol::kConnector);
-  EXPECT_TRUE((all & fs::VnodeProtocol::kDatagramSocket) == fs::VnodeProtocol::kDatagramSocket);
+  EXPECT_TRUE((all & fs::VnodeProtocol::kSynchronousDatagramSocket) ==
+              fs::VnodeProtocol::kSynchronousDatagramSocket);
   EXPECT_TRUE((all & fs::VnodeProtocol::kDevice) == fs::VnodeProtocol::kDevice);
   EXPECT_TRUE((all & fs::VnodeProtocol::kDirectory) == fs::VnodeProtocol::kDirectory);
   EXPECT_TRUE((all & fs::VnodeProtocol::kFile) == fs::VnodeProtocol::kFile);

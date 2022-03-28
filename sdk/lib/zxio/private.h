@@ -121,10 +121,11 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_sock
 // The |handle| should be a Zircon debuglog object.
 zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
-// datagram socket (channel backed) --------------------------------------------
+// synchronous datagram socket (channel backed) --------------------------------------------
 
-zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
-                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
+zx_status_t zxio_synchronous_datagram_socket_init(
+    zxio_storage_t* storage, zx::eventpair event,
+    fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
 
 // stream socket (channel backed) ----------------------------------------------
 

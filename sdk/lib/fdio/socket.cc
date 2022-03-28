@@ -950,13 +950,13 @@ int16_t SetSockOptProcessor::Get(IntOrChar& out) {
 }
 
 template <typename T,
-          typename =
-              std::enable_if_t<std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<fpacketsocket::Socket>>>>
+          typename = std::enable_if_t<
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<fpacketsocket::Socket>>>>
 struct BaseSocket {
-  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
+  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<fpacketsocket::Socket>>);
@@ -970,7 +970,7 @@ struct BaseSocket {
     GetSockOptProcessor proc(optval, optlen);
     switch (optname) {
       case SO_TYPE:
-        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
+        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>>) {
           return proc.StoreOption<int32_t>(SOCK_DGRAM);
         }
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
@@ -1011,7 +1011,7 @@ struct BaseSocket {
           };
         });
       case SO_PROTOCOL:
-        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
+        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>>) {
           return proc.Process(client()->GetInfo(), [](const auto& response) {
             switch (response.proto) {
               case fsocket::wire::DatagramSocketProtocol::kUdp:
@@ -1173,12 +1173,12 @@ struct BaseSocket {
 };
 
 template <typename T,
-          typename =
-              std::enable_if_t<std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>>>
+          typename = std::enable_if_t<
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>>>
 struct BaseNetworkSocket : public BaseSocket<T> {
-  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
+  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>);
 
@@ -1875,18 +1875,20 @@ void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void*
   addr_len = fidl_to_sockaddr(fidl, addr, addr_len);
 }
 
-struct DatagramSocket {
+struct SynchronousDatagramSocket {
   using FidlSockAddr = SocketAddress;
   using FidlSendControlData = fsocket::wire::DatagramSocketSendControlData;
-  using zxio_type = zxio_datagram_socket_t;
+  using zxio_type = zxio_synchronous_datagram_socket_t;
 
-  static void recvmsg_populate_msgname(const fsocket::wire::DatagramSocketRecvMsgResponse& response,
-                                       void* addr, socklen_t& addr_len) {
+  static void recvmsg_populate_msgname(
+      const fsocket::wire::SynchronousDatagramSocketRecvMsgResponse& response, void* addr,
+      socklen_t& addr_len) {
     recvmsg_populate_socketaddress(response.addr, addr, addr_len);
   }
 
-  static void handle_sendmsg_response(const fsocket::wire::DatagramSocketSendMsgResponse& response,
-                                      ssize_t expected_len) {
+  static void handle_sendmsg_response(
+      const fsocket::wire::SynchronousDatagramSocketSendMsgResponse& response,
+      ssize_t expected_len) {
     // TODO(https://fxbug.dev/82346): Drop len from the response as SendMsg does
     // does not perform partial writes.
     ZX_DEBUG_ASSERT_MSG(response.len == expected_len, "got SendMsg(...) = %ld, want = %ld",
@@ -1945,7 +1947,7 @@ struct PacketSocket {
   }
 };
 
-template <typename T, typename = std::enable_if_t<std::is_same_v<T, DatagramSocket> ||
+template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
                                                   std::is_same_v<T, RawSocket> ||
                                                   std::is_same_v<T, PacketSocket>>>
 struct base_socket_with_event : public zxio {
@@ -2152,7 +2154,7 @@ struct base_socket_with_event : public zxio {
   }
 };
 
-template <typename T, typename = std::enable_if_t<std::is_same_v<T, DatagramSocket> ||
+template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
                                                   std::is_same_v<T, RawSocket>>>
 struct socket_with_event : public base_socket_with_event<T> {
   using base_socket_with_event<T>::zxio_socket_with_event;
@@ -2291,19 +2293,19 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
   return result.status;
 }
 
-using datagram_socket = socket_with_event<DatagramSocket>;
+using synchronous_datagram_socket = socket_with_event<SynchronousDatagramSocket>;
 using raw_socket = socket_with_event<RawSocket>;
 
 }  // namespace fdio_internal
 
-zx::status<fdio_ptr> fdio_datagram_socket_create(zx::eventpair event,
-                                                 fidl::ClientEnd<fsocket::DatagramSocket> client) {
-  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::datagram_socket>();
+zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
+    zx::eventpair event, fidl::ClientEnd<fsocket::SynchronousDatagramSocket> client) {
+  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::synchronous_datagram_socket>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status =
-      zxio::CreateDatagramSocket(&io->zxio_storage(), std::move(event), std::move(client));
+  zx_status_t status = zxio::CreateSynchronousDatagramSocket(&io->zxio_storage(), std::move(event),
+                                                             std::move(client));
   if (status != ZX_OK) {
     return zx::error(status);
   }
