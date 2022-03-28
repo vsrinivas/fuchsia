@@ -11,11 +11,15 @@ use core::{convert::TryFrom as _, num::TryFromIntError};
 
 use explicit::ResultExt as _;
 
-use crate::transport::tcp::{
-    buffer::{Assembler, ReceiveBuffer, SendBuffer, SendPayload},
-    segment::{Payload, Segment},
-    seqnum::{SeqNum, WindowSize},
-    Control, UserError,
+use crate::{
+    transport::tcp::{
+        buffer::{Assembler, ReceiveBuffer, SendBuffer, SendPayload},
+        rtt::Estimator,
+        segment::{Payload, Segment},
+        seqnum::{SeqNum, WindowSize},
+        Control, UserError,
+    },
+    Instant,
 };
 
 /// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
@@ -28,14 +32,18 @@ struct Closed<Error> {
     reason: Error,
 }
 
-impl Closed<()> {
+/// An uninhabited type used together with [`Closed`] to sugest that it is in
+/// initial condition and no errors have occurred yet.
+enum Initial {}
+
+impl Closed<Initial> {
     /// Corresponds to the [OPEN](https://tools.ietf.org/html/rfc793#page-54)
     /// user call.
     ///
     /// `iss`is The initial send sequence number. Which is effectively the
     /// sequence number of SYN.
-    fn connect(iss: SeqNum) -> (SynSent, Segment<()>) {
-        (SynSent { iss }, Segment::syn(iss, WindowSize::DEFAULT))
+    fn connect<I: Instant>(iss: SeqNum, now: I) -> (SynSent<I>, Segment<()>) {
+        (SynSent { iss, timestamp: now }, Segment::syn(iss, WindowSize::DEFAULT))
     }
 
     fn listen(iss: SeqNum) -> Listen {
@@ -86,17 +94,18 @@ struct Listen {
 
 /// Dispositions of [`Listen::on_segment`].
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum ListenOnSegmentDisposition {
-    SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd),
+enum ListenOnSegmentDisposition<I: Instant> {
+    SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd<I>),
     SendRst(Segment<()>),
     Ignore,
 }
 
 impl Listen {
-    fn on_segment(
+    fn on_segment<I: Instant>(
         &self,
         Segment { seq, ack, wnd: _, contents }: Segment<impl Payload>,
-    ) -> ListenOnSegmentDisposition {
+        now: I,
+    ) -> ListenOnSegmentDisposition<I> {
         let Listen { iss } = *self;
         //   first check for an RST
         //   An incoming RST should be ignored.  Return.
@@ -128,7 +137,7 @@ impl Listen {
             // there is no need to store these the RCV and SND variables.
             return ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
                 Segment::syn_ack(iss, seq + 1, WindowSize::DEFAULT),
-                SynRcvd { iss, irs: seq },
+                SynRcvd { iss, irs: seq, timestamp: now },
             );
         }
         ListenOnSegmentDisposition::Ignore
@@ -137,21 +146,23 @@ impl Listen {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct SynSent {
+struct SynSent<I: Instant> {
     iss: SeqNum,
+    // The timestamp when the SYN segment was sent.
+    timestamp: I,
 }
 
 /// Dispositions of [`SynSent::on_segment`].
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum SynSentOnSegmentDisposition<R: ReceiveBuffer, S: SendBuffer> {
-    SendAckAndEnterEstablished(Segment<()>, Established<R, S>),
-    SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd),
+enum SynSentOnSegmentDisposition<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
+    SendAckAndEnterEstablished(Segment<()>, Established<I, R, S>),
+    SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd<I>),
     SendRstAndEnterClosed(Segment<()>, Closed<UserError>),
     EnterClosed(Closed<UserError>),
     Ignore,
 }
 
-impl SynSent {
+impl<I: Instant> SynSent<I> {
     /// Processes an incoming segment in the SYN-SENT state.
     ///
     /// Transitions to ESTABLSHED if the incoming segment is a proper SYN-ACK.
@@ -160,8 +171,9 @@ impl SynSent {
     fn on_segment<R: ReceiveBuffer, S: SendBuffer>(
         &self,
         Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents }: Segment<impl Payload>,
-    ) -> SynSentOnSegmentDisposition<R, S> {
-        let Self { iss } = *self;
+        now: I,
+    ) -> SynSentOnSegmentDisposition<I, R, S> {
+        let SynSent { iss, timestamp: syn_sent_ts } = *self;
         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
         //   first check the ACK bit
         //   If the ACK bit is set
@@ -229,6 +241,8 @@ impl SynSent {
                         //   the URG bit is checked, otherwise return.
                         if seg_ack.after(iss) {
                             let irs = seg_seq;
+                            let mut rtt_estimator = Estimator::default();
+                            rtt_estimator.sample(now.duration_since(syn_sent_ts));
                             let established = Established {
                                 snd: Send {
                                     nxt: iss + 1,
@@ -237,6 +251,8 @@ impl SynSent {
                                     wl1: seg_seq,
                                     wl2: seg_ack,
                                     buffer: S::default(),
+                                    last_seq_ts: None,
+                                    rtt_estimator,
                                 },
                                 rcv: Recv {
                                     buffer: R::default(),
@@ -265,7 +281,7 @@ impl SynSent {
                         //   ESTABLISHED state has been reached, return.
                         SynSentOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
                             Segment::syn_ack(iss, seg_seq + 1, WindowSize::DEFAULT),
-                            SynRcvd { iss, irs: seg_seq },
+                            SynRcvd { iss, irs: seg_seq, timestamp: now },
                         )
                     }
                 }
@@ -284,28 +300,31 @@ impl SynSent {
 ///   connection request.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct SynRcvd {
+struct SynRcvd<I: Instant> {
     iss: SeqNum,
     irs: SeqNum,
+    // The timestamp when the SYN segment was received.
+    timestamp: I,
 }
 
 /// Dispositions of [`SynRcvd::on_segment`].
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum SynRcvdOnSegmentDisposition<R: ReceiveBuffer, S: SendBuffer> {
+enum SynRcvdOnSegmentDisposition<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     SendAck(Segment<()>),
     SendRst(Segment<()>),
     SendRstAndEnterClosed(Segment<()>, Closed<UserError>),
     EnterClosed(Closed<UserError>),
-    EnterEstablished(Established<R, S>),
+    EnterEstablished(Established<I, R, S>),
     Ignore,
 }
 
-impl SynRcvd {
+impl<I: Instant> SynRcvd<I> {
     fn on_segment<R: ReceiveBuffer, S: SendBuffer>(
         &self,
         incoming: Segment<impl Payload>,
-    ) -> SynRcvdOnSegmentDisposition<R, S> {
-        let SynRcvd { iss, irs } = *self;
+        now: I,
+    ) -> SynRcvdOnSegmentDisposition<I, R, S> {
+        let SynRcvd { iss, irs, timestamp: syn_rcvd_ts } = *self;
         let is_rst = incoming.contents.control() == Some(Control::RST);
         let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
             match incoming.overlap(irs + 1, WindowSize::DEFAULT) {
@@ -386,6 +405,8 @@ impl SynRcvd {
                         if seg_ack != iss + 1 {
                             SynRcvdOnSegmentDisposition::SendRst(Segment::rst(seg_ack))
                         } else {
+                            let mut rtt_estimator = Estimator::default();
+                            rtt_estimator.sample(now.duration_since(syn_rcvd_ts));
                             SynRcvdOnSegmentDisposition::EnterEstablished(Established {
                                 snd: Send {
                                     nxt: iss + 1,
@@ -394,6 +415,8 @@ impl SynRcvd {
                                     wl1: seg_seq,
                                     wl2: seg_ack,
                                     buffer: S::default(),
+                                    last_seq_ts: None,
+                                    rtt_estimator,
                                 },
                                 rcv: Recv {
                                     buffer: R::default(),
@@ -416,13 +439,16 @@ impl SynRcvd {
 /// TCP control block variables that are responsible for sending.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Send<S: SendBuffer> {
+struct Send<I: Instant, S: SendBuffer> {
     nxt: SeqNum,
     una: SeqNum,
     wnd: WindowSize,
     wl1: SeqNum,
     wl2: SeqNum,
     buffer: S,
+    // The last sequence number sent out and its timestamp when sent.
+    last_seq_ts: Option<(SeqNum, I)>,
+    rtt_estimator: Estimator,
 }
 
 /// TCP control block variables that are responsible for receiving.
@@ -454,8 +480,8 @@ impl<R: ReceiveBuffer> Recv<R> {
 ///   of the connection.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Established<R: ReceiveBuffer, S: SendBuffer> {
-    snd: Send<S>,
+struct Established<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
+    snd: Send<I, S>,
     rcv: Recv<R>,
 }
 
@@ -468,8 +494,12 @@ enum EstablishedOnSegmentDisposition {
     Ignore,
 }
 
-impl<R: ReceiveBuffer, S: SendBuffer> Established<R, S> {
-    fn on_segment(&mut self, incoming: Segment<impl Payload>) -> EstablishedOnSegmentDisposition {
+impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> Established<I, R, S> {
+    fn on_segment(
+        &mut self,
+        incoming: Segment<impl Payload>,
+        now: I,
+    ) -> EstablishedOnSegmentDisposition {
         let Self { snd, rcv } = self;
         let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
             match incoming.overlap(rcv.nxt(), rcv.wnd()) {
@@ -542,6 +572,13 @@ impl<R: ReceiveBuffer, S: SendBuffer> Established<R, S> {
                         snd.wl1 = seg_seq;
                         snd.wl2 = seg_ack;
                     }
+                    // If the incoming segment acks the sequence number that we used
+                    // for RTT estimate, feed the sample to the estimator.
+                    if let Some((seq_max, timestamp)) = snd.last_seq_ts {
+                        if !seg_ack.before(seq_max) {
+                            snd.rtt_estimator.sample(now.duration_since(timestamp));
+                        }
+                    }
                 } else {
                     //   If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be
                     //   ignored.
@@ -584,15 +621,25 @@ impl<R: ReceiveBuffer, S: SendBuffer> Established<R, S> {
     }
 }
 
-impl<S: SendBuffer> Send<S> {
+impl<I: Instant, S: SendBuffer> Send<I, S> {
     fn poll_send(
         &mut self,
         rcv_nxt: SeqNum,
         rcv_wnd: WindowSize,
         mss: u32,
+        now: I,
     ) -> Option<Segment<SendPayload<'_>>> {
-        let Self { nxt: snd_nxt, una: snd_una, wnd: snd_wnd, buffer, wl1: _, wl2: _ } = self;
-        // First calculate the open window, note that if our peer has shrunk
+        let Self {
+            nxt: snd_nxt,
+            una: snd_una,
+            wnd: snd_wnd,
+            buffer,
+            wl1: _,
+            wl2: _,
+            last_seq_ts: _,
+            rtt_estimator: _,
+        } = self;
+        // First calculate the open window, note that if our peer has shrank
         // their window (it is strongly discouraged), the following conversion
         // will fail and we return early.
         // TODO(https://fxbug.dev/93868): Implement zero window probing.
@@ -620,32 +667,46 @@ impl<S: SendBuffer> Send<S> {
             debug_assert_eq!(discarded, 0);
             seg
         });
-        *snd_nxt = *snd_nxt + can_send;
+        let seq_max = self.nxt + can_send;
+        match self.last_seq_ts {
+            Some((seq, _ts)) => {
+                if seq_max.after(seq) {
+                    self.last_seq_ts = Some((seq_max, now));
+                } else {
+                    // If the recorded sequence number is ahead of us, we are
+                    // in retransmission, we should discard the timestamp and
+                    // abort the estimation.
+                    self.last_seq_ts = None;
+                }
+            }
+            None => self.last_seq_ts = Some((seq_max, now)),
+        }
+        self.nxt = seq_max;
         Some(seg)
     }
 }
 
 #[derive(Debug)]
-enum State<R: ReceiveBuffer, S: SendBuffer> {
+enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     Closed(Closed<UserError>),
     Listen(Listen),
-    SynRcvd(SynRcvd),
-    SynSent(SynSent),
-    Established(Established<R, S>),
+    SynRcvd(SynRcvd<I>),
+    SynSent(SynSent<I>),
+    Established(Established<I, R, S>),
 }
 
-impl<R: ReceiveBuffer, S: SendBuffer> State<R, S> {
+impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// Processes an incoming segment and advances the state machine.
-    fn on_segment<P: Payload>(&mut self, incoming: Segment<P>) -> Option<Segment<()>> {
+    fn on_segment<P: Payload>(&mut self, incoming: Segment<P>, now: I) -> Option<Segment<()>> {
         let (maybe_new_state, seg) = match self {
-            State::Listen(listen) => match listen.on_segment(incoming) {
+            State::Listen(listen) => match listen.on_segment(incoming, now) {
                 ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(syn_ack, syn_rcvd) => {
                     (Some(State::SynRcvd(syn_rcvd)), Some(syn_ack))
                 }
                 ListenOnSegmentDisposition::SendRst(rst) => (None, Some(rst)),
                 ListenOnSegmentDisposition::Ignore => (None, None),
             },
-            State::SynRcvd(synrcvd) => match synrcvd.on_segment(incoming) {
+            State::SynRcvd(synrcvd) => match synrcvd.on_segment(incoming, now) {
                 SynRcvdOnSegmentDisposition::SendAck(ack) => (None, Some(ack)),
                 SynRcvdOnSegmentDisposition::SendRst(rst) => (None, Some(rst)),
                 SynRcvdOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
@@ -659,7 +720,7 @@ impl<R: ReceiveBuffer, S: SendBuffer> State<R, S> {
                 }
                 SynRcvdOnSegmentDisposition::Ignore => (None, None),
             },
-            State::SynSent(synsent) => match synsent.on_segment(incoming) {
+            State::SynSent(synsent) => match synsent.on_segment(incoming, now) {
                 SynSentOnSegmentDisposition::SendAckAndEnterEstablished(ack, established) => {
                     (Some(State::Established(established)), Some(ack))
                 }
@@ -674,7 +735,7 @@ impl<R: ReceiveBuffer, S: SendBuffer> State<R, S> {
                 }
                 SynSentOnSegmentDisposition::Ignore => (None, None),
             },
-            State::Established(established) => match established.on_segment(incoming) {
+            State::Established(established) => match established.on_segment(incoming, now) {
                 EstablishedOnSegmentDisposition::SendAck(ack) => (None, Some(ack)),
                 EstablishedOnSegmentDisposition::SendRstAndEnterClosed(rst, closed) => {
                     (Some(State::Closed(closed)), Some(rst))
@@ -696,10 +757,10 @@ impl<R: ReceiveBuffer, S: SendBuffer> State<R, S> {
     ///
     /// Forms one segment of at most `mss` available bytes, as long as the
     /// receiver window allows.
-    fn poll_send(&mut self, mss: u32) -> Option<Segment<SendPayload<'_>>> {
+    fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
         match self {
             State::Established(Established { snd, rcv }) => {
-                snd.poll_send(rcv.nxt(), rcv.wnd(), mss)
+                snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now)
             }
             State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => None,
         }
@@ -708,16 +769,24 @@ impl<R: ReceiveBuffer, S: SendBuffer> State<R, S> {
 
 #[cfg(test)]
 mod test {
-    use core::num::NonZeroUsize;
+    use core::{num::NonZeroUsize, time::Duration};
 
     use assert_matches::assert_matches;
     use test_case::test_case;
 
     use super::*;
-    use crate::transport::tcp::buffer::{Buffer, RingBuffer};
+    use crate::{
+        context::{
+            testutil::{DummyInstant, DummyInstantCtx},
+            InstantContext as _,
+        },
+        transport::tcp::buffer::{Buffer, RingBuffer},
+    };
 
     const ISS_1: SeqNum = SeqNum::new(100);
     const ISS_2: SeqNum = SeqNum::new(300);
+
+    const RTT: Duration = Duration::from_millis(500);
 
     impl<P: Payload> Segment<P> {
         fn data(seq: SeqNum, ack: SeqNum, wnd: WindowSize, data: P) -> Segment<P> {
@@ -818,6 +887,7 @@ mod test {
         SynRcvd {
             iss: ISS_1,
             irs: ISS_2,
+            timestamp: DummyInstant::default() + RTT,
         }
     ); "SYN only")]
     #[test_case(
@@ -831,9 +901,9 @@ mod test {
     => SynSentOnSegmentDisposition::Ignore; "acceptable ACK(ISS) without RST")]
     fn segment_arrives_when_syn_sent(
         incoming: Segment<()>,
-    ) -> SynSentOnSegmentDisposition<NullBuffer, NullBuffer> {
-        let syn_sent = SynSent { iss: ISS_1 };
-        syn_sent.on_segment(incoming)
+    ) -> SynSentOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer> {
+        let syn_sent = SynSent { iss: ISS_1, timestamp: DummyInstant::default() };
+        syn_sent.on_segment(incoming, DummyInstant::default() + RTT)
     }
 
     #[test_case(Segment::rst(ISS_2) => ListenOnSegmentDisposition::Ignore; "ignore RST")]
@@ -845,10 +915,13 @@ mod test {
             SynRcvd {
                 iss: ISS_1,
                 irs: ISS_2,
+                timestamp: DummyInstant::default(),
             }); "accept syn")]
-    fn segment_arrives_when_listen(incoming: Segment<()>) -> ListenOnSegmentDisposition {
-        let listen = Closed::listen(ISS_1);
-        listen.on_segment(incoming)
+    fn segment_arrives_when_listen(
+        incoming: Segment<()>,
+    ) -> ListenOnSegmentDisposition<DummyInstant> {
+        let listen = Closed::<Initial>::listen(ISS_1);
+        listen.on_segment(incoming, DummyInstant::default())
     }
 
     #[test_case(
@@ -879,7 +952,19 @@ mod test {
         Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT)
     => SynRcvdOnSegmentDisposition::EnterEstablished(
         Established {
-            snd: Send { nxt: ISS_2 + 1, una: ISS_2 + 1, wnd: WindowSize::DEFAULT, buffer: NullBuffer, wl1: ISS_1 + 1, wl2: ISS_2 + 1 },
+            snd: Send {
+                nxt: ISS_2 + 1,
+                una: ISS_2 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_1 + 1,
+                wl2: ISS_2 + 1,
+                rtt_estimator: Estimator::Measured {
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
+            },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) },
         }
     ); "acceptable ack (ISS + 1)")]
@@ -898,9 +983,11 @@ mod test {
     => SynRcvdOnSegmentDisposition::Ignore; "no ack")]
     fn segment_arrives_when_syn_rcvd(
         incoming: Segment<()>,
-    ) -> SynRcvdOnSegmentDisposition<NullBuffer, NullBuffer> {
-        let syn_rcvd = SynRcvd { iss: ISS_2, irs: ISS_1 };
-        syn_rcvd.on_segment(incoming)
+    ) -> SynRcvdOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer> {
+        let mut clock = DummyInstantCtx::default();
+        let syn_rcvd = SynRcvd { iss: ISS_2, irs: ISS_1, timestamp: clock.now() };
+        clock.sleep(RTT);
+        syn_rcvd.on_segment(incoming, clock.now())
     }
 
     #[test_case(
@@ -928,29 +1015,37 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_2 + 1,
                 wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::default(),
+                last_seq_ts: None,
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(1).unwrap()),
                 assembler: Assembler::new(ISS_2 + 1),
             },
         };
-        established.on_segment(incoming)
+        established.on_segment(incoming, DummyInstant::default())
     }
 
     #[test]
     fn active_passive_open() {
-        let (syn_sent, syn_seg) = Closed::connect(ISS_1);
+        let mut clock = DummyInstantCtx::default();
+        let (syn_sent, syn_seg) = Closed::<Initial>::connect(ISS_1, clock.now());
         assert_eq!(syn_seg, Segment::syn(ISS_1, WindowSize::DEFAULT));
-        assert_eq!(syn_sent, SynSent { iss: ISS_1 });
+        assert_eq!(syn_sent, SynSent { iss: ISS_1, timestamp: clock.now() });
         let mut active = State::SynSent(syn_sent);
-        let mut passive = State::Listen(Closed::listen(ISS_2));
-        let syn_ack = passive.on_segment(syn_seg).expect("failed to generate a syn-ack segment");
+        let mut passive = State::Listen(Closed::<Initial>::listen(ISS_2));
+        clock.sleep(RTT / 2);
+        let syn_ack =
+            passive.on_segment(syn_seg, clock.now()).expect("failed to generate a syn-ack segment");
         assert_eq!(syn_ack, Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT));
         assert_matches!(passive, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
+            timestamp: clock.now(),
         });
-        let ack_seg = active.on_segment(syn_ack).expect("failed to generate a ack segment");
+        clock.sleep(RTT / 2);
+        let ack_seg =
+            active.on_segment(syn_ack, clock.now()).expect("failed to generate a ack segment");
         assert_eq!(ack_seg, Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::ZERO));
         assert_matches!(active, State::Established(ref established) if established == &Established {
             snd: Send {
@@ -960,10 +1055,16 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_2,
                 wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::Measured {
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_2 + 1) }
         });
-        assert_eq!(passive.on_segment(ack_seg), None);
+        clock.sleep(RTT / 2);
+        assert_eq!(passive.on_segment(ack_seg, clock.now()), None);
         assert_matches!(passive, State::Established(ref established) if established == &Established {
             snd: Send {
                 nxt: ISS_2 + 1,
@@ -972,6 +1073,11 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_1 + 1,
                 wl2: ISS_2 + 1,
+                rtt_estimator: Estimator::Measured {
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
             },
             rcv: Recv { buffer: NullBuffer, assembler: Assembler::new(ISS_1 + 1) }
         })
@@ -979,8 +1085,9 @@ mod test {
 
     #[test]
     fn simultaneous_open() {
-        let (syn_sent1, syn1) = Closed::connect(ISS_1);
-        let (syn_sent2, syn2) = Closed::connect(ISS_2);
+        let mut clock = DummyInstantCtx::default();
+        let (syn_sent1, syn1) = Closed::<Initial>::connect(ISS_1, clock.now());
+        let (syn_sent2, syn2) = Closed::<Initial>::connect(ISS_2, clock.now());
 
         assert_eq!(syn1, Segment::syn(ISS_1, WindowSize::DEFAULT));
         assert_eq!(syn2, Segment::syn(ISS_2, WindowSize::DEFAULT));
@@ -988,8 +1095,9 @@ mod test {
         let mut state1 = State::SynSent(syn_sent1);
         let mut state2 = State::SynSent(syn_sent2);
 
-        let syn_ack1 = state1.on_segment(syn2).expect("failed to generate syn ack");
-        let syn_ack2 = state2.on_segment(syn1).expect("failed to generate syn ack");
+        clock.sleep(RTT);
+        let syn_ack1 = state1.on_segment(syn2, clock.now()).expect("failed to generate syn ack");
+        let syn_ack2 = state2.on_segment(syn1, clock.now()).expect("failed to generate syn ack");
 
         assert_eq!(syn_ack1, Segment::syn_ack(ISS_1, ISS_2 + 1, WindowSize::DEFAULT));
         assert_eq!(syn_ack2, Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT));
@@ -997,14 +1105,17 @@ mod test {
         assert_matches!(state1, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_1,
             irs: ISS_2,
+            timestamp: clock.now(),
         });
         assert_matches!(state2, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
+            timestamp: clock.now(),
         });
 
-        assert_eq!(state1.on_segment(syn_ack2), None);
-        assert_eq!(state2.on_segment(syn_ack1), None);
+        clock.sleep(RTT);
+        assert_eq!(state1.on_segment(syn_ack2, clock.now()), None);
+        assert_eq!(state2.on_segment(syn_ack1, clock.now()), None);
 
         assert_matches!(state1, State::Established(established) if established == Established {
             snd: Send {
@@ -1014,6 +1125,11 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_2 + 1,
                 wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::Measured {
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -1029,6 +1145,11 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_1 + 1,
                 wl2: ISS_2 + 1,
+                rtt_estimator: Estimator::Measured {
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
             },
             rcv: Recv {
                 buffer: NullBuffer,
@@ -1041,6 +1162,7 @@ mod test {
     const BUFFER_SIZE_U32: u32 = BUFFER_SIZE as u32;
     #[test]
     fn established_receive() {
+        let clock = DummyInstantCtx::default();
         let mut established = Established {
             snd: Send {
                 nxt: ISS_1 + 1,
@@ -1049,6 +1171,8 @@ mod test {
                 buffer: NullBuffer,
                 wl1: ISS_2 + 1,
                 wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::default(),
+                last_seq_ts: None,
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
@@ -1061,12 +1185,10 @@ mod test {
 
         // Received an expected segment at rcv.nxt.
         assert_eq!(
-            established.on_segment(Segment::data(
-                ISS_2 + 1,
-                ISS_1 + 1,
-                WindowSize::ZERO,
-                TEST_BYTES,
-            )),
+            established.on_segment(
+                Segment::data(ISS_2 + 1, ISS_1 + 1, WindowSize::ZERO, TEST_BYTES,),
+                clock.now()
+            ),
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
@@ -1083,12 +1205,15 @@ mod test {
 
         // Receive an out-of-order segment.
         assert_eq!(
-            established.on_segment(Segment::data(
-                ISS_2 + 1 + TEST_BYTES.len() * 2,
-                ISS_1 + 1,
-                WindowSize::ZERO,
-                TEST_BYTES,
-            )),
+            established.on_segment(
+                Segment::data(
+                    ISS_2 + 1 + TEST_BYTES.len() * 2,
+                    ISS_1 + 1,
+                    WindowSize::ZERO,
+                    TEST_BYTES,
+                ),
+                clock.now()
+            ),
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
@@ -1105,12 +1230,15 @@ mod test {
 
         // Receive the next segment that fills the hole.
         assert_eq!(
-            established.on_segment(Segment::data(
-                ISS_2 + 1 + TEST_BYTES.len(),
-                ISS_1 + 1,
-                WindowSize::ZERO,
-                TEST_BYTES,
-            )),
+            established.on_segment(
+                Segment::data(
+                    ISS_2 + 1 + TEST_BYTES.len(),
+                    ISS_1 + 1,
+                    WindowSize::ZERO,
+                    TEST_BYTES,
+                ),
+                clock.now()
+            ),
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + 3 * TEST_BYTES.len(),
@@ -1128,6 +1256,7 @@ mod test {
 
     #[test]
     fn established_send() {
+        let clock = DummyInstantCtx::default();
         let mut send_buffer = RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap());
         assert_eq!(send_buffer.enqueue_data("Hello".as_bytes()), 5);
         let mut established = State::Established(Established {
@@ -1138,6 +1267,8 @@ mod test {
                 buffer: send_buffer,
                 wl1: ISS_2,
                 wl2: ISS_1,
+                last_seq_ts: None,
+                rtt_estimator: Estimator::default(),
             },
             rcv: Recv {
                 buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
@@ -1145,19 +1276,21 @@ mod test {
             },
         });
         // Data queued but the window is not opened, nothing to send.
-        assert_eq!(established.poll_send(u32::MAX), None);
-        let open_window = |established: &mut State<RingBuffer, RingBuffer>,
+        assert_eq!(established.poll_send(u32::MAX, clock.now()), None);
+        let open_window = |established: &mut State<DummyInstant, RingBuffer, RingBuffer>,
                            ack: SeqNum,
-                           win: u32| {
+                           win: u32,
+                           now: DummyInstant| {
             assert_eq!(
-                established.on_segment(Segment::ack(ISS_2 + 1, ack, WindowSize::new(win).unwrap())),
+                established
+                    .on_segment(Segment::ack(ISS_2 + 1, ack, WindowSize::new(win).unwrap()), now),
                 Some(Segment::ack(ack, ISS_2 + 1, WindowSize::new(BUFFER_SIZE_U32).unwrap()))
             );
         };
         // Open up the window by 1 byte.
-        open_window(&mut established, ISS_1 + 1, 1);
+        open_window(&mut established, ISS_1 + 1, 1, clock.now());
         assert_eq!(
-            established.poll_send(u32::MAX),
+            established.poll_send(u32::MAX, clock.now()),
             Some(Segment::data(
                 ISS_1 + 1,
                 ISS_2 + 1,
@@ -1167,9 +1300,9 @@ mod test {
         );
 
         // Open up the window by 10 bytes, but the MSS is limited to 2 bytes.
-        open_window(&mut established, ISS_1 + 2, 10);
+        open_window(&mut established, ISS_1 + 2, 10, clock.now());
         assert_eq!(
-            established.poll_send(2),
+            established.poll_send(2, clock.now()),
             Some(Segment::data(
                 ISS_1 + 2,
                 ISS_2 + 1,
@@ -1179,7 +1312,7 @@ mod test {
         );
 
         assert_eq!(
-            established.poll_send(u32::MAX),
+            established.poll_send(u32::MAX, clock.now()),
             Some(Segment::data(
                 ISS_1 + 4,
                 ISS_2 + 1,
@@ -1189,6 +1322,6 @@ mod test {
         );
 
         // We've exhausted our send buffer.
-        assert_eq!(established.poll_send(u32::MAX), None);
+        assert_eq!(established.poll_send(u32::MAX, clock.now()), None);
     }
 }

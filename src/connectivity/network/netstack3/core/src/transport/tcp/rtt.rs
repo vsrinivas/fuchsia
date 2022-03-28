@@ -5,7 +5,8 @@
 //! TCP RTT estimation per [RFC 6298](https://tools.ietf.org/html/rfc6298).
 use core::{default::Default, time::Duration};
 
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub(super) enum Estimator {
     NoSample,
     Measured {
