@@ -26,6 +26,7 @@ support for the architecture being used.
 
 If the architecture is fully support the following are the behaviors of the
 given value:
+
 * **ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS** - set all processor cores as active
 * **ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY** - set only the primary CPU
   as active
