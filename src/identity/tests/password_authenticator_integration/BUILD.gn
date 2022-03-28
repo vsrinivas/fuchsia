@@ -63,7 +63,8 @@ fuchsia_test_package("password-authenticator-integration-tests") {
   test_components = [ ":password-authenticator-integration-test" ]
   deps = [
     ":password-authenticator-integration-test",
-    "//src/identity/bin/password_authenticator:component",
+    "//src/identity/bin/password_authenticator:component_scrypt_for_test",
+    "//src/identity/bin/password_authenticator:component_scrypt_or_null_for_test",
     "//src/storage/bin/minfs",
   ]
 }

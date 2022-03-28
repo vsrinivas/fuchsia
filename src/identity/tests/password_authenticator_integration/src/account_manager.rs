@@ -61,16 +61,27 @@ extern "C" {
     pub fn fvm_init(fd: c_int, slice_size: usize) -> zx_status_t;
 }
 
+enum Config {
+    ScryptOrNull,
+    ScryptOnly,
+}
+
 struct TestEnv {
     realm_instance: RealmInstance,
 }
 
 impl TestEnv {
-    async fn build() -> TestEnv {
+    async fn build(config: Config) -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
         builder.driver_test_realm_setup().await.unwrap();
+        let manifest = match config {
+            Config::ScryptOrNull => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt-or-null.cm",
+            Config::ScryptOnly => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt.cm"
+        };
         let password_authenticator = builder
-            .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildOptions::new()).await.unwrap();
+            .add_child("password_authenticator", manifest, ChildOptions::new())
+            .await
+            .unwrap();
         builder
             .add_route(
                 Route::new()
@@ -284,14 +295,39 @@ async fn wait_for_account_close(account: &AccountProxy) -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn get_account_ids_unprovisioned() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let account_ids = env.account_manager().get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, Vec::<u64>::new());
 }
 
 #[fuchsia::test]
-async fn deprecated_provision_new_null_password_account_on_unformatted_partition() {
-    let env = TestEnv::build().await;
+async fn deprecated_provision_new_null_password_account_while_null_disallowed() {
+    let env = TestEnv::build(Config::ScryptOnly).await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, Vec::<u64>::new());
+
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    let error = account_manager
+        .deprecated_provision_new_account(
+            EMPTY_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect_err("deprecated provision new account should fail");
+    assert_eq!(error, fidl_fuchsia_identity_account::Error::InvalidRequest);
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, Vec::<u64>::new());
+}
+
+#[fuchsia::test]
+async fn deprecated_provision_new_null_password_account_while_null_allowed() {
+    let env = TestEnv::build(Config::ScryptOrNull).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -315,7 +351,7 @@ async fn deprecated_provision_new_null_password_account_on_unformatted_partition
 
 #[fuchsia::test]
 async fn deprecated_provision_new_real_password_account_on_unformatted_partition() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -343,7 +379,7 @@ async fn deprecated_provision_new_real_password_account_on_formatted_partition()
     // metadata store is the canonical "does this account exist" indicator, and it has no existing
     // accounts.
 
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
@@ -366,7 +402,7 @@ async fn deprecated_provision_new_real_password_account_on_formatted_partition()
 
 #[fuchsia::test]
 async fn deprecated_provision_new_account_over_existing_account_fails() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
@@ -408,7 +444,7 @@ async fn deprecated_provision_new_account_over_existing_account_fails() {
 
 #[fuchsia::test]
 async fn deprecated_provision_new_account_formats_directory() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -474,7 +510,7 @@ async fn deprecated_provision_new_account_formats_directory() {
 
 #[fuchsia::test]
 async fn locked_account_can_be_unlocked_again() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -563,7 +599,7 @@ async fn locked_account_can_be_unlocked_again() {
 
 #[fuchsia::test]
 async fn locking_account_terminates_all_clients() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -598,7 +634,7 @@ async fn locking_account_terminates_all_clients() {
 
 #[fuchsia::test]
 async fn null_provision_and_unlock_with_real_password_fails_with_failed_authentication() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOrNull).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
@@ -635,7 +671,7 @@ async fn null_provision_and_unlock_with_real_password_fails_with_failed_authenti
 
 #[fuchsia::test]
 async fn remove_account_succeeds_and_terminates_clients() {
-    let env = TestEnv::build().await;
+    let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 

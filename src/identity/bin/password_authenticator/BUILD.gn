@@ -65,15 +65,40 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("component") {
+# Define non-test components for each flag combination, all sharing
+# the same component name.
+fuchsia_component("component_scrypt") {
   component_name = "password-authenticator"
-  manifest = "meta/password-authenticator.cml"
+  manifest = "meta/password-authenticator-scrypt.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("component_scrypt_or_null") {
+  component_name = "password-authenticator"
+  manifest = "meta/password-authenticator-scrypt-or-null.cml"
+  deps = [ ":bin" ]
+}
+
+# Define test components for each flag combination using different
+# component names so that an integration test can include more than
+# one.
+fuchsia_component("component_scrypt_for_test") {
+  testonly = true
+  component_name = "password-authenticator-scrypt"
+  manifest = "meta/password-authenticator-scrypt.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("component_scrypt_or_null_for_test") {
+  testonly = true
+  component_name = "password-authenticator-scrypt-or-null"
+  manifest = "meta/password-authenticator-scrypt-or-null.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("password_authenticator") {
   deps = [
-    ":component",
+    ":component_scrypt_or_null",
     "//src/storage/bin/minfs",
   ]
 }
