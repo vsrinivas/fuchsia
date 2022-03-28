@@ -4,6 +4,8 @@
 
 mod backend;
 mod file_backend;
+#[cfg(test)]
+mod memory_backend;
 mod wire;
 
 use {

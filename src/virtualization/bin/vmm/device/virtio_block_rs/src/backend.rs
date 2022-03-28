@@ -29,6 +29,11 @@ impl Sector {
     pub fn to_bytes(&self) -> Option<u64> {
         self.0.checked_mul(wire::VIRTIO_BLOCK_SECTOR_SIZE)
     }
+
+    /// Return the raw numeric sector number.
+    pub fn to_raw(&self) -> u64 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
