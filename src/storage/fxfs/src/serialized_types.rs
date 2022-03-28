@@ -56,19 +56,16 @@
 mod traits;
 
 // Re-export the traits we need.
-pub use serialize_macros::*;
-pub use traits::*;
-
-#[cfg(test)]
-mod test_traits;
+pub use fxfs_macros::{versioned_type, Versioned};
+pub use traits::{Version, Versioned, VersionedLatest};
 
 // For test use, we add [Versioned] and [VersionedLatest] to primitive integer types (i32, ...).
 #[cfg(test)]
-pub use test_traits::*;
+pub mod test_traits;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export all Fxfs types.
 mod types;
-pub use types::*;
+pub use types::LATEST_VERSION;

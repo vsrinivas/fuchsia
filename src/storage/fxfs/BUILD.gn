@@ -16,7 +16,7 @@ import("//src/storage/fs_test/suite.gni")
 tracing_enabled = false
 
 fxfs_deps = [
-  ":serialize-macros",
+  ":fxfs_macros",
   "//src/lib/async-utils",
   "//src/lib/fuchsia-async",
   "//src/lib/storage/storage_device",
@@ -150,15 +150,15 @@ if (is_fuchsia) {
   ]
 }
 
-rustc_macro("serialize-macros") {
-  name = "serialize-macros"
+rustc_macro("fxfs_macros") {
+  name = "fxfs_macros"
   deps = [
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]
-  source_root = "src/serialized_types/macros.rs"
-  sources = [ "src/serialized_types/macros.rs" ]
+  source_root = "macros/macros.rs"
+  sources = [ "macros/macros.rs" ]
 }
 
 rustc_library("lib") {

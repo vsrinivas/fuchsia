@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! The following proc macros are related to code under src/storage/fxfs/src/serialized_types.
+
 #[macro_use]
 extern crate quote;
 
