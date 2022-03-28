@@ -32,9 +32,9 @@ group("tools") {
   testonly = true
   deps = [
     "lowpan/tools",
+    "network/bundles:tools",
     "network/mdns/bundles:utils",
     "network/net-cli",
-    "network/tools",
     "overnet/overnetstack",
     "overnet/tools",
     "wlan:tools",

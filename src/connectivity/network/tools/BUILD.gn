@@ -8,7 +8,6 @@ group("tools") {
     "nc",
     "network-speed-test",
     "sockscripter",
-    "//third_party/tcpdump",
   ]
 }
 
