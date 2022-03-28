@@ -7,7 +7,12 @@
 //! used by TCP.
 
 use alloc::{vec, vec::Vec};
-use core::{cmp, convert::TryFrom, num::NonZeroUsize, ops::Range};
+use core::{
+    cmp,
+    convert::TryFrom,
+    num::{NonZeroUsize, TryFromIntError},
+    ops::Range,
+};
 
 use crate::transport::tcp::{
     segment::Payload,
@@ -23,7 +28,7 @@ pub trait Buffer: Default {
     fn cap(&self) -> usize;
 }
 
-/// Trait for receiving end of an TCP connection.
+/// A buffer supporting TCP receiving operations.
 pub trait ReceiveBuffer: Buffer {
     /// Writes `data` into the buffer at `offset`.
     ///
@@ -39,7 +44,7 @@ pub trait ReceiveBuffer: Buffer {
     /// `self.len() + count > self.cap()`
     fn make_readable(&mut self, count: usize);
 
-    /// Calls `f` with contiguous sequence of readable bytes in the buffer and
+    /// Calls `f` with contiguous sequences of readable bytes in the buffer and
     /// discards the amount of bytes returned by `f`.
     ///
     /// # Panics
@@ -49,6 +54,106 @@ pub trait ReceiveBuffer: Buffer {
     fn read_with<'a, F>(&'a mut self, f: F) -> usize
     where
         F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize;
+}
+
+/// A buffer supporting TCP sending operations.
+pub trait SendBuffer: Buffer {
+    /// Removes `count` bytes from the beginning of the buffer as already read.
+    ///
+    /// # Panics
+    ///
+    /// Panics if more bytes are marked as read than are available, i.e.,
+    /// `count > self.len`.
+    fn mark_read(&mut self, count: usize);
+
+    /// Calls `f` with contiguous sequences of readable bytes in the buffer
+    /// without advancing the reading pointer.
+    ///
+    /// # Panics
+    ///
+    /// Panics if more bytes are peeked than are available, i.e.,
+    /// `offset > self.len`
+    // Note: This trait is tied closely to a ring buffer, that's why we use
+    // the `SendPayload` rather than `&[&[u8]]` as in the Rx path. Currently
+    // the language isn't flexible enough to allow its implementors to decide
+    // the shape of readable region. It is theoretically possible and ideal
+    // for this trait to have an associated type that describes the shape of
+    // the borrowed readable region but is currently impossible because GATs
+    // are not implemented yet.
+    fn peek_with<'a, F, R>(&'a self, offset: usize, f: F) -> R
+    where
+        F: FnOnce(SendPayload<'a>) -> R;
+
+    /// Enqueues as much of `data` as possible to the end of the buffer.
+    ///
+    /// Returns the number of bytes actually queued.
+    fn enqueue_data(&mut self, data: &[u8]) -> usize;
+}
+
+/// A type for the payload being sent.
+#[derive(Debug, PartialEq)]
+#[cfg_attr(test, derive(Clone))]
+pub enum SendPayload<'a> {
+    Contiguous(&'a [u8]),
+    Straddle(&'a [u8], &'a [u8]),
+}
+
+impl Payload for SendPayload<'_> {
+    fn len(&self) -> usize {
+        match self {
+            SendPayload::Contiguous(p) => p.len(),
+            SendPayload::Straddle(p1, p2) => p1.len() + p2.len(),
+        }
+    }
+
+    fn slice(self, range: Range<u32>) -> Self {
+        match self {
+            SendPayload::Contiguous(p) => SendPayload::Contiguous(p.slice(range)),
+            SendPayload::Straddle(p1, p2) => {
+                let Range { start, end } = range;
+                let start = usize::try_from(start).unwrap_or_else(|TryFromIntError { .. }| {
+                    panic!(
+                        "range start index {} out of range for slice of length {}",
+                        start,
+                        self.len()
+                    )
+                });
+                let end = usize::try_from(end).unwrap_or_else(|TryFromIntError { .. }| {
+                    panic!(
+                        "range end index {} out of range for slice of length {}",
+                        end,
+                        self.len()
+                    )
+                });
+                assert!(start <= end);
+                let first_len = p1.len();
+                if start < first_len && end > first_len {
+                    SendPayload::Straddle(&p1[start..first_len], &p2[0..end - first_len])
+                } else if start >= first_len {
+                    SendPayload::Contiguous(&p2[start - first_len..end - first_len])
+                } else {
+                    SendPayload::Contiguous(&p1[start..end])
+                }
+            }
+        }
+    }
+
+    fn partial_copy(&self, offset: usize, dst: &mut [u8]) {
+        match self {
+            SendPayload::Contiguous(p) => p.partial_copy(offset, dst),
+            SendPayload::Straddle(p1, p2) => {
+                if offset < p1.len() {
+                    let first_len = dst.len().min(p1.len() - offset);
+                    p1.partial_copy(offset, &mut dst[..first_len]);
+                    if dst.len() > first_len {
+                        p2.partial_copy(0, &mut dst[first_len..]);
+                    }
+                } else {
+                    p2.partial_copy(offset - p1.len(), dst);
+                }
+            }
+        }
+    }
 }
 
 /// A circular buffer implementation.
@@ -72,6 +177,25 @@ impl RingBuffer {
 impl Default for RingBuffer {
     fn default() -> Self {
         Self::new(NonZeroUsize::new(WindowSize::DEFAULT.into()).unwrap())
+    }
+}
+
+impl RingBuffer {
+    /// Calls `f` on the contiguous sequences from `start` up to `len` bytes.
+    fn with_readable<'a, F, R>(storage: &'a Vec<u8>, start: usize, len: usize, f: F) -> R
+    where
+        F: for<'b> FnOnce(&'b [&'a [u8]]) -> R,
+    {
+        // Don't read past the end of storage.
+        let end = start + len;
+        if end > storage.len() {
+            let first_part = &storage[start..storage.len()];
+            let second_part = &storage[0..len - first_part.len()];
+            f(&[first_part, second_part][..])
+        } else {
+            let all_bytes = &storage[start..end];
+            f(&[all_bytes][..])
+        }
     }
 }
 
@@ -115,20 +239,47 @@ impl ReceiveBuffer for RingBuffer {
         F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
     {
         let Self { storage, head, len } = self;
-        // Don't read past the end of storage.
-        let end = *head + *len;
-        let nread = if end > storage.len() {
-            let first_part = &storage[*head..storage.len()];
-            let second_part = &storage[0..*len - first_part.len()];
-            f(&[first_part, second_part][..])
-        } else {
-            let all_bytes = &storage[*head..end];
-            f(&[all_bytes][..])
-        };
+        let nread = RingBuffer::with_readable(storage, *head, *len, f);
         assert!(nread <= *len);
         *len -= nread;
         *head = (*head + nread) % storage.len();
         nread
+    }
+}
+
+impl SendBuffer for RingBuffer {
+    fn mark_read(&mut self, count: usize) {
+        let Self { storage: _, head, len } = self;
+        assert!(count <= *len);
+        *len -= count;
+        *head += count;
+    }
+
+    fn peek_with<'a, F, R>(&'a self, offset: usize, f: F) -> R
+    where
+        F: FnOnce(SendPayload<'a>) -> R,
+    {
+        let Self { storage, head, len } = self;
+        assert!(offset <= *len);
+        RingBuffer::with_readable(
+            storage,
+            (*head + offset) % storage.len(),
+            *len - offset,
+            |readable| match readable.len() {
+                1 => f(SendPayload::Contiguous(readable[0])),
+                2 => f(SendPayload::Straddle(readable[0], readable[1])),
+                x => unreachable!(
+                    "the ring buffer cannot have more than 2 fragments, got {} fragments ({:?})",
+                    x, readable
+                ),
+            },
+        )
+    }
+
+    fn enqueue_data(&mut self, data: &[u8]) -> usize {
+        let nwritten = self.write_at(0, &data);
+        self.make_readable(nwritten);
+        nwritten
     }
 }
 
@@ -274,6 +425,8 @@ mod test {
     use proptest_support::failed_seeds;
     use test_case::test_case;
 
+    const TEST_BYTES: &'static [u8] = "Hello World!".as_bytes();
+
     proptest! {
         #![proptest_config(Config {
             // Add all failed seeds here.
@@ -352,6 +505,48 @@ mod test {
             assert_eq!(nread, consume);
             assert_eq!(rb.len(), expected.len() - consume);
         }
+
+        #[test]
+        fn ring_buffer_mark_read((mut rb, readable) in ring_buffer::with_readable()) {
+            let old_storage = rb.storage.clone();
+            let old_head = rb.head;
+            let old_len = rb.len();
+            rb.mark_read(readable);
+            // Assert that length is updated but everything else is unchanged.
+            let RingBuffer { storage, head, len } = rb;
+            assert_eq!(len, old_len - readable);
+            assert_eq!(head, old_head + readable);
+            assert_eq!(storage, old_storage);
+        }
+
+        #[test]
+        fn ring_buffer_peek_with((rb, expected, offset) in ring_buffer::with_read_data()) {
+            assert_eq!(rb.len(), expected.len());
+            let () = rb.peek_with(offset, |readable| {
+                assert_eq!(readable.to_vec(), &expected[offset..]);
+            });
+            assert_eq!(rb.len(), expected.len());
+        }
+
+        #[test]
+        fn send_payload_len((payload, _idx) in send_payload::with_index()) {
+            assert_eq!(payload.len(), TEST_BYTES.len())
+        }
+
+        #[test]
+        fn send_payload_slice((payload, idx) in send_payload::with_index()) {
+            let idx_u32 = u32::try_from(idx).unwrap();
+            let end = u32::try_from(TEST_BYTES.len()).unwrap();
+            assert_eq!(payload.clone().slice(0..idx_u32).to_vec(), &TEST_BYTES[..idx]);
+            assert_eq!(payload.clone().slice(idx_u32..end).to_vec(), &TEST_BYTES[idx..]);
+        }
+
+        #[test]
+        fn send_payload_partial_copy((payload, offset, len) in send_payload::with_offset_and_length()) {
+            let mut buffer = [0; TEST_BYTES.len()];
+            payload.partial_copy(offset, &mut buffer[0..len]);
+            assert_eq!(&buffer[0..len], &TEST_BYTES[offset..offset + len]);
+        }
     }
 
     #[test_case([Range { start: 0, end: 10 }]
@@ -408,6 +603,19 @@ mod test {
             4
         );
         assert_eq!(rb.len(), 0);
+
+        assert_eq!(rb.enqueue_data("Hello".as_bytes()), 5);
+        assert_eq!(rb.len(), 5);
+
+        let () = rb.peek_with(3, |readable| {
+            assert_eq!(readable.to_vec(), "lo".as_bytes());
+        });
+
+        rb.mark_read(2);
+
+        let () = rb.peek_with(0, |readable| {
+            assert_eq!(readable.to_vec(), "llo".as_bytes());
+        });
     }
 
     mod assembler {
@@ -430,6 +638,13 @@ mod test {
             (1..=32usize).prop_flat_map(|cap| {
                 //  cap      head     len
                 (Just(cap), 0..cap, 0..=cap)
+            })
+        }
+
+        /// A strategy for a [`RingBuffer`] and a valid length to mark read.
+        pub(super) fn with_readable() -> impl Strategy<Value = (RingBuffer, usize)> {
+            arb_ring_buffer_args().prop_flat_map(|(cap, head, len)| {
+                (Just(RingBuffer { storage: vec![0; cap], head, len }), 0..=len)
             })
         }
 
@@ -467,6 +682,41 @@ mod test {
                     (Just(rb), Just(data), 0..=len)
                 })
             })
+        }
+    }
+    mod send_payload {
+        use super::*;
+        use alloc::{borrow::ToOwned as _, vec::Vec};
+
+        pub(super) fn with_index() -> impl Strategy<Value = (SendPayload<'static>, usize)> {
+            proptest::prop_oneof![
+                (Just(SendPayload::Contiguous(TEST_BYTES)), 0..TEST_BYTES.len()),
+                (0..TEST_BYTES.len()).prop_flat_map(|split_at| {
+                    (
+                        Just(SendPayload::Straddle(
+                            &TEST_BYTES[..split_at],
+                            &TEST_BYTES[split_at..],
+                        )),
+                        0..TEST_BYTES.len(),
+                    )
+                })
+            ]
+        }
+
+        pub(super) fn with_offset_and_length(
+        ) -> impl Strategy<Value = (SendPayload<'static>, usize, usize)> {
+            with_index().prop_flat_map(|(payload, index)| {
+                (Just(payload), Just(index), 0..=TEST_BYTES.len() - index)
+            })
+        }
+
+        impl SendPayload<'_> {
+            pub(super) fn to_vec(self) -> Vec<u8> {
+                match self {
+                    SendPayload::Contiguous(p) => p.to_owned(),
+                    SendPayload::Straddle(p1, p2) => [p1, p2].concat(),
+                }
+            }
         }
     }
 }
