@@ -57,7 +57,9 @@ pub async fn list_targets(
         }
         _ => {
             if writer.is_machine() {
-                let formatter = JsonTargetFormatter::try_from(res)?;
+                let mut formatter = JsonTargetFormatter::try_from(res)?;
+                let default: Option<String> = ffx_config::get("target.default").await?;
+                JsonTargetFormatter::set_default_target(&mut formatter.targets, default.as_deref());
                 writer.machine(&formatter.targets)?;
             } else {
                 let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, res))?;

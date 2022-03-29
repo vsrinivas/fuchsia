@@ -189,10 +189,20 @@ impl TryFrom<Vec<bridge::TargetInfo>> for JsonTargetFormatter {
 impl TargetFormatter for JsonTargetFormatter {
     fn lines(&self, default_nodename: Option<&str>) -> Vec<String> {
         let mut t = self.targets.clone();
-        t.iter_mut()
+        JsonTargetFormatter::set_default_target(&mut t, default_nodename);
+        vec![serde_json::to_string(&t).expect("should serialize")]
+    }
+}
+
+impl JsonTargetFormatter {
+    pub(crate) fn set_default_target(
+        targets: &mut Vec<JsonTarget>,
+        default_nodename: Option<&str>,
+    ) {
+        targets
+            .iter_mut()
             .find(|t| default_nodename.map(|n| t.nodename == n).unwrap_or(false))
             .map(|s| s.is_default = true.into());
-        vec![serde_json::to_string(&t).expect("should serialize")]
     }
 }
 
@@ -951,6 +961,19 @@ mod test {
         t.product_config = Some(p);
         let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_FULL_DEFAULT_TARGET_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_full_default_target_set_default_target() {
+        let b = String::from("board");
+        let p = String::from("default");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = Some(p);
+        let mut formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        JsonTargetFormatter::set_default_target(&mut formatter.targets, Some("fooberdoober"));
+        let lines = vec![serde_json::to_string(&formatter.targets).expect("should serialize")];
         assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_FULL_DEFAULT_TARGET_GOLDEN.to_string());
     }
 
