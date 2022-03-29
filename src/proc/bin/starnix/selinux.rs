@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::*;
 use zerocopy::AsBytes;
@@ -28,6 +29,12 @@ impl SeLinuxFs {
             b"checkreqprot",
             mode!(IFREG, 0644),
             SimpleFileNode::new(|| Ok(SeCheckReqProt)),
+        )?;
+        root.add_node_ops(
+            b"deny_unknown",
+            mode!(IFREG, 0444),
+            // Allow all unknown object classes/permissions.
+            ByteVecFile::new(b"0:0\n".to_vec()),
         )?;
 
         // The status file needs to be mmap-able, so use a VMO-backed file.
@@ -83,7 +90,7 @@ impl FileOps for SeLoad {
         let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
-        tracing::info!("got selinux policy, length {}, ignoring", size);
+        not_implemented!("got selinux policy, length {}, ignoring", size);
         Ok(size)
     }
 
@@ -117,17 +124,18 @@ impl FileOps for SeEnforce {
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let enforce = parse_int(&buf)?;
-        tracing::info!("setenforce: {}", enforce);
+        not_implemented!("selinux setenforce: {}", enforce);
         Ok(size)
     }
     fn read_at(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         _offset: usize,
-        _data: &[UserBuffer],
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        error!(ENOSYS)
+        // Don't pretend that selinux is enforced until it is implemented.
+        current_task.mm.write_all(data, b"0\n")
     }
 }
 
@@ -150,7 +158,7 @@ impl FileOps for SeCheckReqProt {
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let checkreqprot = parse_int(&buf)?;
-        tracing::info!("checkreqprot: {}", checkreqprot);
+        not_implemented!("selinux checkreqprot: {}", checkreqprot);
         Ok(size)
     }
     fn read_at(
