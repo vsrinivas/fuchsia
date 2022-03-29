@@ -6,6 +6,8 @@
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
@@ -76,7 +78,12 @@ fi2c::I2CChannel MakeChannel(fidl::AnyArena& arena, uint32_t bus_id, uint16_t ad
 
 class I2cMetadataTest : public zxtest::Test {
  public:
-  void SetUp() override { fake_root_ = MockDevice::FakeRootParent(); }
+  I2cMetadataTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+  void SetUp() override {
+    loop_.StartThread();
+    fake_root_ = MockDevice::FakeRootParent();
+  }
 
   void TearDown() override {
     for (auto& device : fake_root_->children()) {
@@ -87,6 +94,7 @@ class I2cMetadataTest : public zxtest::Test {
   }
 
  protected:
+  async::Loop loop_;
   std::shared_ptr<zx_device> fake_root_;
 };
 
@@ -97,13 +105,17 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
   channels.emplace_back(MakeChannel(arena, 0, 0xb));
 
   auto impl = FakeI2cImpl::Create(fake_root_.get(), std::move(channels));
+  impl->zxdev()->SetDispatcher(loop_.dispatcher());
   // Make the fake I2C driver.
   ASSERT_OK(i2c::I2cDevice::Create(nullptr, impl->zxdev()));
 
   // Check the number of devices we have makes sense.
   ASSERT_EQ(impl->zxdev()->child_count(), 1);
   zx_device_t* i2c = impl->zxdev()->GetLatestChild();
-  ASSERT_EQ(i2c->child_count(), 2);
+  // There should be two devices per channel, one for Banjo and one for FIDL.
+  ASSERT_EQ(i2c->child_count(), 4);
+
+  uint32_t banjo_protocols = 0;
 
   for (auto& child : i2c->children()) {
     uint16_t expected_addr = 0xff;
@@ -113,9 +125,17 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
       }
     }
 
+    i2c_protocol_t proto;
+    if (device_get_protocol(child.get(), ZX_PROTOCOL_I2C, &proto) == ZX_OK) {
+      banjo_protocols++;
+    }
+
     auto decoded =
         ddk::GetEncodedMetadata<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
     ASSERT_TRUE(decoded.is_ok());
     ASSERT_EQ(decoded->PrimaryObject()->address(), expected_addr);
   }
+
+  // Half of the child devices should have Banjo protocols, the others should not.
+  EXPECT_EQ(banjo_protocols, 2);
 }

@@ -114,66 +114,17 @@ void I2cDevice::AddChildren() {
 
   for (auto& channel : metadata->channels()) {
     const uint32_t bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
-    const uint16_t address = channel.has_address() ? channel.address() : 0;
-    const uint32_t i2c_class = channel.has_i2c_class() ? channel.i2c_class() : 0;
-    const uint32_t vid = channel.has_vid() ? channel.vid() : 0;
-    const uint32_t pid = channel.has_pid() ? channel.pid() : 0;
-    const uint32_t did = channel.has_did() ? channel.did() : 0;
-
     if (bus_id < first_bus_id_ || (bus_id - first_bus_id_) >= i2c_buses_.size()) {
       zxlogf(ERROR, "%s: bus_id %u out of range", __func__, bus_id);
       return;
     }
 
     const uint32_t bus_index = bus_id - first_bus_id_;
-
-    fbl::AllocChecker ac;
-    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_index], address));
-    if (!ac.check()) {
-      zxlogf(ERROR, "%s: out of memory", __func__);
-      return;
-    }
-
-    char name[20];
-    snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
-
-    auto metadata = fidl::unstable::OwnedEncodedMessage<fidl_i2c::wire::I2CChannel>(
-        fidl::internal::WireFormatVersion::kV2, &channel);
-    if (!metadata.ok()) {
-      zxlogf(ERROR, "failed to fidl-encode channel: %s", metadata.FormatDescription().data());
-      return;
-    }
-    zx_status_t status;
-    if (vid || pid || did) {
-      zx_device_prop_t props[] = {
-          {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},
-          {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
-          {BIND_PLATFORM_DEV_DID, 0, did}, {BIND_I2C_CLASS, 0, i2c_class},
-      };
-
-      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
-    } else {
-      zx_device_prop_t props[] = {
-          {BIND_I2C_BUS_ID, 0, bus_id},
-          {BIND_I2C_ADDRESS, 0, address},
-          {BIND_I2C_CLASS, 0, i2c_class},
-      };
-
-      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
-    }
-
+    zx_status_t status = I2cChild::CreateAndAddDevice(zxdev(), channel, i2c_buses_[bus_index],
+                                                      device_get_dispatcher(parent()));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
       return;
     }
-
-    auto bytes = metadata.GetOutgoingMessage().CopyBytes();
-    status = dev->DdkAddMetadata(DEVICE_METADATA_I2C_DEVICE, bytes.data(), bytes.size());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "DdkAddMetadata failed %d", status);
-    }
-    // dev is now owned by devmgr.
-    __UNUSED auto ptr = dev.release();
   }
 }
 
