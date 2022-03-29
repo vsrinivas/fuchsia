@@ -5,6 +5,7 @@
 use anyhow::{Context, Result};
 use assembly_images_manifest::ImagesManifest;
 use assembly_partitions_config::PartitionsConfig;
+use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_package::{Slot, UpdatePackageBuilder};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::from_reader;
@@ -14,12 +15,16 @@ use std::fs::File;
 use std::path::Path;
 
 pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
+    // Use the sdk to get the host tool paths.
+    let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
+
     let mut file = File::open(&args.partitions)
         .context(format!("Failed to open: {}", args.partitions.display()))?;
     let partitions = PartitionsConfig::from_reader(&mut file)
         .context("Failed to parse the partitions config")?;
     let epoch: EpochFile = EpochFile::Version1 { epoch: args.epoch };
     let mut builder = UpdatePackageBuilder::new(
+        sdk_tools.get_tool("blobfs")?,
         partitions,
         args.board_name,
         args.version_file,
