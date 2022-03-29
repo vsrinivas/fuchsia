@@ -1011,6 +1011,51 @@ TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
   }
 }
 
+TEST(Sysmem, TokenOneParticipantColorspaceRanking) {
+  auto collection = make_single_participant_collection();
+  ASSERT_OK(collection);
+
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.cpu =
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .cpu_domain_supported = true,
+  };
+  constraints.image_format_constraints_count = 1;
+  fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
+      constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kNv12;
+  image_constraints.color_spaces_count = 3;
+  image_constraints.color_space[0] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601Pal,
+  };
+  image_constraints.color_space[1] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601PalFullRange,
+  };
+  image_constraints.color_space[2] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec709,
+  };
+
+  ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
+
+  auto allocation_result = collection->WaitForBuffersAllocated();
+  ASSERT_OK(allocation_result);
+  ASSERT_OK(allocation_result->status);
+
+  auto buffer_collection_info = &allocation_result->buffer_collection_info;
+  ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
+            fuchsia_sysmem::wire::PixelFormatType::kNv12, "");
+  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_spaces_count, 1, "");
+  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_space[0].type,
+            fuchsia_sysmem::wire::ColorSpaceType::kRec709, "");
+}
+
 TEST(Sysmem, AttachLifetimeTracking) {
   auto collection = make_single_participant_collection();
   ASSERT_OK(collection);
@@ -1870,6 +1915,108 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   // to any step above failing async.
   ASSERT_OK(allocate_result_1);
   ASSERT_OK(allocate_result_1->status);
+}
+
+TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
+  auto allocator = connect_to_sysmem_driver();
+
+  auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ASSERT_OK(token_endpoints_1);
+  auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
+  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+
+  ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
+
+  auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ASSERT_OK(token_endpoints_2);
+  auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
+
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+
+  auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_1);
+  auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
+  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
+
+  SetDefaultCollectionName(collection_1);
+
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
+  constraints_1.usage.cpu =
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+  constraints_1.min_buffer_count_for_camping = 1;
+  constraints_1.has_buffer_memory_constraints = true;
+  constraints_1.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .cpu_domain_supported = true,
+  };
+  constraints_1.image_format_constraints_count = 1;
+  fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints_1 =
+      constraints_1.image_format_constraints[0];
+  image_constraints_1.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kNv12;
+  image_constraints_1.color_spaces_count = 3;
+  image_constraints_1.color_space[0] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601Pal,
+  };
+  image_constraints_1.color_space[1] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601PalFullRange,
+  };
+  image_constraints_1.color_space[2] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec709,
+  };
+
+  // Start with constraints_2 a copy of constraints_1.  There are no handles
+  // in the constraints struct so a struct copy instead of clone is fine here.
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2(constraints_1);
+  fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints_2 =
+      constraints_2.image_format_constraints[0];
+  image_constraints_2.color_spaces_count = 2;
+  image_constraints_2.color_space[0] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601PalFullRange,
+  };
+  image_constraints_2.color_space[1] = fuchsia_sysmem::wire::ColorSpace{
+      .type = fuchsia_sysmem::wire::ColorSpaceType::kRec709,
+  };
+
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
+
+  auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_2);
+  auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
+  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+
+  ASSERT_OK(collection_1->Sync());
+
+  ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(
+      allocator->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
+
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
+
+  // Both collections should yield the same results
+  auto check_allocation_results =
+      [](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>
+             allocation_result) {
+        ASSERT_OK(allocation_result);
+        ASSERT_OK(allocation_result->status);
+
+        auto buffer_collection_info = &allocation_result->buffer_collection_info;
+        ASSERT_EQ(buffer_collection_info->buffer_count, 2, "");
+        ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+        ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
+                  fuchsia_sysmem::wire::PixelFormatType::kNv12, "");
+        ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_spaces_count, 1,
+                  "");
+        ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.color_space[0].type,
+                  fuchsia_sysmem::wire::ColorSpaceType::kRec709, "");
+      };
+
+  check_allocation_results(collection_1->WaitForBuffersAllocated());
+  check_allocation_results(collection_2->WaitForBuffersAllocated());
 }
 
 TEST(Sysmem, DuplicateSync) {

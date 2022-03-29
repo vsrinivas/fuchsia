@@ -13,9 +13,11 @@
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/channel.h>
 
+#include <cstdint>
 #include <list>
 #include <map>
 #include <memory>
+#include <unordered_map>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

@@ -18,6 +18,7 @@
 #include <limits>  // std::numeric_limits
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
@@ -43,6 +44,21 @@ const uint32_t kSysmemVmoRights = ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_EXECUTE;
 const uint64_t kMaxTotalSizeBytesPerCollection = 1ull * 1024 * 1024 * 1024;
 // 256 MiB cap for now.
 const uint64_t kMaxSizeBytesPerBuffer = 256ull * 1024 * 1024;
+
+// Map of all supported color spaces to an unique semi arbitrary number. A higher number means
+// that the color space is less desirable and a lower number means that a color space is more
+// desirable.
+const std::unordered_map<fuchsia_sysmem2::wire::ColorSpaceType, uint32_t> kColorSpaceRanking = {
+    {fuchsia_sysmem2::wire::ColorSpaceType::kInvalid, std::numeric_limits<uint32_t>::max()},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kSrgb, 1},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601Ntsc, 8},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601NtscFullRange, 7},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601Pal, 6},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601PalFullRange, 5},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec709, 4},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec2020, 3},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kRec2100, 2},
+    {fuchsia_sysmem2::wire::ColorSpaceType::kPassThrough, 9}};
 
 // Zero-initialized, so it shouldn't take up space on-disk.
 constexpr uint64_t kZeroBytes = 8192;
@@ -1667,6 +1683,36 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   for (uint32_t i = 0; i < constraints.image_format_constraints().count(); ++i) {
     if (!CheckSanitizeImageFormatConstraints(stage, constraints.image_format_constraints()[i])) {
       return false;
+    }
+  }
+
+  if (stage == CheckSanitizeStage::kAggregated) {
+    // Given the image constriant's pixel format, select the best color space
+    for (auto& image_constraint : constraints.image_format_constraints()) {
+      // We are guaranteed that color spaces are valid for the current pixel format
+      if (image_constraint.has_color_spaces()) {
+        auto best_color_space = fuchsia_sysmem2::wire::ColorSpaceType::kInvalid;
+
+        for (auto& color_space : image_constraint.color_spaces()) {
+          if (color_space.has_type()) {
+            auto best_ranking = kColorSpaceRanking.at(best_color_space);
+            auto current_ranking = kColorSpaceRanking.at(color_space.type());
+
+            if (best_ranking > current_ranking) {
+              best_color_space = color_space.type();
+            }
+          }
+        }
+
+        // Set the best color space
+        fidl::AnyArena& fidl_allocator = table_set_.allocator();
+        fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace> best_color_spaces(fidl_allocator, 1);
+        fuchsia_sysmem2::wire::ColorSpace color_space(fidl_allocator);
+        color_space.set_type(best_color_space);
+        best_color_spaces.at(0) = color_space;
+        image_constraint.set_color_spaces(
+            fidl::ObjectView<decltype(best_color_spaces)>(fidl_allocator, best_color_spaces));
+      }
     }
   }
 
