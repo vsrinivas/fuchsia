@@ -198,4 +198,8 @@ __EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* dev, const char* 
   auto status = dev->driver()->driver_namespace().Connect(path, zx::channel(request));
   return status.status_value();
 }
+
+__EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* dev) {
+  return dev->driver()->dispatcher();
+}
 }

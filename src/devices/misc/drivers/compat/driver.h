@@ -55,6 +55,7 @@ class Driver {
 
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }
+  async_dispatcher_t* dispatcher() { return dispatcher_; }
 
  private:
   // Run the driver at `driver_path`.
