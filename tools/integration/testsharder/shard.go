@@ -174,13 +174,24 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 		})
 		tests := []Test{}
 		for _, spec := range specs {
-			tests = append(tests, Test{Test: spec.Test, Runs: 1})
+			test := Test{Test: spec.Test, Runs: 1}
+			if spec.Test.Isolated {
+				shards = append(shards, &Shard{
+					Name:  fmt.Sprintf("%s-%s", environmentName(env), normalizeTestName(spec.Test.Name)),
+					Tests: []Test{test},
+					Env:   env,
+				})
+			} else {
+				tests = append(tests, test)
+			}
 		}
-		shards = append(shards, &Shard{
-			Name:  environmentName(env),
-			Tests: tests,
-			Env:   env,
-		})
+		if len(tests) > 0 {
+			shards = append(shards, &Shard{
+				Name:  environmentName(env),
+				Tests: tests,
+				Env:   env,
+			})
+		}
 	}
 	return shards
 }
@@ -206,6 +217,9 @@ func environmentName(env build.Environment) string {
 	}
 	if env.Netboot {
 		addToken("netboot")
+	}
+	for _, name := range env.ExtraEnvNameKeys {
+		addToken(name)
 	}
 	return strings.Join(tokens, "-")
 }

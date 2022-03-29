@@ -62,6 +62,12 @@ type Test struct {
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.
 	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
+
+	// Isolated specifies whether the test should run in its own shard.
+	Isolated bool `json:"isolated,omitempty"`
+
+	// TimeoutSecs is the timeout for the test.
+	TimeoutSecs int `json:"timeout_secs,omitempty"`
 }
 
 // IsComponentV2 returns whether the test is a component v2 test.
@@ -92,6 +98,9 @@ type Environment struct {
 
 	// IsEmu is true if this environment targets an emulator, false otherwise.
 	IsEmu bool `json:"is_emu,omitempty"`
+
+	// ExtraEnvNameKeys are keys to further distinguish a unique environment by.
+	ExtraEnvNameKeys []string `json:"extra_env_name_keys,omitempty"`
 }
 
 // DimensionSet encapsulates the Swarming dimensions a test wishes to target.

@@ -65,20 +65,38 @@ _max_severity_allowed_val = [
 #         the Infrastructure team. Labels are used as an escape hatch from the
 #         default testing pipeline for special tests or environments.
 #
-#    log_settings (optional, default: see below properties)
-#      [json] Properties of logs produced by this test run.
+#       extra_env_name_keys (optional)
+#         [list of strings] keys on which to further distinguish a unique
+#         environment by.
 #
-#      Following properties are supported:
+#   log_settings (optional, default: see below properties)
+#     [json] Properties of logs produced by this test run.
 #
-#      max_severity (optional, default: WARN)
-#        [string] Defines maximum severity of logs which can be produced by test
-#        environment. This can only be defined for test components. Test will fail
-#        if any component in its environment produces log with greater severity
-#        than defined here.
+#     Following properties are supported:
 #
-#    parallel (optional)
+#     max_severity (optional, default: WARN)
+#       [string] Defines maximum severity of logs which can be produced by test
+#       environment. This can only be defined for test components. Test will fail
+#       if any component in its environment produces log with greater severity
+#       than defined here.
+#
+#   parallel (optional)
 #     [int] Defines maximum concurrent test cases to run. This only works with v2 tests.
-#           If not defined, test runner will decide the default value.
+#     If not defined, test runner will decide the default value.
+#
+#   isolated (optional)
+#     [bool] Whether the test needs to be run in isolation to other tests.
+#
+#   timeout_secs (optional)
+#     [int] The timeout in seconds for the test.
+#
+#   os (optional)
+#     [string] The intended os for the test to run on. If not defined, the
+#     current_os will be used.
+#
+#   cpu (optional)
+#     [string] The intended cpu for the test to run on. If not defined, the
+#     current_cpu will be used.
 #
 template("test_spec") {
   testonly = true
@@ -323,10 +341,14 @@ template("test_spec") {
     test = {
       forward_variables_from(invoker,
                              [
+                               "cpu",
+                               "isolated",
+                               "os",
                                "path",
                                "package_url",
                                "package_label",
                                "package_manifests",
+                               "timeout_secs",
                              ])
       if (defined(_parallel)) {
         parallel = _parallel
@@ -342,7 +364,9 @@ template("test_spec") {
         name = package_url
       } else {
         assert(defined(path), "path or package_url must be defined.")
-        if (is_linux || is_mac) {
+        if (is_linux || is_mac ||
+            (defined(invoker.os) &&
+             (invoker.os == "linux" || invoker.os == "mac"))) {
           # Trim leading //.
           path = rebase_path(path, root_build_dir)
         }
@@ -352,8 +376,12 @@ template("test_spec") {
         # removing the left-most appearance should do what we want.
         name = string_replace(path, toolchain_variant.suffix, "", 1)
       }
-      os = current_os
-      cpu = current_cpu
+      if (!defined(os)) {
+        os = current_os
+      }
+      if (!defined(cpu)) {
+        cpu = current_cpu
+      }
       if (runtime_deps_file != "") {
         runtime_deps = rebase_path(runtime_deps_file, root_build_dir)
       }

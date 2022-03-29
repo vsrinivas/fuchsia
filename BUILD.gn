@@ -633,8 +633,9 @@ build_api_module("prebuilt_package_flavors") {
 #     - Type: path relative to the testing root.
 #
 #   * cpu, os
-#     - Required: $current_cpu and $current_os values, respectively, for
-#       which this test is intended.
+#     - Required: cpu and os values, respectively, for which this test is
+#       intended. Defaults to $current_cpu and $current_os if not manually
+#       specified.
 #     - Type: string
 #
 #   * disabled
@@ -648,6 +649,14 @@ build_api_module("prebuilt_package_flavors") {
 #       dependencies are aggregated via the metadata graph of the associated
 #       test target under a data key of "test_runtime_deps.
 #     - Type: path relative to root_build_dir
+#
+#   * isolated
+#     - Optional: whether the test needs to be run in isolation to other tests.
+#     - Type: bool
+#
+#   * timeout_secs
+#     - Optional: the timeout in seconds for the test.
+#     - Type: int
 #
 build_api_module("tests") {
   testonly = true

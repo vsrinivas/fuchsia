@@ -194,6 +194,7 @@ func TestMakeShards(t *testing.T) {
 		}
 		assertEqual(t, expected, actual)
 	})
+
 	t.Run("netboot envs get different shards", func(t *testing.T) {
 		withNetboot := func(env build.Environment) build.Environment {
 			env2 := env
@@ -211,6 +212,63 @@ func TestMakeShards(t *testing.T) {
 		expected := []*Shard{
 			fuchsiaShard(env1, 1),
 			fuchsiaShard(withNetboot(env1), 1),
+		}
+		assertEqual(t, expected, actual)
+	})
+
+	t.Run("envs with extra env name keys get different shards", func(t *testing.T) {
+		withEnvNameKeys := func(env build.Environment, keys []string) build.Environment {
+			env2 := env
+			env2.ExtraEnvNameKeys = keys
+			return env2
+		}
+
+		keys := []string{"extra"}
+		actual := MakeShards(
+			[]build.TestSpec{
+				spec(1, env1),
+				spec(2, withEnvNameKeys(env1, keys)),
+			},
+			basicOpts,
+		)
+		expected := []*Shard{
+			fuchsiaShard(env1, 1),
+			fuchsiaShard(withEnvNameKeys(env1, keys), 2),
+		}
+		assertEqual(t, expected, actual)
+		if actual[0].Name == actual[1].Name {
+			t.Errorf("both shards have the same name: %s", actual[0].Name)
+		}
+	})
+
+	t.Run("isolated tests are in separate shards", func(t *testing.T) {
+		isolate := func(test build.TestSpec) build.TestSpec {
+			test.Test.Isolated = true
+			return test
+		}
+
+		actual := MakeShards(
+			[]build.TestSpec{
+				isolate(spec(1, env1, env2)),
+				spec(2, env1),
+				spec(3, env1),
+				isolate(spec(4, env2)),
+			},
+			basicOpts,
+		)
+
+		isolateShard := func(shard *Shard, index int) *Shard {
+			shard.Name = fmt.Sprintf("%s-%s", shard.Name, normalizeTestName(shard.Tests[0].Test.Name))
+			for i := range shard.Tests {
+				shard.Tests[i].Test.Isolated = true
+			}
+			return shard
+		}
+		expected := []*Shard{
+			isolateShard(fuchsiaShard(env1, 1), 1),
+			fuchsiaShard(env1, 2, 3),
+			isolateShard(fuchsiaShard(env2, 1), 1),
+			isolateShard(fuchsiaShard(env2, 4), 2),
 		}
 		assertEqual(t, expected, actual)
 	})
