@@ -472,28 +472,13 @@ protocol A {
   ASSERT_EQ(library.warnings().size(), 0);
 }
 
-TEST(AttributesTests, GoodMultipleTransports) {
+TEST(AttributesTests, BadMultipleTransports) {
   TestLibrary library(R"FIDL(library fidl.test.transportattributes;
 
 @transport("Channel, Syscall")
 protocol A {
     MethodA();
 };
-)FIDL");
-  ASSERT_COMPILED(library);
-  ASSERT_EQ(library.errors().size(), 0);
-  ASSERT_EQ(library.warnings().size(), 0);
-}
-
-TEST(AttributesTests, BadMultipleTransportsWithBogus) {
-  TestLibrary library(R"FIDL(
-library fidl.test.transportattributes;
-
-@transport("Channel, Bogus, Syscall")
-protocol A {
-    MethodA();
-};
-
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidTransportType);
 }

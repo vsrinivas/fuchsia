@@ -641,17 +641,6 @@ static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute
   return true;
 }
 
-static std::string Trim(std::string s) {
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-            return !utils::IsWhitespace(static_cast<char>(ch));
-          }));
-  s.erase(std::find_if(s.rbegin(), s.rend(),
-                       [](int ch) { return !utils::IsWhitespace(static_cast<char>(ch)); })
-              .base(),
-          s.end());
-  return s;
-}
-
 static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
                                 const Element* element) {
   assert(element);
@@ -669,23 +658,10 @@ static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
-  // Parse comma separated transports
   const std::string& value = arg_value.MakeContents();
-  std::string::size_type prev_pos = 0;
-  std::string::size_type pos;
-  std::vector<std::string> transports;
-  while ((pos = value.find(',', prev_pos)) != std::string::npos) {
-    transports.emplace_back(Trim(value.substr(prev_pos, pos - prev_pos)));
-    prev_pos = pos + 1;
-  }
-  transports.emplace_back(Trim(value.substr(prev_pos)));
-
-  // Validate that they're ok
-  for (const auto& transport : transports) {
-    if (kValidTransports->count(transport) == 0) {
-      reporter->Fail(ErrInvalidTransportType, attribute->span, transport, *kValidTransports);
-      return false;
-    }
+  if (kValidTransports->find(value) == kValidTransports->end()) {
+    reporter->Fail(ErrInvalidTransportType, attribute->span, value, *kValidTransports);
+    return false;
   }
   return true;
 }
