@@ -238,6 +238,7 @@ class ParseRustCompileCommandTests(unittest.TestCase):
                 emit_llvm_bc=False,
                 output=None,
                 extra_filename='',
+                target_triple='',
             ))
 
     @parameterized.expand(
@@ -323,10 +324,19 @@ class ParseRustCompileCommandTests(unittest.TestCase):
             (['-Cextra-filename', 'feedface'], 'feedface'),
             (['-Cextra-filename=f00dface'], 'f00dface'),
         ])
-    def testEmitLLVMBC(self, flags, expected_name):
+    def testExtraFilename(self, flags, expected_name):
+        command = ['rustc', 'ignored'] + flags + ['--also-ignored']
         params = rustc_remote_wrapper.parse_rust_compile_command(
-            ['rustc', 'ignored'] + flags + ['--also-ignored'], _FAKE_GLOBALS)
+            command, _FAKE_GLOBALS)
         self.assertEqual(params.extra_filename, expected_name)
+        self.assertEqual(params.dep_only_command, [_ENV] + command)
+
+    def testTargetTriple(self):
+        command = ['rustc', '--target', 'powerpc-apple-darwin8']
+        params = rustc_remote_wrapper.parse_rust_compile_command(
+            command, _FAKE_GLOBALS)
+        self.assertEqual(params.target_triple, 'powerpc-apple-darwin8')
+        self.assertEqual(params.dep_only_command, [_ENV] + command)
 
 
 if __name__ == '__main__':

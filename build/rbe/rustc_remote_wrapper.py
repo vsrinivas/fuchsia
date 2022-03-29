@@ -250,12 +250,14 @@ def parse_rust_compile_command(
         emit_llvm_bc = False,
         output=None,
         extra_filename='',
+        target_triple='',
     )
     opt_arg_func = None
     for token in compile_command:
         if opt_arg_func is not None:
             opt_arg_func(token)
             opt_arg_func = None
+            params.dep_only_command.append(token)
             continue
 
         opt, sep, arg = token.partition('=')
@@ -263,6 +265,9 @@ def parse_rust_compile_command(
         if token == '-o':
             opt_arg_func = lambda x: setattr(
                 params, 'output', remove_dot_slash_prefix(x))
+
+        elif token == '--target':
+            opt_arg_func = lambda x: setattr(params, 'target_triple', x)
 
         # Create a modified copy of the compile command that will be
         # used to only generate a depfile.
