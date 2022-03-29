@@ -38,20 +38,18 @@ template("gn_sdk") {
     # Fix this and delete this line.
     hermetic_deps = false
 
-    no_output_dir_leaks = false
-
     script = "//scripts/sdk/gn/generate.py"
     outputs = [ invoker.output_archive ]
     args = [
       "--archive",
-      rebase_path(invoker.input_archive),
+      rebase_path(invoker.input_archive, root_build_dir),
       "--output-archive",
-      rebase_path(invoker.output_archive),
+      rebase_path(invoker.output_archive, root_build_dir),
       "--output-archive-only=true",
       "--output",
 
       # note: --output-archive-only deletes this at the end of the build.
-      rebase_path("$target_gen_dir/sdk"),
+      rebase_path("$target_gen_dir/sdk", root_build_dir),
     ]
   }
 }
