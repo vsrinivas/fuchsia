@@ -46,6 +46,7 @@ test("test") {
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/uuid",
+    "//src/storage/fshost:headers",
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//src/storage/lib/paver",

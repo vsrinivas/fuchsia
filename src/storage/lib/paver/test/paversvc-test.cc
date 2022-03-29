@@ -38,6 +38,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/storage/fshost/constants.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/paver.h"
@@ -1983,6 +1984,11 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
   };
 
   void InitializeStartingGPTPartitions(const std::vector<PartitionDescription>& init_partitions) {
+    InitializeStartingGPTPartitions(gpt_dev_.get(), init_partitions);
+  }
+
+  void InitializeStartingGPTPartitions(const BlockDevice* gpt_dev,
+                                       const std::vector<PartitionDescription>& init_partitions) {
     // Pause the block watcher while we write partitions to the disk.
     // This is to avoid the block watcher seeing an intermediate state of the partition table
     // and incorrectly treating it as an MBR.
@@ -1991,8 +1997,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(pauser);
 
     std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_OK(gpt::GptDevice::Create(gpt_dev_->fd(), gpt_dev_->block_size(),
-                                     gpt_dev_->block_count(), &gpt));
+    ASSERT_OK(
+        gpt::GptDevice::Create(gpt_dev->fd(), gpt_dev->block_size(), gpt_dev->block_count(), &gpt));
     ASSERT_OK(gpt->Sync());
 
     for (const auto& part : init_partitions) {
@@ -2003,7 +2009,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
     ASSERT_OK(gpt->Sync());
 
-    fdio_cpp::UnownedFdioCaller caller(gpt_dev_->fd());
+    fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
@@ -2031,6 +2037,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
                                                   0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4};
     const std::vector<PartitionDescription> kLuisStartingPartitions = {
         {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
+        {GPT_FVM_NAME, kDummyType, 0x20400, 0x10000},
     };
     ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(kLuisStartingPartitions));
   }
@@ -2054,6 +2061,41 @@ TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
   fidl::WireSyncClient<fuchsia_paver::Sysconfig> sysconfig(std::move(sysconfig_local));
   auto wipe_result = sysconfig->Wipe();
   ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
+}
+
+TEST_F(PaverServiceLuisTest, WriteDataFileIgnoreDataPartitionFromOtherBlockDevices) {
+  // Create a second GPT device with an FVM data partition.
+  std::unique_ptr<BlockDevice> gpt_dev_other;
+  int64_t block_count = 0x30000;
+  ASSERT_NO_FATAL_FAILURE(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
+                                              (uint32_t)block_size_, &gpt_dev_other));
+  const uint8_t data_guid[] = GUID_DATA_VALUE;
+  const std::vector<PartitionDescription> kLuisStartingPartitions = {
+      {fshost::kDataPartitionLabel.data(), data_guid, 0x10400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURE(
+      InitializeStartingGPTPartitions(gpt_dev_other.get(), kLuisStartingPartitions));
+
+  // The original gpt device that the paver operates on doesn't have the data partition.
+  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+  ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
+  auto data_sink = fidl::BindSyncClient(std::move(local));
+
+  fuchsia_mem::wire::Buffer payload;
+  CreatePayload(kPagesPerBlock, &payload);
+  auto result =
+      data_sink->WriteDataFile(fidl::StringView::FromExternal("somefile"), std::move(payload));
+  ASSERT_OK(result.status());
+  // Write should not succeed as there is no FVM data partition on the given block device set by
+  // UseBlockDevice(). Even though there is one on the other GPT device. Expected error should
+  // be ZX_ERR_TIMED_OUT, as OpenPartitionWithDevfs() should eventually timed out waiting for the
+  // data partition.
+  ASSERT_EQ(result.value().status, ZX_ERR_TIMED_OUT);
 }
 
 }  // namespace

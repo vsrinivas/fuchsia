@@ -650,10 +650,26 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
                                               std::string(fshost::kLegacyDataPartitionLabel)};
   const char* c_data_partition_names[] = {data_partition_names[0].c_str(),
                                           data_partition_names[1].c_str()};
+
+  auto fvm_partition_res = GetFvmPartition(*partitioner());
+  if (fvm_partition_res.is_error()) {
+    return fvm_partition_res.take_error();
+  }
+
+  fdio_cpp::UnownedFdioCaller caller(fvm_partition_res.value()->block_fd());
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(caller.channel())->GetTopologicalPath();
+  if (!resp.ok()) {
+    return zx::error(resp.status());
+  }
+  if (resp->result.is_err()) {
+    return zx::error(resp->result.err());
+  }
+
   fs_management::PartitionMatcher matcher{
       .type_guid = data_guid,
       .labels = c_data_partition_names,
       .num_labels = 2,
+      .parent_device = resp->result.response().path.get(),
   };
   auto part_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), &matcher, ZX_SEC(1),
                                                           &partition_path);
