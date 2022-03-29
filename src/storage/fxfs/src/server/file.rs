@@ -184,7 +184,7 @@ impl FxFile {
     }
 
     pub fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
-        const ZERO_VMO_SIZE: u64 = 1024 * 1024;
+        const ZERO_VMO_SIZE: u64 = TRANSFER_BUFFER_MAX_SIZE;
         static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
 
         let vmo = self.vmo();
@@ -217,38 +217,59 @@ impl FxFile {
         }
         range.start = round_down(range.start, self.handle.block_size());
         let this = self.clone();
-        // TODO(fxbug.dev/89444): Handle IO errors.
         fasync::Task::spawn_on(self.handle.owner().executor(), async move {
             async_enter!("page_in");
             static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
-            let (buffer, transfer_buffer) = join!(
-                async {
-                    this.handle.read_uncached(range.clone()).await.expect("TODO handle errors")
-                },
-                async {
+            let (buffer_result, transfer_buffer) =
+                join!(async { this.handle.read_uncached(range.clone()).await }, async {
                     let buffer = TRANSFER_BUFFERS.get().await;
                     // Committing pages in the kernel is time consuming, so we do this in parallel
                     // to the read.  This assumes that the implementation of join! polls the other
                     // future first (which happens to be the case for now).
                     buffer.commit(range.end - range.start);
                     buffer
+                });
+            let buffer = match buffer_result {
+                Ok(buffer) => buffer,
+                Err(e) => {
+                    log::error!(
+                        "Failed to page in range {:?} for object id {:?}: {:?}",
+                        range,
+                        this.handle.uncached_handle().object_id(),
+                        e
+                    );
+                    this.handle.owner().pager().report_failure(
+                        this.vmo(),
+                        range.clone(),
+                        zx::Status::IO,
+                    );
+                    return;
                 }
-            );
+            };
             let mut buf = buffer.as_slice();
             while !buf.is_empty() {
                 let (source, remainder) =
                     buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
                 buf = remainder;
-                transfer_buffer
-                    .vmo()
-                    .write(source, transfer_buffer.offset())
-                    .expect("TODO handle errors");
-                this.handle.owner().pager().supply_pages(
-                    this.vmo(),
-                    range.start..range.start + source.len() as u64,
-                    transfer_buffer.vmo(),
-                    transfer_buffer.offset(),
-                );
+                let range_chunk = range.start..range.start + source.len() as u64;
+                match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
+                    Ok(_) => this.handle.owner().pager().supply_pages(
+                        this.vmo(),
+                        range_chunk,
+                        transfer_buffer.vmo(),
+                        transfer_buffer.offset(),
+                    ),
+                    Err(e) => {
+                        // Failures here due to OOM will get reported as IO errors, as those are
+                        // considered transient.
+                        log::error!("Failed to transfer range {:?}: {:?}", range_chunk, e);
+                        this.handle.owner().pager().report_failure(
+                            this.vmo(),
+                            range_chunk,
+                            zx::Status::IO,
+                        );
+                    }
+                }
                 range.start += source.len() as u64;
             }
         })
@@ -511,6 +532,7 @@ mod tests {
             object_store::filesystem::Filesystem,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
+        anyhow::format_err,
         fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::Status,
@@ -665,6 +687,105 @@ mod tests {
         assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
         assert_eq!(attrs.storage_size, fixture.fs().block_size() as u64);
 
+        close_file_checked(file).await;
+        fixture.close().await;
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_page_in() {
+        let input = "hello, world!";
+        let reused_device = {
+            let fixture = TestFixture::new().await;
+            let root = fixture.root();
+
+            let file = open_file_checked(
+                &root,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_FILE,
+                "foo",
+            )
+            .await;
+
+            let bytes_written = file
+                .write(input.as_bytes())
+                .await
+                .expect("write failed")
+                .map_err(Status::from_raw)
+                .expect("File write was successful");
+            assert_eq!(bytes_written as usize, input.as_bytes().len());
+            assert!(file.sync().await.expect("Sync failed").is_ok());
+
+            close_file_checked(file).await;
+            fixture.close().await
+        };
+
+        let fixture = TestFixture::open(reused_device, false).await;
+        let root = fixture.root();
+
+        let file =
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
+
+        let vmo =
+            file.get_backing_memory(fio::VmoFlags::READ).await.expect("Fidl failure").unwrap();
+        let mut readback = vec![0; input.as_bytes().len()];
+        assert!(vmo.read(&mut readback, 0).is_ok());
+        assert_eq!(input.as_bytes(), readback);
+
+        close_file_checked(file).await;
+        fixture.close().await;
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_page_in_io_error() {
+        let mut device = FakeDevice::new(8192, 512);
+        let succeed_requests = Arc::new(AtomicBool::new(true));
+        let succeed_requests_clone = succeed_requests.clone();
+        device.set_op_callback(Box::new(move |_| {
+            if succeed_requests_clone.load(atomic::Ordering::Relaxed) {
+                Ok(())
+            } else {
+                Err(format_err!("Fake error."))
+            }
+        }));
+
+        let input = "hello, world!";
+        let reused_device = {
+            let fixture = TestFixture::open(DeviceHolder::new(device), true).await;
+            let root = fixture.root();
+
+            let file = open_file_checked(
+                &root,
+                fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_FILE,
+                "foo",
+            )
+            .await;
+
+            let bytes_written = file
+                .write(input.as_bytes())
+                .await
+                .expect("write failed")
+                .map_err(Status::from_raw)
+                .expect("File write was successful");
+            assert_eq!(bytes_written as usize, input.as_bytes().len());
+
+            close_file_checked(file).await;
+            fixture.close().await
+        };
+
+        let fixture = TestFixture::open(reused_device, false).await;
+        let root = fixture.root();
+
+        let file =
+            open_file_checked(&root, fio::OPEN_RIGHT_READABLE, fio::MODE_TYPE_FILE, "foo").await;
+
+        let vmo =
+            file.get_backing_memory(fio::VmoFlags::READ).await.expect("Fidl failure").unwrap();
+        succeed_requests.store(false, atomic::Ordering::Relaxed);
+        let mut readback = vec![0; input.as_bytes().len()];
+        assert!(vmo.read(&mut readback, 0).is_err());
+
+        succeed_requests.store(true, atomic::Ordering::Relaxed);
         close_file_checked(file).await;
         fixture.close().await;
     }

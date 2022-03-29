@@ -157,6 +157,25 @@ impl Pager {
             log::error!("Supply pages error: {:?}", e);
         }
     }
+
+    pub fn report_failure(&self, vmo: &zx::Vmo, range: Range<u64>, status: zx::Status) {
+        let pager_status = match status {
+            zx::Status::IO_DATA_INTEGRITY => zx::Status::IO_DATA_INTEGRITY,
+            // Shamelessly stolen from src/storage/blobfs/page_loader.h
+            zx::Status::IO
+            | zx::Status::IO_DATA_LOSS
+            | zx::Status::IO_INVALID
+            | zx::Status::IO_MISSED_DEADLINE
+            | zx::Status::IO_NOT_PRESENT
+            | zx::Status::IO_OVERRUN
+            | zx::Status::IO_REFUSED
+            | zx::Status::PEER_CLOSED => zx::Status::IO,
+            _ => zx::Status::BAD_STATE,
+        };
+        if let Err(e) = self.thread.pager.op_range(zx::PagerOp::Fail(pager_status), vmo, range) {
+            log::error!("Pager op range error: {:?}", e);
+        }
+    }
 }
 
 impl Drop for Pager {

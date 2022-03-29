@@ -16,11 +16,18 @@ use {
     },
 };
 
+pub enum Op {
+    Read,
+    Write,
+    Flush,
+}
+
 /// A Device backed by a memory buffer.
 pub struct FakeDevice {
     allocator: BufferAllocator,
     data: Mutex<Vec<u8>>,
     closed: AtomicBool,
+    operation_closure: Box<dyn Fn(Op) -> Result<(), Error> + Send + Sync>,
 }
 
 const TRANSFER_HEAP_SIZE: usize = 16 * 1024 * 1024;
@@ -35,7 +42,17 @@ impl FakeDevice {
             allocator,
             data: Mutex::new(vec![0 as u8; block_count as usize * block_size as usize]),
             closed: AtomicBool::new(false),
+            operation_closure: Box::new(|_: Op| Ok(())),
         }
+    }
+
+    /// Sets a callback that will run at the beginning of read, write, and flush which will forward
+    /// any errors, and proceed on Ok().
+    pub fn set_op_callback(
+        &mut self,
+        cb: impl Fn(Op) -> Result<(), Error> + Send + Sync + 'static,
+    ) {
+        self.operation_closure = Box::new(cb);
     }
 }
 
@@ -56,6 +73,7 @@ impl Device for FakeDevice {
 
     async fn read(&self, offset: u64, mut buffer: MutableBufferRef<'_>) -> Result<(), Error> {
         ensure!(!self.closed.load(Ordering::Relaxed));
+        (self.operation_closure)(Op::Read)?;
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
         let data = self.data.lock().unwrap();
@@ -73,6 +91,7 @@ impl Device for FakeDevice {
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
         ensure!(!self.closed.load(Ordering::Relaxed));
+        (self.operation_closure)(Op::Write)?;
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
         let mut data = self.data.lock().unwrap();
@@ -94,7 +113,7 @@ impl Device for FakeDevice {
     }
 
     async fn flush(&self) -> Result<(), Error> {
-        Ok(())
+        (self.operation_closure)(Op::Flush)
     }
 
     fn reopen(&self) {
