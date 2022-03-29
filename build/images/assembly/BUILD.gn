@@ -40,6 +40,10 @@ python_binary("hermetic_inputs_for_image_assembly") {
   ]
 }
 
+python_binary("hermetic_inputs_for_update_package") {
+  main_source = "hermetic_inputs_for_update_package.py"
+}
+
 group("tests") {
   testonly = true
   deps = [

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
 
 template("update_package") {
@@ -11,13 +12,14 @@ template("update_package") {
   assert(defined(invoker.epoch), "Need to define epoch")
 
   labels = {
+    hermetic_inputs = "${target_name}_hermetic_inputs"
     ffx_tool = "//src/developer/ffx:ffx_bin($host_toolchain)"
   }
 
   files = {
+    hermetic_inputs = "${target_out_dir}/${target_name}_hermetic_inputs"
     outdir = "$target_out_dir/$target_name"
     gendir = "$outdir/gen"
-    depfile_path = "$outdir.d"
     update_package = "$outdir/update.far"
     update_package_manifest = "$outdir/update_package_manifest.json"
     update_meta_package = "$gendir/meta/package"
@@ -27,7 +29,44 @@ template("update_package") {
     packages = "$gendir/packages.json"
   }
 
-  action("$target_name") {
+  python_action(labels.hermetic_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    binary_label = "//build/images/assembly:hermetic_inputs_for_update_package"
+
+    inputs = [ invoker.partitions ]
+    outputs = [ files.hermetic_inputs ]
+
+    args = [
+      "--partitions",
+      rebase_path(invoker.partitions, root_build_dir),
+      "--output",
+      rebase_path(files.hermetic_inputs, root_build_dir),
+    ]
+
+    if (defined(invoker.system_a) || defined(invoker.system_b) ||
+        defined(invoker.system_r)) {
+      args += [ "--system" ]
+      if (defined(invoker.system_a)) {
+        args += [ rebase_path(invoker.system_a, root_build_dir) ]
+        inputs += [ invoker.system_a ]
+      }
+      if (defined(invoker.system_b)) {
+        args += [ rebase_path(invoker.system_b, root_build_dir) ]
+        inputs += [ invoker.system_b ]
+      }
+      if (defined(invoker.system_r)) {
+        args += [ rebase_path(invoker.system_r, root_build_dir) ]
+        inputs += [ invoker.system_r ]
+      }
+    }
+  }
+
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -37,19 +76,15 @@ template("update_package") {
     if (!defined(deps)) {
       deps = []
     }
-    depfile = files.depfile_path
 
-    # Compute the path to the ffx host tool.
-    ffx_out_dir = get_label_info(labels.ffx_tool, "root_out_dir")
-    ffx_path = "$ffx_out_dir/ffx"
-    deps += [ labels.ffx_tool ]
+    hermetic_inputs_target = ":${labels.hermetic_inputs}"
+    hermetic_inputs_file = files.hermetic_inputs
 
-    script = "//build/images/assembly/update_package.py"
     args = [
-      "--ffx-path",
-      rebase_path(ffx_path, root_build_dir),
-      "--depfile",
-      rebase_path(files.depfile_path, root_build_dir),
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "create-update",
       "--partitions",
       rebase_path(invoker.partitions, root_build_dir),
       "--outdir",
@@ -75,7 +110,6 @@ template("update_package") {
     ]
 
     inputs = [
-      ffx_path,
       invoker.partitions,
       invoker.version_file,
     ]
