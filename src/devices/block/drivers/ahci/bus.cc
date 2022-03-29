@@ -10,7 +10,6 @@
 namespace ahci {
 
 zx_status_t Bus::WaitForClear(size_t offset, uint32_t mask, zx::duration timeout) {
-  int i = 0;
   zx::time deadline = zx::clock::get_monotonic() + timeout;
   do {
     uint32_t val;
@@ -21,13 +20,11 @@ zx_status_t Bus::WaitForClear(size_t offset, uint32_t mask, zx::duration timeout
     if (!(val & mask))
       return ZX_OK;
     usleep(10 * 1000);
-    i++;
   } while (zx::clock::get_monotonic() < deadline);
   return ZX_ERR_TIMED_OUT;
 }
 
 zx_status_t Bus::WaitForSet(size_t offset, uint32_t mask, zx::duration timeout) {
-  int i = 0;
   zx::time deadline = zx::clock::get_monotonic() + timeout;
   do {
     uint32_t val;
@@ -38,7 +35,6 @@ zx_status_t Bus::WaitForSet(size_t offset, uint32_t mask, zx::duration timeout) 
     if (val & mask)
       return ZX_OK;
     usleep(10 * 1000);
-    i++;
   } while (zx::clock::get_monotonic() < deadline);
   return ZX_ERR_TIMED_OUT;
 }
