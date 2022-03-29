@@ -13,7 +13,7 @@ use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
 
-const ATOMIC_IO_BYTES: usize = 4096;
+const ATOMIC_IO_BYTES: i64 = 4096;
 const PIPE_MAX_SIZE: usize = 1048576; // From pipe.go in gVisor.
 
 fn round_up(value: usize, increment: usize) -> usize {

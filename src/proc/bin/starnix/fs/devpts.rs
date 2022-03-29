@@ -17,9 +17,12 @@ use crate::types::*;
 // See https://www.kernel.org/doc/Documentation/admin-guide/devices.txt
 const DEVPTS_FIRST_MAJOR: u32 = 136;
 const DEVPTS_MAJOR_COUNT: u32 = 4;
-// // The device identifier is encoded through the major and minor device identifier of the
+// The device identifier is encoded through the major and minor device identifier of the
 // device. Each major identifier can contain 256 pts replicas.
 const DEVPTS_COUNT: u32 = 4 * 256;
+// The block size of the node in the devpts file system. Value has been taken from
+// https://github.com/google/gvisor/blob/master/test/syscalls/linux/pty.cc
+const BLOCK_SIZE: i64 = 1024;
 
 // Construct the DeviceType associated with the given pts replicas.
 fn get_device_type_for_pts(id: u32) -> DeviceType {
@@ -34,9 +37,11 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     let fs = TmpFs::new();
 
     // Create ptmx
-    fs.root()
+    let ptmx = fs
+        .root()
         .create_node(b"ptmx", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::PTMX)
         .unwrap();
+    ptmx.node.info_write().blksize = BLOCK_SIZE;
 
     {
         let state = Arc::new(TTYState::new(fs.clone()));
@@ -74,11 +79,13 @@ impl TTYState {
         let device_type = get_device_type_for_pts(id);
         let terminal = Arc::new(Terminal::new(self.clone(), id));
 
-        self.fs.root().create_node(
+        let pts = self.fs.root().create_node(
             id.to_string().as_bytes(),
             FileMode::IFCHR | FileMode::from_bits(0o666),
             device_type,
         )?;
+        pts.node.info_write().blksize = BLOCK_SIZE;
+
         self.terminals.write().insert(id, Arc::downgrade(&terminal));
         Ok(terminal)
     }
@@ -581,6 +588,17 @@ mod tests {
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0)?, 1);
         // /dev/pts/0 cannot be opened
         pts.node.open(&kernel, OpenFlags::RDONLY).map(|_| ()).unwrap_err();
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ptmx_blksize() -> Result<(), anyhow::Error> {
+        let (kernel, _task) = create_kernel_and_task();
+        let fs = dev_pts_fs(&kernel);
+        let ptmx = fs.root().component_lookup(b"ptmx")?;
+        let stat = ptmx.node.stat()?;
+        assert_eq!(stat.st_blksize, BLOCK_SIZE);
 
         Ok(())
     }

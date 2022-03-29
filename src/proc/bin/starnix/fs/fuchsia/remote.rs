@@ -61,7 +61,7 @@ pub fn create_fuchsia_pipe(kern: &Kernel, socket: zx::Socket) -> Result<FileHand
 
 fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) {
     /// st_blksize is measured in units of 512 bytes.
-    const BYTES_PER_BLOCK: usize = 512;
+    const BYTES_PER_BLOCK: i64 = 512;
 
     // TODO - store these in FsNodeState and convert on fstat
     info.size = attrs.content_size as usize;

@@ -57,12 +57,11 @@ pub struct FsNode {
 
 pub type FsNodeHandle = Arc<FsNode>;
 
-#[derive(Default)]
 pub struct FsNodeInfo {
     pub mode: FileMode,
     pub size: usize,
     pub storage_size: usize,
-    pub blksize: usize,
+    pub blksize: i64,
     pub uid: uid_t,
     pub gid: gid_t,
     pub link_count: u64,
@@ -71,6 +70,28 @@ pub struct FsNodeInfo {
     pub time_modify: zx::Time,
     pub dev: DeviceType,
     pub rdev: DeviceType,
+}
+
+/// st_blksize is measured in units of 512 bytes.
+const DEFAULT_BYTES_PER_BLOCK: i64 = 512;
+
+impl Default for FsNodeInfo {
+    fn default() -> Self {
+        FsNodeInfo {
+            mode: Default::default(),
+            size: Default::default(),
+            storage_size: Default::default(),
+            blksize: DEFAULT_BYTES_PER_BLOCK,
+            uid: Default::default(),
+            gid: Default::default(),
+            link_count: Default::default(),
+            time_create: Default::default(),
+            time_access: Default::default(),
+            time_modify: Default::default(),
+            dev: Default::default(),
+            rdev: Default::default(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -395,13 +416,11 @@ impl FsNode {
 
     pub fn stat(&self) -> Result<stat_t, Errno> {
         let info = self.ops().update_info(self)?;
-        /// st_blksize is measured in units of 512 bytes.
-        const BYTES_PER_BLOCK: i64 = 512;
         Ok(stat_t {
             st_ino: self.inode_num,
             st_mode: info.mode.bits(),
             st_size: info.size as off_t,
-            st_blocks: info.storage_size as i64 / BYTES_PER_BLOCK,
+            st_blocks: info.storage_size as i64 / info.blksize,
             st_nlink: info.link_count,
             st_uid: info.uid,
             st_gid: info.gid,
@@ -410,7 +429,7 @@ impl FsNode {
             st_atim: timespec_from_time(info.time_access),
             st_dev: info.dev.bits(),
             st_rdev: info.rdev.bits(),
-            st_blksize: BYTES_PER_BLOCK,
+            st_blksize: info.blksize,
             ..Default::default()
         })
     }
@@ -468,5 +487,48 @@ mod tests {
         let content = &mut [0xff; CONTENT_LEN];
         current_task.mm.read_memory(address, content).expect("read memory");
         assert_eq!(&[0; CONTENT_LEN], content);
+    }
+
+    #[test]
+    fn node_info_is_reflected_in_stat() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Create a node.
+        let node = &current_task
+            .fs
+            .root
+            .create_node(b"zero", FileMode::IFCHR, DeviceType::ZERO)
+            .expect("create_node")
+            .entry
+            .node;
+        {
+            let mut info = node.info_write();
+            info.mode = FileMode::IFSOCK;
+            info.size = 1;
+            info.storage_size = 8;
+            info.blksize = 4;
+            info.uid = 9;
+            info.gid = 10;
+            info.link_count = 11;
+            info.time_create = zx::Time::from_nanos(1);
+            info.time_access = zx::Time::from_nanos(2);
+            info.time_modify = zx::Time::from_nanos(3);
+            info.dev = DeviceType::new(12, 12);
+            info.rdev = DeviceType::new(13, 13);
+        }
+        let stat = node.stat().expect("stat");
+
+        assert_eq!(stat.st_mode, FileMode::IFSOCK.bits());
+        assert_eq!(stat.st_size, 1);
+        assert_eq!(stat.st_blksize, 4);
+        assert_eq!(stat.st_blocks, 2);
+        assert_eq!(stat.st_uid, 9);
+        assert_eq!(stat.st_gid, 10);
+        assert_eq!(stat.st_nlink, 11);
+        assert_eq!(time_from_timespec(stat.st_ctim).expect("ctim"), zx::Time::from_nanos(1));
+        assert_eq!(time_from_timespec(stat.st_atim).expect("atim"), zx::Time::from_nanos(2));
+        assert_eq!(time_from_timespec(stat.st_mtim).expect("mtim"), zx::Time::from_nanos(3));
+        assert_eq!(stat.st_dev, DeviceType::new(12, 12).bits());
+        assert_eq!(stat.st_rdev, DeviceType::new(13, 13).bits());
     }
 }
