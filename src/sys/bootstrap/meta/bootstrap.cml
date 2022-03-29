@@ -122,12 +122,14 @@
             environment: "#boot-driver-env",
             durability: "single_run",
             allowed_offers: "static_and_dynamic",
+            allow_long_names: true,
         },
         {
             name: "pkg-drivers",
             environment: "#pkg-driver-env",
             durability: "single_run",
             allowed_offers: "static_and_dynamic",
+            allow_long_names: true,
         },
     ],
     offer: [

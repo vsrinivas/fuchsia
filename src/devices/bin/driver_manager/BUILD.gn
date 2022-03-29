@@ -346,6 +346,7 @@ fuchsia_test_package("driver-manager-tests") {
 fuchsia_component("driver_manager_component") {
   component_name = "driver_manager"
   manifest = "meta/driver_manager.cml"
+  restricted_features = [ "allow_long_names" ]
   deps = [ ":driver_manager" ]
 }
 
