@@ -151,8 +151,7 @@ void I2cDevice::AddChildren() {
           {BIND_PLATFORM_DEV_DID, 0, did}, {BIND_I2C_CLASS, 0, i2c_class},
       };
 
-      status = dev->DdkAdd(
-          ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE).set_props(props));
+      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
     } else {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},
