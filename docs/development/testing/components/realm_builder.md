@@ -434,9 +434,9 @@ corresponding [offer][offer], requests to open the capability will not resolve
 and you will see error messages similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-[86842.196][klog][E] [component_manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/core:0/test_manager:0/tests:auto-10238282593681900609:4/test_wrapper:0/test_root:0/fuchsia_component_test_
-[86842.197][klog][I] collection:auto-4046836611955440668:16/echo-client:0`: An `offer from parent` declaration was found at `/core:0/test_manager:0/tests:auto-10238282593681900609:4/test_wrapper:0/test_root:0/fuchsia_component_test_colle
-[86842.197][klog][I] ction:auto-4046836611955440668:16` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
+[86842.196][klog][E] [component_manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/core/test_manager/tests:auto-10238282593681900609/test_wrapper/test_root/fuchsia_component_test_
+[86842.197][klog][I] collection:auto-4046836611955440668/echo-client`: An `offer from parent` declaration was found at `/core/test_manager/tests:auto-10238282593681900609/test_wrapper/test_root/fuchsia_component_test_colle
+[86842.197][klog][I] ction:auto-4046836611955440668` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 ```
 
 For more information on how to properly offer capabilities from the test

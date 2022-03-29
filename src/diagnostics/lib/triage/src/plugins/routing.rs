@@ -72,26 +72,26 @@ mod tests {
         let expected_output = vec![
             "[WARNING]: Error routing capability \
         \"fidl.examples.routing.echo.Echo\" to component identified as \"echo_client\" \
-        with moniker \"/bootstrap:0/echo:0/echo_client:0\". Original error log:\n[00017.480623]\
+        with moniker \"/bootstrap/echo/echo_client\". Original error log:\n[00017.480623]\
         [1150][1253][echo_client:0] ERROR: Failed to route protocol \
-        `fidl.examples.routing.echo.Echo` with target component `/bootstrap:0/echo:0/echo_client:0`\
-        : A `use from parent` declaration was found at `/bootstrap:0/echo:0/echo_client:0` for \
+        `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`\
+        : A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for \
         `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the \
         parent"
                 .to_string(),
             "[WARNING]: Error routing capability \
         \"foo.bar.Baz\" to component identified as \"foobar\" \
-        with moniker \"/bootstrap:0/foobar:345\". Original error log:\n[12471.623480]\
+        with moniker \"/bootstrap/foobar\". Original error log:\n[12471.623480]\
         [782][9443][foobar:345] ERROR: Failed to route protocol \
-        `foo.bar.Baz` with target component `/bootstrap:0/foobar:345`: A `use from parent` \
-        declaration was found at `/bootstrap:0/foobar:345` for `foo.bar.Baz`, but no matching \
+        `foo.bar.Baz` with target component `/bootstrap/foobar`: A `use from parent` \
+        declaration was found at `/bootstrap/foobar` for `foo.bar.Baz`, but no matching \
         `offer` declaration was found in the parent"
                 .to_string(),
         ];
 
         let fetcher: TextFetcher = r#"
-[00017.480623][1150][1253][echo_client:0] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap:0/echo:0/echo_client:0`: A `use from parent` declaration was found at `/bootstrap:0/echo:0/echo_client:0` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
-[12471.623480][782][9443][foobar:345] ERROR: Failed to route protocol `foo.bar.Baz` with target component `/bootstrap:0/foobar:345`: A `use from parent` declaration was found at `/bootstrap:0/foobar:345` for `foo.bar.Baz`, but no matching `offer` declaration was found in the parent
+[00017.480623][1150][1253][echo_client:0] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
+[12471.623480][782][9443][foobar:345] ERROR: Failed to route protocol `foo.bar.Baz` with target component `/bootstrap/foobar`: A `use from parent` declaration was found at `/bootstrap/foobar` for `foo.bar.Baz`, but no matching `offer` declaration was found in the parent
 "#.into();
 
         let diagnostics_data = Vec::new();
@@ -105,7 +105,7 @@ mod tests {
         let expected_output: Vec<String> = vec![];
 
         let fetcher: TextFetcher = r#"
-[00017.480623][1150][1253][component manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap:0/echo:0/echo_client:0`: A `use from parent` declaration was found at `/bootstrap:0/echo:0/echo_client:0` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
+[00017.480623][1150][1253][component manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 "#.into();
 
         let diagnostics_data = Vec::new();

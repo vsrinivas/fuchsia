@@ -112,7 +112,7 @@ component manager exhibits the following behavior:
 -   If the parent is the root component, component manager will crash, with an
     error message like:
     ```
-    [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup:0`: failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm": package not found: remote resolver responded with PackageNotFound
+    [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup`: failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm": package not found: remote resolver responded with PackageNotFound
     ```
 
 An `eager` component should be in the same package set as its parent since the

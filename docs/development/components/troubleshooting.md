@@ -156,8 +156,8 @@ hint about what went wrong. Example:
 
 ```
  [component_manager] ERROR: Failed to route protocol `/svc/fuchsia.echo.Echo`
- from component `/core:0/echo_client:0`: A `use from realm` declaration was
- found at `/echo_client:0` for `/svc/fuchsia.echo.Echo`, but no matching
+ from component `/core/echo_client`: A `use from realm` declaration was
+ found at `/echo_client` for `/svc/fuchsia.echo.Echo`, but no matching
  `offer` declaration was found in the parent
 ```
 
@@ -380,7 +380,7 @@ If this is the problem, you can expect to see an error like this in the logs:
 
 ```
 ERROR: Failed to route protocol `/svc/fuchsia.test.Suite` from component
-`/test_manager:0/...`: An `expose from #driver` declaration was found at `/test_manager:0/...`
+`/test_manager/...`: An `expose from #driver` declaration was found at `/test_manager/...`
 for `/svc/fuchsia.test.Suite`, but no matching `expose` declaration was found in the child
 ```
 
