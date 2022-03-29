@@ -18,7 +18,7 @@ use {
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     lazy_static::lazy_static,
     moniker::AbsoluteMoniker,
     routing::capability_source::{ComponentCapability, InternalCapability},
@@ -57,7 +57,7 @@ impl CapabilityProvider for BinderCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -271,7 +271,7 @@ mod tests {
         fixture
             .provider(moniker.clone(), vec!["target:0"].into())
             .await
-            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_end)
+            .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server_end)
             .await
             .expect("failed to call open()");
         task_scope.shutdown().await;
@@ -300,7 +300,7 @@ mod tests {
         fixture
             .provider(moniker, vec![].into())
             .await
-            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_end)
+            .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server_end)
             .await
             .expect("failed to call open()");
         task_scope.shutdown().await;

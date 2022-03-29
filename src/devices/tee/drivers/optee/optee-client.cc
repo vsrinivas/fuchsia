@@ -158,8 +158,8 @@ zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
 
 // Calls `fuchsia.io.Directory/Open` on a channel and awaits the result.
 zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> root, uint32_t flags, uint32_t mode,
-    const std::string& path) {
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, fuchsia_io::wire::OpenFlags flags,
+    uint32_t mode, const std::string& path) {
   // Ensure `kOpenFlagDescribe` is passed
   flags |= fuchsia_io::wire::kOpenFlagDescribe;
 
@@ -198,7 +198,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
 template <uint32_t kOpenFlags>
 static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
-  static_assert((kOpenFlags & fuchsia_io::wire::kOpenFlagNotDirectory) == 0,
+  static_assert((kOpenFlags & static_cast<uint32_t>(fuchsia_io::wire::kOpenFlagNotDirectory)) == 0,
                 "kOpenFlags must not include fuchsia_io::wire::kOpenFlagNotDirectory");
   ZX_DEBUG_ASSERT(root.is_valid());
 
@@ -226,9 +226,9 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
   fidl::ClientEnd<fuchsia_io::Directory> current_dir{};
   for (const auto& fragment : path) {
     static constexpr uint32_t kOpenMode = fuchsia_io::wire::kModeTypeDirectory;
-    auto new_client_end =
-        OpenObjectInDirectory(current_dir.is_valid() ? current_dir.borrow() : root, kOpenFlags,
-                              kOpenMode, fragment.string());
+    auto new_client_end = OpenObjectInDirectory(
+        current_dir.is_valid() ? current_dir.borrow() : root,
+        static_cast<fuchsia_io::wire::OpenFlags>(kOpenFlags), kOpenMode, fragment.string());
     if (new_client_end.is_error()) {
       return new_client_end.take_error();
     }
@@ -240,18 +240,18 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
 
 inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
-  static constexpr uint32_t kCreateFlags =
+  static constexpr fuchsia_io::wire::OpenFlags kCreateFlags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
       fuchsia_io::wire::kOpenFlagCreate | fuchsia_io::wire::kOpenFlagDirectory;
-  return RecursivelyWalkPath<kCreateFlags>(root, path);
+  return RecursivelyWalkPath<static_cast<uint32_t>(kCreateFlags)>(root, path);
 }
 
 inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
-  static constexpr uint32_t kOpenFlags = fuchsia_io::wire::kOpenRightReadable |
-                                         fuchsia_io::wire::kOpenRightWritable |
-                                         fuchsia_io::wire::kOpenFlagDirectory;
-  return RecursivelyWalkPath<kOpenFlags>(root, path);
+  static constexpr fuchsia_io::wire::OpenFlags kOpenFlags = fuchsia_io::wire::kOpenRightReadable |
+                                                            fuchsia_io::wire::kOpenRightWritable |
+                                                            fuchsia_io::wire::kOpenFlagDirectory;
+  return RecursivelyWalkPath<static_cast<uint32_t>(kOpenFlags)>(root, path);
 }
 
 }  // namespace
@@ -1281,7 +1281,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
     return storage_dir.status_value();
   }
 
-  static constexpr uint32_t kOpenFlags =
+  static constexpr fuchsia_io::wire::OpenFlags kOpenFlags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
       fuchsia_io::wire::kOpenFlagNotDirectory | fuchsia_io::wire::kOpenFlagDescribe;
   static constexpr uint32_t kOpenMode = fuchsia_io::wire::kModeTypeFile;
@@ -1331,7 +1331,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
     return storage_dir.status_value();
   }
 
-  static constexpr uint32_t kCreateFlags =
+  static constexpr fuchsia_io::wire::OpenFlags kCreateFlags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
       fuchsia_io::wire::kOpenFlagCreate | fuchsia_io::wire::kOpenFlagDescribe;
   static constexpr uint32_t kCreateMode = fuchsia_io::wire::kModeTypeFile;
@@ -1599,7 +1599,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   }
 
   if (!message->should_overwrite()) {
-    static constexpr uint32_t kCheckRenameFlags =
+    static constexpr fuchsia_io::wire::OpenFlags kCheckRenameFlags =
         fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDescribe;
     static constexpr uint32_t kCheckRenameMode =
         fuchsia_io::wire::kModeTypeFile | fuchsia_io::wire::kModeTypeDirectory;

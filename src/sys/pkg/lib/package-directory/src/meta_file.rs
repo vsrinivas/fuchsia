@@ -65,7 +65,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -75,15 +75,14 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
             return;
         }
 
-        if flags
-            & (fio::OPEN_RIGHT_WRITABLE
+        if flags.intersects(
+            fio::OPEN_RIGHT_WRITABLE
                 | fio::OPEN_RIGHT_EXECUTABLE
                 | fio::OPEN_FLAG_CREATE
                 | fio::OPEN_FLAG_CREATE_IF_ABSENT
                 | fio::OPEN_FLAG_TRUNCATE
-                | fio::OPEN_FLAG_APPEND)
-            != 0
-        {
+                | fio::OPEN_FLAG_APPEND,
+        ) {
             let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
             return;
         }
@@ -108,7 +107,7 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
 
 #[async_trait]
 impl vfs::file::File for MetaFile {
-    async fn open(&self, _flags: u32) -> Result<(), zx::Status> {
+    async fn open(&self, _flags: fio::OpenFlags) -> Result<(), zx::Status> {
         Ok(())
     }
 
@@ -388,7 +387,7 @@ mod tests {
     async fn file_open() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        assert_eq!(File::open(&meta_file, 0).await, Ok(()));
+        assert_eq!(File::open(&meta_file, fio::OpenFlags::empty()).await, Ok(()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

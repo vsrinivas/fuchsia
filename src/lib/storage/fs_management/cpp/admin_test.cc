@@ -198,7 +198,7 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
     ASSERT_TRUE(test_file_ends.is_ok()) << test_file_ends.status_string();
     fidl::ServerEnd<fio::Node> test_file_server(test_file_ends->server.TakeChannel());
 
-    uint32_t file_flags =
+    fio::wire::OpenFlags file_flags =
         fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
     ASSERT_EQ(DataRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server)).status(),
               ZX_OK);
@@ -228,7 +228,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   ASSERT_TRUE(fail_file_ends.is_ok()) << fail_file_ends.status_string();
   fidl::ServerEnd<fio::Node> fail_test_file_server(fail_file_ends->server.TakeChannel());
 
-  uint32_t fail_file_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags fail_file_flags =
+      fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   // open "succeeds" but...
   auto open_resp =
       DataRoot()->Open(fail_file_flags, 0, kTestFilePath, std::move(fail_test_file_server));
@@ -244,7 +245,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   ASSERT_TRUE(test_file_ends.is_ok()) << test_file_ends.status_string();
   fidl::ServerEnd<fio::Node> test_file_server(test_file_ends->server.TakeChannel());
 
-  uint32_t file_flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags file_flags = fio::wire::kOpenRightReadable;
   auto open_resp2 = DataRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
   ASSERT_TRUE(open_resp2.ok()) << open_resp2.status_string();
 
@@ -266,7 +267,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   ASSERT_TRUE(test_file_ends.is_ok()) << test_file_ends.status_string();
   fidl::ServerEnd<fio::Node> test_file_server(test_file_ends->server.TakeChannel());
 
-  uint32_t file_flags =
+  fio::wire::OpenFlags file_flags =
       fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
   auto open_resp = ExportRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
   ASSERT_TRUE(open_resp.ok()) << open_resp.status_string();

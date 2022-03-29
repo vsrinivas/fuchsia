@@ -66,14 +66,16 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
 
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
-      uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
+      fuchsia::io::OpenFlags flags,
+      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     // Convert the interface handle to a typed ClientEnd, respectively.
     fidl::ClientEnd<fuchsia_io::Directory> client_end{remote_directory.TakeChannel()};
 
     fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
     root->AddEntry(dirname, fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end)));
 
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
+    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(
+        static_cast<fuchsia_io::wire::OpenFlags>(static_cast<uint32_t>(flags)));
     fs::VnodeConnectionOptions filtered_options =
         fs::VnodeConnectionOptions::FilterForNewConnection(options);
 
@@ -86,7 +88,7 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
     }
   }
 
-  void GetDirectory(fuchsia::io::test::Directory root, uint32_t flags,
+  void GetDirectory(fuchsia::io::test::Directory root, fuchsia::io::OpenFlags flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     fbl::RefPtr<fs::PseudoDir> dir{fbl::MakeRefCounted<fs::PseudoDir>()};
 
@@ -96,7 +98,8 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
       }
     }
 
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
+    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(
+        static_cast<fuchsia_io::wire::OpenFlags>(static_cast<uint32_t>(flags)));
     options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
     zx_status_t status = vfs_->Serve(std::move(dir), directory_request.TakeChannel(), options);
     if (status != ZX_OK) {

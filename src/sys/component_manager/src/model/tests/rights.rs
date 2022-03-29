@@ -76,7 +76,7 @@ impl CapabilityProvider for MockFrameworkDirectoryProvider {
     async fn open(
         self: Box<Self>,
         _task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,

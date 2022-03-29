@@ -36,7 +36,7 @@ Dirent::Dirent(uint64_t ino, fuchsia::io::DirentType type, const std::string& na
   ZX_DEBUG_ASSERT(name.length() <= static_cast<uint64_t>(NAME_MAX));
 }
 
-void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
+void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, fuchsia::io::OpenFlags flags,
                                zx_status_t expected_status, bool test_on_open_event) {
   fuchsia::io::NodePtr node_ptr;
   if (test_on_open_event) {

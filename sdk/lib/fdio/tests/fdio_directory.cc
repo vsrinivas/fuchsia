@@ -14,7 +14,7 @@ namespace {
 
 namespace fuchsia_io = fuchsia_io;
 
-const uint32_t kReadFlags = fuchsia_io::wire::kOpenRightReadable;
+const fuchsia_io::wire::OpenFlags kReadFlags = fuchsia_io::wire::kOpenRightReadable;
 
 TEST(DirectoryTest, ServiceConnect) {
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS, fdio_service_connect(nullptr, ZX_HANDLE_INVALID));
@@ -34,18 +34,20 @@ TEST(DirectoryTest, Open) {
 
   zx::channel h1, h2;
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open("/x/y/z", kReadFlags, h1.release()));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, fdio_open("/", kReadFlags, h2.release()));
+  ASSERT_STATUS(ZX_ERR_NOT_FOUND,
+                fdio_open("/x/y/z", static_cast<uint32_t>(kReadFlags), h1.release()));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
+                fdio_open("/", static_cast<uint32_t>(kReadFlags), h2.release()));
 
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_OK(fdio_open("/svc", kReadFlags, h1.release()));
+  ASSERT_OK(fdio_open("/svc", static_cast<uint32_t>(kReadFlags), h1.release()));
 
   zx::channel h3, h4;
   ASSERT_OK(zx::channel::create(0, &h3, &h4));
   ASSERT_OK(fdio_service_connect_at(
       h2.get(), fidl::DiscoverableProtocolName<fuchsia_process::Launcher>, h3.release()));
   ASSERT_OK(fdio_open_at(h2.get(), fidl::DiscoverableProtocolName<fuchsia_process::Launcher>,
-                         kReadFlags, h4.release()));
+                         static_cast<uint32_t>(kReadFlags), h4.release()));
 
   h3.reset(fdio_service_clone(h2.get()));
   ASSERT_TRUE(h3.is_valid());
@@ -107,52 +109,62 @@ TEST(DirectoryTest, OpenFD) {
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   {
     fbl::unique_fd fd;
-    ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
-                  fdio_open_fd(nullptr, kReadFlags, fd.reset_and_get_address()));
-    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("/x/y/z", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_STATUS(ZX_ERR_INVALID_ARGS, fdio_open_fd(nullptr, static_cast<uint32_t>(kReadFlags),
+                                                    fd.reset_and_get_address()));
+    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("/x/y/z", static_cast<uint32_t>(kReadFlags),
+                                                 fd.reset_and_get_address()));
 
     // Opening local directories, like the root of the namespace, should be supported.
-    ASSERT_OK(fdio_open_fd("/", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_OK(fdio_open_fd("/", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
 
     // fdio_open_fd canonicalizes the path, per
     // https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;l=41-43;drc=e7cbd843e8ced20ea21f9213989d803ae64fcfaf
-    ASSERT_OK(fdio_open_fd("/pkg/..", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_OK(
+        fdio_open_fd("/pkg/..", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
 
     // fdio_open_fd rejects paths of 4,097 bytes (including the null) or more.
     ASSERT_STATUS(ZX_ERR_BAD_PATH,
-                  fdio_open_fd(INVALID_LENGTH_PATH, kReadFlags, fd.reset_and_get_address()));
+                  fdio_open_fd(INVALID_LENGTH_PATH, static_cast<uint32_t>(kReadFlags),
+                               fd.reset_and_get_address()));
 
     // fdio_open_fd's path canonicalization of consecutive '/'s works with fdio_open_fd's
     // requirement for a leading slash.
-    ASSERT_OK(fdio_open_fd("//", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_OK(fdio_open_fd("//", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
 
     // Path must start with '/'.
-    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("pkg", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd("pkg", static_cast<uint32_t>(kReadFlags),
+                                                 fd.reset_and_get_address()));
 
     // fdio_open_fd sets OPEN_FLAG_DIRECTORY if the path ends in '/'.
     ASSERT_STATUS(ZX_ERR_NOT_DIR,
-                  fdio_open_fd("/pkg/test/fdio-test/", kReadFlags, fd.reset_and_get_address()));
+                  fdio_open_fd("/pkg/test/fdio-test/", static_cast<uint32_t>(kReadFlags),
+                               fd.reset_and_get_address()));
   }
 
   {
     fbl::unique_fd fd;
-    ASSERT_OK(fdio_open_fd("/pkg/test", kReadFlags, fd.reset_and_get_address()));
+    ASSERT_OK(
+        fdio_open_fd("/pkg/test", static_cast<uint32_t>(kReadFlags), fd.reset_and_get_address()));
     ASSERT_TRUE(fd.is_valid());
 
     fbl::unique_fd fd2;
     ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
-                  fdio_open_fd_at(fd.get(), nullptr, kReadFlags, fd2.reset_and_get_address()));
+                  fdio_open_fd_at(fd.get(), nullptr, static_cast<uint32_t>(kReadFlags),
+                                  fd2.reset_and_get_address()));
     ASSERT_FALSE(fd2.is_valid());
-    ASSERT_STATUS(ZX_ERR_NOT_FOUND, fdio_open_fd_at(fd.get(), "some-nonexistent-file", kReadFlags,
-                                                    fd2.reset_and_get_address()));
+    ASSERT_STATUS(ZX_ERR_NOT_FOUND,
+                  fdio_open_fd_at(fd.get(), "some-nonexistent-file",
+                                  static_cast<uint32_t>(kReadFlags), fd2.reset_and_get_address()));
     ASSERT_FALSE(fd2.is_valid());
 
     // fdio_open_fd_at rejects paths of 4,097 bytes (including the null) or more.
-    ASSERT_STATUS(ZX_ERR_BAD_PATH, fdio_open_fd_at(fd.get(), INVALID_LENGTH_PATH, kReadFlags,
-                                                   fd2.reset_and_get_address()));
+    ASSERT_STATUS(ZX_ERR_BAD_PATH,
+                  fdio_open_fd_at(fd.get(), INVALID_LENGTH_PATH, static_cast<uint32_t>(kReadFlags),
+                                  fd2.reset_and_get_address()));
 
     // We expect the binary that this file is compiled into to exist
-    ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test", kReadFlags, fd2.reset_and_get_address()));
+    ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test", static_cast<uint32_t>(kReadFlags),
+                              fd2.reset_and_get_address()));
     ASSERT_TRUE(fd2.is_valid());
 
     // Verify that we can actually read from that file.
@@ -162,12 +174,14 @@ TEST(DirectoryTest, OpenFD) {
 
     // fdio_open_fd_at canonicalizes the path, per
     // https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/io.fidl;l=41-43;drc=e7cbd843e8ced20ea21f9213989d803ae64fcfaf
-    ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test/..", kReadFlags, fd2.reset_and_get_address()));
+    ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test/..", static_cast<uint32_t>(kReadFlags),
+                              fd2.reset_and_get_address()));
     ASSERT_TRUE(fd2.is_valid());
 
     // fdio_open_fd_at sets OPEN_FLAG_DIRECTORY if the path ends in '/'.
     ASSERT_STATUS(ZX_ERR_NOT_DIR,
-                  fdio_open_fd_at(fd.get(), "fdio-test/", kReadFlags, fd2.reset_and_get_address()));
+                  fdio_open_fd_at(fd.get(), "fdio-test/", static_cast<uint32_t>(kReadFlags),
+                                  fd2.reset_and_get_address()));
     ASSERT_FALSE(fd2.is_valid());
   }
 }

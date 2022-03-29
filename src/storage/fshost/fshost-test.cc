@@ -150,13 +150,13 @@ class MockDirectoryOpener : public fidl::testing::WireTestBase<fuchsia_io::Direc
     saved_path_ = request->path.get();
   }
 
-  uint32_t saved_open_flags() const { return saved_open_flags_; }
+  fio::wire::OpenFlags saved_open_flags() const { return saved_open_flags_; }
   uint32_t saved_open_count() const { return saved_open_count_; }
   const std::string saved_path() const { return saved_path_; }
 
  private:
   // Test fields used for validation.
-  uint32_t saved_open_flags_ = 0;
+  fio::wire::OpenFlags saved_open_flags_ = {};
   uint32_t saved_open_count_ = 0;
   std::string saved_path_;
 };

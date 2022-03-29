@@ -11,7 +11,7 @@
 namespace vfs {
 namespace internal {
 
-FileConnection::FileConnection(uint32_t flags, vfs::internal::File* vn)
+FileConnection::FileConnection(fuchsia::io::OpenFlags flags, vfs::internal::File* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 FileConnection::~FileConnection() = default;
@@ -33,7 +33,8 @@ void FileConnection::AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
   callback(fuchsia::io::AdvisoryLocking_AdvisoryLock_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
 }
 
-void FileConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
+void FileConnection::Clone(fuchsia::io::OpenFlags flags,
+                           fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
@@ -225,7 +226,7 @@ void FileConnection::GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback
   callback(ZX_OK, flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void FileConnection::SetFlagsDeprecatedUseNode(uint32_t flags,
+void FileConnection::SetFlagsDeprecatedUseNode(fuchsia::io::OpenFlags flags,
                                                SetFlagsDeprecatedUseNodeCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
@@ -248,7 +249,7 @@ void FileConnection::GetFlags(GetFlagsCallback callback) {
   callback(ZX_OK, flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
+void FileConnection::SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

@@ -149,7 +149,8 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
   static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
 
-  virtual zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode);
+  virtual zx::status<fdio_ptr> open(const char* path, fuchsia_io::wire::OpenFlags flags,
+                                    uint32_t mode);
   virtual zx_status_t clone(zx_handle_t* out_handle) = 0;
   virtual zx_status_t add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
                                          zx::socket socket);
@@ -185,8 +186,8 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   virtual zx_status_t truncate(uint64_t off);
   virtual two_path_op rename;
   virtual two_path_op link;
-  virtual zx_status_t get_flags(uint32_t* out_flags);
-  virtual zx_status_t set_flags(uint32_t flags);
+  virtual zx_status_t get_flags(fuchsia_io::wire::OpenFlags* out_flags);
+  virtual zx_status_t set_flags(fuchsia_io::wire::OpenFlags flags);
   virtual zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code);
   virtual zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code);
   virtual zx_status_t listen(int backlog, int16_t* out_code);

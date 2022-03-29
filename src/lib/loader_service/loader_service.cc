@@ -136,11 +136,13 @@ std::shared_ptr<LoaderService> LoaderService::Create(async_dispatcher_t* dispatc
 }
 
 zx::status<zx::vmo> LoaderService::LoadObjectImpl(std::string path) {
-  const uint32_t kFlags = fio::wire::kOpenFlagNotDirectory | fio::wire::kOpenRightReadable |
-                          fio::wire::kOpenRightExecutable;
+  const fio::wire::OpenFlags kFlags = fio::wire::kOpenFlagNotDirectory |
+                                      fio::wire::kOpenRightReadable |
+                                      fio::wire::kOpenRightExecutable;
 
   fbl::unique_fd fd;
-  zx_status_t status = fdio_open_fd_at(dir_.get(), path.data(), kFlags, fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd_at(dir_.get(), path.data(), static_cast<uint32_t>(kFlags),
+                                       fd.reset_and_get_address());
   if (status != ZX_OK) {
     return zx::error(status);
   }

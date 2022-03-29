@@ -131,12 +131,12 @@ impl Zxio {
         Ok(zxio)
     }
 
-    pub fn open(&self, flags: u32, mode: u32, path: &str) -> Result<Zxio, zx::Status> {
+    pub fn open(&self, flags: fio::OpenFlags, mode: u32, path: &str) -> Result<Zxio, zx::Status> {
         let zxio = Zxio::default();
         let status = unsafe {
             zxio::zxio_open(
                 self.as_ptr(),
-                flags,
+                flags.bits(),
                 mode,
                 path.as_ptr() as *const ::std::os::raw::c_char,
                 path.len(),
@@ -325,7 +325,7 @@ struct DescribedNode {
 fn directory_open(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     deadline: zx::Time,
 ) -> Result<DescribedNode, zx::Status> {
@@ -360,7 +360,7 @@ pub fn directory_open_vmo(
     vmo_flags: fio::VmoFlags,
     deadline: zx::Time,
 ) -> Result<zx::Vmo, zx::Status> {
-    let mut open_flags = 0;
+    let mut open_flags = fio::OpenFlags::empty();
     if vmo_flags.contains(fio::VmoFlags::WRITE) {
         open_flags |= fio::OPEN_RIGHT_WRITABLE;
     }
@@ -396,10 +396,10 @@ pub fn directory_open_vmo(
 pub fn directory_open_async(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<zx::Channel, zx::Status> {
-    if (flags & fio::OPEN_FLAG_DESCRIBE) != 0 {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         return Err(zx::Status::INVALID_ARGS);
     }
 
@@ -423,7 +423,7 @@ pub fn directory_open_async(
 pub fn directory_open_directory_async(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::DirectorySynchronousProxy, zx::Status> {
     let flags = flags | fio::OPEN_FLAG_DIRECTORY;
     let mode = fio::MODE_TYPE_DIRECTORY;
@@ -433,7 +433,7 @@ pub fn directory_open_directory_async(
 
 pub fn directory_clone(
     directory: &fio::DirectorySynchronousProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::DirectorySynchronousProxy, zx::Status> {
     let (client_end, server_end) = zx::Channel::create()?;
     directory.clone(flags, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;
@@ -442,7 +442,7 @@ pub fn directory_clone(
 
 pub fn file_clone(
     file: &fio::FileSynchronousProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::FileSynchronousProxy, zx::Status> {
     let (client_end, server_end) = zx::Channel::create()?;
     file.clone(flags, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;

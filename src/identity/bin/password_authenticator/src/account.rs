@@ -347,7 +347,9 @@ mod test {
         match &*lock {
             State::Locked => panic!("Account should not be locked"),
             State::Unlocked { minfs, .. } => {
-                match directory::open_directory(minfs.root_dir(), path, 0).await {
+                match directory::open_directory(minfs.root_dir(), path, fio::OpenFlags::empty())
+                    .await
+                {
                     Ok(_) => true,
                     Err(OpenError::OpenError(Status::NOT_FOUND)) => false,
                     Err(err) => panic!("Unexpected error opening directory: {:?}", err),

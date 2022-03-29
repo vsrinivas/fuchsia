@@ -21,11 +21,11 @@ void StartDriverTestRealm() {
   fuchsia::driver::test::RealmArgs args;
 
   auto interface = fidl::InterfaceHandle<fuchsia::io::Directory>();
-  zx_status_t status =
-      fdio_open("/pkg",
-                fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
-                    fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-                interface.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_open(
+      "/pkg",
+      static_cast<uint32_t>(fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
+                            fuchsia::io::OPEN_RIGHT_EXECUTABLE),
+      interface.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return;
   }

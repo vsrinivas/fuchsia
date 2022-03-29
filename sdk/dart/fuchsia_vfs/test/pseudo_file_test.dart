@@ -19,7 +19,7 @@ void main() {
     return InterfaceRequest<Node>(proxy.ctrl.request().passChannel());
   }
 
-  _ReadOnlyFile _createReadOnlyFile(String str, int openFlags,
+  _ReadOnlyFile _createReadOnlyFile(String str, OpenFlags openFlags,
       [int expectedStatus = ZX.OK]) {
     _ReadOnlyFile file = _ReadOnlyFile()
       ..pseudoFile = PseudoFile.readOnlyStr(() {
@@ -108,14 +108,14 @@ void main() {
       });
     }
 
-    var _notAllowedFlags = [
+    final _notAllowedFlags = [
       openFlagCreate,
       openFlagCreateIfAbsent,
       openFlagNoRemote,
     ];
 
     test('onOpen event on flag validation error', () async {
-      var file = _createReadOnlyFile(
+      final file = _createReadOnlyFile(
           '', openRightWritable | openFlagDescribe, ZX.ERR_NOT_SUPPORTED);
 
       await file.proxy.onOpen.first.then((response) {
@@ -127,29 +127,35 @@ void main() {
     });
 
     test('read only file', () async {
-      var file =
+      final file =
           _createReadOnlyFile('', openRightWritable, ZX.ERR_NOT_SUPPORTED);
 
-      var proxy = FileProxy();
-      expect(
-          file.pseudoFile
-              .connect(openFlagTruncate, 0, _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_NOT_SUPPORTED);
+      {
+        final proxy = FileProxy();
+        expect(
+            file.pseudoFile
+                .connect(openFlagTruncate, 0, _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_NOT_SUPPORTED);
+      }
 
-      proxy = FileProxy();
-      expect(
-          file.pseudoFile
-              .connect(openFlagDirectory, 0, _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_NOT_DIR);
+      {
+        final proxy = FileProxy();
+        expect(
+            file.pseudoFile
+                .connect(openFlagDirectory, 0, _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_NOT_DIR);
+      }
 
-      proxy = FileProxy();
-      expect(
-          file.pseudoFile
-              .connect(openFlagAppend, 0, _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_INVALID_ARGS);
+      {
+        final proxy = FileProxy();
+        expect(
+            file.pseudoFile
+                .connect(openFlagAppend, 0, _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_INVALID_ARGS);
+      }
 
-      for (var flag in _notAllowedFlags) {
-        proxy = FileProxy();
+      for (final flag in _notAllowedFlags) {
+        final proxy = FileProxy();
         expect(
             file.pseudoFile.connect(flag, 0, _getNodeInterfaceRequest(proxy)),
             ZX.ERR_NOT_SUPPORTED,
@@ -158,19 +164,23 @@ void main() {
     });
 
     test('read write file', () async {
-      var file = _createReadWriteFileStub();
+      final file = _createReadWriteFileStub();
 
-      var proxy = FileProxy();
-      expect(
-          file.connect(openFlagDirectory, 0, _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_NOT_DIR);
+      {
+        final proxy = FileProxy();
+        expect(
+            file.connect(openFlagDirectory, 0, _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_NOT_DIR);
+      }
 
-      proxy = FileProxy();
-      expect(file.connect(openFlagAppend, 0, _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_INVALID_ARGS);
+      {
+        final proxy = FileProxy();
+        expect(file.connect(openFlagAppend, 0, _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_INVALID_ARGS);
+      }
 
-      for (var flag in _notAllowedFlags) {
-        proxy = FileProxy();
+      for (final flag in _notAllowedFlags) {
+        final proxy = FileProxy();
         expect(file.connect(flag, 0, _getNodeInterfaceRequest(proxy)),
             ZX.ERR_NOT_SUPPORTED,
             reason: 'for flag: $flag');
@@ -178,40 +188,44 @@ void main() {
     });
 
     test('connect file with mode', () async {
-      var file = _createReadWriteFileStub();
+      final file = _createReadWriteFileStub();
 
-      var proxy = FileProxy();
-      expect(
-          file.connect(openRightReadable | openFlagDescribe, ~modeTypeFile,
-              _getNodeInterfaceRequest(proxy)),
-          ZX.ERR_INVALID_ARGS);
+      {
+        final proxy = FileProxy();
+        expect(
+            file.connect(openRightReadable | openFlagDescribe, ~modeTypeFile,
+                _getNodeInterfaceRequest(proxy)),
+            ZX.ERR_INVALID_ARGS);
 
-      await proxy.onOpen.first.then((response) {
-        expect(response.s, ZX.ERR_INVALID_ARGS);
-        expect(response.info, isNull);
-      }).catchError((err) async {
-        fail(err.toString());
-      });
+        await proxy.onOpen.first.then((response) {
+          expect(response.s, ZX.ERR_INVALID_ARGS);
+          expect(response.info, isNull);
+        }).catchError((err) async {
+          fail(err.toString());
+        });
+      }
 
-      proxy = FileProxy();
-      expect(
-          file.connect(openRightReadable | openFlagDescribe, modeTypeFile,
-              _getNodeInterfaceRequest(proxy)),
-          ZX.OK);
-      await proxy.onOpen.first.then((response) {
-        expect(response.s, ZX.OK);
-        expect(response.info, isNotNull);
-      }).catchError((err) async {
-        fail(err.toString());
-      });
+      {
+        final proxy = FileProxy();
+        expect(
+            file.connect(openRightReadable | openFlagDescribe, modeTypeFile,
+                _getNodeInterfaceRequest(proxy)),
+            ZX.OK);
+        await proxy.onOpen.first.then((response) {
+          expect(response.s, ZX.OK);
+          expect(response.info, isNotNull);
+        }).catchError((err) async {
+          fail(err.toString());
+        });
+      }
     });
 
     test('open fails', () async {
-      var file = _createReadWriteFileStub();
+      final file = _createReadWriteFileStub();
 
-      var paths = ['', '/', '.', './', './/', './//'];
-      for (var path in paths) {
-        var proxy = FileProxy();
+      final paths = ['', '/', '.', './', './/', './//'];
+      for (final path in paths) {
+        final proxy = FileProxy();
         file.open(openRightReadable | openFlagDescribe, 0, path,
             _getNodeInterfaceRequest(proxy), openRightReadable);
 
@@ -227,9 +241,7 @@ void main() {
 
   group('pseudo file:', () {
     _ReadWriteFile _createReadWriteFile(String initialStr,
-        {int? capacity,
-        createProxy = true,
-        flags = openRightReadable | openRightWritable}) {
+        {int? capacity, createProxy = true, OpenFlags? flags}) {
       int c = initialStr.length;
       if (capacity != null) {
         assert(capacity >= initialStr.length);
@@ -247,15 +259,17 @@ void main() {
       if (createProxy) {
         file.proxy = FileProxy();
         expect(
-            file.pseudoFile
-                .connect(flags, 0, _getNodeInterfaceRequest(file.proxy)),
+            file.pseudoFile.connect(
+                flags ?? openRightReadable | openRightWritable,
+                0,
+                _getNodeInterfaceRequest(file.proxy)),
             ZX.OK);
       }
       return file;
     }
 
     test('onOpen event on success', () async {
-      var file =
+      final file =
           _createReadOnlyFile('test_str', openRightReadable | openFlagDescribe);
 
       await file.proxy.onOpen.first.then((response) {
@@ -266,7 +280,7 @@ void main() {
       });
     });
 
-    var expectedNodeAttrs = NodeAttributes(
+    final expectedNodeAttrs = NodeAttributes(
         mode: modeTypeFile | modeProtectionMask,
         id: inoUnknown,
         contentSize: 0,
@@ -276,16 +290,16 @@ void main() {
         modificationTime: 0);
 
     test('test getAttr', () async {
-      var file = _createReadOnlyFile('test_str', openRightReadable);
-      var response = await file.proxy.getAttr();
+      final file = _createReadOnlyFile('test_str', openRightReadable);
+      final response = await file.proxy.getAttr();
       expect(response.s, ZX.OK);
       expect(response.attributes, expectedNodeAttrs);
     });
 
     test('clone works', () async {
-      var file = _createReadOnlyFile('test_str', openRightReadable);
+      final file = _createReadOnlyFile('test_str', openRightReadable);
 
-      var clonedProxy = FileProxy();
+      final clonedProxy = FileProxy();
       await file.proxy.clone(openRightReadable | openFlagDescribe,
           _getNodeInterfaceRequest(clonedProxy));
 
@@ -298,9 +312,9 @@ void main() {
     });
 
     test('clone works with POSIX compatibility flags', () async {
-      var file = _createReadOnlyFile('test_str', openRightReadable);
+      final file = _createReadOnlyFile('test_str', openRightReadable);
 
-      var clonedProxy = FileProxy();
+      final clonedProxy = FileProxy();
       await file.proxy.clone(
           openRightReadable |
               openFlagDescribe |
@@ -318,10 +332,10 @@ void main() {
 
     test('clone fails when trying to pass Readable flag to Node Reference',
         () async {
-      var file = _createReadOnlyFile(
+      final file = _createReadOnlyFile(
           'test_str', openRightReadable | openFlagNodeReference);
 
-      var clonedProxy = FileProxy();
+      final clonedProxy = FileProxy();
       await file.proxy.clone(openRightReadable | openFlagDescribe,
           _getNodeInterfaceRequest(clonedProxy));
 
@@ -335,10 +349,10 @@ void main() {
 
     test('clone fails when trying to pass Writable flag to Node Reference',
         () async {
-      var file = _createReadWriteFile('test_str',
+      final file = _createReadWriteFile('test_str',
           flags: openRightWritable | openFlagNodeReference);
 
-      var clonedProxy = FileProxy();
+      final clonedProxy = FileProxy();
       await file.proxy.clone(openRightWritable | openFlagDescribe,
           _getNodeInterfaceRequest(clonedProxy));
 
@@ -351,9 +365,9 @@ void main() {
     });
 
     test('able to clone Node Reference', () async {
-      var file = _createReadOnlyFile('test_str', openFlagNodeReference);
+      final file = _createReadOnlyFile('test_str', openFlagNodeReference);
 
-      var clonedProxy = FileProxy();
+      final clonedProxy = FileProxy();
       await file.proxy.clone(openFlagNodeReference | openFlagDescribe,
           _getNodeInterfaceRequest(clonedProxy));
 
@@ -367,15 +381,17 @@ void main() {
 
     test('clone should fail if requested rights exceed source rights',
         () async {
-      var file = _createReadWriteFile('test_str', createProxy: false);
-      var flagsToTest = [openRightReadable, openRightWritable];
+      final file = _createReadWriteFile('test_str', createProxy: false);
+      final flagsToTest = [openRightReadable, openRightWritable];
 
-      for (var flag in flagsToTest) {
-        var proxy = FileProxy();
-        expect(file.pseudoFile.connect(0, 0, _getNodeInterfaceRequest(proxy)),
+      for (final flag in flagsToTest) {
+        final proxy = FileProxy();
+        expect(
+            file.pseudoFile
+                .connect(OpenFlags.$none, 0, _getNodeInterfaceRequest(proxy)),
             ZX.OK);
 
-        var clonedProxy = FileProxy();
+        final clonedProxy = FileProxy();
         await proxy.clone(
             flag | openFlagDescribe, _getNodeInterfaceRequest(clonedProxy));
 
@@ -389,7 +405,7 @@ void main() {
     });
 
     test('onOpen with describe flag', () async {
-      var file =
+      final file =
           _createReadOnlyFile('test_str', openRightReadable | openFlagDescribe);
 
       await file.proxy.onOpen.first.then((response) {
@@ -401,7 +417,7 @@ void main() {
     });
 
     test('onOpen with NodeReference flag', () async {
-      var file = _createReadOnlyFile(
+      final file = _createReadOnlyFile(
           'test_str', openFlagNodeReference | openFlagDescribe);
 
       await file.proxy.onOpen.first.then((response) {
@@ -413,7 +429,7 @@ void main() {
     });
 
     test('Directory not ignored with NodeReference flag', () async {
-      var file = _createReadOnlyFile(
+      final file = _createReadOnlyFile(
           'test_str',
           openFlagNodeReference | openFlagDescribe | openFlagDirectory,
           ZX.ERR_NOT_DIR);
@@ -427,20 +443,20 @@ void main() {
     });
 
     test('GetAttr with NodeReference flag', () async {
-      var file = _createReadOnlyFile('test_str', openFlagNodeReference);
-      var response = await file.proxy.getAttr();
+      final file = _createReadOnlyFile('test_str', openFlagNodeReference);
+      final response = await file.proxy.getAttr();
       expect(response.s, ZX.OK);
       expect(response.attributes, expectedNodeAttrs);
     });
 
     test('read file', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
       await _assertRead(file.proxy, 10, str);
     });
 
     test('read functions fails for NodeReference flag', () async {
-      var file = _createReadOnlyFile(
+      final file = _createReadOnlyFile(
           'test_str', openRightReadable | openFlagNodeReference);
       await expectLater(
           file.proxy.read(1024),
@@ -459,9 +475,9 @@ void main() {
     }
 
     test('simple write file', () async {
-      var str = 'test_str';
-      var file = _createReadWriteFile(str);
-      var proxy = file.proxy;
+      const str = 'test_str';
+      final file = _createReadWriteFile(str);
+      final proxy = file.proxy;
 
       await _assertWrite(proxy, _newStrList);
 
@@ -473,8 +489,8 @@ void main() {
     });
 
     test('readAt', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       for (int i = 0; i < str.length; i++) {
         await _assertReadAt(file.proxy, 100, i, str.substring(i));
@@ -482,8 +498,8 @@ void main() {
     });
 
     test('read after readAt', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _assertReadAt(file.proxy, 100, 1, str.substring(1));
 
@@ -492,8 +508,8 @@ void main() {
     });
 
     test('read should not affect readAt', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _assertRead(file.proxy, 100, str);
 
@@ -502,16 +518,16 @@ void main() {
     });
 
     test('readAt should work for arbitrary length', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       // try to read 3 chars
       await _assertReadAt(file.proxy, 3, 2, str.substring(2, 2 + 3));
     });
 
     test('read should work after readAt read arbitrary length', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _assertReadAt(file.proxy, 3, 2, str.substring(2, 2 + 3));
 
@@ -520,8 +536,8 @@ void main() {
 
     test('readAt should fail for passing offset more than length of file',
         () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _assertReadAt(file.proxy, 100, str.length + 1, '',
           expectedStatus: ZX.ERR_OUT_OF_RANGE);
@@ -529,24 +545,24 @@ void main() {
 
     test('readAt should not fail for passing offset equal to length of file',
         () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _assertReadAt(file.proxy, 100, str.length, '');
     });
 
     test('read should not fail for reading from end of file', () async {
-      var str = 'test_str';
-      var file = _createReadOnlyFile(str, openRightReadable);
+      const str = 'test_str';
+      final file = _createReadOnlyFile(str, openRightReadable);
 
       await _resetSeek(file.proxy, str.length);
       await _assertRead(file.proxy, 100, '');
     });
 
     test('write file at arbitrary position', () async {
-      var str = 'test_str';
-      var file = _createReadWriteFile(str);
-      var proxy = file.proxy;
+      const str = 'test_str';
+      final file = _createReadWriteFile(str);
+      final proxy = file.proxy;
 
       await _resetSeek(proxy, 1);
 
@@ -554,22 +570,22 @@ void main() {
 
       await _resetSeek(proxy);
 
-      var expectedStr = str.substring(0, 1) + _newStr;
+      final expectedStr = str.substring(0, 1) + _newStr;
       await _assertRead(proxy, 100, expectedStr);
 
       await _assertFinalBuffer(proxy, file, str, expectedStr);
     });
 
     test('write should truncate if not enough capacity', () async {
-      var str = 'test_str';
-      var file = _createReadWriteFile(str);
-      var proxy = file.proxy;
+      const str = 'test_str';
+      final file = _createReadWriteFile(str);
+      final proxy = file.proxy;
 
       await _resetSeek(proxy, 2);
       await _assertWrite(proxy, _newStrList, expectedSize: _newStr.length - 1);
       await _resetSeek(proxy);
 
-      var expectedStr =
+      final expectedStr =
           str.substring(0, 2) + _newStr.substring(0, _newStr.length - 1);
       await _assertRead(proxy, 100, expectedStr);
 
@@ -577,9 +593,9 @@ void main() {
     });
 
     test('write at end should fail', () async {
-      var str = 'test_str';
-      var file = _createReadWriteFile(str);
-      var proxy = file.proxy;
+      const str = 'test_str';
+      final file = _createReadWriteFile(str);
+      final proxy = file.proxy;
 
       await _resetSeek(proxy, str.length);
       await _assertWrite(proxy, _newStrList,
@@ -594,14 +610,14 @@ void main() {
 
     group('write file when capacity is not initial length:', () {
       test('should not resize if there is enough capacity', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, capacity: str.length + 2);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, capacity: str.length + 2);
+        final proxy = file.proxy;
 
         await _resetSeek(proxy, 3);
         await _assertWrite(proxy, _newStrList);
 
-        var expectedStr =
+        final expectedStr =
             str.substring(0, 3) + _newStr.substring(0, _newStr.length);
         await _assertReadAt(proxy, 100, 0, expectedStr);
 
@@ -609,14 +625,14 @@ void main() {
       });
 
       test('write should fail when capacity is reached', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, capacity: str.length + 2);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, capacity: str.length + 2);
+        final proxy = file.proxy;
 
         await _resetSeek(proxy, 3);
         await _assertWrite(proxy, _newStrList);
 
-        var expectedStr =
+        final expectedStr =
             str.substring(0, 3) + _newStr.substring(0, _newStr.length);
 
         // write at end, should fail
@@ -631,46 +647,46 @@ void main() {
       });
 
       test('write to end of initial len', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, capacity: str.length + 2);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, capacity: str.length + 2);
+        final proxy = file.proxy;
         await _resetSeek(proxy, str.length);
 
         // write at end
         await _assertWrite(proxy, _newStrList, expectedSize: 2);
 
-        var expectedStr = str + _newStr.substring(0, 2);
+        final expectedStr = str + _newStr.substring(0, 2);
         await _assertReadAt(proxy, 100, 0, expectedStr);
 
         await _assertFinalBuffer(proxy, file, str, expectedStr);
       });
 
       test('writeAt should not depend on seek', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, capacity: str.length + 2);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, capacity: str.length + 2);
+        final proxy = file.proxy;
         await _resetSeek(proxy, str.length);
 
         // seek is at end, write at 2nd position
         await _assertWriteAt(proxy, _newStrList, 2, _newStrList.length);
 
         // seek should not have changed
-        var expectedStr = str.substring(0, 2) + _newStr;
+        final expectedStr = str.substring(0, 2) + _newStr;
         await _assertRead(proxy, 100, expectedStr.substring(str.length));
 
         await _assertFinalBuffer(proxy, file, str, expectedStr);
       });
 
       test('writeAt - end of file with', () async {
-        var str = 'test_str';
+        const str = 'test_str';
 
         // writeAt should be able to write at end of the file
-        var file = _createReadWriteFile(str, capacity: str.length + 5);
-        var proxy = file.proxy;
+        final file = _createReadWriteFile(str, capacity: str.length + 5);
+        final proxy = file.proxy;
 
         await _assertWriteAt(proxy, _newStrList, str.length, 5);
 
-        var expectedStr = str + _newStr.substring(0, 5);
+        final expectedStr = str + _newStr.substring(0, 5);
         await _assertRead(proxy, 100, expectedStr);
 
         await _assertFinalBuffer(proxy, file, str, expectedStr);
@@ -678,9 +694,9 @@ void main() {
 
       test('writeAt should fail for trying to write beyond end of file',
           () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, capacity: str.length + 5);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, capacity: str.length + 5);
+        final proxy = file.proxy;
 
         await _assertWriteAt(proxy, _newStrList, str.length + 1, 0,
             expectedStatus: ZX.ERR_OUT_OF_RANGE);
@@ -691,11 +707,11 @@ void main() {
       });
 
       test('write functions fails for NodeReference flag', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str,
+        const str = 'test_str';
+        final file = _createReadWriteFile(str,
             capacity: str.length + 5,
             flags: openRightWritable | openFlagNodeReference);
-        var proxy = file.proxy;
+        final proxy = file.proxy;
 
         await _assertWriteAt(proxy, _newStrList, str.length + 1, 0,
             expectedStatus: ZX.ERR_ACCESS_DENIED);
@@ -706,9 +722,9 @@ void main() {
     });
 
     test('various seek positions and reads', () async {
-      var str = 'a very big string';
-      var file = _createReadOnlyFile(str, openRightReadable);
-      var proxy = file.proxy;
+      const str = 'a very big string';
+      final file = _createReadOnlyFile(str, openRightReadable);
+      final proxy = file.proxy;
 
       {
         const c = 5;
@@ -791,10 +807,10 @@ void main() {
 
     group('resize: ', () {
       test('failure test', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, createProxy: false);
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, createProxy: false);
 
-        var proxy = FileProxy();
+        final proxy = FileProxy();
         expect(
             file.pseudoFile
                 .connect(openRightReadable, 0, _getNodeInterfaceRequest(proxy)),
@@ -810,13 +826,13 @@ void main() {
       });
 
       test('basic', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str);
+        final proxy = file.proxy;
 
         await proxy.resize(3);
 
-        var expectedStr = str.substring(0, 3);
+        final expectedStr = str.substring(0, 3);
 
         await _assertRead(proxy, 100, expectedStr);
 
@@ -824,9 +840,9 @@ void main() {
       });
 
       test('on open', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str, createProxy: false);
-        var proxy = FileProxy();
+        const str = 'test_str';
+        final file = _createReadWriteFile(str, createProxy: false);
+        final proxy = FileProxy();
         expect(
             file.pseudoFile.connect(
                 openRightReadable | openRightWritable | openFlagTruncate,
@@ -838,9 +854,9 @@ void main() {
       });
 
       test('with seek', () async {
-        var str = 'test_str';
-        var file = _createReadWriteFile(str);
-        var proxy = file.proxy;
+        const str = 'test_str';
+        final file = _createReadWriteFile(str);
+        final proxy = file.proxy;
 
         await _resetSeek(proxy, 5);
 
@@ -854,8 +870,8 @@ void main() {
       });
 
       test('close should work', () async {
-        var str = 'test_str';
-        var file = _createReadOnlyFile(str, openRightReadable);
+        const str = 'test_str';
+        final file = _createReadOnlyFile(str, openRightReadable);
         // make sure file was opened
         file.pseudoFile.close();
 

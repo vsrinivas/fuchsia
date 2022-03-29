@@ -48,15 +48,15 @@ async fn handle_directory_request(req: fio::DirectoryRequest, open_counts: OpenC
     }
 }
 
-fn reopen_self(node: ServerEnd<fio::NodeMarker>, flags: u32, open_counts: OpenCounter) {
+fn reopen_self(node: ServerEnd<fio::NodeMarker>, flags: fio::OpenFlags, open_counts: OpenCounter) {
     let stream = node.into_stream().unwrap().cast_stream();
     describe_dir(flags, &stream);
     fasync::Task::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts))).detach();
 }
 
-pub fn describe_dir(flags: u32, stream: &fio::DirectoryRequestStream) {
+pub fn describe_dir(flags: fio::OpenFlags, stream: &fio::DirectoryRequestStream) {
     let ch = stream.control_handle();
-    if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         let mut ni = fio::NodeInfo::Directory(fio::DirectoryObject);
         ch.send_on_open_(Status::OK.into_raw(), Some(&mut ni)).expect("send_on_open");
     }

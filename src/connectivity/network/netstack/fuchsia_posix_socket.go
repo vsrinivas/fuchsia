@@ -386,13 +386,13 @@ func (ep *endpoint) UpdateAttributes(_ fidl.Context, attributes fidlio.NodeAttri
 	return fidlio.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (ep *endpoint) GetFlags(fidl.Context) (int32, uint32, error) {
+func (ep *endpoint) GetFlags(fidl.Context) (int32, fidlio.OpenFlags, error) {
 	_ = syslog.DebugTf("GetFlags", "%p", ep)
 
 	return 0, 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (ep *endpoint) SetFlags(_ fidl.Context, flags fidlio.OpenFlags) (int32, error) {
 	_ = syslog.DebugTf("GetFlags", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
@@ -1965,7 +1965,7 @@ func (s *synchronousDatagramSocket) addConnection(prefix string, object fidlio.N
 	}()
 }
 
-func (s *synchronousDatagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+func (s *synchronousDatagramSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
@@ -2282,7 +2282,7 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 	}
 }
 
-func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+func (s *streamSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
@@ -3004,7 +3004,7 @@ func (s *rawSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxI
 	}
 }
 
-func (s *rawSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+func (s *rawSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
@@ -3350,7 +3350,7 @@ func (s *packetSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfo
 	return connectionInfo, nil
 }
 
-func (s *packetSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+func (s *packetSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)

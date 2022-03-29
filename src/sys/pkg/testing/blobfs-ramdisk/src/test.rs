@@ -66,7 +66,7 @@ async fn blobfs() -> Result<(), Error> {
 async fn open_blob(
     blobfs: &fio::DirectoryProxy,
     merkle: &str,
-    mut flags: u32,
+    mut flags: fio::OpenFlags,
 ) -> Result<(fio::FileProxy, zx::Event), zx::Status> {
     let (file, server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     let server_end = ServerEnd::new(server_end.into_channel());

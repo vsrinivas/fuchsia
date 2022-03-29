@@ -30,7 +30,7 @@ impl DeviceEnv for IsolatedDeviceEnv {
 }
 
 impl IsolatedDeviceEnv {
-    fn open(path: &str, flags: u32) -> Result<File, zx::Status> {
+    fn open(path: &str, flags: fio::OpenFlags) -> Result<File, zx::Status> {
         let isolated_devmgr =
             connect_to_protocol::<IsolatedDevmgrMarker>().expect("connecting to isolated devmgr.");
         let (node_proxy, server_end) =

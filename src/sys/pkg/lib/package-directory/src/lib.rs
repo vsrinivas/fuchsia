@@ -69,7 +69,7 @@ pub fn serve(
     scope: vfs::execution_scope::ExecutionScope,
     blobfs: blobfs::Client,
     meta_far: fuchsia_hash::Hash,
-    flags: u32,
+    flags: fio::OpenFlags,
     server_end: ServerEnd<fio::DirectoryMarker>,
 ) -> impl futures::Future<Output = Result<(), Error>> {
     serve_path(scope, blobfs, meta_far, flags, 0, VfsPath::dot(), server_end.into_channel().into())
@@ -84,7 +84,7 @@ pub async fn serve_path(
     scope: vfs::execution_scope::ExecutionScope,
     blobfs: blobfs::Client,
     meta_far: fuchsia_hash::Hash,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     path: VfsPath,
     server_end: ServerEnd<fio::NodeMarker>,
@@ -201,8 +201,8 @@ async fn read_dirents<'a>(
 #[cfg(test)]
 async fn verify_open_adjusts_flags(
     entry: &Arc<dyn DirectoryEntry>,
-    in_flags: u32,
-    expected_flags: u32,
+    in_flags: fio::OpenFlags,
+    expected_flags: fio::OpenFlags,
 ) {
     let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
 

@@ -7,7 +7,6 @@ import 'dart:async';
 import 'dart:convert' show utf8;
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart' as io;
 import 'package:fuchsia_services/src/outgoing.dart';
 import 'package:fuchsia_vfs/vfs.dart';
@@ -29,7 +28,7 @@ void main() {
   group('outgoing', () {
     test('connect to service calls correct service', () async {
       final outgoingImpl = Outgoing();
-      final dirProxy = DirectoryProxy();
+      final dirProxy = io.DirectoryProxy();
       outgoingImpl
         ..addPublicService(
           (_) {
@@ -39,12 +38,14 @@ void main() {
         )
         ..serve(InterfaceRequest(dirProxy.ctrl.request().passChannel()));
       {
-        final nodeProxy = NodeProxy();
-        await dirProxy.open(0, 0, 'public/foo', nodeProxy.ctrl.request());
+        final nodeProxy = io.NodeProxy();
+        await dirProxy.open(
+            io.OpenFlags.$none, 0, 'public/foo', nodeProxy.ctrl.request());
       }
       {
-        final nodeProxy = NodeProxy();
-        await dirProxy.open(0, 0, 'svc/foo', nodeProxy.ctrl.request());
+        final nodeProxy = io.NodeProxy();
+        await dirProxy.open(
+            io.OpenFlags.$none, 0, 'svc/foo', nodeProxy.ctrl.request());
       }
       _stream.listen(expectAsync1((response) {
         expect(response, true);
@@ -53,7 +54,7 @@ void main() {
 
     test('diagnostics dir', () async {
       final outgoingImpl = Outgoing();
-      final dirProxy = DirectoryProxy();
+      final dirProxy = io.DirectoryProxy();
       outgoingImpl
           .diagnosticsDir()
           .addNode('foo', PseudoFile.readOnlyStr(() => 'test'));

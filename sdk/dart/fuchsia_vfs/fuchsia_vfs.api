@@ -98,7 +98,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "fidl_io.OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -126,7 +126,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "fidl_io.OpenFlags?"
                 },
                 "path": {
                   "isConst": false,
@@ -246,7 +246,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -274,7 +274,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "request": {
                   "isConst": false,
@@ -386,7 +386,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -414,7 +414,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "path": {
                   "isConst": false,
@@ -518,7 +518,7 @@
                   "isRequiredPositional": false,
                   "name": "rights",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 }
               },
               "isAbstract": false,
@@ -670,7 +670,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -698,7 +698,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "request": {
                   "isConst": false,
@@ -906,7 +906,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -934,7 +934,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "request": {
                   "isConst": false,
@@ -984,7 +984,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -1012,7 +1012,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "path": {
                   "isConst": false,
@@ -1114,7 +1114,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -1142,7 +1142,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "request": {
                   "isConst": false,
@@ -1370,7 +1370,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -1398,7 +1398,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "request": {
                   "isConst": false,
@@ -1438,7 +1438,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 }
               },
               "isAbstract": false,
@@ -1447,7 +1447,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "filterForNodeReference",
-              "returnType": "int",
+              "returnType": "OpenFlags",
               "type": "MethodDeclarationImpl"
             },
             "inodeNumber": {
@@ -1474,7 +1474,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "mode": {
                   "isConst": false,
@@ -1502,7 +1502,7 @@
                   "isRequiredPositional": false,
                   "name": "parentFlags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags?"
                 },
                 "path": {
                   "isConst": false,
@@ -1556,7 +1556,7 @@
                   "isRequiredPositional": true,
                   "name": "flags",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
+                  "varType": "OpenFlags"
                 },
                 "request": {
                   "isConst": false,

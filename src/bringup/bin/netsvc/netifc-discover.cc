@@ -304,10 +304,10 @@ zx::status<std::unique_ptr<fsl::DeviceWatcher>> CreateWatcher(
     // TODO(https://fxbug.dev/77059): We shouldn't require the writable right
     // below, but service::ConnectAt (and fdio_service_connect_at) connect to
     // protocols with the writable right.
-    if (zx_status_t status =
-            fdio_open(classdir.c_str(),
-                      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
-                      server.TakeChannel().release());
+    if (zx_status_t status = fdio_open(classdir.c_str(),
+                                       static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                                             fuchsia_io::wire::kOpenRightWritable),
+                                       server.TakeChannel().release());
         status != ZX_OK) {
       return zx::error(status);
     }

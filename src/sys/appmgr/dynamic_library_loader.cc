@@ -33,11 +33,11 @@ zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Start(int package_fd, std::st
   }
 
   fbl::unique_fd lib_fd;
-  zx_status_t status =
-      fdio_open_fd_at(package_fd, "lib",
-                      fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
-                          fio::wire::kOpenRightExecutable,
-                      lib_fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd_at(
+      package_fd, "lib",
+      static_cast<uint32_t>(fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                            fio::wire::kOpenRightExecutable),
+      lib_fd.reset_and_get_address());
   if (status != ZX_OK) {
     return zx::error(status);
   }

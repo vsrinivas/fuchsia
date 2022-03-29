@@ -705,9 +705,9 @@ Sandbox::Promise Sandbox::SendGuestFiles(const ConfiguringEnvironmentPtr& env,
     std::vector<Sandbox::Promise> transfer_promises;
     for (const auto& file_info : guest.files()) {
       fidl::InterfaceHandle<fuchsia::io::File> put_file;
-      zx_status_t open_status =
-          fdio_open(("/definition/" + file_info.first).c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
-                    put_file.NewRequest().TakeChannel().release());
+      zx_status_t open_status = fdio_open(("/definition/" + file_info.first).c_str(),
+                                          static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+                                          put_file.NewRequest().TakeChannel().release());
 
       if (open_status != ZX_OK) {
         transfer_promises.clear();

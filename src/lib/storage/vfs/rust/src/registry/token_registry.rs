@@ -301,7 +301,7 @@ mod tests {
             fn open(
                 self: Arc<Self>,
                 _scope: ExecutionScope,
-                _flags: u32,
+                _flags: fio::OpenFlags,
                 _mode: u32,
                 _path: Path,
                 _server_end: ServerEnd<fio::NodeMarker>,

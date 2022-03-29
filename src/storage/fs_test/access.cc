@@ -204,13 +204,13 @@ void CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
 }
 
 TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
-  uint32_t rights[] = {
+  fio::wire::OpenFlags rights[] = {
       fio::wire::kOpenRightReadable,
       fio::wire::kOpenRightWritable,
   };
 
   // CLONE_FLAG_SAME_RIGHTS cannot appear together with any specific rights.
-  for (uint32_t right : rights) {
+  for (fio::wire::OpenFlags right : rights) {
     fbl::unique_fd foo_fd(open(GetPath("foo").c_str(), O_RDONLY | O_DIRECTORY, 0644));
     ASSERT_GT(foo_fd.get(), 0);
 

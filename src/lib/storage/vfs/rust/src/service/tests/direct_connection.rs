@@ -45,7 +45,8 @@ async fn echo_server(
     }
 }
 
-const READ_WRITE: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const READ_WRITE: fio::OpenFlags =
+    fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE);
 
 #[test]
 fn construction() {

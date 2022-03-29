@@ -17,7 +17,7 @@ protocol StorageAdmin {
     /// the storage if it hasn't been already.
     OpenComponentStorage(resource struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         mode uint32;
         object server_end:fuchsia.io.Node;
     });

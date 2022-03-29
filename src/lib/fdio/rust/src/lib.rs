@@ -13,6 +13,7 @@ pub use spawn_builder::{Error as SpawnBuilderError, SpawnBuilder};
 use {
     ::bitflags::bitflags,
     fidl_fuchsia_device::ControllerSynchronousProxy,
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{
         self as zx,
         prelude::*,
@@ -80,10 +81,8 @@ pub fn service_connect_at(
 /// Opens the remote object at the given `path` with the given `flags` asynchronously.
 /// ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a return value).
 ///
-/// `flags` is a bit field of |fuchsia.io.OPEN_*| options.
-///
 /// Wraps fdio_open.
-pub fn open(path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Status> {
+pub fn open(path: &str, flags: fio::OpenFlags, channel: zx::Channel) -> Result<(), zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // fdio_open_at takes a directory handle, a *const c_char service path,
@@ -92,21 +91,20 @@ pub fn open(path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Stat
     // On success, the channel is connected, and on failure, it is closed.
     // In either case, we do not need to clean up the channel so we use
     // `into_raw` so that Rust forgets about it.
-    zx::ok(unsafe { fdio_sys::fdio_open(c_path.as_ptr(), flags, channel.into_raw()) })
+    zx::ok(unsafe { fdio_sys::fdio_open(c_path.as_ptr(), flags.bits(), channel.into_raw()) })
 }
 
 /// Opens the remote object at the given `path` relative to the given `dir` with the given `flags`
 /// asynchronously. ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a
 /// return value).
 ///
-/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be a directory protocol
-/// channel.
+/// `dir` must be a directory protocol channel.
 ///
 /// Wraps fdio_open_at.
 pub fn open_at(
     dir: &zx::Channel,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     channel: zx::Channel,
 ) -> Result<(), zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
@@ -118,24 +116,22 @@ pub fn open_at(
     // In either case, we do not need to clean up the channel so we use
     // `into_raw` so that Rust forgets about it.
     zx::ok(unsafe {
-        fdio_sys::fdio_open_at(dir.raw_handle(), c_path.as_ptr(), flags, channel.into_raw())
+        fdio_sys::fdio_open_at(dir.raw_handle(), c_path.as_ptr(), flags.bits(), channel.into_raw())
     })
 }
 
 /// Opens the remote object at the given `path` with the given `flags` synchronously, and on
 /// success, binds that channel to a file descriptor and returns it.
 ///
-/// `flags` is a bit field of |fuchsia.io.OPEN_*| options.
-///
 /// Wraps fdio_open_fd.
-pub fn open_fd(path: &str, flags: u32) -> Result<File, zx::Status> {
+pub fn open_fd(path: &str, flags: fio::OpenFlags) -> Result<File, zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // fdio_open_fd takes a *const c_char service path, flags, and on success returns the opened
     // file descriptor through the provided pointer arguument.
     let mut raw_fd = -1;
     unsafe {
-        let status = fdio_sys::fdio_open_fd(c_path.as_ptr(), flags, &mut raw_fd);
+        let status = fdio_sys::fdio_open_fd(c_path.as_ptr(), flags.bits(), &mut raw_fd);
         zx::Status::ok(status)?;
         Ok(File::from_raw_fd(raw_fd))
     }
@@ -144,11 +140,11 @@ pub fn open_fd(path: &str, flags: u32) -> Result<File, zx::Status> {
 /// Opens the remote object at the given `path` relative to the given `dir` with the given `flags`
 /// synchronously, and on success, binds that channel to a file descriptor and returns it.
 ///
-/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be backed by a directory
-/// protocol channel (even though it is wrapped in a std::fs::File).
+/// `dir` must be backed by a directory protocol channel (even though it is
+/// wrapped in a std::fs::File).
 ///
 /// Wraps fdio_open_fd_at.
-pub fn open_fd_at(dir: &File, path: &str, flags: u32) -> Result<File, zx::Status> {
+pub fn open_fd_at(dir: &File, path: &str, flags: fio::OpenFlags) -> Result<File, zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // fdio_open_fd_at takes a directory file descriptor, a *const c_char service path,
@@ -158,7 +154,7 @@ pub fn open_fd_at(dir: &File, path: &str, flags: u32) -> Result<File, zx::Status
     let dir_fd = dir.as_raw_fd();
     let mut raw_fd = -1;
     unsafe {
-        let status = fdio_sys::fdio_open_fd_at(dir_fd, c_path.as_ptr(), flags, &mut raw_fd);
+        let status = fdio_sys::fdio_open_fd_at(dir_fd, c_path.as_ptr(), flags.bits(), &mut raw_fd);
         zx::Status::ok(status)?;
         Ok(File::from_raw_fd(raw_fd))
     }
@@ -703,10 +699,16 @@ impl Namespace {
     /// to the root of the namespace.
     ///
     /// This corresponds with fdio_ns_connect in C.
-    pub fn connect(&self, path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Status> {
+    pub fn connect(
+        &self,
+        path: &str,
+        flags: fio::OpenFlags,
+        channel: zx::Channel,
+    ) -> Result<(), zx::Status> {
         let cstr = CString::new(path)?;
-        let status =
-            unsafe { fdio_sys::fdio_ns_connect(self.ns, cstr.as_ptr(), flags, channel.into_raw()) };
+        let status = unsafe {
+            fdio_sys::fdio_ns_connect(self.ns, cstr.as_ptr(), flags.bits(), channel.into_raw())
+        };
         zx::Status::ok(status)?;
         Ok(())
     }
@@ -742,7 +744,6 @@ impl Namespace {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_io as fio,
         fuchsia_zircon::{object_wait_many, Signals, Status, Time, WaitItem},
     };
 
@@ -764,7 +765,7 @@ mod tests {
         let path = "/test_path1";
 
         assert_eq!(namespace.bind(path, ns_client), Ok(()));
-        assert_eq!(namespace.connect(path, 0, ns_server), Ok(()));
+        assert_eq!(namespace.connect(path, fio::OpenFlags::empty(), ns_server), Ok(()));
         assert_eq!(namespace.unbind(path), Ok(()));
     }
 
@@ -786,7 +787,10 @@ mod tests {
         let (_client, ns_server) = zx::Channel::create().unwrap();
         let path = "/test_path3";
 
-        assert_eq!(namespace.connect(path, 0, ns_server), Err(zx::Status::NOT_FOUND));
+        assert_eq!(
+            namespace.connect(path, fio::OpenFlags::empty(), ns_server),
+            Err(zx::Status::NOT_FOUND)
+        );
     }
 
     #[test]

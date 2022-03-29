@@ -910,7 +910,7 @@ impl ComponentInstance {
 
     pub async fn open_outgoing(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         path: PathBuf,
         server_chan: &mut zx::Channel,

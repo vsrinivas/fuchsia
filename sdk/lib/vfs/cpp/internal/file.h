@@ -64,7 +64,8 @@ class File : public Node {
  protected:
   NodeKind::Type GetKind() const override;
 
-  zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) override;
+  zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
+                               std::unique_ptr<Connection>* connection) override;
 };
 
 }  // namespace internal

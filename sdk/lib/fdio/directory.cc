@@ -15,12 +15,16 @@ namespace fio = fuchsia_io;
 
 __EXPORT
 zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
-  return fdio_open(path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, h);
+  return fdio_open(
+      path, static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable),
+      h);
 }
 
 __EXPORT
 zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h) {
-  return fdio_open_at(dir, path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable, h);
+  return fdio_open_at(
+      dir, path,
+      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable), h);
 }
 
 __EXPORT
@@ -83,20 +87,21 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
     return status;
   }
 
-  if (flags & fio::wire::kOpenFlagDescribe) {
+  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
+  if (fio_flags & fio::wire::kOpenFlagDescribe) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   return fidl::WireCall(directory)
-      ->Open(flags, kArbitraryMode, fidl::StringView::FromExternal(path, length),
+      ->Open(fio_flags, kArbitraryMode, fidl::StringView::FromExternal(path, length),
              std::move(request))
       .status();
 }
 
 namespace {
 
-zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, std::string_view path, uint32_t flags,
-                                uint32_t mode, int* out_fd) {
+zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, std::string_view path,
+                                fio::wire::OpenFlags flags, uint32_t mode, int* out_fd) {
   // We're opening a file descriptor rather than just a channel (like fdio_open), so we always want
   // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
   // is valid before returning from here, and mimics how open() and openat() behave
@@ -130,8 +135,10 @@ zx_status_t fdio_open_fd(const char* dirty_path, uint32_t flags, int* out_fd) {
     return ZX_ERR_BAD_PATH;
   }
   std::string_view clean_path = clean;
+
+  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
   if (has_ending_slash) {
-    flags |= fio::wire::kOpenFlagDirectory;
+    fio_flags |= fio::wire::kOpenFlagDirectory;
   }
 
   // Since we are sending a request to the root handle, require that we start at '/'. (In fdio_open
@@ -146,7 +153,7 @@ zx_status_t fdio_open_fd(const char* dirty_path, uint32_t flags, int* out_fd) {
         fbl::AutoLock lock(&fdio_lock);
         return fdio_root_handle.get();
       }(),
-      clean_path, flags, kArbitraryMode, out_fd);
+      clean_path, fio_flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT
@@ -161,8 +168,10 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* dirty_path, uint32_t flags, 
     return ZX_ERR_BAD_PATH;
   }
   std::string_view clean_path = clean;
+
+  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
   if (has_ending_slash) {
-    flags |= fio::wire::kOpenFlagDirectory;
+    fio_flags |= fio::wire::kOpenFlagDirectory;
   }
 
   fdio_ptr iodir = fd_to_io(dir_fd);
@@ -170,7 +179,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* dirty_path, uint32_t flags, 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return fdio_open_fd_common(iodir, clean_path, flags, kArbitraryMode, out_fd);
+  return fdio_open_fd_common(iodir, clean_path, fio_flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT
@@ -193,6 +202,6 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
   if (!node.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint32_t flags = fio::wire::kCloneFlagSameRights;
+  fio::wire::OpenFlags flags = fio::wire::kCloneFlagSameRights;
   return fidl::WireCall(node)->Clone(flags, std::move(request)).status();
 }

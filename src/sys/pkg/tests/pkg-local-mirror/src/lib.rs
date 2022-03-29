@@ -189,12 +189,12 @@ impl DirectoryEntry for DropAndSignal {
     fn open(
         self: Arc<Self>,
         _scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         _path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        assert!(flags & fio::OPEN_FLAG_DESCRIBE != 0);
+        assert!(flags.intersects(fio::OPEN_FLAG_DESCRIBE));
         let (_, ch) = server_end.into_stream_and_control_handle().unwrap();
 
         // Need to send OnOpen because of the Describe flag.

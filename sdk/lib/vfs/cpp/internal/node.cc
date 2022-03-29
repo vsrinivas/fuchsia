@@ -17,12 +17,12 @@ namespace {
 
 // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED when all out-of-tree clients have been
 // updated to the latest version of fuchsia.io.
-constexpr uint32_t kCommonAllowedFlags =
+constexpr fuchsia::io::OpenFlags kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
     fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED | fuchsia::io::OPEN_FLAG_POSIX_WRITABLE |
     fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
 
-constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
+constexpr std::tuple<NodeKind::Type, fuchsia::io::OpenFlags> kKindFlagMap[] = {
     {NodeKind::kReadable, fuchsia::io::OPEN_RIGHT_READABLE},
     {NodeKind::kWritable, fuchsia::io::OPEN_RIGHT_WRITABLE},
     {NodeKind::kExecutable, fuchsia::io::OPEN_RIGHT_EXECUTABLE},
@@ -62,14 +62,15 @@ zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Node::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
-                 async_dispatcher_t* dispatcher) {
+void Node::Clone(fuchsia::io::OpenFlags flags, fuchsia::io::OpenFlags parent_flags,
+                 zx::channel request, async_dispatcher_t* dispatcher) {
   if (!Flags::InputPrecondition(flags)) {
     SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
   // If SAME_RIGHTS is specified, the client cannot request any specific rights.
-  if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights)) {
+  if (Flags::ShouldCloneWithSameRights(flags) &&
+      (flags & Flags::kFsRights) != fuchsia::io::OpenFlags()) {
     SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -88,7 +89,7 @@ void Node::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
   Serve(flags, std::move(request), dispatcher);
 }
 
-zx_status_t Node::ValidateFlags(uint32_t flags) const {
+zx_status_t Node::ValidateFlags(fuchsia::io::OpenFlags flags) const {
   if (!Flags::InputPrecondition(flags)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -100,19 +101,19 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
     return ZX_ERR_NOT_FILE;
   }
 
-  uint32_t allowed_flags = kCommonAllowedFlags | GetAllowedFlags();
+  fuchsia::io::OpenFlags allowed_flags = kCommonAllowedFlags | GetAllowedFlags();
   if (is_directory) {
     allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
   } else {
     allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY;
   }
 
-  uint32_t prohibitive_flags = GetProhibitiveFlags();
+  fuchsia::io::OpenFlags prohibitive_flags = GetProhibitiveFlags();
 
-  if ((flags & prohibitive_flags) != 0) {
+  if ((flags & prohibitive_flags) != fuchsia::io::OpenFlags()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if ((flags & ~allowed_flags) != 0) {
+  if ((flags & ~allowed_flags) != fuchsia::io::OpenFlags()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Only allow executable rights on directories.
@@ -128,9 +129,9 @@ zx_status_t Node::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_DIR;
 }
 
-uint32_t Node::GetAllowedFlags() const {
+fuchsia::io::OpenFlags Node::GetAllowedFlags() const {
   NodeKind::Type kind = GetKind();
-  uint32_t flags = 0;
+  fuchsia::io::OpenFlags flags = {};
   for (auto& tuple : kKindFlagMap) {
     if ((kind & std::get<0>(tuple)) == std::get<0>(tuple)) {
       flags = flags | std::get<1>(tuple);
@@ -139,13 +140,13 @@ uint32_t Node::GetAllowedFlags() const {
   return flags;
 }
 
-uint32_t Node::GetProhibitiveFlags() const {
+fuchsia::io::OpenFlags Node::GetProhibitiveFlags() const {
   NodeKind::Type kind = GetKind();
   if (NodeKind::IsDirectory(kind)) {
     return fuchsia::io::OPEN_FLAG_CREATE | fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
            fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
   }
-  return 0;
+  return {};
 }
 
 zx_status_t Node::SetAttr(fuchsia::io::NodeAttributeFlags flags,
@@ -153,14 +154,15 @@ zx_status_t Node::SetAttr(fuchsia::io::NodeAttributeFlags flags,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-uint32_t Node::FilterRefFlags(uint32_t flags) {
+fuchsia::io::OpenFlags Node::FilterRefFlags(fuchsia::io::OpenFlags flags) {
   if (Flags::IsNodeReference(flags)) {
     return flags & (kCommonAllowedFlags | fuchsia::io::OPEN_FLAG_DIRECTORY);
   }
   return flags;
 }
 
-zx_status_t Node::Serve(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
+zx_status_t Node::Serve(fuchsia::io::OpenFlags flags, zx::channel request,
+                        async_dispatcher_t* dispatcher) {
   flags = FilterRefFlags(flags);
   zx_status_t status = ValidateFlags(flags);
   if (status != ZX_OK) {
@@ -170,7 +172,8 @@ zx_status_t Node::Serve(uint32_t flags, zx::channel request, async_dispatcher_t*
   return Connect(flags, std::move(request), dispatcher);
 }
 
-zx_status_t Node::Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
+zx_status_t Node::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
+                          async_dispatcher_t* dispatcher) {
   zx_status_t status;
   std::unique_ptr<Connection> connection;
   if (Flags::IsNodeReference(flags)) {
@@ -189,7 +192,8 @@ zx_status_t Node::Connect(uint32_t flags, zx::channel request, async_dispatcher_
   return status;
 }
 
-void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request, zx_status_t status) {
+void Node::SendOnOpenEventOnError(fuchsia::io::OpenFlags flags, zx::channel request,
+                                  zx_status_t status) {
   ZX_DEBUG_ASSERT(status != ZX_OK);
 
   if (!Flags::ShouldDescribe(flags)) {
@@ -210,7 +214,8 @@ void Node::AddConnection(std::unique_ptr<Connection> connection) {
   connections_.push_back(std::move(connection));
 }
 
-zx_status_t Node::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
+zx_status_t Node::CreateConnection(fuchsia::io::OpenFlags flags,
+                                   std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::NodeConnection>(flags, this);
   return ZX_OK;
 }

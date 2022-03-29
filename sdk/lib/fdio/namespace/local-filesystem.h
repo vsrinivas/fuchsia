@@ -57,8 +57,8 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Create a new object referring to the object at |path|.
   //
   // This object may represent either a local node, or a remote object.
-  zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
-                            uint32_t mode) const;
+  zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, const char* path,
+                            fuchsia_io::wire::OpenFlags flags, uint32_t mode) const;
 
   // Walk local namespace and send inotify filter request to remote server.
   //
@@ -70,7 +70,7 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   //
   // Returns an error if |path| does not exist.
   // Returns an error if |path| references a non-remote object.
-  zx_status_t Connect(const char* path, uint32_t flags,
+  zx_status_t Connect(const char* path, fuchsia_io::wire::OpenFlags flags,
                       fidl::ClientEnd<fuchsia_io::Node> client_end) const;
 
   // Attaches |remote| to |path| within the current namespace.

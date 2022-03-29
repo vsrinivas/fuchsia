@@ -152,7 +152,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
         fs: &mut ServiceFs<ServiceObj<'_, ()>>,
         dir_proxy: &fio::DirectoryProxy,
     ) {
-        let flags = 0;
+        let flags = fio::OpenFlags::empty();
         let mode = fio::MODE_TYPE_SERVICE;
         let (server_end, client_end) = zx::Channel::create().expect("create channel");
         dir_proxy.open(flags, mode, SERVICE_NAME, server_end.into()).expect("open");

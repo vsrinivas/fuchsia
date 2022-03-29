@@ -9,7 +9,12 @@ use {
     fidl_fuchsia_io as fio,
 };
 
-pub fn open_get_proxy<M>(proxy: &fio::DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
+pub fn open_get_proxy<M>(
+    proxy: &fio::DirectoryProxy,
+    flags: fio::OpenFlags,
+    mode: u32,
+    path: &str,
+) -> M::Proxy
 where
     M: ProtocolMarker,
 {
@@ -32,12 +37,16 @@ where
 ///
 /// Add methods to this trait when they are necessary to reduce the maintenance effort.
 pub trait NodeProxyApi {
-    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error>;
+    fn clone(
+        &self,
+        flags: fio::OpenFlags,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fidl::Error>;
 }
 
 /// Calls .clone() on the proxy object, and returns a client side of the connection passed into the
 /// clone() method.
-pub fn clone_get_proxy<M, Proxy>(proxy: &Proxy, flags: u32) -> M::Proxy
+pub fn clone_get_proxy<M, Proxy>(proxy: &Proxy, flags: fio::OpenFlags) -> M::Proxy
 where
     M: ProtocolMarker,
     Proxy: NodeProxyApi,
@@ -51,19 +60,31 @@ where
 }
 
 impl NodeProxyApi for fio::NodeProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+    fn clone(
+        &self,
+        flags: fio::OpenFlags,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fidl::Error> {
         Self::clone(self, flags, server_end)
     }
 }
 
 impl NodeProxyApi for fio::FileProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+    fn clone(
+        &self,
+        flags: fio::OpenFlags,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fidl::Error> {
         Self::clone(self, flags, server_end)
     }
 }
 
 impl NodeProxyApi for fio::DirectoryProxy {
-    fn clone(&self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) -> Result<(), fidl::Error> {
+    fn clone(
+        &self,
+        flags: fio::OpenFlags,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) -> Result<(), fidl::Error> {
         Self::clone(self, flags, server_end)
     }
 }

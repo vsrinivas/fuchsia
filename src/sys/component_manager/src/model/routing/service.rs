@@ -21,9 +21,9 @@ use {
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::warn,
-    tracing::error,
     moniker::AbsoluteMoniker,
     std::{collections::HashSet, path::PathBuf, sync::Arc},
+    tracing::error,
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -89,7 +89,7 @@ impl DirectoryEntry for FilteredServiceDirectory {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -204,7 +204,7 @@ impl CapabilityProvider for FilteredServiceProvider {
     async fn open(
         mut self: Box<Self>,
         task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -284,7 +284,7 @@ impl CapabilityProvider for CollectionServiceDirectoryProvider {
     async fn open(
         self: Box<Self>,
         _task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -328,7 +328,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -535,14 +535,14 @@ mod tests {
         crate::{
             capability::CapabilitySource, model::testing::routing_test_helpers::RoutingTestBuilder,
         },
-        futures::StreamExt,
-        assert_matches::assert_matches,
         ::routing::{
             capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
             error::RoutingError,
         },
+        assert_matches::assert_matches,
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
+        futures::StreamExt,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
         std::{
             collections::{HashMap, HashSet},
@@ -596,7 +596,7 @@ mod tests {
         async fn open(
             self: Box<Self>,
             _task_scope: TaskScope,
-            flags: u32,
+            flags: fio::OpenFlags,
             open_mode: u32,
             relative_path: PathBuf,
             server_end: &mut zx::Channel,
@@ -1021,7 +1021,7 @@ mod tests {
         );
 
         let task_scope = TaskScope::new();
-        // expect that opening an instance that is filtered out 
+        // expect that opening an instance that is filtered out
         let mut path_buf = PathBuf::new();
         path_buf.push("one");
         host.open(
@@ -1031,7 +1031,8 @@ mod tests {
             path_buf,
             &mut server_end,
         )
-        .await.expect("failed to open path in filtered service directory.");
+        .await
+        .expect("failed to open path in filtered service directory.");
         assert_matches!(
             service_proxy.take_event_stream().next().await.unwrap(),
             Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_FOUND, .. })

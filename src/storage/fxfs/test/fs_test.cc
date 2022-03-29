@@ -43,8 +43,8 @@ TEST_P(DeviceTest, TestWriteThenRead) {
   // Re-open file as block device
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
-                ->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       fuchsia::io::MODE_TYPE_BLOCK_DEVICE, "block_device", std::move(server))
+                ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
                 .status(),
             ZX_OK);
 
@@ -102,8 +102,8 @@ TEST_P(DeviceTest, TestGroupWritesThenReads) {
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
-                ->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       fuchsia::io::MODE_TYPE_BLOCK_DEVICE, "block_device", std::move(server))
+                ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
                 .status(),
             ZX_OK);
 
@@ -184,8 +184,8 @@ TEST_P(DeviceTest, TestWriteThenFlushThenRead) {
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
-                ->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       fuchsia::io::MODE_TYPE_BLOCK_DEVICE, "block_device", std::move(server))
+                ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
                 .status(),
             ZX_OK);
 
@@ -242,8 +242,8 @@ TEST_P(DeviceTest, TestInvalidGroupRequests) {
 
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
-                ->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       fuchsia::io::MODE_TYPE_BLOCK_DEVICE, "block_device", std::move(server))
+                ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
+                       fuchsia_io::wire::kModeTypeBlockDevice, "block_device", std::move(server))
                 .status(),
             ZX_OK);
 

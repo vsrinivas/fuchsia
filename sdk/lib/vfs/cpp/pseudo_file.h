@@ -59,7 +59,7 @@ class PseudoFile final : public vfs::internal::File {
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
-  zx_status_t CreateConnection(uint32_t flags,
+  zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override;
 
   NodeKind::Type GetKind() const override;
@@ -67,7 +67,7 @@ class PseudoFile final : public vfs::internal::File {
  private:
   class Content final : public vfs::internal::Connection, public File {
    public:
-    Content(PseudoFile* file, uint32_t flags, std::vector<uint8_t> content);
+    Content(PseudoFile* file, fuchsia::io::OpenFlags flags, std::vector<uint8_t> content);
     ~Content() override;
 
     // |File| implementations:
@@ -87,8 +87,8 @@ class PseudoFile final : public vfs::internal::File {
 
     zx_status_t PreClose(Connection* connection) override;
 
-    void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
-               async_dispatcher_t* dispatcher) override;
+    void Clone(fuchsia::io::OpenFlags flags, fuchsia::io::OpenFlags parent_flags,
+               zx::channel request, async_dispatcher_t* dispatcher) override;
 
     zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
@@ -105,7 +105,7 @@ class PseudoFile final : public vfs::internal::File {
     PseudoFile* const file_;
 
     std::vector<uint8_t> buffer_;
-    uint32_t flags_;
+    fuchsia::io::OpenFlags flags_ = {};
 
     // true if the file was written into
     bool dirty_ = false;

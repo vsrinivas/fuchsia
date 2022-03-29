@@ -461,7 +461,7 @@ where
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

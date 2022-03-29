@@ -132,18 +132,20 @@ zx_status_t EnvironmentServices::AllowParentService(const std::string& service_n
                         }));
 }
 
-fidl::InterfaceHandle<fuchsia::io::Directory> EnvironmentServices::ServeServiceDir(uint32_t flags) {
+fidl::InterfaceHandle<fuchsia::io::Directory> EnvironmentServices::ServeServiceDir(
+    fuchsia::io::OpenFlags flags) {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   ZX_ASSERT(ServeServiceDir(dir.NewRequest(), flags) == ZX_OK);
   return dir;
 }
 
 zx_status_t EnvironmentServices::ServeServiceDir(
-    fidl::InterfaceRequest<fuchsia::io::Directory> request, uint32_t flags) {
+    fidl::InterfaceRequest<fuchsia::io::Directory> request, fuchsia::io::OpenFlags flags) {
   return ServeServiceDir(request.TakeChannel(), flags);
 }
 
-zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request, uint32_t flags) {
+zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request,
+                                                 fuchsia::io::OpenFlags flags) {
   return svc_.Serve(flags, std::move(request), dispatcher_);
 }
 

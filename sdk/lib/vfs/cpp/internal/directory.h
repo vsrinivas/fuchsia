@@ -51,8 +51,8 @@ class Directory : public Node {
   // Parses path and opens correct node.
   //
   // Called from |fuchsia.io.Directory#Open|.
-  void Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, const char* path,
-            size_t path_len, zx::channel request, async_dispatcher_t* dispatcher);
+  void Open(fuchsia::io::OpenFlags open_flags, fuchsia::io::OpenFlags parent_flags, uint32_t mode,
+            const char* path, size_t path_len, zx::channel request, async_dispatcher_t* dispatcher);
 
   // Validates passed path
   //
@@ -85,7 +85,8 @@ class Directory : public Node {
 
  protected:
   // |Node| implementations
-  zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) override;
+  zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
+                               std::unique_ptr<Connection>* connection) override;
 
   // Markes directory with |NODE_KIND_DIRECTORY| and also marks it readable and
   // writable.

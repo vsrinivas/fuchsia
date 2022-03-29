@@ -121,7 +121,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 //
 // Otherwise, this function creates a generic "remote" object.
 zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path,
-                                          uint32_t flags, uint32_t mode) const {
+                                          fio::wire::OpenFlags flags, uint32_t mode) const {
   {
     fbl::AutoLock lock(&lock_);
     zx_status_t status = WalkLocked(&vn, &path);
@@ -154,7 +154,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  status = zxio_open_async(vn->Remote(), flags, mode, path, length,
+  status = zxio_open_async(vn->Remote(), static_cast<uint32_t>(flags), mode, path, length,
                            endpoints->server.TakeChannel().release());
 
   if (status != ZX_OK) {
@@ -233,7 +233,7 @@ zx::status<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
-zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
+zx_status_t fdio_namespace::Connect(const char* path, fio::wire::OpenFlags flags,
                                     fidl::ClientEnd<fio::Node> client_end) const {
   // Require that we start at /
   if (path[0] != '/') {
@@ -262,7 +262,8 @@ zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
     return status;
   }
 
-  return fdio_open_at(borrowed_handle, path, flags, client_end.channel().release());
+  return fdio_open_at(borrowed_handle, path, static_cast<uint32_t>(flags),
+                      client_end.channel().release());
 }
 
 zx_status_t fdio_namespace::Unbind(const char* path) {

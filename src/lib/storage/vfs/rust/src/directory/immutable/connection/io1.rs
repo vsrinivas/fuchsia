@@ -38,14 +38,18 @@ pub struct ImmutableConnection {
 impl DerivedConnection for ImmutableConnection {
     type Directory = dyn ImmutableConnectionClient;
 
-    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self {
+    fn new(
+        scope: ExecutionScope,
+        directory: OpenDirectory<Self::Directory>,
+        flags: fio::OpenFlags,
+    ) -> Self {
         ImmutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
     fn create_connection(
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // Ensure we close the directory if we fail to create the connection.
@@ -73,7 +77,7 @@ impl DerivedConnection for ImmutableConnection {
                 }
             };
 
-        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
@@ -95,12 +99,12 @@ impl DerivedConnection for ImmutableConnection {
     fn entry_not_found(
         _scope: ExecutionScope,
         _parent: Arc<dyn DirectoryEntry>,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         _name: &str,
         _path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if flags & fio::OPEN_FLAG_CREATE == 0 {
+        if !flags.intersects(fio::OPEN_FLAG_CREATE) {
             Err(Status::NOT_FOUND)
         } else {
             Err(Status::NOT_SUPPORTED)

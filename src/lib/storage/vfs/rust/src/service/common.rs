@@ -26,7 +26,10 @@ pub const POSIX_READ_WRITE_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR;
 /// indicating the problem.
 ///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
-pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, Status> {
+pub fn new_connection_validate_flags(
+    mut flags: fio::OpenFlags,
+    mode: u32,
+) -> Result<fio::OpenFlags, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_SOCKET when the
     // target is a service.
     if (mode & !fio::MODE_PROTECTION_MASK) & !fio::MODE_TYPE_SERVICE != 0 {
@@ -48,13 +51,13 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
         | fio::OPEN_FLAG_POSIX_WRITABLE
         | fio::OPEN_FLAG_POSIX_EXECUTABLE);
 
-    if flags & fio::OPEN_FLAG_DIRECTORY != 0 {
+    if flags.intersects(fio::OPEN_FLAG_DIRECTORY) {
         return Err(Status::NOT_DIR);
     }
 
-    if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+    if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
         flags &= !(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
-        if flags & !fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE != 0 {
+        if flags.intersects(!fio::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE) {
             return Err(Status::INVALID_ARGS);
         }
         flags &= fio::OPEN_FLAG_NODE_REFERENCE | fio::OPEN_FLAG_DESCRIBE;
@@ -62,30 +65,28 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
     }
 
     // All the flags we have already checked above and removed.
-    debug_assert!(
-        flags
-            & (fio::OPEN_FLAG_DIRECTORY
-                | fio::OPEN_FLAG_NOT_DIRECTORY
-                | fio::OPEN_FLAG_POSIX_DEPRECATED
-                | fio::OPEN_FLAG_POSIX_WRITABLE
-                | fio::OPEN_FLAG_POSIX_EXECUTABLE
-                | fio::OPEN_FLAG_NODE_REFERENCE)
-            == 0
-    );
+    debug_assert!(!flags.intersects(
+        fio::OPEN_FLAG_DIRECTORY
+            | fio::OPEN_FLAG_NOT_DIRECTORY
+            | fio::OPEN_FLAG_POSIX_DEPRECATED
+            | fio::OPEN_FLAG_POSIX_WRITABLE
+            | fio::OPEN_FLAG_POSIX_EXECUTABLE
+            | fio::OPEN_FLAG_NODE_REFERENCE
+    ));
 
     // A service might only be connected to when both read and write permissions are present.
-    if flags & fio::OPEN_RIGHT_READABLE == 0 || flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+    if !flags.intersects(fio::OPEN_RIGHT_READABLE) || !flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
         return Err(Status::ACCESS_DENIED);
     }
     let allowed_flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
     // OPEN_FLAG_DESCRIBE is not allowed when connecting directly to the service itself.
-    if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         return Err(Status::INVALID_ARGS);
     }
 
     // Anything else is also not allowed.
-    if flags & !allowed_flags != 0 {
+    if flags.intersects(!allowed_flags) {
         return Err(Status::INVALID_ARGS);
     }
 
@@ -99,7 +100,7 @@ mod tests {
     use {fidl_fuchsia_io as fio, fuchsia_zircon::Status};
 
     /// Assertion for when `new_connection_validate_flags` should succeed => `ncvf_ok`.
-    fn ncvf_ok(flags: u32, mode: u32, expected_new_flags: u32) {
+    fn ncvf_ok(flags: fio::OpenFlags, mode: u32, expected_new_flags: fio::OpenFlags) {
         match new_connection_validate_flags(flags, mode) {
             Ok(new_flags) => assert_eq!(
                 expected_new_flags, new_flags,
@@ -113,7 +114,7 @@ mod tests {
     }
 
     /// Assertion for when `new_connection_validate_flags` should fail => `ncvf_err`.
-    fn ncvf_err(flags: u32, mode: u32, expected_status: Status) {
+    fn ncvf_err(flags: fio::OpenFlags, mode: u32, expected_status: Status) {
         match new_connection_validate_flags(flags, mode) {
             Ok(new_flags) => panic!(
                 "new_connection_validate_flags should have failed.\n\
@@ -125,7 +126,8 @@ mod tests {
     }
 
     /// Common combination for the service tests.
-    const READ_WRITE: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+    const READ_WRITE: fio::OpenFlags =
+        fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE);
 
     #[test]
     fn node_reference_basic() {

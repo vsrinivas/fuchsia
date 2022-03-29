@@ -44,8 +44,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -87,7 +87,7 @@ async fn use_framework_service() {
         async fn open(
             self: Box<Self>,
             task_scope: TaskScope,
-            _flags: u32,
+            _flags: fio::OpenFlags,
             _open_mode: u32,
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,
@@ -1661,7 +1661,7 @@ async fn use_runner_from_environment_failed() {
         async fn open(
             self: Box<Self>,
             _task_scope: TaskScope,
-            _flags: u32,
+            _flags: fio::OpenFlags,
             _open_mode: u32,
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,

@@ -68,14 +68,18 @@ pub struct MutableConnection {
 impl DerivedConnection for MutableConnection {
     type Directory = dyn MutableConnectionClient;
 
-    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self {
+    fn new(
+        scope: ExecutionScope,
+        directory: OpenDirectory<Self::Directory>,
+        flags: fio::OpenFlags,
+    ) -> Self {
         MutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
     fn create_connection(
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if let Ok((connection, requests)) =
@@ -94,12 +98,12 @@ impl DerivedConnection for MutableConnection {
     fn entry_not_found(
         scope: ExecutionScope,
         parent: Arc<dyn DirectoryEntry>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         name: &str,
         path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
-        if flags & fio::OPEN_FLAG_CREATE == 0 {
+        if !flags.intersects(fio::OPEN_FLAG_CREATE) {
             return Err(Status::NOT_FOUND);
         }
 
@@ -135,7 +139,7 @@ impl MutableConnection {
     pub async fn create_connection_async(
         scope: ExecutionScope,
         directory: Arc<dyn MutableConnectionClient>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
@@ -196,7 +200,7 @@ impl MutableConnection {
         flags: fio::NodeAttributeFlags,
         attributes: fio::NodeAttributes,
     ) -> Result<(), Status> {
-        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return Err(Status::BAD_HANDLE);
         }
 
@@ -214,7 +218,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -244,7 +248,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status, Option<Handle>) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE, None);
         }
 
@@ -274,7 +278,7 @@ impl MutableConnection {
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if self.base.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.base.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 
@@ -324,7 +328,7 @@ impl MutableConnection {
     fn prepare_connection(
         scope: ExecutionScope,
         directory: Arc<dyn MutableConnectionClient>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) -> Result<(Self, fio::DirectoryRequestStream), Error> {
         // Ensure we close the directory if we fail to prepare the connection.
@@ -344,7 +348,7 @@ impl MutableConnection {
             ServerEnd::<fio::DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
 
-        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
             control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info))?;
         }
@@ -416,7 +420,7 @@ mod tests {
         fn open(
             self: Arc<Self>,
             _scope: ExecutionScope,
-            _flags: u32,
+            _flags: fio::OpenFlags,
             _mode: u32,
             _path: Path,
             _server_end: ServerEnd<fio::NodeMarker>,
@@ -528,7 +532,7 @@ mod tests {
 
         pub fn make_connection(
             self: &Arc<Self>,
-            flags: u32,
+            flags: fio::OpenFlags,
         ) -> (Arc<MockDirectory>, fio::DirectoryProxy) {
             let mut cur_id = self.cur_id.lock().unwrap();
             let dir = MockDirectory::new(*cur_id, self.clone());

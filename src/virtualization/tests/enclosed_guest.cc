@@ -95,7 +95,8 @@ void LocalGuestConfigProvider::Get(GetCallback callback) {
   const std::string config_path = package_dir_name_ + "/data/guest.cfg";
 
   auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
-    return fdio_open((package_dir_name_ + "/" + path).c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+    return fdio_open((package_dir_name_ + "/" + path).c_str(),
+                     static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                      file.TakeChannel().release());
   };
 

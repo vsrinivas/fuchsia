@@ -20,24 +20,6 @@
 
 namespace fidl_codec {
 
-// Imported from https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/.
-constexpr uint32_t OPEN_RIGHT_READABLE = 0x1;
-constexpr uint32_t OPEN_RIGHT_WRITEABLE = 0x2;
-constexpr uint32_t OPEN_RIGHT_EXECUTABLE = 0x8;
-constexpr uint32_t OPEN_FLAG_CREATE = 0x10000;
-constexpr uint32_t OPEN_FLAG_CREATE_IF_ABSENT = 0x20000;
-constexpr uint32_t OPEN_FLAG_TRUNCATE = 0x40000;
-constexpr uint32_t OPEN_FLAG_DIRECTORY = 0x80000;
-constexpr uint32_t OPEN_FLAG_APPEND = 0x100000;
-constexpr uint32_t OPEN_FLAG_NO_REMOTE = 0x200000;
-constexpr uint32_t OPEN_FLAG_NODE_REFERENCE = 0x400000;
-constexpr uint32_t OPEN_FLAG_DESCRIBE = 0x800000;
-constexpr uint32_t OPEN_FLAG_POSIX_DEPRECATED = 0x01000000;
-constexpr uint32_t OPEN_FLAG_POSIX_WRITABLE = 0x8000000;
-constexpr uint32_t OPEN_FLAG_POSIX_EXECUTABLE = 0x10000000;
-constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 0x2000000;
-constexpr uint32_t CLONE_FLAGS_SAME_RIGHTS = 0x4000000;
-
 constexpr uint32_t MODE_TYPE_DIRECTORY = 0x4000;
 constexpr uint32_t MODE_TYPE_BLOCK_DEVICE = 0x6000;
 constexpr uint32_t MODE_TYPE_FILE = 0x8000;
@@ -163,36 +145,6 @@ void PrettyPrinter::DisplayClock(zx_clock_t clock) {
     *this << separator << #name;    \
     separator = " | ";              \
   }
-
-void PrettyPrinter::DisplayDirectoryOpenFlags(uint32_t value) {
-  if (value == 0) {
-    *this << Blue << "0" << ResetColor;
-    return;
-  }
-
-  *this << Blue;
-  const char* separator = "";
-  DirectoryOpenCase(OPEN_RIGHT_READABLE);
-  DirectoryOpenCase(OPEN_RIGHT_WRITEABLE);
-  DirectoryOpenCase(OPEN_RIGHT_EXECUTABLE);
-  DirectoryOpenCase(OPEN_FLAG_CREATE);
-  DirectoryOpenCase(OPEN_FLAG_CREATE_IF_ABSENT);
-  DirectoryOpenCase(OPEN_FLAG_TRUNCATE);
-  DirectoryOpenCase(OPEN_FLAG_DIRECTORY);
-  DirectoryOpenCase(OPEN_FLAG_APPEND);
-  DirectoryOpenCase(OPEN_FLAG_NO_REMOTE);
-  DirectoryOpenCase(OPEN_FLAG_NODE_REFERENCE);
-  DirectoryOpenCase(OPEN_FLAG_DESCRIBE);
-  DirectoryOpenCase(OPEN_FLAG_POSIX_DEPRECATED);
-  DirectoryOpenCase(OPEN_FLAG_POSIX_WRITABLE);
-  DirectoryOpenCase(OPEN_FLAG_POSIX_EXECUTABLE);
-  DirectoryOpenCase(OPEN_FLAG_NOT_DIRECTORY);
-  DirectoryOpenCase(CLONE_FLAGS_SAME_RIGHTS);
-  if (value != 0) {
-    *this << separator << "0x" << std::hex << value << std::dec;
-  }
-  *this << ResetColor;
-}
 
 #define OpenModeCase(name) \
   case name:               \

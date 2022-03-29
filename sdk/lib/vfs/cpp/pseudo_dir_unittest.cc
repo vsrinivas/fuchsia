@@ -30,7 +30,7 @@ class TestNode : public vfs::internal::Node {
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
   void Describe2(fuchsia::io::ConnectionInfo* out_info) override {}
 
-  zx_status_t CreateConnection(uint32_t flags,
+  zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -194,7 +194,8 @@ class DirectoryWrapper {
     ASSERT_EQ(expected_status, dir_->AddSharedEntry(name, std::move(node)));
   }
 
-  fuchsia::io::DirectorySyncPtr Serve(uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE) {
+  fuchsia::io::DirectorySyncPtr Serve(
+      fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE) {
     fuchsia::io::DirectorySyncPtr ptr;
     dir_->Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
@@ -524,28 +525,28 @@ TEST_F(PseudoDirConnection, CantReadNodeReferenceDir) {
 }
 
 TEST_F(PseudoDirConnection, ServeOnInvalidFlags) {
-  uint32_t prohibitive_flags[] = {fuchsia::io::OPEN_FLAG_NO_REMOTE};
-  uint32_t not_allowed_flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
-                                  fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
-                                  fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
+  fuchsia::io::OpenFlags prohibitive_flags[] = {fuchsia::io::OPEN_FLAG_NO_REMOTE};
+  fuchsia::io::OpenFlags not_allowed_flags[] = {
+      fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
 
   for (auto not_allowed_flag : not_allowed_flags) {
-    SCOPED_TRACE(std::to_string(not_allowed_flag));
+    SCOPED_TRACE(std::to_string(static_cast<uint32_t>(not_allowed_flag)));
     AssertOpen(dispatcher(), not_allowed_flag, ZX_ERR_INVALID_ARGS);
   }
 
   for (auto prohibitive_flag : prohibitive_flags) {
-    SCOPED_TRACE(std::to_string(prohibitive_flag));
+    SCOPED_TRACE(std::to_string(static_cast<uint32_t>(prohibitive_flag)));
     AssertOpen(dispatcher(), prohibitive_flag, ZX_ERR_NOT_SUPPORTED);
   }
 }
 
 TEST_F(PseudoDirConnection, ServeOnValidFlags) {
-  uint32_t allowed_flags[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
-                              fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
-                              fuchsia::io::OPEN_FLAG_DIRECTORY};
+  fuchsia::io::OpenFlags allowed_flags[] = {
+      fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_FLAG_NODE_REFERENCE, fuchsia::io::OPEN_FLAG_DIRECTORY};
   for (auto allowed_flag : allowed_flags) {
-    SCOPED_TRACE(std::to_string(allowed_flag));
+    SCOPED_TRACE(std::to_string(static_cast<uint32_t>(allowed_flag)));
     AssertOpen(dispatcher(), allowed_flag, ZX_OK);
   }
 }
@@ -757,9 +758,9 @@ TEST_F(PseudoDirConnection, CannotOpenFileWithDirectoryFlag) {
 }
 
 TEST_F(PseudoDirConnection, CannotOpenDirectoryWithInvalidFlags) {
-  uint32_t invalid_flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
-                              fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
-                              fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
+  fuchsia::io::OpenFlags invalid_flags[] = {
+      fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
   DirectoryWrapper subdir1(false);
   dir_.AddSharedEntry("subdir1", subdir1.dir());
 
@@ -768,7 +769,7 @@ TEST_F(PseudoDirConnection, CannotOpenDirectoryWithInvalidFlags) {
 
   for (auto& path : paths) {
     for (auto flag : invalid_flags) {
-      SCOPED_TRACE("path: " + path + ", flag: " + std::to_string(flag));
+      SCOPED_TRACE("path: " + path + ", flag: " + std::to_string(static_cast<uint32_t>(flag)));
       fuchsia::io::NodeSyncPtr node_ptr;
       AssertOpenPath(ptr, path, node_ptr, flag, 0, ZX_ERR_INVALID_ARGS);
     }
@@ -857,7 +858,8 @@ TEST_F(PseudoDirConnection, CanCloneDirectoryConnection) {
 TEST_F(PseudoDirConnection, CloneFlagSameRightsFailsWithSpecificRights) {
   auto ptr = dir_.Serve();
 
-  uint32_t rights[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE};
+  fuchsia::io::OpenFlags rights[] = {fuchsia::io::OPEN_RIGHT_READABLE,
+                                     fuchsia::io::OPEN_RIGHT_WRITABLE};
 
   for (auto right : rights) {
     fuchsia::io::DirectorySyncPtr cloned_ptr;
@@ -914,7 +916,7 @@ TEST_F(PseudoDirConnection, OpeningWithNoRightsAndNoNodeReference) {
   dir_.AddSharedEntry("subdir1", subdir1.dir());
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
-  AssertOpenPath(ptr, "subdir1", new_ptr, 0, 0, ZX_OK);
+  AssertOpenPath(ptr, "subdir1", new_ptr, {}, 0, ZX_OK);
 }
 
 TEST_F(PseudoDirConnection, DirectoryRightsAreHierarchical) {

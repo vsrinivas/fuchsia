@@ -66,7 +66,7 @@ struct local_connection : public base {
 
   // Expects a canonical path (no ..) with no leading
   // slash and no trailing slash
-  zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override {
+  zx::status<fdio_ptr> open(const char* path, fio::wire::OpenFlags flags, uint32_t mode) override {
     auto& dir = local_dir();
     return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode);
   }

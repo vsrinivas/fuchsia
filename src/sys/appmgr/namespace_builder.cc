@@ -237,19 +237,21 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
   // The POSIX flags below specify that the resulting directory will inherit the maximum set of
   // rights from the root connection serving the namespace (write and/or execute).
-  uint32_t flags = fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
-                   fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                               fio::wire::kOpenFlagPosixWritable |
+                               fio::wire::kOpenFlagPosixExecutable;
   PushDirectoryFromPathAsWithPermissions(std::move(src_path), std::move(dst_path), flags);
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_path,
                                                               std::string dst_path,
-                                                              uint64_t flags) {
+                                                              fio::wire::OpenFlags flags) {
   if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end()) {
     return;
   }
   fbl::unique_fd dir;
-  zx_status_t status = fdio_open_fd(src_path.c_str(), flags, dir.reset_and_get_address());
+  zx_status_t status =
+      fdio_open_fd(src_path.c_str(), static_cast<uint32_t>(flags), dir.reset_and_get_address());
   if (status != ZX_OK) {
     return;
   }

@@ -52,7 +52,7 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
   };
 
   using test_row_t = struct {
-    uint32_t connection_flags;  // Or'd OPEN_RIGHT_* flags for this connection.
+    fio::wire::OpenFlags connection_flags;  // Or'd OPEN_RIGHT_* flags for this connection.
     fio::wire::VmoFlags request_flags;
     zx_status_t expected_result;  // What we expect FileGetBuffer to return.
   };
@@ -100,7 +100,7 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       // Set up a vfs connection with the testcase's connection flags
       zx::status file = fidl::CreateEndpoints<fio::File>();
       ASSERT_OK(file.status_value());
-      uint32_t flags = row.connection_flags;
+      fio::wire::OpenFlags flags = row.connection_flags;
       vfs->Serve(vnode, file->server.TakeChannel(),
                  fs::VnodeConnectionOptions::FromIoV1Flags(flags));
 

@@ -11,7 +11,7 @@ use {
 };
 
 /// Opens a path
-pub fn open_in_isolated_devmgr(path: &str, flags: u32) -> Result<File, zx::Status> {
+pub fn open_in_isolated_devmgr(path: &str, flags: fio::OpenFlags) -> Result<File, zx::Status> {
     let isolated_devmgr =
         connect_to_protocol::<IsolatedDevmgrMarker>().expect("connecting to isolated devmgr.");
     let (node_proxy, server_end) =

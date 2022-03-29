@@ -18,7 +18,10 @@ pub struct Directory {
 
 impl Directory {
     // Opens a path in the namespace as a Directory.
-    pub fn from_namespace(path: impl AsRef<Path>, flags: u32) -> Result<Directory, Status> {
+    pub fn from_namespace(
+        path: impl AsRef<Path>,
+        flags: fio::OpenFlags,
+    ) -> Result<Directory, Status> {
         let path = path.as_ref().to_str().unwrap();
         match io_util::directory::open_in_namespace(path, flags) {
             Ok(proxy) => Ok(Directory { proxy }),
@@ -40,11 +43,15 @@ impl Directory {
     }
 
     // Open a directory in the parent dir with the given |filename|.
-    pub async fn open_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+    pub async fn open_directory(
+        &self,
+        filename: &str,
+        flags: fio::OpenFlags,
+    ) -> Result<Directory, Status> {
         match io_util::directory::open_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("open_directory({},{}) failed: {}", filename, flags, s);
+                debug!("open_directory({},{:?}) failed: {}", filename, flags, s);
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {
@@ -60,11 +67,11 @@ impl Directory {
     }
 
     // Open a file in the parent dir with the given |filename|.
-    pub async fn open_file(&self, filename: &str, flags: u32) -> Result<File, Status> {
+    pub async fn open_file(&self, filename: &str, flags: fio::OpenFlags) -> Result<File, Status> {
         match io_util::directory::open_file(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(File { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("open_file({},{}) failed: {}", filename, flags, s);
+                debug!("open_file({},{:?}) failed: {}", filename, flags, s);
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {
@@ -80,11 +87,15 @@ impl Directory {
     }
 
     // Creates a directory named |filename| within this directory.
-    pub async fn create_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+    pub async fn create_directory(
+        &self,
+        filename: &str,
+        flags: fio::OpenFlags,
+    ) -> Result<Directory, Status> {
         match io_util::directory::create_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("create_directory({},{}) failed: {}", filename, flags, s);
+                debug!("create_directory({},{:?}) failed: {}", filename, flags, s);
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {

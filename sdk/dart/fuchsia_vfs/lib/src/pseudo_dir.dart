@@ -62,8 +62,8 @@ class PseudoDir extends Vnode {
     if (_entries.containsKey(name)) {
       return ZX.ERR_ALREADY_EXISTS;
     }
-    var id = _nextId++;
-    var e = _Entry(node, name, id);
+    final id = _nextId++;
+    final e = _Entry(node, name, id);
     _entries[name] = e;
     _treeEntries.add(e);
     return ZX.OK;
@@ -72,7 +72,7 @@ class PseudoDir extends Vnode {
   @override
   void close() {
     _isClosed = true;
-    for (var entry in _entries.entries) {
+    for (final entry in _entries.entries) {
       entry.value.node!.close();
     }
     removeAllNodes();
@@ -80,7 +80,7 @@ class PseudoDir extends Vnode {
     // they open a connection, dart fidl binding throws exception due to
     // event(OnOpen) on this fidl.
     scheduleMicrotask(() {
-      for (var c in _connections) {
+      for (final c in _connections) {
         c.closeBinding();
       }
       _connections.clear();
@@ -90,8 +90,8 @@ class PseudoDir extends Vnode {
   /// Connects to this instance of [PseudoDir] and serves
   /// [fidl_fuchsia_io.Directory] over fidl.
   @override
-  int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  int connect(OpenFlags flags, int mode, fidl.InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (_isClosed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;
@@ -107,11 +107,12 @@ class PseudoDir extends Vnode {
 
     // Explicitly expand openFlagPosixDeprecated into new equivalent flags.
     // TODO(fxbug.dev/81185): Remove entire branch when flag is removed from fuchsia.io.
-    if ((connectFlags & openFlagPosixDeprecated) != 0) {
+    if ((connectFlags & openFlagPosixDeprecated) != OpenFlags.$none) {
       connectFlags |= openFlagPosixWritable | openFlagPosixExecutable;
       connectFlags &= ~openFlagPosixDeprecated;
     }
 
+    parentFlags ??= Flags.fsRightsDefault();
     // Grant POSIX clients additional rights.
     if (Flags.isPosixWritable(connectFlags)) {
       connectFlags |= parentFlags & openRightWritable;
@@ -122,12 +123,12 @@ class PseudoDir extends Vnode {
     // Clear any remaining POSIX right expansion flags.
     connectFlags &= ~(openFlagPosixWritable | openFlagPosixExecutable);
 
-    var status = _validateFlags(connectFlags);
+    final status = _validateFlags(connectFlags);
     if (status != ZX.OK) {
       sendErrorEvent(connectFlags, status, request);
       return status;
     }
-    var connection = _DirConnection(
+    final connection = _DirConnection(
         mode, connectFlags, this, fidl.InterfaceRequest(request.passChannel()));
     _connections.add(connection);
     return ZX.OK;
@@ -152,7 +153,7 @@ class PseudoDir extends Vnode {
   ///
   /// Returns `null` if no node if found.
   Vnode? lookup(String name) {
-    var v = _entries[name];
+    final v = _entries[name];
     if (v != null) {
       return v.node;
     }
@@ -160,9 +161,9 @@ class PseudoDir extends Vnode {
   }
 
   @override
-  void open(
-      int flags, int mode, String path, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  void open(OpenFlags flags, int mode, String path,
+      fidl.InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (path.startsWith('/') || path == '') {
       sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
       return;
@@ -177,21 +178,17 @@ class PseudoDir extends Vnode {
       p = p.substring(index);
     }
 
+    parentFlags ??= Flags.fsRightsDefault();
     if (p == '.' || p == '') {
       connect(flags, mode, request, parentFlags);
       return;
     }
-    var index = p.indexOf('/');
-    var key = '';
-    if (index == -1) {
-      key = p;
-    } else {
-      key = p.substring(0, index);
-    }
+    final index = p.indexOf('/');
+    final key = index == -1 ? p : p.substring(0, index);
     if (!_isLegalObjectName(key)) {
       sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
     } else if (_entries.containsKey(key)) {
-      var e = _entries[key];
+      final e = _entries[key];
       // final element, open it
       if (index == -1) {
         e!.node!.connect(flags, mode, request, parentFlags);
@@ -221,7 +218,7 @@ class PseudoDir extends Vnode {
   /// Returns `ZX.OK` on success.
   /// Returns `ZX.RR_NOT_FOUND` if there is no node with the given name.
   int removeNode(String name) {
-    var e = _entries.remove(name);
+    final e = _entries.remove(name);
     if (e == null) {
       return ZX.ERR_NOT_FOUND;
     }
@@ -232,9 +229,11 @@ class PseudoDir extends Vnode {
   /// Serves this [request] directory over request channel.
   /// Caller may specify the rights granted to the [request] connection.
   /// If `rights` is omitted, it defaults to readable and writable.
-  int serve(fidl.InterfaceRequest<Node> request,
-      {int rights = openRightReadable | openRightWritable}) {
-    assert((rights & ~Flags.fsRights) == 0);
+  int serve(fidl.InterfaceRequest<Node> request, {OpenFlags? rights}) {
+    if (rights != null) {
+      assert((rights & ~openRights) == OpenFlags.$none);
+    }
+    rights ??= openRightReadable | openRightWritable;
     return connect(openFlagDirectory | rights, 0, request);
   }
 
@@ -251,8 +250,8 @@ class PseudoDir extends Vnode {
     assert(result);
   }
 
-  int _validateFlags(int flags) {
-    var allowedFlags = openRightReadable |
+  int _validateFlags(OpenFlags flags) {
+    final allowedFlags = openRightReadable |
         openRightWritable |
         openFlagDirectory |
         openFlagNodeReference |
@@ -261,7 +260,7 @@ class PseudoDir extends Vnode {
         openFlagPosixWritable |
         openFlagPosixExecutable |
         cloneFlagSameRights;
-    var prohibitedFlags = openFlagCreate |
+    final prohibitedFlags = openFlagCreate |
         openFlagCreateIfAbsent |
         openFlagTruncate |
         openFlagAppend;
@@ -269,10 +268,10 @@ class PseudoDir extends Vnode {
     // TODO(fxbug.dev/33058) : do not allow openRightWritable.
 
     // Pseudo directories do not allow mounting, at this point.
-    if (flags & prohibitedFlags != 0) {
+    if (flags & prohibitedFlags != OpenFlags.$none) {
       return ZX.ERR_INVALID_ARGS;
     }
-    if (flags & ~allowedFlags != 0) {
+    if (flags & ~allowedFlags != OpenFlags.$none) {
       return ZX.ERR_NOT_SUPPORTED;
     }
     return ZX.OK;
@@ -289,7 +288,7 @@ class _DirConnection extends Directory {
   // reference to current Directory object;
   final PseudoDir _dir;
   final int _mode;
-  final int _flags;
+  final OpenFlags _flags;
 
   /// Position in directory where [#readDirents] should start searching. If less
   /// than 0, means first entry should be dot('.').
@@ -309,7 +308,7 @@ class _DirConnection extends Directory {
     _binding.whenClosed.then((_) {
       return close();
     });
-    if (_flags & openFlagNodeReference != 0) {
+    if (_flags & openFlagNodeReference != OpenFlags.$none) {
       isNodeRef = true;
     }
   }
@@ -317,7 +316,7 @@ class _DirConnection extends Directory {
   @override
   Stream<Directory$OnOpen$Response> get onOpen {
     Directory$OnOpen$Response d;
-    if ((_flags & openFlagDescribe) == 0) {
+    if ((_flags & openFlagDescribe) == OpenFlags.$none) {
       d = Directory$OnOpen$Response(ZX.ERR_NOT_DIR, null);
     } else {
       NodeInfo nodeInfo = _describe();
@@ -337,13 +336,14 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<void> clone(int flags, fidl.InterfaceRequest<Node> object) async {
+  Future<void> clone(
+      OpenFlags flags, fidl.InterfaceRequest<Node> object) async {
     if (!Flags.inputPrecondition(flags)) {
       _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
       return;
     }
     if (Flags.shouldCloneWithSameRights(flags)) {
-      if ((flags & Flags.fsRightsSpace) != 0) {
+      if ((flags.$value & openRightsMask) != 0) {
         _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
         return;
       }
@@ -353,8 +353,8 @@ class _DirConnection extends Directory {
     // rights as those from the originating connection.
     var newFlags = flags;
     if (Flags.shouldCloneWithSameRights(flags)) {
-      newFlags &= (~Flags.fsRights);
-      newFlags |= (_flags & Flags.fsRights);
+      newFlags &= (~openRights);
+      newFlags |= (_flags & openRights);
       newFlags &= ~cloneFlagSameRights;
     }
 
@@ -401,7 +401,7 @@ class _DirConnection extends Directory {
 
   @override
   Future<Directory$GetAttr$Response> getAttr() async {
-    var n = NodeAttributes(
+    final n = NodeAttributes(
       mode: modeTypeDirectory | modeProtectionMask,
       id: inoUnknown,
       contentSize: 0,
@@ -430,7 +430,7 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<void> open(int flags, int mode, String path,
+  Future<void> open(OpenFlags flags, int mode, String path,
       fidl.InterfaceRequest<Node> object) async {
     if (!Flags.inputPrecondition(flags)) {
       _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
@@ -440,7 +440,8 @@ class _DirConnection extends Directory {
       _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
       return;
     }
-    if (Flags.isNodeReference(flags) && ((flags & Flags.fsRights) == 0)) {
+    if (Flags.isNodeReference(flags) &&
+        ((flags & openRights) == OpenFlags.$none)) {
       _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
       return;
     }
@@ -456,14 +457,14 @@ class _DirConnection extends Directory {
     if (isNodeRef) {
       return Directory$ReadDirents$Response(ZX.ERR_BAD_HANDLE, Uint8List(0));
     }
-    var buf = Uint8List(maxBytes);
-    var bData = ByteData.view(buf.buffer);
+    final buf = Uint8List(maxBytes);
+    final bData = ByteData.view(buf.buffer);
     var firstOne = true;
     var index = 0;
 
     // add dot
     if (_seek < 0) {
-      var bytes = _encodeDirent(
+      final bytes = _encodeDirent(
           bData, index, maxBytes, inoUnknown, DirentType.directory, '.');
       if (bytes == -1) {
         return Directory$ReadDirents$Response(
@@ -481,14 +482,14 @@ class _DirConnection extends Directory {
         nearestOption: TreeSearch.GREATER_THAN);
 
     if (entry != null) {
-      var iterator = _dir._treeEntries.fromIterator(entry);
+      final iterator = _dir._treeEntries.fromIterator(entry);
       while (iterator.moveNext()) {
         entry = iterator.current;
         // we should only send entries > _seek
         if (entry.nodeId <= _seek) {
           continue;
         }
-        var bytes = _encodeDirent(bData, index, maxBytes,
+        final bytes = _encodeDirent(bData, index, maxBytes,
             entry.node!.inodeNumber(), entry.node!.type(), entry.name);
         if (bytes == -1) {
           if (firstOne) {
@@ -552,7 +553,7 @@ class _DirConnection extends Directory {
   int _encodeDirent(ByteData buf, int startIndex, int maxBytes, int inodeNumber,
       DirentType type, String name) {
     List<int> charBytes = utf8.encode(name);
-    var len = 8 /*ino*/ + 1 /*size*/ + 1 /*type*/ + charBytes.length;
+    final len = 8 /*ino*/ + 1 /*size*/ + 1 /*type*/ + charBytes.length;
     // cannot fit in buffer
     if (maxBytes - startIndex < len) {
       return -1;
@@ -571,11 +572,11 @@ class _DirConnection extends Directory {
 
   @override
   Future<Directory$GetFlags$Response> getFlags() async {
-    return Directory$GetFlags$Response(ZX.ERR_NOT_SUPPORTED, 0);
+    return Directory$GetFlags$Response(ZX.ERR_NOT_SUPPORTED, OpenFlags.$none);
   }
 
   @override
-  Future<int> setFlags(int flags) async {
+  Future<int> setFlags(OpenFlags flags) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

@@ -36,7 +36,8 @@ class DriverHostContext {
   void ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev);
 
   // Attaches channel |c| to new state representing an open connection to |dev|.
-  zx_status_t DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
+  zx_status_t DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, fuchsia_io::wire::OpenFlags flags,
+                            zx::channel c);
 
   // routines driver_host uses to talk to driver_manager
   // |client_remote| will only be a valid handle if the device was added with

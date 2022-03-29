@@ -26,12 +26,12 @@ abstract class Vnode {
   /// By default param [#parentFlags] is all rights, so that open will allow
   /// all rights requested on the incoming [request].
   /// This param is used by clone to restrict cloning.
-  int connect(int flags, int mode, InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]);
+  int connect(OpenFlags flags, int mode, InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]);
 
   /// Filter flags when [openFlagNodeReference] is passed.
   /// This will maintain compatibility with c++ layer.
-  int filterForNodeReference(int flags) {
+  OpenFlags filterForNodeReference(OpenFlags flags) {
     if (Flags.isNodeReference(flags)) {
       return flags &
           (openFlagNodeReference | openFlagDirectory | openFlagDescribe);
@@ -49,8 +49,9 @@ abstract class Vnode {
   /// Behavior:
   /// For directory types, it will throw UnimplementedError error.
   /// For non empty path it will fail with [ERR_NOT_DIR].
-  void open(int flags, int mode, String path, InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  void open(
+      OpenFlags flags, int mode, String path, InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (type() == DirentType.directory) {
       // dir types should implement this function
       throw UnimplementedError();
@@ -59,9 +60,10 @@ abstract class Vnode {
   }
 
   /// Create a error node to send onOpen event with failure status.
-  void sendErrorEvent(int flags, int status, InterfaceRequest<Node> request) {
-    if ((flags & openFlagDescribe) != 0) {
-      var e = ErrorNodeForSendingEvent(status, _removeErrorNode, request);
+  void sendErrorEvent(
+      OpenFlags flags, int status, InterfaceRequest<Node> request) {
+    if ((flags & openFlagDescribe) != OpenFlags.$none) {
+      final e = ErrorNodeForSendingEvent(status, _removeErrorNode, request);
       _errorNodes.add(e);
     } else {
       request.close();

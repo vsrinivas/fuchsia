@@ -813,14 +813,14 @@ zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
   if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-  *out_flags = response.flags;
+  *out_flags = static_cast<uint32_t>(response.flags);
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   Remote rio(io);
-  const fidl::WireResult result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->SetFlags(flags);
+  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))
+                                      ->SetFlags(static_cast<fio::wire::OpenFlags>(flags));
   if (!result.ok()) {
     return result.status();
   }
@@ -870,8 +870,6 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_hand
 
 zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                           size_t path_len, zxio_storage_t* storage) {
-  flags = flags | fio::wire::kOpenFlagDescribe;
-
   Remote rio(io);
   zx::status node_ends = fidl::CreateEndpoints<fio::Node>();
   if (node_ends.is_error()) {
@@ -879,9 +877,10 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
   }
   auto [node_client_end, node_server_end] = std::move(node_ends.value());
 
-  fidl::Status result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                            ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                                   std::move(node_server_end));
+  fidl::Status result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Open(static_cast<fio::wire::OpenFlags>(flags) | fuchsia_io::wire::kOpenFlagDescribe,
+                 mode, fidl::StringView::FromExternal(path, path_len), std::move(node_server_end));
   if (!result.ok()) {
     return result.status();
   }
@@ -894,8 +893,8 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
   fidl::ServerEnd<fio::Node> node_request{zx::channel(request)};
   const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-          ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                 std::move(node_request));
+          ->Open(static_cast<fio::wire::OpenFlags>(flags), mode,
+                 fidl::StringView::FromExternal(path, path_len), std::move(node_request));
   return result.status();
 }
 
@@ -1384,7 +1383,7 @@ zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags
   if (ends.is_error()) {
     return ends.status_value();
   }
-  uint32_t flags = fio::wire::kCloneFlagSameRights;
+  fio::wire::OpenFlags flags = fio::wire::kCloneFlagSameRights;
   if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
     flags |= fio::wire::kOpenFlagDescribe;
   }

@@ -61,7 +61,7 @@ mod tests {
         cm_moniker::InstancedAbsoluteMoniker,
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
-        fidl_fuchsia_kernel as fkernel,
+        fidl_fuchsia_io as fio, fidl_fuchsia_kernel as fkernel,
         futures::lock::Mutex,
         moniker::AbsoluteMonikerBase,
         std::path::PathBuf,
@@ -90,7 +90,9 @@ mod tests {
         let (client, mut server) = zx::Channel::create()?;
         let task_scope = TaskScope::new();
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
+            provider
+                .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server)
+                .await?;
         };
 
         // We do not call get, as we passed an invalid handle to RootResource,

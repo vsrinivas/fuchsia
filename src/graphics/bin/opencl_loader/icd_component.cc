@@ -258,17 +258,18 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
                                      fidl::InterfaceHandle<fuchsia::io::Directory> out_dir) {
   initialization_status_.Set("reading from package");
   fidl::InterfaceHandle<fuchsia::io::Directory> metadata_loader;
-  zx_status_t status =
-      fdio_open_at(out_dir.channel().get(), "metadata", fuchsia::io::OPEN_RIGHT_READABLE,
-                   metadata_loader.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_open_at(out_dir.channel().get(), "metadata",
+                                    static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
+                                    metadata_loader.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << component_url_ << " Failed opening metadata dir";
     return;
   }
   fidl::InterfaceHandle<fuchsia::io::Directory> contents_loader;
-  status = fdio_open_at(out_dir.channel().get(), "contents",
-                        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-                        contents_loader.NewRequest().TakeChannel().release());
+  status = fdio_open_at(
+      out_dir.channel().get(), "contents",
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE),
+      contents_loader.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << component_url_ << " Failed opening pkg dir";
     return;
@@ -314,9 +315,10 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
   fbl::unique_fd fd;
 
   initialization_status_.Set("opening VMO");
-  status = fdio_open_fd_at(contents_dir_fd.get(), file_path.c_str(),
-                           fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
-                           fd.reset_and_get_address());
+  status = fdio_open_fd_at(
+      contents_dir_fd.get(), file_path.c_str(),
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE),
+      fd.reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << component_url_ << " Could not open path " << file_path << ":" << status;
     return;

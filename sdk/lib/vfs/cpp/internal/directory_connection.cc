@@ -11,7 +11,7 @@
 namespace vfs {
 namespace internal {
 
-DirectoryConnection::DirectoryConnection(uint32_t flags, vfs::internal::Directory* vn)
+DirectoryConnection::DirectoryConnection(fuchsia::io::OpenFlags flags, vfs::internal::Directory* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 DirectoryConnection::~DirectoryConnection() = default;
@@ -33,7 +33,8 @@ void DirectoryConnection::AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
   callback(fuchsia::io::AdvisoryLocking_AdvisoryLock_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
 }
 
-void DirectoryConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
+void DirectoryConnection::Clone(fuchsia::io::OpenFlags flags,
+                                fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
@@ -72,7 +73,7 @@ void DirectoryConnection::SetAttr(fuchsia::io::NodeAttributeFlags flags,
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
+void DirectoryConnection::Open(fuchsia::io::OpenFlags flags, uint32_t mode, std::string path,
                                fidl::InterfaceRequest<fuchsia::io::Node> object) {
   vn_->Open(flags, this->flags(), mode, path.data(), path.length(), object.TakeChannel(),
             binding_.dispatcher());
@@ -129,7 +130,7 @@ void DirectoryConnection::GetFlags(GetFlagsCallback callback) {
   callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void DirectoryConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
+void DirectoryConnection::SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

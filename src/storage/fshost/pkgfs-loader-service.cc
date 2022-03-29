@@ -53,12 +53,13 @@ zx::status<zx::vmo> PkgfsLoaderService::LoadPkgfsFile(std::string path) {
 }
 
 zx::status<zx::vmo> PkgfsLoaderService::LoadBlob(std::string merkleroot) {
-  const uint32_t kFlags = fio::wire::kOpenFlagNotDirectory | fio::wire::kOpenRightReadable |
-                          fio::wire::kOpenRightExecutable;
+  const fio::wire::OpenFlags kFlags = fio::wire::kOpenFlagNotDirectory |
+                                      fio::wire::kOpenRightReadable |
+                                      fio::wire::kOpenRightExecutable;
 
   fbl::unique_fd fd;
-  zx_status_t status =
-      fdio_open_fd_at(blob_dir_.get(), merkleroot.data(), kFlags, fd.reset_and_get_address());
+  zx_status_t status = fdio_open_fd_at(blob_dir_.get(), merkleroot.data(),
+                                       static_cast<uint32_t>(kFlags), fd.reset_and_get_address());
   if (status != ZX_OK) {
     return zx::error(status);
   }

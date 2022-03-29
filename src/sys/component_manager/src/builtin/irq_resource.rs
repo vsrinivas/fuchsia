@@ -69,7 +69,7 @@ mod tests {
         cm_moniker::InstancedAbsoluteMoniker,
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
-        fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::sys,
         fuchsia_zircon::AsHandleRef,
@@ -162,7 +162,9 @@ mod tests {
         let (client, mut server) = zx::Channel::create()?;
         let task_scope = TaskScope::new();
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
+            provider
+                .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server)
+                .await?;
         };
 
         let irq_client = ClientEnd::<fkernel::IrqResourceMarker>::new(client)

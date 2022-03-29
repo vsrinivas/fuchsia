@@ -39,7 +39,7 @@ zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
 
 // Perform basic flags sanitization.
 // Returns false if the flags combination is invalid.
-bool PrevalidateFlags(uint32_t flags);
+bool PrevalidateFlags(fuchsia_io::wire::OpenFlags flags);
 
 zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptions child_options,
                                       VnodeConnectionOptions* out_options);
@@ -176,10 +176,11 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   virtual void OnTeardown() {}
 
   // Flags which can be modified by SetFlags.
-  constexpr static uint32_t kSettableStatusFlags = fuchsia_io::wire::kOpenFlagAppend;
+  constexpr static fuchsia_io::wire::OpenFlags kSettableStatusFlags =
+      fuchsia_io::wire::kOpenFlagAppend;
 
   // All flags which indicate state of the connection (excluding rights).
-  constexpr static uint32_t kStatusFlags =
+  constexpr static fuchsia_io::wire::OpenFlags kStatusFlags =
       kSettableStatusFlags | fuchsia_io::wire::kOpenFlagNodeReference;
 
   // Node operations. Note that these provide the shared implementation of |fuchsia.io/Node|
@@ -189,15 +190,15 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // the generated FIDL types in method arguments. This is because return values must recursively
   // own any child objects and handles to avoid a dangling reference.
 
-  void NodeClone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> channel);
+  void NodeClone(fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fuchsia_io::Node> channel);
   zx::status<> NodeClose();
   zx::status<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
   zx::status<VnodeAttributes> NodeGetAttr();
   zx::status<> NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
                            const fuchsia_io::wire::NodeAttributes& attributes);
-  zx::status<uint32_t> NodeGetFlags();
-  zx::status<> NodeSetFlags(uint32_t flags);
+  zx::status<fuchsia_io::wire::OpenFlags> NodeGetFlags();
+  zx::status<> NodeSetFlags(fuchsia_io::wire::OpenFlags flags);
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|

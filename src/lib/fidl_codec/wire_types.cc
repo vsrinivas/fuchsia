@@ -420,7 +420,6 @@ std::string Uint32Type::Name() const {
     case Kind::kClock:
       return "zx.clock";
     case Kind::kDecimal:
-    case Kind::kDirectoryOpenFlags:
     case Kind::kDirectoryOpenMode:
     case Kind::kHexaDecimal:
       return "uint32";
@@ -519,9 +518,6 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
-        break;
-      case Kind::kDirectoryOpenFlags:
-        printer.DisplayDirectoryOpenFlags(static_cast<uint32_t>(absolute));
         break;
       case Kind::kDirectoryOpenMode:
         printer.DisplayDirectoryOpenMode(static_cast<uint32_t>(absolute));

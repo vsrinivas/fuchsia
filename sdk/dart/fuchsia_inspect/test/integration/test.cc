@@ -67,7 +67,8 @@ class InspectTest : public gtest::TestWithEnvironmentFixture {
     }
 
     fuchsia::io::FileSyncPtr file;
-    auto status = fdio_open(std::string(*glob.begin()).c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+    auto status = fdio_open(std::string(*glob.begin()).c_str(),
+                            static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                             file.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       printf("Status bad %d\n", status);

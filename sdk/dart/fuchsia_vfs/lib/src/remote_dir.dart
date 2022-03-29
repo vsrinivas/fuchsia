@@ -8,7 +8,6 @@ import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
-import 'internal/_flags.dart';
 import 'vnode.dart';
 
 /// A [RemoteDir] is a directory-like object which holds a channel to a remotely
@@ -34,16 +33,16 @@ class RemoteDir extends Vnode {
   }
 
   @override
-  int connect(int flags, int mode, request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  int connect(OpenFlags flags, int mode, request, [OpenFlags? parentFlags]) {
     // Called when a PseudoDir needs to open this directory
     open(flags, mode, '.', request);
     return ZX.OK;
   }
 
   @override
-  void open(int flags, int mode, String path, InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  void open(
+      OpenFlags flags, int mode, String path, InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (_isClosed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return;
@@ -59,8 +58,8 @@ class RemoteDir extends Vnode {
     _proxy.open(flags, mode, path, request);
   }
 
-  int _validateFlags(int flags) {
-    if (flags & openFlagNoRemote != 0) {
+  int _validateFlags(OpenFlags flags) {
+    if (flags & openFlagNoRemote != OpenFlags.$none) {
       return ZX.ERR_NOT_SUPPORTED;
     }
     return ZX.OK;

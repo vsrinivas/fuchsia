@@ -56,7 +56,8 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
 
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
-      uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
+      fuchsia::io::OpenFlags flags,
+      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     auto root = std::make_unique<vfs::PseudoDir>();
     auto remote_dir_entry = std::make_unique<vfs::RemoteDir>(std::move(remote_directory));
 
@@ -68,7 +69,7 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
     directories_.push_back(std::move(root));
   }
 
-  void GetDirectory(fuchsia::io::test::Directory root, uint32_t flags,
+  void GetDirectory(fuchsia::io::test::Directory root, fuchsia::io::OpenFlags flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     auto dir = std::make_unique<vfs::PseudoDir>();
 

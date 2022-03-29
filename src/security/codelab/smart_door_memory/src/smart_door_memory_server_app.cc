@@ -78,10 +78,11 @@ bool SmartDoorMemoryServer::Log(std::string file_path, bool read_or_write) {
   log += "\n";
   int fd = 0;
   FX_LOGS(INFO) << "logging to file " << LOG_FILE << std::endl;
-  if (fdio_open_fd(LOG_FILE,
-                   fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                       fuchsia::io::OPEN_FLAG_APPEND,
-                   &fd) != ZX_OK) {
+  if (fdio_open_fd(
+          LOG_FILE,
+          static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                                fuchsia::io::OPEN_FLAG_APPEND),
+          &fd) != ZX_OK) {
     return false;
   }
   const char* log_c = log.c_str();

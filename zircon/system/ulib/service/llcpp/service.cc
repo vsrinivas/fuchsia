@@ -120,7 +120,7 @@ zx::status<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* bu
 namespace internal {
 
 zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
-  constexpr uint32_t flags =
+  constexpr fuchsia_io::wire::OpenFlags flags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable;
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
   fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));

@@ -47,7 +47,7 @@ void CallBindTwiceAndTest(vfs::internal::Connection* connection) {
 TEST(ConnectionBindCalledTwice, DirectoryConnection) {
   vfs::PseudoDir dir;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  vfs::internal::DirectoryConnection connection(0, &dir);
+  vfs::internal::DirectoryConnection connection({}, &dir);
 
   CallBindTwiceAndTest(&connection);
 }
@@ -55,7 +55,7 @@ TEST(ConnectionBindCalledTwice, DirectoryConnection) {
 TEST(ConnectionBindCalledTwice, FileConnection) {
   DummyTestFile file;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  vfs::internal::FileConnection connection(0, &file);
+  vfs::internal::FileConnection connection({}, &file);
 
   CallBindTwiceAndTest(&connection);
 }
@@ -63,7 +63,7 @@ TEST(ConnectionBindCalledTwice, FileConnection) {
 TEST(ConnectionBindCalledTwice, NodeConnection) {
   vfs::PseudoDir dir;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  vfs::internal::NodeConnection connection(0, &dir);
+  vfs::internal::NodeConnection connection({}, &dir);
 
   CallBindTwiceAndTest(&connection);
 }
@@ -79,7 +79,7 @@ class DummyTestNode : public vfs::internal::Node {
 
   vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
 
-  zx_status_t CreateConnection(uint32_t flags,
+  zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override {
     return Node::CreateConnection(flags, connection);
   }
@@ -90,7 +90,7 @@ TEST(ConenctionTest, ConnectionPassedErrorInClose) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   loop.StartThread("vfs test thread");
   fuchsia::io::NodeSyncPtr ptr;
-  ASSERT_EQ(ZX_OK, node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
+  ASSERT_EQ(ZX_OK, node.Serve({}, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
   fuchsia::io::Node2_Close_Result result;
   ASSERT_EQ(ZX_OK, ptr->Close(&result));
   ASSERT_TRUE(result.is_err());

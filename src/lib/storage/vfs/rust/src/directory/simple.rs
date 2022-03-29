@@ -118,7 +118,7 @@ where
     fn get_or_insert_entry(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         name: &str,
         path: &Path,
@@ -127,7 +127,7 @@ where
 
         match this.entries.get(name) {
             Some(entry) => {
-                if flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+                if flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT) {
                     return Err(Status::ALREADY_EXISTS);
                 }
 
@@ -180,7 +180,7 @@ where
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

@@ -41,7 +41,11 @@ pub enum ConnectionState {
 pub trait DerivedConnection: Send + Sync {
     type Directory: BaseConnectionClient + ?Sized;
 
-    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self;
+    fn new(
+        scope: ExecutionScope,
+        directory: OpenDirectory<Self::Directory>,
+        flags: fio::OpenFlags,
+    ) -> Self;
 
     /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
     /// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
@@ -51,14 +55,14 @@ pub trait DerivedConnection: Send + Sync {
     fn create_connection(
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     );
 
     fn entry_not_found(
         scope: ExecutionScope,
         parent: Arc<dyn DirectoryEntry>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         name: &str,
         path: &Path,
@@ -91,7 +95,7 @@ where
     pub(in crate::directory) directory: OpenDirectory<Connection::Directory>,
 
     /// Flags set on this connection when it was opened or cloned.
-    pub(in crate::directory) flags: u32,
+    pub(in crate::directory) flags: fio::OpenFlags,
 
     /// Seek position for this connection to the directory.  We just store the element that was
     /// returned last by ReadDirents for this connection.  Next call will look for the next element
@@ -160,7 +164,7 @@ where
     pub(in crate::directory) fn new(
         scope: ExecutionScope,
         directory: OpenDirectory<Connection::Directory>,
-        flags: u32,
+        flags: fio::OpenFlags,
     ) -> Self {
         BaseConnection { scope, directory, flags, seek: Default::default() }
     }
@@ -344,7 +348,12 @@ where
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_clone(&self, flags: u32, mode: u32, server_end: ServerEnd<fio::NodeMarker>) {
+    fn handle_clone(
+        &self,
+        flags: fio::OpenFlags,
+        mode: u32,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) {
         let flags = match inherit_rights_for_clone(self.flags, flags) {
             Ok(updated) => updated,
             Err(status) => {
@@ -358,12 +367,12 @@ where
 
     fn handle_open(
         &self,
-        mut flags: u32,
+        mut flags: fio::OpenFlags,
         mode: u32,
         path: String,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             send_on_open_with_error(flags, server_end, Status::BAD_HANDLE);
             return;
         }
@@ -392,11 +401,11 @@ where
         // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
         // filesystems.
         if path.is_dot()
-            && flags
-                & (fio::OPEN_FLAG_CREATE
+            && flags.intersects(
+                fio::OPEN_FLAG_CREATE
                     | fio::OPEN_FLAG_CREATE_IF_ABSENT
-                    | fio::OPEN_FLAG_NOT_DIRECTORY)
-                != 0
+                    | fio::OPEN_FLAG_NOT_DIRECTORY,
+            )
         {
             send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
             return;
@@ -415,7 +424,7 @@ where
     where
         R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
-        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             return responder(Status::BAD_HANDLE, &[]);
         }
 
@@ -462,7 +471,7 @@ where
             Some(registry) => registry,
         };
 
-        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return responder(Status::BAD_HANDLE);
         }
 

@@ -294,8 +294,10 @@ pub fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentErr
     entries
 }
 
-const DIR_FLAGS: u32 =
-    fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const DIR_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OPEN_FLAG_DIRECTORY)
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE);
 
 /// Removes a directory and all of its children. `name` must be a subdirectory of `root_dir`.
 ///

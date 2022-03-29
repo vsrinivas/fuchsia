@@ -21,7 +21,7 @@ namespace {
 /// mode only needs to be consistent with the flags/path if the resource already exists
 /// (i.e. even if the path points to a file that reports it's mode as MODE_TYPE_FILE, it is
 /// not an error to open the file with MODE_TYPE_DIRECTORY).
-bool ValidateMode(uint32_t mode, uint32_t flags, std::string_view path) {
+bool ValidateMode(uint32_t mode, fuchsia::io::OpenFlags flags, std::string_view path) {
   if (path.empty()) {
     return false;
   }
@@ -70,7 +70,8 @@ zx_status_t Directory::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Directory::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
+zx_status_t Directory::CreateConnection(fuchsia::io::OpenFlags flags,
+                                        std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::DirectoryConnection>(flags, this);
   return ZX_OK;
 }
@@ -187,8 +188,9 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len, bool* out_i
   return ZX_OK;
 }
 
-void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, const char* path,
-                     size_t path_len, zx::channel request, async_dispatcher_t* dispatcher) {
+void Directory::Open(fuchsia::io::OpenFlags open_flags, fuchsia::io::OpenFlags parent_flags,
+                     uint32_t mode, const char* path, size_t path_len, zx::channel request,
+                     async_dispatcher_t* dispatcher) {
   if (!Flags::InputPrecondition(open_flags)) {
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
@@ -225,7 +227,7 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
   // we cross a remote mount point. This ensures binary compatibility with older clients who have
   // not yet transitioned to the new set of flags.
   // TODO(fxbug.dev/81185): Remove once all clients are updated to use the latest SDK.
-  if (open_flags & fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED) {
+  if ((open_flags & fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED) != fuchsia::io::OpenFlags()) {
     open_flags |= fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
     open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED;
   }

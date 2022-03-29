@@ -9,7 +9,7 @@ namespace driver {
 namespace internal {
 
 zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
-  constexpr uint32_t flags =
+  constexpr fuchsia_io::wire::OpenFlags flags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable;
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
   fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));
@@ -56,8 +56,9 @@ Namespace& Namespace::operator=(Namespace&& other) noexcept {
 }
 
 zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end,
-                                uint32_t flags) const {
-  zx_status_t status = fdio_ns_connect(ns_, path.data(), flags, server_end.release());
+                                fuchsia_io::wire::OpenFlags flags) const {
+  zx_status_t status =
+      fdio_ns_connect(ns_, path.data(), static_cast<uint32_t>(flags), server_end.release());
   return zx::make_status(status);
 }
 

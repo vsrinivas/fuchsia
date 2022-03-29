@@ -129,7 +129,11 @@ async fn alias_offer_dir_rights() {
     .await
 }
 
-pub fn open_at(channel: &zx::Channel, path: &str, flags: u32) -> Result<zx::Channel, Error> {
+pub fn open_at(
+    channel: &zx::Channel,
+    path: &str,
+    flags: fio::OpenFlags,
+) -> Result<zx::Channel, Error> {
     let (client, server) = zx::Channel::create()?;
     fdio::open_at(channel, path, flags, server)?;
     Ok(client)

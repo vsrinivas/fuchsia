@@ -463,10 +463,11 @@ int main(int argc, char** argv) {
   fbl::unique_fd lib_fd;
   {
     std::string library_path = driver_manager_args.path_prefix + "lib";
-    status = fdio_open_fd(library_path.c_str(),
-                          fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
-                              fio::wire::kOpenRightExecutable,
-                          lib_fd.reset_and_get_address());
+    status = fdio_open_fd(
+        library_path.c_str(),
+        static_cast<uint32_t>(fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                              fio::wire::kOpenRightExecutable),
+        lib_fd.reset_and_get_address());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to open %s: %s", library_path.c_str(), zx_status_get_string(status));
       return status;

@@ -210,7 +210,8 @@ zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_
 zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo) {
   int fd = -1;
   zx_status_t r = fdio_open_fd(
-      libname.data(), fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, &fd);
+      libname.data(),
+      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable), &fd);
   if (r != ZX_OK) {
     LOGF(ERROR, "Cannot open driver '%s': %d", libname.data(), r);
     return ZX_ERR_IO;

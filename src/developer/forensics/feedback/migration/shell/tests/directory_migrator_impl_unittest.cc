@@ -58,7 +58,7 @@ TEST_F(DirectoryMigratorImplTest, ValidDirectories) {
   data_dir.Bind(std::move(data_dir_handle));
   {
     int32_t s;
-    uint32_t flags;
+    fuchsia::io::OpenFlags flags;
 
     ASSERT_EQ(data_dir->GetFlags(&s, &flags), ZX_OK);
     EXPECT_EQ(s, ZX_OK);
@@ -69,7 +69,7 @@ TEST_F(DirectoryMigratorImplTest, ValidDirectories) {
   cache_dir.Bind(std::move(cache_dir_handle));
   {
     int32_t s;
-    uint32_t flags;
+    fuchsia::io::OpenFlags flags;
 
     ASSERT_EQ(cache_dir->GetFlags(&s, &flags), ZX_OK);
     EXPECT_EQ(s, ZX_OK);

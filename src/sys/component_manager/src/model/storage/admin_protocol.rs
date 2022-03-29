@@ -73,7 +73,7 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _open_mode: u32,
         in_relative_path: PathBuf,
         server_end: &mut zx::Channel,

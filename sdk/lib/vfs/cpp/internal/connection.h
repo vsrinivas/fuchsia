@@ -27,7 +27,7 @@ class Connection {
   // |Node|. They are defined in |fuchsia.io| fidl for example
   // |OPEN_FLAG_DESCRIBE|. These are stored in this object for future use and no
   // validations are performed.
-  explicit Connection(uint32_t flags);
+  explicit Connection(fuchsia::io::OpenFlags flags);
   virtual ~Connection();
 
   Connection(const Connection&) = delete;
@@ -39,7 +39,7 @@ class Connection {
   // |fuchsia.io.Directory/Open|.
   //
   // For example, |fuchsia::io::OPEN_RIGHT_READABLE|.
-  uint32_t flags() const { return flags_; }
+  fuchsia::io::OpenFlags flags() const { return flags_; }
 
   // The current file offset.
   //
@@ -88,7 +88,8 @@ class Connection {
   // Implementations for common |fuchsia.io.Node| operations. Used by
   // subclasses to avoid code duplication.
 
-  void Clone(Node* vn, uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher);
+  void Clone(Node* vn, fuchsia::io::OpenFlags flags, zx::channel request,
+             async_dispatcher_t* dispatcher);
   void CloseDeprecated(Node* vn, fuchsia::io::Node::CloseDeprecatedCallback callback);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
@@ -108,7 +109,7 @@ class Connection {
   // The flags associated with this connection.
   //
   // See |flags()| for more information.
-  uint32_t flags_ = 0u;
+  fuchsia::io::OpenFlags flags_ = {};
 
   // The current file offset.
   //

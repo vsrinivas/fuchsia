@@ -15,10 +15,11 @@ protocol LocalMirror {
     ///     metadata.
     /// + request `path` the path of the metadata file, relative to the
     ///     repository_metadata directory for the specific TUF repository.
-    /// + request `metadata` a server end for a TUF metadata file to be opened
-    ///     with `OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE`. If the metadata
-    ///     directory exists but the requested file does not, the client end
-    ///     will receive an OnOpen with `Status::NOT_FOUND`.
+    /// + request `metadata` a pipelined TUF metadata file to be opened with
+    ///     `fuchsia.io/OpenFlags.RIGHT_READABLE | fuchsia.io/OpenFlags.DESCRIBE`.
+    ///     If the metadata directory exists but the requested file does not, the
+    ///     client end will receive a fuchsia.io/Node.OnOpen with
+    ///     `Status::NOT_FOUND`.
     /// * error a `GetMetadataError` value
     GetMetadata(resource struct {
         repo_url RepositoryUrl;
@@ -29,10 +30,11 @@ protocol LocalMirror {
     /// Obtains and returns a blob from an attached storage device.
     ///
     /// + request `blob_id` the id of the blob to return.
-    /// + request `blob` a server end for a blob file to be opened
-    ///     with `OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE`. If the blobs
-    ///     directory exists but the requested file does not, the client end
-    ///     will receive an OnOpen with `Status::NOT_FOUND`.
+    /// + request `blob` a pipelined blob file to be opened with
+    ///     `fuchsia.io/OpenFlags.RIGHT_READABLE | fuchsia.io/OpenFlags.DESCRIBE`.
+    ///     If the blobs directory exists but the requested file does not, the
+    ///     client end will receive a fuchsia.io/Node.OnOpen with
+    ///     `Status::NOT_FOUND`.
     /// * error a `GetBlobError` value
     GetBlob(resource struct {
         blob_id BlobId;

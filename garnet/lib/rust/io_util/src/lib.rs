@@ -37,7 +37,7 @@ pub use fio::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 pub fn open_node<'a>(
     dir: &'a fio::DirectoryProxy,
     path: &'a Path,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<fio::NodeProxy, Error> {
     let path = check_path(path)?;
@@ -50,7 +50,7 @@ pub fn open_node<'a>(
 pub fn open_directory<'a>(
     dir: &'a fio::DirectoryProxy,
     path: &'a Path,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::DirectoryProxy, Error> {
     let path = check_path(path)?;
     let node = directory::open_directory_no_describe(dir, path, flags)?;
@@ -62,7 +62,7 @@ pub fn open_directory<'a>(
 pub fn open_file<'a>(
     dir: &'a fio::DirectoryProxy,
     path: &'a Path,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::FileProxy, Error> {
     let path = check_path(path)?;
     let node = directory::open_file_no_describe(dir, path, flags)?;
@@ -114,7 +114,7 @@ pub fn create_sub_directories(
 pub fn connect_in_namespace(
     path: &str,
     server_chan: zx::Channel,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<(), zx_status::Status> {
     node::connect_in_namespace(path, flags, server_chan)
 }
@@ -122,7 +122,7 @@ pub fn connect_in_namespace(
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<fio::NodeProxy, Error> {
+pub fn open_node_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::NodeProxy, Error> {
     let node = node::open_in_namespace(path, flags)?;
     Ok(node)
 }
@@ -130,7 +130,10 @@ pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<fio::NodeProxy, 
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<fio::DirectoryProxy, Error> {
+pub fn open_directory_in_namespace(
+    path: &str,
+    flags: fio::OpenFlags,
+) -> Result<fio::DirectoryProxy, Error> {
     let node = directory::open_in_namespace(path, flags)?;
     Ok(node)
 }
@@ -138,7 +141,7 @@ pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<fio::Direct
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
 /// The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
-pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<fio::FileProxy, Error> {
+pub fn open_file_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::FileProxy, Error> {
     let node = file::open_in_namespace(path, flags)?;
     Ok(node)
 }
@@ -228,7 +231,7 @@ pub fn node_to_file(node: fio::NodeProxy) -> Result<fio::FileProxy, Error> {
 /// This function will not block.
 pub fn clone_directory(
     dir: &fio::DirectoryProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
 ) -> Result<fio::DirectoryProxy, Error> {
     let node = directory::clone_no_describe(dir, Some(flags))?;
     Ok(node)
@@ -380,10 +383,10 @@ mod tests {
                     panic!("successfully opened when expected failure, could describe: {:?}", d)
                 }
             }
-            if flags & OPEN_RIGHT_READABLE != 0 {
+            if flags.intersects(OPEN_RIGHT_READABLE) {
                 assert_eq!(file_name, read_file(&file_proxy).await.expect("failed to read file"));
             }
-            if flags & OPEN_RIGHT_WRITABLE != 0 {
+            if flags.intersects(OPEN_RIGHT_WRITABLE) {
                 let _: u64 = file_proxy
                     .write(b"write_only")
                     .await

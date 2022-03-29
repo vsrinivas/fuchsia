@@ -75,7 +75,7 @@ static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flag
   if (ends.is_error()) {
     return ends.status_value();
   }
-  uint32_t flags = fio::wire::kCloneFlagSameRights;
+  fio::wire::OpenFlags flags = fio::wire::kCloneFlagSameRights;
   if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
     flags |= fio::wire::kOpenFlagDescribe;
   }

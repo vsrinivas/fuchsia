@@ -222,8 +222,9 @@ ComponentControllerBase::GetDir(std::string path) {
         }
       };
 
-  const uint32_t flags = fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
-                         fuchsia::io::OPEN_RIGHT_WRITABLE;
+  const fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_FLAG_DESCRIBE |
+                                       fuchsia::io::OPEN_RIGHT_READABLE |
+                                       fuchsia::io::OPEN_RIGHT_WRITABLE;
   exported_dir_->Open(flags, 0u /* mode */, path, diagnostics_dir_node.NewRequest());
   return bridge.consumer.promise().and_then([diagnostics_dir_node =
                                                  std::move(diagnostics_dir_node)]() mutable {

@@ -125,23 +125,25 @@ pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
 }
 
 const ROOT_NODE: usize = 0;
-const NO_FLAGS: u32 = 0;
-const CLONE_REQ_SUPPORTED_FLAGS: u32 = fio::OPEN_RIGHT_READABLE
-    | fio::OPEN_RIGHT_WRITABLE
-    | fio::OPEN_FLAG_DESCRIBE
-    | fio::CLONE_FLAG_SAME_RIGHTS
-    | fio::OPEN_FLAG_DIRECTORY;
+const NO_FLAGS: fio::OpenFlags = fio::OpenFlags::empty();
+const CLONE_REQ_SUPPORTED_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_FLAG_DESCRIBE)
+    .union(fio::CLONE_FLAG_SAME_RIGHTS)
+    .union(fio::OPEN_FLAG_DIRECTORY);
 // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED when all out-of-tree clients have been
 // updated to use the latest version of the SDK.
-const OPEN_REQ_SUPPORTED_FLAGS: u32 = fio::OPEN_RIGHT_READABLE
-    | fio::OPEN_RIGHT_WRITABLE
-    | fio::OPEN_FLAG_DESCRIBE
-    | fio::OPEN_FLAG_POSIX_DEPRECATED
-    | fio::OPEN_FLAG_POSIX_WRITABLE
-    | fio::OPEN_FLAG_POSIX_EXECUTABLE
-    | fio::OPEN_FLAG_DIRECTORY
-    | fio::OPEN_FLAG_NOT_DIRECTORY
-    | fio::OPEN_FLAG_NODE_REFERENCE;
+const OPEN_REQ_SUPPORTED_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_FLAG_DESCRIBE)
+    .union(fio::OPEN_FLAG_POSIX_DEPRECATED)
+    .union(fio::OPEN_FLAG_POSIX_WRITABLE)
+    .union(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+    .union(fio::OPEN_FLAG_DIRECTORY)
+    .union(fio::OPEN_FLAG_NOT_DIRECTORY)
+    .union(fio::OPEN_FLAG_NODE_REFERENCE);
 
 impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
     /// Create a new `ServiceFs` that is singlethreaded-only and does not
@@ -985,10 +987,10 @@ fn send_failed_on_open(
 
 fn maybe_send_error(
     object: ServerEnd<fio::NodeMarker>,
-    flags: u32,
+    flags: fio::OpenFlags,
     error: zx::sys::zx_status_t,
 ) -> Result<(), Error> {
-    if (flags & fio::OPEN_FLAG_DESCRIBE) != 0 {
+    if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         send_failed_on_open(object, error)?;
     }
     Ok(())
@@ -996,11 +998,11 @@ fn maybe_send_error(
 
 fn handle_potentially_unsupported_flags(
     object: ServerEnd<fio::NodeMarker>,
-    flags: u32,
-    supported_flags_bitmask: u32,
+    flags: fio::OpenFlags,
+    supported_flags_bitmask: fio::OpenFlags,
 ) -> Result<ServerEnd<fio::NodeMarker>, Error> {
     let unsupported_flags = flags & !supported_flags_bitmask;
-    if unsupported_flags != 0 {
+    if !unsupported_flags.is_empty() {
         maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_SUPPORTED)?;
         return Err(format_err!("unsupported flags: {:b}", unsupported_flags));
     } else {
@@ -1086,7 +1088,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         object: ServerEnd<fio::NodeMarker>,
         position: usize,
         name: Option<&str>,
-        flags: u32,
+        flags: fio::OpenFlags,
     ) -> Result<Option<ServiceObjTy::Output>, Error> {
         let node = &self.nodes[position];
 
@@ -1099,23 +1101,23 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             _ => {}
         }
 
-        let info = if (flags & fio::OPEN_FLAG_DESCRIBE) != 0 {
+        let info = if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             Some(self.describe_node(position)?)
         } else {
             None
         };
 
         let is_directory = if let ServiceFsNode::Directory { .. } = node { true } else { false };
-        if (flags & fio::OPEN_FLAG_DIRECTORY != 0) && !is_directory {
+        if (flags.intersects(fio::OPEN_FLAG_DIRECTORY)) && !is_directory {
             send_failed_on_open(object, zx::sys::ZX_ERR_NOT_DIR)?;
             return Ok(None);
         }
-        if (flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0) && is_directory {
+        if (flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY)) && is_directory {
             send_failed_on_open(object, zx::sys::ZX_ERR_NOT_FILE)?;
             return Ok(None);
         }
 
-        if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             let chan = into_async(object.into_channel())?;
             let stream = fio::NodeRequestStream::from_channel(chan);
             send_info_node(&stream, info)?;
@@ -1159,7 +1161,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
 
     fn handle_clone(
         &mut self,
-        flags: u32,
+        flags: fio::OpenFlags,
         object: ServerEnd<fio::NodeMarker>,
         position: usize,
     ) -> Option<ServiceObjTy::Output> {
@@ -1349,7 +1351,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             fio::DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
                 unsupported!(responder)?
             }
-            fio::DirectoryRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            fio::DirectoryRequest::GetFlags { responder } => {
+                unsupported!(responder, fio::OpenFlags::empty())?
+            }
             fio::DirectoryRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             fio::DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 unsupported2!(responder)?
@@ -1539,14 +1543,16 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 unsupported!(responder)?
             }
             fio::FileRequest::Resize { length: _, responder } => unsupported2!(responder)?,
-            fio::FileRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            fio::FileRequest::GetFlags { responder } => {
+                unsupported!(responder, fio::OpenFlags::empty())?
+            }
             fio::FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
                 unsupported!(responder, None)?
             }
             fio::FileRequest::GetBackingMemory { flags: _, responder } => unsupported2!(responder)?,
             fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
-                unsupported!(responder, 0)?
+                unsupported!(responder, fio::OpenFlags::empty())?
             }
             fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 unsupported!(responder)?
@@ -1564,7 +1570,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     ) -> Result<ConnectionState, Error> {
         match request {
             fio::NodeRequest::Clone { flags, object, control_handle: _ } => {
-                if flags & fio::OPEN_FLAG_NODE_REFERENCE == 0 {
+                if !flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
                     // we cannot connect the object-- it is requesting more than a
                     // node reference, which is not allowed from within a node reference.
                     return Ok(ConnectionState::Open);
@@ -1611,7 +1617,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            fio::NodeRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            fio::NodeRequest::GetFlags { responder } => {
+                unsupported!(responder, fio::OpenFlags::empty())?
+            }
             fio::NodeRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             fio::NodeRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
         }

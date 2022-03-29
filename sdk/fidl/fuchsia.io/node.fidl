@@ -122,24 +122,24 @@ protocol Node1 {
     ///
     /// `flags` may be any of:
     ///
-    /// - `OPEN_RIGHT_*`
-    /// - `OPEN_FLAG_APPEND`
-    /// - `OPEN_FLAG_NO_REMOTE`
-    /// - `OPEN_FLAG_DESCRIBE`
-    /// - `CLONE_FLAG_SAME_RIGHTS`
+    /// - `OpenFlags.RIGHT_*`
+    /// - `OpenFlags.APPEND`
+    /// - `OpenFlags.NO_REMOTE`
+    /// - `OpenFlags.DESCRIBE`
+    /// - `OpenFlags.CLONE_SAME_RIGHTS`
     ///
     /// All other flags are ignored.
     ///
-    /// The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
+    /// The `OpenFlags.RIGHT_*` bits in `flags` request corresponding rights over the resulting
     /// cloned object.
     /// The cloned object must have rights less than or equal to the original object, otherwise
     /// returns `ZX_ERR_ACCESS_DENIED`.
-    /// Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
-    /// `CLONE_FLAG_SAME_RIGHTS`.
+    /// Alternatively, pass `OpenFlags.CLONE_SAME_RIGHTS` to inherit the rights on the source connection.
+    /// It is invalid to pass any of the `OpenFlags.RIGHT_*` flags together with
+    /// `OpenFlags.CLONE_SAME_RIGHTS`.
     @selector("fuchsia.io1/Node.Clone")
     Clone(resource struct {
-        flags uint32;
+        flags OpenFlags;
         object server_end:Node;
     });
 
@@ -161,7 +161,7 @@ protocol Node1 {
         info NodeInfo;
     });
 
-    /// An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
+    /// An event produced eagerly by a FIDL server if requested by `OpenFlags.DESCRIBE`.
     ///
     /// Indicates the success or failure of the open operation, and optionally describes the
     /// object. If the status is `ZX_OK`, `info` contains descriptive information about the object
@@ -210,19 +210,19 @@ protocol Node1 {
     @selector("fuchsia.io1/Node.NodeGetFlags")
     GetFlags() -> (struct {
         s zx.status;
-        flags uint32;
+        flags OpenFlags;
     });
 
     /// Changes the `Directory.Open` flags used to access the file.
     /// Supported flags which can be turned on / off:
-    /// - `OPEN_FLAG_APPEND`
+    /// - `OpenFlags.APPEND`
     ///
     /// This method does not require any rights.
     /// This method has the same functionality as SetFlags for File and is
     /// meant as an in-progress replacement.
     @selector("fuchsia.io1/Node.NodeSetFlags")
     SetFlags(struct {
-        flags uint32;
+        flags OpenFlags;
     }) -> (struct {
         s zx.status;
     });

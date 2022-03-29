@@ -27,7 +27,7 @@ import (
 	"fidl/fuchsia/mem"
 )
 
-func respond(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest, err error, node io.NodeWithCtx) error {
+func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest, err error, node io.NodeWithCtx) error {
 	if err != nil {
 		defer func() {
 			_ = req.Close()
@@ -57,7 +57,7 @@ func logError(err error) {
 
 type Node interface {
 	getIO() io.NodeWithCtx
-	addConnection(ctx fidl.Context, flags, mode uint32, req io.NodeWithCtxInterfaceRequest) error
+	addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error
 }
 
 type Service struct {
@@ -73,7 +73,7 @@ func (s *Service) getIO() io.NodeWithCtx {
 	return s
 }
 
-func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (s *Service) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
 	// TODO(fxbug.dev/33595): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK VFS.
 	if flags&io.OpenFlagNodeReference != 0 {
@@ -86,7 +86,7 @@ func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req io.Nod
 	return respond(ctx, flags, req, s.AddFn(context.Background(), req.Channel), s)
 }
 
-func (s *Service) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (s *Service) Clone(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest) error {
 	return s.addConnection(ctx, flags, 0, req)
 }
 
@@ -157,11 +157,11 @@ func (*Service) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2Upda
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*Service) GetFlags(fidl.Context) (int32, uint32, error) {
+func (*Service) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*Service) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (*Service) SetFlags(_ fidl.Context, flags io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -228,7 +228,7 @@ func (dir *DirectoryWrapper) getIO() io.NodeWithCtx {
 	return dir.GetDirectory()
 }
 
-func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
 	ioDir := dir.GetDirectory()
 	stub := io.DirectoryWithCtxStub{Impl: ioDir}
 	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
@@ -246,7 +246,7 @@ type directoryState struct {
 	dirents bytes.Buffer
 }
 
-func (dirState *directoryState) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (dirState *directoryState) Clone(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest) error {
 	return dirState.addConnection(ctx, flags, 0, req)
 }
 
@@ -319,7 +319,7 @@ func (*directoryState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.No
 
 const dot = "."
 
-func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path string, req io.NodeWithCtxInterfaceRequest) error {
+func (dirState *directoryState) Open(ctx fidl.Context, flags io.OpenFlags, mode uint32, path string, req io.NodeWithCtxInterfaceRequest) error {
 	if path == dot {
 		return dirState.addConnection(ctx, flags, mode, req)
 	}
@@ -439,11 +439,11 @@ func (*directoryState) Watch(_ fidl.Context, mask io.WatchMask, options uint32, 
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*directoryState) GetFlags(fidl.Context) (int32, uint32, error) {
+func (*directoryState) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*directoryState) SetFlags(fidl.Context, uint32) (int32, error) {
+func (*directoryState) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -519,7 +519,7 @@ func (file *FileWrapper) getIO() io.NodeWithCtx {
 	return file.getFile()
 }
 
-func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (file *FileWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
 	ioFile := file.getFile()
 	stub := io.FileWithCtxStub{Impl: ioFile}
 	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
@@ -543,7 +543,7 @@ type fileState struct {
 	vmo    zx.VMO
 }
 
-func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
+func (fState *fileState) Clone(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest) error {
 	return fState.addConnection(ctx, flags, 0, req)
 }
 
@@ -736,19 +736,19 @@ func (*fileState) Resize(_ fidl.Context, length uint64) (io.File2ResizeResult, e
 	return io.File2ResizeResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) GetFlags(fidl.Context) (int32, uint32, error) {
+func (*fileState) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (*fileState) SetFlags(_ fidl.Context, flags io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*fileState) GetFlagsDeprecatedUseNode(fidl.Context) (int32, uint32, error) {
+func (*fileState) GetFlagsDeprecatedUseNode(fidl.Context) (int32, io.OpenFlags, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) SetFlagsDeprecatedUseNode(_ fidl.Context, flags uint32) (int32, error) {
+func (*fileState) SetFlagsDeprecatedUseNode(_ fidl.Context, flags io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 

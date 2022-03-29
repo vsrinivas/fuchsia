@@ -151,7 +151,7 @@ fn construct_fs_error_to_mount_vmo_result(source: ConstructFsError) -> MountVmoR
 fn serve_vmo(
     scope: ExecutionScope,
     source: Buffer,
-    flags: u32,
+    flags: fio::OpenFlags,
     root: ServerEnd<fio::DirectoryMarker>,
 ) -> MountVmoResult {
     let tree = match construct_fs(FsSourceType::Vmo(source)) {

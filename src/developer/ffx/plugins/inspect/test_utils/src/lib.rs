@@ -269,7 +269,13 @@ pub fn fake_hub_directory() -> MockDir {
 }
 
 pub trait Entry {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<fio::NodeMarker>);
+    fn open(
+        self: Arc<Self>,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    );
     fn encode(&self, buf: &mut Vec<u8>);
     fn name(&self) -> String;
 }
@@ -340,7 +346,7 @@ fn encode_entries(subdirs: &HashMap<String, Arc<dyn Entry>>) -> Vec<u8> {
 impl Entry for MockDir {
     fn open(
         self: Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: &str,
         object: ServerEnd<fio::NodeMarker>,
@@ -386,7 +392,7 @@ impl Entry for MockDir {
 impl Entry for fio::DirectoryProxy {
     fn open(
         self: Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: &str,
         object: ServerEnd<fio::NodeMarker>,
@@ -416,7 +422,7 @@ impl MockFile {
 impl Entry for MockFile {
     fn open(
         self: Arc<Self>,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _mode: u32,
         _path: &str,
         _object: ServerEnd<fio::NodeMarker>,

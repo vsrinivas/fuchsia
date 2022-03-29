@@ -71,7 +71,7 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_connect(ns, "/dev", fio::wire::kOpenRightReadable,
+    ASSERT_OK(fdio_ns_connect(ns, "/dev", static_cast<uint32_t>(fio::wire::kOpenRightReadable),
                               endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice)));
@@ -89,7 +89,7 @@ TEST(FidlTestCase, Open) {
     ASSERT_OK(endpoints.status_value());
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_connect(ns, "/boot", fio::wire::kOpenRightReadable,
+    ASSERT_OK(fdio_ns_connect(ns, "/boot", static_cast<uint32_t>(fio::wire::kOpenRightReadable),
                               endpoints->server.channel().release()));
     ASSERT_NO_FAILURES(
         FidlOpenValidator(endpoints->client, "lib", zx::ok(fio::wire::NodeInfo::Tag::kDirectory)));

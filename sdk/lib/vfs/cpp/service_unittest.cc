@@ -36,8 +36,9 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
 
   const std::string& service_name() const { return service_name_; }
 
-  void AssertInvalidOpen(uint32_t flag, uint32_t mode, zx_status_t expected_status) {
-    SCOPED_TRACE("flag: " + std::to_string(flag) + ", mode: " + std::to_string(mode));
+  void AssertInvalidOpen(fuchsia::io::OpenFlags flag, uint32_t mode, zx_status_t expected_status) {
+    SCOPED_TRACE("flag: " + std::to_string(static_cast<uint32_t>(flag)) +
+                 ", mode: " + std::to_string(mode));
     fuchsia::io::NodePtr node_ptr;
     dir_ptr()->Open(flag | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, service_name(),
                     node_ptr.NewRequest());
@@ -82,7 +83,7 @@ TEST_F(ServiceTest, CanCloneNodeReference) {
     fuchsia::io::NodeSyncPtr ptr;
     dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
-    ptr->Clone(0, cloned_ptr.NewRequest());
+    ptr->Clone({}, cloned_ptr.NewRequest());
   }
 
   zx_status_t s;
@@ -102,8 +103,9 @@ TEST_F(ServiceTest, TestDescribe) {
 }
 
 TEST_F(ServiceTest, CanOpenAsAService) {
-  uint32_t flags[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
-                      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
+  fuchsia::io::OpenFlags flags[] = {
+      fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
   uint32_t modes[] = {
       // Valid mode types:
       0,
@@ -119,8 +121,9 @@ TEST_F(ServiceTest, CanOpenAsAService) {
   };
 
   for (uint32_t mode : modes) {
-    for (uint32_t flag : flags) {
-      SCOPED_TRACE("flag: " + std::to_string(flag) + ", mode: " + std::to_string(mode));
+    for (fuchsia::io::OpenFlags flag : flags) {
+      SCOPED_TRACE("flag: " + std::to_string(static_cast<uint32_t>(flag)) +
+                   ", mode: " + std::to_string(mode));
       test::placeholders::EchoSyncPtr ptr;
       dir_ptr()->Open(flag, mode, service_name(),
                       fidl::InterfaceRequest<fuchsia::io::Node>(ptr.NewRequest().TakeChannel()));
@@ -134,11 +137,12 @@ TEST_F(ServiceTest, CanOpenAsAService) {
 }
 
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
-  uint32_t flags[] = {fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
-                      fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND,
-                      fuchsia::io::OPEN_FLAG_NO_REMOTE};
+  fuchsia::io::OpenFlags flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
+                                    fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+                                    fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND,
+                                    fuchsia::io::OPEN_FLAG_NO_REMOTE};
 
-  for (uint32_t flag : flags) {
+  for (fuchsia::io::OpenFlags flag : flags) {
     AssertInvalidOpen(flag | fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
                       ZX_ERR_NOT_SUPPORTED);
   }

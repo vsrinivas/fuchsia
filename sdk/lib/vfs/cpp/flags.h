@@ -13,70 +13,73 @@ class Flags {
  public:
   Flags() = delete;
 
-  static bool IsReadable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_READABLE) != 0; }
-
-  static bool IsWritable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != 0; }
-
-  static bool IsExecutable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE) != 0;
+  static bool IsReadable(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_RIGHT_READABLE) != fuchsia::io::OpenFlags();
   }
 
-  static bool IsDirectory(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_DIRECTORY) != 0;
+  static bool IsWritable(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != fuchsia::io::OpenFlags();
   }
 
-  static bool IsNotDirectory(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_NOT_DIRECTORY) != 0;
+  static bool IsExecutable(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE) != fuchsia::io::OpenFlags();
   }
 
-  static bool ShouldDescribe(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_DESCRIBE) != 0;
+  static bool IsDirectory(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_DIRECTORY) != fuchsia::io::OpenFlags();
   }
 
-  static bool IsNodeReference(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_NODE_REFERENCE) != 0;
+  static bool IsNotDirectory(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_NOT_DIRECTORY) != fuchsia::io::OpenFlags();
   }
 
-  static bool ShouldCloneWithSameRights(uint32_t flags) {
-    return (flags & fuchsia::io::CLONE_FLAG_SAME_RIGHTS) != 0;
+  static bool ShouldDescribe(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_DESCRIBE) != fuchsia::io::OpenFlags();
   }
 
-  static bool IsPosixWritable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_POSIX_WRITABLE) != 0;
+  static bool IsNodeReference(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_NODE_REFERENCE) != fuchsia::io::OpenFlags();
   }
 
-  static bool IsPosixExecutable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE) != 0;
+  static bool ShouldCloneWithSameRights(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::CLONE_FLAG_SAME_RIGHTS) != fuchsia::io::OpenFlags();
+  }
+
+  static bool IsPosixWritable(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_POSIX_WRITABLE) != fuchsia::io::OpenFlags();
+  }
+
+  static bool IsPosixExecutable(fuchsia::io::OpenFlags flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE) != fuchsia::io::OpenFlags();
   }
 
   // All known rights.
-  static constexpr uint32_t kFsRights = fuchsia::io::OPEN_RIGHT_READABLE |
-                                        fuchsia::io::OPEN_RIGHT_WRITABLE |
-                                        fuchsia::io::OPEN_RIGHT_EXECUTABLE;
+  static constexpr fuchsia::io::OpenFlags kFsRights = fuchsia::io::OPEN_RIGHTS;
 
   // All lower 16 bits are reserved for future rights extensions.
-  static constexpr uint32_t kFsRightsSpace = 0x0000FFFF;
+  static constexpr fuchsia::io::OpenFlags kFsRightsSpace =
+      static_cast<fuchsia::io::OpenFlags>(fuchsia::io::OPEN_RIGHTS_MASK);
 
   // Flags which can be modified by FIDL File::SetFlags.
-  static constexpr uint32_t kSettableStatusFlags = fuchsia::io::OPEN_FLAG_APPEND;
+  static constexpr fuchsia::io::OpenFlags kSettableStatusFlags = fuchsia::io::OPEN_FLAG_APPEND;
 
   // All flags which indicate state of the connection (excluding rights).
-  static constexpr uint32_t kStatusFlags =
+  static constexpr fuchsia::io::OpenFlags kStatusFlags =
       kSettableStatusFlags | fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
 
   // Returns true if the rights flags in |flags_a| does not exceed
   // those in |flags_b|.
-  static bool StricterOrSameRights(uint32_t flags_a, uint32_t flags_b) {
-    uint32_t rights_a = flags_a & kFsRights;
-    uint32_t rights_b = flags_b & kFsRights;
-    return (rights_a & ~rights_b) == 0;
+  static bool StricterOrSameRights(fuchsia::io::OpenFlags flags_a, fuchsia::io::OpenFlags flags_b) {
+    fuchsia::io::OpenFlags rights_a = flags_a & kFsRights;
+    fuchsia::io::OpenFlags rights_b = flags_b & kFsRights;
+    return (rights_a & ~rights_b) == fuchsia::io::OpenFlags();
   }
 
   // Perform basic flags validation relevant to Directory::Open and Node::Clone.
   // Returns false if the flags combination is invalid.
-  static bool InputPrecondition(uint32_t flags) {
+  static bool InputPrecondition(fuchsia::io::OpenFlags flags) {
     // If the caller specified an unknown right, reject the request.
-    if ((flags & Flags::kFsRightsSpace) & ~Flags::kFsRights) {
+    if (((flags & Flags::kFsRightsSpace) & ~Flags::kFsRights) != fuchsia::io::OpenFlags()) {
       return false;
     }
 
@@ -87,10 +90,8 @@ class Flags {
 
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
     if (Flags::IsNodeReference(flags)) {
-      constexpr uint32_t kValidFlagsForNodeRef =
-          fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_FLAG_DIRECTORY |
-          fuchsia::io::OPEN_FLAG_NOT_DIRECTORY | fuchsia::io::OPEN_FLAG_DESCRIBE;
-      if (flags & ~kValidFlagsForNodeRef) {
+      if ((flags & ~fuchsia::io::OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE) !=
+          fuchsia::io::OpenFlags()) {
         return false;
       }
     }

@@ -875,7 +875,7 @@ where
 struct SocketWorker<I, T, C> {
     ctx: C,
     id: usize,
-    rights: u32,
+    rights: fio::OpenFlags,
     _marker: PhantomData<(I, T)>,
 }
 
@@ -969,7 +969,12 @@ where
     }
 
     // Starts servicing a [Clone request](fposix_socket::SynchronousDatagramSocketRequest::Clone).
-    fn clone_spawn(&self, flags: u32, object: ServerEnd<fio::NodeMarker>, mut worker: Self) {
+    fn clone_spawn(
+        &self,
+        flags: fio::OpenFlags,
+        object: ServerEnd<fio::NodeMarker>,
+        mut worker: Self,
+    ) {
         fasync::Task::spawn(
             async move {
                 let channel = AsyncChannel::from_channel(object.into_channel())
@@ -983,21 +988,21 @@ where
                     }
                 };
                 // Datagram sockets don't understand the following flags.
-                let append_no_remote =
-                    flags & fio::OPEN_FLAG_APPEND != 0 || flags & fio::OPEN_FLAG_NO_REMOTE != 0;
+                let append_no_remote = flags.intersects(fio::OPEN_FLAG_APPEND)
+                    || flags.intersects(fio::OPEN_FLAG_NO_REMOTE);
                 // Datagram sockets are neither mountable nor executable.
-                let executable = flags & fio::OPEN_RIGHT_EXECUTABLE != 0;
+                let executable = flags.intersects(fio::OPEN_RIGHT_EXECUTABLE);
                 // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
                 // OPEN_RIGHT_* flags.
-                let conflicting_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS != 0
-                    && (flags & fio::OPEN_RIGHT_READABLE != 0
-                        || flags & fio::OPEN_RIGHT_WRITABLE != 0);
+                let conflicting_rights = flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS)
+                    && (flags.intersects(fio::OPEN_RIGHT_READABLE)
+                        || flags.intersects(fio::OPEN_RIGHT_WRITABLE));
                 // If CLONE_FLAG_SAME_RIGHTS is not set, then use the
                 // intersection of the inherited rights and the newly specified
                 // rights.
                 let new_rights = flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
-                let more_rights_than_original = new_rights & (!worker.rights) > 0;
-                if flags & fio::CLONE_FLAG_SAME_RIGHTS == 0 && !more_rights_than_original {
+                let more_rights_than_original = new_rights.intersects(!worker.rights);
+                if !flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) && !more_rights_than_original {
                     worker.rights &= new_rights;
                 }
 
@@ -1008,7 +1013,7 @@ where
                     return Ok(());
                 }
 
-                if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+                if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
                     let mut info = worker.make_handler().await.describe();
                     send_on_open(zx::sys::ZX_OK, info.as_mut());
                 }
@@ -1199,7 +1204,7 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetFlags { responder } => {
-                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), fio::OpenFlags::empty());
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetFlags { flags: _, responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
@@ -1581,7 +1586,7 @@ where
 struct RequestHandler<'a, I, T, C: LockableContext> {
     ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context>>>::Guard,
     binding_id: usize,
-    rights: u32,
+    rights: fio::OpenFlags,
     _marker: PhantomData<(I, T)>,
 }
 
@@ -1824,7 +1829,7 @@ where
         }
     }
 
-    fn need_rights(&self, required: u32) -> Result<(), fposix::Errno> {
+    fn need_rights(&self, required: fio::OpenFlags) -> Result<(), fposix::Errno> {
         if self.rights & required == required {
             Ok(())
         } else {
@@ -2449,7 +2454,7 @@ mod tests {
 
     async fn socket_clone(
         socket: &fposix_socket::SynchronousDatagramSocketProxy,
-        flags: u32,
+        flags: fio::OpenFlags,
     ) -> Result<fposix_socket::SynchronousDatagramSocketProxy, Error> {
         let (server, client) = zx::Channel::create()?;
         socket.clone(flags, ServerEnd::from(server))?;
@@ -2835,7 +2840,7 @@ mod tests {
 
     async fn expect_clone_invalid_args(
         socket: &fposix_socket::SynchronousDatagramSocketProxy,
-        flags: u32,
+        flags: fio::OpenFlags,
     ) {
         let cloned = socket_clone(&socket, flags).await.unwrap();
         {

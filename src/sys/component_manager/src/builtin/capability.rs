@@ -15,6 +15,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx, ResourceInfo},
     log::warn,
     routing::capability_source::InternalCapability,
@@ -139,7 +140,7 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,

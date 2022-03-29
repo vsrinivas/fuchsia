@@ -60,65 +60,6 @@ macro_rules! flag_list {
     };
 }
 
-// flags in same order as they appear in fuchsia.io in an attempt to make it easier
-// to keep this list up to date. Although if this list gets out of date it's
-// not the end of the world, the debug printer just won't know how to decode
-// them and will hex format the not-decoded flags.
-const OPEN_FLAGS: &[(u32, &str)] = &flag_list![
-    OPEN_RIGHT_EXECUTABLE,
-    OPEN_RIGHT_READABLE,
-    OPEN_RIGHT_WRITABLE,
-    OPEN_FLAG_CREATE,
-    OPEN_FLAG_CREATE_IF_ABSENT,
-    OPEN_FLAG_TRUNCATE,
-    OPEN_FLAG_DIRECTORY,
-    OPEN_FLAG_APPEND,
-    OPEN_FLAG_NO_REMOTE,
-    OPEN_FLAG_NODE_REFERENCE,
-    OPEN_FLAG_DESCRIBE,
-    OPEN_FLAG_POSIX_WRITABLE,
-    OPEN_FLAG_POSIX_EXECUTABLE,
-    OPEN_FLAG_NOT_DIRECTORY,
-    CLONE_FLAG_SAME_RIGHTS,
-];
-
-#[derive(PartialEq, Eq)]
-struct OpenFlags(u32);
-
-impl Debug for OpenFlags {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut flags = self.0;
-        let flag_strings = OPEN_FLAGS.iter().filter_map(|&flag| {
-            if self.0 & flag.0 == flag.0 {
-                flags &= !flag.0;
-                Some(flag.1)
-            } else {
-                None
-            }
-        });
-        let mut first = true;
-        for flag in flag_strings {
-            if !first {
-                write!(f, " | ")?;
-            }
-            first = false;
-            write!(f, "{}", flag)?;
-        }
-        if flags != 0 {
-            if !first {
-                write!(f, " | ")?;
-            }
-            first = false;
-            write!(f, "{:#x}", flags)?;
-        }
-        if first {
-            write!(f, "0")?;
-        }
-
-        Ok(())
-    }
-}
-
 // modes in same order as they appear in fuchsia.io in an attempt to make it
 // easier to keep this list up to date. Although if this list gets out of date
 // it's not the end of the world, the debug printer just won't know how to

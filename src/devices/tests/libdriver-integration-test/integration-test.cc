@@ -165,7 +165,8 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectRelease(
 }
 
 IntegrationTest::Promise<void> IntegrationTest::DoOpen(
-    const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client, uint32_t flags) {
+    const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client,
+    fuchsia::io::OpenFlags flags) {
   fidl::InterfaceRequest<fuchsia::io::Node> server(
       client->NewRequest(IntegrationTest::IntegrationTest::loop_.dispatcher()));
   PROMISE_ASSERT(ASSERT_TRUE(server.is_valid()));

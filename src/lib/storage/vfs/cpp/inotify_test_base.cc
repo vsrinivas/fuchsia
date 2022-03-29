@@ -25,10 +25,10 @@ fbl::RefPtr<fs::RemoteDir> InotifyTest::GetRemoteDir() {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_TRUE(endpoints.is_ok());
   auto [client, server] = *std::move(endpoints);
-  EXPECT_EQ(ZX_OK,
-            fdio_open(kTmpfsPath,
-                      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable,
-                      server.TakeChannel().release()));
+  EXPECT_EQ(ZX_OK, fdio_open(kTmpfsPath,
+                             static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                                   fuchsia_io::wire::kOpenRightExecutable),
+                             server.TakeChannel().release()));
   return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
 }
 

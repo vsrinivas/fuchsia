@@ -161,9 +161,10 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
     if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
       return status;
     }
-    if ((status = fdio_open("/fs/system",
-                            fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
-                            server.release())) != ZX_OK) {
+    if ((status = fdio_open(
+             "/fs/system",
+             static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable),
+             server.release())) != ZX_OK) {
       FX_LOGS(ERROR) << "cannot open connection to /system: " << status;
       return status;
     }
@@ -181,11 +182,11 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
   // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new
   // usages.
   fbl::unique_fd root_fd;
-  if (zx_status_t status =
-          fdio_open_fd("/",
-                       fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
-                           fio::wire::kOpenRightExecutable,
-                       root_fd.reset_and_get_address());
+  if (zx_status_t status = fdio_open_fd(
+          "/",
+          static_cast<uint32_t>(fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                                fio::wire::kOpenRightExecutable),
+          root_fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);
     return nullptr;

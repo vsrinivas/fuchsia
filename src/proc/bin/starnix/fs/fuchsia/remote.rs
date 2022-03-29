@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
 use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
@@ -25,7 +26,7 @@ impl FileSystemOps for RemoteFs {
 }
 
 impl RemoteFs {
-    pub fn new(root: zx::Channel, rights: u32) -> Result<FileSystemHandle, Errno> {
+    pub fn new(root: zx::Channel, rights: fio::OpenFlags) -> Result<FileSystemHandle, Errno> {
         let remote_node = RemoteNode::new(root.into_handle(), rights)?;
         let attrs = remote_node.zxio.attr_get().map_err(|_| errno!(EIO))?;
         let mut root_node = FsNode::new_root(remote_node);
@@ -44,11 +45,11 @@ struct RemoteNode {
 
     /// The fuchsia.io rights for the dir handle. Subdirs will be opened with
     /// the same rights.
-    rights: u32,
+    rights: fio::OpenFlags,
 }
 
 impl RemoteNode {
-    fn new(handle: zx::Handle, rights: u32) -> Result<RemoteNode, Errno> {
+    fn new(handle: zx::Handle, rights: fio::OpenFlags) -> Result<RemoteNode, Errno> {
         let zxio = Arc::new(Zxio::create(handle).map_err(|status| from_status_like_fdio!(status))?);
         Ok(RemoteNode { zxio, rights })
     }

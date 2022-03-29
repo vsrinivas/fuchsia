@@ -70,7 +70,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   // Push the bash script to the guest.
   fidl::InterfaceHandle<fuchsia::io::File> put_remote;
-  ASSERT_OK(fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE,
+  ASSERT_OK(fdio_open(kTestScriptSource, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                       put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
@@ -172,10 +172,11 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   // The bash script will create a file with contents that were written to
   // stdin.  Pull this file back and inspect its contents.
   fidl::InterfaceHandle<fuchsia::io::File> get_remote;
-  ASSERT_OK(fdio_open(kHostOuputCopyLocation,
-                      fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                          fuchsia::io::OPEN_FLAG_TRUNCATE,
-                      get_remote.NewRequest().TakeChannel().release()));
+  ASSERT_OK(fdio_open(
+      kHostOuputCopyLocation,
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                            fuchsia::io::OPEN_FLAG_TRUNCATE),
+      get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Get(kGuestFileOutputLocation, std::move(get_remote), [&](zx_status_t get_result) {
@@ -248,7 +249,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   // Push the test file to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_remote;
-  ASSERT_OK(fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE,
+  ASSERT_OK(fdio_open(test_file, static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                       put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
@@ -262,10 +263,11 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   // Copy back the file that was sent to the guest.
   fidl::InterfaceHandle<fuchsia::io::File> get_remote;
-  ASSERT_OK(fdio_open(host_verification_file,
-                      fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
-                          fuchsia::io::OPEN_FLAG_TRUNCATE,
-                      get_remote.NewRequest().TakeChannel().release()));
+  ASSERT_OK(fdio_open(
+      host_verification_file,
+      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                            fuchsia::io::OPEN_FLAG_TRUNCATE),
+      get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Get(guest_destination, std::move(get_remote), [&](zx_status_t get_result) {

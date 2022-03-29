@@ -12,7 +12,8 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags) {
+VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(
+    fuchsia_io::wire::OpenFlags fidl_flags) {
   VnodeConnectionOptions options;
 
   // Flags:
@@ -74,8 +75,8 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags
   return options;
 }
 
-uint32_t VnodeConnectionOptions::ToIoV1Flags() const {
-  uint32_t fidl_flags = 0;
+fuchsia_io::wire::OpenFlags VnodeConnectionOptions::ToIoV1Flags() const {
+  fuchsia_io::wire::OpenFlags fidl_flags = {};
 
   // Flags:
   if (flags.create) {

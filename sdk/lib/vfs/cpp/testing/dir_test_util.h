@@ -49,8 +49,8 @@ class DirConnection : public gtest::RealLoopFixture {
  protected:
   virtual vfs::internal::Directory* GetDirectoryNode() = 0;
 
-  void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags, zx_status_t expected_status,
-                  bool test_on_open_event = true);
+  void AssertOpen(async_dispatcher_t* dispatcher, fuchsia::io::OpenFlags flags,
+                  zx_status_t expected_status, bool test_on_open_event = true);
 
   void AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64_t max_bytes,
                          std::vector<Dirent>& expected_dirents,
@@ -61,8 +61,9 @@ class DirConnection : public gtest::RealLoopFixture {
   template <typename T>
   void AssertOpenPathImpl(std::string caller_file, int caller_line,
                           fuchsia::io::DirectorySyncPtr& dir_ptr, const std::string& path,
-                          ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr, uint32_t flags,
-                          uint32_t mode = 0, zx_status_t expected_status = ZX_OK) {
+                          ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
+                          fuchsia::io::OpenFlags flags, uint32_t mode = 0,
+                          zx_status_t expected_status = ZX_OK) {
     ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
     dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path, node_ptr.NewRequest());
     bool on_open_called = false;

@@ -504,8 +504,8 @@ impl Blob {
 
 #[derive(Copy, Clone, Debug)]
 struct FlagSet {
-    required: u32,
-    anti_required: u32,
+    required: fio::OpenFlags,
+    anti_required: fio::OpenFlags,
 }
 
 impl FlagSet {
@@ -519,18 +519,20 @@ impl FlagSet {
         .require_present(fio::OPEN_RIGHT_WRITABLE);
 
     const fn new() -> Self {
-        Self { required: 0, anti_required: 0 }
+        Self { required: fio::OpenFlags::empty(), anti_required: fio::OpenFlags::empty() }
     }
-    const fn require_present(mut self, flags: u32) -> Self {
-        self.required |= flags;
-        self
+    const fn require_present(self, flags: fio::OpenFlags) -> Self {
+        let Self { required, anti_required } = self;
+        let required = required.union(flags);
+        Self { required, anti_required }
     }
-    const fn require_absent(mut self, flags: u32) -> Self {
-        self.anti_required |= flags;
-        self
+    const fn require_absent(self, flags: fio::OpenFlags) -> Self {
+        let Self { required, anti_required } = self;
+        let anti_required = anti_required.union(flags);
+        Self { required, anti_required }
     }
-    fn verify(self, flags: u32) {
+    fn verify(self, flags: fio::OpenFlags) {
         assert_eq!(flags & self.required, self.required);
-        assert_eq!(flags & self.anti_required, 0);
+        assert_eq!(flags & self.anti_required, fio::OpenFlags::empty());
     }
 }

@@ -116,7 +116,7 @@ impl From<ExposeDecl> for CapabilityType {
 fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     Box::new(
         move |scope: ExecutionScope,
-              flags: u32,
+              flags: fio::OpenFlags,
               mode: u32,
               path: Path,
               server_end: ServerEnd<fio::NodeMarker>| {

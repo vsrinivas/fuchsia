@@ -2918,7 +2918,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Clone => {
                     let (_, server_end) =
                         fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
-                    let () = proxy.clone(0, server_end).unwrap();
+                    let () = proxy.clone(fio::OpenFlags::empty(), server_end).unwrap();
                     future::ready(()).boxed()
                 }
                 StubRequestor::Describe => proxy.describe().map(|_| ()).boxed(),
@@ -2935,7 +2935,7 @@ mod serve_write_blob_tests {
                     proxy.get_flags_deprecated_use_node().map(|_| ()).boxed()
                 }
                 StubRequestor::SetFlagsDeprecatedUseNode => {
-                    proxy.set_flags_deprecated_use_node(0).map(|_| ()).boxed()
+                    proxy.set_flags_deprecated_use_node(fio::OpenFlags::empty()).map(|_| ()).boxed()
                 }
                 StubRequestor::Write => proxy.write(&[0; 0]).map(|_| ()).boxed(),
                 StubRequestor::WriteAt => proxy.write_at(&[0; 0], 0).map(|_| ()).boxed(),
@@ -2944,7 +2944,9 @@ mod serve_write_blob_tests {
                 StubRequestor::Seek => proxy.seek(fio::SeekOrigin::Start, 0).map(|_| ()).boxed(),
                 StubRequestor::Truncate => proxy.resize(0).map(|_| ()).boxed(),
                 StubRequestor::GetFlags => proxy.get_flags().map(|_| ()).boxed(),
-                StubRequestor::SetFlags => proxy.set_flags(0).map(|_| ()).boxed(),
+                StubRequestor::SetFlags => {
+                    proxy.set_flags(fio::OpenFlags::empty()).map(|_| ()).boxed()
+                }
                 StubRequestor::GetBuffer => {
                     proxy.get_backing_memory(fio::VmoFlags::empty()).map(|_| ()).boxed()
                 }

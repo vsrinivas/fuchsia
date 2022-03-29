@@ -17,7 +17,7 @@ pub async fn find_codecs<T: Configurator>(
     break_on_idle: bool,
     mut configurator: T,
 ) -> Result<(), Error> {
-    let dev_proxy_local = io_util::clone_directory(&dev_proxy, 0)?;
+    let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
 
     let mut found_codec = false;
@@ -26,7 +26,7 @@ pub async fn find_codecs<T: Configurator>(
         match msg.event {
             fuchsia_vfs_watcher::WatchEvent::EXISTING
             | fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
-                let dev_proxy_local = io_util::clone_directory(&dev_proxy, 0);
+                let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty());
                 match dev_proxy_local {
                     Ok(local) => {
                         let path = Path::new(&msg.filename);

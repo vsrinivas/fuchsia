@@ -112,13 +112,13 @@ class TestDirectory : public fio::testing::Directory_TestBase {
   void SetOpenHandler(OpenHandler open_handler) { open_handler_ = std::move(open_handler); }
 
  private:
-  void Clone(uint32_t flags, fidl::InterfaceRequest<fio::Node> object) override {
+  void Clone(fuchsia::io::OpenFlags flags, fidl::InterfaceRequest<fio::Node> object) override {
     EXPECT_EQ(fuchsia::io::CLONE_FLAG_SAME_RIGHTS, flags);
     fidl::InterfaceRequest<fio::Directory> dir(object.TakeChannel());
     Bind(std::move(dir));
   }
 
-  void Open(uint32_t flags, uint32_t mode, std::string path,
+  void Open(fuchsia::io::OpenFlags flags, uint32_t mode, std::string path,
             fidl::InterfaceRequest<fio::Node> object) override {
     open_handler_(std::move(path), std::move(object));
   }

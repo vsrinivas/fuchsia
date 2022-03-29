@@ -47,7 +47,7 @@ impl Connection {
     /// `OnOpen` event if necessary.
     pub fn create_connection(
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
@@ -61,7 +61,7 @@ impl Connection {
 
     async fn create_connection_task(
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
@@ -85,7 +85,7 @@ impl Connection {
                 }
             };
 
-        if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             let mut info = fio::NodeInfo::Service(fio::Service);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
@@ -254,7 +254,7 @@ impl Connection {
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_clone(&mut self, flags: u32, server_end: ServerEnd<fio::NodeMarker>) {
+    fn handle_clone(&mut self, flags: fio::OpenFlags, server_end: ServerEnd<fio::NodeMarker>) {
         let parent_flags = fio::OPEN_FLAG_NODE_REFERENCE;
         let flags = match inherit_rights_for_clone(parent_flags, flags) {
             Ok(updated) => updated,

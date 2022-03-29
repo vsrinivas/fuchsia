@@ -370,7 +370,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,

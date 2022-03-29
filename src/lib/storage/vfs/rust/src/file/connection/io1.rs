@@ -40,7 +40,7 @@ pub struct FileConnection<T: 'static + File> {
 
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
     /// received with [`value@FileRequest::Clone`].
-    flags: u32,
+    flags: fio::OpenFlags,
 
     /// Seek position. Next byte to be read or written within the buffer. This might be beyond the
     /// current size of buffer, matching POSIX:
@@ -78,7 +78,7 @@ impl<T: 'static + File> FileConnection<T> {
     pub fn create_connection(
         scope: ExecutionScope,
         file: Arc<T>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
         readable: bool,
         writable: bool,
@@ -98,7 +98,7 @@ impl<T: 'static + File> FileConnection<T> {
     pub async fn create_connection_async(
         scope: ExecutionScope,
         file: Arc<T>,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
         readable: bool,
         writable: bool,
@@ -126,14 +126,14 @@ impl<T: 'static + File> FileConnection<T> {
             }
         };
 
-        if flags & fio::OPEN_FLAG_TRUNCATE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_TRUNCATE) {
             if let Err(status) = file.truncate(0).await {
                 send_on_open_with_error(flags, server_end, status);
                 return;
             }
         }
 
-        let info = if flags & fio::OPEN_FLAG_DESCRIBE != 0 {
+        let info = if flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
             match file.describe(flags) {
                 Ok(info) => Some(info),
                 Err(status) => {
@@ -452,8 +452,8 @@ impl<T: 'static + File> FileConnection<T> {
 
     fn handle_clone(
         &mut self,
-        parent_flags: u32,
-        flags: u32,
+        parent_flags: fio::OpenFlags,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = match inherit_rights_for_clone(parent_flags, flags) {
@@ -494,7 +494,7 @@ impl<T: 'static + File> FileConnection<T> {
         offset: u64,
         count: u64,
     ) -> Result<(Vec<u8>, u64), zx::Status> {
-        if self.flags & fio::OPEN_RIGHT_READABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_READABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
 
@@ -507,11 +507,11 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_write(&mut self, content: &[u8]) -> (zx::Status, u64) {
-        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
-        if self.flags & fio::OPEN_FLAG_APPEND != 0 {
+        if self.flags.intersects(fio::OPEN_FLAG_APPEND) {
             match self.file.append(content).await {
                 Ok((bytes, offset)) => {
                     self.seek = offset;
@@ -528,7 +528,7 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (zx::Status, u64) {
-        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
@@ -540,7 +540,7 @@ impl<T: 'static + File> FileConnection<T> {
 
     /// Move seek position to byte `offset` relative to the origin specified by `start`.
     async fn handle_seek(&mut self, offset: i64, start: fio::SeekOrigin) -> (zx::Status, u64) {
-        if self.flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        if self.flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             return (zx::Status::BAD_HANDLE, 0);
         }
 
@@ -576,7 +576,7 @@ impl<T: 'static + File> FileConnection<T> {
         flags: fio::NodeAttributeFlags,
         attrs: fio::NodeAttributes,
     ) -> zx::Status {
-        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return zx::Status::BAD_HANDLE;
         }
 
@@ -587,7 +587,7 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_truncate(&mut self, length: u64) -> zx::Status {
-        if self.flags & fio::OPEN_RIGHT_WRITABLE == 0 {
+        if !self.flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
             return zx::Status::BAD_HANDLE;
         }
 
@@ -616,7 +616,7 @@ mod tests {
 
     #[derive(Debug, PartialEq)]
     enum FileOperation {
-        Init { flags: u32 },
+        Init { flags: fio::OpenFlags },
         ReadAt { offset: u64, count: u64 },
         WriteAt { offset: u64, content: Vec<u8> },
         Append { content: Vec<u8> },
@@ -668,7 +668,7 @@ mod tests {
 
     #[async_trait]
     impl File for MockFile {
-        async fn open(&self, flags: u32) -> Result<(), zx::Status> {
+        async fn open(&self, flags: fio::OpenFlags) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::Init { flags })?;
             Ok(())
         }
@@ -750,7 +750,7 @@ mod tests {
         fn open(
             self: Arc<Self>,
             scope: ExecutionScope,
-            flags: u32,
+            flags: fio::OpenFlags,
             _mode: u32,
             path: Path,
             server_end: ServerEnd<fio::NodeMarker>,
@@ -792,7 +792,7 @@ mod tests {
         pub scope: ExecutionScope,
     }
 
-    fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
+    fn init_mock_file(callback: MockCallbackType, flags: fio::OpenFlags) -> TestEnv {
         let file = MockFile::new(callback);
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::FileMarker>().expect("Create proxy to succeed");
@@ -921,7 +921,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_getattr() {
-        let env = init_mock_file(Box::new(always_succeed_callback), 0);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let (status, attributes) = env.proxy.get_attr().await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(
@@ -937,7 +937,10 @@ mod tests {
             }
         );
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: 0 }, FileOperation::GetAttrs,]);
+        assert_eq!(
+            *events,
+            vec![FileOperation::Init { flags: fio::OpenFlags::empty() }, FileOperation::GetAttrs,]
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -962,7 +965,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer_no_perms() {
-        let env = init_mock_file(Box::new(always_succeed_callback), 0);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let result = env
             .proxy
             .get_backing_memory(fio::VmoFlags::READ)
@@ -971,7 +974,7 @@ mod tests {
             .map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: 0 },]);
+        assert_eq!(*events, vec![FileOperation::Init { flags: fio::OpenFlags::empty() },]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1241,10 +1244,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sync() {
-        let env = init_mock_file(Box::new(always_succeed_callback), 0);
+        let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let () = env.proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = env.file.operations.lock().unwrap();
-        assert_eq!(*events, vec![FileOperation::Init { flags: 0 }, FileOperation::Sync,]);
+        assert_eq!(
+            *events,
+            vec![FileOperation::Init { flags: fio::OpenFlags::empty() }, FileOperation::Sync,]
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1341,7 +1347,8 @@ mod tests {
             .unwrap();
         assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
-        const INIT_FLAGS: u32 = fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND;
+        const INIT_FLAGS: fio::OpenFlags =
+            fio::OpenFlags::empty().union(fio::OPEN_RIGHT_WRITABLE).union(fio::OPEN_FLAG_APPEND);
         assert_matches!(
             &events[..],
             [FileOperation::Init { flags: INIT_FLAGS }, FileOperation::Append { .. },]

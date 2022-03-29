@@ -95,8 +95,8 @@ class PseudoFile extends Vnode {
 
   /// Connects to this instance of [PseudoFile] and serves [fidl_fuchsia_io.File] over fidl.
   @override
-  int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  int connect(OpenFlags flags, int mode, fidl.InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (_isClosed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;
@@ -108,14 +108,15 @@ class PseudoFile extends Vnode {
       return ZX.ERR_INVALID_ARGS;
     }
 
-    var connectFlags = filterForNodeReference(flags);
-    var status = _validateFlags(parentFlags, connectFlags);
+    final connectFlags = filterForNodeReference(flags);
+    final status =
+        _validateFlags(parentFlags ?? Flags.fsRightsDefault(), connectFlags);
     if (status != ZX.OK) {
       sendErrorEvent(connectFlags, status, request);
       return status;
     }
 
-    var connection = _FileConnection(
+    final connection = _FileConnection(
         capacity: _capacity,
         flags: connectFlags,
         file: this,
@@ -161,8 +162,8 @@ class PseudoFile extends Vnode {
     assert(result);
   }
 
-  int _validateFlags(int parentFlags, int flags) {
-    if (flags & openFlagDirectory != 0) {
+  int _validateFlags(OpenFlags parentFlags, OpenFlags flags) {
+    if (flags & openFlagDirectory != OpenFlags.$none) {
       return ZX.ERR_NOT_DIR;
     }
     var allowedFlags = openFlagDescribe |
@@ -179,19 +180,20 @@ class PseudoFile extends Vnode {
     }
 
     // allowedFlags takes precedence over prohibited_flags.
-    var prohibitedFlags = openFlagAppend;
+    const prohibitedFlags = openFlagAppend;
 
-    var flagsDependentOnParentFlags = [openRightReadable, openRightWritable];
-    for (var flag in flagsDependentOnParentFlags) {
-      if (flags & flag != 0 && parentFlags & flag == 0) {
+    final flagsDependentOnParentFlags = [openRightReadable, openRightWritable];
+    for (final flag in flagsDependentOnParentFlags) {
+      if (flags & flag != OpenFlags.$none &&
+          parentFlags & flag == OpenFlags.$none) {
         return ZX.ERR_ACCESS_DENIED;
       }
     }
 
-    if (flags & prohibitedFlags != 0) {
+    if (flags & prohibitedFlags != OpenFlags.$none) {
       return ZX.ERR_INVALID_ARGS;
     }
-    if (flags & ~allowedFlags != 0) {
+    if (flags & ~allowedFlags != OpenFlags.$none) {
       return ZX.ERR_NOT_SUPPORTED;
     }
     return ZX.OK;
@@ -204,7 +206,7 @@ class PseudoFile extends Vnode {
     // they open a connection, dart fidl binding throws exception due to
     // event on this fidl.
     scheduleMicrotask(() {
-      for (var c in _connections) {
+      for (final c in _connections) {
         c.closeBinding();
       }
       _connections.clear();
@@ -219,7 +221,7 @@ class _FileConnection extends File {
   final FileBinding _binding = FileBinding();
 
   /// open file connection flags
-  final int flags;
+  final OpenFlags flags;
 
   /// open file mode
   final int mode;
@@ -257,11 +259,11 @@ class _FileConnection extends File {
       _buffer = Uint8List(capacity);
     }
 
-    if (flags & openFlagTruncate != 0) {
+    if (flags & openFlagTruncate != OpenFlags.$none) {
       // don't call read handler on truncate.
       _wasWritten = true;
     } else {
-      var readBuf = file._readFn!();
+      final readBuf = file._readFn!();
       _currentLen = readBuf.lengthInBytes;
       if (_currentLen > capacity) {
         capacity = _currentLen;
@@ -281,7 +283,7 @@ class _FileConnection extends File {
   @override
   Stream<File$OnOpen$Response> get onOpen {
     File$OnOpen$Response d;
-    if ((flags & openFlagDescribe) == 0) {
+    if ((flags & openFlagDescribe) == OpenFlags.$none) {
       d = File$OnOpen$Response(ZX.ERR_NOT_FILE, null);
     } else {
       NodeInfo nodeInfo = file.describe();
@@ -301,13 +303,14 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<void> clone(int flags, fidl.InterfaceRequest<Node> object) async {
+  Future<void> clone(
+      OpenFlags flags, fidl.InterfaceRequest<Node> object) async {
     if (!Flags.inputPrecondition(flags)) {
       file.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
       return;
     }
     if (Flags.shouldCloneWithSameRights(flags)) {
-      if ((flags & Flags.fsRightsSpace) != 0) {
+      if ((flags.$value & openRightsMask) != 0) {
         file.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
         return;
       }
@@ -317,8 +320,8 @@ class _FileConnection extends File {
     // rights as those from the originating connection.
     var newFlags = flags;
     if (Flags.shouldCloneWithSameRights(flags)) {
-      newFlags &= (~Flags.fsRights);
-      newFlags |= (this.flags & Flags.fsRights);
+      newFlags &= (~openRights);
+      newFlags |= (this.flags & openRights);
       newFlags &= ~cloneFlagSameRights;
     }
 
@@ -349,7 +352,7 @@ class _FileConnection extends File {
 
   @override
   Future<void> close() async {
-    var status = await closeDeprecated();
+    final status = await closeDeprecated();
     if (status != ZX.OK) {
       throw fidl.MethodException(status);
     }
@@ -401,7 +404,7 @@ class _FileConnection extends File {
 
   @override
   Future<File$ReadDeprecated$Response> readDeprecated(int count) async {
-    var response = _handleRead(count, seekPos);
+    final response = _handleRead(count, seekPos);
     if (response.s == ZX.OK) {
       seekPos += response.data.length;
     }
@@ -410,7 +413,7 @@ class _FileConnection extends File {
 
   @override
   Future<Uint8List> read(int count) async {
-    var response = _handleRead(count, seekPos);
+    final response = _handleRead(count, seekPos);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
     }
@@ -421,13 +424,13 @@ class _FileConnection extends File {
   @override
   Future<File$ReadAtDeprecated$Response> readAtDeprecated(
       int count, int offset) async {
-    var response = _handleRead(count, offset);
+    final response = _handleRead(count, offset);
     return File$ReadAtDeprecated$Response(response.s, response.data);
   }
 
   @override
   Future<Uint8List> readAt(int count, int offset) async {
-    var response = _handleRead(count, offset);
+    final response = _handleRead(count, offset);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
     }
@@ -442,7 +445,7 @@ class _FileConnection extends File {
 
   @override
   Future<int> seek(SeekOrigin seek, int offset) async {
-    var response = _handleSeek(seek, offset);
+    final response = _handleSeek(seek, offset);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
     }
@@ -478,12 +481,12 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> setFlags(int flags) async {
+  Future<int> setFlags(OpenFlags flags) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 
   @override
-  Future<int> setFlagsDeprecatedUseNode(int flags) async {
+  Future<int> setFlagsDeprecatedUseNode(OpenFlags flags) async {
     return await setFlags(flags);
   }
 
@@ -511,7 +514,7 @@ class _FileConnection extends File {
   }
 
   int _handleResize(int length) {
-    if ((flags & openRightWritable) == 0) {
+    if ((flags & openRightWritable) == OpenFlags.$none) {
       return ZX.ERR_ACCESS_DENIED;
     }
     if (file._writeFn == null) {
@@ -529,7 +532,7 @@ class _FileConnection extends File {
 
   @override
   Future<File$WriteDeprecated$Response> writeDeprecated(Uint8List data) async {
-    var response = _handleWrite(seekPos, data);
+    final response = _handleWrite(seekPos, data);
     if (response.s == ZX.OK) {
       seekPos += response.actual;
     }
@@ -538,7 +541,7 @@ class _FileConnection extends File {
 
   @override
   Future<int> write(Uint8List data) async {
-    var response = _handleWrite(seekPos, data);
+    final response = _handleWrite(seekPos, data);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
     }
@@ -549,13 +552,13 @@ class _FileConnection extends File {
   @override
   Future<File$WriteAtDeprecated$Response> writeAtDeprecated(
       Uint8List data, int offset) async {
-    var response = _handleWrite(offset, data);
+    final response = _handleWrite(offset, data);
     return File$WriteAtDeprecated$Response(response.s, response.actual);
   }
 
   @override
   Future<int> writeAt(Uint8List data, int offset) async {
-    var response = _handleWrite(offset, data);
+    final response = _handleWrite(offset, data);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
     }
@@ -563,7 +566,7 @@ class _FileConnection extends File {
   }
 
   File$ReadDeprecated$Response _handleRead(int count, int offset) {
-    if ((flags & openRightReadable) == 0) {
+    if ((flags & openRightReadable) == OpenFlags.$none) {
       return File$ReadDeprecated$Response(ZX.ERR_ACCESS_DENIED, Uint8List(0));
     }
     if (file._readFn == null) {
@@ -583,12 +586,12 @@ class _FileConnection extends File {
         c = 0;
       }
     }
-    var b = Uint8List.view(_buffer.buffer, offset, c);
+    final b = Uint8List.view(_buffer.buffer, offset, c);
     return File$ReadDeprecated$Response(ZX.OK, b);
   }
 
   File$WriteDeprecated$Response _handleWrite(int offset, Uint8List data) {
-    if ((flags & openRightWritable) == 0) {
+    if ((flags & openRightWritable) == OpenFlags.$none) {
       return File$WriteDeprecated$Response(ZX.ERR_ACCESS_DENIED, 0);
     }
     if (file._writeFn == null) {
@@ -601,7 +604,7 @@ class _FileConnection extends File {
       return File$WriteDeprecated$Response(ZX.ERR_OUT_OF_RANGE, 0);
     }
 
-    var actual = min(data.length, capacity - offset);
+    final actual = min(data.length, capacity - offset);
     _buffer.setRange(offset, offset + actual, data.getRange(0, actual));
     _wasWritten = true;
     _currentLen = offset + actual;

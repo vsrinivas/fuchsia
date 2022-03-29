@@ -60,11 +60,11 @@ impl TestPackage {
 }
 
 // Should roughly be kept in sync with the heuristic under Open in pkgfs/package_directory.go
-fn should_redirect_request_to_merkle_file(path: &str, flags: u32, mode: u32) -> bool {
+fn should_redirect_request_to_merkle_file(path: &str, flags: fio::OpenFlags, mode: u32) -> bool {
     let mode_file = mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_FILE;
-    let file_flag = flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0;
-    let dir_flag = flags & fio::OPEN_FLAG_DIRECTORY != 0;
-    let path_flag = flags & fio::OPEN_FLAG_NODE_REFERENCE != 0;
+    let file_flag = flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY);
+    let dir_flag = flags.intersects(fio::OPEN_FLAG_DIRECTORY);
+    let path_flag = flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE);
 
     let open_as_file = mode_file || file_flag;
     let open_as_directory = dir_flag || path_flag;

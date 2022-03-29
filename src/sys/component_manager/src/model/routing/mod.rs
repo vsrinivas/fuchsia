@@ -41,8 +41,10 @@ use {
 pub type RouteRequest = ::routing::RouteRequest;
 pub type RouteSource = ::routing::RouteSource<ComponentInstance>;
 
-const SERVICE_OPEN_FLAGS: u32 =
-    fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const SERVICE_OPEN_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OPEN_FLAG_DESCRIBE)
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE);
 
 /// Routes a capability from `target` to its source. Opens the capability if routing succeeds.
 ///
@@ -149,7 +151,7 @@ pub(super) async fn route_and_open_capability_for_resolver(
 /// Only capabilities that can be installed in a namespace are supported: Protocol, Service,
 /// Directory, and Storage.
 pub(super) async fn route_and_open_namespace_capability(
-    flags: u32,
+    flags: fio::OpenFlags,
     open_mode: u32,
     relative_path: String,
     use_decl: UseDecl,
@@ -179,7 +181,7 @@ pub(super) async fn route_and_open_namespace_capability(
 /// Only capabilities that can both be opened from a VFS and be exposed to their parent
 /// are supported: Protocol, Service, and Directory.
 pub(super) async fn route_and_open_namespace_capability_from_expose(
-    flags: u32,
+    flags: fio::OpenFlags,
     open_mode: u32,
     relative_path: String,
     expose_decl: ExposeDecl,
@@ -237,7 +239,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
     async fn open(
         self: Box<Self>,
         _task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -293,7 +295,7 @@ impl CapabilityProvider for NamespaceCapabilityProvider {
     async fn open(
         self: Box<Self>,
         _task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,

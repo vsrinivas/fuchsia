@@ -95,7 +95,7 @@ impl FakePkgfs {
     fn handle_open(
         inside_pkgfs: bool,
         path: &str,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         // Only support opening the base_resolver_test package's directory. All other paths just

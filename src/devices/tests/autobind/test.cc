@@ -17,6 +17,7 @@ TEST(AutobindTest, DriversExist) {
   zx::channel client, server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
   ASSERT_EQ(ZX_OK, fdio_open("/dev/sys/test/autobind/autobind",
-                             fuchsia_io::wire::kOpenRightReadable, server.release()));
+                             static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable),
+                             server.release()));
   ASSERT_EQ(ZX_OK, client.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 }

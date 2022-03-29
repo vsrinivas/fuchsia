@@ -21,21 +21,23 @@ namespace fio = fuchsia_io;
 
 using OpenTest = FilesystemTest;
 
-fidl::ClientEnd<fio::Directory> CreateDirectory(uint32_t dir_flags, const std::string& path) {
+fidl::ClientEnd<fio::Directory> CreateDirectory(fio::wire::OpenFlags dir_flags,
+                                                const std::string& path) {
   EXPECT_EQ(mkdir(path.c_str(), 0755), 0);
 
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
   EXPECT_EQ(endpoints.status_value(), ZX_OK);
-  EXPECT_EQ(fdio_open(path.c_str(), dir_flags | fio::wire::kOpenFlagDirectory,
-                      endpoints->server.TakeChannel().release()),
-            ZX_OK);
+  EXPECT_EQ(
+      fdio_open(path.c_str(), static_cast<uint32_t>(dir_flags | fio::wire::kOpenFlagDirectory),
+                endpoints->server.TakeChannel().release()),
+      ZX_OK);
 
   return std::move(endpoints->client);
 }
 
 zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
                                const std::string& path) {
-  uint32_t child_flags =
+  fio::wire::OpenFlags child_flags =
       fio::wire::kOpenFlagCreate | fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe;
   auto child_endpoints = fidl::CreateEndpoints<fio::Node>();
   EXPECT_EQ(child_endpoints.status_value(), ZX_OK);
@@ -65,13 +67,13 @@ zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
 }
 
 TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDir) {
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
   EXPECT_EQ(OpenFileWithCreate(parent, "b"), ZX_OK);
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDir) {
-  uint32_t flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
   EXPECT_EQ(OpenFileWithCreate(parent, "b"), ZX_ERR_ACCESS_DENIED);
 }
@@ -79,7 +81,7 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDir) {
 TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDirPosixOpen) {
   // kOpenFlagPosixWritable expand the rights of the directory connection to include write rights if
   // the parent connection has them.
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
   flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
@@ -97,7 +99,7 @@ TEST_P(OpenTest, OpenFileWithCreateCreatesInReadWriteDirPosixOpen) {
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixOpen) {
-  uint32_t flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
   flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
@@ -116,7 +118,7 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixOpen) {
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadWriteDirPosixClone) {
   // kOpenFlagPosixWritable only does the rights expansion with the open call though.
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
   flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
@@ -131,7 +133,7 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadWriteDirPosixClone) {
 }
 
 TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixClone) {
-  uint32_t flags = fio::wire::kOpenRightReadable;
+  fio::wire::OpenFlags flags = fio::wire::kOpenRightReadable;
   auto parent = CreateDirectory(flags, GetPath("a"));
 
   flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |

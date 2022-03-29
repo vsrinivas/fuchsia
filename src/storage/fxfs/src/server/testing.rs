@@ -172,7 +172,7 @@ pub async fn close_dir_checked(dir: fio::DirectoryProxy) {
 // Utility function to open a new node connection under |dir|.
 pub async fn open_file(
     dir: &fio::DirectoryProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     path: &str,
 ) -> Result<fio::FileProxy, Error> {
@@ -185,7 +185,7 @@ pub async fn open_file(
 // Like |open_file|, but asserts if the open call fails.
 pub async fn open_file_checked(
     dir: &fio::DirectoryProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     path: &str,
 ) -> fio::FileProxy {
@@ -195,7 +195,7 @@ pub async fn open_file_checked(
 // Utility function to open a new node connection under |dir|.
 pub async fn open_dir(
     dir: &fio::DirectoryProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     path: &str,
 ) -> Result<fio::DirectoryProxy, Error> {
@@ -208,7 +208,7 @@ pub async fn open_dir(
 // Like |open_dir|, but asserts if the open call fails.
 pub async fn open_dir_checked(
     dir: &fio::DirectoryProxy,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     path: &str,
 ) -> fio::DirectoryProxy {

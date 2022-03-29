@@ -27,7 +27,7 @@ use {
 trait OpenRequestHandler: Sized {
     fn handle_open_request(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: String,
         object: ServerEnd<fio::NodeMarker>,
@@ -110,7 +110,7 @@ impl OpenFailOrTempFs {
 impl OpenRequestHandler for OpenFailOrTempFs {
     fn handle_open_request(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: String,
         object: ServerEnd<fio::NodeMarker>,
@@ -185,7 +185,7 @@ impl WriteFailOrTempFs {
 impl OpenRequestHandler for WriteFailOrTempFs {
     fn handle_open_request(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: String,
         object: ServerEnd<fio::NodeMarker>,
@@ -226,7 +226,7 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         // not directories, so cast the NodeProxy to a FileProxy. If the pkg-resolver assumption
         // changes, this code will have to support both.
         let backing_file_proxy = fio::FileProxy::new(backing_node_proxy.into_channel().unwrap());
-        let send_onopen = flags & fio::OPEN_FLAG_DESCRIBE != 0;
+        let send_onopen = flags.intersects(fio::OPEN_FLAG_DESCRIBE);
 
         let file_handler = Arc::new(FailingWriteFileStreamHandler::new(
             backing_file_proxy,
@@ -399,7 +399,7 @@ impl RenameFailOrTempFs {
 impl OpenRequestHandler for RenameFailOrTempFs {
     fn handle_open_request(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: String,
         object: ServerEnd<fio::NodeMarker>,

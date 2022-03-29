@@ -113,7 +113,7 @@ impl WriteNamedError {
 /// Opens the given `path` from the current namespace as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
 #[cfg(target_os = "fuchsia")]
-pub fn open_in_namespace(path: &str, flags: u32) -> Result<fio::FileProxy, OpenError> {
+pub fn open_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::FileProxy, OpenError> {
     let (dir, server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(OpenError::CreateProxy)?;
 

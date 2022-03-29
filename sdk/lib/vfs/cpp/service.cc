@@ -21,12 +21,13 @@ void Service::Describe2(fuchsia::io::ConnectionInfo* out_info) {
       fuchsia::io::Representation::WithConnector(fuchsia::io::ConnectorInfo()));
 }
 
-zx_status_t Service::CreateConnection(uint32_t flags,
+zx_status_t Service::CreateConnection(fuchsia::io::OpenFlags flags,
                                       std::unique_ptr<vfs::internal::Connection>* connection) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Service::Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
+zx_status_t Service::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
+                             async_dispatcher_t* dispatcher) {
   if (Flags::IsNodeReference(flags)) {
     return Node::Connect(flags, std::move(request), dispatcher);
   }

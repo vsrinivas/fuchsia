@@ -150,15 +150,17 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   namespace fio = fuchsia_io;
 
   static_assert(fuchsia_io_MAX_PATH == fio::wire::kMaxPath);
-  static_assert(fuchsia_io_OPEN_RIGHT_READABLE == fio::wire::kOpenRightReadable);
-  static_assert(fuchsia_io_OPEN_RIGHT_WRITABLE == fio::wire::kOpenRightWritable);
+  static_assert(fuchsia_io_OPEN_RIGHT_READABLE ==
+                static_cast<uint32_t>(fio::wire::kOpenRightReadable));
+  static_assert(fuchsia_io_OPEN_RIGHT_WRITABLE ==
+                static_cast<uint32_t>(fio::wire::kOpenRightWritable));
   static_assert(fuchsia_io_DirectoryOpenOrdinal ==
                 fidl::internal::WireOrdinal<fio::Directory::Open>::value);
 
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
-  fidl::internal::TransactionalRequest<fio::Directory::Open> request{0, 0, fidl::StringView(""),
-                                                                     std::move(endpoints->server)};
+  fidl::internal::TransactionalRequest<fio::Directory::Open> request{
+      {}, 0, fidl::StringView(), std::move(endpoints->server)};
   fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fio::Directory::Open>>
       msg{&request};
   ASSERT_OK(msg.status());

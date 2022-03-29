@@ -14,28 +14,31 @@ use {
 };
 
 /// Set of known rights.
-const FS_RIGHTS: u32 =
-    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE;
+const FS_RIGHTS: fio::OpenFlags = fio::OPEN_RIGHTS;
 
 /// Flags visible to GetFlags. These are flags that have meaning after the open call; all other
 /// flags are only significant at open time.
-pub const GET_FLAGS_VISIBLE: u32 = fio::OPEN_RIGHT_READABLE
-    | fio::OPEN_RIGHT_WRITABLE
-    | fio::OPEN_RIGHT_EXECUTABLE
-    | fio::OPEN_FLAG_APPEND
-    | fio::OPEN_FLAG_NODE_REFERENCE;
+pub const GET_FLAGS_VISIBLE: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OPEN_RIGHT_READABLE)
+    .union(fio::OPEN_RIGHT_WRITABLE)
+    .union(fio::OPEN_RIGHT_EXECUTABLE)
+    .union(fio::OPEN_FLAG_APPEND)
+    .union(fio::OPEN_FLAG_NODE_REFERENCE);
 
 /// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
-pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {
+pub fn stricter_or_same_rights(parent_flags: fio::OpenFlags, flags: fio::OpenFlags) -> bool {
     let parent_rights = parent_flags & FS_RIGHTS;
     let rights = flags & FS_RIGHTS;
-    return (rights & !parent_rights) == 0;
+    return !rights.intersects(!parent_rights);
 }
 
 /// Common logic for rights processing during cloning a node, shared by both file and directory
 /// implementations.
-pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
-    if (flags & fio::CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
+pub fn inherit_rights_for_clone(
+    parent_flags: fio::OpenFlags,
+    mut flags: fio::OpenFlags,
+) -> Result<fio::OpenFlags, Status> {
+    if flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) && flags.intersects(FS_RIGHTS) {
         return Err(Status::INVALID_ARGS);
     }
 
@@ -47,7 +50,7 @@ pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32
     // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
     // as those from the originating connection.  We have ensured that no FS_RIGHTS flags are set
     // above.
-    if flags & fio::CLONE_FLAG_SAME_RIGHTS != 0 {
+    if flags.intersects(fio::CLONE_FLAG_SAME_RIGHTS) {
         flags &= !fio::CLONE_FLAG_SAME_RIGHTS;
         flags |= parent_flags & FS_RIGHTS;
     }
@@ -100,12 +103,16 @@ pub fn node_attributes() -> fio::NodeAttributes {
 /// # Panics
 /// If `status` is `Status::OK`.  In this case `OnOpen` may need to contain a description of the
 /// object, and server_end should not be dropped.
-pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<fio::NodeMarker>, status: Status) {
+pub fn send_on_open_with_error(
+    flags: fio::OpenFlags,
+    server_end: ServerEnd<fio::NodeMarker>,
+    status: Status,
+) {
     if status == Status::OK {
         panic!("send_on_open_with_error() should not be used to respond with Status::OK");
     }
 
-    if flags & fio::OPEN_FLAG_DESCRIBE == 0 {
+    if !flags.intersects(fio::OPEN_FLAG_DESCRIBE) {
         // There is no reasonable way to report this error.  Assuming the `server_end` has just
         // disconnected or failed in some other way why we are trying to send OnOpen.
         let _ = server_end.close_with_epitaph(status);
@@ -176,6 +183,10 @@ mod tests {
 
     #[test]
     fn node_reference_is_inherited() {
-        irfc_ok!(fio::OPEN_FLAG_NODE_REFERENCE, 0, fio::OPEN_FLAG_NODE_REFERENCE);
+        irfc_ok!(
+            fio::OPEN_FLAG_NODE_REFERENCE,
+            fio::OpenFlags::empty(),
+            fio::OPEN_FLAG_NODE_REFERENCE
+        );
     }
 }

@@ -14,6 +14,7 @@ use {
     cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx},
     futures::TryStreamExt,
     lazy_static::lazy_static,
@@ -42,7 +43,7 @@ impl CapabilityProvider for EchoCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,

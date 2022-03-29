@@ -621,7 +621,7 @@ mod tests {
     };
 
     fn create_ns_from_current_ns(
-        dir_paths: Vec<(&str, u32)>,
+        dir_paths: Vec<(&str, fio::OpenFlags)>,
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
         let mut ns = vec![];
         for (path, permission) in dir_paths {

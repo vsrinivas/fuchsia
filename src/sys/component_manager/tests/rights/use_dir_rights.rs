@@ -14,21 +14,21 @@ use {
 /// rights.
 struct RightsTestCase {
     path: &'static str,
-    rights: u32,
+    rights: fio::OpenFlags,
 }
 
 impl RightsTestCase {
     /// Constructs a new rights test case.
-    fn new(path: &'static str, rights: u32) -> RightsTestCase {
+    fn new(path: &'static str, rights: fio::OpenFlags) -> RightsTestCase {
         RightsTestCase { path: path, rights: rights }
     }
 
     /// Returns every right not available for this path.
-    fn unavailable_rights(&self) -> Vec<u32> {
+    fn unavailable_rights(&self) -> Vec<fio::OpenFlags> {
         let all_rights =
             [fio::OPEN_RIGHT_READABLE, fio::OPEN_RIGHT_WRITABLE, fio::OPEN_RIGHT_EXECUTABLE];
 
-        let mut unavailable_rights: Vec<u32> = vec![];
+        let mut unavailable_rights: Vec<fio::OpenFlags> = vec![];
         for right_to_check in all_rights.iter() {
             if *right_to_check | self.rights != self.rights {
                 unavailable_rights.push(*right_to_check);
@@ -45,7 +45,7 @@ impl RightsTestCase {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     format!(
-                        "Path: {} with rights: {} was opened with invalid rights {}",
+                        "Path: {} with rights: {:?} was opened with invalid rights {:?}",
                         self.path, self.rights, invalid_right
                     ),
                 ));

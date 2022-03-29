@@ -60,18 +60,16 @@ zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
   return zx::ok(std::move(representation));
 }
 
-bool PrevalidateFlags(uint32_t flags) {
+bool PrevalidateFlags(fio::wire::OpenFlags flags) {
   // If the caller specified an unknown right, reject the request.
-  if ((flags & fio::wire::kOpenRightsMask) & ~fio::wire::kOpenRights) {
+  if ((flags & static_cast<fio::wire::OpenFlags>(fio::wire::kOpenRightsMask)) &
+      ~fio::wire::kOpenRights) {
     return false;
   }
 
   if (flags & fio::wire::kOpenFlagNodeReference) {
-    constexpr uint32_t kValidFlagsForNodeRef =
-        fio::wire::kOpenFlagNodeReference | fio::wire::kOpenFlagDirectory |
-        fio::wire::kOpenFlagNotDirectory | fio::wire::kOpenFlagDescribe;
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
-    if (flags & ~kValidFlagsForNodeRef) {
+    if (flags & ~fio::wire::kOpenFlagsAllowedWithNodeReference) {
       return false;
     }
   }
@@ -255,7 +253,8 @@ zx_status_t Connection::EnsureVnodeClosed() {
   return vnode_->Close();
 }
 
-void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> server_end) {
+void Connection::NodeClone(fio::wire::OpenFlags clone_flags,
+                           fidl::ServerEnd<fio::Node> server_end) {
   auto clone_options = VnodeConnectionOptions::FromIoV1Flags(clone_flags);
   auto write_error = [describe = clone_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                                zx_status_t error) {
@@ -266,8 +265,7 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> serv
     }
   };
   if (!PrevalidateFlags(clone_flags)) {
-    FS_PRETTY_TRACE_DEBUG("[NodeClone] prevalidate failed",
-                          ", incoming flags: ", ZxFlags(clone_flags));
+    FS_PRETTY_TRACE_DEBUG("[NodeClone] prevalidate failed", ", incoming flags: ", clone_flags);
     return write_error(std::move(server_end), ZX_ERR_INVALID_ARGS);
   }
   FS_PRETTY_TRACE_DEBUG("[NodeClone] our options: ", options(),
@@ -358,11 +356,11 @@ zx::status<> Connection::NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
   return zx::make_status(vnode_->SetAttributes(update));
 }
 
-zx::status<uint32_t> Connection::NodeGetFlags() {
+zx::status<fio::wire::OpenFlags> Connection::NodeGetFlags() {
   return zx::ok(options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights));
 }
 
-zx::status<> Connection::NodeSetFlags(uint32_t flags) {
+zx::status<> Connection::NodeSetFlags(fio::wire::OpenFlags flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
   return zx::ok();

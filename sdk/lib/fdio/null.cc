@@ -8,7 +8,8 @@
 
 fdio::~fdio() = default;
 
-zx::status<fdio_ptr> fdio::open(const char* path, uint32_t flags, uint32_t mode) {
+zx::status<fdio_ptr> fdio::open(const char* path, fuchsia_io::wire::OpenFlags flags,
+                                uint32_t mode) {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -66,9 +67,9 @@ zx_status_t fdio::link(std::string_view src, zx_handle_t dst_token, std::string_
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio::get_flags(uint32_t* out_flags) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio::get_flags(fuchsia_io::wire::OpenFlags* out_flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio::set_flags(uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio::set_flags(fuchsia_io::wire::OpenFlags flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
   *out_code = EBADF;

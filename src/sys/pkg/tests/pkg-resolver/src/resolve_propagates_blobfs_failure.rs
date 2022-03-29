@@ -96,7 +96,7 @@ impl DirectoryWithFileCreateOverride {
                     self.clone().spawn(stream);
                 }
                 fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                    let is_create = flags & fio::OPEN_FLAG_CREATE != 0;
+                    let is_create = flags.intersects(fio::OPEN_FLAG_CREATE);
 
                     if path == "." {
                         let stream = object.into_stream().unwrap().cast_stream();

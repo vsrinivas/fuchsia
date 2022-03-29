@@ -1515,7 +1515,7 @@ async fn test_pkgfs_get_flags() {
         .expect("opening /pkg");
     let (status, flags) = this_pkg_dir.get_flags().await.expect("getting directory flags");
     assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
-    assert_eq!(flags, 0);
+    assert_eq!(flags, fio::OpenFlags::empty());
 
     // Try get_flags on a file within our package directory.
     // thinfs maps GetFlags to GetFlags, so this should not close the channel.

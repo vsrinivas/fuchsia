@@ -85,7 +85,7 @@ impl Service {
     fn open_as_node(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
@@ -95,7 +95,7 @@ impl Service {
     fn open_as_service(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
@@ -132,20 +132,20 @@ impl DirectoryEntry for Service {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if !path.is_empty() {
             // See comment at the beginning of [`Service::open_as_service`].
-            if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+            if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
                 send_on_open_with_error(flags, server_end, Status::NOT_DIR);
             }
             return;
         }
 
-        if flags & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_service(scope, flags, mode, server_end);

@@ -12,7 +12,7 @@ namespace fio = fuchsia_io;
 // switch this to always do a strict test.
 static struct {
   const char *path;
-  uint32_t rights;
+  fio::wire::OpenFlags rights;
   bool strict;
 } kExpectedShellPathTestcases[] = {
     {"/boot", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, true},

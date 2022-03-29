@@ -136,7 +136,7 @@ func (d *directoryWrapper) clearCookie() {
 	}
 }
 
-func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
+func (d *directoryWrapper) Clone(_ fidl.Context, flags io.OpenFlags, node io.NodeWithCtxInterfaceRequest) error {
 	newDir, err := d.dir.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
@@ -260,7 +260,7 @@ func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, path string, filters
 	return nil
 }
 
-func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path string, node io.NodeWithCtxInterfaceRequest) error {
+func (d *directoryWrapper) Open(_ fidl.Context, inFlags io.OpenFlags, inMode uint32, path string, node io.NodeWithCtxInterfaceRequest) error {
 	flags := openFlagsFromFIDL(inFlags, inMode)
 	if flags.Path() {
 		flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagDescribe
@@ -469,11 +469,11 @@ func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemI
 	return int32(zx.ErrOk), &info, nil
 }
 
-func (d *directoryWrapper) GetFlags(fidl.Context) (int32, uint32, error) {
-	return int32(zx.ErrNotSupported), uint32(0), nil
+func (d *directoryWrapper) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
+	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (d *directoryWrapper) SetFlags(fidl.Context, uint32) (int32, error) {
+func (d *directoryWrapper) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -483,7 +483,7 @@ type fileWrapper struct {
 	file   fs.File
 }
 
-func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
+func (f *fileWrapper) Clone(_ fidl.Context, flags io.OpenFlags, node io.NodeWithCtxInterfaceRequest) error {
 	newFile, err := f.file.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
@@ -697,11 +697,12 @@ func (f *fileWrapper) getFlagsInternal(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrOk), oflags & (rightFlags | statusFlags), nil
 }
 
-func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, uint32, error) {
-	return f.getFlagsInternal(ctx)
+func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, io.OpenFlags, error) {
+	status, flags, err := f.getFlagsInternal(ctx)
+	return status, io.OpenFlags(flags), err
 }
 
-func (f *fileWrapper) GetFlagsDeprecatedUseNode(ctx fidl.Context) (int32, uint32, error) {
+func (f *fileWrapper) GetFlagsDeprecatedUseNode(ctx fidl.Context) (int32, io.OpenFlags, error) {
 	return f.GetFlags(ctx)
 }
 
@@ -709,7 +710,7 @@ func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io.AdvisoryLockRequest)
 	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (f *fileWrapper) SetFlags(ctx fidl.Context, flags uint32) (int32, error) {
+func (f *fileWrapper) SetFlags(ctx fidl.Context, flags io.OpenFlags) (int32, error) {
 	{
 		flags := uint32(openFlagsFromFIDL(flags, 0))
 		uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
@@ -717,7 +718,7 @@ func (f *fileWrapper) SetFlags(ctx fidl.Context, flags uint32) (int32, error) {
 	}
 }
 
-func (f *fileWrapper) SetFlagsDeprecatedUseNode(ctx fidl.Context, flags uint32) (int32, error) {
+func (f *fileWrapper) SetFlagsDeprecatedUseNode(ctx fidl.Context, flags io.OpenFlags) (int32, error) {
 	return f.SetFlags(ctx, flags)
 }
 
@@ -808,8 +809,8 @@ func fileTypeToFIDL(t fs.FileType) uint32 {
 
 const alignedFlags = uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsRightExecutable)
 
-func openFlagsToFIDL(f fs.OpenFlags) (arg uint32, mode uint32) {
-	arg = uint32(f) & alignedFlags
+func openFlagsToFIDL(f fs.OpenFlags) (arg io.OpenFlags, mode uint32) {
+	arg = io.OpenFlags(uint32(f) & alignedFlags)
 
 	if (f.Create() && !f.Directory()) || f.File() {
 		mode |= syscall.S_IFREG
@@ -820,8 +821,8 @@ func openFlagsToFIDL(f fs.OpenFlags) (arg uint32, mode uint32) {
 	return
 }
 
-func openFlagsFromFIDL(arg uint32, mode uint32) fs.OpenFlags {
-	res := fs.OpenFlags(arg & alignedFlags)
+func openFlagsFromFIDL(arg io.OpenFlags, mode uint32) fs.OpenFlags {
+	res := fs.OpenFlags(uint32(arg) & alignedFlags)
 
 	// Additional open flags
 	if arg&syscall.FsFlagCreate != 0 {

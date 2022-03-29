@@ -6,7 +6,6 @@ import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
-import 'internal/_flags.dart';
 import 'vnode.dart';
 
 // ignore_for_file: unnecessary_null_comparison
@@ -29,13 +28,13 @@ class Service<T> extends Vnode {
   }
 
   @override
-  int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRightsDefault]) {
+  int connect(OpenFlags flags, int mode, fidl.InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     if (_closed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;
     }
-    var status = _validateFlagsAndMode(flags, mode);
+    final status = _validateFlagsAndMode(flags, mode);
     if (status != ZX.OK) {
       sendErrorEvent(flags, status, request);
       return status;
@@ -50,11 +49,11 @@ class Service<T> extends Vnode {
     return DirentType.service;
   }
 
-  int _validateFlagsAndMode(int flags, int mode) {
+  int _validateFlagsAndMode(OpenFlags flags, int mode) {
     if ((mode & ~modeProtectionMask) & ~modeTypeService != 0) {
       return ZX.ERR_INVALID_ARGS;
     }
-    if (flags & openFlagDirectory != 0) {
+    if (flags & openFlagDirectory != OpenFlags.$none) {
       return ZX.ERR_NOT_DIR;
     }
 
@@ -62,13 +61,13 @@ class Service<T> extends Vnode {
     // to be of type fidl.InterfaceRequest<Node> most of the time, but we do send
     // OnOpen event incase of bad flags and if openRightDescribe is passed
     // so that underlying services don't need to handle these flags.
-    var unsupportedFlags = ~(openRightReadable |
+    final unsupportedFlags = ~(openRightReadable |
         openRightWritable |
         openFlagPosixDeprecated |
         openFlagPosixWritable |
         openFlagPosixExecutable |
         cloneFlagSameRights);
-    if (flags & unsupportedFlags != 0) {
+    if (flags & unsupportedFlags != OpenFlags.$none) {
       return ZX.ERR_NOT_SUPPORTED;
     }
 

@@ -39,7 +39,7 @@ class ErrorNodeForSendingEvent extends Node {
   Stream<ConnectionInfo> get onConnectionInfo async* {}
 
   @override
-  Future<void> clone(int flags, InterfaceRequest<Node> object) async {
+  Future<void> clone(OpenFlags flags, InterfaceRequest<Node> object) async {
     // nothing to clone, left blank
   }
 
@@ -87,11 +87,11 @@ class ErrorNodeForSendingEvent extends Node {
 
   @override
   Future<Node$GetFlags$Response> getFlags() async {
-    return Node$GetFlags$Response(ZX.ERR_NOT_SUPPORTED, 0);
+    return Node$GetFlags$Response(ZX.ERR_NOT_SUPPORTED, OpenFlags.$none);
   }
 
   @override
-  Future<int> setFlags(int flags) async {
+  Future<int> setFlags(OpenFlags flags) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

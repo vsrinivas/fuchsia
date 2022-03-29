@@ -608,9 +608,9 @@ async fn get_flags_per_package_source(source: PackageSource) {
 async fn assert_get_flags(
     root_dir: &fio::DirectoryProxy,
     path: &str,
-    open_flag: u32,
-    status_flags: u32,
-    right_flags: u32,
+    open_flag: fio::OpenFlags,
+    status_flags: fio::OpenFlags,
+    right_flags: fio::OpenFlags,
 ) {
     let file = open_file(root_dir, path, open_flag).await.unwrap();
 
@@ -661,7 +661,7 @@ async fn assert_get_flags_meta_file(root_dir: &fio::DirectoryProxy, path: &str) 
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_NODE_REFERENCE;
 
     for open_flag in [
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_FLAG_CREATE_IF_ABSENT,
         fio::OPEN_FLAG_DIRECTORY,

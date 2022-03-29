@@ -81,7 +81,7 @@ impl LegacyComponent {
         fsysv1::LoaderMarker::NAME,
         vfs::remote::remote_boxed(Box::new(
             move |_scope: ExecutionScope,
-                  flags: u32,
+                  flags: fio::OpenFlags,
                   mode: u32,
                   _relative_path: VfsPath,
                   server_end: ServerEnd<fio::NodeMarker>| {
@@ -106,7 +106,7 @@ impl LegacyComponent {
                     svc_name.clone().as_str(),
                     vfs::remote::remote_boxed(Box::new(
                         move |_scope: ExecutionScope,
-                              flags: u32,
+                              flags: fio::OpenFlags,
                               mode: u32,
                               _relative_path: VfsPath,
                               server_end: ServerEnd<fio::NodeMarker>| {

@@ -19,7 +19,7 @@ class File;
 class FileConnection final : public Connection, public fuchsia::io::File {
  public:
   // Create a connection to |vn| with the given |flags|.
-  FileConnection(uint32_t flags, vfs::internal::File* vn);
+  FileConnection(fuchsia::io::OpenFlags flags, vfs::internal::File* vn);
   ~FileConnection() override;
 
   // Start listening for |fuchsia.io.File| messages on |request|.
@@ -28,7 +28,8 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   // |fuchsia::io::File| Implementation:
   void AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
                     AdvisoryLockCallback callback) override;
-  void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void Clone(fuchsia::io::OpenFlags flags,
+             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void CloseDeprecated(CloseDeprecatedCallback callback) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
@@ -48,21 +49,21 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void WriteAtDeprecated(std::vector<uint8_t> data, uint64_t offset,
                          WriteAtDeprecatedCallback callback) override;
   void WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) override;
-  void SeekDeprecated(int64_t offset, fuchsia::io::SeekOrigin start,
+  void SeekDeprecated(int64_t new_offset, fuchsia::io::SeekOrigin start,
                       SeekDeprecatedCallback callback) override;
-  void Seek(fuchsia::io::SeekOrigin start, int64_t offset, SeekCallback callback) override;
+  void Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCallback callback) override;
   void TruncateDeprecatedUseResize(uint64_t length,
                                    TruncateDeprecatedUseResizeCallback callback) override;
   void Resize(uint64_t length, ResizeCallback callback) override;
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback callback) override;
-  void SetFlagsDeprecatedUseNode(uint32_t flags,
+  void SetFlagsDeprecatedUseNode(fuchsia::io::OpenFlags flags,
                                  SetFlagsDeprecatedUseNodeCallback callback) override;
   void GetBufferDeprecatedUseGetBackingMemory(
       fuchsia::io::VmoFlags flags,
       GetBufferDeprecatedUseGetBackingMemoryCallback callback) override;
   void GetBackingMemory(fuchsia::io::VmoFlags flags, GetBackingMemoryCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
-  void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
+  void SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) override;
   void QueryFilesystem(QueryFilesystemCallback callback) override;
 
  protected:

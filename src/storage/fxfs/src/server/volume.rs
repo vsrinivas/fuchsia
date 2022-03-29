@@ -459,7 +459,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
+            open_file(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -467,7 +467,8 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "bar/b").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "bar/b").await;
         close_file_checked(f).await;
 
         close_dir_checked(dst).await;
@@ -500,7 +501,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
+            open_file(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -508,7 +509,8 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "foo/b").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "foo/b").await;
         close_file_checked(f).await;
 
         close_dir_checked(src).await;
@@ -564,7 +566,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file(&root, 0, fio::MODE_TYPE_FILE, "foo/a")
+            open_file(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -627,7 +629,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_dir(&root, 0, fio::MODE_TYPE_DIRECTORY, "foo/a")
+            open_dir(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_DIRECTORY, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -635,7 +637,9 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let f = open_file_checked(&root, 0, fio::MODE_TYPE_FILE, "bar/b/file").await;
+        let f =
+            open_file_checked(&root, fio::OpenFlags::empty(), fio::MODE_TYPE_FILE, "bar/b/file")
+                .await;
         close_file_checked(f).await;
 
         close_dir_checked(dst).await;

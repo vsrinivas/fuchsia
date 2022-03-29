@@ -78,7 +78,7 @@ pub trait DirectoryEntry: IntoAny + Sync + Send {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

@@ -35,7 +35,8 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status = fdio_open_at(pkgfs_root.get(), "system", kFlags, system_req.release());
+  status =
+      fdio_open_at(pkgfs_root.get(), "system", static_cast<uint32_t>(kFlags), system_req.release());
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -45,8 +46,8 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status =
-      fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", kFlags, bin_req.release());
+  status = fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin",
+                        static_cast<uint32_t>(kFlags), bin_req.release());
   if (status != ZX_OK) {
     // non-fatal.
     FX_LOGS(WARNING) << "failed to install /bin (could not open shell-commands)";
@@ -87,9 +88,10 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   const char* cmd = cmd_status.value().c_str();
 
   fbl::unique_fd blob_dir;
-  auto status = zx::make_status(
-      fdio_open_fd("/blob", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
-                   blob_dir.reset_and_get_address()));
+  auto status = zx::make_status(fdio_open_fd(
+      "/blob",
+      static_cast<uint32_t>(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable),
+      blob_dir.reset_and_get_address()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "fdio_open_fd(/blob) failed: " << status.status_string();
     return status;

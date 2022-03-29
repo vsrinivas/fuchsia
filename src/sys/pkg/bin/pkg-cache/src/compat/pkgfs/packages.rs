@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    super::BitFlags as _,
     crate::{base_packages::BasePackages, index::PackageIndex},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -98,27 +97,26 @@ impl DirectoryEntry for PkgfsPackages {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.unset(fio::OPEN_FLAG_POSIX_WRITABLE);
-        let flags = if flags.is_any_set(fio::OPEN_FLAG_POSIX_DEPRECATED) {
-            flags.unset(fio::OPEN_FLAG_POSIX_DEPRECATED).set(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+        let flags = flags.difference(fio::OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.intersects(fio::OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.difference(fio::OPEN_FLAG_POSIX_DEPRECATED).union(fio::OPEN_FLAG_POSIX_EXECUTABLE)
         } else {
             flags
         };
 
         // This directory and all child nodes are read-only
-        if flags
-            & (fio::OPEN_RIGHT_WRITABLE
+        if flags.intersects(
+            fio::OPEN_RIGHT_WRITABLE
                 | fio::OPEN_FLAG_CREATE
                 | fio::OPEN_FLAG_CREATE_IF_ABSENT
                 | fio::OPEN_FLAG_TRUNCATE
-                | fio::OPEN_FLAG_APPEND)
-            != 0
-        {
+                | fio::OPEN_FLAG_APPEND,
+        ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
 
@@ -223,7 +221,7 @@ mod tests {
             )
         }
 
-        fn proxy(self: &Arc<Self>, flags: u32) -> fio::DirectoryProxy {
+        fn proxy(self: &Arc<Self>, flags: fio::OpenFlags) -> fio::DirectoryProxy {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 

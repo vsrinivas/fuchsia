@@ -181,7 +181,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

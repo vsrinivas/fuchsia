@@ -38,26 +38,25 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags & !fio::OPEN_FLAG_POSIX_WRITABLE;
-        let flags = if flags & fio::OPEN_FLAG_POSIX_DEPRECATED != 0 {
+        let flags = if flags.intersects(fio::OPEN_FLAG_POSIX_DEPRECATED) {
             (flags & !fio::OPEN_FLAG_POSIX_DEPRECATED) | fio::OPEN_FLAG_POSIX_EXECUTABLE
         } else {
             flags
         };
         if path.is_empty() {
-            if flags
-                & (fio::OPEN_RIGHT_WRITABLE
+            if flags.intersects(
+                fio::OPEN_RIGHT_WRITABLE
                     | fio::OPEN_FLAG_CREATE
                     | fio::OPEN_FLAG_CREATE_IF_ABSENT
                     | fio::OPEN_FLAG_TRUNCATE
-                    | fio::OPEN_FLAG_APPEND)
-                != 0
-            {
+                    | fio::OPEN_FLAG_APPEND,
+            ) {
                 let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
                 return;
             }

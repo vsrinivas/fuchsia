@@ -39,7 +39,8 @@ bool MagmaDevice::Initialize(int dir_fd, const std::string& name, inspect::Node*
   }
 
   zx_status_t status;
-  status = fdio_open_at(dir_handle, name.c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+  status = fdio_open_at(dir_handle, name.c_str(),
+                        static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                         device_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to connect to service";

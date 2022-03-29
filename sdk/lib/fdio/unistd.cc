@@ -69,43 +69,65 @@ fdio_state_t __fdio_global_state = []() constexpr {
 ();
 
 // Verify the O_* flags which align with fuchsia.io.
-static_assert(O_PATH == fio::wire::kOpenFlagNodeReference, "Open Flag mismatch");
-static_assert(O_CREAT == fio::wire::kOpenFlagCreate, "Open Flag mismatch");
-static_assert(O_EXCL == fio::wire::kOpenFlagCreateIfAbsent, "Open Flag mismatch");
-static_assert(O_TRUNC == fio::wire::kOpenFlagTruncate, "Open Flag mismatch");
-static_assert(O_DIRECTORY == fio::wire::kOpenFlagDirectory, "Open Flag mismatch");
-static_assert(O_APPEND == fio::wire::kOpenFlagAppend, "Open Flag mismatch");
-static_assert(O_NOREMOTE == fio::wire::kOpenFlagNoRemote, "Open Flag mismatch");
+static_assert(O_PATH == static_cast<uint32_t>(fio::wire::kOpenFlagNodeReference),
+              "Open Flag mismatch");
+static_assert(O_CREAT == static_cast<uint32_t>(fio::wire::kOpenFlagCreate), "Open Flag mismatch");
+static_assert(O_EXCL == static_cast<uint32_t>(fio::wire::kOpenFlagCreateIfAbsent),
+              "Open Flag mismatch");
+static_assert(O_TRUNC == static_cast<uint32_t>(fio::wire::kOpenFlagTruncate), "Open Flag mismatch");
+static_assert(O_DIRECTORY == static_cast<uint32_t>(fio::wire::kOpenFlagDirectory),
+              "Open Flag mismatch");
+static_assert(O_APPEND == static_cast<uint32_t>(fio::wire::kOpenFlagAppend), "Open Flag mismatch");
+static_assert(O_NOREMOTE == static_cast<uint32_t>(fio::wire::kOpenFlagNoRemote),
+              "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
-constexpr uint32_t kZxioFsMask =
-    O_PATH | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE;
+constexpr fio::wire::OpenFlags kZxioFsMask =
+    fio::wire::kOpenFlagNodeReference | fio::wire::kOpenFlagCreate |
+    fio::wire::kOpenFlagCreateIfAbsent | fio::wire::kOpenFlagTruncate |
+    fio::wire::kOpenFlagDirectory | fio::wire::kOpenFlagAppend | fio::wire::kOpenFlagNoRemote |
+    fio::wire::kCloneFlagSameRights;
 
 // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
-constexpr uint32_t kZxioFsFlags =
+constexpr fio::wire::OpenFlags kZxioFsFlags =
     kZxioFsMask | fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable |
     fio::wire::kOpenFlagPosixDeprecated | fio::wire::kOpenFlagNotDirectory |
     fio::wire::kCloneFlagSameRights;
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
-static_assert(!(O_RDONLY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_WRONLY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_RDWR & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_NONBLOCK & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_DSYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_SYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_RSYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_NOFOLLOW & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_CLOEXEC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_NOCTTY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_ASYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_DIRECT & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_LARGEFILE & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_NOATIME & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
-static_assert(!(O_TMPFILE & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_RDONLY & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_WRONLY & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_RDWR & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_NONBLOCK & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_DSYNC & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_SYNC & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_RSYNC & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_NOFOLLOW & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_CLOEXEC & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_NOCTTY & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_ASYNC & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_DIRECT & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_LARGEFILE & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_NOATIME & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
+static_assert(!(O_TMPFILE & static_cast<uint32_t>(kZxioFsFlags)),
+              "Unexpected collision with static_cast<uint32_t>(kZxioFsFlags)");
 
-static uint32_t fdio_flags_to_zxio(uint32_t flags) {
-  uint32_t rights = 0;
+static fio::wire::OpenFlags fdio_flags_to_zxio(uint32_t flags) {
+  fio::wire::OpenFlags rights = {};
   switch (flags & O_ACCMODE) {
     case O_RDONLY:
       rights |= fio::wire::kOpenRightReadable;
@@ -118,7 +140,8 @@ static uint32_t fdio_flags_to_zxio(uint32_t flags) {
       break;
   }
 
-  uint32_t result = rights | fio::wire::kOpenFlagDescribe | (flags & kZxioFsMask);
+  fio::wire::OpenFlags result = rights | fio::wire::kOpenFlagDescribe |
+                                (static_cast<fio::wire::OpenFlags>(flags) & kZxioFsMask);
 
   if (!(result & fio::wire::kOpenFlagNodeReference)) {
     result |= fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable;
@@ -126,7 +149,7 @@ static uint32_t fdio_flags_to_zxio(uint32_t flags) {
   return result;
 }
 
-static uint32_t zxio_flags_to_fdio(uint32_t flags) {
+static uint32_t zxio_flags_to_fdio(fio::wire::OpenFlags flags) {
   uint32_t result = 0;
   if ((flags & (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) ==
       (fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable)) {
@@ -137,7 +160,7 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
     result |= O_RDONLY;
   }
 
-  result |= (flags & kZxioFsMask);
+  result |= static_cast<uint32_t>(flags & kZxioFsMask);
   return result;
 }
 
@@ -197,7 +220,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
   }
   flags |= (has_ending_slash ? O_DIRECTORY : 0);
 
-  uint32_t zx_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
+  fio::wire::OpenFlags zx_flags = fdio_flags_to_zxio(static_cast<uint32_t>(flags));
 
   if (!(zx_flags & fio::wire::kOpenFlagDirectory)) {
     // At this point we're not sure if the path refers to a directory.
@@ -850,23 +873,23 @@ int fcntl(int fd, int cmd, ...) {
       if (io == nullptr) {
         return ERRNO(EBADF);
       }
-      uint32_t flags = 0;
+      fio::wire::OpenFlags flags;
       zx_status_t r = io->get_flags(&flags);
       if (r == ZX_ERR_NOT_SUPPORTED) {
         // We treat this as non-fatal, as it's valid for a remote to
         // simply not support FCNTL, but we still want to correctly
         // report the state of the (local) NONBLOCK flag
-        flags = 0;
+        flags = {};
         r = ZX_OK;
       }
-      flags = zxio_flags_to_fdio(flags);
+      uint32_t fdio_flags = zxio_flags_to_fdio(flags);
       if (io->ioflag() & IOFLAG_NONBLOCK) {
-        flags |= O_NONBLOCK;
+        fdio_flags |= O_NONBLOCK;
       }
       if (r != ZX_OK) {
         return ERROR(r);
       }
-      return flags;
+      return fdio_flags;
     }
     case F_SETFL: {
       fdio_ptr io = fd_to_io(fd);
@@ -875,9 +898,8 @@ int fcntl(int fd, int cmd, ...) {
       }
       GET_INT_ARG(n);
 
-      zx_status_t r;
-      uint32_t flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
-      r = io->set_flags(flags);
+      fio::wire::OpenFlags flags = fdio_flags_to_zxio(n & ~O_NONBLOCK);
+      zx_status_t r = io->set_flags(flags);
 
       // Some remotes don't support setting flags; we
       // can adjust their local flags anyway if NONBLOCK

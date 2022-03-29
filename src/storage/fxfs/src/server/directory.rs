@@ -145,7 +145,7 @@ impl FxDirectory {
 
     async fn lookup(
         self: &Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: Path,
     ) -> Result<OpenedNode<dyn FxNode>, Error> {
@@ -165,7 +165,7 @@ impl FxDirectory {
             // lock in place.
             let keys =
                 [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
-            let transaction_or_guard = if last_segment && flags & fio::OPEN_FLAG_CREATE != 0 {
+            let transaction_or_guard = if last_segment && flags.intersects(fio::OPEN_FLAG_CREATE) {
                 Left(fs.clone().new_transaction(&keys, Options::default()).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
@@ -177,19 +177,19 @@ impl FxDirectory {
             match current_dir.directory.lookup(name).await? {
                 Some((object_id, object_descriptor)) => {
                     if transaction_or_guard.is_left()
-                        && flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0
+                        && flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT)
                     {
                         bail!(FxfsError::AlreadyExists);
                     }
                     if last_segment {
                         match object_descriptor {
                             ObjectDescriptor::File => {
-                                if flags & fio::OPEN_FLAG_DIRECTORY > 0 {
+                                if flags.intersects(fio::OPEN_FLAG_DIRECTORY) {
                                     bail!(FxfsError::NotDir)
                                 }
                             }
                             ObjectDescriptor::Directory => {
-                                if flags & fio::OPEN_FLAG_NOT_DIRECTORY > 0 {
+                                if flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) {
                                     bail!(FxfsError::NotFile)
                                 }
                             }
@@ -431,7 +431,7 @@ impl DirectoryEntry for FxDirectory {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

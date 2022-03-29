@@ -352,7 +352,7 @@ TEST_F(SessionTest, LaunchBasemgrV1ProvidesConfig) {
         auto dir_chan = std::move(launch_info.flat_namespace->directories.at(0));
         fuchsia::io::FileSyncPtr file;
         ASSERT_EQ(ZX_OK, fdio_open_at(dir_chan.release(), modular_config::kStartupConfigFilePath,
-                                      fuchsia::io::OPEN_RIGHT_READABLE,
+                                      static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                                       file.NewRequest().TakeChannel().get()));
 
         // Read from the startup.config file into |config_str|.

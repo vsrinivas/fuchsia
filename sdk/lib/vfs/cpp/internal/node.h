@@ -65,8 +65,8 @@ class Node {
                               const fuchsia::io::NodeAttributes& attributes);
 
   // Implementation of |fuchsia.io.Node/Clone|.
-  virtual void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
-                     async_dispatcher_t* dispatcher);
+  virtual void Clone(fuchsia::io::OpenFlags flags, fuchsia::io::OpenFlags parent_flags,
+                     zx::channel request, async_dispatcher_t* dispatcher);
 
   // Establishes a connection for |request| using the given |flags|.
   //
@@ -76,7 +76,8 @@ class Node {
   // current thread.
   //
   // Calls |Connect| after validating flags and modes.
-  zx_status_t Serve(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Serve(fuchsia::io::OpenFlags flags, zx::channel request,
+                    async_dispatcher_t* dispatcher = nullptr);
 
   // Find an entry in this directory with the given |name|.
   //
@@ -123,10 +124,12 @@ class Node {
   // Default implementation:
   // Uses |CreateConnection| to create a connection appropriate for the
   // concrete type of this object.
-  virtual zx_status_t Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher);
+  virtual zx_status_t Connect(fuchsia::io::OpenFlags flags, zx::channel request,
+                              async_dispatcher_t* dispatcher);
 
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
-  static void SendOnOpenEventOnError(uint32_t flags, zx::channel request, zx_status_t status);
+  static void SendOnOpenEventOnError(fuchsia::io::OpenFlags flags, zx::channel request,
+                                     zx_status_t status);
 
   // Store given connection.
   void AddConnection(std::unique_ptr<Connection> connection);
@@ -137,7 +140,8 @@ class Node {
   // The returned connection should be in an "unbound" state.
   //
   // Typically called by |Serve|.
-  virtual zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
+  virtual zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
+                                       std::unique_ptr<Connection>* connection) = 0;
 
  private:
   // Validate flags on |Serve|.
@@ -157,12 +161,12 @@ class Node {
   // |ZX_ERR_NOT_SUPPORTED| if flags are not found in allowed list.
   //
   // Returns ZX_OK if none of the above cases are true.
-  zx_status_t ValidateFlags(uint32_t flags) const;
+  zx_status_t ValidateFlags(fuchsia::io::OpenFlags flags) const;
 
   // Filters out flags that are invalid when combined with
   // |OPEN_FLAG_NODE_REFERENCE|.
   // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
-  uint32_t FilterRefFlags(uint32_t flags);
+  fuchsia::io::OpenFlags FilterRefFlags(fuchsia::io::OpenFlags flags);
 
   // Allowed flags for use in |ValidateFlags|.
   //
@@ -170,7 +174,7 @@ class Node {
   // returned by |GetKind()|.
   //
   // See documentation of  |ValidateFlags| for exact details.
-  uint32_t GetAllowedFlags() const;
+  fuchsia::io::OpenFlags GetAllowedFlags() const;
 
   // Prohibitive flags use in |ValidateFlags|.
   //
@@ -178,7 +182,7 @@ class Node {
   // applied to a directory.
   //
   // See documentation of  |ValidateFlags| for exact details.
-  uint32_t GetProhibitiveFlags() const;
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const;
 
   // guards connection_
   mutable std::mutex mutex_;

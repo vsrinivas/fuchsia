@@ -21,7 +21,7 @@ use {
 pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |scope: ExecutionScope,
-              flags: u32,
+              flags: fio::OpenFlags,
               mode: u32,
               path: Path,
               server_end: ServerEnd<fio::NodeMarker>| {
@@ -68,7 +68,7 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
 pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |scope: ExecutionScope,
-              flags: u32,
+              flags: fio::OpenFlags,
               mode: u32,
               path: Path,
               server_end: ServerEnd<fio::NodeMarker>| {

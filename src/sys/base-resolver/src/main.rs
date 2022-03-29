@@ -221,12 +221,12 @@ mod tests {
 
     /// A DirectoryEntry implementation that checks whether an expected set of flags
     /// are set in the Open request.
-    struct FlagVerifier(u32);
+    struct FlagVerifier(fio::OpenFlags);
 
     impl Entry for FlagVerifier {
         fn open(
             self: Arc<Self>,
-            flags: u32,
+            flags: fio::OpenFlags,
             _mode: u32,
             _path: &str,
             server_end: ServerEnd<fio::NodeMarker>,

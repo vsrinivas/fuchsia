@@ -50,9 +50,9 @@ pub struct Rights(fio::Operations);
 impl Rights {
     /// Converts new fuchsia.io directory rights to legacy fuchsia.io compatible rights. This will
     /// be remove once new rights are supported by component manager.
-    pub fn into_legacy(&self) -> u32 {
-        let mut flags: u32 = 0;
-        let rights = self.0;
+    pub fn into_legacy(&self) -> fio::OpenFlags {
+        let mut flags = fio::OpenFlags::empty();
+        let Self(rights) = self;
         // The `intersects` below is intentional. The translation from io2 to io rights is lossy
         // in the sense that a single io2 right may require an io right with coarser permissions.
         if rights.intersects(*LEGACY_READABLE_RIGHTS) {
@@ -69,7 +69,7 @@ impl Rights {
         //
         // TODO(fxbug.dev/60673): Is this correct? ReadBytes | Connect seems like it should translate to
         // READABLE | WRITABLE, not empty rights.
-        if flags == 0 && rights.contains(fio::Operations::CONNECT) {
+        if flags.is_empty() && rights.contains(fio::Operations::CONNECT) {
             flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         }
         flags

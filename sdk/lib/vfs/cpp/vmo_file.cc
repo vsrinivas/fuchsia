@@ -128,9 +128,11 @@ size_t VmoFile::GetCapacity() { return length_; }
 size_t VmoFile::GetLength() { return length_; }
 
 zx_status_t VmoFile::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
-  out_attributes->mode =
-      fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE |
-      (write_option_ == WriteOption::WRITABLE ? fuchsia::io::OPEN_RIGHT_WRITABLE : 0);
+  fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE;
+  if (write_option_ == WriteOption::WRITABLE) {
+    flags |= fuchsia::io::OPEN_RIGHT_WRITABLE;
+  }
+  out_attributes->mode = fuchsia::io::MODE_TYPE_FILE | static_cast<uint32_t>(flags);
   out_attributes->id = fuchsia::io::INO_UNKNOWN;
   out_attributes->content_size = length_;
   out_attributes->storage_size = length_;

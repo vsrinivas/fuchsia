@@ -75,7 +75,7 @@ zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_
 // Opens the remote object at the given |path| relative to the root of the namespace with the given
 // |flags| asynchronously.
 //
-// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+// |flags| is a |fuchsia.io/OpenFlags|.
 //
 // Always consumes |request|.
 //
@@ -86,7 +86,7 @@ zx_status_t fdio_open(const char* path, uint32_t flags, ZX_HANDLE_RELEASE zx_han
 // Opens the remote object at the given |path| relative to the given |directory| with the given
 // |flags| asynchronously.
 //
-// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+// |flags| is a |fuchsia.io/OpenFlags|.
 //
 // Always consumes |request|.
 //
@@ -101,7 +101,7 @@ zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags
 // Note that unlike fdio_open, this function is synchronous. This is because it produces a file
 // descriptor, which requires synchronously waiting for the open to complete.
 //
-// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+// |flags| is a |fuchsia.io/OpenFlags|.
 //
 // See |fdio_service_connect| for details.
 zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) ZX_AVAILABLE_SINCE(1);
@@ -112,7 +112,7 @@ zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) ZX_AVAIL
 // Note that unlike fdio_open, this function is synchronous. This is because it produces a file
 // descriptor, which requires synchronously waiting for the open to complete.
 //
-// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+// |flags| is a |fuchsia.io/OpenFlags|.
 //
 // See |fdio_service_connect| fort details.
 zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd)

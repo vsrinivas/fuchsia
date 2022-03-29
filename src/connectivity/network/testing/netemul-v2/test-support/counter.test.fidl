@@ -4,6 +4,7 @@
 library fuchsia.netemul.test;
 
 using fuchsia.component;
+using fuchsia.io;
 using zx;
 
 /// Sample interface that keeps a stateful integer counter starting at zero.
@@ -31,7 +32,7 @@ protocol Counter {
     /// + request `request` the server end channel to the node.
     OpenInNamespace(resource struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         request zx.handle:CHANNEL;
     });
     /// Opens the directory found at `path`.

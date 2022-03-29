@@ -144,7 +144,7 @@ pub enum OpenRights {
 }
 
 impl OpenRights {
-    fn to_flags(&self) -> u32 {
+    fn to_flags(&self) -> fio::OpenFlags {
         match self {
             OpenRights::Read => fio::OPEN_RIGHT_READABLE,
             OpenRights::ReadExecute => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,

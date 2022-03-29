@@ -314,10 +314,10 @@ struct VnodeConnectionOptions {
 
 #ifdef __Fuchsia__
   // Converts from fuchsia.io v1 flags to |VnodeConnectionOptions|.
-  static VnodeConnectionOptions FromIoV1Flags(uint32_t fidl_flags);
+  static VnodeConnectionOptions FromIoV1Flags(fuchsia_io::wire::OpenFlags fidl_flags);
 
   // Converts from |VnodeConnectionOptions| to fuchsia.io flags.
-  uint32_t ToIoV1Flags() const;
+  fuchsia_io::wire::OpenFlags ToIoV1Flags() const;
 
   // Some flags (e.g. POSIX) only affect the interpretation of rights at the time of Open/Clone, and
   // should have no effects thereafter. Hence we filter them here.

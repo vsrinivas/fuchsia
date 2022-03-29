@@ -25,7 +25,7 @@ zx_status_t DevfsVnode::OpenNode(fs::Vnode::ValidatedOptions options,
     return ZX_ERR_IO_NOT_PRESENT;
   }
   fbl::RefPtr<zx_device_t> new_dev;
-  zx_status_t status = device_open(dev_, &new_dev, options->ToIoV1Flags());
+  zx_status_t status = device_open(dev_, &new_dev, static_cast<uint32_t>(options->ToIoV1Flags()));
   if (status != ZX_OK) {
     return status;
   }

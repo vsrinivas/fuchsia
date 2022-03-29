@@ -175,7 +175,7 @@ impl Kind {
 #[cfg(target_os = "fuchsia")]
 pub fn connect_in_namespace(
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     chan: zx::Channel,
 ) -> Result<(), zx_status::Status> {
     let namespace = fdio::Namespace::installed()?;
@@ -186,7 +186,7 @@ pub fn connect_in_namespace(
 /// Opens the given `path` from the current namespace as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
 #[cfg(target_os = "fuchsia")]
-pub fn open_in_namespace(path: &str, flags: u32) -> Result<fio::NodeProxy, OpenError> {
+pub fn open_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::NodeProxy, OpenError> {
     let (node, server_end) =
         fidl::endpoints::create_proxy::<fio::NodeMarker>().map_err(OpenError::CreateProxy)?;
 

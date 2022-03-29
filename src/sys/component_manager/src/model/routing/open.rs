@@ -11,7 +11,7 @@ use {
             routing::{RouteRequest, RouteSource},
         },
     },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -31,7 +31,7 @@ impl<'a> OpenOptions<'a> {
     /// in a namespace.
     pub fn for_namespace_capability(
         route_request: &RouteRequest,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: String,
         server_chan: &'a mut zx::Channel,
@@ -74,33 +74,33 @@ impl<'a> OpenOptions<'a> {
 }
 
 pub struct OpenDirectoryOptions<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub relative_path: String,
     pub server_chan: &'a mut zx::Channel,
 }
 
 pub struct OpenProtocolOptions<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub relative_path: String,
     pub server_chan: &'a mut zx::Channel,
 }
 
 pub struct OpenResolverOptions<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub server_chan: &'a mut zx::Channel,
 }
 
 pub struct OpenRunnerOptions<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub server_chan: &'a mut zx::Channel,
 }
 
 pub struct OpenServiceOptions<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub relative_path: String,
     pub server_chan: &'a mut zx::Channel,
@@ -114,7 +114,7 @@ pub struct OpenStorageOptions<'a> {
 
 /// A request to open a capability at its source.
 pub struct OpenRequest<'a> {
-    pub flags: u32,
+    pub flags: fio::OpenFlags,
     pub open_mode: u32,
     pub relative_path: PathBuf,
     pub source: CapabilitySource,

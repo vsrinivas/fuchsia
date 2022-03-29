@@ -213,7 +213,7 @@ protocol Server {
     ///           and the `root` connection will be closed.
     MountVmo(resource struct {
         source fuchsia.mem.Buffer;
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         root server_end:fuchsia.io.Directory;
     }) -> (struct {
         result MountVmoResult;

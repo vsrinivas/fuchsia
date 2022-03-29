@@ -43,7 +43,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
     #[derive(Debug)]
     struct Args {
-        open_flags: u32,
+        open_flags: fio::OpenFlags,
         open_mode: u32,
         expected_mode: u32,
         id_verifier: Box<dyn U64Verifier>,
@@ -55,7 +55,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
     impl Default for Args {
         fn default() -> Self {
             Self {
-                open_flags: 0,
+                open_flags: fio::OpenFlags::empty(),
                 open_mode: 0,
                 expected_mode: 0,
                 id_verifier: Box::new(1),
@@ -288,7 +288,7 @@ async fn describe_per_package_source(source: PackageSource) {
 }
 
 async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &str) {
-    for flag in [0, fio::OPEN_FLAG_NODE_REFERENCE] {
+    for flag in [fio::OpenFlags::empty(), fio::OPEN_FLAG_NODE_REFERENCE] {
         let node =
             io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_DIRECTORY)
                 .await
@@ -324,8 +324,11 @@ async fn assert_describe_file(package_root: &fio::DirectoryProxy, path: &str) {
     }
 }
 
-async fn verify_describe_content_file(node: fio::NodeProxy, flag: u32) -> Result<(), Error> {
-    if flag & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+async fn verify_describe_content_file(
+    node: fio::NodeProxy,
+    flag: fio::OpenFlags,
+) -> Result<(), Error> {
+    if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
         match node.describe().await {
             Ok(fio::NodeInfo::Service(fio::Service)) => Ok(()),
             Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -346,7 +349,7 @@ async fn verify_describe_content_file(node: fio::NodeProxy, flag: u32) -> Result
 }
 
 async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &str) {
-    for flag in [0, fio::OPEN_FLAG_NODE_REFERENCE] {
+    for flag in [fio::OpenFlags::empty(), fio::OPEN_FLAG_NODE_REFERENCE] {
         let node = io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_FILE)
             .await
             .unwrap();
@@ -377,15 +380,24 @@ async fn set_flags() {
 
 async fn set_flags_per_package_source(source: PackageSource) {
     let package_root = &source.dir;
-    do_set_flags(package_root, ".", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "meta", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "meta/dir", fio::MODE_TYPE_DIRECTORY, 0)
+    do_set_flags(package_root, ".", fio::MODE_TYPE_DIRECTORY, fio::OpenFlags::empty())
         .await
         .assert_not_supported();
-    do_set_flags(package_root, "dir", fio::MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_set_flags(package_root, "file", fio::MODE_TYPE_FILE, 0).await.assert_ok();
+    do_set_flags(package_root, "meta", fio::MODE_TYPE_DIRECTORY, fio::OpenFlags::empty())
+        .await
+        .assert_not_supported();
+    do_set_flags(package_root, "meta/dir", fio::MODE_TYPE_DIRECTORY, fio::OpenFlags::empty())
+        .await
+        .assert_not_supported();
+    do_set_flags(package_root, "dir", fio::MODE_TYPE_DIRECTORY, fio::OpenFlags::empty())
+        .await
+        .assert_not_supported();
+    do_set_flags(package_root, "file", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
+        .await
+        .assert_ok();
     {
-        let outcome = do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, 0).await;
+        let outcome =
+            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::empty()).await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -404,7 +416,9 @@ async fn set_flags_per_package_source(source: PackageSource) {
         }
     };
     {
-        let outcome = do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, 0).await;
+        let outcome =
+            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
+                .await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -426,7 +440,7 @@ async fn set_flags_per_package_source(source: PackageSource) {
 }
 
 struct SetFlagsOutcome<'a> {
-    argument: crate::OpenFlags,
+    argument: fio::OpenFlags,
     path: &'a str,
     mode: Mode,
     result: Result<Result<(), zx::Status>, fidl::Error>,
@@ -435,14 +449,14 @@ async fn do_set_flags<'a>(
     package_root: &fio::DirectoryProxy,
     path: &'a str,
     mode: u32,
-    argument: u32,
+    argument: fio::OpenFlags,
 ) -> SetFlagsOutcome<'a> {
     let node = io_util::directory::open_node(package_root, path, fio::OPEN_RIGHT_READABLE, mode)
         .await
         .unwrap();
 
     let result = node.set_flags(argument).await.map(zx::Status::ok);
-    SetFlagsOutcome { path, mode: Mode(mode), result, argument: crate::OpenFlags(argument) }
+    SetFlagsOutcome { path, mode: Mode(mode), result, argument }
 }
 
 impl SetFlagsOutcome<'_> {
@@ -503,7 +517,9 @@ async fn set_attr_per_package_source(source: PackageSource) {
 }
 
 async fn assert_set_attr(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
-    let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
+    let node = io_util::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
+        .await
+        .unwrap();
 
     if let Err(e) = verify_set_attr(node).await {
         panic!("set_attr failed. path: {:?}, error: {:#}", path, e);
@@ -553,7 +569,9 @@ async fn sync_per_package_source(source: PackageSource) {
 }
 
 async fn assert_sync(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
-    let node = io_util::directory::open_node(package_root, path, 0, mode).await.unwrap();
+    let node = io_util::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
+        .await
+        .unwrap();
 
     if let Err(e) = verify_sync(node).await {
         panic!("sync failed. path: {:?}, error: {:#}", path, e);

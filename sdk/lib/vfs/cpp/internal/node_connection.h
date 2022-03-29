@@ -20,14 +20,15 @@ class Node;
 class NodeConnection final : public Connection, public fuchsia::io::Node {
  public:
   // Create a connection to |vn| with the given |flags|.
-  NodeConnection(uint32_t flags, vfs::internal::Node* vn);
+  NodeConnection(fuchsia::io::OpenFlags flags, vfs::internal::Node* vn);
   ~NodeConnection() override;
 
   // Start listening for |fuchsia.io.Node| messages on |request|.
   zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::Node| Implementation:
-  void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void Clone(fuchsia::io::OpenFlags flags,
+             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void CloseDeprecated(CloseDeprecatedCallback callback) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
@@ -38,7 +39,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void SetAttr(fuchsia::io::NodeAttributeFlags flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
-  void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
+  void SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) override;
   void QueryFilesystem(QueryFilesystemCallback callback) override;
 
  protected:

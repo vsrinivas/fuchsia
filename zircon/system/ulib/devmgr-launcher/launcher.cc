@@ -73,8 +73,9 @@ zx_status_t LaunchDriverIndex(const Args& args, zx::job& job, zx::channel svc_cl
     return status;
   }
   status = fdio_open("/pkg",
-                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
-                         fuchsia_io::wire::kOpenFlagDirectory,
+                     static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                           fuchsia_io::wire::kOpenRightExecutable |
+                                           fuchsia_io::wire::kOpenFlagDirectory),
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -182,8 +183,9 @@ zx_status_t LaunchFshost(const Args& args, zx::job& job, zx::channel svc_client,
     return status;
   }
   status = fdio_open("/pkg",
-                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
-                         fuchsia_io::wire::kOpenFlagDirectory,
+                     static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                           fuchsia_io::wire::kOpenRightExecutable |
+                                           fuchsia_io::wire::kOpenFlagDirectory),
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -333,8 +335,9 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
     return status;
   }
   status = fdio_open("/pkg",
-                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
-                         fuchsia_io::wire::kOpenFlagDirectory,
+                     static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                           fuchsia_io::wire::kOpenRightExecutable |
+                                           fuchsia_io::wire::kOpenFlagDirectory),
                      remote.release());
   if (status != ZX_OK) {
     return status;
@@ -352,8 +355,9 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
     return status;
   }
   status = fdio_open("/pkg",
-                     fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightExecutable |
-                         fuchsia_io::wire::kOpenFlagDirectory,
+                     static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                           fuchsia_io::wire::kOpenRightExecutable |
+                                           fuchsia_io::wire::kOpenFlagDirectory),
                      remote.release());
   if (status != ZX_OK) {
     return status;

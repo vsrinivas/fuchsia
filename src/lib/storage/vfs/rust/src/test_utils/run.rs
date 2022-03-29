@@ -13,6 +13,7 @@ use crate::{
 
 use {
     fidl::endpoints::{create_proxy, ProtocolMarker},
+    fidl_fuchsia_io as fio,
     fuchsia_async::TestExecutor,
     std::{future::Future, pin::Pin, sync::Arc, task::Poll},
 };
@@ -24,7 +25,7 @@ use {
 /// This is the most common case for the test execution, and is actualy just forwarding to
 /// [`test_server_client()`] followed immediately by a [`AsyncClientTestParams::run()`] call.
 pub fn run_server_client<Marker, GetClient, GetClientRes>(
-    flags: u32,
+    flags: fio::OpenFlags,
     server: Arc<dyn DirectoryEntry>,
     get_client: GetClient,
 ) where
@@ -111,7 +112,7 @@ impl<'test_refs> Drop for TestController<'test_refs> {
 /// Actual execution of the test happen when [`AsyncServerClientTestParams::run()`] method is
 /// invoked.
 pub fn test_server_client<'test_refs, Marker, GetClient, GetClientRes>(
-    flags: u32,
+    flags: fio::OpenFlags,
     server: Arc<dyn DirectoryEntry>,
     get_client: GetClient,
 ) -> AsyncServerClientTestParams<'test_refs, Marker>
@@ -137,7 +138,7 @@ where
 /// [`test_server_client`] but also takes the `mode` argument as part of the invocation, in order
 /// to keep it close the the `flag` and the other related arguments.
 pub fn test_server_client_with_mode<'test_refs, Marker, GetClient, GetClientRes>(
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
     server: Arc<dyn DirectoryEntry>,
     get_client: GetClient,
@@ -185,7 +186,7 @@ where
     Marker: ProtocolMarker,
 {
     exec: Option<TestExecutor>,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: Option<u32>,
     server: Arc<dyn DirectoryEntry>,
     get_client: Box<

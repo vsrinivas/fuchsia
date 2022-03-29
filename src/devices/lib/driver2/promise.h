@@ -19,7 +19,7 @@ namespace internal {
 template <typename T>
 fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher, std::string_view path,
-    uint32_t flags) {
+    fuchsia_io::wire::OpenFlags flags) {
   auto result = ns.Connect<T>(path, flags);
   if (result.is_error()) {
     return fpromise::error(result.status_value());
@@ -36,7 +36,7 @@ template <typename T>
 fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
     std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
-    uint32_t flags = fuchsia_io::wire::kOpenRightReadable) {
+    fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable) {
   return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path, flags));
 }
 

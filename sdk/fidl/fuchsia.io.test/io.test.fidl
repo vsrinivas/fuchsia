@@ -134,7 +134,7 @@ protocol Io1Harness {
     /// given `flags`.
     GetDirectory(resource struct {
         root Directory;
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         directory_request server_end:fuchsia.io.Directory;
     });
 
@@ -152,7 +152,7 @@ protocol Io1Harness {
     GetDirectoryWithRemoteDirectory(resource struct {
         remote_directory client_end:fuchsia.io.Directory;
         name string;
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         directory_request server_end:fuchsia.io.Directory;
     });
 };

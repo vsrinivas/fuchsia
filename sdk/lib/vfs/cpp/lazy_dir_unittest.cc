@@ -38,7 +38,8 @@ class TestLazyDir : public vfs::LazyDir {
     next_id_ = GetStartingId();
   }
 
-  fuchsia::io::DirectorySyncPtr ServeForTest(int flags = fuchsia::io::OPEN_RIGHT_READABLE) {
+  fuchsia::io::DirectorySyncPtr ServeForTest(
+      fuchsia::io::OpenFlags flags = fuchsia::io::OPEN_RIGHT_READABLE) {
     fuchsia::io::DirectorySyncPtr ptr;
     Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;

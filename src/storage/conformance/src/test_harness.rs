@@ -6,7 +6,7 @@ use {
     crate::flags::Rights,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test, fuchsia_zircon as zx,
 };
 
 /// Helper struct for connecting to an io1 test harness and running a conformance test on it.
@@ -49,8 +49,12 @@ impl TestHarness {
     }
 
     /// Creates a DirectoryProxy with the given root directory structure.
-    pub fn get_directory(&self, root: io_test::Directory, flags: u32) -> io::DirectoryProxy {
-        let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+    pub fn get_directory(
+        &self,
+        root: io_test::Directory,
+        flags: fio::OpenFlags,
+    ) -> fio::DirectoryProxy {
+        let (client, server) = create_proxy::<fio::DirectoryMarker>().expect("Cannot create proxy");
         self.proxy
             .get_directory(root, flags, server)
             .expect("Cannot get directory from test harness");
@@ -60,11 +64,11 @@ impl TestHarness {
     /// Creates a DirectoryProxy with the specified remote directory mounted at the given path.
     pub fn get_directory_with_remote_directory(
         &self,
-        remote_dir: ClientEnd<io::DirectoryMarker>,
+        remote_dir: ClientEnd<fio::DirectoryMarker>,
         path: &str,
-        flags: u32,
-    ) -> io::DirectoryProxy {
-        let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+        flags: fio::OpenFlags,
+    ) -> fio::DirectoryProxy {
+        let (client, server) = create_proxy::<fio::DirectoryMarker>().expect("Cannot create proxy");
         self.proxy
             .get_directory_with_remote_directory(remote_dir, path, flags, server)
             .expect("Cannot get remote directory from test harness");
@@ -84,13 +88,13 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     realm
         .open_exposed_dir(
             &mut child_ref,
-            fidl::endpoints::ServerEnd::<io::DirectoryMarker>::new(server),
+            fidl::endpoints::ServerEnd::<fio::DirectoryMarker>::new(server),
             zx::Time::INFINITE,
         )
         .expect("FIDL error when binding to child in Realm")
         .expect("Cannot bind to test harness child in Realm");
 
-    let exposed_dir = io::DirectoryProxy::new(
+    let exposed_dir = fio::DirectoryProxy::new(
         fidl::AsyncChannel::from_channel(client).expect("Cannot create async channel"),
     );
 
@@ -103,17 +107,17 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
 /// Returns the aggregate of all rights that are supported for Directory objects.
 ///
 /// Must support read, write, execute.
-fn get_supported_dir_rights(_config: &io_test::Io1Config) -> u32 {
-    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE
+fn get_supported_dir_rights(_config: &io_test::Io1Config) -> fio::OpenFlags {
+    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
 }
 
 /// Returns the aggregate of all rights that are supported for File objects.
 ///
 /// Must support read, and optionally, write (if immutable_file == true).
-fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
-    let mut rights = io::OPEN_RIGHT_READABLE;
+fn get_supported_file_rights(config: &io_test::Io1Config) -> fio::OpenFlags {
+    let mut rights = fio::OPEN_RIGHT_READABLE;
     if !config.immutable_file.unwrap_or_default() {
-        rights |= io::OPEN_RIGHT_WRITABLE;
+        rights |= fio::OPEN_RIGHT_WRITABLE;
     }
     rights
 }
@@ -121,13 +125,13 @@ fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
 /// Returns the aggregate of all rights that are supported for VmoFile objects.
 ///
 /// Must support both read and write.
-fn get_supported_vmofile_rights() -> u32 {
-    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE
+fn get_supported_vmofile_rights() -> fio::OpenFlags {
+    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE
 }
 
 /// Returns the aggregate of all rights that are supported for ExecFile objects.
 ///
 /// Must support both read and execute.
-fn get_supported_execfile_rights() -> u32 {
-    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_EXECUTABLE
+fn get_supported_execfile_rights() -> fio::OpenFlags {
+    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE
 }

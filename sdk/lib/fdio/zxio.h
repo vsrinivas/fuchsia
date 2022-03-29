@@ -37,8 +37,8 @@ struct zxio : public base {
   zx_status_t truncate(uint64_t off) override;
   zx_status_t rename(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;
   zx_status_t link(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;
-  zx_status_t get_flags(uint32_t* out_flags) override;
-  zx_status_t set_flags(uint32_t flags) override;
+  zx_status_t get_flags(fuchsia_io::wire::OpenFlags* out_flags) override;
+  zx_status_t set_flags(fuchsia_io::wire::OpenFlags flags) override;
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override;
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
@@ -63,7 +63,8 @@ struct remote : public zxio {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
-  zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;
+  zx::status<fdio_ptr> open(const char* path, fuchsia_io::wire::OpenFlags flags,
+                            uint32_t mode) override;
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override;
   void wait_end(zx_signals_t signals, uint32_t* events) override;
 

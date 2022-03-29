@@ -91,11 +91,12 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
-      uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
+      fuchsia::io::OpenFlags flags,
+      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     ZX_PANIC("Method not supported");
   }
 
-  void GetDirectory(fuchsia::io::test::Directory root, uint32_t flags,
+  void GetDirectory(fuchsia::io::test::Directory root, fuchsia::io::OpenFlags flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     // Create a unique directory within the root of minfs for each request and popuplate it with the
     // requested contents.
@@ -181,8 +182,9 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     return directory;
   }
 
-  static fs::VnodeConnectionOptions GetConnectionOptions(uint32_t flags) {
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
+  static fs::VnodeConnectionOptions GetConnectionOptions(fuchsia::io::OpenFlags flags) {
+    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(
+        static_cast<fuchsia_io::wire::OpenFlags>(static_cast<uint32_t>(flags)));
     options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
     return options;
   }

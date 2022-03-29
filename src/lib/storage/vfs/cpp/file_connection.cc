@@ -121,7 +121,7 @@ void FileConnection::GetFlagsDeprecatedUseNode(
     GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   zx::status result = Connection::NodeGetFlags();
   if (result.is_error()) {
-    completer.Reply(result.status_value(), 0);
+    completer.Reply(result.status_value(), {});
   } else {
     completer.Reply(ZX_OK, result.value());
   }
@@ -167,7 +167,7 @@ void FileConnection::Resize(ResizeRequestView request, ResizeCompleter::Sync& co
 }
 
 void FileConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
-  uint32_t flags = options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights);
+  fio::wire::OpenFlags flags = options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights);
   completer.Reply(ZX_OK, flags);
 }
 

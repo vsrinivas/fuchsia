@@ -24,7 +24,13 @@ use {
 
 /// All nodes (directories, files, etc) implement this.
 pub trait Entry {
-    fn open(self: Arc<Self>, flags: u32, mode: u32, path: &str, object: ServerEnd<fio::NodeMarker>);
+    fn open(
+        self: Arc<Self>,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    );
 }
 
 /// The implementation of a mock directory.
@@ -66,7 +72,7 @@ impl MockDir {
 impl Entry for MockDir {
     fn open(
         self: Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: &str,
         object: ServerEnd<fio::NodeMarker>,
@@ -98,7 +104,7 @@ impl Entry for MockDir {
 impl Entry for fio::DirectoryProxy {
     fn open(
         self: Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: &str,
         object: ServerEnd<fio::NodeMarker>,
@@ -130,7 +136,7 @@ impl MockFile {
 impl Entry for MockFile {
     fn open(
         self: Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: &str,
         object: ServerEnd<fio::NodeMarker>,

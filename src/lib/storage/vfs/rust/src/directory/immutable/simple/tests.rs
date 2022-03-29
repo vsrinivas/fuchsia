@@ -396,62 +396,69 @@ fn open_subdir_with_posix_flag_rights_expansion() {
 
     // Combinations of flags to test the root directory with.
     let root_flag_combos = build_flag_combinations(
-        fio::OPEN_RIGHT_READABLE,
-        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE,
-    );
+        fio::OPEN_RIGHT_READABLE.bits(),
+        (fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE).bits(),
+    )
+    .into_iter()
+    .map(fio::OpenFlags::from_bits_truncate)
+    .collect::<Vec<_>>();
 
     // Combinations of flags to pass in when opening a subdirectory within the root directory.
     let subdir_flag_combos = build_flag_combinations(
-        fio::OPEN_RIGHT_READABLE,
-        fio::OPEN_FLAG_POSIX_DEPRECATED
+        fio::OPEN_RIGHT_READABLE.bits(),
+        (fio::OPEN_FLAG_POSIX_DEPRECATED
             | fio::OPEN_FLAG_POSIX_WRITABLE
-            | fio::OPEN_FLAG_POSIX_EXECUTABLE,
-    );
+            | fio::OPEN_FLAG_POSIX_EXECUTABLE)
+            .bits(),
+    )
+    .into_iter()
+    .map(fio::OpenFlags::from_bits_truncate)
+    .collect::<Vec<_>>();
 
     // Validates that POSIX flags passed when opening a subdirectory against the root directory
     // result in the correct expanded rights, and that they do not exceed those of the root.
     fn validate_expanded_rights(
-        root_node_flags: u32,
-        subdir_open_flags: u32,
-        resulting_subdir_flags: u32,
+        root_node_flags: fio::OpenFlags,
+        subdir_open_flags: fio::OpenFlags,
+        resulting_subdir_flags: fio::OpenFlags,
     ) {
         // Ensure POSIX flags were removed.
         assert!(
-            resulting_subdir_flags
-                & (fio::OPEN_FLAG_POSIX_DEPRECATED
+            !resulting_subdir_flags.intersects(
+                fio::OPEN_FLAG_POSIX_DEPRECATED
                     | fio::OPEN_FLAG_POSIX_WRITABLE
-                    | fio::OPEN_FLAG_POSIX_EXECUTABLE)
-                == 0,
+                    | fio::OPEN_FLAG_POSIX_EXECUTABLE
+            ),
             "POSIX flags were not removed!"
         );
         // Ensure writable rights were expanded correctly.
-        if subdir_open_flags & (fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_WRITABLE)
-            != 0
+        if subdir_open_flags
+            .intersects(fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_WRITABLE)
         {
-            if root_node_flags & fio::OPEN_RIGHT_WRITABLE != 0 {
+            if root_node_flags.intersects(fio::OPEN_RIGHT_WRITABLE) {
                 assert!(
-                    resulting_subdir_flags & fio::OPEN_RIGHT_WRITABLE != 0,
+                    resulting_subdir_flags.intersects(fio::OPEN_RIGHT_WRITABLE),
                     "Failed to expand writable right!"
                 );
             } else {
                 assert!(
-                    resulting_subdir_flags & fio::OPEN_RIGHT_WRITABLE == 0,
+                    !resulting_subdir_flags.intersects(fio::OPEN_RIGHT_WRITABLE),
                     "Rights violation: improperly expanded writable right!"
                 );
             }
         }
         // Ensure executable rights were expanded correctly.
-        if subdir_open_flags & (fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_EXECUTABLE)
-            != 0
+        if subdir_open_flags
+            .intersects(fio::OPEN_FLAG_POSIX_DEPRECATED | fio::OPEN_FLAG_POSIX_EXECUTABLE)
         {
-            if root_node_flags & fio::OPEN_RIGHT_EXECUTABLE != 0 {
+            if root_node_flags.intersects(fio::OPEN_RIGHT_EXECUTABLE) {
                 assert!(
-                    resulting_subdir_flags & fio::OPEN_RIGHT_EXECUTABLE != 0,
+                    resulting_subdir_flags.intersects(fio::OPEN_RIGHT_EXECUTABLE),
                     "Failed to expand executable right!"
                 );
             } else {
                 assert!(
-                    resulting_subdir_flags & fio::OPEN_RIGHT_EXECUTABLE == 0,
+                    !resulting_subdir_flags.intersects(fio::OPEN_RIGHT_EXECUTABLE),
                     "Rights violation: improperly expanded executable right!"
                 );
             }
@@ -469,7 +476,7 @@ fn open_subdir_with_posix_flag_rights_expansion() {
                 for subdir_flags in &subdir_flag_combos {
                     // Open the subdirectory with a set of POSIX flags, and call get_flags to
                     // determine which set of rights they were expanded to.
-                    let subdir_flags = fio::OPEN_FLAG_DESCRIBE | subdir_flags;
+                    let subdir_flags = fio::OPEN_FLAG_DESCRIBE | *subdir_flags;
                     let subdir_proxy =
                         open_get_directory_proxy_assert_ok!(&root_proxy, subdir_flags, "etc/ssh");
                     let (_, resulting_subdir_flags) =
@@ -721,7 +728,7 @@ fn directories_restrict_nested_read_permissions() {
         },
     };
 
-    run_server_client(0, root, |root| async move {
+    run_server_client(fio::OpenFlags::empty(), root, |root| async move {
         open_as_file_assert_err!(
             &root,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
@@ -743,7 +750,7 @@ fn directories_restrict_nested_write_permissions() {
         },
     };
 
-    run_server_client(0, root, |root| async move {
+    run_server_client(fio::OpenFlags::empty(), root, |root| async move {
         open_as_file_assert_err!(
             &root,
             fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,

@@ -181,7 +181,7 @@ protocol DeviceController {
 
     /// See fuchsia.io.Directory/Open for information.
     Open(resource struct {
-        flags uint32;
+        flags fuchsia.io.OpenFlags;
         mode uint32;
         path string:fuchsia.io.MAX_PATH;
         object server_end:fuchsia.io.Node;

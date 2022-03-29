@@ -19,6 +19,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::*,
     fuchsia_async::{self as fasync},
     fuchsia_zircon as zx,
@@ -148,7 +149,7 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -222,7 +223,13 @@ mod tests {
         let mut server_channel = server_channel.into_channel();
         let task_scope = TaskScope::new();
         sys_controller
-            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_channel)
+            .open(
+                task_scope.clone(),
+                fio::OpenFlags::empty(),
+                0,
+                PathBuf::new(),
+                &mut server_channel,
+            )
             .await
             .expect("failed to open capability");
         let controller_proxy =
@@ -308,7 +315,13 @@ mod tests {
             let mut server_channel = server_channel.into_channel();
             let task_scope = TaskScope::new();
             sys_controller
-                .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_channel)
+                .open(
+                    task_scope.clone(),
+                    fio::OpenFlags::empty(),
+                    0,
+                    PathBuf::new(),
+                    &mut server_channel,
+                )
                 .await
                 .expect("failed to open capability");
             let controller_proxy =

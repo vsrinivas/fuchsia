@@ -22,7 +22,7 @@ PseudoFile::PseudoFile(size_t max_file_size, ReadHandler read_handler, WriteHand
 
 PseudoFile::~PseudoFile() = default;
 
-zx_status_t PseudoFile::CreateConnection(uint32_t flags,
+zx_status_t PseudoFile::CreateConnection(fuchsia::io::OpenFlags flags,
                                          std::unique_ptr<vfs::internal::Connection>* connection) {
   std::vector<uint8_t> output;
   if (Flags::IsReadable(flags)) {
@@ -75,7 +75,8 @@ size_t PseudoFile::GetCapacity() {
   return max_file_size_;
 }
 
-PseudoFile::Content::Content(PseudoFile* file, uint32_t flags, std::vector<uint8_t> content)
+PseudoFile::Content::Content(PseudoFile* file, fuchsia::io::OpenFlags flags,
+                             std::vector<uint8_t> content)
     : Connection(flags), file_(file), buffer_(std::move(content)), flags_(flags) {
   SetInputLength(buffer_.size());
 }
@@ -178,8 +179,8 @@ std::unique_ptr<vfs::internal::Connection> PseudoFile::Content::Close(Connection
   return file_->Close(this);
 }
 
-void PseudoFile::Content::Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
-                                async_dispatcher_t* dispatcher) {
+void PseudoFile::Content::Clone(fuchsia::io::OpenFlags flags, fuchsia::io::OpenFlags parent_flags,
+                                zx::channel request, async_dispatcher_t* dispatcher) {
   file_->Clone(flags, parent_flags, std::move(request), dispatcher);
 }
 

@@ -29,7 +29,8 @@ zx_status_t File::WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* 
 
 zx_status_t File::Truncate(uint64_t length) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t File::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
+zx_status_t File::CreateConnection(fuchsia::io::OpenFlags flags,
+                                   std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::FileConnection>(flags, this);
   return ZX_OK;
 }

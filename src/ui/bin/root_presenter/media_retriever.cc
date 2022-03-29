@@ -25,7 +25,7 @@ MediaRetriever::ResetSoundResult MediaRetriever::GetResetSound() {
   {
     std::string path(CONFIG_DATA_PATH);
     path += FACTORY_RESET_SOUND_PATH;
-    open_status = fdio_open(path.c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+    open_status = fdio_open(path.c_str(), static_cast<uint32_t>(fuchsia::io::OPEN_RIGHT_READABLE),
                             sound_file.NewRequest().TakeChannel().release());
   }
 

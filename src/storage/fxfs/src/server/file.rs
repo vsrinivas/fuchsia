@@ -143,7 +143,7 @@ impl FxFile {
     pub async fn create_connection(
         this: OpenedNode<FxFile>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
@@ -351,7 +351,7 @@ impl DirectoryEntry for FxFile {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -372,7 +372,7 @@ impl DirectoryEntry for FxFile {
 
 #[async_trait]
 impl File for FxFile {
-    async fn open(&self, _flags: u32) -> Result<(), Status> {
+    async fn open(&self, _flags: fio::OpenFlags) -> Result<(), Status> {
         Ok(())
     }
 

@@ -35,7 +35,7 @@ pub use run::{run_client, test_client};
 /// [`DirectoryMarker`], and providing explicit type for the `get_client` closure argument.  This
 /// makes it possible for the caller not to provide explicit types.
 pub fn run_server_client<GetClientRes>(
-    flags: u32,
+    flags: fio::OpenFlags,
     server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(fio::DirectoryProxy) -> GetClientRes,
 ) where
@@ -48,7 +48,7 @@ pub fn run_server_client<GetClientRes>(
 /// [`DirectoryMarker`], and providing explicit type for the `get_client` closure argument.  This
 /// makes it possible for the caller not to provide explicit types.
 pub fn test_server_client<'test_refs, GetClientRes>(
-    flags: u32,
+    flags: fio::OpenFlags,
     server: Arc<dyn DirectoryEntry>,
     get_client: impl FnOnce(fio::DirectoryProxy) -> GetClientRes + 'test_refs,
 ) -> AsyncServerClientTestParams<'test_refs, fio::DirectoryMarker>

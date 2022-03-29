@@ -37,7 +37,8 @@ namespace {
 zx::vmo GetVmo(std::string_view path) {
   zx::status endpoints = fidl::CreateEndpoints<fio::File>();
   EXPECT_TRUE(endpoints.is_ok()) << endpoints.status_string();
-  zx_status_t status = fdio_open(path.data(), kOpenFlags, endpoints->server.channel().release());
+  zx_status_t status = fdio_open(path.data(), static_cast<uint32_t>(kOpenFlags),
+                                 endpoints->server.channel().release());
   EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
   fidl::WireResult result = fidl::WireCall(endpoints->client)->GetBackingMemory(kVmoFlags);
   EXPECT_TRUE(result.ok()) << result.FormatDescription();

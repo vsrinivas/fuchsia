@@ -23,7 +23,7 @@ protocol File1 {
     /// Reads up to `count` bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
-    /// This method requires the following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// This method requires the following rights: `OpenFlags.RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
@@ -39,7 +39,7 @@ protocol File1 {
     /// Reads up to `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
-    /// This method requires the following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// This method requires the following rights: `OpenFlags.RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
@@ -56,7 +56,7 @@ protocol File1 {
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/File.Write")
     @deprecated("replaced by File2.Write")
@@ -70,7 +70,7 @@ protocol File1 {
     /// Writes data to the provided offset.
     /// Does not affect the seek offset.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/File.WriteAt")
     @deprecated("replaced by File2.WriteAt")
@@ -98,7 +98,7 @@ protocol File1 {
 
     /// Shrinks the file size to 'length' bytes.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/File.Truncate")
     @deprecated("replaced by File2.Resize")
@@ -115,18 +115,18 @@ protocol File1 {
     @deprecated("replaced by Node.GetFlags")
     GetFlagsDeprecatedUseNode() -> (struct {
         s zx.status;
-        flags uint32;
+        flags OpenFlags;
     });
 
     /// Changes the `Directory.Open` flags used to access the file.
     /// Supported flags which can be turned on / off:
-    /// - `OPEN_FLAG_APPEND`
+    /// - `OpenFlags.APPEND`
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/File.SetFlags")
     @deprecated("replaced by Node.SetFlags")
     SetFlagsDeprecatedUseNode(struct {
-        flags uint32;
+        flags OpenFlags;
     }) -> (struct {
         s zx.status;
     });
@@ -136,9 +136,9 @@ protocol File1 {
     ///
     /// This method requires following rights:
     ///
-    /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VmoFlags.WRITE`.
-    /// - `OPEN_RIGHT_READABLE` if `flags` includes `VmoFlags.READ` or `VmoFlags.EXECUTE`.
-    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VmoFlags.EXECUTE`.
+    /// - `OpenFlags.RIGHT_WRITABLE` if `flags` includes `VmoFlags.WRITE`.
+    /// - `OpenFlags.RIGHT_READABLE` if `flags` includes `VmoFlags.READ` or `VmoFlags.EXECUTE`.
+    /// - `OpenFlags.RIGHT_EXECUTABLE` if `flags` includes `VmoFlags.EXECUTE`.
     @selector("fuchsia.io1/File.GetBuffer")
     @deprecated("replaced by File2.GetBackingMemory")
     GetBufferDeprecatedUseGetBackingMemory(struct {

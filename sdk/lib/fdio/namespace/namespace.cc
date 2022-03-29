@@ -23,10 +23,9 @@ zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io) { return ns->SetRoot(io)
 __BEGIN_CDECLS
 
 __EXPORT
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags,
-                            zx_handle_t raw_handle) {
-  auto remote = fidl::ClientEnd<fuchsia_io::Node>(zx::channel(raw_handle));
-  return ns->Connect(path, flags, std::move(remote));
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request) {
+  auto remote = fidl::ClientEnd<fuchsia_io::Node>(zx::channel(request));
+  return ns->Connect(path, static_cast<fuchsia_io::wire::OpenFlags>(flags), std::move(remote));
 }
 
 __EXPORT
@@ -57,9 +56,7 @@ __EXPORT
 zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) { return ns->Unbind(path); }
 
 __EXPORT
-bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) {
-  return ns->IsBound(path);
-}
+bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) { return ns->IsBound(path); }
 
 __EXPORT
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {

@@ -22,8 +22,9 @@ use {
 
 /// The type for the callback function used to create new connections to the remote object. The
 /// arguments mirror DirectoryEntry::open.
-pub type RoutingFn =
-    Box<dyn Fn(ExecutionScope, u32, u32, Path, ServerEnd<fio::NodeMarker>) + Send + Sync>;
+pub type RoutingFn = Box<
+    dyn Fn(ExecutionScope, fio::OpenFlags, u32, Path, ServerEnd<fio::NodeMarker>) + Send + Sync,
+>;
 
 /// Create a new [`Remote`] node that forwards requests to the provided [`RoutingFn`]. This routing
 /// function is called once per open request. The dirent type is set to the provided
@@ -46,7 +47,10 @@ pub fn remote_boxed(open: RoutingFn) -> Arc<Remote> {
 /// instead.
 pub fn remote<Open>(open: Open) -> Arc<Remote>
 where
-    Open: Fn(ExecutionScope, u32, u32, Path, ServerEnd<fio::NodeMarker>) + Send + Sync + 'static,
+    Open: Fn(ExecutionScope, fio::OpenFlags, u32, Path, ServerEnd<fio::NodeMarker>)
+        + Send
+        + Sync
+        + 'static,
 {
     remote_boxed(Box::new(open))
 }
@@ -79,7 +83,7 @@ impl Remote {
     fn open_as_node(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mut flags: u32,
+        mut flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
@@ -88,7 +92,7 @@ impl Remote {
         // implementation also only allows access if both OPEN_RIGHT_READABLE and
         // OPEN_WRITE_WRITABLE is set, or it's OPEN_FLAG_NODE_REFERENCE, so, for now, we hack the
         // flags to be OPEN_FLAG_NODE_REFERENCE which will cause the rights to be ignored.
-        if flags & fio::OPEN_FLAG_NO_REMOTE != 0 {
+        if flags.intersects(fio::OPEN_FLAG_NO_REMOTE) {
             flags &= !fio::OPEN_FLAG_NO_REMOTE;
             flags |= fio::OPEN_FLAG_NODE_REFERENCE;
         }
@@ -98,7 +102,7 @@ impl Remote {
     fn open_as_remote(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -113,12 +117,12 @@ impl DirectoryEntry for Remote {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        if flags & fio::OPEN_FLAG_NO_REMOTE != 0 && path.is_empty() {
+        if flags.intersects(fio::OPEN_FLAG_NO_REMOTE) && path.is_empty() {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             self.open_as_remote(scope, flags, mode, path, server_end);

@@ -25,7 +25,8 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     std::{path::PathBuf, sync::Weak},
 };
 
@@ -117,7 +118,7 @@ impl CapabilityProvider for EventSource {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,

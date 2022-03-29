@@ -18,7 +18,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
@@ -352,7 +352,7 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -453,7 +453,9 @@ mod tests {
         let capability_provider = capability_provider.lock().await.take();
         let task_scope = TaskScope::new();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
+            capability_provider
+                .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server)
+                .await?;
         };
 
         let launcher_proxy = ClientEnd::<fproc::LauncherMarker>::new(client)

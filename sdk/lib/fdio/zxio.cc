@@ -224,11 +224,13 @@ zx_status_t zxio::link(std::string_view src, zx_handle_t dst_token, std::string_
                    dst.length());
 }
 
-zx_status_t zxio::get_flags(uint32_t* out_flags) {
-  return zxio_flags_get(&zxio_storage().io, out_flags);
+zx_status_t zxio::get_flags(fio::wire::OpenFlags* out_flags) {
+  return zxio_flags_get(&zxio_storage().io, reinterpret_cast<uint32_t*>(out_flags));
 }
 
-zx_status_t zxio::set_flags(uint32_t flags) { return zxio_flags_set(&zxio_storage().io, flags); }
+zx_status_t zxio::set_flags(fio::wire::OpenFlags flags) {
+  return zxio_flags_set(&zxio_storage().io, static_cast<uint32_t>(flags));
+}
 
 zx_status_t zxio::recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actual) {
   zxio_flags_t zxio_flags = 0;
@@ -310,7 +312,7 @@ zx_status_t zxio::shutdown(int how, int16_t* out_code) {
   return zxio_shutdown(&zxio_storage().io, options);
 }
 
-zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mode) {
+zx::status<fdio_ptr> remote::open(const char* path, fio::wire::OpenFlags flags, uint32_t mode) {
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
@@ -322,7 +324,7 @@ zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mod
     return endpoints.take_error();
   }
 
-  status = zxio_open_async(&zxio_storage().io, flags, mode, path, length,
+  status = zxio_open_async(&zxio_storage().io, static_cast<uint32_t>(flags), mode, path, length,
                            endpoints->server.channel().release());
   if (status != ZX_OK) {
     return zx::error(status);

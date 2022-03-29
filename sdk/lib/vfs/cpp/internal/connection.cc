@@ -10,11 +10,11 @@
 namespace vfs {
 namespace internal {
 
-Connection::Connection(uint32_t flags) : flags_(flags) {}
+Connection::Connection(fuchsia::io::OpenFlags flags) : flags_(flags) {}
 
 Connection::~Connection() = default;
 
-void Connection::Clone(Node* vn, uint32_t flags, zx::channel request,
+void Connection::Clone(Node* vn, fuchsia::io::OpenFlags flags, zx::channel request,
                        async_dispatcher_t* dispatcher) {
   vn->Clone(flags, flags_, std::move(request), dispatcher);
 }

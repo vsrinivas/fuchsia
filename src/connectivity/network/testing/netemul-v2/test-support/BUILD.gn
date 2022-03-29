@@ -11,6 +11,7 @@ fidl("fidl") {
   sources = [ "counter.test.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.io",
     "//zircon/vdso/zx",
   ]
 }

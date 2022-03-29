@@ -826,7 +826,9 @@ TEST(SpawnTest, SpawnVmo) {
   {
     int fd;
     zx::vmo vmo;
-    ASSERT_OK(fdio_open_fd(bin_path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
+    ASSERT_OK(fdio_open_fd(
+        bin_path, static_cast<uint32_t>(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
+        &fd));
     ASSERT_GE(fd, 0);
     ASSERT_OK(fdio_get_vmo_exec(fd, vmo.reset_and_get_address()));
     close(fd);

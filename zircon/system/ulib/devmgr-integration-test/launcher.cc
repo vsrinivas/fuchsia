@@ -161,11 +161,11 @@ zx_status_t ConnectToSvcAt(const zx::channel& dir,
   }
   auto [client, server] = *std::move(endpoints);
 
-  zx_status_t status =
-      fdio_open_at(dir.get(), "svc",
-                   fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
-                       fuchsia_io::wire::kOpenFlagDirectory,
-                   server.TakeChannel().release());
+  zx_status_t status = fdio_open_at(dir.get(), "svc",
+                                    static_cast<uint32_t>(fuchsia_io::wire::kOpenRightReadable |
+                                                          fuchsia_io::wire::kOpenRightWritable |
+                                                          fuchsia_io::wire::kOpenFlagDirectory),
+                                    server.TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }

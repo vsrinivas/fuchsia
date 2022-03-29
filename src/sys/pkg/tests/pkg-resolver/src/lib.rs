@@ -255,7 +255,7 @@ pub enum DirOrProxy {
 }
 
 impl DirOrProxy {
-    fn to_proxy(&self, rights: u32) -> fio::DirectoryProxy {
+    fn to_proxy(&self, rights: fio::OpenFlags) -> fio::DirectoryProxy {
         match &self {
             DirOrProxy::Dir(d) => {
                 io_util::directory::open_in_namespace(d.path().to_str().unwrap(), rights).unwrap()
@@ -265,7 +265,10 @@ impl DirOrProxy {
     }
 }
 
-pub fn clone_directory_proxy(proxy: &fio::DirectoryProxy, rights: u32) -> fio::DirectoryProxy {
+pub fn clone_directory_proxy(
+    proxy: &fio::DirectoryProxy,
+    rights: fio::OpenFlags,
+) -> fio::DirectoryProxy {
     let (client, server) = fidl::endpoints::create_endpoints().unwrap();
     proxy.clone(rights, server).unwrap();
     ClientEnd::<fio::DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap()

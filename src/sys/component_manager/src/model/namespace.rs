@@ -383,7 +383,7 @@ impl IncomingNamespace {
         let not_found_component_copy = component.clone();
         let route_open_fn =
             move |scope: ExecutionScope,
-                  flags: u32,
+                  flags: fio::OpenFlags,
                   mode: u32,
                   relative_path: Path,
                   server_end: ServerEnd<fio::NodeMarker>| {

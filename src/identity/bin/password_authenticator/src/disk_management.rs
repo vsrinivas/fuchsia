@@ -71,7 +71,8 @@ impl From<DiskError> for faccount::Error {
     }
 }
 
-const OPEN_RW: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const OPEN_RW: fio::OpenFlags =
+    fio::OpenFlags::empty().union(fio::OPEN_RIGHT_READABLE).union(fio::OPEN_RIGHT_WRITABLE);
 
 // This is the 16-byte magic byte string found at the start of a valid zxcrypt partition.
 // It is also defined in `//src/security/zxcrypt/volume.h` and
@@ -862,7 +863,7 @@ pub mod test {
         fn open(
             self: Arc<Self>,
             scope: ExecutionScope,
-            flags: u32,
+            flags: fio::OpenFlags,
             mode: u32,
             path: VfsPath,
             server_end: ServerEnd<fio::NodeMarker>,

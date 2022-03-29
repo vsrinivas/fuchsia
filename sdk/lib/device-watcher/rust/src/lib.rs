@@ -28,7 +28,7 @@ async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<(), anyh
 pub async fn recursive_wait_and_open_node_with_flags(
     initial_dir: &fio::DirectoryProxy,
     name: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<fio::NodeProxy, anyhow::Error> {
     let mut dir = io_util::clone_directory(initial_dir, flags)?;

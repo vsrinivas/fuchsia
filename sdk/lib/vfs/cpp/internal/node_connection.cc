@@ -11,7 +11,7 @@
 namespace vfs {
 namespace internal {
 
-NodeConnection::NodeConnection(uint32_t flags, vfs::internal::Node* vn)
+NodeConnection::NodeConnection(fuchsia::io::OpenFlags flags, vfs::internal::Node* vn)
     : Connection(flags), vn_(vn), binding_(this) {}
 
 NodeConnection::~NodeConnection() = default;
@@ -28,7 +28,8 @@ zx_status_t NodeConnection::BindInternal(zx::channel request, async_dispatcher_t
   return ZX_OK;
 }
 
-void NodeConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
+void NodeConnection::Clone(fuchsia::io::OpenFlags flags,
+                           fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
@@ -69,7 +70,7 @@ void NodeConnection::GetFlags(GetFlagsCallback callback) {
   callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void NodeConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
+void NodeConnection::SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

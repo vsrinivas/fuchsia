@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, repeat_by_n, OpenFlags, PackageSource},
+    crate::{dirs_to_test, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io as fio,
@@ -64,13 +64,13 @@ async fn open_per_package_source(source: PackageSource) {
     assert_open_content_file(&source, "dir", "dir/file").await;
 }
 
-const ALL_FLAGS: [u32; 16] = [
-    0,
+const ALL_FLAGS: [fio::OpenFlags; 16] = [
+    fio::OpenFlags::empty(),
     fio::OPEN_RIGHT_READABLE,
     fio::OPEN_RIGHT_WRITABLE,
     fio::OPEN_RIGHT_EXECUTABLE,
     fio::OPEN_FLAG_CREATE,
-    fio::OPEN_FLAG_CREATE | fio::OPEN_FLAG_CREATE_IF_ABSENT,
+    fio::OpenFlags::empty().union(fio::OPEN_FLAG_CREATE).union(fio::OPEN_FLAG_CREATE_IF_ABSENT),
     fio::OPEN_FLAG_CREATE_IF_ABSENT,
     fio::OPEN_FLAG_TRUNCATE,
     fio::OPEN_FLAG_DIRECTORY,
@@ -100,7 +100,7 @@ async fn assert_open_root_directory(
     let package_root = &source.dir;
 
     let mut success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_RIGHT_EXECUTABLE,
         fio::OPEN_FLAG_DIRECTORY,
@@ -164,20 +164,22 @@ async fn assert_open_root_directory(
     .await;
 }
 
-fn dont_filter_anything((flag, mode, child_path): (u32, u32, &str)) -> Option<(u32, u32, &'_ str)> {
+fn dont_filter_anything(
+    (flag, mode, child_path): (fio::OpenFlags, u32, &str),
+) -> Option<(fio::OpenFlags, u32, &'_ str)> {
     Some((flag, mode, child_path))
 }
 
 fn filter_out_contradictory_open_parameters(
-    (flag, mode, child_path): (u32, u32, &str),
-) -> Option<(u32, u32, &'_ str)> {
+    (flag, mode, child_path): (fio::OpenFlags, u32, &str),
+) -> Option<(fio::OpenFlags, u32, &'_ str)> {
     // See "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY" in the README
 
-    if flag & fio::OPEN_FLAG_NOT_DIRECTORY != 0 && mode == fio::MODE_TYPE_DIRECTORY {
+    if flag.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY {
         // Skipping invalid mode combination
         return None;
     }
-    if (flag & fio::OPEN_FLAG_DIRECTORY != 0 || child_path.ends_with('/'))
+    if (flag.intersects(fio::OPEN_FLAG_DIRECTORY) || child_path.ends_with('/'))
         && !(mode == 0 || mode == fio::MODE_TYPE_DIRECTORY)
     {
         // Skipping invalid mode combination
@@ -239,10 +241,10 @@ fn test_product3() {
 async fn assert_open_success<V, Fut>(
     package_root: &fio::DirectoryProxy,
     parent_path: &str,
-    allowed_flags_modes_and_child_paths: impl Iterator<Item = (u32, u32, &str)>,
+    allowed_flags_modes_and_child_paths: impl Iterator<Item = (fio::OpenFlags, u32, &str)>,
     verifier: V,
 ) where
-    V: Fn(fio::NodeProxy, u32) -> Fut,
+    V: Fn(fio::NodeProxy, fio::OpenFlags) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
     let parent = open_parent(package_root, parent_path).await;
@@ -252,11 +254,7 @@ async fn assert_open_success<V, Fut>(
             panic!(
                 "failed to verify open. parent: {:?}, child: {:?}, flag: {:?}, \
                        mode: {:#x}, error: {:#}",
-                parent_path,
-                child_path,
-                OpenFlags(flag),
-                mode,
-                e
+                parent_path, child_path, flag, mode, e
             );
         }
     }
@@ -270,7 +268,7 @@ async fn assert_open_content_directory(
     let package_root = &source.dir;
 
     let mut success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_RIGHT_EXECUTABLE,
         fio::OPEN_FLAG_DIRECTORY,
@@ -344,7 +342,7 @@ fn test_subtract() {
 async fn assert_open_flag_mode_and_child_path_failure<V, Fut>(
     package_root: &fio::DirectoryProxy,
     parent_path: &str,
-    disallowed_flags_modes_and_child_paths: impl Iterator<Item = (u32, u32, &str)>,
+    disallowed_flags_modes_and_child_paths: impl Iterator<Item = (fio::OpenFlags, u32, &str)>,
     verifier: V,
 ) where
     V: Fn(fio::NodeProxy) -> Fut,
@@ -357,11 +355,7 @@ async fn assert_open_flag_mode_and_child_path_failure<V, Fut>(
             panic!(
                 "failed to verify open failed. parent: {:?}, child: {:?}, flag: {:?}, \
                        mode: {:#x}, error: {:#}",
-                parent_path,
-                child_path,
-                OpenFlags(flag),
-                mode,
-                e
+                parent_path, child_path, flag, mode, e
             );
         }
     }
@@ -375,7 +369,7 @@ async fn assert_open_content_file(
     let package_root = &source.dir;
 
     let mut success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_RIGHT_EXECUTABLE,
         fio::OPEN_FLAG_NO_REMOTE,
@@ -451,7 +445,7 @@ async fn assert_open_meta_as_directory_and_file(
     let package_root = &source.dir;
 
     let mut base_directory_success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_FLAG_DIRECTORY,
         fio::OPEN_FLAG_NODE_REFERENCE,
@@ -486,7 +480,7 @@ async fn assert_open_meta_as_directory_and_file(
         product(base_directory_success_flags.clone(), [fio::MODE_TYPE_DIRECTORY])
             .chain(product(
                 base_directory_success_flags.clone().into_iter().filter_map(|f| {
-                    if f & fio::OPEN_FLAG_NOT_DIRECTORY != 0 && source.is_pkgdir() {
+                    if f.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && source.is_pkgdir() {
                         // "OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY are mutually exclusive"
                         None
                     } else {
@@ -569,7 +563,7 @@ async fn assert_open_meta_as_directory_and_file(
     //    b. OPEN_FLAG_DIRECTORY is set
     //    c. OPEN_FLAG_NODE_REFERENCE is set
     let mut base_file_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_FLAG_DESCRIBE,
         fio::OPEN_FLAG_POSIX_WRITABLE,
@@ -646,7 +640,7 @@ async fn assert_open_meta_subdirectory(
     let package_root = &source.dir;
 
     let mut success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_FLAG_DIRECTORY,
         fio::OPEN_FLAG_NODE_REFERENCE,
@@ -706,7 +700,7 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
     let package_root = &source.dir;
 
     let mut success_flags = vec![
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_FLAG_NODE_REFERENCE,
         fio::OPEN_FLAG_DESCRIBE,
@@ -778,7 +772,12 @@ async fn open_parent(package_root: &fio::DirectoryProxy, parent_path: &str) -> f
         .expect("open parent directory")
 }
 
-fn open_node(parent: &fio::DirectoryProxy, flags: u32, mode: u32, path: &str) -> fio::NodeProxy {
+fn open_node(
+    parent: &fio::DirectoryProxy,
+    flags: fio::OpenFlags,
+    mode: u32,
+    path: &str,
+) -> fio::NodeProxy {
     let (node, server_end) = create_proxy::<fio::NodeMarker>().expect("create_proxy");
     parent.open(flags, mode, path, server_end).expect("open node");
     node
@@ -827,7 +826,7 @@ fn generate_valid_file_paths(base: &str) -> Vec<String> {
     vec![base.to_string(), format!("/{}", base)]
 }
 
-async fn verify_directory_opened(node: fio::NodeProxy, flag: u32) -> Result<(), Error> {
+async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> Result<(), Error> {
     match node.describe().await {
         Ok(fio::NodeInfo::Directory(directory_object)) => {
             assert_eq!(directory_object, fio::DirectoryObject);
@@ -836,7 +835,7 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: u32) -> Result<(), 
         Err(e) => return Err(e).context("failed to call describe"),
     }
 
-    if flag & fio::OPEN_FLAG_DESCRIBE != 0 {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -858,8 +857,11 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: u32) -> Result<(), 
     Ok(())
 }
 
-async fn verify_content_file_opened(node: fio::NodeProxy, flag: u32) -> Result<(), Error> {
-    if flag & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+async fn verify_content_file_opened(
+    node: fio::NodeProxy,
+    flag: fio::OpenFlags,
+) -> Result<(), Error> {
+    if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
         match node.describe().await {
             Ok(fio::NodeInfo::Service(_)) => (),
             Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -872,8 +874,8 @@ async fn verify_content_file_opened(node: fio::NodeProxy, flag: u32) -> Result<(
             Err(e) => return Err(e).context("failed to call describe"),
         }
     }
-    if flag & fio::OPEN_FLAG_DESCRIBE != 0 {
-        if flag & fio::OPEN_FLAG_NODE_REFERENCE != 0 {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
+        if flag.intersects(fio::OPEN_FLAG_NODE_REFERENCE) {
             match node.take_event_stream().next().await {
                 Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -931,14 +933,17 @@ async fn verify_content_file_opened(node: fio::NodeProxy, flag: u32) -> Result<(
     Ok(())
 }
 
-async fn verify_meta_as_file_opened(node: fio::NodeProxy, flag: u32) -> Result<(), Error> {
+async fn verify_meta_as_file_opened(
+    node: fio::NodeProxy,
+    flag: fio::OpenFlags,
+) -> Result<(), Error> {
     match node.describe().await {
         Ok(fio::NodeInfo::File(_)) => (),
         Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => return Err(e).context("failed to call describe"),
     }
 
-    if flag & fio::OPEN_FLAG_DESCRIBE != 0 {
+    if flag.intersects(fio::OPEN_FLAG_DESCRIBE) {
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
@@ -983,7 +988,7 @@ async fn clone_per_package_source(source: PackageSource) {
     assert_clone_sends_on_open_event(root_dir, "meta/dir").await;
 
     for flag in [
-        0,
+        fio::OpenFlags::empty(),
         fio::OPEN_RIGHT_READABLE,
         fio::OPEN_RIGHT_WRITABLE,
         fio::OPEN_RIGHT_EXECUTABLE,
@@ -992,15 +997,15 @@ async fn clone_per_package_source(source: PackageSource) {
         fio::OPEN_FLAG_DESCRIBE,
         fio::CLONE_FLAG_SAME_RIGHTS,
     ] {
-        if source.is_pkgdir() && (flag & fio::OPEN_FLAG_NO_REMOTE != 0) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_FLAG_NO_REMOTE)) {
             // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
             continue;
         }
-        if source.is_pkgdir() && (flag & fio::OPEN_FLAG_APPEND != 0) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_FLAG_APPEND)) {
             // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
             continue;
         }
-        if source.is_pkgdir() && (flag & fio::OPEN_RIGHT_WRITABLE != 0) {
+        if source.is_pkgdir() && (flag.intersects(fio::OPEN_RIGHT_WRITABLE)) {
             // "OPEN_RIGHT_WRITABLE not supported"
             continue;
         }
@@ -1037,7 +1042,7 @@ async fn clone_per_package_source(source: PackageSource) {
             ],
         )
         .await;
-        if flag & fio::OPEN_RIGHT_EXECUTABLE != 0 {
+        if flag.intersects(fio::OPEN_RIGHT_EXECUTABLE) {
             // pkgdir requires a directory to have EXECUTABLE rights for it to be cloned
             // ("Hierarchical rights enforcement"), Since both pkgfs and pkgdir reject opening
             // meta dirs with EXECUTABLE rights, we can't get a valid parent directory to
@@ -1104,7 +1109,7 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
 async fn assert_clone_directory_no_overflow(
     package_root: &fio::DirectoryProxy,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     expected_dirents: Vec<DirEntry>,
 ) {
     let parent = open_directory(
@@ -1125,7 +1130,7 @@ async fn assert_clone_directory_no_overflow(
 async fn assert_clone_directory_overflow(
     package_root: &fio::DirectoryProxy,
     path: &str,
-    flags: u32,
+    flags: fio::OpenFlags,
     expected_dirents: Vec<DirEntry>,
 ) {
     let parent = open_parent(package_root, path).await;
@@ -1164,7 +1169,9 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta", 0).await.expect("open meta as dir"),
+        &io_util::directory::open_directory(&root_dir, "meta", fio::OpenFlags::empty())
+            .await
+            .expect("open meta as dir"),
         vec![
             DirEntry { name: "contents".to_string(), kind: DirentKind::File },
             DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
@@ -1181,23 +1188,33 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(&root_dir, "dir_overflow_readdirents", 0)
-            .await
-            .expect("open dir_overflow_readdirents"),
+        &io_util::directory::open_directory(
+            &root_dir,
+            "dir_overflow_readdirents",
+            fio::OpenFlags::empty(),
+        )
+        .await
+        .expect("open dir_overflow_readdirents"),
         vec![],
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta/dir_overflow_readdirents", 0)
-            .await
-            .expect("open meta/dir_overflow_readdirents"),
+        &io_util::directory::open_directory(
+            &root_dir,
+            "meta/dir_overflow_readdirents",
+            fio::OpenFlags::empty(),
+        )
+        .await
+        .expect("open meta/dir_overflow_readdirents"),
         vec![],
     )
     .await;
 
     // Handle no-overflow cases (e.g. when size of total dirents does not exceed MAX_BUF).
     assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "dir", 0).await.expect("open dir"),
+        &io_util::directory::open_directory(&root_dir, "dir", fio::OpenFlags::empty())
+            .await
+            .expect("open dir"),
         vec![
             DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
@@ -1205,7 +1222,9 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta/dir", 0).await.expect("open meta/dir"),
+        &io_util::directory::open_directory(&root_dir, "meta/dir", fio::OpenFlags::empty())
+            .await
+            .expect("open meta/dir"),
         vec![
             DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
@@ -1279,7 +1298,9 @@ async fn rewind_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
     // Handle overflow cases.
     for path in [".", "meta", "dir_overflow_readdirents", "meta/dir_overflow_readdirents"] {
-        let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
+        let dir = io_util::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
+            .await
+            .unwrap();
         assert_rewind_overflow_when_seek_offset_at_end(&dir).await;
         assert_rewind_overflow_when_seek_offset_in_middle(&dir).await;
     }
@@ -1287,7 +1308,9 @@ async fn rewind_per_package_source(source: PackageSource) {
     // Handle non-overflow cases.
     for path in ["dir", "meta/dir"] {
         assert_rewind_no_overflow(
-            &io_util::directory::open_directory(&root_dir, path, 0).await.unwrap(),
+            &io_util::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
+                .await
+                .unwrap(),
         )
         .await;
     }
@@ -1362,7 +1385,9 @@ async fn get_token() {
 async fn get_token_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
     for path in [".", "dir", "meta", "meta/dir"] {
-        let dir = io_util::directory::open_directory(root_dir, path, 0).await.unwrap();
+        let dir = io_util::directory::open_directory(root_dir, path, fio::OpenFlags::empty())
+            .await
+            .unwrap();
 
         let (status, token) = dir.get_token().await.unwrap();
         let status = zx::Status::ok(status);
@@ -1409,7 +1434,7 @@ async fn get_flags_per_package_source(source: PackageSource) {
 async fn assert_get_flags_directory_calls(
     source: &PackageSource,
     path: &str,
-    expected_rights: u32,
+    expected_rights: fio::OpenFlags,
 ) {
     let package_root = &source.dir;
     let dir = io_util::directory::open_directory(
@@ -1428,12 +1453,12 @@ async fn assert_get_flags_directory_calls(
 
     if source.is_pkgdir() {
         // "GetFlags() is supported on directories"
-        let result = status.map(|()| OpenFlags(flags));
-        assert_eq!(result, Ok(OpenFlags(expected_rights)))
+        let result = status.map(|()| flags);
+        assert_eq!(result, Ok(expected_rights))
     } else {
         // Verify nodeGetFlags() is not supported.
         assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
-        assert_eq!(flags, 0);
+        assert_eq!(flags, fio::OpenFlags::empty());
     }
 }
 
@@ -1464,9 +1489,10 @@ async fn assert_unsupported_directory_calls(
     parent_path: &str,
     child_base_path: &str,
 ) {
-    let parent = io_util::directory::open_directory(&source.dir, parent_path, 0)
-        .await
-        .expect("open parent directory");
+    let parent =
+        io_util::directory::open_directory(&source.dir, parent_path, fio::OpenFlags::empty())
+            .await
+            .expect("open parent directory");
 
     // Verify unlink() is not supported.
     assert_eq!(
@@ -1514,5 +1540,8 @@ async fn assert_unsupported_directory_calls(
     );
 
     // Verify nodeSetFlags() is not supported.
-    assert_eq!(zx::Status::from_raw(parent.set_flags(0).await.unwrap()), zx::Status::NOT_SUPPORTED);
+    assert_eq!(
+        zx::Status::from_raw(parent.set_flags(fio::OpenFlags::empty()).await.unwrap()),
+        zx::Status::NOT_SUPPORTED
+    );
 }

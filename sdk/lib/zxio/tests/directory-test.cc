@@ -29,11 +29,11 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final {
-    constexpr uint32_t kExpectedFlags =
+    constexpr fuchsia_io::wire::OpenFlags kExpectedFlags =
         fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDescribe;
     if (request->flags != kExpectedFlags) {
-      ADD_FAILURE("unexpected flags for Open request: 0x%x vs 0x%x", request->flags,
-                  kExpectedFlags);
+      ADD_FAILURE("unexpected flags for Open request: 0x%x vs 0x%x",
+                  static_cast<uint32_t>(request->flags), static_cast<uint32_t>(kExpectedFlags));
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -159,11 +159,11 @@ class Directory : public zxtest::Test {
 };
 
 TEST_F(Directory, Open) {
-  uint32_t flags = fuchsia_io::wire::kOpenRightReadable;
+  fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::kOpenRightReadable;
   uint32_t mode = 0u;
   zxio_storage_t file_storage;
-  ASSERT_OK(
-      zxio_open(directory(), flags, mode, kTestPath.data(), kTestPath.length(), &file_storage));
+  ASSERT_OK(zxio_open(directory(), static_cast<uint32_t>(flags), mode, kTestPath.data(),
+                      kTestPath.length(), &file_storage));
   zxio_t* file = &file_storage.io;
 
   ASSERT_OK(zxio_close(directory()));

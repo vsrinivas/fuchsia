@@ -26,14 +26,14 @@ void main() {
 
     test('basic', () {
       PseudoDir dir = PseudoDir();
-      var key1 = 'key1';
-      var key2 = 'key2';
+      const key1 = 'key1';
+      const key2 = 'key2';
 
-      var node1 = _TestVnode();
+      final node1 = _TestVnode();
       expect(dir.addNode(key1, node1), ZX.OK);
       expect(dir.lookup(key1), node1);
 
-      var node2 = _TestVnode();
+      final node2 = _TestVnode();
       expect(dir.addNode(key2, node2), ZX.OK);
       expect(dir.lookup(key2), node2);
 
@@ -46,12 +46,12 @@ void main() {
       const maxObjectNameLength = 255;
       StringBuffer specialsNonPrintablesBuilder = StringBuffer();
       // null character is illegal, start at one
-      for (var char = 1; char < maxObjectNameLength; char++) {
+      for (int char = 1; char < maxObjectNameLength; char++) {
         if (char != 47 /* key seperator */) {
           specialsNonPrintablesBuilder.writeCharCode(char);
         }
       }
-      var legalKeys = <String>[
+      final legalKeys = <String>[
         'k',
         'key',
         'longer_key',
@@ -71,8 +71,8 @@ void main() {
         'numbers_0123456789',
         specialsNonPrintablesBuilder.toString(),
       ];
-      for (var key in legalKeys) {
-        var node = _TestVnode();
+      for (final key in legalKeys) {
+        final node = _TestVnode();
         expect(dir.addNode(key, node), ZX.OK);
         expect(dir.lookup(key), node);
       }
@@ -80,7 +80,7 @@ void main() {
 
     test('illegal name', () {
       PseudoDir dir = PseudoDir();
-      var illegalKeys = <String>[
+      final illegalKeys = <String>[
         '',
         'illegal_length_key${'_' * 238}',
         '.',
@@ -90,17 +90,17 @@ void main() {
         '/',
         'key_/_seperator',
       ];
-      var node = _TestVnode();
-      for (var key in illegalKeys) {
+      final node = _TestVnode();
+      for (final key in illegalKeys) {
         expect(dir.addNode(key, node), ZX.ERR_INVALID_ARGS);
       }
     });
 
     test('duplicate key', () {
       PseudoDir dir = PseudoDir();
-      var key = 'key';
-      var node = _TestVnode();
-      var dupNode = _TestVnode();
+      const key = 'key';
+      final node = _TestVnode();
+      final dupNode = _TestVnode();
       expect(dir.addNode(key, node), ZX.OK);
       expect(dir.addNode(key, dupNode), ZX.ERR_ALREADY_EXISTS);
 
@@ -110,8 +110,8 @@ void main() {
 
     test('remove node', () {
       PseudoDir dir = PseudoDir();
-      var key = 'key';
-      var node = _TestVnode();
+      const key = 'key';
+      final node = _TestVnode();
       expect(dir.addNode(key, node), ZX.OK);
       expect(dir.lookup(key), node);
 
@@ -125,10 +125,10 @@ void main() {
 
     test('remove when multiple keys', () {
       PseudoDir dir = PseudoDir();
-      var key1 = 'key1';
-      var key2 = 'key2';
-      var node1 = _TestVnode();
-      var node2 = _TestVnode();
+      const key1 = 'key1';
+      const key2 = 'key2';
+      final node1 = _TestVnode();
+      final node2 = _TestVnode();
       expect(dir.addNode(key1, node1), ZX.OK);
       expect(dir.addNode(key2, node2), ZX.OK);
       expect(dir.lookup(key1), node1);
@@ -148,12 +148,12 @@ void main() {
 
     test('key order is maintained', () {
       PseudoDir dir = PseudoDir();
-      var key1 = 'key1';
-      var key2 = 'key2';
-      var key3 = 'key3';
-      var node1 = _TestVnode();
-      var node2 = _TestVnode();
-      var node3 = _TestVnode();
+      const key1 = 'key1';
+      const key2 = 'key2';
+      const key3 = 'key3';
+      final node1 = _TestVnode();
+      final node2 = _TestVnode();
+      final node3 = _TestVnode();
       expect(dir.addNode(key1, node1), ZX.OK);
       expect(dir.addNode(key2, node2), ZX.OK);
       expect(dir.addNode(key3, node3), ZX.OK);
@@ -171,12 +171,12 @@ void main() {
 
     test('remove and isEmpty', () {
       PseudoDir dir = PseudoDir();
-      var key1 = 'key1';
-      var key2 = 'key2';
-      var key3 = 'key3';
-      var node1 = _TestVnode();
-      var node2 = _TestVnode();
-      var node3 = _TestVnode();
+      const key1 = 'key1';
+      const key2 = 'key2';
+      const key3 = 'key3';
+      final node1 = _TestVnode();
+      final node2 = _TestVnode();
+      final node3 = _TestVnode();
       expect(dir.isEmpty(), true);
       expect(dir.addNode(key1, node1), ZX.OK);
       expect(dir.addNode(key2, node2), ZX.OK);
@@ -204,21 +204,18 @@ void main() {
     group('open fails: ', () {
       test('invalid flags', () async {
         PseudoDir dir = PseudoDir();
-        var invalidFlags = [
+        final invalidFlags = [
           openFlagAppend,
           openFlagCreate,
           openFlagCreateIfAbsent,
           openFlagNoRemote,
           openFlagTruncate,
         ];
-
-        var i = 0;
-        for (var flag in invalidFlags) {
+        for (final entry in invalidFlags.asMap().entries) {
           DirectoryProxy proxy = DirectoryProxy();
-          var status = dir.connect(flag | openFlagDescribe, 0,
+          final status = dir.connect(entry.value | openFlagDescribe, 0,
               InterfaceRequest(proxy.ctrl.request().passChannel()));
-          expect(status, isNot(ZX.OK), reason: 'flagIndex: $i');
-          i++;
+          expect(status, isNot(ZX.OK), reason: 'flagIndex: ${entry.key}');
           await proxy.onOpen.first.then((response) {
             expect(response.s, status);
             expect(response.info, isNull);
@@ -230,7 +227,7 @@ void main() {
 
       test('invalid mode', () async {
         PseudoDir dir = PseudoDir();
-        var invalidModes = [
+        final invalidModes = [
           modeTypeBlockDevice,
           modeTypeFile,
           modeTypeService,
@@ -238,13 +235,12 @@ void main() {
           modeTypeSocket
         ];
 
-        var i = 0;
-        for (var mode in invalidModes) {
+        for (final entry in invalidModes.asMap().entries) {
           DirectoryProxy proxy = DirectoryProxy();
-          var status = dir.connect(openFlagDescribe, mode,
+          final status = dir.connect(openFlagDescribe, entry.value,
               InterfaceRequest(proxy.ctrl.request().passChannel()));
-          expect(status, ZX.ERR_INVALID_ARGS, reason: 'modeIndex: $i');
-          i++;
+          expect(status, ZX.ERR_INVALID_ARGS,
+              reason: 'modeIndex: ${entry.key}');
           await proxy.onOpen.first.then((response) {
             expect(response.s, status);
             expect(response.info, isNull);
@@ -255,11 +251,10 @@ void main() {
       });
     });
 
-    DirectoryProxy _getProxyForDir(PseudoDir dir,
-        [int flags = openRightReadable | openRightWritable]) {
+    DirectoryProxy _getProxyForDir(PseudoDir dir, [OpenFlags? flags]) {
       DirectoryProxy proxy = DirectoryProxy();
-      var status = dir.connect(
-          flags, 0, InterfaceRequest(proxy.ctrl.request().passChannel()));
+      final status = dir.connect(flags ?? openRightReadable | openRightWritable,
+          0, InterfaceRequest(proxy.ctrl.request().passChannel()));
       expect(status, ZX.OK);
       return proxy;
     }
@@ -279,18 +274,16 @@ void main() {
 
     test('open passes with valid mode', () async {
       PseudoDir dir = PseudoDir();
-      var validModes = [
+      final validModes = [
         modeProtectionMask,
         modeTypeDirectory,
       ];
 
-      var i = 0;
-      for (var mode in validModes) {
+      for (final entry in validModes.asMap().entries) {
         DirectoryProxy proxy = DirectoryProxy();
-        var status = dir.connect(openFlagDescribe, mode,
+        final status = dir.connect(openFlagDescribe, entry.value,
             InterfaceRequest(proxy.ctrl.request().passChannel()));
-        expect(status, ZX.OK, reason: 'modeIndex: $i');
-        i++;
+        expect(status, ZX.OK, reason: 'modeIndex: ${entry.key}');
         await proxy.onOpen.first.then((response) {
           expect(response.s, ZX.OK);
           expect(response.info, isNotNull);
@@ -302,14 +295,14 @@ void main() {
 
     test('open passes with valid flags', () async {
       PseudoDir dir = PseudoDir();
-      var validFlags = [
+      final validFlags = [
         openRightReadable,
         openRightWritable,
         openRightReadable | openFlagDirectory,
         openFlagNodeReference
       ];
 
-      for (var flag in validFlags) {
+      for (final flag in validFlags) {
         DirectoryProxy proxy = _getProxyForDir(dir, flag | openFlagDescribe);
         await proxy.onOpen.first.then((response) {
           expect(response.s, ZX.OK);
@@ -324,7 +317,7 @@ void main() {
       PseudoDir dir = PseudoDir();
       DirectoryProxy proxy = _getProxyForDir(dir);
 
-      var attr = await proxy.getAttr();
+      final attr = await proxy.getAttr();
 
       expect(attr.attributes.linkCount, 1);
       expect(attr.attributes.mode, modeProtectionMask | modeTypeDirectory);
@@ -340,7 +333,7 @@ void main() {
 
     int _expectedDirentSize(List<_Dirent> dirents) {
       var sum = 0;
-      for (var d in dirents) {
+      for (final d in dirents) {
         sum += d.direntSizeInBytes!;
       }
       return sum;
@@ -351,10 +344,10 @@ void main() {
       expect(response.s, ZX.OK);
       expect(response.dirents.length, _expectedDirentSize(dirents));
       var offset = 0;
-      for (var dirent in dirents) {
-        var data = ByteData.view(
+      for (final dirent in dirents) {
+        final data = ByteData.view(
             response.dirents.buffer, response.dirents.offsetInBytes + offset);
-        var actualDirent = _Dirent.fromData(data);
+        final actualDirent = _Dirent.fromData(data);
         expect(actualDirent, dirent);
         offset += actualDirent.direntSizeInBytes!;
       }
@@ -364,133 +357,152 @@ void main() {
       test('simple call should work', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        var file2 = PseudoFile.readOnlyStr(() => 'file2');
-        var file3 = PseudoFile.readOnlyStr(() => 'file3');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file2 = PseudoFile.readOnlyStr(() => 'file2');
+        final file3 = PseudoFile.readOnlyStr(() => 'file3');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir)
           ..addNode('file3', file3);
         subDir.addNode('file2', file2);
 
-        DirectoryProxy proxy = _getProxyForDir(dir);
+        {
+          final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-          _createDirent(file1, 'file1'),
-          _createDirent(subDir, 'subDir'),
-          _createDirent(file3, 'file3'),
-        ];
-        var response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+          final expectedDirents = [
+            _createDirentForDot(),
+            _createDirent(file1, 'file1'),
+            _createDirent(subDir, 'subDir'),
+            _createDirent(file3, 'file3'),
+          ];
+          {
+            final response = await proxy.readDirents(1024);
+            _validateExpectedDirents(expectedDirents, response);
+          }
 
-        // test that next read call returns length zero buffer
-        response = await proxy.readDirents(1024);
-        expect(response.s, ZX.OK);
-        expect(response.dirents.length, 0);
+          // test that next read call returns length zero buffer
+          {
+            final response = await proxy.readDirents(1024);
+            expect(response.s, ZX.OK);
+            expect(response.dirents.length, 0);
+          }
+        }
 
         // also test sub folder and make sure it was not affected by parent dir.
-        proxy = _getProxyForDir(subDir);
-        expectedDirents = [
-          _createDirentForDot(),
-          _createDirent(file2, 'file2'),
-        ];
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final proxy = _getProxyForDir(subDir);
+          final expectedDirents = [
+            _createDirentForDot(),
+            _createDirent(file2, 'file2'),
+          ];
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('serve function works', () async {
         PseudoDir dir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
 
         dir.addNode('file1', file1);
 
         DirectoryProxy proxy = DirectoryProxy();
-        var status =
+        final status =
             dir.serve(InterfaceRequest(proxy.ctrl.request().passChannel()));
         expect(status, ZX.OK);
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirentForDot(),
           _createDirent(file1, 'file1'),
         ];
-        var response = await proxy.readDirents(1024);
+        final response = await proxy.readDirents(1024);
         _validateExpectedDirents(expectedDirents, response);
       });
 
       test('passed buffer size is exact', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        var file3 = PseudoFile.readOnlyStr(() => 'file3');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file3 = PseudoFile.readOnlyStr(() => 'file3');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir)
           ..addNode('file3', file3);
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirentForDot(),
           _createDirent(file1, 'file1'),
           _createDirent(subDir, 'subDir'),
           _createDirent(file3, 'file3'),
         ];
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         // test that next read call returns length zero buffer
-        response = await proxy.readDirents(1024);
-        expect(response.s, ZX.OK);
-        expect(response.dirents.length, 0);
+        {
+          final response = await proxy.readDirents(1024);
+          expect(response.s, ZX.OK);
+          expect(response.dirents.length, 0);
+        }
       });
 
       test('passed buffer size is exact - 1', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        var file3 = PseudoFile.readOnlyStr(() => 'file3');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file3 = PseudoFile.readOnlyStr(() => 'file3');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir)
           ..addNode('file3', file3);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirentForDot(),
           _createDirent(file1, 'file1'),
           _createDirent(subDir, 'subDir'),
           _createDirent(file3, 'file3'),
         ];
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) - 1);
-        var lastDirent = expectedDirents.removeLast();
-        _validateExpectedDirents(expectedDirents, response);
+        final size = _expectedDirentSize(expectedDirents) - 1;
+        final lastDirent = expectedDirents.removeLast();
+
+        {
+          final response = await proxy.readDirents(size);
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         // test that next read call returns last dirent
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents([lastDirent], response);
+        {
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents([lastDirent], response);
+        }
 
         // test that next read call returns length zero buffer
-        response = await proxy.readDirents(1024);
-        expect(response.s, ZX.OK);
-        expect(response.dirents.length, 0);
+        {
+          final response = await proxy.readDirents(1024);
+          expect(response.s, ZX.OK);
+          expect(response.dirents.length, 0);
+        }
       });
 
       test('buffer too small', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var size = _expectedDirentSize([_createDirentForDot()]) - 1;
+        final size = _expectedDirentSize([_createDirentForDot()]) - 1;
         for (int i = 0; i < size; i++) {
-          var response = await proxy.readDirents(i);
+          final response = await proxy.readDirents(i);
           expect(response.s, ZX.ERR_BUFFER_TOO_SMALL);
           expect(response.dirents.length, 0);
         }
@@ -501,28 +513,32 @@ void main() {
           () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
-        var size = _expectedDirentSize([_createDirentForDot()]);
-        var response = await proxy.readDirents(size);
+        final proxy = _getProxyForDir(dir);
+        final size = _expectedDirentSize([_createDirentForDot()]);
 
-        // make sure that '.' was read
-        _validateExpectedDirents([_createDirentForDot()], response);
+        {
+          final response = await proxy.readDirents(size);
+          // make sure that '.' was read
+          _validateExpectedDirents([_createDirentForDot()], response);
+        }
 
         // this should return error
-        response = await proxy.readDirents(size);
-        expect(response.s, ZX.ERR_BUFFER_TOO_SMALL);
-        expect(response.dirents.length, 0);
+        {
+          final response = await proxy.readDirents(size);
+          expect(response.s, ZX.ERR_BUFFER_TOO_SMALL);
+          expect(response.dirents.length, 0);
+        }
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirent(file1, 'file1'),
           _createDirent(subDir, 'subDir'),
         ];
-        response =
+        final response =
             await proxy.readDirents(_expectedDirentSize(expectedDirents));
         _validateExpectedDirents(expectedDirents, response);
       });
@@ -530,25 +546,26 @@ void main() {
       test('multiple reads with small buffer', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
-        var expectedDirents = [
+        final proxy = _getProxyForDir(dir);
+        final expectedDirents = [
           _createDirentForDot(),
           _createDirent(file1, 'file1'),
           _createDirent(subDir, 'subDir'),
         ];
-        for (var dirent in expectedDirents) {
-          var dirents = [dirent];
-          var response = await proxy.readDirents(_expectedDirentSize(dirents));
+        for (final dirent in expectedDirents) {
+          final dirents = [dirent];
+          final response =
+              await proxy.readDirents(_expectedDirentSize(dirents));
           _validateExpectedDirents(dirents, response);
         }
 
         // test that next read call returns length zero buffer
-        var response = await proxy.readDirents(1024);
+        final response = await proxy.readDirents(1024);
         expect(response.s, ZX.OK);
         expect(response.dirents.length, 0);
       });
@@ -556,216 +573,252 @@ void main() {
       test('read two dirents then one', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-          _createDirent(file1, 'file1'),
-        ];
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+            _createDirent(file1, 'file1'),
+          ];
 
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
-        expectedDirents = [
-          _createDirent(subDir, 'subDir'),
-        ];
+        {
+          final expectedDirents = [
+            _createDirent(subDir, 'subDir'),
+          ];
 
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('buffer size more than first less than 2 dirents', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-        ];
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+          ];
 
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) + 10);
-        _validateExpectedDirents(expectedDirents, response);
+          final response = await proxy
+              .readDirents(_expectedDirentSize(expectedDirents) + 10);
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
-        // now test that we are able to get rest
-        expectedDirents = [
-          _createDirent(file1, 'file1'),
-          _createDirent(subDir, 'subDir'),
-        ];
+        {
+          // now test that we are able to get rest
+          final expectedDirents = [
+            _createDirent(file1, 'file1'),
+            _createDirent(subDir, 'subDir'),
+          ];
 
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('rewind works', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirentForDot(),
         ];
 
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) + 10);
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final response = await proxy
+              .readDirents(_expectedDirentSize(expectedDirents) + 10);
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
-        var rewindResponse = await proxy.rewind();
-        expect(rewindResponse, ZX.OK);
+        {
+          final rewindResponse = await proxy.rewind();
+          expect(rewindResponse, ZX.OK);
+        }
 
-        response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) + 10);
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final response = await proxy
+              .readDirents(_expectedDirentSize(expectedDirents) + 10);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('rewind works after we reach directory end', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
+        final expectedDirents = [
           _createDirentForDot(),
           _createDirent(file1, 'file1'),
           _createDirent(subDir, 'subDir'),
         ];
 
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) + 10);
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final response = await proxy
+              .readDirents(_expectedDirentSize(expectedDirents) + 10);
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
-        var rewindResponse = await proxy.rewind();
-        expect(rewindResponse, ZX.OK);
+        {
+          final rewindResponse = await proxy.rewind();
+          expect(rewindResponse, ZX.OK);
+        }
 
-        response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents) + 10);
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final response = await proxy
+              .readDirents(_expectedDirentSize(expectedDirents) + 10);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('readdir works when node removed', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-        ];
-
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+          ];
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         // remove first node
         dir.removeNode('file1');
-        expectedDirents = [_createDirent(subDir, 'subDir')];
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+
+        {
+          final expectedDirents = [_createDirent(subDir, 'subDir')];
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('readdir works when already last node is removed', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-          _createDirent(file1, 'file1')
-        ];
-
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+            _createDirent(file1, 'file1')
+          ];
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         // remove first node
         dir.removeNode('file1');
-        expectedDirents = [_createDirent(subDir, 'subDir')];
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+
+        {
+          final expectedDirents = [_createDirent(subDir, 'subDir')];
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('readdir works when node is added', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-          _createDirent(file1, 'file1'),
-          _createDirent(subDir, 'subDir')
-        ];
-
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+            _createDirent(file1, 'file1'),
+            _createDirent(subDir, 'subDir')
+          ];
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         dir.addNode('file2', file1);
-        expectedDirents = [_createDirent(file1, 'file2')];
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+
+        {
+          final expectedDirents = [_createDirent(file1, 'file2')];
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
 
       test('readdir works when node is added and only first node was read',
           () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
-        var expectedDirents = [
-          _createDirentForDot(),
-        ];
-
-        var response =
-            await proxy.readDirents(_expectedDirentSize(expectedDirents));
-        _validateExpectedDirents(expectedDirents, response);
+        {
+          final expectedDirents = [
+            _createDirentForDot(),
+          ];
+          final response =
+              await proxy.readDirents(_expectedDirentSize(expectedDirents));
+          _validateExpectedDirents(expectedDirents, response);
+        }
 
         dir.addNode('file2', file1);
-        expectedDirents = [
-          _createDirent(file1, 'file1'),
-          _createDirent(subDir, 'subDir'),
-          _createDirent(file1, 'file2')
-        ];
-        response = await proxy.readDirents(1024);
-        _validateExpectedDirents(expectedDirents, response);
+
+        {
+          final expectedDirents = [
+            _createDirent(file1, 'file1'),
+            _createDirent(subDir, 'subDir'),
+            _createDirent(file1, 'file2')
+          ];
+          final response = await proxy.readDirents(1024);
+          _validateExpectedDirents(expectedDirents, response);
+        }
       });
     });
 
@@ -783,10 +836,10 @@ void main() {
       PseudoDir _setUpDir() {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
-        var file2 = PseudoFile.readOnlyStr(() => 'file2');
-        var file3 = PseudoFile.readOnlyStr(() => 'file3');
-        var file4 = PseudoFile.readOnlyStr(() => 'file4');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file2 = PseudoFile.readOnlyStr(() => 'file2');
+        final file3 = PseudoFile.readOnlyStr(() => 'file3');
+        final file4 = PseudoFile.readOnlyStr(() => 'file4');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir)
@@ -800,9 +853,9 @@ void main() {
       test('open self', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
-        var paths = ['.', './', './/', './//', './/.//./'];
-        for (var path in paths) {
+        final proxy = _getProxyForDir(dir);
+        final paths = ['.', './', './/', './//', './/.//./'];
+        for (final path in paths) {
           DirectoryProxy newProxy = DirectoryProxy();
           await proxy.open(openRightReadable, 0, path,
               InterfaceRequest(newProxy.ctrl.request().passChannel()));
@@ -815,11 +868,11 @@ void main() {
       test('open file', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         // open file 1 check contents.
-        var paths = ['file1', './file1', './/file1', './//file1'];
-        for (var path in paths) {
+        final paths = ['file1', './file1', './/file1', './//file1'];
+        for (final path in paths) {
           await _openFileAndAssert(proxy, path, 100, 'file1');
         }
       });
@@ -827,8 +880,8 @@ void main() {
       test('open fails for illegal path', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
-        var paths = <String>[
+        final proxy = _getProxyForDir(dir);
+        final paths = <String>[
           '',
           'too_long_path${'_' * 242}',
           'subDir/too_long_path${'_' * 242}',
@@ -838,7 +891,7 @@ void main() {
           'subDir/invalid_\u{00}_name',
           'invalid_\u{00}_name/legal_name',
         ];
-        for (var path in paths) {
+        for (final path in paths) {
           DirectoryProxy newProxy = DirectoryProxy();
           await proxy.open(openRightReadable | openFlagDescribe, 0, path,
               InterfaceRequest(newProxy.ctrl.request().passChannel()));
@@ -855,7 +908,7 @@ void main() {
       test('open file fails for path ending with "/"', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
         await proxy.open(openRightReadable | openFlagDescribe, 0, 'file1/',
@@ -872,7 +925,7 @@ void main() {
       test('open file fails for invalid key', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
         await proxy.open(openRightReadable, 0, 'invalid',
@@ -885,7 +938,7 @@ void main() {
       test('open fails for trying to open file within a file', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         FileProxy fileProxy = FileProxy();
         await proxy.open(openRightReadable | openFlagDescribe, 0, 'file1/file2',
@@ -902,12 +955,12 @@ void main() {
       test('close works', () async {
         PseudoDir dir = PseudoDir();
         PseudoDir subDir = PseudoDir();
-        var file1 = PseudoFile.readOnlyStr(() => 'file1');
+        final file1 = PseudoFile.readOnlyStr(() => 'file1');
         dir
           ..addNode('file1', file1)
           ..addNode('subDir', subDir);
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
         DirectoryProxy subDirProxy = DirectoryProxy();
         await proxy.open(openRightReadable, 0, 'subDir',
             InterfaceRequest(subDirProxy.ctrl.request().passChannel()));
@@ -924,7 +977,7 @@ void main() {
       test('open sub dir', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         DirectoryProxy dirProxy = DirectoryProxy();
         await proxy.open(openRightReadable, 0, 'subDir',
@@ -937,9 +990,9 @@ void main() {
       test('directory rights are hierarchical (open dir)', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir, openRightReadable);
+        final proxy = _getProxyForDir(dir, openRightReadable);
 
-        var newProxy = DirectoryProxy();
+        final newProxy = DirectoryProxy();
         await proxy.open(openRightWritable | openFlagDescribe, 0, 'subDir',
             InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
@@ -954,9 +1007,9 @@ void main() {
       test('directory rights are hierarchical (open file)', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir, openRightWritable);
+        final proxy = _getProxyForDir(dir, openRightWritable);
 
-        var newProxy = DirectoryProxy();
+        final newProxy = DirectoryProxy();
         await proxy.open(openRightWritable | openFlagDescribe, 0, 'subDir',
             InterfaceRequest(newProxy.ctrl.request().passChannel()));
 
@@ -978,7 +1031,7 @@ void main() {
       test('open sub dir with "/" at end', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         DirectoryProxy dirProxy = DirectoryProxy();
         await proxy.open(openRightReadable, 0, 'subDir/',
@@ -991,7 +1044,7 @@ void main() {
       test('directly open file in sub dir', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir);
+        final proxy = _getProxyForDir(dir);
 
         // open file 2 in subDir.
         await _openFileAndAssert(proxy, 'subDir/file2', 100, 'file2');
@@ -1000,16 +1053,16 @@ void main() {
       test('readdir fails for NodeReference', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir, openFlagNodeReference);
+        final proxy = _getProxyForDir(dir, openFlagNodeReference);
 
-        var response = await proxy.readDirents(1024);
+        final response = await proxy.readDirents(1024);
         expect(response.s, ZX.ERR_BAD_HANDLE);
       });
 
       test('not allowed to open a file for NodeReference', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir, openFlagNodeReference);
+        final proxy = _getProxyForDir(dir, openFlagNodeReference);
 
         // open file 2 in subDir.
         FileProxy fileProxy = FileProxy();
@@ -1023,12 +1076,13 @@ void main() {
       test('clone with same rights', () async {
         PseudoDir dir = _setUpDir();
 
-        var proxy = _getProxyForDir(dir, openRightReadable | openRightWritable);
+        final proxy =
+            _getProxyForDir(dir, openRightReadable | openRightWritable);
         DirectoryProxy cloneProxy = DirectoryProxy();
         await proxy.clone(cloneFlagSameRights | openFlagDescribe,
             InterfaceRequest(cloneProxy.ctrl.request().passChannel()));
 
-        var subDirProxy = DirectoryProxy();
+        final subDirProxy = DirectoryProxy();
         await cloneProxy.open(
             openRightReadable | openRightWritable | openFlagDescribe,
             0,
@@ -1050,7 +1104,7 @@ void main() {
     test('test clone', () async {
       PseudoDir dir = PseudoDir();
 
-      var proxy = _getProxyForDir(dir, openRightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       DirectoryProxy newProxy = DirectoryProxy();
       await proxy.clone(openRightReadable | openFlagDescribe,
@@ -1067,9 +1121,9 @@ void main() {
     test('clone should fail if requested rights exceed source rights',
         () async {
       PseudoDir dir = PseudoDir();
-      var proxy = _getProxyForDir(dir, openRightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
-      var clonedProxy = DirectoryProxy();
+      final clonedProxy = DirectoryProxy();
       await proxy.clone(openRightWritable | openFlagDescribe,
           InterfaceRequest(clonedProxy.ctrl.request().passChannel()));
 
@@ -1084,7 +1138,7 @@ void main() {
     test('test clone fails for invalid flags', () async {
       PseudoDir dir = PseudoDir();
 
-      var proxy = _getProxyForDir(dir, openRightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
       DirectoryProxy newProxy = DirectoryProxy();
       await proxy.clone(openFlagTruncate | openFlagDescribe,
@@ -1101,9 +1155,9 @@ void main() {
     test('test clone disallows both cloneFlagSameRights and specific rights',
         () async {
       PseudoDir dir = PseudoDir();
-      var proxy = _getProxyForDir(dir, openRightReadable);
+      final proxy = _getProxyForDir(dir, openRightReadable);
 
-      var clonedProxy = DirectoryProxy();
+      final clonedProxy = DirectoryProxy();
       await proxy.clone(
           openRightReadable | cloneFlagSameRights | openFlagDescribe,
           InterfaceRequest(clonedProxy.ctrl.request().passChannel()));
@@ -1168,8 +1222,8 @@ class _TestVnode extends Vnode {
   _TestVnode();
 
   @override
-  int connect(int flags, int mode, InterfaceRequest<Node> request,
-      [int parentFlags = openRightReadable | openRightWritable]) {
+  int connect(OpenFlags flags, int mode, InterfaceRequest<Node> request,
+      [OpenFlags? parentFlags]) {
     throw UnimplementedError();
   }
 

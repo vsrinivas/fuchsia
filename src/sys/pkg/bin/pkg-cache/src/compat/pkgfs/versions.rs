@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    super::BitFlags as _,
     crate::{base_packages::BasePackages, index::PackageIndex},
     anyhow::anyhow,
     async_trait::async_trait,
@@ -112,20 +111,20 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.unset(fio::OPEN_FLAG_POSIX_WRITABLE);
-        let flags = if flags.is_any_set(fio::OPEN_FLAG_POSIX_DEPRECATED) {
-            flags.unset(fio::OPEN_FLAG_POSIX_DEPRECATED).set(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+        let flags = flags.difference(fio::OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.intersects(fio::OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.difference(fio::OPEN_FLAG_POSIX_DEPRECATED).union(fio::OPEN_FLAG_POSIX_EXECUTABLE)
         } else {
             flags
         };
 
         // This directory and all child nodes are read-only
-        if flags.is_any_set(
+        if flags.intersects(
             fio::OPEN_RIGHT_WRITABLE
                 | fio::OPEN_FLAG_CREATE
                 | fio::OPEN_FLAG_CREATE_IF_ABSENT
@@ -157,7 +156,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                         &package_status,
                         self.non_static_allow_list.as_ref(),
                     );
-                    let executablity_requested = flags.is_any_set(fio::OPEN_RIGHT_EXECUTABLE);
+                    let executablity_requested = flags.intersects(fio::OPEN_RIGHT_EXECUTABLE);
                     let flags = match (executability_status, executablity_requested) {
                         (ExecutabilityStatus::Forbidden, true) => {
                             let () = send_on_open_with_error(
@@ -168,7 +167,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                             return;
                         }
                         (ExecutabilityStatus::Forbidden, false) => {
-                            flags.unset(fio::OPEN_FLAG_POSIX_EXECUTABLE)
+                            flags.difference(fio::OPEN_FLAG_POSIX_EXECUTABLE)
                         }
                         (ExecutabilityStatus::Allowed, _) => flags,
                     };
@@ -263,7 +262,7 @@ mod tests {
     };
 
     impl PkgfsVersions {
-        fn proxy(self: &Arc<Self>, flags: u32) -> fio::DirectoryProxy {
+        fn proxy(self: &Arc<Self>, flags: fio::OpenFlags) -> fio::DirectoryProxy {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 

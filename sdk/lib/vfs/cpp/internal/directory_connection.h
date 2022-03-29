@@ -21,7 +21,7 @@ class Directory;
 class DirectoryConnection final : public Connection, public fuchsia::io::Directory {
  public:
   // Create a connection to |vn| with the given |flags|.
-  DirectoryConnection(uint32_t flags, vfs::internal::Directory* vn);
+  DirectoryConnection(fuchsia::io::OpenFlags flags, vfs::internal::Directory* vn);
   ~DirectoryConnection() override;
 
   // Start listening for |fuchsia.io.Directory| messages on |request|.
@@ -30,7 +30,8 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   // |fuchsia::io::Directory| Implementation:
   void AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
                     AdvisoryLockCallback callback) override;
-  void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void Clone(fuchsia::io::OpenFlags flags,
+             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void CloseDeprecated(CloseDeprecatedCallback callback) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
@@ -40,7 +41,7 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void GetAttr(GetAttrCallback callback) override;
   void SetAttr(fuchsia::io::NodeAttributeFlags flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
-  void Open(uint32_t flags, uint32_t mode, std::string path,
+  void Open(fuchsia::io::OpenFlags flags, uint32_t mode, std::string path,
             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void AddInotifyFilter(std::string path, fuchsia::io::InotifyWatchMask filters,
                         uint32_t watch_descriptor, zx::socket socket,
@@ -58,7 +59,7 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
              fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> watcher,
              WatchCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
-  void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
+  void SetFlags(fuchsia::io::OpenFlags flags, SetFlagsCallback callback) override;
   void QueryFilesystem(QueryFilesystemCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED, nullptr);
   }

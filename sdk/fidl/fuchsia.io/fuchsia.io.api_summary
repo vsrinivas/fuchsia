@@ -16,7 +16,7 @@ struct fuchsia.io/AdvisoryLocking_AdvisoryLock_Response
 union/member fuchsia.io/AdvisoryLocking_AdvisoryLock_Result.err int32
 union/member fuchsia.io/AdvisoryLocking_AdvisoryLock_Result.response fuchsia.io/AdvisoryLocking_AdvisoryLock_Response
 strict union fuchsia.io/AdvisoryLocking_AdvisoryLock_Result
-const fuchsia.io/CLONE_FLAG_SAME_RIGHTS uint32 67108864
+const fuchsia.io/CLONE_FLAG_SAME_RIGHTS fuchsia.io/OpenFlags 67108864
 const fuchsia.io/CLOSE_ALL fuchsia.io/InotifyWatchMask 24
 bits/member fuchsia.io/ConnectionFlags.APPEND 4
 bits/member fuchsia.io/ConnectionFlags.CONNECT 2
@@ -42,7 +42,7 @@ table/member fuchsia.io/DeviceInfo.unused zx/handle:EVENTPAIR
 resource table fuchsia.io/DeviceInfo
 protocol/member fuchsia.io/Directory.AddInotifyFilter(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
-protocol/member fuchsia.io/Directory.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Directory.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Directory.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory.Describe() -> (fuchsia.io/NodeInfo info)
@@ -50,12 +50,12 @@ protocol/member fuchsia.io/Directory.Describe2(fuchsia.io/ConnectionInfoQuery qu
 protocol/member fuchsia.io/Directory.Enumerate(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)
 protocol/member fuchsia.io/Directory.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/Directory.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Directory.GetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/Directory.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/Directory.GetToken() -> (int32 s,zx/handle:optional token)
 protocol/member fuchsia.io/Directory.Link(string:255 src,zx/handle dst_parent_token,string:255 dst) -> (int32 s)
 protocol/member fuchsia.io/Directory.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
-protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Directory.Open(fuchsia.io/OpenFlags flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.Open2(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
@@ -63,32 +63,32 @@ protocol/member fuchsia.io/Directory.Rename(string:255 src,zx/handle:EVENT dst_p
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)
 protocol/member fuchsia.io/Directory.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/Directory.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/Directory.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/Directory.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Directory.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory.Unlink(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)
 protocol/member fuchsia.io/Directory.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol/member fuchsia.io/Directory.Watch(fuchsia.io/WatchMask mask,uint32 options,server_end:fuchsia.io/DirectoryWatcher watcher) -> (int32 s)
 protocol fuchsia.io/Directory
-protocol/member fuchsia.io/Directory1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Directory1.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory1.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Directory1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory1.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Directory1.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/Directory1.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Directory1.GetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/Directory1.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/Directory1.GetToken() -> (int32 s,zx/handle:optional token)
 protocol/member fuchsia.io/Directory1.Link(string:255 src,zx/handle dst_parent_token,string:255 dst) -> (int32 s)
 protocol/member fuchsia.io/Directory1.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory1.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
-protocol/member fuchsia.io/Directory1.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Directory1.Open(fuchsia.io/OpenFlags flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory1.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Directory1.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/Directory1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory1.Rewind() -> (int32 s)
 protocol/member fuchsia.io/Directory1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/Directory1.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/Directory1.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/Directory1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Directory1.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory1.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
@@ -140,7 +140,7 @@ enum/member fuchsia.io/DirentType.SOCKET 12
 enum/member fuchsia.io/DirentType.UNKNOWN 0
 strict enum fuchsia.io/DirentType uint8
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
-protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/File.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/File.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File.Describe() -> (fuchsia.io/NodeInfo info)
@@ -149,8 +149,8 @@ protocol/member fuchsia.io/File.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes 
 protocol/member fuchsia.io/File.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.io/File.GetBackingMemory(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)
 protocol/member fuchsia.io/File.GetBufferDeprecatedUseGetBackingMemory(fuchsia.io/VmoFlags flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
-protocol/member fuchsia.io/File.GetFlags() -> (int32 s,uint32 flags)
-protocol/member fuchsia.io/File.GetFlagsDeprecatedUseNode() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/File.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
+protocol/member fuchsia.io/File.GetFlagsDeprecatedUseNode() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/File.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/File.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
@@ -163,8 +163,8 @@ protocol/member fuchsia.io/File.Resize(uint64 length) -> (fuchsia.io/File2_Resiz
 protocol/member fuchsia.io/File.Seek(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)
 protocol/member fuchsia.io/File.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
 protocol/member fuchsia.io/File.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/File.SetFlags(uint32 flags) -> (int32 s)
-protocol/member fuchsia.io/File.SetFlagsDeprecatedUseNode(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/File.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
+protocol/member fuchsia.io/File.SetFlagsDeprecatedUseNode(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/File.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/File.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File.TruncateDeprecatedUseResize(uint64 length) -> (int32 s)
@@ -174,7 +174,7 @@ protocol/member fuchsia.io/File.WriteAt(vector<uint8>:8192 data,uint64 offset) -
 protocol/member fuchsia.io/File.WriteAtDeprecated(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
 protocol/member fuchsia.io/File.WriteDeprecated(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
 protocol fuchsia.io/File
-protocol/member fuchsia.io/File1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/File1.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File1.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/File1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File1.Describe() -> (fuchsia.io/NodeInfo info)
@@ -182,8 +182,8 @@ protocol/member fuchsia.io/File1.Describe2(fuchsia.io/ConnectionInfoQuery query)
 protocol/member fuchsia.io/File1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/File1.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.io/File1.GetBufferDeprecatedUseGetBackingMemory(fuchsia.io/VmoFlags flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
-protocol/member fuchsia.io/File1.GetFlags() -> (int32 s,uint32 flags)
-protocol/member fuchsia.io/File1.GetFlagsDeprecatedUseNode() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/File1.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
+protocol/member fuchsia.io/File1.GetFlagsDeprecatedUseNode() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/File1.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File1.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/File1.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
@@ -192,8 +192,8 @@ protocol/member fuchsia.io/File1.ReadDeprecated(uint64 count) -> (int32 s,vector
 protocol/member fuchsia.io/File1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File1.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
 protocol/member fuchsia.io/File1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/File1.SetFlags(uint32 flags) -> (int32 s)
-protocol/member fuchsia.io/File1.SetFlagsDeprecatedUseNode(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/File1.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
+protocol/member fuchsia.io/File1.SetFlagsDeprecatedUseNode(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/File1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/File1.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File1.TruncateDeprecatedUseResize(uint64 length) -> (int32 s)
@@ -321,38 +321,38 @@ const fuchsia.io/MODE_TYPE_SOCKET uint32 49152
 const fuchsia.io/MOVE fuchsia.io/InotifyWatchMask 192
 table/member fuchsia.io/MemoryInfo.buffer fuchsia.mem/Range
 resource table fuchsia.io/MemoryInfo
-protocol/member fuchsia.io/Node.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Node.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Node.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Node.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Node.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/Node.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Node.GetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/Node.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/Node.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Node.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Node.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Node.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/Node.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/Node.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/Node.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Node.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.io/Node
-protocol/member fuchsia.io/Node1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Node1.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Node1.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Node1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node1.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Node1.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/Node1.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Node1.GetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.io/Node1.GetFlags() -> (int32 s,fuchsia.io/OpenFlags flags)
 protocol/member fuchsia.io/Node1.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node1.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Node1.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
 protocol/member fuchsia.io/Node1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Node1.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
-protocol/member fuchsia.io/Node1.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.io/Node1.SetFlags(fuchsia.io/OpenFlags flags) -> (int32 s)
 protocol/member fuchsia.io/Node1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Node1.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node1.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
@@ -435,24 +435,41 @@ bits/member fuchsia.io/NodeProtocols.STREAM_SOCKET 64
 bits/member fuchsia.io/NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET 32
 bits/member fuchsia.io/NodeProtocols.TTY 536870912
 strict bits fuchsia.io/NodeProtocols uint64
-const fuchsia.io/OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 46661632
-const fuchsia.io/OPEN_FLAG_APPEND uint32 1048576
-const fuchsia.io/OPEN_FLAG_CREATE uint32 65536
-const fuchsia.io/OPEN_FLAG_CREATE_IF_ABSENT uint32 131072
-const fuchsia.io/OPEN_FLAG_DESCRIBE uint32 8388608
-const fuchsia.io/OPEN_FLAG_DIRECTORY uint32 524288
-const fuchsia.io/OPEN_FLAG_NODE_REFERENCE uint32 4194304
-const fuchsia.io/OPEN_FLAG_NOT_DIRECTORY uint32 33554432
-const fuchsia.io/OPEN_FLAG_NO_REMOTE uint32 2097152
-const fuchsia.io/OPEN_FLAG_POSIX_DEPRECATED uint32 16777216
-const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE uint32 268435456
-const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE uint32 134217728
-const fuchsia.io/OPEN_FLAG_TRUNCATE uint32 262144
-const fuchsia.io/OPEN_RIGHTS uint32 11
+const fuchsia.io/OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE fuchsia.io/OpenFlags 46661632
+const fuchsia.io/OPEN_FLAG_APPEND fuchsia.io/OpenFlags 1048576
+const fuchsia.io/OPEN_FLAG_CREATE fuchsia.io/OpenFlags 65536
+const fuchsia.io/OPEN_FLAG_CREATE_IF_ABSENT fuchsia.io/OpenFlags 131072
+const fuchsia.io/OPEN_FLAG_DESCRIBE fuchsia.io/OpenFlags 8388608
+const fuchsia.io/OPEN_FLAG_DIRECTORY fuchsia.io/OpenFlags 524288
+const fuchsia.io/OPEN_FLAG_NODE_REFERENCE fuchsia.io/OpenFlags 4194304
+const fuchsia.io/OPEN_FLAG_NOT_DIRECTORY fuchsia.io/OpenFlags 33554432
+const fuchsia.io/OPEN_FLAG_NO_REMOTE fuchsia.io/OpenFlags 2097152
+const fuchsia.io/OPEN_FLAG_POSIX_DEPRECATED fuchsia.io/OpenFlags 16777216
+const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE fuchsia.io/OpenFlags 268435456
+const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE fuchsia.io/OpenFlags 134217728
+const fuchsia.io/OPEN_FLAG_TRUNCATE fuchsia.io/OpenFlags 262144
+const fuchsia.io/OPEN_RIGHTS fuchsia.io/OpenFlags 11
 const fuchsia.io/OPEN_RIGHTS_MASK uint32 65535
-const fuchsia.io/OPEN_RIGHT_EXECUTABLE uint32 8
-const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
-const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2
+const fuchsia.io/OPEN_RIGHT_EXECUTABLE fuchsia.io/OpenFlags 8
+const fuchsia.io/OPEN_RIGHT_READABLE fuchsia.io/OpenFlags 1
+const fuchsia.io/OPEN_RIGHT_WRITABLE fuchsia.io/OpenFlags 2
+bits/member fuchsia.io/OpenFlags.APPEND 1048576
+bits/member fuchsia.io/OpenFlags.CLONE_SAME_RIGHTS 67108864
+bits/member fuchsia.io/OpenFlags.CREATE 65536
+bits/member fuchsia.io/OpenFlags.CREATE_IF_ABSENT 131072
+bits/member fuchsia.io/OpenFlags.DESCRIBE 8388608
+bits/member fuchsia.io/OpenFlags.DIRECTORY 524288
+bits/member fuchsia.io/OpenFlags.NODE_REFERENCE 4194304
+bits/member fuchsia.io/OpenFlags.NOT_DIRECTORY 33554432
+bits/member fuchsia.io/OpenFlags.NO_REMOTE 2097152
+bits/member fuchsia.io/OpenFlags.POSIX_DEPRECATED 16777216
+bits/member fuchsia.io/OpenFlags.POSIX_EXECUTABLE 268435456
+bits/member fuchsia.io/OpenFlags.POSIX_WRITABLE 134217728
+bits/member fuchsia.io/OpenFlags.RIGHT_EXECUTABLE 8
+bits/member fuchsia.io/OpenFlags.RIGHT_READABLE 1
+bits/member fuchsia.io/OpenFlags.RIGHT_WRITABLE 2
+bits/member fuchsia.io/OpenFlags.TRUNCATE 262144
+strict bits fuchsia.io/OpenFlags uint32
 enum/member fuchsia.io/OpenMode.ALWAYS_CREATE 3
 enum/member fuchsia.io/OpenMode.MAYBE_CREATE 2
 enum/member fuchsia.io/OpenMode.OPEN_EXISTING 1

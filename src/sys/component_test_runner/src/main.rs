@@ -45,7 +45,12 @@ async fn file_contents_at_path(dir: zx::Channel, path: &str) -> Result<Vec<u8>, 
 
     let (file, server) = create_proxy::<fio::FileMarker>()?;
 
-    dir_proxy.open(0, 0, path, ServerEnd::<fio::NodeMarker>::new(server.into_channel()))?;
+    dir_proxy.open(
+        fio::OpenFlags::empty(),
+        0,
+        path,
+        ServerEnd::<fio::NodeMarker>::new(server.into_channel()),
+    )?;
 
     let attr = file.get_attr().await?.1;
 

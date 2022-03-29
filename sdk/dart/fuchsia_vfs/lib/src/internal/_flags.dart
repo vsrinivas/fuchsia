@@ -6,55 +6,50 @@ import 'package:fidl_fuchsia_io/fidl_async.dart';
 
 /// Common utilities for working with flags during open/clone.
 class Flags {
-  /// All known rights (some rights may be known but unsupported).
-  static const int fsRights =
-      openRightReadable | openRightWritable | openRightExecutable;
-
   /// Default rights.
-  static const int fsRightsDefault = openRightReadable | openRightWritable;
-
-  /// All lower 16 bits are reserved for future rights extensions.
-  static const int fsRightsSpace = 0x0000FFFF;
+  static OpenFlags fsRightsDefault() {
+    return openRightReadable | openRightWritable;
+  }
 
   /// Returns true if the OPEN_FLAG_NODE_REFERENCE bit is set in |flags|.
-  static bool isNodeReference(int flags) {
-    return (flags & openFlagNodeReference) != 0;
+  static bool isNodeReference(OpenFlags flags) {
+    return (flags & openFlagNodeReference) != OpenFlags.$none;
   }
 
   /// Returns true if the CLONE_FLAG_SAME_RIGHTS bit is set in |flags|.
-  static bool shouldCloneWithSameRights(int flags) {
-    return (flags & cloneFlagSameRights) != 0;
+  static bool shouldCloneWithSameRights(OpenFlags flags) {
+    return (flags & cloneFlagSameRights) != OpenFlags.$none;
   }
 
   /// Returns true if the OPEN_FLAG_POSIX_WRITABLE bit is set in |flags|.
-  static bool isPosixWritable(int flags) {
-    return (flags & openFlagPosixWritable) != 0;
+  static bool isPosixWritable(OpenFlags flags) {
+    return (flags & openFlagPosixWritable) != OpenFlags.$none;
   }
 
   /// Returns true if the OPEN_FLAG_POSIX_EXECUTABLE bit is set in |flags|.
-  static bool isPosixExecutable(int flags) {
-    return (flags & openFlagPosixExecutable) != 0;
+  static bool isPosixExecutable(OpenFlags flags) {
+    return (flags & openFlagPosixExecutable) != OpenFlags.$none;
   }
 
   /// Returns true if the rights flags in |flagsA| does not exceed
   /// those in |flagsB|.
-  static bool stricterOrSameRights(int flagsA, int flagsB) {
-    var rightsA = flagsA & fsRights;
-    var rightsB = flagsB & fsRights;
-    return (rightsA & ~rightsB) == 0;
+  static bool stricterOrSameRights(OpenFlags flagsA, OpenFlags flagsB) {
+    var rightsA = flagsA & openRights;
+    var rightsB = flagsB & openRights;
+    return (rightsA & ~rightsB) == OpenFlags.$none;
   }
 
   /// Perform basic flags validation relevant to |Directory.Open| and
   /// |Node.Clone|.
   /// Returns false if the flags combination is invalid.
-  static bool inputPrecondition(int flags) {
+  static bool inputPrecondition(OpenFlags flags) {
     // If the caller specified an unknown right, reject the request.
-    if (((flags & fsRightsSpace) & ~fsRights) != 0) {
+    if (((flags.$value & openRightsMask) & ~openRights.$value) != 0) {
       return false;
     }
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
-    if ((flags & openFlagNodeReference) != 0) {
-      if ((flags & ~openFlagsAllowedWithNodeReference) != 0) {
+    if ((flags & openFlagNodeReference) != OpenFlags.$none) {
+      if ((flags & ~openFlagsAllowedWithNodeReference) != OpenFlags.$none) {
         return false;
       }
     }

@@ -62,7 +62,7 @@ impl CapabilityProvider for HubCapabilityProvider {
     async fn open(
         self: Box<Self>,
         _task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -134,7 +134,7 @@ impl Hub {
 
     pub async fn open_root(
         &self,
-        flags: u32,
+        flags: fio::OpenFlags,
         mut server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let root_moniker = InstancedAbsoluteMoniker::root();
@@ -162,7 +162,7 @@ impl Hub {
     pub async fn open(
         &self,
         instanced_moniker: &InstancedAbsoluteMoniker,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: pfsPath,
         server_end: &mut zx::Channel,
@@ -402,7 +402,7 @@ impl Hub {
             lifecycle_controller_path,
             Box::new(
                 move |scope: ExecutionScope,
-                      _flags: u32,
+                      _flags: fio::OpenFlags,
                       _mode: u32,
                       _relative_path: pfsPath,
                       server_end: ServerEnd<fio::NodeMarker>| {

@@ -25,7 +25,7 @@ class Directory : public fuchsia::io::testing::Directory_TestBase {
   void SetOpenHandler(OpenHandler open_handler) { open_handler_ = std::move(open_handler); }
 
  private:
-  void Open(uint32_t flags, uint32_t mode, std::string path,
+  void Open(fuchsia::io::OpenFlags flags, uint32_t mode, std::string path,
             fidl::InterfaceRequest<fuchsia::io::Node> object) override {
     open_handler_(std::move(path), std::move(object));
   }

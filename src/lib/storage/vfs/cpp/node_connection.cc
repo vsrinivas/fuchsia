@@ -119,7 +119,7 @@ void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
 void NodeConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
   auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
-    completer.Reply(result.status_value(), 0);
+    completer.Reply(result.status_value(), {});
   } else {
     completer.Reply(ZX_OK, result.value());
   }

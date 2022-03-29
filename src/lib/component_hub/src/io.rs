@@ -55,7 +55,11 @@ impl Directory {
     }
 
     // Open a directory at the given `relative_path` with the provided flags.
-    pub fn open_dir<P: AsRef<Path>>(&self, relative_path: P, flags: u32) -> Result<Self> {
+    pub fn open_dir<P: AsRef<Path>>(
+        &self,
+        relative_path: P,
+        flags: fio::OpenFlags,
+    ) -> Result<Self> {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,

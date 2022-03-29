@@ -75,7 +75,7 @@ class NamespaceBuilder {
   void PushDirectoryFromPath(std::string path);
   void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
   void PushDirectoryFromPathAsWithPermissions(std::string src_path, std::string dst_path,
-                                              uint64_t flags);
+                                              fuchsia_io::wire::OpenFlags flags);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
   void Release();
 

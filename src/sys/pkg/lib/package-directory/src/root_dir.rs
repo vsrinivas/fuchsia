@@ -164,26 +164,25 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags & !fio::OPEN_FLAG_POSIX_WRITABLE;
-        let flags = if flags & fio::OPEN_FLAG_POSIX_DEPRECATED != 0 {
+        let flags = if flags.intersects(fio::OPEN_FLAG_POSIX_DEPRECATED) {
             (flags & !fio::OPEN_FLAG_POSIX_DEPRECATED) | fio::OPEN_FLAG_POSIX_EXECUTABLE
         } else {
             flags
         };
         if path.is_empty() {
-            if flags
-                & (fio::OPEN_RIGHT_WRITABLE
+            if flags.intersects(
+                fio::OPEN_RIGHT_WRITABLE
                     | fio::OPEN_FLAG_CREATE
                     | fio::OPEN_FLAG_CREATE_IF_ABSENT
                     | fio::OPEN_FLAG_TRUNCATE
-                    | fio::OPEN_FLAG_APPEND)
-                != 0
-            {
+                    | fio::OPEN_FLAG_APPEND,
+            ) {
                 let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
                 return;
             }
@@ -340,11 +339,11 @@ impl vfs::directory::entry_container::Directory for RootDir {
 }
 
 // Behavior copied from pkgfs.
-fn open_meta_as_file(flags: u32, mode: u32) -> bool {
+fn open_meta_as_file(flags: fio::OpenFlags, mode: u32) -> bool {
     let mode_type = mode & fio::MODE_TYPE_MASK;
     let open_as_file = mode_type == fio::MODE_TYPE_FILE;
     let open_as_dir = mode_type == fio::MODE_TYPE_DIRECTORY
-        || flags & (fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NODE_REFERENCE) != 0;
+        || flags.intersects(fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NODE_REFERENCE);
     open_as_file || !open_as_dir
 }
 
@@ -356,7 +355,6 @@ mod tests {
         fidl::endpoints::{create_proxy, Proxy as _},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
-        proptest::{prelude::ProptestConfig, prop_assert, proptest},
         std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
@@ -745,7 +743,8 @@ mod tests {
 
             // Cloning meta_as_dir yields meta_as_dir
             let (cloned_proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-            let () = proxy.clone(0, server_end.into_channel().into()).unwrap();
+            let () =
+                proxy.clone(fio::OpenFlags::empty(), server_end.into_channel().into()).unwrap();
             assert_eq!(
                 files_async::readdir(&cloned_proxy).await.unwrap(),
                 vec![
@@ -869,37 +868,43 @@ mod tests {
         assert_eq!(buf, fuchsia_archive::MAGIC_INDEX_VALUE);
     }
 
-    proptest! {
-        #![proptest_config(ProptestConfig {
+    fn arb_open_flags() -> impl proptest::strategy::Strategy<Value = fio::OpenFlags> {
+        use proptest::strategy::Strategy as _;
+
+        proptest::arbitrary::any::<u32>().prop_map(fio::OpenFlags::from_bits_truncate)
+    }
+
+    proptest::proptest! {
+        #![proptest_config(proptest::test_runner::Config {
             failure_persistence:
                 Some(Box::new(proptest::test_runner::FileFailurePersistence::Off)),
-            ..ProptestConfig::default()
+            ..Default::default()
         })]
         #[test]
-        fn open_meta_as_file_file_first_priority(flags: u32, mode: u32) {
+        fn open_meta_as_file_file_first_priority(flags in arb_open_flags(), mode: u32) {
             let mode_with_file = (mode & !fio::MODE_TYPE_MASK) | fio::MODE_TYPE_FILE;
-            prop_assert!(open_meta_as_file(flags, mode_with_file));
+            proptest::prop_assert!(open_meta_as_file(flags, mode_with_file));
         }
 
         #[test]
-        fn open_meta_as_file_dir_second_priority(flags: u32, mode: u32) {
+        fn open_meta_as_file_dir_second_priority(flags in arb_open_flags(), mode: u32) {
             let mode_with_dir = (mode & !fio::MODE_TYPE_MASK) | fio::MODE_TYPE_DIRECTORY;
-            prop_assert!(!open_meta_as_file(flags, mode_with_dir));
+            proptest::prop_assert!(!open_meta_as_file(flags, mode_with_dir));
 
             let mode_without_file = if mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_FILE {
                 mode & !fio::MODE_TYPE_FILE
             } else {
                 mode
             };
-            prop_assert!(!open_meta_as_file(flags | fio::OPEN_FLAG_DIRECTORY, mode_without_file));
-            prop_assert!(!open_meta_as_file(flags | fio::OPEN_FLAG_NODE_REFERENCE, mode_without_file));
+            proptest::prop_assert!(!open_meta_as_file(flags | fio::OPEN_FLAG_DIRECTORY, mode_without_file));
+            proptest::prop_assert!(!open_meta_as_file(flags | fio::OPEN_FLAG_NODE_REFERENCE, mode_without_file));
         }
 
         #[test]
-        fn open_meta_as_file_file_fallback(mut flags: u32, mut mode: u32) {
-            mode = mode & !(fio::MODE_TYPE_FILE | fio::MODE_TYPE_DIRECTORY);
-            flags = flags & !(fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NODE_REFERENCE);
-            prop_assert!(open_meta_as_file(flags, mode));
+        fn open_meta_as_file_file_fallback(flags in arb_open_flags(), mode: u32) {
+            let mode = mode & !(fio::MODE_TYPE_FILE | fio::MODE_TYPE_DIRECTORY);
+            let flags = flags & !(fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_NODE_REFERENCE);
+            proptest::prop_assert!(open_meta_as_file(flags, mode));
         }
     }
 }

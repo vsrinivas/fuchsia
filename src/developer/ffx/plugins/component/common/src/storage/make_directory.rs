@@ -73,8 +73,8 @@ mod test {
                     request
                 {
                     assert_eq!(path, "test");
-                    assert!(flags & fio::OPEN_FLAG_CREATE != 0);
-                    assert!(flags & fio::OPEN_FLAG_DIRECTORY != 0);
+                    assert!(flags.intersects(fio::OPEN_FLAG_CREATE));
+                    assert!(flags.intersects(fio::OPEN_FLAG_DIRECTORY));
                     assert!(mode & fio::MODE_TYPE_DIRECTORY != 0);
                     object
                 } else {

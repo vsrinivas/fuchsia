@@ -137,7 +137,7 @@ impl Client {
     pub fn forward_open(
         &self,
         blob: &Hash,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) -> Result<(), fidl::Error> {

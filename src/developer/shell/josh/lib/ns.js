@@ -93,7 +93,7 @@ class Directory {
     const rootElements = rns.getElements();
     let restOfPath = undefined;
     let element = undefined;
-    let checkDirectory = fidling.fuchsia_io.OPEN_FLAG_DESCRIBE;
+    let checkDirectory = true;
 
     // The root elements are special, top-level paths.  Every path is relative to one.
     // So, we have to start looking for the given path from one of the root strings.
@@ -106,7 +106,7 @@ class Directory {
         // For some reason, waiting for OnOpen below in this code path
         // causes memory corruption.  We don't really need the check,
         // and we're likely to deprecate this code anyway.
-        checkDirectory = 0;
+        checkDirectory = false;
       } else if (util.isPrefixOf(splitElement, splitDirString)) {
         // We are trying to list something reachable from a root handle.
         // element.length + 1 gets rid of the next path separator.
@@ -141,7 +141,7 @@ class Directory {
     // |nodeClient| is going to be the end of the channel that we speak Node over.
     let nodeClient = request.getProtocolClient();
     let openedPromise = undefined;
-    if (checkDirectory != 0) {
+    if (checkDirectory) {
       // We can get notified when the Node gets opened.
       openedPromise = nodeClient.OnOpen((args) => {
         return args;
@@ -149,10 +149,13 @@ class Directory {
     }
     // Ask the service providing the root namespace element to open the Node
     // we want to inspect.
-    dirClient.Open(
-        fidling.fuchsia_io.OPEN_RIGHT_READABLE | checkDirectory, 0, restOfPath,
-        request.getChannelForServer());
-    if (checkDirectory != 0) {
+    // TODO(https://fxbug.dev/96495): don't pass strings when this API is more sensible.
+    let flags = "RIGHT_READABLE";
+    if (checkDirectory) {
+      flags += "|DESCRIBE";
+    }
+    dirClient.Open(flags, 0, restOfPath, request.getChannelForServer());
+    if (checkDirectory) {
       let args = await openedPromise;
       // TODO: check the value of args.s
       if ('directory' in args.info) {

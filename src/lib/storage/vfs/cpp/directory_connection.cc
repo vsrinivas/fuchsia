@@ -182,7 +182,7 @@ void DirectoryConnection::GetFlags(GetFlagsRequestView request,
                                    GetFlagsCompleter::Sync& completer) {
   zx::status result = Connection::NodeGetFlags();
   if (result.is_error()) {
-    completer.Reply(result.status_value(), 0);
+    completer.Reply(result.status_value(), {});
   } else {
     completer.Reply(ZX_OK, result.value());
   }
@@ -206,8 +206,8 @@ void DirectoryConnection::AddInotifyFilter(AddInotifyFilterRequestView request,
 }
 
 void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
-  bool describe = request->flags & fio::wire::kOpenFlagDescribe;
-  auto write_error = [describe](fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
+  auto write_error = [describe = request->flags & fio::wire::kOpenFlagDescribe](
+                         fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
     if (describe) {
       // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
       (void)fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
@@ -225,7 +225,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 
-  uint32_t flags = request->flags;
+  fio::wire::OpenFlags flags = request->flags;
   if (path.back() == '/') {
     flags |= fio::wire::kOpenFlagDirectory;
   }
@@ -234,8 +234,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
 
   if (!PrevalidateFlags(flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
-                          ", incoming flags: ", ZxFlags(request->flags),
-                          ", path: ", request->path.data());
+                          ", incoming flags: ", request->flags, ", path: ", request->path.data());
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 

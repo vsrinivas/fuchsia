@@ -247,7 +247,7 @@ impl vfs::directory::entry::DirectoryEntry for MinfsSyncOnOpenSelf {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         path: vfs::path::Path,
         server_end: fidl::endpoints::ServerEnd<fio::NodeMarker>,

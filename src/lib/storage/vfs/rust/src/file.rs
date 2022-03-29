@@ -27,7 +27,7 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// * OPEN_FLAG_TRUNCATE - A call to truncate() will be made immediately after open().
     /// * OPEN_FLAG_DESCRIBE - The OnOpen event is sent before any other requests are received from
     /// the file's client.
-    async fn open(&self, flags: u32) -> Result<(), Status>;
+    async fn open(&self, flags: fio::OpenFlags) -> Result<(), Status>;
 
     /// Read at most |buffer.len()| bytes starting at |offset| into |buffer|. The function may read
     /// less than |count| bytes and still return success, in which case read_at returns the number
@@ -87,7 +87,7 @@ pub trait File: Sync + Send + DirectoryEntry {
     }
 
     /// Describes the underlying object.  Defaults to a simple file.
-    fn describe(&self, _connection_flags: u32) -> Result<fio::NodeInfo, Status> {
+    fn describe(&self, _connection_flags: fio::OpenFlags) -> Result<fio::NodeInfo, Status> {
         Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
     }
 }

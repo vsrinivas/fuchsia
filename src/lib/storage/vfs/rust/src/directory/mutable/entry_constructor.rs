@@ -66,7 +66,7 @@ impl NewEntryType {
     /// make sure that `flags` and `mode` combination allows or specifies a directory, returning an
     /// error when it is not the case.
     pub fn from_flags_and_mode(
-        flags: u32,
+        flags: fio::OpenFlags,
         mut mode: u32,
         force_directory: bool,
     ) -> Result<NewEntryType, Status> {
@@ -78,20 +78,24 @@ impl NewEntryType {
         }
 
         // Same for `flags`, allow only one of OPEN_FLAG_DIRECTORY or OPEN_FLAG_NOT_DIRECTORY.
-        if flags & fio::OPEN_FLAG_DIRECTORY != 0 && flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0 {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        // If specified, `flags` and `mode` should agree on what they are asking for.
-        if (flags & fio::OPEN_FLAG_DIRECTORY != 0 && mode == fio::MODE_TYPE_FILE)
-            || (flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0 && mode == fio::MODE_TYPE_DIRECTORY)
+        if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
+            && flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY)
         {
             return Err(Status::INVALID_ARGS);
         }
 
-        let type_ = if flags & fio::OPEN_FLAG_DIRECTORY != 0 || mode == fio::MODE_TYPE_DIRECTORY {
+        // If specified, `flags` and `mode` should agree on what they are asking for.
+        if (flags.intersects(fio::OPEN_FLAG_DIRECTORY) && mode == fio::MODE_TYPE_FILE)
+            || (flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) && mode == fio::MODE_TYPE_DIRECTORY)
+        {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let type_ = if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
+            || mode == fio::MODE_TYPE_DIRECTORY
+        {
             NewEntryType::Directory
-        } else if flags & fio::OPEN_FLAG_NOT_DIRECTORY != 0 || mode == fio::MODE_TYPE_FILE {
+        } else if flags.intersects(fio::OPEN_FLAG_NOT_DIRECTORY) || mode == fio::MODE_TYPE_FILE {
             NewEntryType::File
         } else {
             // Neither is set, so default to file, unless `force_directory` would make use fail.
@@ -162,7 +166,7 @@ mod tests {
             mode: 0,
             force_directory: false,
             expected: Directory);
-        assert_success!(flags: 0,
+        assert_success!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: false,
             expected: Directory);
@@ -170,7 +174,7 @@ mod tests {
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: false,
             expected: Directory);
-        assert_success!(flags: 0,
+        assert_success!(flags: fio::OpenFlags::empty(),
             mode: 0,
             force_directory: true,
             expected: Directory);
@@ -178,7 +182,7 @@ mod tests {
             mode: 0,
             force_directory: true,
             expected: Directory);
-        assert_success!(flags: 0,
+        assert_success!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_DIRECTORY,
             force_directory: true,
             expected: Directory);
@@ -190,7 +194,7 @@ mod tests {
 
     #[test]
     fn file() {
-        assert_success!(flags: 0,
+        assert_success!(flags: fio::OpenFlags::empty(),
             mode: 0,
             force_directory: false,
             expected: File);
@@ -198,7 +202,7 @@ mod tests {
             mode: 0,
             force_directory: false,
             expected: File);
-        assert_success!(flags: 0,
+        assert_success!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_FILE,
             force_directory: false,
             expected: File);
@@ -212,15 +216,15 @@ mod tests {
     fn unsupported_types() {
         let status = Status::NOT_SUPPORTED;
 
-        assert_failure!(flags: 0,
+        assert_failure!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_BLOCK_DEVICE,
             force_directory: false,
             expected: status);
-        assert_failure!(flags: 0,
+        assert_failure!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_SOCKET,
             force_directory: false,
             expected: status);
-        assert_failure!(flags: 0,
+        assert_failure!(flags: fio::OpenFlags::empty(),
             mode: fio::MODE_TYPE_SERVICE,
             force_directory: false,
             expected: status);

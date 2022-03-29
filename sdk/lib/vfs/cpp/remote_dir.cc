@@ -22,7 +22,7 @@ RemoteDir::RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir) {
 
 RemoteDir::~RemoteDir() = default;
 
-zx_status_t RemoteDir::Connect(uint32_t flags, zx::channel request,
+zx_status_t RemoteDir::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
                                async_dispatcher_t* dispatcher) {
   dir_ptr_->Clone(flags, fidl::InterfaceRequest<fuchsia ::io::Node>(std::move(request)));
   return ZX_OK;

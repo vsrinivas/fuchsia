@@ -52,7 +52,9 @@ class TestFile : public fio::testing::File_TestBase {
     EXPECT_EQ(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE | fio::VmoFlags::PRIVATE_CLONE, flags);
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
     ASSERT_TRUE(endpoints.is_ok());
-    EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    EXPECT_EQ(ZX_OK, fdio_open(path_.data(),
+                               static_cast<uint32_t>(fio::OPEN_RIGHT_READABLE |
+                                                     fio::OPEN_RIGHT_EXECUTABLE),
                                endpoints->server.channel().release()));
 
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
@@ -79,13 +81,13 @@ class TestFile : public fio::testing::File_TestBase {
 
 class TestDirectory : public fio::testing::Directory_TestBase {
  public:
-  using OpenHandler = fit::function<void(uint32_t flags, std::string path,
+  using OpenHandler = fit::function<void(fio::OpenFlags flags, std::string path,
                                          fidl::InterfaceRequest<fio::Node> object)>;
 
   void SetOpenHandler(OpenHandler open_handler) { open_handler_ = std::move(open_handler); }
 
  private:
-  void Open(uint32_t flags, uint32_t mode, std::string path,
+  void Open(fio::OpenFlags flags, uint32_t mode, std::string path,
             fidl::InterfaceRequest<fio::Node> object) override {
     open_handler_(flags, std::move(path), std::move(object));
   }
@@ -161,7 +163,7 @@ class DriverHostTest : public testing::Test {
     fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
     pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop_.dispatcher());
     pkg_directory.SetOpenHandler(
-        [this, &file_binding](uint32_t flags, std::string path, auto object) {
+        [this, &file_binding](fio::OpenFlags flags, std::string path, auto object) {
           EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
           EXPECT_EQ("driver/library.so", path);
           file_binding.Bind(object.TakeChannel(), loop_.dispatcher());
@@ -472,7 +474,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
   pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop().dispatcher());
   pkg_directory.SetOpenHandler(
-      [this, &file_binding](uint32_t flags, std::string path, auto object) {
+      [this, &file_binding](fio::OpenFlags flags, std::string path, auto object) {
         EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
         EXPECT_EQ("driver/library.so", path);
         file_binding.Bind(object.TakeChannel(), loop().dispatcher());

@@ -333,7 +333,7 @@ void SemanticParser::ParseMethod(InterfaceMethod* method) {
       }
     } else if (Is("print")) {
       // Parses something like:
-      //   print flags as directory_open_flags;
+      //   print mode as directory_open_mode;
       NextLexicalToken();
       if (!IsIdentifier()) {
         AddError() << "Field name expected.\n";
@@ -352,14 +352,7 @@ void SemanticParser::ParseMethod(InterfaceMethod* method) {
           if (!IsIdentifier()) {
             AddError() << "Decode function expected.\n";
           } else {
-            if (current_string_ == "directory_open_flags") {
-              Uint32Type* type = member->type()->AsUint32Type();
-              if (type == nullptr) {
-                AddError() << "<" << member->name() << "> should be an Uint32.\n";
-              } else {
-                type->set_kind(Uint32Type::Kind::kDirectoryOpenFlags);
-              }
-            } else if (current_string_ == "directory_open_mode") {
+            if (current_string_ == "directory_open_mode") {
               Uint32Type* type = member->type()->AsUint32Type();
               if (type == nullptr) {
                 AddError() << "<" << member->name() << "> should be an Uint32.\n";

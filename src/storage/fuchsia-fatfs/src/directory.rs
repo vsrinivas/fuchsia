@@ -45,8 +45,8 @@ use {
     },
 };
 
-fn check_open_flags_for_existing_entry(flags: u32) -> Result<(), Status> {
-    if flags & fio::OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+fn check_open_flags_for_existing_entry(flags: fio::OpenFlags) -> Result<(), Status> {
+    if flags.intersects(fio::OPEN_FLAG_CREATE_IF_ABSENT) {
         return Err(Status::ALREADY_EXISTS);
     }
     // Other flags are verified by VFS's new_connection_validate_flags method.
@@ -260,7 +260,7 @@ impl FatDirectory {
 
     fn lookup(
         self: &Arc<Self>,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         mut path: Path,
         closer: &mut Closer<'_>,
@@ -298,7 +298,7 @@ impl FatDirectory {
     pub(crate) fn open_child(
         self: &Arc<Self>,
         name: &str,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         closer: &mut Closer<'_>,
     ) -> Result<FatNode, Status> {
@@ -338,11 +338,11 @@ impl FatDirectory {
                         name.to_owned(),
                     )))
                 }
-            } else if flags & fio::OPEN_FLAG_CREATE != 0 {
+            } else if flags.intersects(fio::OPEN_FLAG_CREATE) {
                 // Child entry does not exist, but we've been asked to create it.
                 created = true;
                 let dir = self.borrow_dir(&fs_lock)?;
-                if flags & fio::OPEN_FLAG_DIRECTORY != 0
+                if flags.intersects(fio::OPEN_FLAG_DIRECTORY)
                     || (mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_DIRECTORY)
                 {
                     let dir = dir.create_dir(name).map_err(fatfs_error_to_status)?;
@@ -553,7 +553,7 @@ impl DirectoryEntry for FatDirectory {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,

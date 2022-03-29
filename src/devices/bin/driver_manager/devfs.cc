@@ -127,7 +127,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   }
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
   void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -426,7 +426,7 @@ again:
 }
 
 void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ipc,
-                char* path, uint32_t flags) {
+                char* path, fio::OpenFlags flags) {
   // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
   if (!strncmp(path, kDiagnosticsDirName, kDiagnosticsDirLen) &&
       (path[kDiagnosticsDirLen] == '\0' || path[kDiagnosticsDirLen] == '/')) {
@@ -662,7 +662,7 @@ zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_r
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  __UNUSED auto result = dev->device_controller()->Open(0, 0, ".", std::move(client_remote));
+  __UNUSED auto result = dev->device_controller()->Open({}, 0, ".", std::move(client_remote));
   return ZX_OK;
 }
 

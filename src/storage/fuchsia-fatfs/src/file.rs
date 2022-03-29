@@ -214,7 +214,7 @@ impl Debug for FatFile {
 
 #[async_trait]
 impl VfsFile for FatFile {
-    async fn open(&self, _flags: u32) -> Result<(), Status> {
+    async fn open(&self, _flags: fio::OpenFlags) -> Result<(), Status> {
         Ok(())
     }
 
@@ -342,7 +342,7 @@ impl DirectoryEntry for FatFile {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         _mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
@@ -408,11 +408,13 @@ mod tests {
             let mut closer = Closer::new(&fs.filesystem());
             dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
             closer.add(FatNode::Dir(dir.clone()));
-            let file =
-                match dir.open_child("test_file", 0, 0, &mut closer).expect("Open to succeed") {
-                    FatNode::File(f) => f,
-                    val => panic!("Unexpected value {:?}", val),
-                };
+            let file = match dir
+                .open_child("test_file", fio::OpenFlags::empty(), 0, &mut closer)
+                .expect("Open to succeed")
+            {
+                FatNode::File(f) => f,
+                val => panic!("Unexpected value {:?}", val),
+            };
             file.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
             TestFile(file)
         }

@@ -24,7 +24,7 @@ namespace fs_management {
 
 __EXPORT
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> export_root, uint32_t flags) {
+    fidl::UnownedClientEnd<fuchsia_io::Directory> export_root, fuchsia_io::wire::OpenFlags flags) {
   zx::channel root_client, root_server;
   auto status = zx::make_status(zx::channel::create(0, &root_client, &root_server));
   if (status.is_error()) {

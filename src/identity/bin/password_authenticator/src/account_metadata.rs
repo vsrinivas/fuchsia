@@ -493,8 +493,11 @@ pub mod test {
         .expect("could not open temp dir");
 
         let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
-            .expect("open second connection to temp dir");
+        dir.clone(
+            fio::OpenFlags::empty(),
+            fidl::endpoints::ServerEnd::new(server_end.into_channel()),
+        )
+        .expect("open second connection to temp dir");
 
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
@@ -578,8 +581,11 @@ pub mod test {
         .expect("could not open temp dir");
 
         let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
-            .expect("open second connection to temp dir");
+        dir.clone(
+            fio::OpenFlags::empty(),
+            fidl::endpoints::ServerEnd::new(server_end.into_channel()),
+        )
+        .expect("open second connection to temp dir");
 
         // Prepare tmp_dir with an account for ID 1
         write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
@@ -645,8 +651,11 @@ pub mod test {
         .expect("could not open temp dir");
 
         let (dir2, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
-            .expect("open second connection to temp dir");
+        dir.clone(
+            fio::OpenFlags::empty(),
+            fidl::endpoints::ServerEnd::new(server_end.into_channel()),
+        )
+        .expect("open second connection to temp dir");
 
         // Prepare tmp_dir with an account for ID 1
         // and a tempfile (representing an uncommitted file), this tempfile

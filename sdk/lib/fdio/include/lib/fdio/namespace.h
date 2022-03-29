@@ -95,7 +95,7 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) ZX_AVAILABLE_SINCE(
 // or passed to the remote service on success.
 // The path must be an absolute path starting with / and containing
 // no ".." or "." or empty segments.
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t zxflags, zx_handle_t h)
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request)
     ZX_AVAILABLE_SINCE(1);
 
 // Frees a flat namespace.

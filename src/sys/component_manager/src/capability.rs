@@ -7,7 +7,7 @@ use {
     ::routing::capability_source::CapabilitySourceInterface,
     async_trait::async_trait,
     cm_task_scope::TaskScope,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::path::PathBuf,
 };
 
@@ -30,7 +30,7 @@ pub trait CapabilityProvider: Send + Sync {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        flags: u32,
+        flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,

@@ -13,8 +13,9 @@
 namespace fshost {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
-  int flags = fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
-              fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenFlagNoRemote;
+  fuchsia_io::wire::OpenFlags flags =
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+      fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenFlagNoRemote;
   if (strcmp(path, "data") == 0) {
     path = "/fs/data";
   } else if (strcmp(path, "blobexec") == 0) {
@@ -30,7 +31,7 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
   if (status != ZX_OK) {
     return zx::channel();
   }
-  status = fdio_open(path, flags, server.release());
+  status = fdio_open(path, static_cast<uint32_t>(flags), server.release());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Failed to connect to " << path << ": " << status;
     return zx::channel();

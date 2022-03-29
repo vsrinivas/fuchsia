@@ -18,7 +18,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
     std::{
         path::PathBuf,
@@ -106,7 +106,7 @@ impl CapabilityProvider for RunnerCapabilityProvider {
     async fn open(
         self: Box<Self>,
         task_scope: TaskScope,
-        _flags: u32,
+        _flags: fio::OpenFlags,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
@@ -187,7 +187,9 @@ mod tests {
             fidl::endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()?;
         let mut server = server.into_channel();
         let task_scope = TaskScope::new();
-        provider.open(task_scope.clone(), 0, 0, PathBuf::from("."), &mut server).await?;
+        provider
+            .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::from("."), &mut server)
+            .await?;
 
         // Start the component.
         client.start(sample_start_info(url), server_controller)?;
@@ -255,7 +257,9 @@ mod tests {
         let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
         let mut server = server.into_channel();
         let task_scope = TaskScope::new();
-        provider.open(task_scope.clone(), 0, 0, PathBuf::from("."), &mut server).await?;
+        provider
+            .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::from("."), &mut server)
+            .await?;
 
         // Ensure errors are propagated back to the caller.
         //

@@ -487,12 +487,12 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
     Ok(())
 }
 
-fn launch_cloned_blobfs(end: ServerEnd<fio::NodeMarker>, flags: u32, parent_flags: u32) {
-    let flags = if (flags & fio::CLONE_FLAG_SAME_RIGHTS) == fio::CLONE_FLAG_SAME_RIGHTS {
-        parent_flags
-    } else {
-        flags
-    };
+fn launch_cloned_blobfs(
+    end: ServerEnd<fio::NodeMarker>,
+    flags: fio::OpenFlags,
+    parent_flags: fio::OpenFlags,
+) {
+    let flags = if flags.contains(fio::CLONE_FLAG_SAME_RIGHTS) { parent_flags } else { flags };
     let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
     let stream = fio::DirectoryRequestStream::from_channel(chan);
     fasync::Task::spawn(async move {
@@ -505,9 +505,9 @@ fn launch_cloned_blobfs(end: ServerEnd<fio::NodeMarker>, flags: u32, parent_flag
 
 async fn serve_failing_blobfs(
     mut stream: fio::DirectoryRequestStream,
-    open_flags: u32,
+    open_flags: fio::OpenFlags,
 ) -> Result<(), Error> {
-    if (open_flags & fio::OPEN_FLAG_DESCRIBE) == fio::OPEN_FLAG_DESCRIBE {
+    if open_flags.contains(fio::OPEN_FLAG_DESCRIBE) {
         stream
             .control_handle()
             .send_on_open_(
@@ -572,9 +572,9 @@ async fn serve_failing_blobfs(
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
-            fio::DirectoryRequest::GetFlags { responder } => {
-                responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
-            }
+            fio::DirectoryRequest::GetFlags { responder } => responder
+                .send(zx::Status::IO.into_raw(), fio::OpenFlags::empty())
+                .context("failing getflags")?,
             fio::DirectoryRequest::SetFlags { flags: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
             }
@@ -666,7 +666,7 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
         fio::DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
 
     fasync::Task::spawn(async move {
-        serve_failing_blobfs(stream, 0)
+        serve_failing_blobfs(stream, fio::OpenFlags::empty())
             .await
             .unwrap_or_else(|e| panic!("Failed to serve blobfs: {:?}", e));
     })

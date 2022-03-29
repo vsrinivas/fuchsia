@@ -20,13 +20,13 @@ void main() {
   }
 
   Future<void> _assertDescribeFile(FileProxy proxy) async {
-    var response = await proxy.describe();
+    final response = await proxy.describe();
     expect(response.file, isNotNull);
   }
 
   Future<void> _assertDescribeVmo(
       FileProxy proxy, int expectedLength, String expectedString) async {
-    var response = await proxy.describe();
+    final response = await proxy.describe();
     Vmofile? vmoFile = response.vmofile;
     if (vmoFile != null) {
       expect(vmoFile.vmo.isValid, isTrue);
@@ -38,9 +38,9 @@ void main() {
 
   group('pseudo vmo file:', () {
     test('onOpen event on success', () async {
-      var stringList = ['test string'];
-      var file = _TestPseudoVmoFile.fromStringList(stringList);
-      var proxy = file.connect(openRightReadable | openFlagDescribe);
+      final stringList = ['test string'];
+      final file = _TestPseudoVmoFile.fromStringList(stringList);
+      final proxy = file.connect(openRightReadable | openFlagDescribe);
 
       await proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
@@ -51,18 +51,18 @@ void main() {
     });
 
     test('read file', () async {
-      var stringList = ['test string'];
-      var file = _TestPseudoVmoFile.fromStringList(stringList);
-      var proxy = file.connect(openRightReadable);
+      final stringList = ['test string'];
+      final file = _TestPseudoVmoFile.fromStringList(stringList);
+      final proxy = file.connect(openRightReadable);
       await _assertRead(proxy);
     });
 
     test('describe file', () async {
-      var stringList = ['test string', 'hello world', 'lorem ipsum'];
-      var file = _TestPseudoVmoFile.fromStringList(stringList);
+      final stringList = ['test string', 'hello world', 'lorem ipsum'];
+      final file = _TestPseudoVmoFile.fromStringList(stringList);
 
-      for (var expectedString in stringList) {
-        var proxy = file.connect(openRightReadable);
+      for (final expectedString in stringList) {
+        final proxy = file.connect(openRightReadable);
         await _assertDescribeVmo(proxy, expectedString.length, expectedString);
         await proxy.close();
       }
@@ -75,8 +75,8 @@ void main() {
 
     test('pass null-producing vmo function', () async {
       Vmo? produceVmo() => null;
-      var file = _TestPseudoVmoFile.fromVmoFunc(produceVmo);
-      var proxy = file.connect(openRightReadable);
+      final file = _TestPseudoVmoFile.fromVmoFunc(produceVmo);
+      final proxy = file.connect(openRightReadable);
       await _assertDescribeFile(proxy);
     });
   });
@@ -109,10 +109,10 @@ class _TestPseudoVmoFile {
     };
   }
 
-  FileProxy connect(int openRights) {
-    var proxy = FileProxy();
-    var channel = proxy.ctrl.request().passChannel();
-    var interfaceRequest = InterfaceRequest<Node>(channel);
+  FileProxy connect(OpenFlags openRights) {
+    final proxy = FileProxy();
+    final channel = proxy.ctrl.request().passChannel();
+    final interfaceRequest = InterfaceRequest<Node>(channel);
     _pseudoVmoFile.connect(openRights, modeTypeFile, interfaceRequest);
     return proxy;
   }

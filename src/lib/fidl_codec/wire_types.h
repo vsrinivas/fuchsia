@@ -261,7 +261,6 @@ class Uint32Type : public IntegralType<uint32_t> {
     kChannelOption,
     kClock,
     kDecimal,
-    kDirectoryOpenFlags,
     kDirectoryOpenMode,
     kExceptionChannelType,
     kExceptionState,

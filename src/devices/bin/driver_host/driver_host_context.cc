@@ -20,8 +20,8 @@ DriverHostContext::~DriverHostContext() {
   }
 }
 
-zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
-                                             zx::channel c) {
+zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev,
+                                             fuchsia_io::wire::OpenFlags flags, zx::channel c) {
   auto options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
 
   fbl::RefPtr<fs::Vnode> target;

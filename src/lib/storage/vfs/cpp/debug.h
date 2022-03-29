@@ -28,12 +28,6 @@
 namespace fs {
 
 // Marker type for pretty-printing flags
-struct ZxFlags {
- public:
-  explicit ZxFlags(uint32_t flags) : value(flags) {}
-  uint32_t value;
-};
-
 struct Path {
   Path(const char* path, size_t size) : str(path), size(size) {}
   const char* str;
@@ -132,60 +126,36 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::NodeAttri
   }
 }
 
-constexpr const char* FlagToString(uint32_t flag) {
-  switch (flag) {
-    case fuchsia_io::wire::kOpenRightReadable:
-      return "RIGHT_READABLE";
-    case fuchsia_io::wire::kOpenRightWritable:
-      return "RIGHT_WRITABLE";
-    case fuchsia_io::wire::kOpenRightExecutable:
-      return "RIGHT_EXECUTABLE";
-    case fuchsia_io::wire::kOpenFlagCreate:
-      return "CREATE";
-    case fuchsia_io::wire::kOpenFlagCreateIfAbsent:
-      return "CREATE_IF_ABSENT";
-    case fuchsia_io::wire::kOpenFlagTruncate:
-      return "TRUNCATE";
-    case fuchsia_io::wire::kOpenFlagDirectory:
-      return "DIRECTORY";
-    case fuchsia_io::wire::kOpenFlagAppend:
-      return "APPEND";
-    case fuchsia_io::wire::kOpenFlagNoRemote:
-      return "NO_REMOTE";
-    case fuchsia_io::wire::kOpenFlagNodeReference:
-      return "NODE_REFEREFENCE";
-    case fuchsia_io::wire::kOpenFlagDescribe:
-      return "DESCRIBE";
-    case fuchsia_io::wire::kOpenFlagPosixDeprecated:
-      return "POSIX_DEPRECATED";
-    case fuchsia_io::wire::kOpenFlagPosixWritable:
-      return "POSIX_WRITABLE";
-    case fuchsia_io::wire::kOpenFlagPosixExecutable:
-      return "POSIX_EXECUTABLE";
-    case fuchsia_io::wire::kOpenFlagNotDirectory:
-      return "NOT_DIRECTORY";
-    case fuchsia_io::wire::kCloneFlagSameRights:
-      return "CLONE_SAME_RIGHTS";
-    default:
-      return "(Unknown flag)";
-  }
-}
-
 template <size_t N>
-void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, ZxFlags flags) {
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::OpenFlags flags) {
+  constexpr std::pair<fuchsia_io::wire::OpenFlags, std::string_view> flagToString[] = {
+      {fuchsia_io::wire::OpenFlags::kRightReadable, "RIGHT_READABLE"},
+      {fuchsia_io::wire::OpenFlags::kRightWritable, "RIGHT_WRITABLE"},
+      {fuchsia_io::wire::OpenFlags::kRightExecutable, "RIGHT_EXECUTABLE"},
+      {fuchsia_io::wire::OpenFlags::kCreate, "CREATE"},
+      {fuchsia_io::wire::OpenFlags::kCreateIfAbsent, "CREATE_IF_ABSENT"},
+      {fuchsia_io::wire::OpenFlags::kTruncate, "TRUNCATE"},
+      {fuchsia_io::wire::OpenFlags::kDirectory, "DIRECTORY"},
+      {fuchsia_io::wire::OpenFlags::kAppend, "APPEND"},
+      {fuchsia_io::wire::OpenFlags::kNoRemote, "NO_REMOTE"},
+      {fuchsia_io::wire::OpenFlags::kNodeReference, "NODE_REFERENCE"},
+      {fuchsia_io::wire::OpenFlags::kDescribe, "DESCRIBE"},
+      {fuchsia_io::wire::OpenFlags::kPosixDeprecated, "POSIX_DEPRECATED"},
+      {fuchsia_io::wire::OpenFlags::kPosixWritable, "POSIX_WRITABLE"},
+      {fuchsia_io::wire::OpenFlags::kPosixExecutable, "POSIX_EXECUTABLE"},
+      {fuchsia_io::wire::OpenFlags::kNotDirectory, "NOT_DIRECTORY"},
+      {fuchsia_io::wire::OpenFlags::kCloneSameRights, "CLONE_SAME_RIGHTS"},
+  };
   bool first = true;
-  uint32_t bit = 1;
-  for (int i = 0; i < 32; i++) {
-    const uint32_t flag = flags.value & bit;
-    if (flag) {
-      const char* desc = FlagToString(flag);
+  for (const auto& [flag, desc] : flagToString) {
+    if (flags & flag) {
       if (!first) {
         sb->Append(" | ");
       }
       first = false;
       sb->Append(desc);
     }
-    bit = bit << 1U;
+    flags ^= flag;
   }
 }
 
