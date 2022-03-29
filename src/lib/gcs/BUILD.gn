@@ -35,7 +35,7 @@ rustc_library("lib") {
 }
 
 group("gcs") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 group("tests") {

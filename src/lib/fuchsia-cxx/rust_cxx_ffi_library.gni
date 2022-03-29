@@ -228,15 +228,15 @@ template("rust_cxx_ffi_library") {
       deps = []
     }
     deps += generation_targets
-    deps += [
-      ":$rust_lib_target",
-      ":$rust_staticlib_target",
-    ]
+    deps += [ ":$rust_staticlib_target" ]
 
     if (!defined(public_deps)) {
       public_deps = []
     }
-    public_deps += [ "//src/lib/fuchsia-cxx:cxx_lib" ]
+    public_deps += [
+      ":$rust_lib_target",
+      "//src/lib/fuchsia-cxx:cxx_lib",
+    ]
 
     if (!defined(public_configs)) {
       public_configs = []

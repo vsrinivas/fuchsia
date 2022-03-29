@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("rust") {
-  deps = [ "icu_data" ]
+  public_deps = [ "icu_data" ]
 }
 
 group("tests") {

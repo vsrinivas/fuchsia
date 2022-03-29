@@ -18,5 +18,5 @@ rustc_library("stdout-to-debuglog") {
 }
 
 group("rust") {
-  deps = [ ":stdout-to-debuglog" ]
+  public_deps = [ ":stdout-to-debuglog" ]
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 group("data") {
-  deps = [ "//src/lib/diagnostics/data/rust" ]
+  public_deps = [ "//src/lib/diagnostics/data/rust" ]
 }
 
 group("tests") {

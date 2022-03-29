@@ -92,7 +92,7 @@ fuchsia_unittest_package("openthread-rust-tests") {
 }
 
 group("openthread_rust") {
-  deps = [ ":openthread" ]
+  public_deps = [ ":openthread" ]
 }
 
 group("tests") {

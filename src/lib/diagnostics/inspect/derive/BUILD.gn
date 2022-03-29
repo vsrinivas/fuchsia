@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 group("derive") {
-  deps = [ ":fuchsia-inspect-derive" ]
+  public_deps = [ ":fuchsia-inspect-derive" ]
 }
 
 group("tests") {

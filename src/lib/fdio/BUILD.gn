@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("fdio") {
-  deps = [ "rust:fdio" ]
+  public_deps = [ "rust:fdio" ]
 }
 
 group("tests") {

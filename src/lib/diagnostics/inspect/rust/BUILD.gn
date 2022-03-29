@@ -93,7 +93,7 @@ fuchsia_unittest_package("fuchsia-inspect-tests") {
 }
 
 group("rust") {
-  deps = [ ":fuchsia-inspect" ]
+  public_deps = [ ":fuchsia-inspect" ]
 }
 
 group("tests") {

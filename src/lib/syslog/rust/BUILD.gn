@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 group("rust") {
-  deps = [ ":syslog" ]
+  public_deps = [ ":syslog" ]
 }
 
 rustc_library("syslog") {

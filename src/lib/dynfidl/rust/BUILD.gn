@@ -9,7 +9,7 @@ import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 group("rust") {
-  deps = [ ":dynfidl" ]
+  public_deps = [ ":dynfidl" ]
 }
 
 group("tests") {

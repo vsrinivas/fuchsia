@@ -87,5 +87,5 @@ group("tests") {
 }
 
 group("rust") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }

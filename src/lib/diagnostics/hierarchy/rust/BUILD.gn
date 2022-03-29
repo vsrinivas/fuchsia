@@ -53,7 +53,7 @@ fuchsia_unittest_package("diagnostics-hierarchy-test") {
 }
 
 group("rust") {
-  deps = [ ":diagnostics-hierarchy" ]
+  public_deps = [ ":diagnostics-hierarchy" ]
 }
 
 group("tests") {

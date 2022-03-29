@@ -28,5 +28,5 @@ expect_includes("actor_includes") {
 }
 
 group("actor") {
-  deps = [ ":stress-test-actor" ]
+  public_deps = [ ":stress-test-actor" ]
 }

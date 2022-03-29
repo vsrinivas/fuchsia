@@ -27,5 +27,5 @@ group("tests") {
 }
 
 group("selector-maps") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }

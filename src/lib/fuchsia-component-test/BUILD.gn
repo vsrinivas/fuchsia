@@ -9,10 +9,10 @@ import("//tools/cmc/build/expect_includes.gni")
 group("fuchsia-component-test") {
   testonly = true
   deps = [
-    ":fuchsia-component-test-lib",
     ":includes",
     "realm_builder_server:realm_builder_server_component",
   ]
+  public_deps = [ ":fuchsia-component-test-lib" ]
 }
 
 rustc_library("fuchsia-component-test-lib") {

@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
 group("rust") {
-  deps = [ ":lib" ]
+  public_deps = [ ":lib" ]
 }
 
 group("tests") {
