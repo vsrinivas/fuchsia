@@ -7,6 +7,11 @@ import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
+# Defines host_test_data that can be used in the CTS.
+#
+# An equivalent to host_test_data, but ensures dependencies are allowed in the CTS.
+#
+# See host_test_data() for parameters.
 template("cts_host_test_data") {
   if (!defined(invoker.deps)) {
     invoker.deps = []

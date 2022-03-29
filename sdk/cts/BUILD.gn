@@ -26,6 +26,15 @@ generated_file("generated_test_manifest") {
   ]
 }
 
+generated_file("generated_host_test_manifest") {
+  testonly = true
+  outputs = [ "$target_gen_dir/cts/host_test_manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "host_test_manifest" ]
+
+  deps = [ "examples/host_tool:tests($host_toolchain)" ]
+}
+
 cts_copy_to_sdk("test_manifest") {
   testonly = true
   dest = ""
@@ -33,9 +42,19 @@ cts_copy_to_sdk("test_manifest") {
   non_sdk_deps = [ ":generated_test_manifest" ]
 }
 
+cts_copy_to_sdk("host_test_manifest") {
+  testonly = true
+  dest = ""
+  sources = get_target_outputs(":generated_host_test_manifest")
+  non_sdk_deps = [ ":generated_host_test_manifest" ]
+}
+
 sdk_molecule("test_manifest") {
   testonly = true
-  deps = [ ":test_manifest_sdk" ]
+  deps = [
+    ":host_test_manifest_sdk",
+    ":test_manifest_sdk",
+  ]
 }
 
 group("cts_no_e2e") {
@@ -50,7 +69,7 @@ group("cts_no_e2e") {
   if (is_cts_tot) {
     deps += [
       "build/scripts:tests",
-      "examples:tests",
+      "examples:tests_no_e2e",
     ]
   }
 }
@@ -59,6 +78,7 @@ group("cts") {
   testonly = true
   deps = [
     ":cts_no_e2e",
+    "examples:tests",
     "tests",
   ]
 }

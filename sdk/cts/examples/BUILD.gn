@@ -3,10 +3,18 @@
 # found in the LICENSE file.
 import("//sdk/cts/build/cts.gni")
 
-group("tests") {
+group("tests_no_e2e") {
   deps = [
     "hello_world:tests",
     "rust:tests",
+  ]
+  testonly = true
+}
+
+group("tests") {
+  deps = [
+    ":tests_no_e2e",
+    "host_tool:tests($host_toolchain)",
   ]
   testonly = true
 }
@@ -20,6 +28,7 @@ sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
     "hello_world:test_sdks",
+    "host_tool:test_sdks($host_toolchain)",
     "rust:test_sdks",
   ]
   testonly = true

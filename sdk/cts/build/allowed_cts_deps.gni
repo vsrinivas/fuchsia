@@ -44,6 +44,8 @@ ALLOWED_RUST_DEPS = [
   "//src/sys/component_manager/tests/reboot_on_terminate:config",
   "//src/sys/component_manager:bin",
   "//src/sys/lib/cm_rust:cm_rust",
+
+  "//src/developer/ffx:ffx_bin",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.
