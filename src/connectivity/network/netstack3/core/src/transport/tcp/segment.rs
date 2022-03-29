@@ -416,7 +416,7 @@ mod test {
         control: Option<Control>,
         data_len: u32,
         rcv_nxt: u32,
-        rcv_wnd: usize,
+        rcv_wnd: u32,
     }
     #[test_case(OverlapTestArgs{
         seg_seq: 1,
