@@ -801,6 +801,7 @@ void RndisFunction::ReadComplete(usb_request_t* usb_request) {
     if (shutting_down_) {
       request.Release();
       if (pending_requests_ == 0) {
+        lock.release();
         ShutdownComplete();
       }
       return;
@@ -824,6 +825,7 @@ void RndisFunction::ReadComplete(usb_request_t* usb_request) {
       request.Release();
       pending_requests_--;
       if (pending_requests_ == 0) {
+        lock.release();
         ShutdownComplete();
       }
       return;
@@ -888,6 +890,7 @@ void RndisFunction::WriteComplete(usb_request_t* usb_request) {
   if (shutting_down_) {
     request.Release();
     if (pending_requests_ == 0) {
+      lock.release();
       ShutdownComplete();
     }
     return;
@@ -902,6 +905,7 @@ void RndisFunction::NotificationComplete(usb_request_t* usb_request) {
   if (shutting_down_) {
     request.Release();
     if (pending_requests_ == 0) {
+      lock.release();
       ShutdownComplete();
     }
     return;
@@ -1128,6 +1132,7 @@ void RndisFunction::Shutdown() {
   ifc_.clear();
 
   if (pending_requests_ == 0) {
+    lock.release();
     ShutdownComplete();
   } else {
     zxlogf(ERROR, "Shutdown with %zd pending", pending_requests_);
@@ -1135,8 +1140,6 @@ void RndisFunction::Shutdown() {
 }
 
 void RndisFunction::ShutdownComplete() {
-  ZX_DEBUG_ASSERT(pending_requests_ == 0);
-
   if (shutdown_callback_.has_value()) {
     (*shutdown_callback_)();
   } else {

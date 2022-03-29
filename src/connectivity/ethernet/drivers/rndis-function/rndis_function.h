@@ -76,7 +76,10 @@ class RndisFunction : public RndisFunctionType,
   zx_status_t SetOid(uint32_t oid, const uint8_t* input, size_t length);
 
   void Shutdown();
-  void ShutdownComplete() __TA_REQUIRES(lock_);
+  // The driver framework may call DdkRelease at any point after we trigger the shutdown callback,
+  // so we should not hold the lock when executing the callback or we might get a use-after-free
+  // when the lock is released.
+  void ShutdownComplete() __TA_EXCLUDES(lock_);
 
   void ReadComplete(usb_request_t* request);
   void WriteComplete(usb_request_t* request);
