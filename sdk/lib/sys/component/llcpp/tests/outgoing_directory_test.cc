@@ -175,15 +175,15 @@ TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
     bool message_echoed = false;
     auto client = ConnectToServiceMember(service, reversed);
     auto expected_reply = reversed ? kTestStringReversed : kTestString;
-    client->EchoString(
-        kTestString,
-        [quit_loop = QuitLoopClosure(), &message_echoed, expected_reply = expected_reply](
-            fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& reply) {
-          EXPECT_TRUE(reply.ok()) << "Reply failed with: " << reply.error().status_string();
-          EXPECT_EQ(reply.value().response.get(), cpp17::string_view(expected_reply));
-          message_echoed = true;
-          quit_loop();
-        });
+    client->EchoString(kTestString)
+        .ThenExactlyOnce(
+            [quit_loop = QuitLoopClosure(), &message_echoed, expected_reply = expected_reply](
+                fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& reply) {
+              EXPECT_TRUE(reply.ok()) << "Reply failed with: " << reply.error().status_string();
+              EXPECT_EQ(reply.value().response.get(), cpp17::string_view(expected_reply));
+              message_echoed = true;
+              quit_loop();
+            });
 
     RunLoop();
 
@@ -223,9 +223,9 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
     fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
     std::string reply_received;
-    client->EchoString(
-        kTestString, [&reply_received, quit_loop = QuitLoopClosure()](
-                         fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+    client->EchoString(kTestString)
+        .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
+                             fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
           ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                         result.error().FormatDescription().c_str());
           auto* response = result.Unwrap();
@@ -324,9 +324,9 @@ TEST_F(OutgoingDirectoryTest, ServeCanYieldMultipleConnections) {
     fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
     std::string reply_received;
-    client->EchoString(
-        kTestString, [&reply_received, quit_loop = QuitLoopClosure()](
-                         fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+    client->EchoString(kTestString)
+        .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
+                             fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
           ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                         result.error().FormatDescription().c_str());
           auto* response = result.Unwrap();
