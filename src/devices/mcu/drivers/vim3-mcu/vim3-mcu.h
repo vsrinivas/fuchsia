@@ -27,7 +27,7 @@
 
 // RW
 #define STM_MCU_REG_BOOT_MODE 0x20
-#define STM_MCU_REG_BOOT_EN_WOL 0x21
+
 #define STM_MCU_REG_BOOT_EN_RTC 0x22
 #define STM_MCU_REG_BOOT_EN_EXP 0x23
 #define STM_MCU_REG_BOOT_EN_IR 0x24
@@ -45,7 +45,10 @@
 #define STM_MCU_REG_WOL_INIT_START_REG 0x87
 #endif
 
+#define STM_MCU_REG_BOOT_EN_WOL 0x21
 #define STM_MCU_REG_CMD_FAN_STATUS_CTRL_REG 0x88
+
+#define STM_MCU_REG_EN_WOL_RESET_ENABLE 0x03
 
 // Vim3MCU is an external MCU made by STM used in vim3 for
 // fan control and WoL
@@ -69,11 +72,14 @@ class StmMcu : public DeviceType {
   ~StmMcu() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  zx_status_t SetFanLevel(FanLevel level);
+  void Init();  // Visible for testing.
+
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:
+  zx_status_t SetFanLevel(FanLevel level);
+
   ddk::I2cChannel i2c_;
   void ShutDown();
   fbl::Mutex i2c_lock_;

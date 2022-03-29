@@ -118,25 +118,15 @@ static pbus_dev_t dwmac_dev = []() {
 }();
 
 // Composite binding rules for ethernet board driver.
-const zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x18),
-};
-
 static const zx_bind_inst_t gpio_int_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_ETH_MAC_INTR),
-};
-static const device_fragment_part_t i2c_fragment[] = {
-    {std::size(i2c_match), i2c_match},
 };
 
 static const device_fragment_part_t gpio_int_fragment[] = {
     {std::size(gpio_int_match), gpio_int_match},
 };
 static const device_fragment_t eth_fragments[] = {
-    {"i2c", std::size(i2c_fragment), i2c_fragment},
     {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
 };
 

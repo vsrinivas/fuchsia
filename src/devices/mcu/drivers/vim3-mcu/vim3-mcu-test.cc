@@ -12,10 +12,10 @@
 namespace stm {
 TEST(Vim3McuTest, FanLevel) {
   mock_i2c::MockI2c mock_i2c;
-  mock_i2c.ExpectWriteStop({0x88, 1});
+  mock_i2c.ExpectWriteStop({0x88, 1}).ExpectWriteStop({0x21, 0x03});
   ddk::I2cChannel i2c(mock_i2c.GetProto());
   StmMcu device(nullptr, std::move(i2c));
-  ASSERT_OK(device.SetFanLevel(FL1));
+  device.Init();
   mock_i2c.VerifyAndClear();
 }
 }  // namespace stm

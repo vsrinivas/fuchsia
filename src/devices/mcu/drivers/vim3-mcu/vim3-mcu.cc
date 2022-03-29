@@ -25,26 +25,23 @@
 
 namespace stm {
 zx_status_t StmMcu::Create(void* ctx, zx_device_t* parent) {
-  i2c_protocol_t i2c;
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C", __FILE__);
-    return status;
+  ddk::I2cChannel i2c(parent);
+  if (!i2c.is_valid()) {
+    zxlogf(ERROR, "Failed to get ZX_PROTOCOL_I2C");
+    return ZX_ERR_NO_RESOURCES;
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<StmMcu> device(new (&ac) StmMcu(parent, &i2c));
+  std::unique_ptr<StmMcu> device(new (&ac) StmMcu(parent, i2c));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: StmMcu alloc failed", __FILE__);
+    zxlogf(ERROR, "StmMcu alloc failed");
     return ZX_ERR_NO_MEMORY;
   }
-  status = device->SetFanLevel(FL1);
-  if (status != ZX_OK) {
-    return status;
-  }
 
-  if ((status = device->DdkAdd("vim3-mcu")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
+  device->Init();
+
+  if (zx_status_t status = device->DdkAdd("vim3-mcu"); status != ZX_OK) {
+    zxlogf(ERROR, "DdkAdd failed");
     return status;
   }
 
@@ -60,6 +57,16 @@ void StmMcu::DdkUnbind(ddk::UnbindTxn txn) {
 }
 void StmMcu::DdkRelease() { delete this; }
 
+void StmMcu::Init() {
+  SetFanLevel(FL1);
+
+  const uint8_t wol_reset_enable[] = {STM_MCU_REG_BOOT_EN_WOL, STM_MCU_REG_EN_WOL_RESET_ENABLE};
+  zx_status_t status = i2c_.WriteSync(wol_reset_enable, countof(wol_reset_enable));
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Failed to enable WOL: %d", status);
+  }
+}
+
 zx_status_t StmMcu::SetFanLevel(FanLevel level) {
   // TODO fxbug.dev/56400: rsubr clean this up to implement outward intf for rd/wr
   // for now just turning on the fan to prevent soc from overheating
@@ -67,7 +74,7 @@ zx_status_t StmMcu::SetFanLevel(FanLevel level) {
   uint8_t cmd[] = {STM_MCU_REG_CMD_FAN_STATUS_CTRL_REG, static_cast<uint8_t>(level)};
   auto status = i2c_.WriteSync(cmd, sizeof(cmd));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "StmMCu::could not set the fan level %d", status);
+    zxlogf(ERROR, "Could not set the fan level: %d", status);
   }
   return status;
 }

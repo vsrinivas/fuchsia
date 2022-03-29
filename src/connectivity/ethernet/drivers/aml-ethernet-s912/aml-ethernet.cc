@@ -47,11 +47,8 @@ zx_status_t AmlEthernet::InitPdev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
+  // Not needed on vim3.
   i2c_ = ddk::I2cChannel(parent(), "i2c");
-  if (!i2c_.is_valid()) {
-    zxlogf(ERROR, "Could not get I2C protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
 
   // Reset is optional.
   gpios_[PHY_RESET] = ddk::GpioProtocolClient(parent(), "gpio-reset");
@@ -111,12 +108,14 @@ zx_status_t AmlEthernet::Bind() {
   hhi_mmio_->SetBits32(1 << 3, HHI_GCLK_MPEG1);
   hhi_mmio_->ClearBits32((1 << 3) | (1 << 2), HHI_MEM_PD_REG0);
 
-  // WOL reset enable to MCU
-  uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
-  status = i2c_.WriteSync(write_buf, sizeof(write_buf));
-  if (status) {
-    zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d", status);
-    return status;
+  if (i2c_.is_valid()) {
+    // WOL reset enable to MCU
+    uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
+    status = i2c_.WriteSync(write_buf, sizeof(write_buf));
+    if (status) {
+      zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d", status);
+      return status;
+    }
   }
 
   // Populate board specific information

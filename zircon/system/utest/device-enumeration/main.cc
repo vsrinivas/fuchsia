@@ -158,6 +158,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
       "dwmac/dwmac/eth_phy/phy_null_device",
       "dwmac/dwmac/Designware-MAC/ethernet",
+      "ethernet_mac/aml-ethernet",
       "aml_sd/aml-sd-emmc",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
@@ -195,6 +196,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
 
       // GPIO
       "gpio-expander/ti-tca6408a/gpio-107",
+
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-24/vim3-mcu",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
