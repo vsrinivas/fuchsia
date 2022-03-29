@@ -39,6 +39,15 @@ fn static_directory_builder_with_common_task_entries<'a>(
         .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
         .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
         .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
+        .add_node_entry(b"attr", attr_directory(fs))
+}
+
+/// Creates an [`FsNode`] that represents the `/proc/<pid>/attr` directory.
+fn attr_directory(fs: &FileSystemHandle) -> Arc<FsNode> {
+    StaticDirectoryBuilder::new(fs)
+        // The `current` security context is, with selinux disabled, unconfined.
+        .add_entry(b"current", ByteVecFile::new(b"unconfined\n".to_vec()), mode!(IFREG, 0o666))
+        .build()
 }
 
 /// `FdDirectory` implements the directory listing operations for a `proc/<pid>/fd` directory.

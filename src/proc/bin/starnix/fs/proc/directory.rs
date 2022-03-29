@@ -27,6 +27,17 @@ impl<'a> StaticDirectoryBuilder<'a> {
         Self { fs, entries: BTreeMap::new() }
     }
 
+    /// Adds an entry to the directory. Panics if an entry with the same name was already added.
+    pub fn add_entry(
+        self,
+        name: &'static FsStr,
+        ops: impl FsNodeOps + 'static,
+        mode: FileMode,
+    ) -> Self {
+        let node = self.fs.create_node_with_ops(ops, mode);
+        self.add_node_entry(name, node)
+    }
+
     /// Adds an [`FsNode`] entry to the directory, which already has an inode number and file mode.
     /// Panics if an entry with the same name was already added.
     pub fn add_node_entry(mut self, name: &'static FsStr, node: Arc<FsNode>) -> Self {

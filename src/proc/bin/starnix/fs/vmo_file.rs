@@ -52,6 +52,13 @@ impl VmoFileNode {
             zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0).map_err(|_| errno!(ENOMEM))?;
         Ok(VmoFileNode { vmo: Arc::new(vmo), xattrs: MemoryXattrStorage::default() })
     }
+
+    pub fn from_bytes(data: &[u8]) -> Result<VmoFileNode, Errno> {
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, data.len() as u64)
+            .map_err(|_| errno!(ENOMEM))?;
+        vmo.write(data, 0).map_err(|_| errno!(ENOMEM))?;
+        Ok(VmoFileNode { vmo: Arc::new(vmo), xattrs: MemoryXattrStorage::default() })
+    }
 }
 
 impl FsNodeOps for VmoFileNode {

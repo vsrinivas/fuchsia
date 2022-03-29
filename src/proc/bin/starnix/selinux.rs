@@ -5,23 +5,64 @@
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
+use zerocopy::AsBytes;
+
+/// The version of selinux_status_t this kernel implements.
+const SELINUX_STATUS_VERSION: u32 = 1;
 
 struct SeLinuxFs;
-impl FileSystemOps for SeLinuxFs {}
+impl FileSystemOps for SeLinuxFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs { f_type: SELINUX_MAGIC as i64, ..Default::default() })
+    }
+}
+
 impl SeLinuxFs {
     fn new() -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(SeLinuxFs);
         fs.set_root(ROMemoryDirectory);
         let root = fs.root();
         root.add_node_ops(b"load", mode!(IFREG, 0600), SimpleFileNode::new(|| Ok(SeLoad)))?;
-        root.add_node_ops(b"enforce", mode!(IFREG, 0600), SimpleFileNode::new(|| Ok(SeEnforce)))?;
+        root.add_node_ops(b"enforce", mode!(IFREG, 0644), SimpleFileNode::new(|| Ok(SeEnforce)))?;
         root.add_node_ops(
             b"checkreqprot",
-            mode!(IFREG, 0600),
+            mode!(IFREG, 0644),
             SimpleFileNode::new(|| Ok(SeCheckReqProt)),
         )?;
+
+        // The status file needs to be mmap-able, so use a VMO-backed file.
+        // When the selinux state changes in the future, the way to update this data (and
+        // communicate updates with userspace) is to use the
+        // ["seqlock"](https://en.wikipedia.org/wiki/Seqlock) technique.
+        root.add_node_ops(
+            b"status",
+            mode!(IFREG, 0444),
+            VmoFileNode::from_bytes(
+                selinux_status_t { version: SELINUX_STATUS_VERSION, ..Default::default() }
+                    .as_bytes(),
+            )?,
+        )?;
+
         Ok(fs)
     }
+}
+
+/// The C-style struct exposed to userspace by the /sys/fs/selinux/status file.
+/// Defined here (instead of imported through bindgen) as selinux headers are not exposed through
+/// kernel uapi headers.
+#[derive(Debug, Copy, Clone, AsBytes, Default)]
+#[repr(C, packed)]
+struct selinux_status_t {
+    /// Version number of this structure (1).
+    version: u32,
+    /// Sequence number. See [seqlock](https://en.wikipedia.org/wiki/Seqlock).
+    sequence: u32,
+    /// `0` means permissive mode, `1` means enforcing mode.
+    enforcing: u32,
+    /// The number of times the selinux policy has been reloaded.
+    policyload: u32,
+    /// `0` means allow and `1` means deny unknown object classes/permissions.
+    deny_unknown: u32,
 }
 
 struct SeLoad;
