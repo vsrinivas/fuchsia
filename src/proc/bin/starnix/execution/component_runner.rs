@@ -11,9 +11,9 @@ use fidl_fuchsia_component_runner::{ComponentControllerMarker, ComponentStartInf
 use fidl_fuchsia_io as fio;
 use fuchsia_component::client as fclient;
 use fuchsia_zircon as zx;
-use log::info;
 use rand::Rng;
 use std::ffi::CString;
+use tracing::info;
 
 use super::*;
 use crate::auth::Credentials;

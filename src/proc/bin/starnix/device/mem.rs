@@ -42,7 +42,11 @@ impl FileOps for DevNullFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         current_task.mm.read_each(data, |bytes| {
-            log::warn!("{:?} write to devnull: {:?}", current_task, String::from_utf8_lossy(bytes));
+            tracing::warn!(
+                "{:?} write to devnull: {:?}",
+                current_task,
+                String::from_utf8_lossy(bytes)
+            );
             Ok(Some(()))
         })?;
         UserBuffer::get_total_length(data)
@@ -272,7 +276,7 @@ impl FileOps for DevKmsgFile {
         let total = UserBuffer::get_total_length(data)?;
         let mut bytes = vec![0; total];
         current_task.mm.read_all(data, &mut bytes)?;
-        log::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
+        tracing::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
         Ok(total)
     }
 }

@@ -203,7 +203,7 @@ impl Drop for SharedMemory {
         match res {
             Ok(()) => {}
             Err(status) => {
-                log::error!("failed to unmap shared binder region from kernel: {:?}", status);
+                tracing::error!("failed to unmap shared binder region from kernel: {:?}", status);
             }
         }
     }
@@ -220,7 +220,7 @@ impl SharedMemory {
         let kernel_address = kernel_root_vmar
             .map(0, vmo, 0, length, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
             .map_err(|status| {
-                log::error!("failed to map shared binder region in kernel: {:?}", status);
+                tracing::error!("failed to map shared binder region in kernel: {:?}", status);
                 errno!(ENOMEM)
             })?;
         Ok(Self {
@@ -834,7 +834,7 @@ impl BinderDriver {
                 Ok(SUCCESS)
             }
             _ => {
-                log::error!("binder received unknown ioctl request 0x{:08x}", request);
+                tracing::error!("binder received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
             }
         }
@@ -893,7 +893,7 @@ impl BinderDriver {
                 self.handle_reply(current_task, binder_proc, binder_thread, cursor)
             }
             _ => {
-                log::error!("binder received unknown RW command: 0x{:08x}", command);
+                tracing::error!("binder received unknown RW command: 0x{:08x}", command);
                 error!(EINVAL)
             }
         }
@@ -1319,7 +1319,7 @@ impl BinderDriver {
                     };
                 }
                 _ => {
-                    log::error!("unknown object type {}", object.hdr.type_);
+                    tracing::error!("unknown object type {}", object.hdr.type_);
                     return error!(EINVAL);
                 }
             }

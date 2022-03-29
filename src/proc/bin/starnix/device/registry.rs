@@ -51,7 +51,7 @@ impl DeviceFamilyRegistry {
                 Ok(())
             }
             Entry::Occupied(_) => {
-                log::error!("dev type {:?} is already registered", minor);
+                tracing::error!("dev type {:?} is already registered", minor);
                 error!(EINVAL)
             }
         }
@@ -62,7 +62,7 @@ impl DeviceFamilyRegistry {
         D: DeviceOps + 'static,
     {
         if self.default_device.is_some() {
-            log::error!("default device is already registered");
+            tracing::error!("default device is already registered");
             return error!(EINVAL);
         }
         self.default_device = Some(Box::new(device));

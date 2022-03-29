@@ -116,7 +116,7 @@ impl Mapping {
     /// - `bytes`: The byte array to read into.
     fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
         self.vmo.read(bytes, self.address_to_offset(addr)).map_err(|e| {
-            log::warn!("Got an error when reading from vmo: {:?}", e);
+            tracing::warn!("Got an error when reading from vmo: {:?}", e);
             errno!(EFAULT)
         })
     }

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use log::info;
 use std::ffi::CString;
 use std::sync::Arc;
+use tracing::info;
 use zerocopy::AsBytes;
 
 use crate::execution::*;

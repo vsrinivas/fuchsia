@@ -89,7 +89,7 @@ impl TTYState {
             Ok(_) => Ok(()),
             Err(e) => {
                 if e.value() == ENOENT.value() {
-                    log::warn!("Unable to delete pts id {}.", id);
+                    tracing::warn!("Unable to delete pts id {}.", id);
                     Ok(())
                 } else {
                     Err(e)
@@ -252,7 +252,7 @@ impl FileOps for DevPtmxFile {
                 Ok(SUCCESS)
             }
             _ => {
-                log::error!("ptmx received unknown ioctl request 0x{:08x}", request);
+                tracing::error!("ptmx received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
             }
         }

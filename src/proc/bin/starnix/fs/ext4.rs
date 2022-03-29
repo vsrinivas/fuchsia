@@ -86,7 +86,7 @@ impl FsNodeOps for ExtDirectory {
                 }
                 ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: ext_node.clone() }),
                 _ => {
-                    log::warn!("unhandled ext entry type {:?}", entry_type);
+                    tracing::warn!("unhandled ext entry type {:?}", entry_type);
                     Box::new(ExtFile::new(ext_node.clone(), name))
                 }
             };
@@ -215,7 +215,7 @@ fn directory_entry_type(entry_type: ext_structs::EntryType) -> DirectoryEntryTyp
 }
 
 fn ext_error(err: ext_structs::ParsingError) -> Errno {
-    log::error!("ext4 error: {:?}", err);
+    tracing::error!("ext4 error: {:?}", err);
     errno!(EIO)
 }
 

@@ -83,7 +83,7 @@ impl FileOps for SeLoad {
         let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
-        log::info!("got selinux policy, length {}, ignoring", size);
+        tracing::info!("got selinux policy, length {}, ignoring", size);
         Ok(size)
     }
 
@@ -117,7 +117,7 @@ impl FileOps for SeEnforce {
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let enforce = parse_int(&buf)?;
-        log::info!("setenforce: {}", enforce);
+        tracing::info!("setenforce: {}", enforce);
         Ok(size)
     }
     fn read_at(
@@ -150,7 +150,7 @@ impl FileOps for SeCheckReqProt {
         let mut buf = vec![0u8; size];
         current_task.mm.read_all(&data, &mut buf)?;
         let checkreqprot = parse_int(&buf)?;
-        log::info!("checkreqprot: {}", checkreqprot);
+        tracing::info!("checkreqprot: {}", checkreqprot);
         Ok(size)
     }
     fn read_at(

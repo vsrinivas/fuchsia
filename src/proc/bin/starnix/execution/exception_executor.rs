@@ -12,10 +12,10 @@ use fuchsia_zircon::sys::{
     ZX_EXCP_POLICY_ERROR,
 };
 use fuchsia_zircon::{AsHandleRef, Task as zxTask};
-use log::info;
 use std::ffi::CString;
 use std::mem;
 use std::sync::Arc;
+use tracing::info;
 
 use super::shared::*;
 use crate::logging::strace;

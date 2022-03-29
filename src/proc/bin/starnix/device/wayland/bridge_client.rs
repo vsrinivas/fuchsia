@@ -26,7 +26,7 @@ impl LocalViewProducerClient for WaylandClient {
     }
 
     fn shutdown_view(&mut self, view_id: u32) {
-        log::warn!("Wayland bridge is attempting to shut down view_id: {:?}.", view_id);
+        tracing::warn!("Wayland bridge is attempting to shut down view_id: {:?}.", view_id);
     }
 }
 

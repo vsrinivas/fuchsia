@@ -4,7 +4,7 @@
 
 use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, Task};
-use log::warn;
+use tracing::warn;
 
 use crate::logging::not_implemented;
 use crate::syscalls::decls::SyscallDecl;

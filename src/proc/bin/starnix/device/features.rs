@@ -31,7 +31,7 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                 create_socket_and_start_server(current_task.kernel());
             }
             feature => {
-                log::warn!("Unsupported feature: {:?}", feature);
+                tracing::warn!("Unsupported feature: {:?}", feature);
             }
         }
     }

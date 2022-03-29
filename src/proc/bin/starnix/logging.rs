@@ -8,13 +8,13 @@ use crate::types::Errno;
 
 macro_rules! not_implemented {
     ($($arg:tt)+) => (
-        log::warn!(target: "not_implemented", $($arg)+)
+        tracing::warn!(target: "not_implemented", $($arg)+)
     )
 }
 
 macro_rules! strace {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        log::debug!(target: "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
+        tracing::debug!(target: "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
     )
 }
 

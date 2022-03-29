@@ -43,9 +43,9 @@ if (target_cpu == "x64") {
       "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
       "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
       "//src/graphics/lib/magma/src/libmagma",
-      "//src/lib/diagnostics/log/rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-component",
       "//src/lib/fuchsia-image-format",
@@ -86,7 +86,6 @@ if (target_cpu == "x64") {
 
     test_deps = [
       "//garnet/lib/rust/io_util",
-      "//src/lib/fuchsia",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:itertools",
     ]

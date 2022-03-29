@@ -25,10 +25,8 @@ mod vmex_resource;
 #[cfg(test)]
 mod testing;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["starnix"])]
 async fn main() -> Result<(), Error> {
-    diagnostics_log::init!(&[&"starnix"]);
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {

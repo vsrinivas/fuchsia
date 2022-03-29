@@ -12,7 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::HandleBased;
 use futures::TryStreamExt;
-use log::error;
+use tracing::error;
 
 use super::*;
 

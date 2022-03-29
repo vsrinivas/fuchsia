@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::{self as zx, HandleBased};
-use log::warn;
 use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{
     zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
     ZxioSignals,
 };
+use tracing::warn;
 
 use crate::fs::*;
 use crate::logging::impossible_error;

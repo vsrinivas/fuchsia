@@ -148,7 +148,7 @@ async fn serve_view_provider(
                         ) {
                             Ok(_) => {}
                             Err(e) => {
-                                log::error!("Got an error when creating view: {:?}", e);
+                                tracing::error!("Got an error when creating view: {:?}", e);
                                 return;
                             }
                         }
@@ -159,14 +159,14 @@ async fn serve_view_provider(
                         match view_provider.create_view2(args) {
                             Ok(_) => {}
                             Err(e) => {
-                                log::error!("Got an error when creating view: {:?}", e);
+                                tracing::error!("Got an error when creating view: {:?}", e);
                                 return;
                             }
                         }
                     });
                 }
                 r => {
-                    log::warn!("Got unexpected view provider request: {:?}", r);
+                    tracing::warn!("Got unexpected view provider request: {:?}", r);
                 }
             }
         }
@@ -211,14 +211,14 @@ fn handle_client_data(
                                 .expect("Failed to duplicate buffer collection import token.");
                             handles.push(import_token);
                         } else {
-                            log::error!(
+                            tracing::error!(
                                 "Trying to parse buffre collection token from invalid file type."
                             );
                         }
                     }
                 }
                 _ => {
-                    log::error!("Got unexpected ancillary data.");
+                    tracing::error!("Got unexpected ancillary data.");
                     return;
                 }
             }
@@ -228,7 +228,7 @@ fn handle_client_data(
         match wayland_sender.unbounded_send(message_buf) {
             Ok(_) => {}
             Err(_) => {
-                log::error!("Failed to send data to wayland bridge.");
+                tracing::error!("Failed to send data to wayland bridge.");
                 return;
             }
         }

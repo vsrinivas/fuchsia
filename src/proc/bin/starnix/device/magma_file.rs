@@ -204,7 +204,7 @@ impl FileOps for MagmaFile {
                 current_task.mm.read_object(UserRef::new(create_info_address), &mut create_info)?;
 
                 let (vmo, token, info) = create_drm_image(0, &create_info).map_err(|e| {
-                    log::warn!("Error creating drm image: {:?}", e);
+                    tracing::warn!("Error creating drm image: {:?}", e);
                     errno!(EINVAL)
                 })?;
 
@@ -249,7 +249,9 @@ impl FileOps for MagmaFile {
                         response.result_return = MAGMA_STATUS_OK as u64;
                     }
                     _ => {
-                        log::error!("No image info was found for buffer: {:?}", { control.image });
+                        tracing::error!("No image info was found for buffer: {:?}", {
+                            control.image
+                        });
                         response.result_return = MAGMA_STATUS_INVALID_ARGS as u64;
                     }
                 };
@@ -359,7 +361,7 @@ impl FileOps for MagmaFile {
                             );
                         },
                         _ => {
-                            log::error!("Calling magma_release_buffer with an invalid buffer.");
+                            tracing::error!("Calling magma_release_buffer with an invalid buffer.");
                         }
                     },
                 );
@@ -807,7 +809,7 @@ impl FileOps for MagmaFile {
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             t => {
-                log::warn!("Got unknown request: {:?}", t);
+                tracing::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
             }
         }?;
