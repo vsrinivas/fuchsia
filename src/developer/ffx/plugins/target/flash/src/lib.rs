@@ -26,8 +26,7 @@ pub async fn flash_plugin_impl<W: Write>(
     mut cmd: FlashCommand,
     writer: &mut W,
 ) -> Result<()> {
-    // TODO(94641): Remove ssh_key after migrated to authorized_keys.
-    match cmd.authorized_keys.as_ref().or(cmd.ssh_key.as_ref()) {
+    match cmd.authorized_keys.as_ref() {
         Some(ssh) => {
             let ssh_file = Path::new(ssh);
             if !ssh_file.is_file() {
@@ -90,7 +89,7 @@ mod test {
             setup().1,
             FlashCommand {
                 manifest: Some(PathBuf::from(tmp_file_name)),
-                ssh_key: Some("ssh_does_not_exist".to_string()),
+                authorized_keys: Some("ssh_does_not_exist".to_string()),
                 ..Default::default()
             }
         )
