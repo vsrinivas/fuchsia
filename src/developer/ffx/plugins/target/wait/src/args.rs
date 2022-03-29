@@ -14,7 +14,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 )]
 
 pub struct WaitCommand {
-    #[argh(option, short = 't', default = "60")]
-    /// the timeout in seconds [default = 60]
+    #[argh(option, short = 't', default = "120")]
+    /// the timeout in seconds [default = 120]
     pub timeout: usize,
 }

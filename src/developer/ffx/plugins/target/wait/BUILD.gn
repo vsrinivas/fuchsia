@@ -13,6 +13,8 @@ ffx_plugin("ffx_wait") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/netext:lib",
     "//src/developer/ffx/lib/timeout:lib",
+    "//src/lib/diagnostics/selectors",
+    "//third_party/rust_crates:futures-lite",
   ]
 
   args_sources = [ "src/args.rs" ]
