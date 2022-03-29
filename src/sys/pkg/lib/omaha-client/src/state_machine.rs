@@ -3911,6 +3911,7 @@ mod tests {
             updater: Updater { name: "updater".to_string(), version: Version::from([0, 1]) },
             os: OS { version: "1.2.3.5".to_string(), ..OS::default() },
             service_url: "http://example.com/".to_string(),
+            omaha_public_keys: None,
         };
         let metrics_reporter = Rc::new(RefCell::new(MockMetricsReporter::new()));
         let (_ctl, state_machine) = pool.run_until(

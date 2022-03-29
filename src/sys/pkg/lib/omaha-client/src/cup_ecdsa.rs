@@ -6,6 +6,7 @@ use http::Response;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature};
 use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt::Debug};
@@ -46,11 +47,13 @@ pub enum CupVerificationError {
 pub type PublicKeyId = u64;
 pub type PublicKey = p256::ecdsa::VerifyingKey;
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PublicKeyAndId {
     pub key: PublicKey,
     pub id: PublicKeyId,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PublicKeys {
     /// The latest public key will be used when decorating requests.
     pub latest: PublicKeyAndId,

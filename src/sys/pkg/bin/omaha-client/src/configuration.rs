@@ -211,6 +211,7 @@ pub async fn get_config(version: &str) -> Config {
         },
 
         service_url,
+        omaha_public_keys: None,
     }
 }
 

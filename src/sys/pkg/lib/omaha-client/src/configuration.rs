@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::cup_ecdsa::PublicKeys;
 use crate::protocol::request::OS;
 use version::Version;
 
@@ -28,6 +29,9 @@ pub struct Config {
 
     /// This is the address of the Omaha service that should be used.
     pub service_url: String,
+
+    /// These are the public keys to use when communicating with the Omaha server.
+    pub omaha_public_keys: Option<PublicKeys>,
 }
 
 #[cfg(test)]
@@ -46,6 +50,7 @@ pub mod test_support {
                 arch: "test_arch".to_string(),
             },
             service_url: "http://example.com/".to_string(),
+            omaha_public_keys: None,
         }
     }
 }

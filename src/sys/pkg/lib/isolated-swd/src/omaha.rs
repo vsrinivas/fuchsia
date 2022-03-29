@@ -53,6 +53,7 @@ async fn get_omaha_config(version: &str, service_url: &str) -> Config {
         },
 
         service_url: service_url.to_owned(),
+        omaha_public_keys: None,
     }
 }
 
@@ -246,6 +247,7 @@ mod tests {
 
             // Since we're using the mock http resolver, this doesn't matter.
             service_url: "http://example.com".to_owned(),
+            omaha_public_keys: None,
         }
     }
 
