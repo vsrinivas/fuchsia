@@ -20,10 +20,6 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-// Note that these are the rights that the ExpectPathSupportsRights call itself supports generally.
-// The rights that are checked for a specific path are provided by the caller and must be <= these.
-constexpr fio::wire::OpenFlags kKnownFsRights = fio::wire::kOpenRights;
-
 std::string rights_str(fio::wire::OpenFlags rights) {
   std::ostringstream os;
   if (rights & fio::wire::kOpenRightReadable) {
@@ -54,7 +50,8 @@ void NamespaceTest::ExpectDoesNotExist(const char* path) {
 }
 
 void NamespaceTest::ExpectPathSupportsRights(const char* path, fio::wire::OpenFlags rights) {
-  ASSERT_FALSE(rights & ~kKnownFsRights) << "Unsupported rights in ExpectPathSupportsRights call";
+  ASSERT_FALSE(rights & ~fio::wire::kOpenRights)
+      << "Unsupported rights in ExpectPathSupportsRights call";
 
   fbl::unique_fd fd;
   EXPECT_EQ(ZX_OK, fdio_open_fd(path, static_cast<uint32_t>(rights), fd.reset_and_get_address()))
@@ -68,8 +65,8 @@ void NamespaceTest::ExpectPathSupportsStrictRights(const char* path,
   ExpectPathSupportsRights(path, rights);
 
   // Check that the path can't be opened with rights other than the ones passed in 'rights'.
-  for (uint32_t r = 1; r < static_cast<uint32_t>(kKnownFsRights); r = r << 1) {
-    uint32_t rights_bit = static_cast<uint32_t>(kKnownFsRights) & r;
+  for (uint32_t r = 1; r < static_cast<uint32_t>(fio::wire::kOpenRights); r = r << 1) {
+    uint32_t rights_bit = static_cast<uint32_t>(fio::wire::kOpenRights) & r;
     if (!rights_bit || (static_cast<uint32_t>(rights) & rights_bit)) {
       continue;
     }
