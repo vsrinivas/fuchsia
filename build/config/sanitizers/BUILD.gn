@@ -100,7 +100,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/graphics/lib/compute/surpass/*",
     "//src/lib/scoped_task/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
-    "//src/security/scrutiny/*",
     "//third_party/alacritty/alacritty_terminal/*",
     "//third_party/crashpad/*",
   ]
