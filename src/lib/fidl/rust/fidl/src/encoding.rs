@@ -2830,7 +2830,11 @@ pub fn decode_envelope_header(
             let mut flags: u16 = 0;
             flags.decode(decoder, offset + 6)?;
 
-            inlined = flags & 1 != 0;
+            inlined = match flags {
+                0 => false,
+                1 => true,
+                _ => return Err(Error::InvalidInlineMarkerInEnvelope),
+            };
             if inlined {
                 num_bytes = 4;
             }

@@ -117,7 +117,7 @@ void NaturalEnvelopeDecode(NaturalDecoder* decoder, Field* value, size_t offset,
       fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
       if (::fidl::internal::NaturalDecodingInlineSize<Field, Constraint>(decoder) <=
           FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        if (!(envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK)) {
+        if (envelope->flags != FIDL_ENVELOPE_FLAGS_INLINING_MASK) {
           decoder->SetError(kCodingErrorInvalidInlineBit);
           return;
         }
@@ -153,7 +153,7 @@ void NaturalEnvelopeDecode(NaturalDecoder* decoder, Field* value, size_t offset,
         return;
       }
 
-      if (envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) {
+      if (envelope->flags != 0) {
         decoder->SetError(kCodingErrorInvalidInlineBit);
         return;
       }

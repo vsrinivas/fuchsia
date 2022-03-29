@@ -365,6 +365,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.InvalidBoolean:                     "InvalidBoolean",
 	gidlir.InvalidEmptyStruct:                 "Invalid",
 	gidlir.InvalidInlineBitInEnvelope:         "InvalidInlineBitInEnvelope",
+	gidlir.InvalidInlineMarkerInEnvelope:      "InvalidInlineMarkerInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:          "InvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:        "InvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:                 "NonZeroPadding",

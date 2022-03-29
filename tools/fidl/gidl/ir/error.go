@@ -15,6 +15,7 @@ const (
 	InvalidBoolean                     ErrorCode = "INVALID_BOOLEAN"
 	InvalidEmptyStruct                 ErrorCode = "INVALID_EMPTY_STRUCT"
 	InvalidInlineBitInEnvelope         ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
+	InvalidInlineMarkerInEnvelope      ErrorCode = "INVALID_INLINE_MARKER_IN_ENVELOPE"
 	InvalidNumBytesInEnvelope          ErrorCode = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope        ErrorCode = "INVALID_NUM_HANDLES_IN_ENVELOPE"
 	InvalidPaddingByte                 ErrorCode = "INVALID_PADDING_BYTE"
@@ -48,6 +49,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	InvalidBoolean:                     {},
 	InvalidEmptyStruct:                 {},
 	InvalidInlineBitInEnvelope:         {},
+	InvalidInlineMarkerInEnvelope:      {},
 	InvalidNumBytesInEnvelope:          {},
 	InvalidNumHandlesInEnvelope:        {},
 	InvalidPaddingByte:                 {},

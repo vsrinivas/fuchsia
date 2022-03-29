@@ -145,6 +145,10 @@ pub enum Error {
     #[error("Invalid inline bit in envelope.")]
     InvalidInlineBitInEnvelope,
 
+    /// An envelope inline marker is malformed.
+    #[error("Invalid inline marker in envelope.")]
+    InvalidInlineMarkerInEnvelope,
+
     /// An envelope in the FIDL message had an unexpected number of bytes.
     #[error("Invalid number of bytes in FIDL envelope.")]
     InvalidNumBytesInEnvelope,

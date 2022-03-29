@@ -112,6 +112,48 @@ success("TableFieldOutOfLine") {
     },
 }
 
+decode_failure("TableFieldBadInlineMarkerLower") {
+    type = TableFieldInlinedStruct,
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(123):4, num(0):2, 0xff, 0x00,
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
+decode_failure("TableFieldBadInlineMarkerUpper") {
+    type = TableFieldInlinedStruct,
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(123):4, num(0):2, 0x01, 0xee,
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
+decode_failure("TableFieldOutOfLineBadOutlinedMarker") {
+    type = TableFieldOutOfLineStruct,
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            // 0xfe, 0xff is an inline marker with only the inline bit unset.
+            num(8):4, num(0):2, 0xfe, 0xff,
+
+            num(123):8,
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
 // Tests a table in which a value is inlined into an unknown field.
 success("TableFieldUnknownInlined") {
     value = TableFieldUnknownStruct{

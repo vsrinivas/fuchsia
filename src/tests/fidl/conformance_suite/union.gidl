@@ -422,6 +422,47 @@ success("UnionEnvelopeInlining_LargeValue_Outlined") {
     },
 }
 
+decode_failure("UnionEnvelopeInlining_SmallValue_BadInlineMarkerLower") {
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            num(100):4, num(0):2, 0xff, 0x00, // inlined envelope
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
+decode_failure("UnionEnvelopeInlining_SmallValue_BadInlineMarkerUpper") {
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            num(100):4, num(0):2, 0x01, 0xee, // inlined envelope
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
+decode_failure("UnionEnvelopeInlining_LargeValue_BadOutlinedMarker") {
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(2):8, // ordinal
+
+            // 0xfe, 0xff is an inline marker with only the inline bit unset.
+            num(8):4, num(0):2, 0xfe, 0xff,
+
+            // secondary object
+            num(100):8,
+        ],
+    },
+    err = INVALID_INLINE_MARKER_IN_ENVELOPE,
+}
+
 success("UnionEnvelopeInlining_HandleValue_Inlined") {
     handle_defs = {
         #0 = event(),

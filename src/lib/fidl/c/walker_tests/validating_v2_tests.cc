@@ -171,6 +171,7 @@ TEST(Walker, validate_v2_walker_table_max_out_of_line_depth_exceeded) {
   vec->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
   envelope->num_bytes = 256;
   envelope->num_handles = 0;
+  envelope->flags = 0;
   for (int i = 0; i < 31; i++) {
     opt_structs[i] = FIDL_ALLOC_PRESENT;
   }
@@ -196,6 +197,7 @@ TEST(Walker, validate_v2_walker_table_max_out_of_line_depth_matched) {
   vec->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
   envelope->num_bytes = 248;
   envelope->num_handles = 0;
+  envelope->flags = 0;
   for (int i = 0; i < 30; i++) {
     opt_structs[i] = FIDL_ALLOC_PRESENT;
   }

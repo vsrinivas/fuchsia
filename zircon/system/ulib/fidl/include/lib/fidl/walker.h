@@ -504,7 +504,19 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
 
   EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
 
-  bool is_inline_bit_set = v2_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+  bool is_inline_bit_set;
+  switch (v2_envelope->flags) {
+    case FIDL_ENVELOPE_FLAGS_INLINING_MASK:
+      is_inline_bit_set = true;
+      break;
+    case 0:
+      is_inline_bit_set = false;
+      break;
+    default:
+      visitor_->OnError("Invalid inline marker in envelope");
+      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+      break;
+  }
 
   bool is_inlined;
   uint32_t type_size;
