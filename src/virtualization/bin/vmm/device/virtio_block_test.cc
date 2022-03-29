@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 #include <virtio/block.h>
 
 #include "fuchsia/logger/cpp/fidl.h"
@@ -28,7 +29,17 @@ static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
-class VirtioBlockTest : public TestWithDevice {
+constexpr auto kVirtioBlockCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+constexpr auto kVirtioBlockRustUrl =
+    "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
+
+struct VirtioBlockTestParam {
+  std::string test_name;
+  std::string component_url;
+};
+
+class VirtioBlockTest : public TestWithDevice,
+                        public ::testing::WithParamInterface<VirtioBlockTestParam> {
  protected:
   VirtioBlockTest() : request_queue_(phys_mem_, kQueueDataSize * kNumQueues, kQueueSize) {}
 
@@ -40,11 +51,11 @@ class VirtioBlockTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
     constexpr auto kComponentName = "virtio_block";
+    auto component_url = GetParam().component_url;
 
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddChild(kComponentName, component_url);
 
     realm_builder
         .AddRoute(Route{.capabilities =
@@ -105,6 +116,8 @@ class VirtioBlockTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
   }
 
+  bool IsRustComponent() { return GetParam().component_url == kVirtioBlockRustUrl; }
+
   fbl::unique_fd fd_;
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
@@ -134,7 +147,12 @@ class VirtioBlockTest : public TestWithDevice {
   }
 };
 
-TEST_F(VirtioBlockTest, BadHeaderShort) {
+TEST_P(VirtioBlockTest, BadHeaderShort) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   uint8_t header[sizeof(virtio_blk_req_t) - 1] = {};
   uint8_t* blk_status;
   zx_status_t status = DescriptorChainBuilder(request_queue_)
@@ -151,7 +169,7 @@ TEST_F(VirtioBlockTest, BadHeaderShort) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, BadHeaderLong) {
+TEST_P(VirtioBlockTest, BadHeaderLong) {
   uint8_t header[sizeof(virtio_blk_req_t) + 1] = {};
   uint8_t* blk_status;
   zx_status_t status = DescriptorChainBuilder(request_queue_)
@@ -168,7 +186,7 @@ TEST_F(VirtioBlockTest, BadHeaderLong) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, BadPayload) {
+TEST_P(VirtioBlockTest, BadPayload) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -189,7 +207,7 @@ TEST_F(VirtioBlockTest, BadPayload) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, BadRequestType) {
+TEST_P(VirtioBlockTest, BadRequestType) {
   virtio_blk_req_t header = {
       .type = UINT32_MAX,
   };
@@ -208,7 +226,7 @@ TEST_F(VirtioBlockTest, BadRequestType) {
   EXPECT_EQ(VIRTIO_BLK_S_UNSUPP, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, Read) {
+TEST_P(VirtioBlockTest, Read) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -232,7 +250,7 @@ TEST_F(VirtioBlockTest, Read) {
   }
 }
 
-TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
+TEST_P(VirtioBlockTest, ReadMultipleDescriptors) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_IN,
   };
@@ -259,7 +277,7 @@ TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   }
 }
 
-TEST_F(VirtioBlockTest, UnderflowOnWrite) {
+TEST_P(VirtioBlockTest, UnderflowOnWrite) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 0,
@@ -282,7 +300,7 @@ TEST_F(VirtioBlockTest, UnderflowOnWrite) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, BadWriteOffset) {
+TEST_P(VirtioBlockTest, BadWriteOffset) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = kNumSectors,
@@ -305,7 +323,7 @@ TEST_F(VirtioBlockTest, BadWriteOffset) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, Write) {
+TEST_P(VirtioBlockTest, Write) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
   };
@@ -327,7 +345,12 @@ TEST_F(VirtioBlockTest, Write) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, WriteGoodAndBadSectors) {
+TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 1,
@@ -360,7 +383,7 @@ TEST_F(VirtioBlockTest, WriteGoodAndBadSectors) {
   ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
 }
 
-TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
+TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_OUT,
       .sector = 0,
@@ -391,7 +414,7 @@ TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
   ASSERT_EQ(memcmp(result.data() + block_1.size(), block_2.data(), block_2.size()), 0);
 }
 
-TEST_F(VirtioBlockTest, Sync) {
+TEST_P(VirtioBlockTest, Sync) {
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
   };
@@ -410,7 +433,12 @@ TEST_F(VirtioBlockTest, Sync) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, SyncWithData) {
+TEST_P(VirtioBlockTest, SyncWithData) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
   };
@@ -432,7 +460,12 @@ TEST_F(VirtioBlockTest, SyncWithData) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, SyncNonZeroSector) {
+TEST_P(VirtioBlockTest, SyncNonZeroSector) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_FLUSH,
       .sector = 1,
@@ -452,7 +485,12 @@ TEST_F(VirtioBlockTest, SyncNonZeroSector) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, Id) {
+TEST_P(VirtioBlockTest, Id) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };
@@ -474,7 +512,12 @@ TEST_F(VirtioBlockTest, Id) {
   EXPECT_EQ(0, memcmp(id, kVirtioBlockId, sizeof(kVirtioBlockId)));
 }
 
-TEST_F(VirtioBlockTest, IdLengthIncorrect) {
+TEST_P(VirtioBlockTest, IdLengthIncorrect) {
+  // TODO(fxbug.dev/95529): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_blk_req_t header = {
       .type = VIRTIO_BLK_T_GET_ID,
   };
@@ -494,3 +537,10 @@ TEST_F(VirtioBlockTest, IdLengthIncorrect) {
 
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
+
+INSTANTIATE_TEST_SUITE_P(VirtioBlockComponentsTest, VirtioBlockTest,
+                         testing::Values(VirtioBlockTestParam{"cpp", kVirtioBlockCppUrl},
+                                         VirtioBlockTestParam{"rust", kVirtioBlockRustUrl}),
+                         [](const testing::TestParamInfo<VirtioBlockTestParam>& info) {
+                           return info.param.test_name;
+                         });
