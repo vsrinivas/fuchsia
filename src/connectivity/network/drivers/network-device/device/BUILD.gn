@@ -75,6 +75,7 @@ test("test_bin") {
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

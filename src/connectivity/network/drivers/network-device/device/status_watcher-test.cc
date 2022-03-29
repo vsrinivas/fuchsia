@@ -5,6 +5,7 @@
 #include "status_watcher.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/event.h>
 
@@ -53,12 +54,14 @@ class WatchClient {
   // We capture references to this in |WatchStatus|.
   WatchClient(WatchClient&&) = delete;
 
+  // Creates a |WatchClient|. The client must only be destroyed outside of the dispatcher thread.
   static zx::status<std::unique_ptr<WatchClient>> Create(
       async_dispatcher_t* dispatcher, fidl::ClientEnd<netdev::StatusWatcher> client_end) {
     zx::event event;
     if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
       return zx::error(status);
     }
+
     std::unique_ptr ptr = std::unique_ptr<WatchClient>(
         new WatchClient(dispatcher, std::move(client_end), std::move(event)));
     return zx::ok(std::move(ptr));
@@ -95,26 +98,40 @@ class WatchClient {
     }
   }
 
+  ~WatchClient() {
+    // Wait until any |WatchStatus| callback completes.
+    channel_.AsyncTeardown();
+    status_watcher_client_torn_down_.Wait();
+  }
+
  private:
   explicit WatchClient(async_dispatcher_t* dispatcher,
                        fidl::ClientEnd<netdev::StatusWatcher> client_end, zx::event event)
-      : channel_(std::move(client_end), dispatcher), event_(std::move(event)) {
+      : channel_(std::move(client_end), dispatcher,
+                 fidl::ObserveTeardown([this] { status_watcher_client_torn_down_.Signal(); })),
+        event_(std::move(event)) {
     WatchStatus();
   }
 
   void WatchStatus() {
-    channel_->WatchStatus([this](fidl::WireResponse<netdev::StatusWatcher::WatchStatus>* resp) {
-      fbl::AutoLock lock(&lock_);
-      EXPECT_OK(event_.signal(0, kEvent));
-      observed_status_.emplace(resp->port_status);
-      WatchStatus();
-    });
+    channel_->WatchStatus().Then(
+        [this](fidl::WireUnownedResult<netdev::StatusWatcher::WatchStatus>& result) {
+          if (!result.ok()) {
+            return;
+          }
+          auto* resp = result.Unwrap();
+          fbl::AutoLock lock(&lock_);
+          EXPECT_OK(event_.signal(0, kEvent));
+          observed_status_.emplace(resp->port_status);
+          WatchStatus();
+        });
   }
 
   fbl::Mutex lock_;
   fidl::WireSharedClient<netdev::StatusWatcher> channel_;
   zx::event event_;
   std::queue<ObservedStatus> observed_status_ __TA_GUARDED(lock_);
+  libsync::Completion status_watcher_client_torn_down_;
 };
 
 class StatusWatcherTest : public ::testing::Test {
