@@ -638,7 +638,7 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
             buffer,
             wl1: _,
             wl2: _,
-            last_seq_ts: _,
+            last_seq_ts,
             rtt_estimator: _,
         } = self;
         // First calculate the open window, note that if our peer has shrank
@@ -669,21 +669,21 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
             debug_assert_eq!(discarded, 0);
             seg
         });
-        let seq_max = self.nxt + can_send;
-        match self.last_seq_ts {
+        let seq_max = *snd_nxt + can_send;
+        match *last_seq_ts {
             Some((seq, _ts)) => {
                 if seq_max.after(seq) {
-                    self.last_seq_ts = Some((seq_max, now));
+                    *last_seq_ts = Some((seq_max, now));
                 } else {
                     // If the recorded sequence number is ahead of us, we are
                     // in retransmission, we should discard the timestamp and
                     // abort the estimation.
-                    self.last_seq_ts = None;
+                    *last_seq_ts = None;
                 }
             }
-            None => self.last_seq_ts = Some((seq_max, now)),
+            None => *last_seq_ts = Some((seq_max, now)),
         }
-        self.nxt = seq_max;
+        *snd_nxt = seq_max;
         Some(seg)
     }
 }
