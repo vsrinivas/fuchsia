@@ -54,20 +54,16 @@ impl Crypt for RemoteCrypt {
     }
 
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        // TODO(fxbug.dev/95352): Change the Crypt interface to do one key at a time.
-        // It seems that in practice we'll never have a WrappedKey with the same wrapping key
-        // appearing twice, so the batch interface doesn't make sense.
         let unwrap_key = |key: WrappedKey| async move {
-            let raw_keys = vec![&key.key[..]];
-            // Have to split this up because the &mut raw_keys... part isn't Send.
-            let unwrapped_fut =
-                self.client.unwrap_keys(key.wrapping_key_id, owner, &mut raw_keys.into_iter());
-            let mut unwrapped = unwrapped_fut.await?.map_err(|e| anyhow!(e))?;
-            assert!(unwrapped.len() == 1);
-            if unwrapped[0].len() != 32 {
+            let unwrapped = self
+                .client
+                .unwrap_key(key.wrapping_key_id, owner, &key.key[..])
+                .await?
+                .map_err(|e| anyhow!(e))?;
+            if unwrapped.len() != 32 {
                 bail!("Unexpected key length");
             }
-            Ok(UnwrappedKey::new(key.key_id, unwrapped.pop().unwrap().try_into().unwrap()))
+            Ok(UnwrappedKey::new(key.key_id, unwrapped.try_into().unwrap()))
         };
         let mut futures = vec![];
         for key in keys.iter().cloned() {

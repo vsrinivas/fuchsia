@@ -13,7 +13,7 @@ use {
         CryptCreateKeyResult, CryptManagementAddWrappingKeyResult,
         CryptManagementForgetWrappingKeyResult, CryptManagementRequest,
         CryptManagementRequestStream, CryptManagementSetActiveKeyResult, CryptRequest,
-        CryptRequestStream, CryptUnwrapKeysResult, KeyPurpose,
+        CryptRequestStream, CryptUnwrapKeyResult, KeyPurpose,
     },
     fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
@@ -93,48 +93,32 @@ impl CryptService {
         Ok((0, wrapped.into(), key.into()))
     }
 
-    fn unwrap_keys(
-        &self,
-        wrapping_key_id: u64,
-        owner: u64,
-        keys: Vec<Vec<u8>>,
-    ) -> CryptUnwrapKeysResult {
+    fn unwrap_key(&self, wrapping_key_id: u64, owner: u64, key: Vec<u8>) -> CryptUnwrapKeyResult {
         if self.use_legacy_stubbed_crypto {
-            return self.unwrap_keys_legacy(wrapping_key_id, owner, keys);
+            return self.unwrap_key_legacy(wrapping_key_id, owner, key);
         }
         let inner = self.inner.lock().unwrap();
         let cipher = inner.ciphers.get(&wrapping_key_id).ok_or(zx::Status::NOT_FOUND.into_raw())?;
         let nonce = zero_extended_nonce(owner);
 
-        let mut unwrapped_keys = vec![];
-        for key in keys {
-            let unwrapped_key = cipher
-                .decrypt(&nonce, &key[..])
-                .map_err(|_| zx::Status::IO_DATA_INTEGRITY.into_raw())?;
-            unwrapped_keys.push(unwrapped_key);
-        }
-        Ok(unwrapped_keys)
+        cipher.decrypt(&nonce, &key[..]).map_err(|_| zx::Status::IO_DATA_INTEGRITY.into_raw())
     }
 
-    fn unwrap_keys_legacy(
+    fn unwrap_key_legacy(
         &self,
         wrapping_key_id: u64,
         owner: u64,
-        keys: Vec<Vec<u8>>,
-    ) -> CryptUnwrapKeysResult {
+        key: Vec<u8>,
+    ) -> CryptUnwrapKeyResult {
         assert_eq!(wrapping_key_id, 0, "Key ID must be 0 for legacy keys.");
-        let mut unwrapped_keys = Vec::new();
-        for key in keys {
-            let mut unwrapped = [0; 32];
-            for (chunk, mut unwrapped) in key.chunks_exact(8).zip(unwrapped.chunks_exact_mut(8)) {
-                LittleEndian::write_u64(
-                    &mut unwrapped,
-                    LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner,
-                );
-            }
-            unwrapped_keys.push(unwrapped.into());
+        let mut unwrapped = vec![0; 32];
+        for (chunk, mut unwrapped) in key.chunks_exact(8).zip(unwrapped.chunks_exact_mut(8)) {
+            LittleEndian::write_u64(
+                &mut unwrapped,
+                LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner,
+            );
         }
-        Ok(unwrapped_keys)
+        Ok(unwrapped)
     }
 
     fn add_wrapping_key(
@@ -198,10 +182,10 @@ impl CryptService {
                                 log::error!("Failed to send CreateKey response: {:?}", e)
                             });
                         }
-                        CryptRequest::UnwrapKeys { wrapping_key_id, owner, keys, responder } => {
-                            let mut response = self.unwrap_keys(wrapping_key_id, owner, keys);
+                        CryptRequest::UnwrapKey { wrapping_key_id, owner, key, responder } => {
+                            let mut response = self.unwrap_key(wrapping_key_id, owner, key);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send UnwrapKeys response: {:?}", e)
+                                log::error!("Failed to send UnwrapKey response: {:?}", e)
                             });
                         }
                     }
@@ -257,8 +241,8 @@ mod tests {
         let (wrapping_key_id, wrapped, unwrapped) =
             service.create_key(0, KeyPurpose::Data).expect("create_key failed");
         let unwrap_result =
-            service.unwrap_keys(wrapping_key_id, 0, vec![wrapped]).expect("unwrap_key failed");
-        assert_eq!(unwrap_result, vec![unwrapped]);
+            service.unwrap_key(wrapping_key_id, 0, wrapped).expect("unwrap_key failed");
+        assert_eq!(unwrap_result, unwrapped);
     }
 
     #[test]
@@ -272,8 +256,8 @@ mod tests {
         // The legacy algorithm has no authentication, so the call will succeed but return the wrong
         // value.
         let unwrap_result =
-            service.unwrap_keys(wrapping_key_id, 0, vec![wrapped]).expect("unwrap_key failed");
-        assert_ne!(unwrap_result[0], unwrapped);
+            service.unwrap_key(wrapping_key_id, 0, wrapped).expect("unwrap_key failed");
+        assert_ne!(unwrap_result, unwrapped);
     }
 
     #[test]
@@ -287,16 +271,16 @@ mod tests {
             service.create_key(0, KeyPurpose::Data).expect("create_key failed");
         assert_eq!(wrapping_key_id, 1);
         let unwrap_result =
-            service.unwrap_keys(wrapping_key_id, 0, vec![wrapped]).expect("unwrap_key failed");
-        assert_eq!(unwrap_result, vec![unwrapped]);
+            service.unwrap_key(wrapping_key_id, 0, wrapped).expect("unwrap_key failed");
+        assert_eq!(unwrap_result, unwrapped);
 
         // Do it twice to make sure the service can use the same key repeatedly.
         let (wrapping_key_id, wrapped, unwrapped) =
             service.create_key(1, KeyPurpose::Data).expect("create_key failed");
         assert_eq!(wrapping_key_id, 1);
         let unwrap_result =
-            service.unwrap_keys(wrapping_key_id, 1, vec![wrapped]).expect("unwrap_key failed");
-        assert_eq!(unwrap_result, vec![unwrapped]);
+            service.unwrap_key(wrapping_key_id, 1, wrapped).expect("unwrap_key failed");
+        assert_eq!(unwrap_result, unwrapped);
     }
 
     #[test]
@@ -311,7 +295,7 @@ mod tests {
         for byte in &mut wrapped {
             *byte ^= 0xff;
         }
-        service.unwrap_keys(wrapping_key_id, 0, vec![wrapped]).expect_err("unwrap_key should fail");
+        service.unwrap_key(wrapping_key_id, 0, wrapped).expect_err("unwrap_key should fail");
     }
 
     #[test]
@@ -323,7 +307,7 @@ mod tests {
 
         let (wrapping_key_id, wrapped, _) =
             service.create_key(0, KeyPurpose::Data).expect("create_key failed");
-        service.unwrap_keys(wrapping_key_id, 1, vec![wrapped]).expect_err("unwrap_key should fail");
+        service.unwrap_key(wrapping_key_id, 1, wrapped).expect_err("unwrap_key should fail");
     }
 
     #[test]

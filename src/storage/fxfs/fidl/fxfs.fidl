@@ -30,16 +30,16 @@ protocol Crypt {
         unwrapped_key bytes:32;
     }) error zx.status;
 
-    /// Unwraps keys that are wrapped by the key identified by `wrapping_key_id`.  `owner` must be
+    /// Unwraps a key that is wrapped by the key identified by `wrapping_key_id`.  `owner` must be
     /// the same as that passed to `CreateKey`.  This can fail due to permission reasons, but an
     /// incorrect key or owner will not fail; it will just return an unwrapped key that won't
     /// actually decrpyt the data.
-    UnwrapKeys(struct {
+    UnwrapKey(struct {
         wrapping_key_id uint64;
         owner uint64;
-        keys vector<bytes:32>:8;
+        key bytes:32;
     }) -> (struct {
-        unwrapped_keys vector<bytes:32>:8;
+        unwrapped_key bytes:32;
     }) error zx.status;
 };
 
