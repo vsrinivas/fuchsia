@@ -87,10 +87,10 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
       svc_client_ = fidl::WireClient<fuchsia_io::Directory>(std::move(root), dispatcher());
     }
 
-    auto status =
-        svc_client_->Open(fuchsia_io::OPEN_RIGHT_WRITABLE | fuchsia_io::OPEN_RIGHT_READABLE,
-                          fuchsia_io::MODE_TYPE_DIRECTORY, kSvcDirectoryPath,
-                          fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
+    auto status = svc_client_->Open(
+        fuchsia_io::wire::kOpenRightWritable | fuchsia_io::wire::kOpenRightReadable,
+        fuchsia_io::MODE_TYPE_DIRECTORY, kSvcDirectoryPath,
+        fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
     ZX_ASSERT_MSG(status.ok(), "Failed to open /svc client: %s", status.status_string());
     return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client_end));
   }
