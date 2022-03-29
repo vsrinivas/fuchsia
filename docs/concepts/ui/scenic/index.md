@@ -159,10 +159,8 @@ a hierarchy called a `node tree` for rendering.
 [Here](gfx/scenic_resource_lifecycle.md) is a walk-through on how Scenic internally manages
 the lifecycle of Node-like resources and embedded Views.
 
-{#
-TODO: Discuss this in more detail, especially hierarchical modeling concepts
-such as per-node transforms, groups, adding and removing children, etc.
-#}
+{# TODO: Discuss this in more detail, especially hierarchical modeling concepts #}
+{# such as per-node transforms, groups, adding and removing children, etc. #}
 
 ### Scenes {#scenes}
 
@@ -194,12 +192,10 @@ can contain either an `Image` (perhaps transformed by a matrix), or a
 
 ![Scenic Resource Graph](/docs/concepts/ui/scenic/images/scenic_resource_graph.png)
 
-{#
-### TODO: More Resources {#todo-more-resources}
+{# ### TODO: More Resources {#todo-more-resources} #}
 
-Add sections to discuss all other kinds of resources: shapes, materials,
-links, memory, images, buffers, animations, variables, renderers etc.
-#}
+{# Add sections to discuss all other kinds of resources: shapes, materials, #}
+{# links, memory, images, buffers, animations, variables, renderers etc. #}
 
 ## Coordinate Frames and Units {#coordinate-frames-and-units}
 
@@ -239,9 +235,9 @@ The bounds of the root view are defined by a min and a max point as follows:
 [View Bounds](/docs/development/graphics/scenic/concepts/view_bounds.md) shows how to set up your view bounds, how to debug
 them with wireframe rendering, and explains how view bounds interact with hit testing.
 
-## Fences {#fences}
+{# ## Fences {#fences} #}
 
-TODO(fxbug.dev/24431): Talk about synchronization.
+{# TODO(fxbug.dev/24431): Talk about synchronization. #}
 
 # Frame Scheduling {#frame-scheduling}
 
@@ -299,8 +295,6 @@ make up Scenic.
 * [App](/sdk/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
   * [view_provider.fidl](/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
 
-{#
-## TODO {#todo}
+{# ## TODO {#todo} #}
 
-Talk about how to get started using Scenic, recommended implementation strategies, etc.
-#}
+{# Talk about how to get started using Scenic, recommended implementation strategies, etc. #}
