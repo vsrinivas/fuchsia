@@ -9,16 +9,16 @@ use {
     diagnostics_bridge::ArchiveReaderManager,
     diagnostics_data::{Data, LogsData},
     diagnostics_reader as reader,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_developer_remotecontrol::StreamError,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorProxy, ArchiveAccessorRequest, ArchiveAccessorRequestStream,
-        BatchIteratorMarker, BatchIteratorProxy, BatchIteratorRequest, ClientSelectorConfiguration,
-        ComponentSelector, DataType, Format, FormattedContent, Selector, SelectorArgument,
-        StreamMode, StreamParameters, StringSelector,
+        BatchIteratorMarker, BatchIteratorProxy, BatchIteratorRequest, BatchIteratorRequestStream,
+        ClientSelectorConfiguration, ComponentSelector, DataType, Format, FormattedContent,
+        Selector, SelectorArgument, StreamMode, StreamParameters, StringSelector,
     },
     fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{stream::FusedStream, TryStreamExt},
+    futures::{future::Either, stream::FusedStream, FutureExt, TryStreamExt},
     serde_json::{self, Value as JsonValue},
     std::{ops::Deref, sync::Arc, sync::Weak},
     tracing::{error, warn},
@@ -123,9 +123,20 @@ async fn interpose_batch_iterator_responses(
     iterator: BatchIteratorProxy,
     client_server_end: ServerEnd<BatchIteratorMarker>,
 ) -> Result<(), Error> {
-    let mut request_stream = client_server_end.into_stream()?;
+    let request_stream = client_server_end.into_stream()?;
+    let (serve_inner, terminated) = request_stream.into_inner();
+    let serve_inner_clone = serve_inner.clone();
+    let mut channel_closed_fut =
+        fasync::OnSignals::new(serve_inner_clone.channel(), zx::Signals::CHANNEL_PEER_CLOSED)
+            .fuse();
+    let mut request_stream = BatchIteratorRequestStream::from_inner(serve_inner, terminated);
+
     while let Some(BatchIteratorRequest::GetNext { responder }) = request_stream.try_next().await? {
-        let result = iterator.get_next().await?;
+        let result =
+            match futures::future::select(iterator.get_next(), &mut channel_closed_fut).await {
+                Either::Left((result, _)) => result?,
+                Either::Right(_) => break,
+            };
         match result {
             Err(e) => responder.send(&mut Err(e))?,
             Ok(batch) => {
@@ -249,7 +260,7 @@ mod tests {
         diagnostics_data::Data,
         diagnostics_hierarchy::hierarchy,
         fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
-        futures::{channel::mpsc, SinkExt, StreamExt},
+        futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -382,5 +393,41 @@ mod tests {
         let json_value = serde_json::to_value(result).expect("data to json");
         let buffer = write_json_value(json_value).expect("json value to vmo buffer");
         FormattedContent::Json(buffer)
+    }
+
+    #[test]
+    fn verify_channel_closure_propagated() {
+        // This test verifies that when the client of the mock closes it's channel, the channel to
+        // Archivist also closes, even when some other future might be in flight. In case the
+        // closure is not propagated, the mock may remain alive and keep Archivist alive even
+        // though it's not serving a client any more.
+
+        let mut executor = fasync::TestExecutor::new().expect("create executor");
+
+        let (client_proxy, client_server) =
+            fidl::endpoints::create_proxy::<BatchIteratorMarker>().unwrap();
+        let (interpose_client, interpose_server) =
+            fidl::endpoints::create_proxy::<BatchIteratorMarker>().unwrap();
+
+        let interpose_fut = interpose_batch_iterator_responses(interpose_client, client_server);
+        // "Archivist" server just waits for channel closed. This simulates GetNext not having
+        // new data
+        let server_fut =
+            fasync::OnSignals::new(&interpose_server, zx::Signals::CHANNEL_PEER_CLOSED);
+        let mut client_fut = client_proxy.get_next().boxed();
+
+        let mut join_fut = futures::future::join(interpose_fut, server_fut).boxed();
+
+        // first, poll client and server futs to ensure client request is received.
+        assert!(executor.run_until_stalled(&mut client_fut).is_pending());
+        assert!(executor.run_until_stalled(&mut join_fut).is_pending());
+        assert!(executor.run_until_stalled(&mut client_fut).is_pending());
+
+        // close channel on client side.
+        drop(client_fut);
+        drop(client_proxy);
+
+        // server futs should now complete.
+        assert!(executor.run_until_stalled(&mut join_fut).is_ready());
     }
 }
