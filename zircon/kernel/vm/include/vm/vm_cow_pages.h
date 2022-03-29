@@ -232,6 +232,18 @@ class VmCowPages final
   zx_status_t LookupLocked(uint64_t offset, uint64_t len, VmObject::LookupFunction lookup_fn)
       TA_REQ(lock_);
 
+  // Similar to LookupLocked, but enumerate all readable pages in the hierarchy within the requested
+  // range. The offset passed to the |lookup_fn| is the offset this page is visible at in this
+  // object, even if the page itself is committed in a parent object. The physical addresses given
+  // to the lookup_fn should not be retained in any way unless the range has also been pinned by the
+  // caller.
+  // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS. The lookup_fn
+  // can terminate iteration early by returning ZX_ERR_STOP.
+  using LookupReadableFunction =
+      fit::inline_function<zx_status_t(uint64_t offset, paddr_t pa), 4 * sizeof(void*)>;
+  zx_status_t LookupReadableLocked(uint64_t offset, uint64_t len, LookupReadableFunction lookup_fn)
+      TA_REQ(lock_);
+
   // See VmObject::TakePages
   zx_status_t TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) TA_REQ(lock_);
 

@@ -3592,6 +3592,88 @@ zx_status_t VmCowPages::LookupLocked(uint64_t offset, uint64_t len,
       start_page_offset, end_page_offset);
 }
 
+zx_status_t VmCowPages::LookupReadableLocked(uint64_t offset, uint64_t len,
+                                             LookupReadableFunction lookup_fn) {
+  canary_.Assert();
+  if (unlikely(len == 0)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // verify that the range is within the object
+  if (unlikely(!InRange(offset, len, size_))) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (is_slice_locked()) {
+    DEBUG_ASSERT(parent_);
+    AssertHeld(parent_->lock_ref());
+    // Slices are always hung off a non-slice parent, so we know we only need to walk up one level.
+    DEBUG_ASSERT(!parent_->is_slice_locked());
+    return parent_->LookupReadableLocked(
+        offset + parent_offset_, len,
+        [&lookup_fn, parent_offset = parent_offset_](uint64_t offset, paddr_t pa) {
+          // Need to undo the parent_offset before forwarding to the lookup_fn, who is ignorant of
+          // slices.
+          return lookup_fn(offset - parent_offset, pa);
+        });
+  }
+
+  uint64_t current_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
+
+  while (current_page_offset != end_page_offset) {
+    // Attempt to process any pages we have first.
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [&lookup_fn, &current_page_offset](const VmPageOrMarker* page_or_marker, uint64_t offset) {
+          DEBUG_ASSERT(offset == current_page_offset);
+          current_page_offset += PAGE_SIZE;
+          if (!page_or_marker->IsPage()) {
+            return ZX_ERR_NEXT;
+          }
+          return lookup_fn(offset, page_or_marker->Page()->paddr());
+        },
+        [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_STOP; }, current_page_offset,
+        end_page_offset);
+
+    // Check if we've processed the whole range.
+    if (current_page_offset == end_page_offset) {
+      break;
+    }
+
+    // See if any of our parents have the content.
+    VmCowPages* owner = nullptr;
+    uint64_t owner_offset = 0;
+    uint64_t owner_length = end_page_offset - current_page_offset;
+
+    // We do not care about the return value, all we are interested in is the populated out
+    // variables that we pass in.
+    FindInitialPageContentLocked(current_page_offset, &owner, &owner_offset, &owner_length);
+
+    // This should always get filled out.
+    DEBUG_ASSERT(owner_length > 0);
+    DEBUG_ASSERT(owner);
+
+    // Iterate over any potential content.
+    AssertHeld(owner->lock_ref());
+    status = owner->page_list_.ForEveryPageInRange(
+        [&lookup_fn, current_page_offset, owner_offset](const VmPageOrMarker* page_or_marker,
+                                                        uint64_t offset) {
+          if (!page_or_marker->IsPage()) {
+            return ZX_ERR_NEXT;
+          }
+          return lookup_fn(offset - owner_offset + current_page_offset,
+                           page_or_marker->Page()->paddr());
+        },
+        owner_offset, owner_offset + owner_length);
+    if (status != ZX_OK || status != ZX_ERR_NEXT) {
+      return status;
+    }
+
+    current_page_offset += owner_length;
+  }
+  return ZX_OK;
+}
+
 zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
   canary_.Assert();
 

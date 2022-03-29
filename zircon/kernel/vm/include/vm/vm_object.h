@@ -17,6 +17,7 @@
 #include <zircon/syscalls-next.h>
 #include <zircon/types.h>
 
+#include <arch/aspace.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -476,11 +477,11 @@ class VmObject : public VmHierarchyBase,
 
   virtual void Dump(uint depth, bool verbose) = 0;
 
-  // cache maintenance operations.
-  zx_status_t InvalidateCache(const uint64_t offset, const uint64_t len);
-  zx_status_t CleanCache(const uint64_t offset, const uint64_t len);
-  zx_status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len);
-  zx_status_t SyncCache(const uint64_t offset, const uint64_t len);
+  // perform a cache maintenance operation against the vmo.
+  enum class CacheOpType { Invalidate, Clean, CleanInvalidate, Sync };
+  virtual zx_status_t CacheOp(uint64_t offset, uint64_t len, CacheOpType type) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   virtual uint32_t GetMappingCachePolicy() const = 0;
   virtual zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) {
@@ -694,6 +695,11 @@ class VmObject : public VmHierarchyBase,
   void RemoveFromGlobalList();
   bool InGlobalList() const { return fbl::InContainer<internal::GlobalListTag>(*this); }
 
+  // Performs the requested cache op against a physical address range. The requested physical range
+  // must be accessible via the physmap.
+  static void CacheOpPhys(paddr_t pa, uint64_t length, CacheOpType op,
+                          ArchVmICacheConsistencyManager& cm);
+
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;
 
@@ -726,10 +732,6 @@ class VmObject : public VmHierarchyBase,
   static_assert(MAX_SIZE % PAGE_SIZE == 0);
 
  private:
-  // perform a cache maintenance operation against the vmo.
-  enum class CacheOpType { Invalidate, Clean, CleanInvalidate, Sync };
-  zx_status_t CacheOp(const uint64_t offset, const uint64_t len, const CacheOpType type);
-
   mutable DECLARE_MUTEX(VmObject) child_observer_lock_;
 
   // This member, if not null, is used to signal the user facing Dispatcher.

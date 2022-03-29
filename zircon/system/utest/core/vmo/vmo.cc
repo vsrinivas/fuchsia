@@ -1382,6 +1382,28 @@ TEST(VmoTestCase, CacheOp) {
   EXPECT_OK(zx_handle_close(phys.vmo.release()), "close handle (physical vmo)");
 }
 
+TEST(VmoTestCase, CacheOpLargeVmo) {
+  zx::vmo vmo;
+
+  const uint64_t kMaxSize = UINT64_MAX - static_cast<uint64_t>(zx_system_get_page_size()) * 64 + 1;
+
+  ASSERT_OK(zx::vmo::create(kMaxSize, 0, &vmo));
+
+  // Cache ops should be quick on this VMO has it has no committed pages.
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, kMaxSize, nullptr, 0));
+
+  // Commit some pages around.
+  constexpr uint64_t kCommitPages = 64;
+  for (uint64_t i = 0; i < kCommitPages; i++) {
+    uint64_t val = 42;
+    const uint64_t offset = kMaxSize / kCommitPages * i;
+    EXPECT_OK(vmo.write(&val, offset, sizeof(val)));
+  }
+
+  // With these committed pages, ops should still be fast.
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, kMaxSize, nullptr, 0));
+}
+
 TEST(VmoTestCase, CacheOpOutOfRange) {
   zx::vmo vmo;
 

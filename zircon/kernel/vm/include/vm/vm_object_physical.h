@@ -63,6 +63,7 @@ class VmObjectPhysical final : public VmObject {
 
   uint32_t GetMappingCachePolicy() const override;
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+  zx_status_t CacheOp(uint64_t offset, uint64_t len, CacheOpType type) override;
 
  private:
   // private constructor (use Create())

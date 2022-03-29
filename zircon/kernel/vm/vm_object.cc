@@ -326,104 +326,28 @@ uint32_t VmObject::num_user_children() const {
   return user_child_count_;
 }
 
-zx_status_t VmObject::InvalidateCache(const uint64_t offset, const uint64_t len) {
-  return CacheOp(offset, len, CacheOpType::Invalidate);
-}
+// static
+void VmObject::CacheOpPhys(paddr_t pa, uint64_t len, CacheOpType type,
+                           ArchVmICacheConsistencyManager& cm) {
+  DEBUG_ASSERT(is_physmap_phys_addr(pa));
+  DEBUG_ASSERT(len > 0);
 
-zx_status_t VmObject::CleanCache(const uint64_t offset, const uint64_t len) {
-  return CacheOp(offset, len, CacheOpType::Clean);
-}
+  const vaddr_t va = reinterpret_cast<vaddr_t>(paddr_to_physmap(pa));
 
-zx_status_t VmObject::CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
-  return CacheOp(offset, len, CacheOpType::CleanInvalidate);
-}
-
-zx_status_t VmObject::SyncCache(const uint64_t offset, const uint64_t len) {
-  return CacheOp(offset, len, CacheOpType::Sync);
-}
-
-zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
-                              const CacheOpType type) {
-  canary_.Assert();
-
-  if (unlikely(len == 0)) {
-    return ZX_ERR_INVALID_ARGS;
+  switch (type) {
+    case CacheOpType::Invalidate:
+      arch_invalidate_cache_range(va, len);
+      break;
+    case CacheOpType::Clean:
+      arch_clean_cache_range(va, len);
+      break;
+    case CacheOpType::CleanInvalidate:
+      arch_clean_invalidate_cache_range(va, len);
+      break;
+    case CacheOpType::Sync:
+      cm.SyncAddr(va, len);
+      break;
   }
-
-  size_t end_offset;
-  size_t op_start_offset = static_cast<size_t>(start_offset);
-
-  if (add_overflow(op_start_offset, static_cast<size_t>(len), &end_offset)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  Guard<Mutex> guard{&lock_};
-
-  // For syncing instruction caches there may be work that is more efficient to batch together, and
-  // so we use an abstract consistency manager to optimize it for the given architecture.
-  ArchVmICacheConsistencyManager sync_cm;
-
-  while (op_start_offset != end_offset) {
-    // lookup the physical address of the page, careful not to fault in a new one. The lookup is
-    // performed first to allow us to fail early for any incorrect offsets.
-    paddr_t pa;
-    zx_status_t status = GetPageLocked(op_start_offset, 0, nullptr, nullptr, nullptr, &pa);
-    if (unlikely(status == ZX_ERR_OUT_OF_RANGE)) {
-      return status;
-    }
-
-    // Offset at the end of the current page.
-    const size_t page_end_offset = ROUNDUP(op_start_offset + 1, PAGE_SIZE);
-
-    // This cache op will either terminate at the end of the current page or
-    // at the end of the whole op range -- whichever comes first.
-    const size_t op_end_offset = ktl::min(page_end_offset, end_offset);
-
-    const size_t cache_op_len = op_end_offset - op_start_offset;
-    DEBUG_ASSERT(cache_op_len <= PAGE_SIZE);
-
-    const size_t page_offset = op_start_offset % PAGE_SIZE;
-
-    op_start_offset += cache_op_len;
-
-    // For any absent pages we just continue and look for pages later on.
-    if (unlikely(status != ZX_OK)) {
-      continue;
-    }
-
-    // This check is here for the benefit of VmObjectPhysical VMOs,
-    // which can potentially have pa(s) outside physmap, in contrast to
-    // VmObjectPaged whose pa(s) are always in physmap.
-    if (unlikely(!is_physmap_phys_addr(pa))) {
-      // TODO(fxbug.dev/33855): Consider whether to keep or remove op_range
-      // for cache ops for phsyical VMOs. If we keep, possibly we'd
-      // want to obtain a mapping somehow here instead of failing.
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    // Convert the page address to a Kernel virtual address.
-    const void* ptr = paddr_to_physmap(pa);
-    const vaddr_t cache_op_addr = reinterpret_cast<vaddr_t>(ptr) + page_offset;
-
-    LTRACEF("ptr %p op %d\n", ptr, (int)type);
-
-    // Perform the necessary cache op against this page.
-    switch (type) {
-      case CacheOpType::Invalidate:
-        arch_invalidate_cache_range(cache_op_addr, cache_op_len);
-        break;
-      case CacheOpType::Clean:
-        arch_clean_cache_range(cache_op_addr, cache_op_len);
-        break;
-      case CacheOpType::CleanInvalidate:
-        arch_clean_invalidate_cache_range(cache_op_addr, cache_op_len);
-        break;
-      case CacheOpType::Sync:
-        sync_cm.SyncAddr(cache_op_addr, cache_op_len);
-        break;
-    }
-  }
-
-  return ZX_OK;
 }
 
 // round up the size to the next page size boundary and make sure we dont wrap

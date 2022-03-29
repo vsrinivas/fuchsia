@@ -1118,6 +1118,48 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
   return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
+zx_status_t VmObjectPaged::CacheOp(uint64_t offset, uint64_t len, CacheOpType type) {
+  canary_.Assert();
+  if (unlikely(len == 0)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  Guard<Mutex> guard{&lock_};
+
+  // verify that the range is within the object
+  if (unlikely(!InRange(offset, len, size_locked()))) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // This cannot overflow as we already checked the range.
+  const uint64_t end_offset = offset + len;
+
+  // For syncing instruction caches there may be work that is more efficient to batch together, and
+  // so we use an abstract consistency manager to optimize it for the given architecture.
+  ArchVmICacheConsistencyManager sync_cm;
+
+  return cow_pages_locked()->LookupReadableLocked(
+      offset, len, [&sync_cm, offset, end_offset, type](uint64_t page_offset, paddr_t pa) {
+        // This cannot overflow due to the maximum possible size of a VMO.
+        const uint64_t page_end = page_offset + PAGE_SIZE;
+
+        // Determine our start and end in terms of vmo offset
+        const uint64_t start = ktl::max(page_offset, offset);
+        const uint64_t end = ktl::min(end_offset, page_end);
+
+        // Translate to inter-page offset
+        DEBUG_ASSERT(start >= page_offset);
+        const uint64_t op_start_offset = start - page_offset;
+        DEBUG_ASSERT(op_start_offset < PAGE_SIZE);
+
+        DEBUG_ASSERT(end > start);
+        const uint64_t op_len = end - start;
+
+        CacheOpPhys(pa + op_start_offset, op_len, type, sync_cm);
+        return ZX_ERR_NEXT;
+      });
+}
+
 zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
                                   VmObject::LookupFunction lookup_fn) {
   canary_.Assert();

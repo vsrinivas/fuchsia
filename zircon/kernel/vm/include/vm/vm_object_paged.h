@@ -190,6 +190,8 @@ class VmObjectPaged final : public VmObject {
   zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,
                           bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override;
 
+  zx_status_t CacheOp(uint64_t offset, uint64_t len, CacheOpType type) override;
+
   uint32_t GetMappingCachePolicy() const override {
     Guard<Mutex> guard{&lock_};
     return GetMappingCachePolicyLocked();

@@ -323,7 +323,7 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
       if ((rights & ZX_RIGHT_READ) == 0) {
         return ZX_ERR_ACCESS_DENIED;
       }
-      return vmo_->SyncCache(offset, size);
+      return vmo_->CacheOp(offset, size, VmObject::CacheOpType::Sync);
     case ZX_VMO_OP_CACHE_INVALIDATE:
       if (!gBootOptions->enable_debugging_syscalls) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -334,17 +334,17 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
       if ((rights & ZX_RIGHT_WRITE) == 0) {
         return ZX_ERR_ACCESS_DENIED;
       }
-      return vmo_->InvalidateCache(offset, size);
+      return vmo_->CacheOp(offset, size, VmObject::CacheOpType::Invalidate);
     case ZX_VMO_OP_CACHE_CLEAN:
       if ((rights & ZX_RIGHT_READ) == 0) {
         return ZX_ERR_ACCESS_DENIED;
       }
-      return vmo_->CleanCache(offset, size);
+      return vmo_->CacheOp(offset, size, VmObject::CacheOpType::Clean);
     case ZX_VMO_OP_CACHE_CLEAN_INVALIDATE:
       if ((rights & ZX_RIGHT_READ) == 0) {
         return ZX_ERR_ACCESS_DENIED;
       }
-      return vmo_->CleanInvalidateCache(offset, size);
+      return vmo_->CacheOp(offset, size, VmObject::CacheOpType::CleanInvalidate);
     case ZX_VMO_OP_ZERO:
       if ((rights & ZX_RIGHT_WRITE) == 0) {
         return ZX_ERR_ACCESS_DENIED;
