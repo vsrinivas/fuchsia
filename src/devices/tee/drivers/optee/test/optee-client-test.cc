@@ -875,13 +875,18 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
   uint32_t sid2;
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2> *resp) {
-          EXPECT_EQ(resp->session_id, cur_sid_);
-          sid1 = resp->session_id;
-          sync_completion_signal(&completion);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2> &result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              auto *resp = result.Unwrap();
+              EXPECT_EQ(resp->session_id, cur_sid_);
+              sid1 = resp->session_id;
+              sync_completion_signal(&completion);
+            });
   }
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   sync_completion_reset(&completion);
@@ -928,12 +933,17 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->InvokeCommand(
-        sid1, kSleepCommand, std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::InvokeCommand> *resp) {
-          EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
-          sync_completion_signal(&completion);
-        });
+    fidl_client1->InvokeCommand(sid1, kSleepCommand, parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::InvokeCommand> &result) {
+              if (!result.ok()) {
+                FAIL("InvokeCommand failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              auto *resp = result.Unwrap();
+              EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
+              sync_completion_signal(&completion);
+            });
   }
 
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
@@ -965,13 +975,18 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
   uint32_t sid2;
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2> *resp) {
-          EXPECT_EQ(resp->session_id, cur_sid_);
-          sid1 = resp->session_id;
-          sync_completion_signal(&completion);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2> &result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              auto *resp = result.Unwrap();
+              EXPECT_EQ(resp->session_id, cur_sid_);
+              sid1 = resp->session_id;
+              sync_completion_signal(&completion);
+            });
   }
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
@@ -986,12 +1001,17 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
   sync_completion_reset(&completion);
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->InvokeCommand(
-        sid1, kSleepCommand, std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::InvokeCommand> *resp) {
-          EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
-          sync_completion_signal(&completion);
-        });
+    fidl_client1->InvokeCommand(sid1, kSleepCommand, parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::InvokeCommand> &result) {
+              if (!result.ok()) {
+                FAIL("InvokeCommand failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              auto *resp = result.Unwrap();
+              EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
+              sync_completion_signal(&completion);
+            });
   }
 
   EXPECT_EQ(invoke_done_cnt_, 0);

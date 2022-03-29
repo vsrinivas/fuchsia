@@ -252,11 +252,15 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion1);
+            });
   }
   status = sync_completion_wait(&completion1, ZX_SEC(1));
   EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
@@ -269,11 +273,15 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
+    fidl_client2->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion2);
+            });
   }
   sync_completion_wait(&completion2, ZX_TIME_INFINITE);
   sync_completion_signal(&smc_completion);
@@ -312,11 +320,15 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion1);
+            });
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
@@ -332,11 +344,15 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
+    fidl_client2->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion2);
+            });
   }
 
   sync_completion_wait(&completion2, ZX_TIME_INFINITE);
@@ -381,11 +397,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   }
   {  // first client is just sleeping for a long time (without ThreadLimit)
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion1);
+            });
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
@@ -401,11 +421,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   }
   {  // 2nd client got ThreadLimit
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
+    fidl_client2->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion2);
+            });
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
@@ -420,11 +444,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client3->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion3);
-        });
+    fidl_client3->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion3);
+            });
   }
 
   sync_completion_wait(&completion3, ZX_TIME_INFINITE);
@@ -472,11 +500,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   }
   {  // first client is just sleeping for a long time (without ThreadLimit)
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
+    fidl_client1->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion1);
+            });
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
@@ -493,11 +525,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   }
   {  // 2nd client got ThreadLimit
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
+    fidl_client2->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion2);
+            });
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
@@ -512,11 +548,15 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   }
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client3->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion3);
-        });
+    fidl_client3->OpenSession2(parameter_set)
+        .ThenExactlyOnce(
+            [&](::fidl::WireUnownedResult<::fuchsia_tee::Application::OpenSession2>& result) {
+              if (!result.ok()) {
+                FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
+                return;
+              }
+              sync_completion_signal(&completion3);
+            });
   }
   sync_completion_wait(&completion3, ZX_TIME_INFINITE);
   EXPECT_EQ(call_with_args_count, 3);
