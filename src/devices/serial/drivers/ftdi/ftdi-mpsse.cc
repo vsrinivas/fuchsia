@@ -61,13 +61,10 @@ zx_status_t Mpsse::Read(uint8_t* buf, size_t len) {
 }
 
 zx_status_t Mpsse::Write(uint8_t* buf, size_t len) {
-  int retries = 0;
   uint8_t* buf_index = buf;
   size_t write_len = 0;
 
   while (write_len < len) {
-    retries++;
-
     size_t actual;
     zx_status_t status = ftdi_.Write(buf_index, len - write_len, &actual);
     if (status == ZX_ERR_SHOULD_WAIT || (actual == 0)) {
