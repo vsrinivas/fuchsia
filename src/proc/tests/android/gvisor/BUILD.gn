@@ -80,7 +80,7 @@ gvisor_tests = [
 
   # "pselect_test",
   # "pty_root_test",
-  # "pty_test",
+  "pty_test",
   "pwrite64_test",
   "read_test",
   "readv_socket_test",

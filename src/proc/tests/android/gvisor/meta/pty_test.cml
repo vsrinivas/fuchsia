@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "tests/pty_test",
+        args: [ "--gunit_filter=BasicPtyTest.StatUnopenedMaster:BasicPtyTest.OpenMasterReplica:BasicPtyTest.ReplicaEntryGoneAfterMasterClose:BasicPtyTest.Getdents:JobControlTest.SetTTY:JobControlTest.SetTTYNonLeader:JobControlTest.OrphanRegression" ],
+    },
+}
