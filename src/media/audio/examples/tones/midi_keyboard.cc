@@ -62,7 +62,12 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
 }
 
 void MidiKeyboard::IssueRead() {
-  dev_->Read([this](::fidl::WireResponse<fuchsia_hardware_midi::Device::Read>* response) {
+  dev_->Read().Then([this](::fidl::WireUnownedResult<fuchsia_hardware_midi::Device::Read>& result) {
+    if (!result.ok()) {
+      FX_LOGS(WARNING) << "Failed to read from MIDI device: " << result.error();
+      return;
+    }
+    auto* response = result.Unwrap();
     if (response->result.is_err()) {
       FX_LOGS(WARNING) << "Shutting down MIDI keyboard (status " << response->result.err() << " )";
       return;

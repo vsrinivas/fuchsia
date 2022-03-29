@@ -261,9 +261,12 @@ void SimpleCodecClient::UpdateGainState(
     gain_state_ = zx::ok(state);
   }
 
-  codec_->WatchGainState(
-      [&](fidl::WireResponse<fuchsia_hardware_audio::Codec::WatchGainState>* response2) {
-        UpdateGainState(response2);
+  codec_->WatchGainState().Then(
+      [this](fidl::WireUnownedResult<fuchsia_hardware_audio::Codec::WatchGainState>& result) {
+        if (!result.ok()) {
+          return;
+        }
+        UpdateGainState(result.Unwrap());
       });
 }
 
