@@ -191,6 +191,19 @@ pub fn validate_dynamic_offers(offers: &Vec<fdecl::Offer>) -> Result<(), ErrorLi
     }
 }
 
+fn check_offer_name(
+    prop: Option<&String>,
+    decl: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+    offer_type: OfferType,
+) -> bool {
+    match offer_type {
+        OfferType::Static => check_name(prop, decl, keyword, errors),
+        OfferType::Dynamic => check_dynamic_name(prop, decl, keyword, errors),
+    }
+}
+
 #[derive(Default)]
 struct ValidationContext<'a> {
     all_children: HashMap<&'a str, &'a fdecl::Child>,
@@ -1263,7 +1276,13 @@ impl<'a> ValidationContext<'a> {
         offer_type: OfferType,
     ) {
         let mut valid = true;
-        valid &= check_name(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
+        valid &= check_offer_name(
+            Some(&child.name),
+            decl_type,
+            "source.child.name",
+            &mut self.errors,
+            offer_type,
+        );
         match offer_type {
             OfferType::Static => {
                 valid &= if child.collection.is_some() {
@@ -1847,7 +1866,7 @@ impl<'a> ValidationContext<'a> {
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
-        check_name(source_name, decl, "source_name", &mut self.errors);
+        check_offer_name(source_name, decl, "source_name", &mut self.errors, offer_type);
         match (offer_type, target) {
             (OfferType::Static, Some(fdecl::Ref::Child(c))) => {
                 self.validate_target_child(decl, allowable_names, c, source, target_name);
@@ -1867,7 +1886,7 @@ impl<'a> ValidationContext<'a> {
             }
             (OfferType::Dynamic, None) => {}
         }
-        check_name(target_name, decl, "target_name", &mut self.errors);
+        check_offer_name(target_name, decl, "target_name", &mut self.errors, offer_type);
     }
 
     fn validate_storage_offer_fields(
@@ -1907,7 +1926,13 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_event_offer_fields(&mut self, event: &'a fdecl::OfferEvent, offer_type: OfferType) {
         let decl = "OfferEvent";
-        check_name(event.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        check_offer_name(
+            event.source_name.as_ref(),
+            decl,
+            "source_name",
+            &mut self.errors,
+            offer_type,
+        );
 
         // Only parent and framework are valid.
         match event.source {
@@ -1948,7 +1973,13 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
-        check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
+        check_offer_name(
+            event.target_name.as_ref(),
+            decl,
+            "target_name",
+            &mut self.errors,
+            offer_type,
+        );
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -7442,45 +7473,45 @@ mod tests {
                 fdecl::Offer::Protocol(fdecl::OfferProtocol {
                     dependency_type: Some(fdecl::DependencyType::Strong),
                     source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
-                    source_name: Some("thing".to_string()),
-                    target_name: Some("thing".to_string()),
+                    source_name: Some("thing".repeat(26)),
+                    target_name: Some("thing".repeat(26)),
                     ..fdecl::OfferProtocol::EMPTY
                 }),
                 fdecl::Offer::Service(fdecl::OfferService {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thang".to_string()),
-                    target_name: Some("thang".to_string()),
+                    source_name: Some("thang".repeat(26)),
+                    target_name: Some("thang".repeat(26)),
                     ..fdecl::OfferService::EMPTY
                 }),
                 fdecl::Offer::Directory(fdecl::OfferDirectory {
                     dependency_type: Some(fdecl::DependencyType::Strong),
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung1".to_string()),
-                    target_name: Some("thung1".to_string()),
+                    source_name: Some("thung1".repeat(26)),
+                    target_name: Some("thung1".repeat(26)),
                     ..fdecl::OfferDirectory::EMPTY
                 }),
                 fdecl::Offer::Storage(fdecl::OfferStorage {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung2".to_string()),
-                    target_name: Some("thung2".to_string()),
+                    source_name: Some("thung2".repeat(26)),
+                    target_name: Some("thung2".repeat(26)),
                     ..fdecl::OfferStorage::EMPTY
                 }),
                 fdecl::Offer::Runner(fdecl::OfferRunner {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung3".to_string()),
-                    target_name: Some("thung3".to_string()),
+                    source_name: Some("thung3".repeat(26)),
+                    target_name: Some("thung3".repeat(26)),
                     ..fdecl::OfferRunner::EMPTY
                 }),
                 fdecl::Offer::Resolver(fdecl::OfferResolver {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung4".to_string()),
-                    target_name: Some("thung4".to_string()),
+                    source_name: Some("thung4".repeat(26)),
+                    target_name: Some("thung4".repeat(26)),
                     ..fdecl::OfferResolver::EMPTY
                 }),
                 fdecl::Offer::Event(fdecl::OfferEvent {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung5".to_string()),
-                    target_name: Some("thung5".to_string()),
+                    source_name: Some("thung5".repeat(26)),
+                    target_name: Some("thung5".repeat(26)),
                     ..fdecl::OfferEvent::EMPTY
                 }),
             ]),
