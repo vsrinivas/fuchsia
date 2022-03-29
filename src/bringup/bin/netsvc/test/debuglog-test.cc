@@ -110,8 +110,8 @@ class LogListenerTest : public zxtest::Test {
 
   zx_status_t Log(std::string_view message, std::optional<zx_status_t>& result) {
     fidl::StringView tags[] = {kTag1, kTag2};
-    client_->Log(
-        fuchsia_logger::wire::LogMessage{
+    client_
+        ->Log(fuchsia_logger::wire::LogMessage{
             .pid = kPid,
             .tid = kTid,
             .time = (zx::sec(kTimeSecs) + zx::msec(kTimeMillis)).to_nsecs(),
@@ -119,10 +119,11 @@ class LogListenerTest : public zxtest::Test {
             .tags =
                 fidl::VectorView<fidl::StringView>::FromExternal(std::begin(tags), std::size(tags)),
             .msg = fidl::StringView::FromExternal(message),
-        },
-        [&result](fidl::WireUnownedResult<fuchsia_logger::LogListenerSafe::Log>& r) {
-          result = r.status();
-        });
+        })
+        .ThenExactlyOnce(
+            [&result](fidl::WireUnownedResult<fuchsia_logger::LogListenerSafe::Log>& r) {
+              result = r.status();
+            });
     return loop_.RunUntilIdle();
   }
 
@@ -142,11 +143,11 @@ class LogListenerTest : public zxtest::Test {
           .msg = fidl::StringView::FromExternal(msg),
       });
     }
-    client_->LogMany(
-        fidl::VectorView<fuchsia_logger::wire::LogMessage>::FromExternal(message_vec),
-        [&result](fidl::WireUnownedResult<fuchsia_logger::LogListenerSafe::LogMany>& r) {
-          result = r.status();
-        });
+    client_->LogMany(fidl::VectorView<fuchsia_logger::wire::LogMessage>::FromExternal(message_vec))
+        .ThenExactlyOnce(
+            [&result](fidl::WireUnownedResult<fuchsia_logger::LogListenerSafe::LogMany>& r) {
+              result = r.status();
+            });
     return loop_.RunUntilIdle();
   }
 

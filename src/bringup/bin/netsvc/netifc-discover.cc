@@ -120,7 +120,7 @@ struct Netdevice {
       std::optional<DiscoveredInterface>& discovered,
       const std::shared_ptr<fidl::WireClient<fuchsia_hardware_network::PortWatcher>>& watcher,
       fidl::ClientEnd<fuchsia_hardware_network::Device> dev) {
-    (*watcher)->Watch(
+    (*watcher)->Watch().ThenExactlyOnce(
         [&discovered, watcher, dev = std::move(dev)](
             fidl::WireUnownedResult<fuchsia_hardware_network::PortWatcher::Watch>& r) mutable {
           if (!r.ok()) {

@@ -114,8 +114,8 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
     // The server may be in an unresponsive state, unknown here, despite responding to IsActive.
     // However, the response to IsActive narrows window during which it's unknown the server
     // became unresponsive.
-    weak_this->connection_->OnException(
-        std::move(*shared_exception), exception_info, [info](auto& result) {
+    weak_this->connection_->OnException(std::move(*shared_exception), exception_info)
+        .ThenExactlyOnce([info](auto& result) {
           if (!result.ok()) {
             LogError("Failed to pass exception to handler", info, result.status());
           }
@@ -130,7 +130,7 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
     }
   };
 
-  connection_->IsActive(std::move(is_active_cb));
+  connection_->IsActive().ThenExactlyOnce(std::move(is_active_cb));
   async::PostDelayedTask(dispatcher_, std::move(release_exception), is_active_timeout_);
 }
 
