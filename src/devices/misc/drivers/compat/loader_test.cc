@@ -89,7 +89,9 @@ TEST_F(LoaderTest, LoadObject) {
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that loading a random library fetches a VMO from the backing loader.
-  client->LoadObject("mylib.so", [mylib_koid](auto* response) {
+  client->LoadObject("mylib.so").Then([mylib_koid](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
     EXPECT_EQ(ZX_OK, response->rv);
     zx_koid_t actual_koid = GetKoid(response->object);
     EXPECT_EQ(mylib_koid, actual_koid);
@@ -98,7 +100,9 @@ TEST_F(LoaderTest, LoadObject) {
   ASSERT_TRUE(RunLoopUntilIdle());
 
   // Test that loading the driver library fetches a VMO from the compat loader.
-  client->LoadObject(compat::kLibDriverName, [loader_koid](auto* response) {
+  client->LoadObject(compat::kLibDriverName).Then([loader_koid](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
     EXPECT_EQ(ZX_OK, response->rv);
     zx_koid_t actual_koid = GetKoid(response->object);
     EXPECT_EQ(loader_koid, actual_koid);
@@ -108,8 +112,11 @@ TEST_F(LoaderTest, LoadObject) {
 
   // Test that loading the driver library a second returns an error. We should
   // only see a single request for the driver library by the dynamic loader.
-  client->LoadObject(compat::kLibDriverName,
-                     [](auto* response) { EXPECT_EQ(ZX_ERR_NOT_FOUND, response->rv); });
+  client->LoadObject(compat::kLibDriverName).Then([](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, response->rv);
+  });
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }
@@ -160,7 +167,11 @@ TEST_F(LoaderTest, ConfigSucceeds) {
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that config returns success.
-  client->Config("", [](auto* response) { EXPECT_EQ(ZX_OK, response->rv); });
+  client->Config("").Then([](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
+    EXPECT_EQ(ZX_OK, response->rv);
+  });
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }
@@ -184,8 +195,11 @@ TEST_F(LoaderTest, CloneSucceeds) {
 
   // Test that clone returns success.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  client->Clone(std::move(endpoints->server),
-                [](auto* response) { EXPECT_EQ(ZX_OK, response->rv); });
+  client->Clone(std::move(endpoints->server)).Then([](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
+    EXPECT_EQ(ZX_OK, response->rv);
+  });
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }
@@ -207,8 +221,16 @@ TEST_F(LoaderTest, NoBackingLoader) {
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that functions that call the backing loader fail.
-  client->LoadObject("mylib.so", [](auto* response) { EXPECT_EQ(ZX_ERR_CANCELED, response->rv); });
-  client->Config("", [](auto* response) { EXPECT_EQ(ZX_ERR_CANCELED, response->rv); });
+  client->LoadObject("mylib.so").Then([](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
+    EXPECT_EQ(ZX_ERR_CANCELED, response->rv);
+  });
+  client->Config("").Then([](auto& result) {
+    ASSERT_EQ(ZX_OK, result.status());
+    auto* response = result.Unwrap();
+    EXPECT_EQ(ZX_ERR_CANCELED, response->rv);
+  });
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }

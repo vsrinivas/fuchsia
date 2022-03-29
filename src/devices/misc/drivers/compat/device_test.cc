@@ -499,7 +499,7 @@ TEST_F(DeviceTest, GetFidlProtocol) {
 
   fidl::WireClient client(std::move(echo_endpoints->client), dispatcher());
   bool done = false;
-  client->EchoString("hello").ThenExactlyOnce(
+  client->EchoString("hello").Then(
       [&done](fidl::WireUnownedResult<test_placeholders::Echo::EchoString>& result) {
         if (!result.ok()) {
           FAIL() << result.error();
@@ -611,7 +611,7 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
   client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
 
   bool callback_called = false;
-  client->GetTopologicalPath().ThenExactlyOnce(
+  client->GetTopologicalPath().Then(
       [&callback_called](
           fidl::WireUnownedResult<fuchsia_device::Controller::GetTopologicalPath>& result) {
         if (!result.ok()) {
@@ -670,7 +670,7 @@ TEST_F(DeviceTest, DevfsVnodeTestBind) {
 
   auto [vnode, client] = CreateVnode(second_device);
   bool callback_called = false;
-  client->Bind("gpt.so").ThenExactlyOnce(
+  client->Bind("gpt.so").Then(
       [&callback_called](fidl::WireUnownedResult<fuchsia_device::Controller::Bind>& result) {
         if (!result.ok()) {
           FAIL() << result.error();
@@ -706,16 +706,21 @@ TEST_F(DeviceTest, DevfsVnodeTestBindAlreadyBound) {
   second_device->Add(&args, &third_device);
 
   auto [vnode, client] = CreateVnode(second_device);
-  bool callback_called = false;
-  client->Bind("gpt.so",
-               [&callback_called](fidl::WireResponse<fuchsia_device::Controller::Bind>* response) {
-                 ASSERT_TRUE(response->result.is_err());
-                 ASSERT_EQ(ZX_ERR_ALREADY_BOUND, response->result.err());
-                 callback_called = true;
-               });
+  bool got_reply = false;
+  client->Bind("gpt.so").Then(
+      [&got_reply](fidl::WireUnownedResult<fuchsia_device::Controller::Bind>& result) {
+        if (!result.ok()) {
+          FAIL() << "Bind failed: " << result.error();
+          return;
+        }
+        auto* response = result.Unwrap();
+        ASSERT_TRUE(response->result.is_err());
+        ASSERT_EQ(ZX_ERR_ALREADY_BOUND, response->result.err());
+        got_reply = true;
+      });
 
   ASSERT_TRUE(test_loop().RunUntilIdle());
-  ASSERT_TRUE(callback_called);
+  ASSERT_TRUE(got_reply);
 }
 
 TEST_F(DeviceTest, DevfsVnodeTestRebind) {
@@ -755,14 +760,19 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
   ASSERT_EQ(ZX_OK, device.Add(&args, &second_device));
   ASSERT_EQ(ZX_OK, second_device->CreateNode());
 
-  bool callback_called = false;
+  bool got_reply = false;
   auto [vnode, client] = CreateVnode(second_device);
-  client->Rebind("gpt.so", [&callback_called](
-                               fidl::WireResponse<fuchsia_device::Controller::Rebind>* response) {
-    ASSERT_TRUE(response->result.is_response());
-    callback_called = true;
-  });
+  client->Rebind("gpt.so").Then(
+      [&got_reply](fidl::WireUnownedResult<fuchsia_device::Controller::Rebind>& result) {
+        if (!result.ok()) {
+          FAIL() << "Rebind failed: " << result.error();
+          return;
+        }
+        auto* response = result.Unwrap();
+        ASSERT_TRUE(response->result.is_response());
+        got_reply = true;
+      });
 
   ASSERT_TRUE(test_loop().RunUntilIdle());
-  ASSERT_TRUE(callback_called);
+  ASSERT_TRUE(got_reply);
 }
