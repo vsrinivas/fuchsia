@@ -15,6 +15,7 @@
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
+#include "src/ui/scenic/lib/display/display_power_manager.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
@@ -538,6 +539,14 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
         fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateClient);
     zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[display_power]");
+    display_power_manager_ = std::make_unique<display::DisplayPowerManager>(display_manager_.get());
+    zx_status_t status =
+        app_context_->outgoing()->AddPublicService(display_power_manager_->GetHandler());
     FX_DCHECK(status == ZX_OK);
   }
 

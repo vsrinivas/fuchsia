@@ -25,7 +25,6 @@ protocol DisplayPower {
     // TODO(fxbug.dev/95196): Currently this method controls all displays and
     // only succeeds when all displays support DDIC power control. We should
     // improve this function to better support multi-display use cases.
-    @transitional
     SetDisplayPower(struct {
         power_on bool;
     }) -> (struct {}) error zx.status;

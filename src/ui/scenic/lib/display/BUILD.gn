@@ -14,6 +14,8 @@ source_set("display") {
     "display_manager.h",
     "display_manager2.cc",
     "display_manager2.h",
+    "display_power_manager.cc",
+    "display_power_manager.h",
     "util.cc",
     "util.h",
   ]
@@ -21,6 +23,7 @@ source_set("display") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.ui.display",
+    "//sdk/fidl/fuchsia.ui.display.internal",
     "//sdk/lib/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -36,6 +39,7 @@ source_set("display") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
+    "//zircon/system/public",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]

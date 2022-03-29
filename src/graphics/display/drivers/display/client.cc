@@ -925,6 +925,17 @@ void Client::SetMinimumRgb(SetMinimumRgbRequestView request,
   }
 }
 
+void Client::SetDisplayPower(SetDisplayPowerRequestView request,
+                             SetDisplayPowerCompleter::Sync& _completer) {
+  ZX_DEBUG_ASSERT(controller_->dc());
+  auto status = controller_->dc()->SetDisplayPower(request->display_id, request->power_on);
+  if (status == ZX_OK) {
+    _completer.ReplySuccess();
+  } else {
+    _completer.ReplyError(status);
+  }
+}
+
 bool Client::CheckConfig(fhd::wire::ConfigResult* res,
                          std::vector<fhd::wire::ClientCompositionOp>* ops) {
   if (res && ops) {
@@ -941,7 +952,6 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   uint32_t layer_cfg_results[layers_size];
   uint32_t* display_layer_cfg_results[configs_.size()];
   memset(layer_cfg_results, 0, layers_size * sizeof(uint32_t));
-
 
   bool config_fail = false;
   size_t config_idx = 0;

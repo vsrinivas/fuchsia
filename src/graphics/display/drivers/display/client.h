@@ -289,6 +289,9 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   void SetMinimumRgb(SetMinimumRgbRequestView request,
                      SetMinimumRgbCompleter::Sync& _completer) override;
 
+  void SetDisplayPower(SetDisplayPowerRequestView request,
+                       SetDisplayPowerCompleter::Sync& _completer) override;
+
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
   bool CleanUpImage(Image* image);

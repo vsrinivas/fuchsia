@@ -795,7 +795,6 @@ protocol Controller {
     /// handles this method.
     /// Returns ZX_ERR_NOT_SUPPORTED if the display driver IC doesn't support
     /// turning on/off displays.
-    @transitional
     SetDisplayPower(struct {
         display_id uint64;
         power_on bool;

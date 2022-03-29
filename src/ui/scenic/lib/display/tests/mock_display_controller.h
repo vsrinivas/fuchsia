@@ -148,6 +148,22 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     }
   }
 
+  void set_set_display_power_result(zx_status_t result) { set_display_power_result_ = result; }
+
+  bool display_power_on() const { return display_power_on_; }
+
+  void SetDisplayPower(uint64_t display_id, bool power_on,
+                       SetDisplayPowerCallback callback) override {
+    using SetDisplayPowerResult = fuchsia::hardware::display::Controller_SetDisplayPower_Result;
+    auto result = set_display_power_result_;
+    if (result == ZX_OK) {
+      display_power_on_ = power_on;
+      callback(SetDisplayPowerResult::WithResponse({}));
+    } else {
+      callback(SetDisplayPowerResult::WithErr(static_cast<int32_t>(result)));
+    }
+  }
+
   EventSender_& events() { return binding_.events(); }
 
   void ResetDeviceChannel() { device_channel_.reset(); }
@@ -183,6 +199,8 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   uint32_t acknowledge_vsync_count_ = 0;
   uint32_t set_display_layers_count_ = 0;
   uint32_t set_layer_primary_position_count_ = 0;
+  zx_status_t set_display_power_result_ = ZX_OK;
+  bool display_power_on_ = true;
 
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
   zx::channel device_channel_;
