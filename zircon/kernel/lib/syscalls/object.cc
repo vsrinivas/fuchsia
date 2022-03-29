@@ -313,7 +313,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       SimpleJobEnumerator sje(koids, max, topic == ZX_INFO_JOB_CHILDREN);
 
       // Don't recurse; we only want the job's direct children.
-      if (!job->EnumerateChildren(&sje, /* recurse */ false)) {
+      if (!job->EnumerateChildren(&sje)) {
         // SimpleJobEnumerator only returns false when it can't
         // write to the user pointer.
         return ZX_ERR_INVALID_ARGS;

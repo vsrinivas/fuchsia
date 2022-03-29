@@ -71,7 +71,7 @@ static bool TestJobEnumerator() {
   ASSERT_TRUE(root_job, "The root job is required.");
   // Enumerating the children will not add the root job itself. Add it explicitly.
   job_enumerator.AddEntry(root_job->get_koid(), ZX_KOID_INVALID);
-  root_job->EnumerateChildren(&job_enumerator, /*recurse=*/true);
+  root_job->EnumerateChildrenRecursive(&job_enumerator);
 
   ASSERT_FALSE(job_enumerator.badness_, "A pointer was unexpectedly null.");
   ASSERT_FALSE(job_enumerator.called_after_stop_, "Return false didn't halt Enumeration.");
@@ -142,7 +142,6 @@ bool TestJobNoChildrenSignal() {
   root.dispatcher()->Kill(0);
   END_TEST;
 }
-
 
 }  // namespace
 

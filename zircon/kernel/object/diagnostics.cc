@@ -191,7 +191,7 @@ void DumpProcessList() {
     process->get_name(pname);
     printf("%7" PRIu64 " %s [%s]\n", process->get_koid(), handle_counts, pname);
   });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 }
 
 void DumpJobList() {
@@ -202,7 +202,7 @@ void DumpJobList() {
     job->get_name(name);
     printf("%7" PRIu64 " '%s'\n", job->get_koid(), name);
   });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 }
 
 void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process,
@@ -243,14 +243,14 @@ void DumpChannelsByKoid(zx_koid_t id) {
   } else {
     auto walker = MakeProcessWalker(
         [id](ProcessDispatcher* process) { DumpProcessChannels(fbl::RefPtr(process), id); });
-    GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+    GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
   }
 }
 
 void DumpAllChannels() {
   auto walker = MakeProcessWalker(
       [](ProcessDispatcher* process) { DumpProcessChannels(fbl::RefPtr(process)); });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 }
 
 const char kRightsHeader[] =
@@ -355,7 +355,7 @@ void DumpHandlesForKoid(zx_koid_t id) {
     });
     total_proc += found_handle;
   });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 
   if (total_handles > 0) {
     printf("total: %u handles in %u processes\n", total_handles, total_proc);
@@ -372,7 +372,7 @@ void ktrace_report_live_processes() {
     process->get_name(name);
     ktrace_name(TAG_PROC_NAME, (uint32_t)process->get_koid(), 0, name, /*always*/ true);
   });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 }
 
 namespace {
@@ -1040,7 +1040,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
       printf("%sproc %5" PRIu64 " %4zuM '%s'\n", prefix, process->get_koid(), pages / 256, pname);
     }
   });
-  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);
 }
 
 int mwd_thread(void* arg) {

@@ -139,10 +139,18 @@ class JobDispatcher final
   // Returns false if no alive child job had get_kill_on_oom() set.
   bool KillJobWithKillOnOOM();
 
-  // Walks the job/process tree and invokes |je| methods on each node. If
-  // |recurse| is false, only visits direct children of this job. Returns
-  // false if any methods of |je| return false; returns true otherwise.
-  bool EnumerateChildren(JobEnumerator* je, bool recurse);
+  // Enumerates the direct (non recursive) children and invokes |je| methods on
+  // each node. The |je| methods are invoked without the lock of this
+  // JobDispatcher held, however a consistent atomic snapshot of children will
+  // be given. Returns false if any methods of |je| return false; returns true
+  // otherwise.
+  bool EnumerateChildren(JobEnumerator* je);
+
+  // Recursively walks the job/process tree and invokes |je| methods on each
+  // node. The |je| methods are invoked with all parent |JobDispatcher| object
+  // locks held. Returns false if any methods of |je| return false; returns true
+  // otherwise.
+  bool EnumerateChildrenRecursive(JobEnumerator* je) TA_EXCL(get_lock());
 
   fbl::RefPtr<ProcessDispatcher> LookupProcessById(zx_koid_t koid);
   fbl::RefPtr<JobDispatcher> LookupJobById(zx_koid_t koid);
@@ -166,7 +174,8 @@ class JobDispatcher final
  private:
   enum class State { READY, KILLING, DEAD };
 
-  using LiveRefsArray = fbl::Array<fbl::RefPtr<Dispatcher>>;
+  template <typename T>
+  using LiveRefsArray = fbl::Array<fbl::RefPtr<T>>;
 
   JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, JobPolicy policy);
 
@@ -197,10 +206,11 @@ class JobDispatcher final
   // Set or clear the JobDispatcher's signals to reflect its current state.
   void UpdateSignalsLocked() TA_REQ(get_lock());
 
-  template <typename T, typename Fn>
-  __attribute__((warn_unused_result)) LiveRefsArray ForEachChildInLocked(T& children,
-                                                                         zx_status_t* status,
-                                                                         Fn func)
+  // L is the type of the child list, and T is the type of the dispatcher object in the list.
+  template <typename T, typename L, typename Fn>
+  __attribute__((warn_unused_result)) LiveRefsArray<T> ForEachChildInLocked(L& children,
+                                                                            zx_status_t* status,
+                                                                            Fn func)
       TA_REQ(get_lock());
 
   template <typename T, typename Fn>

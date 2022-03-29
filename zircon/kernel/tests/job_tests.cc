@@ -57,7 +57,7 @@ void tree_to_string(JobDispatcher* root, int indent, TreeString* buf) {
 
   auto walker =
       MakeJobWalker([&indent, &buf](JobDispatcher* job) { tree_to_string(job, indent + 2, buf); });
-  root->EnumerateChildren(&walker, false);
+  root->EnumerateChildren(&walker);
 }
 
 void count_nodes_per_level(JobDispatcher* root, ktl::span<int> per_level_count) {
@@ -71,7 +71,7 @@ void count_nodes_per_level(JobDispatcher* root, ktl::span<int> per_level_count) 
     auto walker = MakeJobWalker([&step, level, per_level_count](JobDispatcher* job) {
       step(step, job, level + 1, per_level_count);
     });
-    node->EnumerateChildren(&walker, false);
+    node->EnumerateChildren(&walker);
   };
   recusive_step(recusive_step, root, 0, per_level_count);
 }

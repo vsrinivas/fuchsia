@@ -66,21 +66,21 @@ uint32_t JobDispatcher::LockOrder() const { return kRootJobMaxHeight - max_heigh
 //      refs = ForEachChildInLocked(...);
 //  }
 //
-template <typename T, typename Fn>
-JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx_status_t* result,
-                                                                 Fn func) {
-  const uint64_t count = ChildCountLocked<typename T::ValueType>();
+template <typename T, typename L, typename Fn>
+JobDispatcher::LiveRefsArray<T> JobDispatcher::ForEachChildInLocked(L& children,
+                                                                    zx_status_t* result, Fn func) {
+  const uint64_t count = ChildCountLocked<typename L::ValueType>();
 
   if (!count) {
     *result = ZX_OK;
-    return LiveRefsArray();
+    return LiveRefsArray<T>();
   }
 
   fbl::AllocChecker ac;
-  LiveRefsArray refs(new (&ac) fbl::RefPtr<Dispatcher>[count], count);
+  LiveRefsArray<T> refs(new (&ac) fbl::RefPtr<T>[count], count);
   if (!ac.check()) {
     *result = ZX_ERR_NO_MEMORY;
-    return LiveRefsArray();
+    return LiveRefsArray<T>();
   }
 
   size_t ix = 0;
@@ -522,11 +522,54 @@ zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& poli
   return ZX_OK;
 }
 
-bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
+bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
   canary_.Assert();
 
-  LiveRefsArray jobs_refs;
-  LiveRefsArray proc_refs;
+  LiveRefsArray<JobDispatcher> jobs_refs;
+  LiveRefsArray<ProcessDispatcher> proc_refs;
+
+  zx_status_t result = ZX_OK;
+
+  {
+    Guard<Mutex> guard{get_lock()};
+
+    proc_refs = ForEachChildInLocked<ProcessDispatcher>(
+        procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) { return ZX_OK; });
+    if (result != ZX_OK) {
+      return false;
+    }
+
+    jobs_refs = ForEachChildInLocked<JobDispatcher>(
+        jobs_, &result, [&](const fbl::RefPtr<JobDispatcher>& job) { return ZX_OK; });
+  }
+
+  // With the processes and jobs collected into their respective LiveRefsArrays, we can now invoke
+  // the JobEnumerator callbacks on them. We perform this here, outside the lock, instead of
+  // directly in the ForEachChildInLocked callbacks so that the callbacks are permitted to perform
+  // user copies, or generally do actions that are not permitted whilst locks are held.
+  for (auto& process : proc_refs) {
+    if (process) {
+      if (!je->OnProcess(&*process)) {
+        return false;
+      }
+    }
+  }
+  for (auto& job : jobs_refs) {
+    if (job) {
+      if (!je->OnJob(&*job)) {
+        return false;
+      }
+    }
+  }
+
+  return result == ZX_OK;
+}
+
+bool JobDispatcher::EnumerateChildrenRecursive(JobEnumerator* je) {
+  canary_.Assert();
+
+  LiveRefsArray<JobDispatcher> jobs_refs;
+  LiveRefsArray<ProcessDispatcher> proc_refs;
 
   zx_status_t result = ZX_OK;
 
@@ -534,24 +577,22 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     // As EnumerateChildren will recurse we need to give a lock order to the guard.
     Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
 
-    proc_refs =
-        ForEachChildInLocked(procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) {
+    proc_refs = ForEachChildInLocked<ProcessDispatcher>(
+        procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) {
           return je->OnProcess(proc.get()) ? ZX_OK : ZX_ERR_STOP;
         });
     if (result != ZX_OK) {
       return false;
     }
 
-    jobs_refs = ForEachChildInLocked(jobs_, &result, [&](const fbl::RefPtr<JobDispatcher>& job) {
-      if (!je->OnJob(job.get())) {
-        return ZX_ERR_STOP;
-      }
-      if (recurse) {
-        // TODO(kulakowski): This recursive call can overflow the stack.
-        return job->EnumerateChildren(je, /* recurse */ true) ? ZX_OK : ZX_ERR_STOP;
-      }
-      return ZX_OK;
-    });
+    jobs_refs = ForEachChildInLocked<JobDispatcher>(
+        jobs_, &result, [&](const fbl::RefPtr<JobDispatcher>& job) {
+          if (!je->OnJob(job.get())) {
+            return ZX_ERR_STOP;
+          }
+          // TODO(kulakowski): This recursive call can overflow the stack.
+          return job->EnumerateChildrenRecursive(je) ? ZX_OK : ZX_ERR_STOP;
+        });
   }
 
   return result == ZX_OK;
@@ -560,20 +601,21 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
 fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(zx_koid_t koid) {
   canary_.Assert();
 
-  LiveRefsArray proc_refs;
+  LiveRefsArray<ProcessDispatcher> proc_refs;
 
   fbl::RefPtr<ProcessDispatcher> found_proc;
   {
     Guard<Mutex> guard{get_lock()};
     zx_status_t result;
 
-    proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
-      if (proc->get_koid() == koid) {
-        found_proc = ktl::move(proc);
-        return ZX_ERR_STOP;
-      }
-      return ZX_OK;
-    });
+    proc_refs = ForEachChildInLocked<ProcessDispatcher>(procs_, &result,
+                                                        [&](fbl::RefPtr<ProcessDispatcher> proc) {
+                                                          if (proc->get_koid() == koid) {
+                                                            found_proc = ktl::move(proc);
+                                                            return ZX_ERR_STOP;
+                                                          }
+                                                          return ZX_OK;
+                                                        });
   }
   return found_proc;  // Null if not found.
 }
@@ -581,20 +623,21 @@ fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(zx_koid_t koid) 
 fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(zx_koid_t koid) {
   canary_.Assert();
 
-  LiveRefsArray jobs_refs;
+  LiveRefsArray<JobDispatcher> jobs_refs;
 
   fbl::RefPtr<JobDispatcher> found_job;
   {
     Guard<Mutex> guard{get_lock()};
     zx_status_t result;
 
-    jobs_refs = ForEachChildInLocked(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
-      if (job->get_koid() == koid) {
-        found_job = ktl::move(job);
-        return ZX_ERR_STOP;
-      }
-      return ZX_OK;
-    });
+    jobs_refs =
+        ForEachChildInLocked<JobDispatcher>(jobs_, &result, [&](fbl::RefPtr<JobDispatcher> job) {
+          if (job->get_koid() == koid) {
+            found_job = ktl::move(job);
+            return ZX_ERR_STOP;
+          }
+          return ZX_OK;
+        });
   }
   return found_job;  // Null if not found.
 }

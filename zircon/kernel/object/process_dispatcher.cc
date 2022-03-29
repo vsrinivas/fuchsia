@@ -652,7 +652,7 @@ class FindProcessByKoid final : public JobEnumerator {
 // static
 fbl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(zx_koid_t koid) {
   FindProcessByKoid finder(koid);
-  GetRootJobDispatcher()->EnumerateChildren(&finder, /* recurse */ true);
+  GetRootJobDispatcher()->EnumerateChildrenRecursive(&finder);
   return finder.get_pd();
 }
 
