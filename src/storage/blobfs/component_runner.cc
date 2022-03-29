@@ -51,7 +51,7 @@ void ComponentRunner::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callb
   }
 
   using Unregister = fuchsia_device_manager::Administrator::UnregisterSystemStorageForShutdown;
-  driver_admin_->UnregisterSystemStorageForShutdown(
+  driver_admin_->UnregisterSystemStorageForShutdown().ThenExactlyOnce(
       [callback = std::move(callback)](fidl::WireUnownedResult<Unregister>& result) mutable {
         if (!result.ok()) {
           callback(result.status());

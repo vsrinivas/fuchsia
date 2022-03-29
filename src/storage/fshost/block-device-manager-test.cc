@@ -229,13 +229,14 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
   ASSERT_EQ(node_client_end.status_value(), ZX_OK);
   fidl::WireSharedClient<fuchsia_io::Node> node(std::move(*node_client_end), loop.dispatcher());
   sync_completion_t query_completion;
-  node->QueryFilesystem([query_completion = &query_completion](
-                            fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
-    EXPECT_EQ(res.status(), ZX_OK);
-    EXPECT_EQ(res->s, ZX_OK);
-    EXPECT_EQ(res->info->fs_type, VFS_TYPE_BLOBFS);
-    sync_completion_signal(query_completion);
-  });
+  node->QueryFilesystem().ThenExactlyOnce(
+      [query_completion =
+           &query_completion](fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
+        EXPECT_EQ(res.status(), ZX_OK);
+        EXPECT_EQ(res->s, ZX_OK);
+        EXPECT_EQ(res->info->fs_type, VFS_TYPE_BLOBFS);
+        sync_completion_signal(query_completion);
+      });
 
   ASSERT_FALSE(sync_completion_signaled(&query_completion));
   PauseWatcher();  // Pause whilst we create a ramdisk.

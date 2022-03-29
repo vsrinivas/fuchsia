@@ -102,9 +102,9 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
   ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
   std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(
-      std::move(event), [query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+  query_client->IsNodeInFilesystem(std::move(event))
+      .ThenExactlyOnce([query_complete = &query_complete](
+                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
         EXPECT_EQ(info.status(), ZX_OK);
         EXPECT_FALSE(info->is_in_filesystem);
         *query_complete = true;
@@ -144,9 +144,9 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfsWithoutDriverMana
   ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
   std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(
-      std::move(event), [query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+  query_client->IsNodeInFilesystem(std::move(event))
+      .ThenExactlyOnce([query_complete = &query_complete](
+                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
         EXPECT_EQ(info.status(), ZX_OK);
         EXPECT_FALSE(info->is_in_filesystem);
         *query_complete = true;
@@ -187,9 +187,9 @@ TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter
   ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
   std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(
-      std::move(event), [query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+  query_client->IsNodeInFilesystem(std::move(event))
+      .ThenExactlyOnce([query_complete = &query_complete](
+                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
         EXPECT_EQ(info.status(), ZX_OK);
         EXPECT_FALSE(info->is_in_filesystem);
         *query_complete = true;

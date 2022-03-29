@@ -141,9 +141,9 @@ TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
   sync_completion_t query_completion;
-  query_client->IsNodeInFilesystem(
-      std::move(event), [query_completion = &query_completion](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+  query_client->IsNodeInFilesystem(std::move(event))
+      .ThenExactlyOnce([query_completion = &query_completion](
+                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
         EXPECT_EQ(info.status(), ZX_OK);
         EXPECT_FALSE(info->is_in_filesystem);
         sync_completion_signal(query_completion);
