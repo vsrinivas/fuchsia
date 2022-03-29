@@ -121,15 +121,15 @@ if (is_host) {
     # TODO: When specifying a custom toolchain locally this input wont exist, which
     # causes this action to always run, even on no-op rebuilds.
     inputs = [ "$rebased_rust_sysroot/.versions/rust.cipd_version" ]
-    _stamp = "rust-sysroot/make_toolchain_host_binaries.stamp"
+    _stamp = "$target_gen_dir/$target_name.stamp"
     args = [
       rebase_path("//build/copy_tree.py", root_build_dir),
       rebased_rust_sysroot,
       out_rust_sysroot,
-      _stamp,
+      rebase_path(_stamp, root_build_dir),
     ]
     outputs = [
-      "$root_build_dir/$_stamp",
+      _stamp,
       "$root_build_dir/$out_rust_sysroot",
     ]
   }

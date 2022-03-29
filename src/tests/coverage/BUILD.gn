@@ -188,6 +188,7 @@ go_test("rust_coverage_tests") {
   non_go_deps = [
     ":rust_coverage_test_deps($host_toolchain)",
     ":rust_coverage_test_package($target_toolchain)",
+    "//build/rust:prebuilt_toolchain_host_test_data($host_toolchain)",
   ]
 
   # Declare this test as a host-target interaction test, so that Fuchsia
@@ -207,7 +208,7 @@ go_test("rust_coverage_tests") {
       rebase_path("//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
                   root_build_dir),
       "--llvm-profdata",
-      "$rebased_rustc_prefix/llvm-profdata",
+      "$out_rustc_prefix/llvm-profdata",
     ]
   }
 }
