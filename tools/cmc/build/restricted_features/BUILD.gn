@@ -29,6 +29,9 @@ group("dynamic_offers") {
 }
 
 # The allowlist of components that can use the "structured_config" feature in CML.
+# This allowlist is temporary and will be removed once the interfaces between structured
+# configuration clients and the framework is mature. Clients in this list may need some
+# refactoring as structured configuration is fully productionized.
 group("structured_config") {
   visibility = [
     # components
