@@ -461,11 +461,7 @@ struct Recv<R: ReceiveBuffer> {
 
 impl<R: ReceiveBuffer> Recv<R> {
     fn wnd(&self) -> WindowSize {
-        let wnd = self.buffer.cap() - self.buffer.len();
-        u32::try_from(wnd)
-            .ok_checked::<TryFromIntError>()
-            .and_then(WindowSize::new)
-            .unwrap_or(WindowSize::MAX)
+        WindowSize::new(self.buffer.cap() - self.buffer.len()).unwrap_or(WindowSize::MAX)
     }
 
     fn nxt(&self) -> SeqNum {
@@ -1164,7 +1160,8 @@ mod test {
     }
 
     const BUFFER_SIZE: usize = 16;
-    const BUFFER_SIZE_U32: u32 = BUFFER_SIZE as u32;
+    const TEST_BYTES: &[u8] = "Hello".as_bytes();
+
     #[test]
     fn established_receive() {
         let clock = DummyInstantCtx::default();
@@ -1185,9 +1182,6 @@ mod test {
             },
         };
 
-        const TEST_BYTES: &[u8] = "Hello".as_bytes();
-        const TEST_BYTES_LEN: u32 = TEST_BYTES.len() as u32;
-
         // Received an expected segment at rcv.nxt.
         assert_eq!(
             established.on_segment(
@@ -1197,7 +1191,7 @@ mod test {
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
-                WindowSize::new(BUFFER_SIZE_U32 - TEST_BYTES_LEN).unwrap()
+                WindowSize::new(BUFFER_SIZE - TEST_BYTES.len()).unwrap(),
             ),)
         );
         assert_eq!(
@@ -1222,7 +1216,7 @@ mod test {
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + TEST_BYTES.len(),
-                WindowSize::new(BUFFER_SIZE_U32).unwrap()
+                WindowSize::new(BUFFER_SIZE).unwrap(),
             )),
         );
         assert_eq!(
@@ -1247,7 +1241,7 @@ mod test {
             EstablishedOnSegmentDisposition::SendAck(Segment::ack(
                 ISS_1 + 1,
                 ISS_2 + 1 + 3 * TEST_BYTES.len(),
-                WindowSize::new(BUFFER_SIZE_U32 - 2 * TEST_BYTES_LEN).unwrap()
+                WindowSize::new(BUFFER_SIZE - 2 * TEST_BYTES.len()).unwrap(),
             ))
         );
         assert_eq!(
@@ -1263,7 +1257,7 @@ mod test {
     fn established_send() {
         let clock = DummyInstantCtx::default();
         let mut send_buffer = RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap());
-        assert_eq!(send_buffer.enqueue_data("Hello".as_bytes()), 5);
+        assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         let mut established = State::Established(Established {
             snd: Send {
                 nxt: ISS_1 + 1,
@@ -1284,7 +1278,7 @@ mod test {
         assert_eq!(established.poll_send(u32::MAX, clock.now()), None);
         let open_window = |established: &mut State<DummyInstant, RingBuffer, RingBuffer>,
                            ack: SeqNum,
-                           win: u32,
+                           win: usize,
                            now: DummyInstant| {
             assert_eq!(
                 established
@@ -1299,8 +1293,8 @@ mod test {
             Some(Segment::data(
                 ISS_1 + 1,
                 ISS_2 + 1,
-                WindowSize::new(BUFFER_SIZE_U32).unwrap(),
-                SendPayload::Contiguous("e".as_bytes()),
+                WindowSize::new(BUFFER_SIZE).unwrap(),
+                SendPayload::Contiguous(&TEST_BYTES[1..2]),
             ))
         );
 
@@ -1311,8 +1305,8 @@ mod test {
             Some(Segment::data(
                 ISS_1 + 2,
                 ISS_2 + 1,
-                WindowSize::new(BUFFER_SIZE_U32).unwrap(),
-                SendPayload::Contiguous("ll".as_bytes()),
+                WindowSize::new(BUFFER_SIZE).unwrap(),
+                SendPayload::Contiguous(&TEST_BYTES[2..4]),
             ))
         );
 
@@ -1321,8 +1315,8 @@ mod test {
             Some(Segment::data(
                 ISS_1 + 4,
                 ISS_2 + 1,
-                WindowSize::new(BUFFER_SIZE_U32).unwrap(),
-                SendPayload::Contiguous("o".as_bytes()),
+                WindowSize::new(BUFFER_SIZE).unwrap(),
+                SendPayload::Contiguous(&TEST_BYTES[4..5]),
             ))
         );
 
