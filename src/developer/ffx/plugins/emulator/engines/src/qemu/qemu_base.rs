@@ -306,6 +306,21 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             Ok(_) => (),
                             Err(e) => eprintln!("Couldn't print the log: {:?}", e),
                         };
+                        if self.emu_config().host.networking == NetworkingMode::User {
+                            // We only need to do this if we're running in user net mode.
+                            if let Some(ssh_port) = ssh_port {
+                                if let Err(e) =
+                                    remove_target(proxy, &format!("127.0.0.1:{}", ssh_port)).await
+                                {
+                                    // A failure here probably means it was never added.
+                                    // Just log the error and quit.
+                                    log::warn!(
+                                        "Couldn't remove target from ffx during shutdown: {:?}",
+                                        e
+                                    );
+                                }
+                            }
+                        }
                         return Ok(1);
                     }
 
