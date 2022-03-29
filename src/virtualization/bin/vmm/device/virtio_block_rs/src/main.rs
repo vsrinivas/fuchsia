@@ -20,7 +20,7 @@ use {
     fuchsia_component::server,
     fuchsia_syslog::{self as syslog},
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryStreamExt},
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
     virtio_device::chain::ReadableChain,
 };
 
@@ -73,14 +73,18 @@ async fn run_virtio_block(
     let request_stream = device.take_stream(wire::VIRTIO_BLOCK_REQUEST_QUEUE)?;
     ready_responder.send()?;
 
-    futures::try_join!(request_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
-        let guest_mem = &guest_mem;
-        let block_device = &block_device;
-        move |chain| async move {
-            block_device.process_chain(ReadableChain::new(chain, guest_mem)).await
-        }
-    }))?;
-
+    futures::try_join!(
+        device
+            .run_device_notify(virtio_device_fidl)
+            .map_err(|e| anyhow!("run_device_notify: {}", e)),
+        request_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+            let guest_mem = &guest_mem;
+            let block_device = &block_device;
+            move |chain| async move {
+                block_device.process_chain(ReadableChain::new(chain, guest_mem)).await
+            }
+        })
+    )?;
     Ok(())
 }
 
