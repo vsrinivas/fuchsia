@@ -212,10 +212,10 @@ class AuthService {
     final dataDir = RemoteDir(dataDirChannel.first!);
     final cacheSubdirChannel = ChannelPair();
     dataDir.open(
-        openRightReadable |
-            openRightWritable |
-            openFlagCreate |
-            openFlagDirectory,
+        OpenFlags.rightReadable |
+            OpenFlags.rightWritable |
+            OpenFlags.create |
+            OpenFlags.directory,
         0,
         kCacheSubdirectory,
         InterfaceRequest(cacheSubdirChannel.second));
@@ -225,10 +225,10 @@ class AuthService {
     final tmpDir = RemoteDir(Channel.fromFile(kIncomingTmpDirectory));
     final tmpSubdirChannel = ChannelPair();
     tmpDir.open(
-        openRightReadable |
-            openRightWritable |
-            openFlagCreate |
-            openFlagDirectory,
+        OpenFlags.rightReadable |
+            OpenFlags.rightWritable |
+            OpenFlags.create |
+            OpenFlags.directory,
         0,
         kTmpSubdirectory,
         InterfaceRequest(tmpSubdirChannel.second));
