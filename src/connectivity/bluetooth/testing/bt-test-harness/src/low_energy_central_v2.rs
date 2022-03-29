@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,7 +20,10 @@ use {
     test_harness::{SharedState, TestHarness},
 };
 
-use crate::host_watcher::ActivatedFakeHost;
+use crate::{
+    core_realm::{CoreRealm, SHARED_STATE_INDEX},
+    host_watcher_v2::ActivatedFakeHost,
+};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ScanStateChange {
@@ -68,15 +71,20 @@ impl DerefMut for CentralHarness {
 }
 
 impl TestHarness for CentralHarness {
-    type Env = ActivatedFakeHost;
+    type Env = (ActivatedFakeHost, Arc<CoreRealm>);
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let fake_host = ActivatedFakeHost::new().await?;
-            let central = fuchsia_component::client::connect_to_protocol::<CentralMarker>()
+        let shared_state = shared_state.clone();
+        async move {
+            let realm =
+                shared_state.get_or_insert_with(SHARED_STATE_INDEX, CoreRealm::create).await?;
+            let fake_host = ActivatedFakeHost::new(realm.clone()).await?;
+            let central = realm
+                .instance()
+                .connect_to_protocol_at_exposed_dir::<CentralMarker>()
                 .context("Failed to connect to BLE Central service")?;
 
             let harness = CentralHarness(expectable(
@@ -84,13 +92,18 @@ impl TestHarness for CentralHarness {
                 Aux { central, emulator: fake_host.emulator().clone() },
             ));
             let run_central = handle_central_events(harness.clone()).boxed();
-            Ok((harness, fake_host, run_central))
+            Ok((harness, (fake_host, realm), run_central))
         }
         .boxed()
     }
 
-    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
-        env.release().boxed()
+    fn terminate((emulator, realm): Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        // The realm must be kept alive in order for emulator.release() to work properly.
+        async move {
+            let _realm = realm;
+            emulator.release().await
+        }
+        .boxed()
     }
 }
 

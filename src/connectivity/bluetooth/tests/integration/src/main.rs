@@ -5,9 +5,6 @@
 use {anyhow::Error, fuchsia_bluetooth::util::CollectExt};
 
 #[macro_use]
-mod expect;
-
-#[macro_use]
 mod tests;
 
 fn main() -> Result<(), Error> {
@@ -21,8 +18,6 @@ fn main() -> Result<(), Error> {
     let _ = vec![
         // Tests that trigger bt-gap.cmx.
         tests::inspect::run_all(),
-        tests::low_energy_central::run_all(),
-        tests::low_energy_peripheral::run_all(),
     ]
     .into_iter()
     .collect_results()?;

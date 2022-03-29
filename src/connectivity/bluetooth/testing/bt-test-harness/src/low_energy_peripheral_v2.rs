@@ -23,8 +23,9 @@ use {
 };
 
 use crate::{
+    core_realm::{CoreRealm, SHARED_STATE_INDEX},
     emulator::{watch_advertising_states, EmulatorState},
-    host_watcher::ActivatedFakeHost,
+    host_watcher_v2::ActivatedFakeHost,
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
@@ -86,15 +87,20 @@ impl AsRef<HciEmulatorProxy> for Aux {
 }
 
 impl TestHarness for PeripheralHarness {
-    type Env = ActivatedFakeHost;
+    type Env = (ActivatedFakeHost, Arc<CoreRealm>);
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let host = ActivatedFakeHost::new().await?;
-            let peripheral = fuchsia_component::client::connect_to_protocol::<PeripheralMarker>()
+        let shared_state = shared_state.clone();
+        async move {
+            let realm =
+                shared_state.get_or_insert_with(SHARED_STATE_INDEX, CoreRealm::create).await?;
+            let host = ActivatedFakeHost::new(realm.clone()).await?;
+            let peripheral = realm
+                .instance()
+                .connect_to_protocol_at_exposed_dir::<PeripheralMarker>()
                 .context("Failed to connect to BLE Peripheral service")?;
             let harness = PeripheralHarness(expectable(
                 Default::default(),
@@ -107,12 +113,17 @@ impl TestHarness for PeripheralHarness {
             let run_peripheral =
                 future::try_join(watch_adv, watch_conn).map_ok(|((), ())| ()).boxed();
 
-            Ok((harness, host, run_peripheral))
+            Ok((harness, (host, realm), run_peripheral))
         }
         .boxed()
     }
-    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
-        env.release().boxed()
+    fn terminate((emulator, realm): Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        // The realm must be kept alive in order for emulator.release() to work properly.
+        async move {
+            let _realm = realm;
+            emulator.release().await
+        }
+        .boxed()
     }
 }
 
