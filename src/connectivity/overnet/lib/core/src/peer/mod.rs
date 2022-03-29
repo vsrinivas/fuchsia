@@ -645,6 +645,8 @@ impl Peer {
     }
 }
 
+const QUIC_CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
+
 async fn client_handshake(
     my_node_id: NodeId,
     peer_node_id: NodeId,
@@ -657,7 +659,7 @@ async fn client_handshake(
     log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
     conn_stream_writer
         .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
-        .on_timeout(Duration::from_secs(60), || {
+        .on_timeout(QUIC_CONNECTION_TIMEOUT, || {
             Err(format_err!("timeout initializing quic connection"))
         })
         .await?;
@@ -696,7 +698,7 @@ async fn client_handshake(
 
         Ok((conn_stream_writer, conn_stream_reader))
     }
-    .on_timeout(Duration::from_secs(20), || Err(format_err!("timeout performing handshake")))
+    .on_timeout(QUIC_CONNECTION_TIMEOUT, || Err(format_err!("timeout performing handshake")))
     .await
 }
 
