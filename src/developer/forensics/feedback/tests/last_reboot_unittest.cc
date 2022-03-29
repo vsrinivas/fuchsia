@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
 #include <memory>
 
@@ -50,6 +51,7 @@ class LastRebootTest : public UnitTestFixture {
   }
 
   cobalt::Logger* Cobalt() { return &cobalt_; }
+  RedactorBase* Redactor() { return &redactor_; }
 
   fuchsia::feedback::CrashReporter* CrashReporter() { return crash_reporter_server_.get(); }
 
@@ -60,6 +62,7 @@ class LastRebootTest : public UnitTestFixture {
  private:
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
+  IdentityRedactor redactor_{inspect::BoolProperty()};
 
   std::unique_ptr<stubs::RebootMethodsWatcherRegisterBase> reboot_watcher_register_server_;
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
@@ -77,7 +80,7 @@ TEST_F(LastRebootTest, FirstInstance) {
           .is_fatal = IsFatal(reboot_log.RebootReason()),
       }));
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), Redactor(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = true,
                              .reboot_log = reboot_log,
@@ -101,7 +104,7 @@ TEST_F(LastRebootTest, IsNotFirstInstance) {
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), Redactor(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = false,
                              .reboot_log = reboot_log,
@@ -119,7 +122,7 @@ TEST_F(LastRebootTest, ReportsOnReboot) {
   const zx::duration oom_crash_reporting_delay = zx::sec(90);
   const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1), std::nullopt);
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), Redactor(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = false,
                              .reboot_log = reboot_log,

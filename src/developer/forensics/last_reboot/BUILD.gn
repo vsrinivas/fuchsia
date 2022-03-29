@@ -72,6 +72,7 @@ source_set("reporter") {
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
+    "//src/developer/forensics/utils/redact",
   ]
 
   deps = [

@@ -29,10 +29,12 @@ constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 }  // namespace
 
 Reporter::Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                   cobalt::Logger* cobalt, fuchsia::feedback::CrashReporter* crash_reporter)
+                   cobalt::Logger* cobalt, RedactorBase* redactor,
+                   fuchsia::feedback::CrashReporter* crash_reporter)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       cobalt_(cobalt),
+      redactor_(redactor),
       crash_reporter_(crash_reporter) {}
 
 void Reporter::ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay) {
@@ -60,7 +62,8 @@ void Reporter::ReportOn(const feedback::RebootLog& reboot_log, zx::duration cras
 
 namespace {
 
-fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& reboot_log) {
+fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& reboot_log,
+                                                 RedactorBase* redactor) {
   // Build the crash report.
   fuchsia::feedback::CrashReport report;
   report.set_program_name(ToCrashProgramName(reboot_log.RebootReason()))
@@ -71,9 +74,11 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
     report.set_program_uptime(reboot_log.Uptime()->get());
   }
 
+  std::string reboot_log_str = reboot_log.RebootLogStr();
+
   // Build the crash report attachments.
   fsl::SizedVmo vmo;
-  if (fsl::VmoFromString(reboot_log.RebootLogStr(), &vmo)) {
+  if (fsl::VmoFromString(redactor->Redact(reboot_log_str), &vmo)) {
     std::vector<fuchsia::feedback::Attachment> attachments(1);
     attachments.back().key = "reboot_crash_log";
     attachments.back().value = std::move(vmo).ToTransport();
@@ -87,7 +92,7 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
 
 ::fpromise::promise<void> Reporter::FileCrashReport(const feedback::RebootLog& reboot_log,
                                                     const zx::duration delay) {
-  auto report = CreateCrashReport(reboot_log);
+  auto report = CreateCrashReport(reboot_log, redactor_);
 
   ::fpromise::bridge<void, Error> bridge;
 

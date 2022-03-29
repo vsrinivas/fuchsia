@@ -19,6 +19,7 @@
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 #include "src/developer/forensics/last_reboot/reporter.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics::feedback {
 
@@ -33,8 +34,8 @@ class LastReboot {
   };
 
   LastReboot(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-             cobalt::Logger* cobalt, fuchsia::feedback::CrashReporter* crash_reporter,
-             Options options);
+             cobalt::Logger* cobalt, RedactorBase* redactor,
+             fuchsia::feedback::CrashReporter* crash_reporter, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::LastRebootInfoProvider> request,
               ::fit::function<void(zx_status_t)> error_handler);

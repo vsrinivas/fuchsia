@@ -8,10 +8,11 @@ namespace forensics::feedback {
 
 LastReboot::LastReboot(async_dispatcher_t* dispatcher,
                        std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
-                       fuchsia::feedback::CrashReporter* crash_reporter, const Options options)
+                       RedactorBase* redactor, fuchsia::feedback::CrashReporter* crash_reporter,
+                       const Options options)
     : dispatcher_(dispatcher),
       reboot_watcher_(services, options.graceful_reboot_reason_write_path, cobalt),
-      reporter_(dispatcher, services, cobalt, crash_reporter),
+      reporter_(dispatcher, services, cobalt, redactor, crash_reporter),
       last_reboot_info_provider_(options.reboot_log) {
   reboot_watcher_.Connect();
   if (options.is_first_instance) {

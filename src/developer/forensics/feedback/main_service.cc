@@ -54,7 +54,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
                      annotations_.GetAnnotationManager(), feedback_data_.DataProvider(),
                      options.crash_reports_options),
 
-      last_reboot_(dispatcher_, services_, cobalt_, crash_reports_.CrashReporter(),
+      last_reboot_(dispatcher_, services_, cobalt_, redactor_.get(), crash_reports_.CrashReporter(),
                    options.last_reboot_options),
       last_reboot_info_provider_stats_(&inspect_node_manager_,
                                        "/fidl/fuchsia.feedback.LastRebootInfoProvider"),

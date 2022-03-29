@@ -5,6 +5,7 @@
 #include "src/developer/forensics/last_reboot/reporter.h"
 
 #include <lib/fpromise/result.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -72,7 +73,9 @@ struct GracefulRebootWithCrashTestParam {
 template <typename TestParam>
 class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<TestParam> {
  public:
-  ReporterTest() : cobalt_(dispatcher(), services(), &clock_) {}
+  ReporterTest()
+      : cobalt_(dispatcher(), services(), &clock_),
+        redactor_(new IdentityRedactor(inspect::BoolProperty())) {}
 
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
@@ -80,6 +83,8 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
   void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> server) {
     crash_reporter_server_ = std::move(server);
   }
+
+  void SetUpRedactor(std::unique_ptr<RedactorBase> redactor) { redactor_ = std::move(redactor); }
 
   void WriteZirconRebootLogContents(const std::string& contents) {
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &zircon_reboot_log_path_));
@@ -98,7 +103,8 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
   }
 
   void ReportOn(const feedback::RebootLog& reboot_log) {
-    Reporter reporter(dispatcher(), services(), &cobalt_, crash_reporter_server_.get());
+    Reporter reporter(dispatcher(), services(), &cobalt_, redactor_.get(),
+                      crash_reporter_server_.get());
     reporter.ReportOn(reboot_log, /*delay=*/zx::sec(0));
     RunLoopUntilIdle();
   }
@@ -110,6 +116,7 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
  private:
   timekeeper::TestClock clock_;
   cobalt::Logger cobalt_;
+  std::unique_ptr<RedactorBase> redactor_;
   files::ScopedTempDir tmp_dir_;
   bool not_a_fdr_{true};
 };
@@ -180,6 +187,42 @@ TEST_F(GenericReporterTest, Succeed_NoUptime) {
           .is_fatal = true,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+  ReportOn(reboot_log);
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LastRebootReason::kKernelPanic, /*duration=*/0u),
+              }));
+}
+
+class SimpleRedactor : public RedactorBase {
+ public:
+  SimpleRedactor() : RedactorBase(inspect::BoolProperty()) {}
+
+  std::string& Redact(std::string& text) override {
+    text = "<REDACTED>";
+    return text;
+  }
+
+  std::string UnredactedCanary() const override { return ""; }
+  std::string RedactedCanary() const override { return ""; }
+};
+
+TEST_F(GenericReporterTest, Succeed_RedactsData) {
+  const feedback::RebootLog reboot_log(feedback::RebootReason::kKernelPanic,
+                                       "ZIRCON REBOOT REASON (KERNEL PANIC)\n", std::nullopt,
+                                       std::nullopt);
+
+  SetUpCrashReporterServer(
+      std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
+          .crash_signature = ToCrashSignature(reboot_log.RebootReason()),
+          .reboot_log = "<REDACTED>",
+          .uptime = std::nullopt,
+          .is_fatal = true,
+      }));
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpRedactor(std::make_unique<SimpleRedactor>());
 
   ReportOn(reboot_log);
 
