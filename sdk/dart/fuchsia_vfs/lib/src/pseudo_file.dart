@@ -310,7 +310,7 @@ class _FileConnection extends File {
       return;
     }
     if (Flags.shouldCloneWithSameRights(flags)) {
-      if ((flags.$value & openRightsMask) != 0) {
+      if ((flags & openRights) != OpenFlags.$none) {
         file.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
         return;
       }

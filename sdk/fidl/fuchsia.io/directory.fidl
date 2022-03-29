@@ -90,9 +90,6 @@ type OpenFlags = strict bits : uint32 {
 /// All known rights.
 const OPEN_RIGHTS OpenFlags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
 
-/// A mask for all possible rights including future extensions.
-const OPEN_RIGHTS_MASK uint32 = 0x0000FFFF;
-
 /// Flags used when opening a node reference must fall within this mask.
 const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE OpenFlags
         = OpenFlags.DIRECTORY | OpenFlags.NOT_DIRECTORY | OpenFlags.DESCRIBE | OpenFlags.NODE_REFERENCE;

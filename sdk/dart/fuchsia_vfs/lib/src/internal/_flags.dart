@@ -43,10 +43,6 @@ class Flags {
   /// |Node.Clone|.
   /// Returns false if the flags combination is invalid.
   static bool inputPrecondition(OpenFlags flags) {
-    // If the caller specified an unknown right, reject the request.
-    if (((flags.$value & openRightsMask) & ~openRights.$value) != 0) {
-      return false;
-    }
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
     if ((flags & openFlagNodeReference) != OpenFlags.$none) {
       if ((flags & ~openFlagsAllowedWithNodeReference) != OpenFlags.$none) {

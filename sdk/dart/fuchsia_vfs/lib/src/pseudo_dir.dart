@@ -343,7 +343,7 @@ class _DirConnection extends Directory {
       return;
     }
     if (Flags.shouldCloneWithSameRights(flags)) {
-      if ((flags.$value & openRightsMask) != 0) {
+      if ((flags & openRights) != OpenFlags.$none) {
         _dir.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);
         return;
       }

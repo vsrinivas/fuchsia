@@ -56,10 +56,6 @@ class Flags {
   // All known rights.
   static constexpr fuchsia::io::OpenFlags kFsRights = fuchsia::io::OPEN_RIGHTS;
 
-  // All lower 16 bits are reserved for future rights extensions.
-  static constexpr fuchsia::io::OpenFlags kFsRightsSpace =
-      static_cast<fuchsia::io::OpenFlags>(fuchsia::io::OPEN_RIGHTS_MASK);
-
   // Flags which can be modified by FIDL File::SetFlags.
   static constexpr fuchsia::io::OpenFlags kSettableStatusFlags = fuchsia::io::OPEN_FLAG_APPEND;
 
@@ -78,11 +74,6 @@ class Flags {
   // Perform basic flags validation relevant to Directory::Open and Node::Clone.
   // Returns false if the flags combination is invalid.
   static bool InputPrecondition(fuchsia::io::OpenFlags flags) {
-    // If the caller specified an unknown right, reject the request.
-    if (((flags & Flags::kFsRightsSpace) & ~Flags::kFsRights) != fuchsia::io::OpenFlags()) {
-      return false;
-    }
-
     // Reject if OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY are both specified.
     if (Flags::IsDirectory(flags) && Flags::IsNotDirectory(flags)) {
       return false;

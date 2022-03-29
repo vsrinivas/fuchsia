@@ -449,7 +449,6 @@ const fuchsia.io/OPEN_FLAG_POSIX_EXECUTABLE fuchsia.io/OpenFlags 268435456
 const fuchsia.io/OPEN_FLAG_POSIX_WRITABLE fuchsia.io/OpenFlags 134217728
 const fuchsia.io/OPEN_FLAG_TRUNCATE fuchsia.io/OpenFlags 262144
 const fuchsia.io/OPEN_RIGHTS fuchsia.io/OpenFlags 11
-const fuchsia.io/OPEN_RIGHTS_MASK uint32 65535
 const fuchsia.io/OPEN_RIGHT_EXECUTABLE fuchsia.io/OpenFlags 8
 const fuchsia.io/OPEN_RIGHT_READABLE fuchsia.io/OpenFlags 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE fuchsia.io/OpenFlags 2

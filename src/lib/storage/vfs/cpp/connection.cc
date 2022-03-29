@@ -61,12 +61,6 @@ zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
 }
 
 bool PrevalidateFlags(fio::wire::OpenFlags flags) {
-  // If the caller specified an unknown right, reject the request.
-  if ((flags & static_cast<fio::wire::OpenFlags>(fio::wire::kOpenRightsMask)) &
-      ~fio::wire::kOpenRights) {
-    return false;
-  }
-
   if (flags & fio::wire::kOpenFlagNodeReference) {
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
     if (flags & ~fio::wire::kOpenFlagsAllowedWithNodeReference) {
