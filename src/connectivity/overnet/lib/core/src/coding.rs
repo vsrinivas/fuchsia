@@ -41,7 +41,7 @@ pub fn encode_fidl_with_context(
 ) -> Result<Vec<u8>, Error> {
     if ctx.use_persistent_header {
         fidl::encoding::encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
             value,
         )
         .map_err(Into::into)
