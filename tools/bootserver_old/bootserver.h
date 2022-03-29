@@ -15,7 +15,7 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool 
 int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name);
 
 #define DEFAULT_TFTP_BLOCK_SZ 1428
-#define DEFAULT_TFTP_WIN_SZ 256
+#define DEFAULT_TFTP_WIN_SZ 128
 #define DEFAULT_US_BETWEEN_PACKETS 20
 
 extern char* appname;
