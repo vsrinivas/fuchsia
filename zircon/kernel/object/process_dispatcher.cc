@@ -524,10 +524,10 @@ zx_status_t ProcessDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info)
 zx_status_t ProcessDispatcher::GetAspaceMaps(VmAspace* current_aspace,
                                              user_out_ptr<zx_info_maps_t> maps, size_t max,
                                              size_t* actual, size_t* available) const {
-  Guard<Mutex> guard{get_lock()};
-  if (state_ == State::DEAD) {
-    return ZX_ERR_BAD_STATE;
-  }
+  // Do not check the state_ since we need to call GetVmAspaceMaps without the dispatcher lock held,
+  // and so any check will become stale anyway. Should the process be dead, or transition to the
+  // dead state during the operation, then the associated aspace will also be destroyed, which will
+  // be noticed and result in a ZX_ERR_BAD_STATE being returned from GetVmAspaceMaps.
   return GetVmAspaceMaps(current_aspace, aspace_, maps, max, actual, available);
 }
 
