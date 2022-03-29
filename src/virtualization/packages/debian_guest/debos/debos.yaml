@@ -86,7 +86,7 @@ actions:
 
   # Copy the base image into the image.
   - action: filesystem-deploy
-    setup-fstab: false
+    setup-fstab: true
     setup-kernel-cmdline: false
 
   # Copy out the vmlinuz and initrd files.
