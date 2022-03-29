@@ -69,15 +69,24 @@ pub async fn stop(cmd: StopCommand, proxy: TargetCollectionProxy) -> Result<()> 
     match get_instance_paths(cmd.name, cmd.all, &ffx_config).await {
         Ok(instances) => {
             for path in instances {
-                let result = attempt_stop(&path, &proxy).await;
-                if !cmd.persist {
-                    let cleanup = clean_up_instance_dir(&path).await;
-                    if cleanup.is_err() {
-                        ffx_bail!("{:?}", cleanup.unwrap_err());
+                if let Some(name_as_os_str) = path.file_name() {
+                    if let Some(name) = name_as_os_str.to_str() {
+                        println!("Stopping emulator '{}'...", name);
+                        let result = attempt_stop(&path, &proxy).await;
+                        if result.is_err() {
+                            eprintln!("Failed with the following error: {:?}", result.unwrap_err());
+                        }
+                        if !cmd.persist {
+                            let cleanup = clean_up_instance_dir(&path).await;
+                            if cleanup.is_err() {
+                                eprintln!(
+                                    "Cleanup of '{}' failed with the following error: {:?}",
+                                    name,
+                                    cleanup.unwrap_err()
+                                );
+                            }
+                        }
                     }
-                }
-                if result.is_err() {
-                    ffx_bail!("{:?}", result.unwrap_err());
                 }
             }
         }
