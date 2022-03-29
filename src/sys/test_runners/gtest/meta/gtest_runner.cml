@@ -1,5 +1,8 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/sys/test_runners/lib.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/gtest_runner",

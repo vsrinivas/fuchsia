@@ -30,6 +30,10 @@
             url: "fuchsia-pkg://fuchsia.com/legacy-test-runner#meta/legacy-test-runner.cm",
         },
         {
+            name: "lib_loader_cache",
+            url: "fuchsia-pkg://fuchsia.com/lib_loader_runner_cache#meta/lib_loader_runner_cache.cm",
+        },
+        {
             name: "netemul_test_runner",
             url: "fuchsia-pkg://fuchsia.com/netemul-test-runner#meta/netemul-test-runner.cm",
         },
@@ -222,6 +226,7 @@
                 "#gtest_runner",
                 "#inspect_test_runner",
                 "#legacy_test_runner",
+                "#lib_loader_cache",
                 "#netemul_test_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
@@ -275,6 +280,18 @@
                 "#netemul_test_runner",
                 "#rust_test_runner",
                 "#starnix_test_runner",
+                "#starnix_unit_test_runner",
+            ],
+        },
+        {
+            protocol: "fuchsia.test.runner.LibraryLoaderCacheBuilder",
+            from: "#lib_loader_cache",
+            to: [
+                "#elf_test_ambient_exec_runner",
+                "#elf_test_runner",
+                "#go_test_runner",
+                "#gtest_runner",
+                "#rust_test_runner",
                 "#starnix_unit_test_runner",
             ],
         },
