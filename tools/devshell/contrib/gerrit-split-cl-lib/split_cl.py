@@ -189,6 +189,8 @@ def get_cl_tags(files: List[Path]) -> List[str]:
   3) If the path begins with "zircon", then pick the path component after
      either "ulib" or "utest", e.g.
      zircon/system/ulib/fs-pty/test/service-test.cc -> fs-pty
+  4) If the path begins with "examples", then pick the next path component,
+     e.g. examples/fidl/llcpp/async_completer/client/main.cc -> fidl
 
   Example:
 
@@ -223,6 +225,8 @@ def get_cl_tags(files: List[Path]) -> List[str]:
       for part, next_part in zip(p.parts, p.parts[1:]):
         if part == "ulib" or part == "utest":
           return next_part
+    if p.parts[0] == "examples":
+      return p.parts[1]
     raise RuntimeError(f"Could not infer tags from path {p}")
 
   tags: Set[str] = set()
