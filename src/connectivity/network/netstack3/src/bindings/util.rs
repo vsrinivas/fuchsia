@@ -536,7 +536,7 @@ mod tests {
     use net_types::UnicastAddr;
 
     use super::*;
-    use crate::bindings::Netstack;
+    use crate::bindings::NetstackContext;
     use netstack3_core::EntryDestEither;
 
     struct FakeConversionContext {
@@ -548,12 +548,12 @@ mod tests {
         fn new() -> Self {
             // we need a valid context to be able to create DeviceIds, so
             // we just create it, get the device id and then destroy everything
-            let netstack = Netstack::default();
-            let core =
-                netstack.ctx.try_lock().unwrap().state.add_ethernet_device(
-                    UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(),
-                    1500,
-                );
+            let ctx = NetstackContext::default();
+            let core = ctx
+                .try_lock()
+                .unwrap()
+                .state
+                .add_ethernet_device(UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(), 1500);
             Self { binding: 1, core }
         }
     }

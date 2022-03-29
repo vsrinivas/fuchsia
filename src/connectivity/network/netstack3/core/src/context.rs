@@ -513,6 +513,16 @@ impl<D: EventDispatcher, C: BlanketCoreContext> CounterContext for Ctx<D, C> {
     }
 }
 
+/// A context for emitting events.
+///
+/// `EventContext` encodes the common pattern for emitting atomic events of type
+/// `T` from core. An implementation of `EventContext` must guarantee that
+/// events are processed in the order they are emitted.
+pub trait EventContext<T> {
+    /// Handles `event`.
+    fn on_event(&mut self, event: T);
+}
+
 /// Mock implementations of context traits.
 ///
 /// Each trait `Xxx` has a mock called `DummyXxx`. `DummyXxx` implements `Xxx`,
@@ -1110,6 +1120,38 @@ pub(crate) mod testutil {
         }
     }
 
+    /// A dummy [`EventContext`].
+    pub struct DummyEventCtx<E> {
+        events: Vec<E>,
+    }
+
+    impl<E, Event: From<E>> EventContext<E> for DummyEventCtx<Event> {
+        fn on_event(&mut self, event: E) {
+            self.events.push(event.into())
+        }
+    }
+
+    impl<E> Drop for DummyEventCtx<E> {
+        fn drop(&mut self) {
+            // NB: It'd be really nice to provide better output here, but that
+            // becomes a nasty viral bound that is not worth the extra output.
+            // We could make this better with specialization.
+            assert!(self.events.is_empty(), "all events must be consumed");
+        }
+    }
+
+    impl<E> Default for DummyEventCtx<E> {
+        fn default() -> Self {
+            Self { events: Default::default() }
+        }
+    }
+
+    impl<E> DummyEventCtx<E> {
+        pub fn take(&mut self) -> Vec<E> {
+            core::mem::take(&mut self.events)
+        }
+    }
+
     /// A dummy [`CounterContext`].
     #[derive(Default)]
     pub struct DummyCounterCtx {
@@ -1137,37 +1179,40 @@ pub(crate) mod testutil {
     /// [`InstantContext`], [`TimerContext`], [`FrameContext`], and
     /// [`CounterContext`]. It also provides getters for `S`. If the type, `S`,
     /// is meant to implement some other trait, then the caller is advised to
-    /// instead implement that trait for `DummyCtx<S, Id, Meta>`. This allows
-    /// for full test mocks to be written with a minimum of boilerplate code.
-    pub(crate) struct DummyCtx<S, Id = (), Meta = ()> {
+    /// instead implement that trait for `DummyCtx<S, Id, Meta, Event>`. This
+    /// allows for full test mocks to be written with a minimum of boilerplate
+    /// code.
+    pub(crate) struct DummyCtx<S, Id = (), Meta = (), Event = ()> {
         state: S,
         timers: DummyTimerCtx<Id>,
         frames: DummyFrameCtx<Meta>,
         counters: DummyCounterCtx,
         rng: FakeCryptoRng<XorShiftRng>,
+        events: DummyEventCtx<Event>,
     }
 
-    impl<S: Default, Id, Meta> Default for DummyCtx<S, Id, Meta> {
-        fn default() -> DummyCtx<S, Id, Meta> {
+    impl<S: Default, Id, Meta, Event> Default for DummyCtx<S, Id, Meta, Event> {
+        fn default() -> DummyCtx<S, Id, Meta, Event> {
             DummyCtx::with_state(S::default())
         }
     }
 
-    impl<S, Id, Meta> DummyNetworkContext for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> DummyNetworkContext for DummyCtx<S, Id, Meta, Event> {
         type TimerId = Id;
         type SendMeta = Meta;
     }
 
-    impl<S, Id, Meta> DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> DummyCtx<S, Id, Meta, Event> {
         /// Constructs a `DummyCtx` with the given state and default
         /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
-        pub(crate) fn with_state(state: S) -> DummyCtx<S, Id, Meta> {
+        pub(crate) fn with_state(state: S) -> DummyCtx<S, Id, Meta, Event> {
             DummyCtx {
                 state,
                 timers: DummyTimerCtx::default(),
                 frames: DummyFrameCtx::default(),
                 counters: DummyCounterCtx::default(),
                 rng: FakeCryptoRng::new_xorshift(0),
+                events: DummyEventCtx::default(),
             }
         }
 
@@ -1189,9 +1234,9 @@ pub(crate) mod testutil {
         ///
         /// This method is provided instead of an [`AsRef`] impl to avoid
         /// conflicting with user-provided implementations of `AsRef<T> for
-        /// DummyCtx<S, Id, Meta>` for other types, `T`. It is named `get_ref`
-        /// instead of `as_ref` so that programmer doesn't need to specify which
-        /// `as_ref` method is intended.
+        /// DummyCtx<S, Id, Meta, Event>` for other types, `T`. It is named
+        /// `get_ref` instead of `as_ref` so that programmer doesn't need to
+        /// specify which `as_ref` method is intended.
         pub(crate) fn get_ref(&self) -> &S {
             &self.state
         }
@@ -1220,39 +1265,43 @@ pub(crate) mod testutil {
         pub(crate) fn timer_ctx_mut(&mut self) -> &mut DummyTimerCtx<Id> {
             &mut self.timers
         }
+
+        pub(crate) fn take_events(&mut self) -> Vec<Event> {
+            self.events.take()
+        }
     }
 
-    impl<S, Id, Meta> AsRef<DummyInstantCtx> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> AsRef<DummyInstantCtx> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyInstantCtx {
             self.timers.as_ref()
         }
     }
 
-    impl<S, Id, Meta> AsRef<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> AsRef<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyTimerCtx<Id> {
             &self.timers
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> AsMut<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta, Event> {
         fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
             &mut self.timers
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyFrameCtx<Meta>> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> AsMut<DummyFrameCtx<Meta>> for DummyCtx<S, Id, Meta, Event> {
         fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
         }
     }
 
-    impl<S, Id, Meta> AsRef<DummyCounterCtx> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> AsRef<DummyCounterCtx> for DummyCtx<S, Id, Meta, Event> {
         fn as_ref(&self) -> &DummyCounterCtx {
             &self.counters
         }
     }
 
-    impl<S, Id: Debug + PartialEq, Meta> TimerContext<Id> for DummyCtx<S, Id, Meta> {
+    impl<S, Id: Debug + PartialEq, Meta, Event> TimerContext<Id> for DummyCtx<S, Id, Meta, Event> {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             self.timers.schedule_timer_instant(time, id)
         }
@@ -1270,7 +1319,13 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta> FrameContext<B, Meta> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> EventContext<Event> for DummyCtx<S, Id, Meta, Event> {
+        fn on_event(&mut self, event: Event) {
+            self.events.on_event(event)
+        }
+    }
+
+    impl<B: BufferMut, S, Id, Meta, Event> FrameContext<B, Meta> for DummyCtx<S, Id, Meta, Event> {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
             metadata: Meta,
@@ -1280,7 +1335,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta> RngContext for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> RngContext for DummyCtx<S, Id, Meta, Event> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
         fn rng(&self) -> &Self::Rng {
@@ -1292,7 +1347,9 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta> DualStateContext<S, FakeCryptoRng<XorShiftRng>> for DummyCtx<S, Id, Meta> {
+    impl<S, Id, Meta, Event> DualStateContext<S, FakeCryptoRng<XorShiftRng>>
+        for DummyCtx<S, Id, Meta, Event>
+    {
         fn get_states_with(&self, _id0: (), _id1: ()) -> (&S, &FakeCryptoRng<XorShiftRng>) {
             (&self.state, &self.rng)
         }

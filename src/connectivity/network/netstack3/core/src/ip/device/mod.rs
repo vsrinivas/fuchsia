@@ -13,15 +13,15 @@ use alloc::boxed::Box;
 use core::{num::NonZeroU8, time::Duration};
 
 #[cfg(test)]
-use net_types::ip::{Ip, IpVersion};
+use net_types::ip::IpVersion;
 use net_types::{
-    ip::{AddrSubnet, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, Ip, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
 
 use crate::{
-    context::{InstantContext, RngContext, TimerContext, TimerHandler},
+    context::{EventContext, InstantContext, RngContext, TimerContext, TimerHandler},
     error::{ExistsError, NotFoundError},
     ip::{
         device::{
@@ -151,10 +151,33 @@ impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv6 {
     type Timer = Ipv6DeviceTimerId<DeviceId>;
 }
 
+#[derive(Debug)]
+/// Events emitted from IP devices.
+pub enum IpDeviceEvent<DeviceId, I: Ip> {
+    /// Address was assigned.
+    AddressAssigned {
+        /// The device.
+        device: DeviceId,
+        /// The new address.
+        addr: I::InterfaceAddress,
+    },
+    /// Address was unassigned.
+    AddressUnassigned {
+        /// The device.
+        device: DeviceId,
+        /// The removed address.
+        addr: I::InterfaceAddress,
+    },
+}
+
 /// The execution context for IP devices.
 pub(crate) trait IpDeviceContext<
     I: IpDeviceIpExt<<Self as InstantContext>::Instant, Self::DeviceId>,
->: IpDeviceIdContext<I> + TimerContext<I::Timer> + RngContext
+>:
+    IpDeviceIdContext<I>
+    + TimerContext<I::Timer>
+    + RngContext
+    + EventContext<IpDeviceEvent<Self::DeviceId, I>>
 {
     /// Gets immutable access to an IP device's state.
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &I::State;
@@ -512,7 +535,9 @@ pub(crate) fn add_ipv4_addr_subnet<
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<Ipv4Addr>,
 ) -> Result<(), ExistsError> {
-    ctx.get_ip_device_state_mut(device_id).ip_state.add_addr(addr_sub)
+    ctx.get_ip_device_state_mut(device_id).ip_state.add_addr(addr_sub).map(|()| {
+        ctx.on_event(IpDeviceEvent::AddressAssigned { device: device_id, addr: addr_sub })
+    })
 }
 
 /// Adds an IPv6 address (with duplicate address detection) and associated
@@ -548,6 +573,8 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + Dad
         .map(|()| {
             join_ip_multicast(ctx, device_id, addr_sub.addr().to_solicited_node_address());
             DadHandler::do_duplicate_address_detection(ctx, device_id, addr_sub.addr());
+            // NB: We don't emit an address assigned event here, addresses are
+            // only exposed when they've moved from the Tentative state.
         })
 }
 
@@ -557,7 +584,10 @@ pub(crate) fn del_ipv4_addr<C: IpDeviceContext<Ipv4> + BufferIpDeviceContext<Ipv
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<Ipv4Addr>,
 ) -> Result<(), NotFoundError> {
-    ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr)
+    ctx.get_ip_device_state_mut(device_id)
+        .ip_state
+        .remove_addr(&addr)
+        .map(|addr| ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }))
 }
 
 /// Removes an IPv6 address and associated subnet from this device.
@@ -566,17 +596,25 @@ pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<Ipv6Addr>,
 ) -> Result<(), NotFoundError> {
-    ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr).map(|()| {
-        // TODO(https://fxbug.dev/69196): Give `addr` the type
-        // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
-        // dynamic check here and statically guarantee only unicast
-        // addresses are added for IPv6.
-        if let Some(addr) = UnicastAddr::new(addr.get()) {
-            // Leave the the solicited-node multicast group.
-            leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-            DadHandler::stop_duplicate_address_detection(ctx, device_id, addr);
-        }
-    })
+    ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr).map(
+        |entry: Ipv6AddressEntry<_>| {
+            // TODO(https://fxbug.dev/69196): Give `addr` the type
+            // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
+            // dynamic check here and statically guarantee only unicast
+            // addresses are added for IPv6.
+            if let Some(addr) = UnicastAddr::new(addr.get()) {
+                // Leave the the solicited-node multicast group.
+                leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+                DadHandler::stop_duplicate_address_detection(ctx, device_id, addr);
+                match entry.state {
+                    AddressState::Assigned | AddressState::Deprecated => {
+                        ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr })
+                    }
+                    AddressState::Tentative { .. } => {}
+                }
+            }
+        },
+    )
 }
 
 /// Sends an IP packet through the device.

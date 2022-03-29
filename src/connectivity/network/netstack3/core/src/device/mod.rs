@@ -33,8 +33,8 @@ use zerocopy::ByteSlice;
 
 use crate::{
     context::{
-        CounterContext, DualStateContext, FrameContext, InstantContext, RecvFrameContext,
-        RngContext, TimerContext,
+        CounterContext, DualStateContext, EventContext, FrameContext, InstantContext,
+        RecvFrameContext, RngContext, TimerContext,
     },
     data_structures::{IdMap, IdMapCollectionKey},
     device::{
@@ -237,6 +237,15 @@ fn leave_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAd
             self::ethernet::leave_link_multicast(ctx, id, MulticastAddr::from(&multicast_addr))
         }
         DeviceIdInner::Loopback => {}
+    }
+}
+
+impl<D: EventDispatcher, C: BlanketCoreContext, T> EventContext<T> for Ctx<D, C>
+where
+    D: EventContext<T>,
+{
+    fn on_event(&mut self, event: T) {
+        self.dispatcher.on_event(event)
     }
 }
 

@@ -24,6 +24,7 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
+    context::EventContext,
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     initialize_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
@@ -202,26 +203,40 @@ where
     }
 }
 
+impl<T: 'static + Send> EventContext<T> for TestDispatcher {
+    fn on_event(&mut self, _event: T) {}
+}
+
+#[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
     ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl>>>,
+    _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
+    interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
 
 impl TestContext {
     fn new(builder: StackStateBuilder) -> Self {
+        let (worker, _, interfaces_sink) = super::interfaces_watcher::Worker::new();
         Self {
             ctx: Arc::new(Mutex::new(Ctx::new(
                 builder.build(),
                 TestDispatcher::default(),
                 BindingsContextImpl::default(),
             ))),
+            _interfaces_worker: Arc::new(worker),
+            interfaces_sink,
         }
     }
 }
 
-impl Clone for TestContext {
-    fn clone(&self) -> Self {
-        Self { ctx: Arc::clone(&self.ctx) }
+impl super::InterfaceEventProducerFactory for TestContext {
+    fn create_interface_event_producer(
+        &self,
+        id: super::devices::BindingId,
+        properties: super::interfaces_watcher::InterfaceProperties,
+    ) -> super::interfaces_watcher::InterfaceEventProducer {
+        self.interfaces_sink.add_interface(id, properties).expect("interfaces worker not running")
     }
 }
 
@@ -283,14 +298,14 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
         let check_online = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
             }) => true,
         };
         self.wait_for_interface_status(if_id, check_online).await;
@@ -300,14 +315,14 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
         let check_offline = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => !phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
             }) => false,
         };
         self.wait_for_interface_status(if_id, check_offline).await;
@@ -396,7 +411,7 @@ impl TestStack {
                 .collect()
         });
 
-        let (admin_enabled, phy_up) = assert_matches::assert_matches!(device.info(), DeviceSpecificInfo::Ethernet(EthernetInfo {  common_info: CommonInfo { admin_enabled, mtu: _ }, client: _, mac: _, features: _, phy_up }) => (*admin_enabled, *phy_up));
+        let (admin_enabled, phy_up) = assert_matches::assert_matches!(device.info(), DeviceSpecificInfo::Ethernet(EthernetInfo {  common_info: CommonInfo { admin_enabled, mtu: _, events: _ }, client: _, mac: _, features: _, phy_up }) => (*admin_enabled, *phy_up));
         InterfaceInfo { admin_enabled, phy_up, addresses }
     }
 }

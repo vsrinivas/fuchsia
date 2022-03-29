@@ -140,19 +140,26 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// Delete all routes to a subnet, returning `Err` if no route was found to
     /// be deleted.
     ///
+    /// Returns all the deleted entries on success.
+    ///
     /// Note, `del_route` will remove *all* routes to a `subnet`, including
     /// routes that consider `subnet` on-link for some device and routes that
     /// require packets destined to a node within `subnet` to be routed through
     /// some next-hop node.
-    pub(crate) fn del_route(&mut self, subnet: Subnet<I::Addr>) -> Result<(), NotFoundError> {
+    pub(crate) fn del_route(
+        &mut self,
+        subnet: Subnet<I::Addr>,
+    ) -> Result<Vec<Entry<I::Addr, D>>, NotFoundError> {
         debug!("deleting route: {}", subnet);
 
         // Delete all routes to a subnet.
-        let old_len = self.installed.len();
-        self.installed.retain(|entry| entry.subnet != subnet);
-        let new_len = self.installed.len();
 
-        if old_len == new_len {
+        // TODO(https://github.com/rust-lang/rust/issues/43244): Use
+        // drain_filter to avoid extra allocation.
+        let installed = core::mem::replace(&mut self.installed, Vec::new());
+        let (keep, removed) = installed.into_iter().partition(|entry| entry.subnet != subnet);
+        self.installed = keep;
+        if removed.is_empty() {
             // If a path to `subnet` was not in our installed table, then it
             // definitely won't be in our active routes cache.
             return Err(NotFoundError);
@@ -160,8 +167,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
         // Regenerate our cache of active routes.
         self.regen_active();
-
-        Ok(())
+        Ok(removed)
     }
 
     /// Delete the route to a subnet that goes through a next hop node,
@@ -574,7 +580,14 @@ mod tests {
         assert_eq!(table.iter_installed().count(), 2);
 
         // Delete all routes to subnet.
-        table.del_route(subnet).unwrap();
+        assert_eq!(
+            table.del_route(subnet).unwrap().into_iter().collect::<HashSet<_>>(),
+            HashSet::from([
+                Entry { subnet, dest: EntryDest::Local { device } },
+                Entry { subnet, dest: EntryDest::Remote { next_hop } }
+            ])
+        );
+
         assert_empty(table.iter_active());
         assert_empty(table.iter_installed());
 
@@ -615,7 +628,10 @@ mod tests {
         assert_eq!(table.lookup(None, config.remote_ip).unwrap(), Destination { next_hop, device });
 
         // Delete the device route.
-        table.del_route(next_hop_specific_subnet).unwrap();
+        assert_eq!(
+            table.del_route(next_hop_specific_subnet).unwrap(),
+            &[Entry { subnet: next_hop_specific_subnet, dest: EntryDest::Local { device } }][..]
+        );
 
         // Do lookup for our next hop (should get None since we have no route to
         // a local device).

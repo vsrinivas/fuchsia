@@ -8,11 +8,14 @@ use super::{
     devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
     ethernet_worker,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
-    DeviceStatusNotifier, InterfaceControl as _, Lockable, LockableContext,
-    MutableDeviceState as _,
+    DeviceStatusNotifier, InterfaceControl as _, InterfaceEventProducerFactory, Lockable,
+    LockableContext, MutableDeviceState as _,
 };
 
+use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
+use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net_interfaces as finterfaces;
 use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, ForwardingEntry, StackRequest, StackRequestStream,
 };
@@ -42,7 +45,7 @@ impl<C: LockableContext> StackFidlWorker<C> {
 
 impl<C> StackFidlWorker<C>
 where
-    C: ethernet_worker::EthernetWorkerContext,
+    C: ethernet_worker::EthernetWorkerContext + InterfaceEventProducerFactory,
     C: Clone,
 {
     pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
@@ -142,14 +145,16 @@ where
 
 impl<'a, C> LockedFidlWorker<'a, C>
 where
-    C: ethernet_worker::EthernetWorkerContext,
+    C: ethernet_worker::EthernetWorkerContext + InterfaceEventProducerFactory,
     C: Clone,
 {
     async fn fidl_add_ethernet_interface(
-        mut self,
+        self,
         _topological_path: String,
         device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     ) -> Result<u64, fidl_net_stack::Error> {
+        let Self { mut ctx, worker } = self;
+
         let (
             client,
             fidl_fuchsia_hardware_ethernet_ext::EthernetInfo {
@@ -163,7 +168,7 @@ where
         .await
         .map_err(|_| fidl_net_stack::Error::Internal)?;
 
-        let Ctx { state, dispatcher, ctx: _ } = self.ctx.deref_mut();
+        let Ctx { state, dispatcher, ctx: _ } = ctx.deref_mut();
         let client_stream = client.get_stream();
 
         let online = client
@@ -176,39 +181,54 @@ where
         // We do not support updating the device's mac-address, mtu, and
         // features during it's lifetime, their cached states are hence not
         // updated once initialized.
-        let comm_info = EthernetInfo {
-            common_info: CommonInfo { mtu, admin_enabled: true },
-            client,
-            mac: mac_addr,
-            features,
-            phy_up: online,
+        let make_info = |id| {
+            let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK) {
+                finterfaces::DeviceClass::Loopback(finterfaces::Empty)
+            } else if features.contains(fhardware_ethernet::Features::SYNTHETIC) {
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Virtual)
+            } else if features.contains(fhardware_ethernet::Features::WLAN_AP) {
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::WlanAp)
+            } else if features.contains(fhardware_ethernet::Features::WLAN) {
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan)
+            } else {
+                finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet)
+            };
+
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo {
+                    mtu,
+                    admin_enabled: true,
+                    events: worker.ctx.create_interface_event_producer(
+                        id,
+                        super::InterfaceProperties { name: format!("eth{}", id), device_class },
+                    ),
+                },
+                client,
+                mac: mac_addr,
+                features,
+                phy_up: online,
+            })
         };
 
         let devices: &mut Devices = dispatcher.as_mut();
         let id = if online {
             let eth_id = state.add_ethernet_device(mac_addr, mtu);
-            devices.add_active_device(eth_id, comm_info.into())
+            devices.add_active_device(eth_id, make_info).unwrap_or_else(|| {
+                panic!("failed to store device with {:?} on devices map", eth_id)
+            })
         } else {
-            Some(devices.add_device(comm_info.into()))
+            devices.add_device(make_info)
         };
-        match id {
-            Some(id) => {
-                ethernet_worker::EthernetWorker::new(id, self.worker.ctx.clone())
-                    .spawn(client_stream);
-                // If we have a core_id associated with id, that means the
-                // device was added in the active state, so we must initialize
-                // it using the new core_id.
-                let devices: &Devices = self.ctx.dispatcher.as_ref();
-                if let Some(core_id) = devices.get_core_id(id) {
-                    initialize_device(&mut self.ctx, core_id);
-                }
-                Ok(id)
-            }
-            None => {
-                // Send internal error if we can't allocate an id
-                Err(fidl_net_stack::Error::Internal)
-            }
+
+        ethernet_worker::EthernetWorker::new(id, self.worker.ctx.clone()).spawn(client_stream);
+        // If we have a core_id associated with id, that means the
+        // device was added in the active state, so we must initialize
+        // it using the new core_id.
+        let devices: &Devices = ctx.dispatcher.as_ref();
+        if let Some(core_id) = devices.get_core_id(id) {
+            initialize_device(&mut ctx, core_id);
         }
+        Ok(id)
     }
 }
 
@@ -320,14 +340,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = true;
@@ -339,14 +359,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = false;

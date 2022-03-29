@@ -61,11 +61,15 @@ pub use crate::{
     },
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
     ip::{
-        device::state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+        device::{
+            dad::DadEvent,
+            state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+            IpDeviceEvent,
+        },
         icmp,
         socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-        EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
-        TransportIpContext,
+        EntryDest, EntryDestEither, EntryEither, IpExt, IpLayerEvent, Ipv4StateBuilder,
+        Ipv6StateBuilder, TransportIpContext,
     },
     transport::{
         udp::{
@@ -90,7 +94,7 @@ use net_types::{
 use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::{
-    context::{InstantContext, RngContext, TimerContext},
+    context::{EventContext, InstantContext, RngContext, TimerContext},
     device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder},
     ip::{
         device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
@@ -463,6 +467,11 @@ pub trait EventDispatcher:
     + BufferUdpContext<Ipv4, EmptyBuf>
     + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
     + BufferUdpContext<Ipv6, EmptyBuf>
+    + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
+    + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
+    + EventContext<IpLayerEvent<DeviceId, Ipv4>>
+    + EventContext<IpLayerEvent<DeviceId, Ipv6>>
+    + EventContext<DadEvent<DeviceId>>
 {
 }
 
@@ -480,7 +489,12 @@ impl<
             + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
             + BufferUdpContext<Ipv4, EmptyBuf>
             + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
-            + BufferUdpContext<Ipv6, EmptyBuf>,
+            + BufferUdpContext<Ipv6, EmptyBuf>
+            + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
+            + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
+            + EventContext<IpLayerEvent<DeviceId, Ipv4>>
+            + EventContext<IpLayerEvent<DeviceId, Ipv6>>
+            + EventContext<DadEvent<DeviceId>>,
     > EventDispatcher for D
 {
 }

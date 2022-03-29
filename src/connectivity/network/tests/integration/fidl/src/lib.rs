@@ -231,29 +231,22 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
     // link is down.
     let () = stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
     let () = iface.set_link_up(true).await.expect("bring device up");
-    // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
-    loop {
-        let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-                .expect("create event stream"),
-            HashMap::new(),
-        )
-        .await
-        .expect("fetch existing interfaces");
-
-        let fidl_fuchsia_net_interfaces_ext::Properties {
-            id: _,
-            name: _,
-            device_class: _,
-            online,
-            addresses: _,
-            has_default_ipv4_route: _,
-            has_default_ipv6_route: _,
-        } = interfaces.get(&id).expect("find added ethernet interface");
-        if *online {
-            break;
-        }
-    }
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("interface stream"),
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id: _,
+             name: _,
+             device_class: _,
+             online,
+             addresses: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| (*online).then(|| ()),
+    )
+    .await
+    .expect("wait device online");
 
     let interface_addr_with_prefix = fidl_ip_v4_with_prefix!("1.1.1.1/32");
     let mut interface_subnet = ipv4_with_prefix_to_subnet(interface_addr_with_prefix);
@@ -524,20 +517,6 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     add_addr(ipv6_with_prefix_to_subnet(NEW_IPV6_ADDRESS)).await;
 
     // Wait for the addresses to be set.
-    //
-    // On Netstack2, the DAD resolution event (which the interface watcher
-    // depends on to update its view of interface properties) is handled
-    // asynchronously w.r.t. the add address operation so the new IPv6 address
-    // may not be observed in the initial "Existing" event; it may be observed
-    // in a "Changed" event.
-    //
-    // This is not an issue on Netstack3 as we will observe the address in an
-    // "Existing" event right away as we do not perform DAD and Netstack3 is
-    // queried for all interface states on watcher creation (no events happen
-    // asynchronously).
-    //
-    // TODO(https://fxbug.dev/60923): Wait for changed event instead of creating
-    // a new watcher.
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("connect to protocol");

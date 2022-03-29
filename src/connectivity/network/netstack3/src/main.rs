@@ -9,7 +9,7 @@
 
 mod bindings;
 
-use bindings::Netstack;
+use bindings::NetstackSeed;
 
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init()?;
@@ -17,6 +17,6 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut executor = fuchsia_async::LocalExecutor::new()?;
 
-    let eventloop = Netstack::default();
-    executor.run_singlethreaded(eventloop.serve())
+    let seed = NetstackSeed::default();
+    executor.run_singlethreaded(seed.serve())
 }

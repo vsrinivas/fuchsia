@@ -13,7 +13,7 @@ use net_types::{
 ///
 /// `EntryDest` can either be a device or another network address.
 #[allow(missing_docs)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum EntryDest<A, D> {
     Local { device: D },
     Remote { next_hop: SpecifiedAddr<A> },
@@ -38,7 +38,7 @@ where
 /// A forwarding entry.
 ///
 /// `Entry` is a `Subnet` paired with an `EntryDest`.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Entry<A: IpAddress, D> {
     pub subnet: Subnet<A>,
     pub dest: EntryDest<A, D>,

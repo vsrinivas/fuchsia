@@ -116,9 +116,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     for (idx, (has_default_ipv4_route, has_default_ipv6_route)) in
         IntoIterator::into_iter([true, false]).cartesian_product([true, false]).enumerate()
     {
-        // TODO(https://fxbug.dev/75553): Use TestRealm::join_network_with
+        // TODO(https://fxbug.dev/88796): Use TestRealm::join_network_with
         // https://fuchsia-docs.firebaseapp.com/rust/netemul/struct.TestRealm.html#method.join_network_with
-        // when `Changed` events are supported.
+        // when `fuchsia.net.interfaces.admin` is supported.
         let ep = sandbox
             .create_endpoint::<netemul::Ethernet, _>(format!("test-ep-{}", idx))
             .await
@@ -132,29 +132,23 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         let () =
             stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
         let () = iface.set_link_up(true).await.expect("bring device up");
-        // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
-        loop {
-            let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-                fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-                    .expect("create event stream"),
-                HashMap::new(),
-            )
-            .await
-            .expect("fetch existing interfaces");
 
-            let fidl_fuchsia_net_interfaces_ext::Properties {
-                id: _,
-                name: _,
-                device_class: _,
-                online,
-                addresses: _,
-                has_default_ipv4_route: _,
-                has_default_ipv6_route: _,
-            } = interfaces.get(&id).expect("find added ethernet interface");
-            if *online {
-                break;
-            }
-        }
+        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+                .expect("interface stream"),
+            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+            |fidl_fuchsia_net_interfaces_ext::Properties {
+                 id: _,
+                 name: _,
+                 device_class: _,
+                 online,
+                 addresses: _,
+                 has_default_ipv4_route: _,
+                 has_default_ipv6_route: _,
+             }| (*online).then(|| ()),
+        )
+        .await
+        .expect("wait device online");
 
         let addr = fidl_fuchsia_net::Ipv4Address { addr: [192, 168, idx.try_into().unwrap(), 1] };
         let prefix_len = 24;

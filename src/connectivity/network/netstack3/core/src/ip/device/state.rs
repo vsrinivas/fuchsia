@@ -162,15 +162,14 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
     pub(crate) fn remove_addr(
         &mut self,
         addr: &I::Addr,
-    ) -> Result<(), crate::error::NotFoundError> {
+    ) -> Result<I::AssignedAddress, crate::error::NotFoundError> {
         let (index, _entry): (_, &I::AssignedAddress) = self
             .addrs
             .iter()
             .enumerate()
             .find(|(_, entry)| &entry.addr().get() == addr)
             .ok_or(crate::error::NotFoundError)?;
-        let _entry: I::AssignedAddress = self.addrs.remove(index);
-        Ok(())
+        Ok(self.addrs.remove(index))
     }
 }
 

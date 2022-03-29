@@ -1317,6 +1317,7 @@ mod tests {
         DummyUdpCtx<I>,
         (),
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+        (),
     >;
 
     /// The trait bounds required of `DummyCtx<I>` in tests.

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
+use super::{devices::BindingId, util::IntoFidl};
 use fidl::prelude::*;
-use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
-use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces::{
     self as finterfaces, StateRequest, StateRequestStream, WatcherOptions, WatcherRequest,
@@ -15,176 +14,39 @@ use fidl_fuchsia_net_interfaces::{
 use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
 use fuchsia_zircon as zx;
 use futures::{
-    ready, sink::Sink, sink::SinkExt as _, task::Poll, Future, StreamExt as _, TryFutureExt as _,
-    TryStreamExt as _,
+    channel::mpsc, ready, sink::SinkExt as _, task::Poll, Future, FutureExt as _, StreamExt as _,
+    TryFutureExt as _, TryStreamExt as _,
 };
-use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet, SubnetEither};
-use netstack3_core::{get_all_ip_addr_subnets, get_all_routes, EntryDest};
-use todo_unused::todo_unused;
-
-use super::{
-    devices::{CommonInfo, DeviceSpecificInfo, EthernetInfo, LoopbackInfo},
-    util::IntoFidl,
-    Devices, LockableContext,
-};
-
-#[todo_unused("https://fxbug.dev/60923")]
-use {
-    super::devices::BindingId,
-    futures::{channel::mpsc, FutureExt},
-    net_types::ip::{InterfaceAddr, IpVersion},
-    std::collections::HashMap,
-};
-
-pub(crate) const LOOPBACK_DEVICE_NAME: &str = "lo";
+use net_types::ip::{InterfaceAddr, IpVersion};
 
 /// Possible errors when serving `fuchsia.net.interfaces/State`.
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
     #[error("failed to send a Watcher task to parent")]
-    Send(#[from] futures::channel::mpsc::SendError),
+    Send(#[from] WorkerClosedError),
     #[error(transparent)]
     Fidl(#[from] fidl::Error),
 }
 
 /// Serves the `fuchsia.net.interfaces/State` protocol.
-// TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked up to
-// NS3.
-pub(crate) async fn serve<C, S>(ctx: C, stream: StateRequestStream, sink: S) -> Result<(), Error>
-where
-    C: LockableContext,
-    C::Dispatcher: AsRef<Devices>,
-    S: Sink<Watcher> + std::marker::Unpin,
-    Error: From<S::Error>,
-{
+pub(crate) async fn serve(
+    stream: StateRequestStream,
+    sink: WorkerWatcherSink,
+) -> Result<(), Error> {
     stream
         .err_into()
-        .try_fold((ctx, sink), |(ctx, mut sink), req| async {
+        .try_fold(sink, |mut sink, req| async move {
             let StateRequest::GetWatcher {
                 options: WatcherOptions { .. },
                 watcher,
                 control_handle: _,
             } = req;
-            let (stream, control_handle) = watcher.into_stream_and_control_handle()?;
-            match existing_properties(&ctx).await {
-                Ok(events) => sink.send(Watcher { events, stream, responder: None }).await?,
-                Err(err) => control_handle.shutdown_with_epitaph(err),
-            }
-            Ok((ctx, sink))
+            let watcher = watcher.into_stream()?;
+            sink.add_watcher(watcher).await?;
+            Ok(sink)
         })
-        .map_ok(|_: (C, S)| ())
+        .map_ok(|_: WorkerWatcherSink| ())
         .await
-}
-
-// TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked up to
-// NS3.
-async fn existing_properties<C>(ctx: &C) -> Result<EventQueue, zx::Status>
-where
-    C: LockableContext,
-    C::Dispatcher: AsRef<Devices>,
-{
-    let ctx = ctx.lock().await;
-    let existing = ctx.dispatcher.as_ref().iter_devices().map(|info| {
-        let addrs = info
-            .core_id()
-            .map(|id| {
-                // TODO(https://fxbug.dev/60923): Don't store addresses as subnets in Core.
-                get_all_ip_addr_subnets(&ctx, id)
-                    .map(IntoFidl::into_fidl)
-                    .map(|fnet::Subnet { addr, prefix_len }| {
-                        let value = match addr {
-                            fnet::IpAddress::Ipv4(addr) => {
-                                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                                    addr,
-                                    prefix_len,
-                                })
-                            }
-                            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-                        };
-                        finterfaces_ext::Address { value, valid_until: zx::sys::ZX_TIME_INFINITE }
-                    })
-                    .collect::<Vec<finterfaces_ext::Address>>()
-            })
-            .unwrap_or(Vec::new());
-
-        match info.info() {
-            DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _ },
-                client: _,
-                mac: _,
-                features,
-                phy_up,
-            }) => {
-                let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK) {
-                    finterfaces::DeviceClass::Loopback(finterfaces::Empty)
-                } else if features.contains(fhardware_ethernet::Features::SYNTHETIC) {
-                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Virtual)
-                } else if features.contains(fhardware_ethernet::Features::WLAN_AP) {
-                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::WlanAp)
-                } else if features.contains(fhardware_ethernet::Features::WLAN) {
-                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan)
-                } else {
-                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet)
-                };
-
-                let (has_default_ipv4_route, has_default_ipv6_route) = {
-                    let mut has_default_ipv4_route = false;
-                    let mut has_default_ipv6_route = false;
-                    if let Some(id) = info.core_id() {
-                        let default_ipv4_dest = Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 0).unwrap();
-                        let default_ipv6_dest = Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 0).unwrap();
-                        for r in get_all_routes(&ctx) {
-                            let (subnet, dest) = r.into_subnet_dest();
-                            match dest {
-                                EntryDest::Remote { next_hop: _ } => {}
-                                EntryDest::Local { device } => {
-                                    if device != id {
-                                        continue;
-                                    }
-                                    match subnet {
-                                        SubnetEither::V4(subnet) => {
-                                            if subnet == default_ipv4_dest {
-                                                has_default_ipv4_route = true;
-                                            }
-                                        }
-                                        SubnetEither::V6(subnet) => {
-                                            if subnet == default_ipv6_dest {
-                                                has_default_ipv6_route = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    (has_default_ipv4_route, has_default_ipv6_route)
-                };
-
-                finterfaces_ext::Properties {
-                    id: info.id(),
-                    addresses: addrs,
-                    online: *admin_enabled && *phy_up,
-                    device_class,
-                    has_default_ipv4_route,
-                    has_default_ipv6_route,
-                    // TODO(https://fxbug.dev/84516): populate interface name.
-                    name: format!("[TBD]-{}", info.id()),
-                }
-            }
-            DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _ },
-            }) => finterfaces_ext::Properties {
-                id: info.id(),
-                addresses: addrs,
-                online: *admin_enabled,
-                device_class: finterfaces::DeviceClass::Loopback(finterfaces::Empty),
-                has_default_ipv4_route: false,
-                has_default_ipv6_route: false,
-                name: LOOPBACK_DEVICE_NAME.to_string(),
-            },
-        }
-    });
-    EventQueue::existing(existing)
 }
 
 /// The maximum events to buffer at server side before the client consumes them.
@@ -192,34 +54,16 @@ where
 /// The value is currently kept in sync with the netstack2 implementation.
 const MAX_EVENTS: usize = 128;
 
+#[derive(Debug)]
 /// A bounded queue of [`Events`] for `fuchsia.net.interfaces/Watcher` protocol.
 struct EventQueue {
     events: VecDeque<finterfaces::Event>,
 }
 
 impl EventQueue {
-    /// Creates a queue with all the existing [`Properties`] and an
-    /// [`Event::Idle`].
-    // TODO(https://fxbug.dev/60923): Delete once queue-based worker is hooked
-    // up to NS3.
-    fn existing(
-        existing: impl IntoIterator<Item = finterfaces_ext::Properties>,
-    ) -> Result<Self, zx::Status> {
-        let events = existing
-            .into_iter()
-            .map(|p| finterfaces::Event::Existing(p.into()))
-            .chain(std::iter::once(finterfaces::Event::Idle(finterfaces::Empty)))
-            .collect::<VecDeque<finterfaces::Event>>();
-        if events.len() > MAX_EVENTS {
-            return Err(zx::Status::BUFFER_TOO_SMALL);
-        }
-        Ok(EventQueue { events })
-    }
-
     /// Creates a new event queue containing all the interfaces in `state`
     /// wrapped in a [`finterfaces::Event::Existing`] followed by a
     /// [`finterfaces::Event::Idle`].
-    #[todo_unused("https://fxbug.dev/60923")]
     fn from_state(state: &HashMap<BindingId, InterfaceState>) -> Result<Self, zx::Status> {
         // NB: Leave room for idle event.
         if state.len() >= MAX_EVENTS {
@@ -257,7 +101,6 @@ impl EventQueue {
     }
 
     /// Adds a [`finterfaces::Event`] to the back of the queue.
-    #[todo_unused("https://fxbug.dev/60923")]
     fn push(&mut self, event: finterfaces::Event) -> Result<(), finterfaces::Event> {
         let Self { events } = self;
         if events.len() >= MAX_EVENTS {
@@ -296,7 +139,9 @@ impl Future for Watcher {
             let next_request = self.as_mut().stream.poll_next_unpin(cx)?;
             match ready!(next_request) {
                 Some(WatcherRequest::Watch { responder }) => match self.events.pop_front() {
-                    Some(mut e) => responder_send!(responder, &mut e),
+                    Some(mut e) => {
+                        responder_send!(responder, &mut e)
+                    }
                     None => match &self.responder {
                         Some(existing) => {
                             existing
@@ -315,7 +160,6 @@ impl Future for Watcher {
     }
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl Watcher {
     fn push(&mut self, mut event: finterfaces::Event) {
         let Self { stream, events, responder } = self;
@@ -338,7 +182,6 @@ impl Watcher {
 }
 
 /// Interface specific events.
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub enum InterfaceUpdate {
@@ -349,7 +192,6 @@ pub enum InterfaceUpdate {
 }
 
 /// Immutable interface properties.
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct InterfaceProperties {
@@ -358,7 +200,6 @@ pub struct InterfaceProperties {
 }
 
 /// Cached interface state by the worker.
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct InterfaceState {
@@ -370,14 +211,12 @@ pub struct InterfaceState {
 }
 
 /// Cached address state by the worker.
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct AddressState {
     pub valid_until: zx::Time,
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone))]
 enum InterfaceEvent {
@@ -386,13 +225,12 @@ enum InterfaceEvent {
     Removed(BindingId),
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
+#[derive(Debug)]
 pub struct InterfaceEventProducer {
     id: BindingId,
     channel: mpsc::UnboundedSender<InterfaceEvent>,
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl InterfaceEventProducer {
     /// Notifies the interface state [`Worker`] of [`event`] on this
     /// [`InterfaceEventProducer`]'s interface.
@@ -409,7 +247,6 @@ impl InterfaceEventProducer {
     }
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl Drop for InterfaceEventProducer {
     fn drop(&mut self) {
         let Self { id, channel } = self;
@@ -423,7 +260,6 @@ impl Drop for InterfaceEventProducer {
     }
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(thiserror::Error, Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub enum WorkerError {
@@ -439,19 +275,16 @@ pub enum WorkerError {
     UnassignNonexistentAddr { interface: BindingId, addr: InterfaceAddr },
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 pub struct Worker {
     events: mpsc::UnboundedReceiver<InterfaceEvent>,
     watchers: mpsc::Receiver<finterfaces::WatcherRequestStream>,
 }
 
 /// Arbitrarily picked constant to force backpressure on FIDL requests.
-#[todo_unused("https://fxbug.dev/60923")]
 const WATCHER_CHANNEL_CAPACITY: usize = 32;
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl Worker {
-    fn new() -> (Worker, WorkerWatcherSink, WorkerInterfaceSink) {
+    pub fn new() -> (Worker, WorkerWatcherSink, WorkerInterfaceSink) {
         let (events_sender, events_receiver) = mpsc::unbounded();
         let (watchers_sender, watchers_receiver) = mpsc::channel(WATCHER_CHANNEL_CAPACITY);
         (
@@ -477,9 +310,14 @@ impl Worker {
             NewWatcher(finterfaces::WatcherRequestStream),
             Event(InterfaceEvent),
         }
-        let mut sink_actions = futures::stream::select(
+        let mut sink_actions = futures::stream::select_with_strategy(
             watchers_stream.map(SinkAction::NewWatcher),
             events.map(SinkAction::Event),
+            // Always consume events before watchers. That allows external
+            // observers to assume all side effects of a call are already
+            // applied before a watcher observes its initial existing set of
+            // properties.
+            |_: &mut ()| futures::stream::PollNext::Right,
         );
 
         loop {
@@ -525,6 +363,7 @@ impl Worker {
                     }
                 }
                 Action::Sink(Some(SinkAction::Event(e))) => {
+                    log::debug!("consuming event {:?}", e);
                     if let Some(event) = Self::consume_event(&mut interface_state, e)? {
                         current_watchers.iter_mut().for_each(|watcher| watcher.push(event.clone()));
                     }
@@ -676,13 +515,11 @@ impl Worker {
 /// This trait enables the implementation of [`Worker::collect_addresses`] to be
 /// agnostic to extension and pure FIDL types, it is not meant to be used in
 /// other contexts.
-#[todo_unused("https://fxbug.dev/60923")]
 trait SortableInterfaceAddress: From<finterfaces_ext::Address> {
     type Key: Ord;
     fn get_sort_key(&self) -> Self::Key;
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl SortableInterfaceAddress for finterfaces_ext::Address {
     type Key = fnet::InterfaceAddress;
     fn get_sort_key(&self) -> fnet::InterfaceAddress {
@@ -690,7 +527,6 @@ impl SortableInterfaceAddress for finterfaces_ext::Address {
     }
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl SortableInterfaceAddress for finterfaces::Address {
     type Key = Option<fnet::InterfaceAddress>;
     fn get_sort_key(&self) -> Option<fnet::InterfaceAddress> {
@@ -702,13 +538,11 @@ impl SortableInterfaceAddress for finterfaces::Address {
 #[error("Connection to interfaces worker closed")]
 pub struct WorkerClosedError {}
 
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Clone)]
 pub struct WorkerWatcherSink {
     sender: mpsc::Sender<finterfaces::WatcherRequestStream>,
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl WorkerWatcherSink {
     /// Adds a new interface watcher to be operated on by [`Worker`].
     pub async fn add_watcher(
@@ -719,13 +553,11 @@ impl WorkerWatcherSink {
     }
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 #[derive(Clone)]
 pub struct WorkerInterfaceSink {
     sender: mpsc::UnboundedSender<InterfaceEvent>,
 }
 
-#[todo_unused("https://fxbug.dev/60923")]
 impl WorkerInterfaceSink {
     /// Adds a new interface `id` with fixed properties `properties`.
     ///
@@ -758,9 +590,11 @@ mod tests {
     use super::*;
     use crate::bindings::util::TryIntoCore as _;
     use assert_matches::assert_matches;
+    use fidl_fuchsia_hardware_network as fhardware_network;
     use fixture::fixture;
     use futures::{Future, Stream};
     use itertools::Itertools as _;
+    use net_types::ip::Ipv6;
     use std::convert::{TryFrom as _, TryInto as _};
     use test_case::test_case;
 
@@ -792,13 +626,6 @@ mod tests {
                 })
             })
         }
-    }
-
-    #[test]
-    fn test_events_idle() {
-        let mut events = EventQueue::existing(std::iter::empty()).expect("failed to create Events");
-        assert_eq!(events.pop_front(), Some(finterfaces::Event::Idle(finterfaces::Empty)));
-        assert_eq!(events.pop_front(), None);
     }
 
     async fn with_worker<
@@ -1308,9 +1135,12 @@ mod tests {
         interface_sink: WorkerInterfaceSink,
     ) {
         let watcher = watcher_sink.create_watcher();
+        // Get the idle event to make sure the worker sees the watcher.
+        assert_matches!(watcher.watch().await, Ok(finterfaces::Event::Idle(finterfaces::Empty {})));
+
         // NB: Every round generates two events, addition and removal because we
         // drop the producer.
-        for i in 1..(MAX_EVENTS / 2 + 1) {
+        for i in 1..=(MAX_EVENTS / 2 + 1) {
             let _: InterfaceEventProducer = interface_sink
                 .add_interface(
                     i.try_into().unwrap(),

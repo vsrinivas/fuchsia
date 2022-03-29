@@ -26,7 +26,7 @@ use rand_xorshift::XorShiftRng;
 use crate::{
     context::{
         testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
-        FrameContext as _, InstantContext, TimerContext,
+        EventContext, FrameContext as _, InstantContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
     ip::{
@@ -694,6 +694,10 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
     ) -> Result<(), S> {
         self.frames.send_frame(device, frame)
     }
+}
+
+impl<T> EventContext<T> for DummyEventDispatcher {
+    fn on_event(&mut self, _event: T) {}
 }
 
 #[cfg(test)]

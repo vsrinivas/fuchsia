@@ -35,8 +35,7 @@ use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_zircon as zx;
-use futures::channel::mpsc;
-use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
+use futures::{lock::Mutex, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{debug, error, warn};
 use packet::{BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -45,14 +44,16 @@ use util::ConversionContext;
 
 use context::Lockable;
 use devices::{
-    CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo, ToggleError,
+    BindingId, CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
+    ToggleError,
 };
+use interfaces_watcher::{InterfaceEventProducer, InterfaceProperties, InterfaceUpdate};
 use timers::TimerDispatcher;
 
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
-    context::{InstantContext, RngContext, TimerContext},
+    context::{EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, initialize_device, remove_device, set_ipv4_configuration,
     set_ipv6_configuration, BlanketCoreContext, BufferUdpContext, Ctx, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpDeviceConfiguration,
@@ -88,6 +89,14 @@ pub(crate) trait DeviceStatusNotifier {
     /// only side effect should be notifying other workers or external
     /// applications that are listening for status changes.
     fn device_status_changed(&mut self, id: u64);
+}
+
+pub(crate) trait InterfaceEventProducerFactory {
+    fn create_interface_event_producer(
+        &self,
+        id: BindingId,
+        properties: InterfaceProperties,
+    ) -> InterfaceEventProducer;
 }
 
 type IcmpEchoSockets = socket::datagram::SocketCollectionPair<socket::datagram::IcmpEcho>;
@@ -300,7 +309,7 @@ where
 
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                 client,
                 mac: _,
                 features: _,
@@ -386,6 +395,73 @@ where
     }
 }
 
+impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for BindingsDispatcher {
+    fn on_event(&mut self, event: netstack3_core::IpDeviceEvent<DeviceId, I>) {
+        let (device, event) = match event {
+            netstack3_core::IpDeviceEvent::AddressAssigned { device, addr } => (
+                device,
+                InterfaceUpdate::AddressAssigned {
+                    addr: addr.into(),
+                    properties: interfaces_watcher::AddressState {
+                        valid_until: zx::Time::INFINITE,
+                    },
+                },
+            ),
+            netstack3_core::IpDeviceEvent::AddressUnassigned { device, addr } => {
+                (device, InterfaceUpdate::AddressUnassigned(addr.into()))
+            }
+        };
+        self.notify_interface_update(device, event);
+    }
+}
+
+impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for BindingsDispatcher {
+    fn on_event(&mut self, event: netstack3_core::IpLayerEvent<DeviceId, I>) {
+        let (device, subnet, has_default_route) = match event {
+            netstack3_core::IpLayerEvent::DeviceRouteAdded { device, subnet } => {
+                (device, subnet, true)
+            }
+            netstack3_core::IpLayerEvent::DeviceRouteRemoved { device, subnet } => {
+                (device, subnet, false)
+            }
+        };
+        // We only care about the default route.
+        if subnet.prefix() != 0 || subnet.network() != I::UNSPECIFIED_ADDRESS {
+            return;
+        }
+        self.notify_interface_update(
+            device,
+            InterfaceUpdate::DefaultRouteChanged { version: I::VERSION, has_default_route },
+        );
+    }
+}
+
+impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsDispatcher {
+    fn on_event(&mut self, event: netstack3_core::DadEvent<DeviceId>) {
+        match event {
+            netstack3_core::DadEvent::AddressAssigned { device, addr } => {
+                self.on_event(netstack3_core::IpDeviceEvent::<_, Ipv6>::AddressAssigned {
+                    device,
+                    addr,
+                })
+            }
+        }
+    }
+}
+
+impl BindingsDispatcher {
+    fn notify_interface_update(&self, device: DeviceId, event: InterfaceUpdate) {
+        self.devices
+            .get_core_device(device)
+            .unwrap_or_else(|| panic!("issued event {:?} for deleted device {:?}", event, device))
+            .info()
+            .common_info()
+            .events
+            .notify(event)
+            .expect("interfaces worker closed");
+    }
+}
+
 trait MutableDeviceState {
     /// Invoke a function on the state associated with the device `id`.
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
@@ -430,84 +506,95 @@ where
 
         let enabled = match device.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => *admin_enabled && *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
             }) => *admin_enabled,
         };
 
-        if enabled {
-            // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
-            // two stages: add device to the core to get an id, then reach into
-            // the driver to get updated info before triggering the core to
-            // allow traffic on the interface.
-            let generate_core_id = |info: &DeviceInfo| match info.info() {
-                DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled: _, mtu },
-                    client: _,
-                    mac,
-                    features: _,
-                    phy_up: _,
-                }) => state.add_ethernet_device(*mac, *mtu),
-                DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled: _, mtu },
-                }) => {
-                    // Should not panic as we only reach this point if a device
-                    // was previously disabled and (as of writing) disabled
-                    // devices are not held in core.
-                    //
-                    // TODO(https://fxbug.dev/92656): Hold disabled interfaces
-                    // in core so we can avoid adding interfaces when
-                    // transitioning from disabled to enabled.
-                    state.add_loopback_device(*mtu).expect("error adding loopback device")
-                }
-            };
-            match dispatcher.as_mut().activate_device(id, generate_core_id) {
-                Ok(device_info) => {
-                    // we can unwrap core_id here because activate_device just
-                    // succeeded.
-                    let core_id = device_info.core_id().unwrap();
-                    // don't forget to initialize the device in core!
-                    initialize_device(self, core_id);
-                    Ok(())
-                }
-                Err(toggle_error) => {
-                    match toggle_error {
-                        ToggleError::NoChange => Ok(()),
-                        // Invalid device ID
-                        ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound),
-                    }
+        if !enabled {
+            return Ok(());
+        }
+
+        // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
+        // two stages: add device to the core to get an id, then reach into
+        // the driver to get updated info before triggering the core to
+        // allow traffic on the interface.
+        let generate_core_id = |info: &DeviceInfo| match info.info() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu, events: _ },
+                client: _,
+                mac,
+                features: _,
+                phy_up: _,
+            }) => state.add_ethernet_device(*mac, *mtu),
+            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu, events: _ },
+            }) => {
+                // Should not panic as we only reach this point if a device
+                // was previously disabled and (as of writing) disabled
+                // devices are not held in core.
+                //
+                // TODO(https://fxbug.dev/92656): Hold disabled interfaces
+                // in core so we can avoid adding interfaces when
+                // transitioning from disabled to enabled.
+                state.add_loopback_device(*mtu).expect("error adding loopback device")
+            }
+        };
+        match dispatcher.as_mut().activate_device(id, generate_core_id) {
+            Ok(device_info) => {
+                // we can unwrap core_id here because activate_device just
+                // succeeded.
+                let core_id = device_info.core_id().unwrap();
+
+                device_info
+                    .info()
+                    .common_info()
+                    .events
+                    .notify(InterfaceUpdate::OnlineChanged(true))
+                    .expect("interfaces worker not running");
+
+                // don't forget to initialize the device in core!
+                initialize_device(self, core_id);
+                Ok(())
+            }
+            Err(toggle_error) => {
+                match toggle_error {
+                    ToggleError::NoChange => Ok(()),
+                    // Invalid device ID
+                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound),
                 }
             }
-        } else {
-            Ok(())
         }
     }
 
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.dispatcher.as_mut().deactivate_device(id) {
             Ok((core_id, device_info)) => {
-                // Sanity check that there is a reason that the device is
-                // disabled.
-                assert!(match device_info.info() {
+                let (online, events) = match device_info.info() {
                     DeviceSpecificInfo::Ethernet(EthernetInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _ },
+                        common_info: CommonInfo { admin_enabled, mtu: _, events },
                         client: _,
                         mac: _,
                         features: _,
                         phy_up,
-                    }) => !admin_enabled || !phy_up,
+                    }) => (*admin_enabled && *phy_up, events),
                     DeviceSpecificInfo::Loopback(LoopbackInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _ },
-                    }) => {
-                        !admin_enabled
-                    }
-                });
+                        common_info: CommonInfo { admin_enabled, mtu: _, events },
+                    }) => (*admin_enabled, events),
+                };
+                // Sanity check that there is a reason that the device is
+                // disabled.
+                assert!(!online);
+
+                events
+                    .notify(InterfaceUpdate::OnlineChanged(false))
+                    .expect("interfaces worker not running");
 
                 // Disabling the interface deactivates it in the bindings, and
                 // will remove it completely from the core.
@@ -528,18 +615,52 @@ where
     }
 }
 
+type NetstackContext = Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl>>>;
+
 /// The netstack.
 ///
 /// Provides the entry point for creating a netstack to be served as a
 /// component.
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Netstack {
-    ctx: Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl>>>,
+    ctx: NetstackContext,
+    interfaces_event_sink: interfaces_watcher::WorkerInterfaceSink,
+}
+
+/// Contains the information needed to start serving a network stack over FIDL.
+pub struct NetstackSeed {
+    netstack: Netstack,
+    interfaces_worker: interfaces_watcher::Worker,
+    interfaces_watcher_sink: interfaces_watcher::WorkerWatcherSink,
+}
+
+impl Default for NetstackSeed {
+    fn default() -> Self {
+        let (interfaces_worker, interfaces_watcher_sink, interfaces_event_sink) =
+            interfaces_watcher::Worker::new();
+        Self {
+            netstack: Netstack { ctx: Default::default(), interfaces_event_sink },
+            interfaces_worker,
+            interfaces_watcher_sink,
+        }
+    }
 }
 
 impl LockableContext for Netstack {
     type Dispatcher = BindingsDispatcher;
     type Context = BindingsContextImpl;
+}
+
+impl InterfaceEventProducerFactory for Netstack {
+    fn create_interface_event_producer(
+        &self,
+        id: BindingId,
+        properties: InterfaceProperties,
+    ) -> InterfaceEventProducer {
+        self.interfaces_event_sink
+            .add_interface(id, properties)
+            .expect("interface worker not running")
+    }
 }
 
 enum Service {
@@ -549,13 +670,8 @@ enum Service {
     Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
 }
 
-enum Task {
-    Watcher(interfaces_watcher::Watcher),
-}
-
 enum WorkItem {
     Incoming(Service),
-    Spawned(Task),
 }
 
 trait RequestStreamExt: RequestStream {
@@ -577,7 +693,7 @@ impl<D: DiscoverableProtocolMarker, S: RequestStream<Protocol = D>> RequestStrea
     }
 }
 
-impl Netstack {
+impl NetstackSeed {
     /// Consumes the netstack and starts serving all the FIDL services it
     /// implements to the outgoing service directory.
     pub async fn serve(self) -> Result<(), anyhow::Error> {
@@ -585,8 +701,10 @@ impl Netstack {
 
         debug!("Serving netstack");
 
+        let Self { netstack, interfaces_worker, interfaces_watcher_sink } = self;
+
         {
-            let mut ctx = self.lock().await;
+            let mut ctx = netstack.lock().await;
             let ctx = ctx.deref_mut();
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
@@ -600,12 +718,27 @@ impl Netstack {
                 .add_loopback_device(DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
             let _binding_id: u64 = devices
-                .add_active_device(
-                    loopback,
+                .add_active_device(loopback, |id| {
+                    let events = netstack.create_interface_event_producer(
+                        id,
+                        InterfaceProperties {
+                            name: format!("lo"),
+                            device_class: fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                                fidl_fuchsia_net_interfaces::Empty {},
+                            ),
+                        },
+                    );
+                    events
+                        .notify(InterfaceUpdate::OnlineChanged(true))
+                        .expect("interfaces worker not running");
                     DeviceSpecificInfo::Loopback(LoopbackInfo {
-                        common_info: CommonInfo { mtu: DEFAULT_LOOPBACK_MTU, admin_enabled: true },
-                    }),
-                )
+                        common_info: CommonInfo {
+                            mtu: DEFAULT_LOOPBACK_MTU,
+                            admin_enabled: true,
+                            events,
+                        },
+                    })
+                })
                 .expect("error adding loopback device");
             initialize_device(ctx, loopback);
             // Don't need DAD and IGMP/MLD on loopback.
@@ -672,8 +805,14 @@ impl Netstack {
                 dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
                 ctx: BindingsContextImpl { rng: _, timers },
             } = ctx;
-            timers.spawn(self.clone());
+            timers.spawn(netstack.clone());
         }
+
+        let interfaces_worker_task = fuchsia_async::Task::spawn(async move {
+            let result = interfaces_worker.run().await;
+            // The worker is not expected to end for the lifetime of the stack.
+            panic!("interfaces worker finished unexpectedly {:?}", result);
+        });
 
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
@@ -684,40 +823,25 @@ impl Netstack {
             .add_fidl_service(Service::Interfaces);
 
         let services = fs.take_and_serve_directory_handle().context("directory handle")?;
-        let (work_items, tasks) = {
-            let (sender, receiver) = mpsc::unbounded();
-            (
-                futures::stream::select(
-                    receiver.map(WorkItem::Spawned),
-                    services.map(WorkItem::Incoming),
-                ),
-                sender,
-            )
-        };
-        let () = work_items
+        let work_items = services.map(WorkItem::Incoming);
+        let service_fs_fut = work_items
             .for_each_concurrent(None, |wi| async {
                 match wi {
                     WorkItem::Incoming(Service::Stack(stack)) => {
                         stack
                             .serve_with(|rs| {
-                                stack_fidl_worker::StackFidlWorker::serve(self.clone(), rs)
+                                stack_fidl_worker::StackFidlWorker::serve(netstack.clone(), rs)
                             })
                             .await
                     }
                     WorkItem::Incoming(Service::Socket(socket)) => {
-                        socket.serve_with(|rs| socket::serve(self.clone(), rs)).await
+                        socket.serve_with(|rs| socket::serve(netstack.clone(), rs)).await
                     }
                     WorkItem::Incoming(Service::Interfaces(interfaces)) => {
                         interfaces
                             .serve_with(|rs| {
                                 interfaces_watcher::serve(
-                                    self.clone(),
-                                    rs,
-                                    tasks.clone().with(|w| {
-                                        futures::future::ok::<_, futures::channel::mpsc::SendError>(
-                                            Task::Watcher(w),
-                                        )
-                                    }),
+                                    rs, interfaces_watcher_sink.clone()
                                 )
                             })
                             .await
@@ -756,14 +880,10 @@ impl Netstack {
                             }))
                             .await
                     }
-                    WorkItem::Spawned(Task::Watcher(watcher)) => {
-                        watcher.await.unwrap_or_else(|err| {
-                            error!("fuchsia.net.interfaces.Watcher error: {}", err)
-                        })
                     }
-                }
-            })
-            .await;
+            });
+
+        let ((), ()) = futures::future::join(service_fs_fut, interfaces_worker_task).await;
         debug!("Services stream finished");
         Ok(())
     }

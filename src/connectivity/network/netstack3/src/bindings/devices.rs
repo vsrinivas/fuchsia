@@ -95,7 +95,11 @@ where
     /// currently tracked by [`Devices`]). A new [`BindingId`] will be allocated
     /// and a [`DeviceInfo`] struct will be created with the provided `info` and
     /// IDs.
-    pub fn add_active_device(&mut self, core_id: C, info: I) -> Option<BindingId> {
+    pub fn add_active_device<F: FnOnce(BindingId) -> I>(
+        &mut self,
+        core_id: C,
+        info: F,
+    ) -> Option<BindingId> {
         let Self { active_devices, id_map, inactive_devices: _, last_id } = self;
         match active_devices.entry(core_id) {
             Entry::Occupied(_) => None,
@@ -104,7 +108,7 @@ where
                 let core_id = entry.key().clone();
                 assert_matches::assert_matches!(id_map.insert(id, core_id.clone()), None);
                 let _: &mut DeviceInfo<_, _> =
-                    entry.insert(DeviceInfo { id, core_id: Some(core_id.clone()), info });
+                    entry.insert(DeviceInfo { id, core_id: Some(core_id.clone()), info: info(id) });
                 Some(id)
             }
         }
@@ -119,11 +123,13 @@ where
     /// The new device will *not* have a `core_id` allocated, that can be done
     /// by calling [`Devices::activate_device`] with the newly created
     /// [`BindingId`].
-    pub fn add_device(&mut self, info: I) -> BindingId {
+    pub fn add_device<F: FnOnce(BindingId) -> I>(&mut self, info: F) -> BindingId {
         let Self { active_devices: _, id_map: _, inactive_devices, last_id } = self;
         let id = Self::alloc_id(last_id);
         // NB: Can't `assert_eq!(_, None)` because of missing I: Debug bound.
-        assert!(inactive_devices.insert(id, DeviceInfo { id, core_id: None, info }).is_none());
+        assert!(inactive_devices
+            .insert(id, DeviceInfo { id, core_id: None, info: info(id) })
+            .is_none());
         id
     }
 
@@ -239,6 +245,7 @@ where
     }
 
     /// Gets an iterator over all tracked devices.
+    #[cfg(test)]
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
         self.active_devices.iter().chain(self.inactive_devices.values())
     }
@@ -265,6 +272,11 @@ where
         self.id_map.get(&id).cloned()
     }
 
+    /// Retrieve non-mutable reference to device by associated [`CoreId`] `id`.
+    pub fn get_core_device(&self, id: C) -> Option<&DeviceInfo<C, I>> {
+        self.active_devices.get(&id)
+    }
+
     /// Retrieve mutable reference to device by associated [`CoreId`] `id`.
     pub fn get_core_device_mut(&mut self, id: C) -> Option<&mut DeviceInfo<C, I>> {
         self.active_devices.get_mut(&id)
@@ -283,11 +295,21 @@ pub enum DeviceSpecificInfo {
     Loopback(LoopbackInfo),
 }
 
+impl DeviceSpecificInfo {
+    pub fn common_info(&self) -> &CommonInfo {
+        match self {
+            Self::Ethernet(i) => &i.common_info,
+            Self::Loopback(i) => &i.common_info,
+        }
+    }
+}
+
 /// Information common to all devices.
 #[derive(Debug)]
 pub struct CommonInfo {
     pub mtu: u32,
     pub admin_enabled: bool,
+    pub events: super::InterfaceEventProducer,
 }
 
 /// Loopback device information.
@@ -326,10 +348,6 @@ where
 {
     pub fn core_id(&self) -> Option<C> {
         self.core_id.clone()
-    }
-
-    pub fn id(&self) -> BindingId {
-        self.id
     }
 
     #[cfg(test)]
@@ -374,10 +392,10 @@ mod tests {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
         let core_b = MockDeviceId(2);
-        let a = d.add_active_device(core_a, 10).expect("can add device");
-        let b = d.add_active_device(core_b, 20).expect("can add device");
+        let a = d.add_active_device(core_a, |id| id + 10).expect("can add device");
+        let b = d.add_active_device(core_b, |id| id + 20).expect("can add device");
         assert_ne!(a, b, "allocated same id");
-        assert_eq!(d.add_active_device(core_a, 10), None, "can't add same id again");
+        assert_eq!(d.add_active_device(core_a, |id| id + 10), None, "can't add same id again");
         // check that ids are incrementing
         assert_eq!(d.last_id, 2);
 
@@ -396,8 +414,8 @@ mod tests {
         // remove both devices
         let info_a = d.remove_device(a).expect("can remove device");
         let info_b = d.remove_device(b).expect("can remove device");
-        assert_eq!(info_a.info, 10);
-        assert_eq!(info_b.info, 20);
+        assert_eq!(info_a.info, a + 10);
+        assert_eq!(info_b.info, b + 20);
         assert_eq!(info_a.core_id.unwrap(), core_a);
         assert_eq!(info_b.core_id.unwrap(), core_b);
         // removing device again will fail
@@ -416,8 +434,8 @@ mod tests {
     #[test]
     fn test_add_remove_inactive_device() {
         let mut d = TestDevices::default();
-        let a = d.add_device(10);
-        let b = d.add_device(20);
+        let a = d.add_device(|id| id + 10);
+        let b = d.add_device(|id| id + 20);
         assert_ne!(a, b, "allocated same id");
 
         // check that ids are incrementing
@@ -433,8 +451,8 @@ mod tests {
         // remove both devices
         let info_a = d.remove_device(a).expect("can remove device");
         let info_b = d.remove_device(b).expect("can remove device");
-        assert_eq!(info_a.info, 10);
-        assert_eq!(info_b.info, 20);
+        assert_eq!(info_a.info, a + 10);
+        assert_eq!(info_b.info, b + 20);
         assert_eq!(info_a.core_id, None);
         assert_eq!(info_b.core_id, None);
 
@@ -455,13 +473,13 @@ mod tests {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
         let core_b = MockDeviceId(2);
-        let a = d.add_device(10);
-        let b = d.add_active_device(core_b, 20).unwrap();
+        let a = d.add_device(|id| id + 10);
+        let b = d.add_active_device(core_b, |id| id + 20).unwrap();
         assert_eq!(d.activate_device(1000, |_| core_a).unwrap_err(), ToggleError::NotFound);
         assert_eq!(d.activate_device(b, |_| core_b).unwrap_err(), ToggleError::NoChange);
 
         let info = d.activate_device(a, |_| core_a).expect("can activate device");
-        assert_eq!(info.info, 10);
+        assert_eq!(info.info, a + 10);
         assert_eq!(info.core_id.unwrap(), core_a);
 
         // both a and b should be active now:
@@ -474,10 +492,10 @@ mod tests {
         let mut devices = TestDevices::default();
         let core_id = MockDeviceId(1);
         // Add an active device with core_id
-        assert_eq!(devices.add_active_device(core_id, 20), Some(1));
+        assert_eq!(devices.add_active_device(core_id, |id| id + 20), Some(1));
 
         // Trying to activate another device with the same core_id should panic
-        let second_device = devices.add_device(10);
+        let second_device = devices.add_device(|id| id + 10);
         let _result = devices.activate_device(second_device, |_| core_id);
     }
 
@@ -485,14 +503,14 @@ mod tests {
     fn test_deactivate_device() {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
-        let a = d.add_active_device(core_a, 10).unwrap();
-        let b = d.add_device(20);
+        let a = d.add_active_device(core_a, |id| id + 10).unwrap();
+        let b = d.add_device(|id| id + 20);
         assert_eq!(d.deactivate_device(b).unwrap_err(), ToggleError::NoChange);
         assert_eq!(d.deactivate_device(1000).unwrap_err(), ToggleError::NotFound);
 
         let (core, info) = d.deactivate_device(a).unwrap();
         assert_eq!(core, core_a);
-        assert_eq!(info.info, 10);
+        assert_eq!(info.info, a + 10);
         assert_eq!(info.core_id, None);
 
         // both a and b should be inactive now:
@@ -504,8 +522,8 @@ mod tests {
     fn test_iter() {
         let mut d = TestDevices::default();
         let core_a = MockDeviceId(1);
-        let a = d.add_active_device(core_a, 10).unwrap();
-        let b = d.add_device(20);
+        let a = d.add_active_device(core_a, |id| id + 10).unwrap();
+        let b = d.add_device(|id| id + 20);
 
         // check that we can iterate over active and inactive devices seamlessly
         assert_eq!(d.iter_devices().count(), 2);

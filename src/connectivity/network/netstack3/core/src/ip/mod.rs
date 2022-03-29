@@ -47,7 +47,7 @@ use packet_formats::{
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::{
-    context::{CounterContext, InstantContext, TimerContext},
+    context::{CounterContext, EventContext, InstantContext, TimerContext},
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -387,15 +387,39 @@ pub(crate) trait TransportContext<I: Ip> {
     fn on_routing_state_updated(&mut self);
 }
 
+/// Events observed at the IP layer.
+pub enum IpLayerEvent<DeviceId, I: Ip> {
+    /// A device route was added.
+    DeviceRouteAdded {
+        /// The resolved device.
+        device: DeviceId,
+        /// The destination subnet.
+        subnet: Subnet<I::Addr>,
+    },
+    /// A device route was removed.
+    DeviceRouteRemoved {
+        /// The resolved device.
+        device: DeviceId,
+        /// The destination subnet.
+        subnet: Subnet<I::Addr>,
+    },
+}
+
 /// The execution context for the IP layer.
 pub(crate) trait IpLayerContext<I: IpLayerStateIpExt<Self::Instant, Self::DeviceId>>:
-    IpStateContext<I> + IpDeviceContext<I> + TransportContext<I>
+    IpStateContext<I>
+    + IpDeviceContext<I>
+    + TransportContext<I>
+    + EventContext<IpLayerEvent<Self::DeviceId, I>>
 {
 }
 
 impl<
         I: IpLayerStateIpExt<C::Instant, C::DeviceId>,
-        C: IpStateContext<I> + IpDeviceContext<I> + TransportContext<I>,
+        C: IpStateContext<I>
+            + IpDeviceContext<I>
+            + TransportContext<I>
+            + EventContext<IpLayerEvent<C::DeviceId, I>>,
     > IpLayerContext<I> for C
 {
 }
@@ -738,7 +762,9 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Id, Meta> IpDeviceIdContext<I> for crate::context::testutil::DummyCtx<S, Id, Meta> {
+impl<I: Ip, S, Id, Meta, Event> IpDeviceIdContext<I>
+    for crate::context::testutil::DummyCtx<S, Id, Meta, Event>
+{
     type DeviceId = DummyDeviceId;
 
     fn loopback_id(&self) -> Option<DummyDeviceId> {
@@ -2001,10 +2027,10 @@ pub(crate) fn add_device_route<
     subnet: Subnet<I::Addr>,
     device: C::DeviceId,
 ) -> Result<(), ExistsError> {
-    get_ip_layer_state_inner_mut(ctx)
-        .table
-        .add_device_route(subnet, device)
-        .map(|()| on_routing_state_updated(ctx))
+    get_ip_layer_state_inner_mut(ctx).table.add_device_route(subnet, device).map(|()| {
+        on_routing_state_updated(ctx);
+        ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
+    })
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no
@@ -2013,10 +2039,15 @@ pub(crate) fn del_route<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLaye
     ctx: &mut C,
     subnet: Subnet<I::Addr>,
 ) -> Result<(), NotFoundError> {
-    get_ip_layer_state_inner_mut(ctx)
-        .table
-        .del_route(subnet)
-        .map(|()| on_routing_state_updated(ctx))
+    get_ip_layer_state_inner_mut(ctx).table.del_route(subnet).map(|removed| {
+        on_routing_state_updated(ctx);
+        removed.into_iter().for_each(|entry| match entry.dest {
+            EntryDest::Local { device } => {
+                ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet })
+            }
+            EntryDest::Remote { next_hop: _ } => (),
+        });
+    })
 }
 
 /// Returns all the routes for the provided `IpAddress` type.
