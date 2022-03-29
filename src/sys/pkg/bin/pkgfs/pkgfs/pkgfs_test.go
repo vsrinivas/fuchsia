@@ -23,9 +23,10 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	zxio "syscall/zx/io"
 	"testing"
 
-	zxio "syscall/zx/io"
+	fidlio "fidl/fuchsia/io"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/ramdisk"
@@ -832,7 +833,7 @@ func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.
 	unlink := func(path string) error {
-		d, err := pkgfsDir.Open(".", zxio.OpenFlagDirectory|zxio.OpenRightReadable|zxio.OpenRightWritable, 0o700)
+		d, err := pkgfsDir.Open(".", uint32(fidlio.OpenFlagDirectory|fidlio.OpenRightReadable|fidlio.OpenRightWritable), 0o700)
 		if err != nil {
 			return err
 		}
