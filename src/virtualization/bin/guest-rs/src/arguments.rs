@@ -5,7 +5,7 @@
 use argh::FromArgs;
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Launch a guest image. Usage: guest-rs launch --package <package> [--vmm_args <args>]
+/// Launch a guest image. Usage: guest-rs launch package [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
 #[argh(subcommand, name = "launch")]
 pub struct LaunchArgs {
     #[argh(positional)]

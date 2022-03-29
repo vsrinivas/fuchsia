@@ -32,40 +32,40 @@ enum SubCommands {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Modify the size of a memory balloon. Usage: guest-rs balloon --env_id <id> --cid <id> --num_pages <num>
+/// Modify the size of a memory balloon. Usage: guest-rs balloon env-id cid num-pages
 #[argh(subcommand, name = "balloon")]
 struct BalloonArgs {
-    #[argh(option)]
+    #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// context id of guest.
     cid: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// number of pages guest balloon will have after use.
     num_pages: u32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// See the stats of a guest's memory balloon. Usage: guest-rs balloon-stats --env_id <id> --cid <id>
+/// See the stats of a guest's memory balloon. Usage: guest-rs balloon-stats env-id cid
 #[argh(subcommand, name = "balloon-stats")]
 struct BalloonStatsArgs {
-    #[argh(option)]
+    #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// context id of guest.
     cid: u32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Access the serial output for a guest. Usage: guest-rs serial --env_id <id> --cid <id>
+/// Access the serial output for a guest. Usage: guest-rs serial env-id cid
 #[argh(subcommand, name = "serial")]
 struct SerialArgs {
-    #[argh(option)]
+    #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// context id of guest.
     cid: u32,
 }
@@ -76,44 +76,44 @@ struct SerialArgs {
 struct ListArgs {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create a socat connection on the specified port. Usage: guest-rs socat --env_id <id> --cid <id> --port <num>
+/// Create a socat connection on the specified port. Usage: guest-rs socat env-id cid port
 #[argh(subcommand, name = "socat")]
 struct SocatArgs {
-    #[argh(option)]
+    #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// context id of guest.
     cid: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// port for listeners to connect on.
     port: u32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Listen through socat on the specified port. Usage: guest-rs socat-listen --env_id <id> --host_port <num>
+/// Listen through socat on the specified port. Usage: guest-rs socat-listen env-id host-port
 #[argh(subcommand, name = "socat-listen")]
 struct SocatListenArgs {
-    #[argh(option)]
+    #[argh(positional)]
     /// environment id of host.
     env_id: u32,
-    #[argh(option)]
+    #[argh(positional)]
     /// port number of host (see `guest-rs socat`)
     host_port: u32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create virtual shell for a guest or connect via virtual shell. Usage: guest-rs [--env_id <id> [--cid <id> [--port [num]]]] [--args <args>]
+/// Create virtual shell for a guest or connect via virtual shell. Usage: guest-rs vsh [env_id [cid [port]]] [--args <arg>]
 #[argh(subcommand, name = "vsh")]
 struct VshArgs {
     #[argh(option)]
-    /// optional environment id of host.
+    /// positional environment id of host.
     env_id: Option<u32>,
     #[argh(option)]
-    /// optional context id of vsh to connect to.
+    /// positional context id of vsh to connect to.
     cid: Option<u32>,
     #[argh(option)]
-    /// optional port of a vsh socket to connect to.
+    /// positional port of a vsh socket to connect to.
     port: Option<u32>,
     #[argh(option)]
     /// list of arguments to run non-interactively on launch.
